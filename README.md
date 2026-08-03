@@ -8,12 +8,14 @@ console with seven-role RBAC, maker-checker governance, immutable domain audit, 
 
 ## Start locally
 
-See [startup.md](startup.md).
+See the [local development section of the deployment guide](docs/DEPLOYMENT.md#local-development).
 
-## Docker and PostgreSQL
+## Deployment, Docker, and operations
 
-See [DOCKER_SETUP.md](DOCKER_SETUP.md) for every Compose service, environment
-setup, `psql` access, backups, Redis inspection, and MinIO access.
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — the single source of truth for
+first-time deployment, routine updates, operations, backup/restore, and
+troubleshooting (including the health-check cascade, seed requirements, and
+env-file flags).
 
 ## Phase 8 verification
 
@@ -30,9 +32,7 @@ npm run phase8:verify:full            # plus browser, accessibility, HTTP load, 
 The full mode requires customer/admin credentials (via `E2E_DEMO_EMAIL` /
 `E2E_DEMO_PASSWORD` and `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`) and a reachable
 application. Set `PHASE8_START_SERVER=true` to let the orchestrator start and
-stop a development server, or provide an already-running staging endpoint. See
-[VERIFICATION_PHASE_8.md](VERIFICATION_PHASE_8.md) for the complete environment,
-acceptance thresholds, evidence paths, and release procedure.
+stop a development server, or provide an already-running staging endpoint.
 
 GitHub Actions runs the complete simulation matrix from
 `.github/workflows/phase8-verification.yml` and retains the generated evidence.
@@ -68,20 +68,17 @@ npm run auth:doctor
 
 The command verifies the public Auth.js origin, PostgreSQL and identity
 migrations, the SecuritySession/AdminRoleAssignment tables, and Redis.
-See `LOGIN_INVESTIGATION_REPORT.md` for the navbar hydration and
-credentials-login investigation.
 
 ## Release hardening guides
 
-- [`RELEASE_HARDENING_REPORT.md`](RELEASE_HARDENING_REPORT.md) maps the latest mobile, deployment, login, market-data, pagination and chart changes to verification evidence.
-- [`ENVIRONMENT_VARIABLES.md`](ENVIRONMENT_VARIABLES.md) explains every runtime, deployment and verification environment variable.
-- [`DEPLOYMENT.md`](DEPLOYMENT.md) provides the live Docker/Caddy deployment and operations procedure.
+- [`docs/RELEASE_HARDENING_REPORT.md`](docs/RELEASE_HARDENING_REPORT.md) maps the latest mobile, deployment, login, market-data, pagination and chart changes to verification evidence.
+- [`docs/ENVIRONMENT_VARIABLES.md`](docs/ENVIRONMENT_VARIABLES.md) explains every runtime, deployment and verification environment variable.
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) provides the live Docker/Caddy deployment and operations procedure.
 - Local authentication/reconciliation recovery: `npm run local:repair`.
 - Finnhub live-price plus simulated-history behavior is controlled by `MARKET_DATA_MODE` and `FINNHUB_CANDLE_MODE`.
 - Browser regressions cover mobile navigation, scrollable/paginated assets, professional chart sizing, and timeframe persistence.
 
 ## Payment and email operations
 
-- [Deposit and withdrawal workflows](PAYMENT_WORKFLOWS.md)
-- [Email activation and template design](EMAIL_SETUP.md)
-- [Payment/email patch report](PAYMENT_EMAIL_PATCH_REPORT.md)
+- [Deposit and withdrawal workflows](docs/PAYMENT_WORKFLOWS.md)
+- [Email activation and template design](docs/EMAIL_SETUP.md)

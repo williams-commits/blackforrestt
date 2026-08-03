@@ -1,0 +1,168 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: blckforest
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-blckforest}
+      POSTGRES_DB: blckforest
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blckforest -d blckforest"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: quay.io/minio/minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: creates the quarantine and sealed KYC buckets on first boot and,
+  # where the provider supports it, enables default bucket encryption. Uploads
+  # and downloads are proxied through the app (same-origin), so no browser CORS
+  # configuration is required.
+  minio-init:
+    image: quay.io/minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin} &&
+      mc mb --ignore-existing local/${S3_BUCKET_PREFIX:-blckforest-kyc}-quarantine &&
+      mc mb --ignore-existing local/${S3_BUCKET_PREFIX:-blckforest-kyc}-sealed &&
+      mc mb --ignore-existing local/${S3_BUCKET_PREFIX:-blckforest-kyc}-payment-quarantine &&
+      mc mb --ignore-existing local/${S3_BUCKET_PREFIX:-blckforest-kyc}-payment-sealed &&
+      (mc anonymous set none local/${S3_BUCKET_PREFIX:-blckforest-kyc}-quarantine || true) &&
+      (mc anonymous set none local/${S3_BUCKET_PREFIX:-blckforest-kyc}-sealed || true) &&
+      (mc anonymous set none local/${S3_BUCKET_PREFIX:-blckforest-kyc}-payment-quarantine || true) &&
+      (mc anonymous set none local/${S3_BUCKET_PREFIX:-blckforest-kyc}-payment-sealed || true) &&
+      (mc encrypt set sse-s3 local/${S3_BUCKET_PREFIX:-blckforest-kyc}-sealed || true) &&
+      (mc encrypt set sse-s3 local/${S3_BUCKET_PREFIX:-blckforest-kyc}-quarantine || true) &&
+      (mc encrypt set sse-s3 local/${S3_BUCKET_PREFIX:-blckforest-kyc}-payment-sealed || true) &&
+      (mc encrypt set sse-s3 local/${S3_BUCKET_PREFIX:-blckforest-kyc}-payment-quarantine || true)
+      "
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://blckforest:${POSTGRES_PASSWORD:-blckforest}@postgres:5432/blckforest?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in your environment or .env file}
+      FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?Set FIELD_ENCRYPTION_KEY to a base64 32-byte key}
+      SECURITY_HASH_PEPPER: ${SECURITY_HASH_PEPPER:?Set SECURITY_HASH_PEPPER}
+      APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN to the public HTTPS origin}
+      AUTH_URL: ${AUTH_URL:?Set AUTH_URL to the same public HTTPS origin}
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET_PREFIX: ${S3_BUCKET_PREFIX:-blckforest-kyc}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?Set S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?Set S3_SECRET_ACCESS_KEY}
+      S3_FORCE_PATH_STYLE: "true"
+      AUTH_TRUST_HOST: "true"
+      ALLOW_UNVERIFIED_WITHDRAWALS: "false"
+      REGISTRATION_STARTING_BALANCE: ${REGISTRATION_STARTING_BALANCE:-0}
+      REGISTRATION_REQUIRE_EMAIL_VERIFICATION: ${REGISTRATION_REQUIRE_EMAIL_VERIFICATION:-true}
+      DEV_EMAIL_PREVIEW: "false"
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-disabled}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_API_URL: ${EMAIL_API_URL:-}
+      EMAIL_API_TOKEN: ${EMAIL_API_TOKEN:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
+      EMAIL_SUPPORT_ADDRESS: ${EMAIL_SUPPORT_ADDRESS:-support@example.com}
+      EMAIL_BRAND_NAME: ${EMAIL_BRAND_NAME:-Black Forest}
+      EMAIL_BRAND_COLOR: "${EMAIL_BRAND_COLOR:-#16a34a}"
+      EMAIL_LOGO_URL: ${EMAIL_LOGO_URL:-}
+      EMAIL_DISPATCH_INTERVAL_MS: ${EMAIL_DISPATCH_INTERVAL_MS:-15000}
+      EMAIL_MAX_ATTEMPTS: ${EMAIL_MAX_ATTEMPTS:-5}
+      EMAIL_PROCESSING_TIMEOUT_MS: ${EMAIL_PROCESSING_TIMEOUT_MS:-120000}
+      KYC_KMS_KEY_ID: ${KYC_KMS_KEY_ID:-}
+      KYC_DOWNLOAD_TTL_SECONDS: ${KYC_DOWNLOAD_TTL_SECONDS:-300}
+      KYC_MAX_BYTES: ${KYC_MAX_BYTES:-10485760}
+      KYC_RETENTION_DAYS: ${KYC_RETENTION_DAYS:-2555}
+      KYC_SCANNER: ${KYC_SCANNER:-stub}
+      ALLOW_LOCAL_STUB_SCANNER: ${ALLOW_LOCAL_STUB_SCANNER:-true}
+      MALWARE_SCANNER_URL: ${MALWARE_SCANNER_URL:-}
+      MALWARE_SCANNER_TOKEN: ${MALWARE_SCANNER_TOKEN:-}
+      MALWARE_SCANNER_TIMEOUT_MS: ${MALWARE_SCANNER_TIMEOUT_MS:-30000}
+      PAYMENT_PROOF_MAX_BYTES: ${PAYMENT_PROOF_MAX_BYTES:-10485760}
+      PAYMENT_BENEFICIARY_COOLING_OFF_HOURS: ${PAYMENT_BENEFICIARY_COOLING_OFF_HOURS:-24}
+      PAYMENT_PASSWORD_CHANGE_COOLING_OFF_HOURS: ${PAYMENT_PASSWORD_CHANGE_COOLING_OFF_HOURS:-24}
+      PAYMENT_DAILY_WITHDRAWAL_LIMIT: ${PAYMENT_DAILY_WITHDRAWAL_LIMIT:-25000}
+      PAYMENT_DAILY_WITHDRAWAL_COUNT: ${PAYMENT_DAILY_WITHDRAWAL_COUNT:-5}
+      RECONCILIATION_ENABLED: ${RECONCILIATION_ENABLED:-false}
+      RECONCILIATION_INTERVAL_MS: ${RECONCILIATION_INTERVAL_MS:-300000}
+      RECONCILIATION_LOCK_LEASE_MS: ${RECONCILIATION_LOCK_LEASE_MS:-60000}
+      RECONCILIATION_RUN_STALE_MS: ${RECONCILIATION_RUN_STALE_MS:-900000}
+      RECONCILIATION_PAYMENT_PENDING_HOURS: ${RECONCILIATION_PAYMENT_PENDING_HOURS:-72}
+      NODE_ENV: production
+      PORT: "3000"
+      MARKET_TICK_MS: ${MARKET_TICK_MS:-1000}
+      POSITION_PERSIST_EVERY_TICKS: ${POSITION_PERSIST_EVERY_TICKS:-5}
+      MAX_POSITION_LOTS: ${MAX_POSITION_LOTS:-100}
+      MARKET_SEED: ${MARKET_SEED:-black-forest-dev}
+      MARKET_DATA_MODE: ${MARKET_DATA_MODE:-simulation}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+      FINNHUB_CANDLE_MODE: ${FINNHUB_CANDLE_MODE:-auto}
+      FINNHUB_CANDLE_DELAY_MS: ${FINNHUB_CANDLE_DELAY_MS:-250}
+      WS_MAX_BUFFERED_BYTES: ${WS_MAX_BUFFERED_BYTES:-1048576}
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

@@ -1,0 +1,111 @@
+export type AdminRoleName =
+  | "SUPER_ADMIN"
+  | "COMPLIANCE"
+  | "FINANCE"
+  | "DEALER"
+  | "RISK"
+  | "SUPPORT"
+  | "AUDITOR";
+
+export type AdminChangeDomainName = "ACCESS" | "RISK" | "INSTRUMENT" | "CONFIGURATION";
+
+export type AdminPermission =
+  | "ADMIN_DASHBOARD"
+  | "USER_READ"
+  | "USER_ACCESS_MANAGE"
+  | "USER_BALANCE_ADJUST"
+  | "KYC_READ"
+  | "KYC_DECIDE"
+  | "KYC_DOCUMENT_ACCESS"
+  | "PAYMENT_READ"
+  | "PAYMENT_PREPARE"
+  | "PAYMENT_APPROVE"
+  | "PAYMENT_RECONCILE"
+  | "LEDGER_READ"
+  | "EXECUTION_READ"
+  | "EXECUTION_MANAGE"
+  | "RECONCILIATION_READ"
+  | "RECONCILIATION_MANAGE"
+  | "SUPPORT_READ"
+  | "SUPPORT_MANAGE"
+  | "INSTRUMENT_READ"
+  | "INSTRUMENT_MANAGE"
+  | "RISK_READ"
+  | "RISK_MANAGE"
+  | "AUDIT_READ"
+  | "AUDIT_EXPORT"
+  | "AUDIT_VERIFY"
+  | "SERVICE_HEALTH_READ"
+  | "CHANGE_REQUEST_READ"
+  | "CHANGE_REQUEST_APPROVE"
+  | "CONFIG_MANAGE";
+
+const ALL_PERMISSIONS: readonly AdminPermission[] = [
+  "ADMIN_DASHBOARD", "USER_READ", "USER_ACCESS_MANAGE", "USER_BALANCE_ADJUST", "KYC_READ", "KYC_DECIDE",
+  "KYC_DOCUMENT_ACCESS", "PAYMENT_READ", "PAYMENT_PREPARE", "PAYMENT_APPROVE",
+  "PAYMENT_RECONCILE", "LEDGER_READ", "EXECUTION_READ", "EXECUTION_MANAGE",
+  "RECONCILIATION_READ", "RECONCILIATION_MANAGE", "SUPPORT_READ", "SUPPORT_MANAGE",
+  "INSTRUMENT_READ", "INSTRUMENT_MANAGE", "RISK_READ", "RISK_MANAGE", "AUDIT_READ",
+  "AUDIT_EXPORT", "AUDIT_VERIFY", "SERVICE_HEALTH_READ", "CHANGE_REQUEST_READ",
+  "CHANGE_REQUEST_APPROVE", "CONFIG_MANAGE",
+] as const;
+
+const ROLE_PERMISSIONS: Record<AdminRoleName, readonly AdminPermission[]> = {
+  SUPER_ADMIN: ALL_PERMISSIONS,
+  COMPLIANCE: [
+    "ADMIN_DASHBOARD", "USER_READ", "KYC_READ", "KYC_DECIDE", "KYC_DOCUMENT_ACCESS",
+    "RECONCILIATION_READ", "SUPPORT_READ", "AUDIT_READ", "AUDIT_EXPORT", "AUDIT_VERIFY",
+    "SERVICE_HEALTH_READ",
+  ],
+  FINANCE: [
+    "ADMIN_DASHBOARD", "USER_READ", "USER_BALANCE_ADJUST", "PAYMENT_READ", "PAYMENT_PREPARE", "PAYMENT_APPROVE",
+    "PAYMENT_RECONCILE", "LEDGER_READ", "RECONCILIATION_READ", "RECONCILIATION_MANAGE",
+    "SUPPORT_READ", "AUDIT_READ", "SERVICE_HEALTH_READ",
+  ],
+  DEALER: [
+    "ADMIN_DASHBOARD", "EXECUTION_READ", "EXECUTION_MANAGE", "INSTRUMENT_READ",
+    "INSTRUMENT_MANAGE", "RISK_READ", "CHANGE_REQUEST_READ", "RECONCILIATION_READ",
+    "SERVICE_HEALTH_READ",
+  ],
+  RISK: [
+    "ADMIN_DASHBOARD", "USER_READ", "EXECUTION_READ", "RECONCILIATION_READ",
+    "RECONCILIATION_MANAGE", "INSTRUMENT_READ", "RISK_READ", "RISK_MANAGE", "AUDIT_READ",
+    "AUDIT_VERIFY", "SERVICE_HEALTH_READ", "CHANGE_REQUEST_READ", "CHANGE_REQUEST_APPROVE",
+  ],
+  SUPPORT: [
+    "ADMIN_DASHBOARD", "USER_READ", "KYC_READ", "PAYMENT_READ", "SUPPORT_READ",
+    "SUPPORT_MANAGE", "SERVICE_HEALTH_READ",
+  ],
+  AUDITOR: [
+    "ADMIN_DASHBOARD", "USER_READ", "KYC_READ", "PAYMENT_READ", "LEDGER_READ",
+    "EXECUTION_READ", "RECONCILIATION_READ", "SUPPORT_READ", "INSTRUMENT_READ", "RISK_READ",
+    "AUDIT_READ", "AUDIT_EXPORT", "AUDIT_VERIFY", "SERVICE_HEALTH_READ", "CHANGE_REQUEST_READ",
+  ],
+};
+
+export interface PermissionContext {
+  roles: AdminRoleName[];
+  permissions: AdminPermission[];
+}
+
+export function permissionsForRoles(roles: readonly AdminRoleName[]): AdminPermission[] {
+  const permissions = new Set<AdminPermission>();
+  for (const role of roles) for (const permission of ROLE_PERMISSIONS[role]) permissions.add(permission);
+  return [...permissions].sort();
+}
+
+export function hasAdminPermission(
+  context: Pick<PermissionContext, "permissions">,
+  permission: AdminPermission,
+): boolean {
+  return context.permissions.includes(permission);
+}
+
+export function canReviewChangeDomain(
+  context: Pick<PermissionContext, "roles">,
+  domain: AdminChangeDomainName,
+): boolean {
+  if (context.roles.includes("SUPER_ADMIN")) return true;
+  if (domain === "RISK" || domain === "INSTRUMENT") return context.roles.includes("RISK");
+  return false;
+}

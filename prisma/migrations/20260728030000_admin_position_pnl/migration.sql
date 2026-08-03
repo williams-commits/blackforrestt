@@ -1,0 +1,2 @@
+ALTER TABLE "Position"
+ADD COLUMN "adminPnlAdjustment" DECIMAL(18,8) NOT NULL DEFAULT 0;

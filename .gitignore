@@ -1,0 +1,23 @@
+node_modules/
+.next/
+coverage/
+dist/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+!deploy/.env.production.example
+npm-debug.log*
+.DS_Store
+# KYC document test artifacts (never commit PII or sample uploads)
+tests/fixtures/
+uploads/
+.zcode/
+# Phase 8 generated verification evidence
+artifacts/
+e2e/node_modules/
+e2e/playwright-report/
+e2e/test-results/
+.next/
+node_modules/
+docs/

@@ -1,0 +1,1 @@
+ALTER TYPE "InstrumentCategory" ADD VALUE IF NOT EXISTS 'STOCK';

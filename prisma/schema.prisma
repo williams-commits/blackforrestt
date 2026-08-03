@@ -1,0 +1,889 @@
+// blckforest database schema — forex broker platform.
+//
+// Models a light-themed forex broker supporting two position types:
+//   - CFD: open BUY/SELL at current rate, hold, close manually.
+//   - STRIKE: open at a strike rate, settle at "openedTill" expiry.
+//
+// There is no order book / matching engine: positions open instantly against
+// the broker's quoted rate, exactly like a dealing-desk broker.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+enum AdminRole {
+  SUPER_ADMIN
+  COMPLIANCE
+  FINANCE
+  DEALER
+  RISK
+  SUPPORT
+  AUDITOR
+}
+
+enum AuditDomain {
+  SECURITY
+  KYC
+  PAYMENT
+  LEDGER
+  EXECUTION
+  RECONCILIATION
+  CONFIGURATION
+  SUPPORT
+  ADMIN
+  SYSTEM
+}
+
+enum SupportCaseStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum SupportCasePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum RiskRuleSeverity {
+  INFO
+  WARNING
+  BLOCKING
+}
+
+enum AdminChangeDomain {
+  ACCESS
+  RISK
+  INSTRUMENT
+  CONFIGURATION
+}
+
+enum AdminChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXECUTED
+  CANCELLED
+}
+
+enum InstrumentCategory {
+  FOREX
+  COMMODITY
+  INDEX
+  CRYPTO
+  STOCK
+}
+
+enum PositionType {
+  CFD
+  STRIKE
+}
+
+enum PositionSide {
+  BUY
+  SELL
+}
+
+enum PositionStatus {
+  OPEN
+  CLOSED
+}
+
+model Instrument {
+  // Stable symbol, e.g. "AUDCAD", "EURUSD", "XAUUSD", "BTCUSD".
+  symbol      String  @id
+  name        String
+  // Asset class, used to group instruments in the sidebar + filter in queries.
+  category    InstrumentCategory @default(FOREX)
+  base        String // e.g. "AUD"
+  quote       String // e.g. "CAD"
+  // Price decimal places (5 for most pairs, 3 for JPY pairs).
+  digits      Int     @default(5)
+  // Size of one pip in price terms (0.0001 for 5-digit, 0.01 for JPY).
+  pipSize     Decimal @db.Decimal(18, 8)
+  // Money value of one pip per 1.0 lot, in quote currency.
+  pipValue    Decimal @db.Decimal(18, 8)
+  // Contract size: 1 lot = this many units of base currency.
+  contractSize Decimal @default(100000) @db.Decimal(18, 4)
+  // Margin required per 1.0 lot, in account currency (USD), at base price.
+  marginPerLot Decimal @db.Decimal(18, 4)
+  // Overnight swap in pips per lot (long / short). 0 in the sim.
+  swapLongPips  Decimal @default(0) @db.Decimal(18, 8)
+  swapShortPips Decimal @default(0) @db.Decimal(18, 8)
+  // Commission per lot round-turn, in account currency.
+  commissionPerLot Decimal @default(7) @db.Decimal(18, 4)
+  // Seed/anchor price for the simulator (also the initial price if no live feed).
+  basePrice   Decimal @db.Decimal(24, 8)
+  // External feed symbol (e.g. "OANDA:EUR_USD", "BINANCE:BTCUSDT") for live data.
+  feedSymbol  String?
+  active      Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  positions   Position[]
+
+  @@index([active])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String?  @unique
+  name         String?
+  // bcrypt password hash. Null for the legacy dev user / OAuth-only accounts.
+  passwordHash String?
+  // Trading account number shown in the UI (e.g. 6583478).
+  accountNo    String?  @unique
+  isDev        Boolean  @default(false)
+  // Admin flag gates access to /admin (KYC review tooling).
+  isAdmin      Boolean  @default(false)
+  verified     Boolean  @default(false)
+  emailVerifiedAt DateTime?
+  failedLoginCount Int @default(0)
+  lockedUntil DateTime?
+  passwordChangedAt DateTime?
+  mfaSecretEncrypted String?
+  mfaEnabledAt DateTime?
+  mfaLastUsedStep BigInt?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  wallets      Wallet[]
+  positions    Position[]
+  metrics      AccountMetrics?
+  transactions Transaction[]
+  kyc          KycSubmission?
+  paymentRequests PaymentRequest[]
+  ledgerAccounts  LedgerAccount[]
+  ledgerTransactions LedgerTransaction[]
+  securityTokens SecurityToken[]
+  recoveryCodes MfaRecoveryCode[]
+  securitySessions SecuritySession[]
+  kycDocuments   KycDocument[]
+  notifications  Notification[]
+  reconciliationCases  ReconciliationCase[]
+  reconciliationBlocks ReconciliationBlock[]
+  adminRoles           AdminRoleAssignment[]
+  emailDeliveries      EmailDelivery[]
+}
+
+enum SecurityTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model SecurityToken {
+  id         String            @id @default(cuid())
+  userId     String
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       SecurityTokenType
+  tokenHash  String            @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime          @default(now())
+
+  @@index([userId, type, createdAt])
+  @@index([type, expiresAt])
+}
+
+model MfaRecoveryCode {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String   @unique
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, usedAt])
+}
+
+model SecuritySession {
+  id            String   @id
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId      String
+  deviceName    String
+  userAgent     String?
+  ipHash        String?
+  mfaVerifiedAt DateTime?
+  createdAt     DateTime @default(now())
+  lastSeenAt    DateTime @default(now())
+  expiresAt     DateTime
+  revokedAt     DateTime?
+
+  @@index([userId, revokedAt, expiresAt])
+  @@index([userId, deviceId])
+}
+
+model Wallet {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset     String // e.g. "USD"
+  free      Decimal  @default(0) @db.Decimal(36, 8)
+  locked    Decimal  @default(0) @db.Decimal(36, 8)
+
+  @@unique([userId, asset])
+  @@index([userId])
+}
+
+// Cached/derived account metrics, recomputed on every tick. Stored so the REST
+// account endpoint and the WS snapshot can read them without re-deriving.
+model AccountMetrics {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance     Decimal  @default(0) @db.Decimal(36, 8)
+  credit      Decimal  @default(0) @db.Decimal(36, 8)
+  // Equity = balance + credit + floating PnL.
+  equity      Decimal  @default(0) @db.Decimal(36, 8)
+  // Margin currently locked by open positions.
+  margin      Decimal  @default(0) @db.Decimal(36, 8)
+  // marginLevel = equity / margin * 100 (percent). Null when margin is 0.
+  marginLevel Decimal? @db.Decimal(18, 4)
+  // Free margin = equity - margin.
+  free        Decimal  @default(0) @db.Decimal(36, 8)
+  // Sum of unrealized PnL across open positions.
+  floatingPl  Decimal  @default(0) @db.Decimal(36, 8)
+  updatedAt   DateTime @updatedAt
+}
+
+model Position {
+  id         String         @id @default(cuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  symbol     String
+  instrument Instrument     @relation(fields: [symbol], references: [symbol])
+  type       PositionType
+  side       PositionSide
+  // Volume in lots.
+  volume     Decimal        @db.Decimal(18, 4)
+  // Rate at which the position was opened (market rate for CFD).
+  openRate   Decimal        @db.Decimal(24, 8)
+  // For STRIKE trades: the strike rate the trade was placed at. Null for CFD.
+  strikeRate Decimal?       @db.Decimal(24, 8)
+  // Current mark rate (live-updated while open).
+  currentRate Decimal       @default(0) @db.Decimal(24, 8)
+  // Optional risk management levels.
+  stopLoss   Decimal?       @db.Decimal(24, 8)
+  takeProfit Decimal?       @db.Decimal(24, 8)
+  // Overnight financing in account currency.
+  swap       Decimal        @default(0) @db.Decimal(18, 8)
+  // Durable swap cursor prevents double charging or skipping elapsed time after restart.
+  swapAccruedAt DateTime    @default(now())
+  // Per-lot commission charged at open.
+  commission Decimal        @default(0) @db.Decimal(18, 8)
+  // Broker "trading commission" (separate line item shown in the table).
+  tradingCommission Decimal @default(0) @db.Decimal(18, 8)
+  // Realized profit (account currency). Updated live for open, final on close.
+  profit     Decimal        @default(0) @db.Decimal(18, 8)
+  // Audited simulation-only adjustment applied by an authorized dealer.
+  adminPnlAdjustment Decimal @default(0) @db.Decimal(18, 8)
+  // Net = profit + swap - commission - tradingCommission.
+  netProfit  Decimal        @default(0) @db.Decimal(18, 8)
+  status     PositionStatus @default(OPEN)
+  // CFD: openedTill is null (open-ended). STRIKE: the settlement time.
+  openedAt   DateTime       @default(now())
+  openedTill DateTime?
+  closedAt   DateTime?
+  // MANUAL | STOP_LOSS | TAKE_PROFIT | EXPIRY | STOP_OUT.
+  closeReason String?
+  idempotencyKey String?
+  requestFingerprint String?
+
+  @@index([userId, status])
+  @@index([symbol, status])
+  @@unique([userId, idempotencyKey])
+}
+
+enum TxnType {
+  DEPOSIT
+  WITHDRAW
+  BONUS
+  ADJUSTMENT
+  COMMISSION
+  SWAP
+  TRADE_PNL
+  FEE
+  REVERSAL
+  NEGATIVE_BALANCE_PROTECTION
+}
+
+enum TxnStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+  CANCELLED
+  REVERSED
+}
+
+model Transaction {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      TxnType
+  status    TxnStatus @default(COMPLETED)
+  amount    Decimal    @db.Decimal(36, 8) // signed: + for credit, - for debit
+  asset     String     @default("USD")
+  // Optional description / method (e.g. "Bank transfer", "Visa ****1234").
+  description String?
+  reference String?
+  createdAt DateTime   @default(now())
+
+  paymentRequest PaymentRequest?
+
+  @@index([userId, createdAt])
+  @@index([userId, type, createdAt])
+  @@unique([userId, reference])
+}
+
+enum KycStatus {
+  NOT_SUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model KycSubmission {
+  id          String     @id @default(cuid())
+  userId      String     @unique
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      KycStatus  @default(NOT_SUBMITTED)
+  firstName   String?
+  lastName    String?
+  dob         DateTime?
+  country     String?
+  address     String?
+  city        String?
+  postalCode  String?
+  docType     String? // PASSPORT | ID_CARD | DRIVING_LICENSE
+  // In a real system this would be a file upload URL. Here we store a label.
+  docReference String?
+  note        String? // reviewer note on rejection
+  submittedAt DateTime?
+  reviewedAt  DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  documents   KycDocument[]
+}
+
+enum KycDocumentStatus {
+  PENDING_SCAN
+  CLEAN
+  BLOCKED
+  QUARANTINED
+}
+
+// A privately stored KYC document (e.g. passport, proof of address).
+// Only an opaque storage key is persisted — never object bytes or a public URL.
+model KycDocument {
+  id              String            @id @default(cuid())
+  userId          String
+  kycSubmissionId String
+  // Opaque storage key, NOT a URL. e.g. "kyc/<userId>/<id>/v1"
+  storageKey      String            @unique
+  // Which logical bucket the object currently lives in (quarantine or sealed).
+  bucket          String
+  docType         String // PASSPORT | ID_CARD | DRIVING_LICENSE | PROOF_OF_ADDRESS
+  declaredMime    String
+  detectedMime    String?
+  sizeBytes       Int
+  sha256          String
+  status          KycDocumentStatus @default(PENDING_SCAN)
+  version         Int               @default(1)
+  uploadedAt      DateTime          @default(now())
+  finalizedAt     DateTime?
+  // Soft-delete tombstone used by retention; backing object is also removed.
+  deletedAt       DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kycSubmission   KycSubmission     @relation(fields: [kycSubmissionId], references: [id], onDelete: Cascade)
+  accesses        KycDocumentAccess[]
+
+  @@index([userId])
+  @@index([kycSubmissionId])
+  @@index([status])
+}
+
+// Every compliance download mints a short-lived signed URL and records who/why.
+model KycDocumentAccess {
+  id         String      @id @default(cuid())
+  documentId String
+  actorId    String
+  reason     String
+  ipHash     String?
+  createdAt  DateTime    @default(now())
+  document   KycDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+
+enum PaymentRequestType {
+  DEPOSIT
+  WITHDRAWAL
+}
+
+enum PaymentRequestStatus {
+  PENDING
+  AWAITING_APPROVAL
+  APPROVED
+  REJECTED
+  CANCELLED
+  REVERSED
+}
+
+enum PaymentReconciliationStatus {
+  PENDING
+  MATCHED
+  MISMATCHED
+}
+
+enum PaymentProofStatus {
+  PENDING_SCAN
+  CLEAN
+  BLOCKED
+  QUARANTINED
+}
+
+enum PaymentEventType {
+  CREATED
+  PROOF_RECEIVED
+  PROOF_FINALIZED
+  PROOF_BLOCKED
+  PREPARED
+  APPROVED
+  REJECTED
+  CANCELLED
+  REVERSED
+  RECONCILED
+  RISK_REJECTED
+}
+
+model PaymentRequest {
+  id                String               @id @default(cuid())
+  userId            String
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionId     String               @unique
+  transaction       Transaction          @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  type              PaymentRequestType
+  status            PaymentRequestStatus @default(PENDING)
+  amount            Decimal              @db.Decimal(36, 8)
+  asset             String               @default("USD")
+  method            String
+  userReference     String?
+  externalReference String?
+  reviewerNote      String?
+  beneficiaryEncrypted   String?
+  beneficiaryFingerprint String?
+  beneficiarySummary     String?
+  methodDetailsEncrypted String?
+  methodDetailsFingerprint String?
+  methodDetailsSummary   String?
+  beneficiaryAvailableAt DateTime?
+  riskHoldUntil          DateTime?
+  preparedBy        String?
+  preparedAt        DateTime?
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  reconciliationStatus    PaymentReconciliationStatus @default(PENDING)
+  reconciliationReference String?
+  reconciledAmount        Decimal?                    @db.Decimal(36, 8)
+  reconciledBy            String?
+  reconciledAt            DateTime?
+  reconciliationNote      String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  proofs            PaymentProof[]
+  events            PaymentEvent[]
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@index([reconciliationStatus, createdAt])
+  @@unique([asset, externalReference])
+  @@unique([asset, reconciliationReference])
+}
+
+model PaymentProof {
+  id               String             @id @default(cuid())
+  paymentRequestId String
+  paymentRequest   PaymentRequest     @relation(fields: [paymentRequestId], references: [id], onDelete: Cascade)
+  storageKey       String             @unique
+  bucket           String
+  declaredMime     String
+  detectedMime     String?
+  sizeBytes        Int
+  sha256           String
+  status           PaymentProofStatus @default(PENDING_SCAN)
+  uploadedBy       String
+  uploadedAt       DateTime           @default(now())
+  finalizedAt      DateTime?
+  deletedAt        DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([paymentRequestId, createdAt])
+  @@index([status])
+}
+
+model PaymentEvent {
+  id                 String           @id @default(cuid())
+  paymentRequestId   String
+  paymentRequest     PaymentRequest   @relation(fields: [paymentRequestId], references: [id], onDelete: Cascade)
+  type               PaymentEventType
+  actorId            String?
+  commandKey         String?
+  commandFingerprint String?
+  metadata           Json?
+  createdAt          DateTime         @default(now())
+
+  @@index([paymentRequestId, createdAt])
+  @@unique([paymentRequestId, commandKey])
+}
+
+
+model EmailDelivery {
+  id                String   @id @default(cuid())
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  recipient         String
+  template          String
+  subject           String
+  variables         Json
+  status            String   @default("PENDING")
+  attempts          Int      @default(0)
+  nextAttemptAt     DateTime @default(now())
+  providerMessageId String?
+  lastError         String?
+  sentAt            DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([userId, createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  metadata  Json?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt, createdAt])
+}
+
+// ── Phase 5: reconciliation ──────────────────────────────────────────────────
+// A replay-safe batch run that matches every operational feed (ledger trial
+// balance, wallet/account projections, position P&L, payment settlement) and
+// records any divergence as cases, optionally blocking trading/withdrawals.
+
+enum ReconciliationRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ReconciliationRunTrigger {
+  SCHEDULED
+  MANUAL
+  RETRY
+  STARTUP_CATCHUP
+}
+
+enum ReconciliationCaseStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum ReconciliationSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum ReconciliationBlockScope {
+  TRADE
+  WITHDRAW
+}
+
+enum ReconciliationFeedKind {
+  LEDGER_TRIAL_BALANCE
+  USER_PROJECTION
+  WALLET_PROJECTION
+  ACCOUNT_METRICS
+  POSITION_PNL
+  PAYMENT_SETTLEMENT
+}
+
+model ReconciliationRun {
+  id           String                 @id @default(cuid())
+  // Deterministic, caller-supplied or generated; replays return the stored run.
+  reference    String                 @unique
+  status       ReconciliationRunStatus  @default(RUNNING)
+  trigger      ReconciliationRunTrigger @default(MANUAL)
+  windowStart  DateTime?
+  windowEnd    DateTime?
+  requestedBy  String?
+  startedAt    DateTime                 @default(now())
+  heartbeatAt  DateTime                 @default(now())
+  completedAt  DateTime?
+  usersChecked Int                    @default(0)
+  caseCount    Int                    @default(0)
+  blockCount   Int                    @default(0)
+  summary      Json?
+  errorMessage String?
+  cases        ReconciliationCase[]
+
+  @@index([startedAt])
+  @@index([status, startedAt])
+}
+
+model ReconciliationCase {
+  id              String                   @id @default(cuid())
+  runId           String
+  run             ReconciliationRun        @relation(fields: [runId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  feedKind        ReconciliationFeedKind
+  severity        ReconciliationSeverity
+  status          ReconciliationCaseStatus @default(OPEN)
+  message         String
+  expectedValue   String?
+  actualValue     String?
+  ownerAssignee   String?
+  resolutionNote  String?
+  detectedAt      DateTime                 @default(now())
+  acknowledgedAt  DateTime?
+  resolvedAt      DateTime?
+  blocks          ReconciliationBlock[]
+
+  @@index([runId])
+  @@index([userId, status])
+  @@index([severity, status])
+}
+
+// An active trading/withdrawal block opened by a critical reconciliation case.
+// One block is retained per discrepancy/case. A scope is blocked while any row
+// for that user/scope remains unreleased.
+model ReconciliationBlock {
+  id          String                   @id @default(cuid())
+  userId      String
+  user        User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scope       ReconciliationBlockScope
+  reason      String
+  caseId      String?
+  case        ReconciliationCase?      @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  createdAt   DateTime                 @default(now())
+  releasedAt  DateTime?
+  releasedBy  String?
+  releaseNote String?
+
+  @@index([userId, scope, releasedAt])
+  @@index([caseId])
+}
+
+enum LedgerAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum LedgerDirection {
+  DEBIT
+  CREDIT
+}
+
+enum LedgerTransactionStatus {
+  DRAFT
+  POSTED
+}
+
+enum LedgerTransactionKind {
+  DEPOSIT
+  WITHDRAWAL_RESERVATION
+  WITHDRAWAL
+  REVERSAL
+  MARGIN_RESERVATION
+  COMMISSION
+  SWAP
+  TRADING_PNL
+  BONUS
+  FEE
+  ADMIN_ADJUSTMENT
+  NEGATIVE_BALANCE_PROTECTION
+  DEMO_FUNDING
+}
+
+model LedgerAccount {
+  id        String            @id @default(cuid())
+  code      String            @unique
+  name      String
+  type      LedgerAccountType
+  asset     String            @default("USD")
+  userId    String?
+  user      User?             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  entries   LedgerEntry[]
+  createdAt DateTime          @default(now())
+
+  @@index([userId, asset])
+}
+
+model LedgerTransaction {
+  id          String                  @id @default(cuid())
+  reference   String                  @unique
+  fingerprint String                  @unique
+  kind        LedgerTransactionKind
+  description String
+  status      LedgerTransactionStatus @default(DRAFT)
+  createdBy   String?
+  userId      String?
+  user        User?                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  sourceType  String?
+  sourceId    String?
+  metadata    Json?
+  reversalOfId String?                @unique
+  reversalOf   LedgerTransaction?     @relation("LedgerReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy   LedgerTransaction?     @relation("LedgerReversal")
+  entries      LedgerEntry[]
+  effectiveAt DateTime                @default(now())
+  createdAt    DateTime               @default(now())
+
+  @@index([createdAt])
+  @@index([userId, effectiveAt])
+  @@index([sourceType, sourceId])
+}
+
+model LedgerEntry {
+  id            String            @id @default(cuid())
+  transactionId String
+  transaction   LedgerTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  accountId     String
+  account       LedgerAccount     @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  direction     LedgerDirection
+  amount        Decimal           @db.Decimal(36, 8)
+  asset         String            @default("USD")
+  createdAt     DateTime          @default(now())
+
+  @@index([transactionId])
+  @@index([accountId, createdAt])
+  @@unique([transactionId, accountId])
+}
+
+model AuditEvent {
+  sequence      BigInt      @id @default(autoincrement())
+  schemaVersion Int         @default(2)
+  domain        AuditDomain @default(ADMIN)
+  actorId       String?
+  action        String
+  entityType    String
+  entityId      String?
+  requestId     String?
+  metadata      Json?
+  previousHash  String?
+  eventHash     String      @unique
+  createdAt     DateTime    @default(now())
+
+  @@index([domain, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([requestId])
+}
+
+model AdminRoleAssignment {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         AdminRole
+  assignedById String?
+  assignedAt   DateTime  @default(now())
+  revokedById  String?
+  revokedAt    DateTime?
+  reason       String?
+
+  @@unique([userId, role])
+  @@index([role, revokedAt])
+  @@index([userId, revokedAt])
+}
+
+model SupportCase {
+  id             String              @id @default(cuid())
+  reference      String              @unique
+  userId         String?
+  subject        String
+  description    String
+  category       String
+  priority       SupportCasePriority @default(NORMAL)
+  status         SupportCaseStatus   @default(OPEN)
+  createdById    String
+  assignedToId   String?
+  resolutionNote String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  resolvedAt     DateTime?
+  closedAt       DateTime?
+
+  @@index([status, priority, createdAt])
+  @@index([userId, createdAt])
+  @@index([assignedToId, status])
+}
+
+model RiskRule {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  name        String
+  description String
+  severity    RiskRuleSeverity @default(WARNING)
+  enabled     Boolean          @default(true)
+  configuration Json
+  version     Int              @default(1)
+  updatedById String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([enabled, severity])
+}
+
+model AdminChangeRequest {
+  id            String            @id @default(cuid())
+  commandKey    String            @unique
+  domain        AdminChangeDomain
+  action        String
+  entityType    String
+  entityId      String?
+  payload       Json
+  status        AdminChangeStatus @default(PENDING)
+  requestedById String
+  reviewedById  String?
+  requestNote   String?
+  reviewNote    String?
+  createdAt     DateTime          @default(now())
+  reviewedAt    DateTime?
+  executedAt    DateTime?
+  cancelledAt   DateTime?
+
+  @@index([status, domain, createdAt])
+  @@index([requestedById, createdAt])
+  @@index([reviewedById, reviewedAt])
+}

@@ -1,0 +1,201 @@
+import { randomInt } from "node:crypto";
+import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
+import bcrypt from "bcryptjs";
+import { prisma, withSerializableRetry } from "@/server/db";
+import {
+  appendAuditEvent,
+  ensureUserLedgerAccount,
+  refreshLedgerProjections,
+} from "@/server/ledger";
+import {
+  applicationOrigin,
+  deliverSecurityEmail,
+  developmentEmailPreviewEnabled,
+  issueSecurityToken,
+  securityEmailProviderConfigured,
+} from "@/server/security/tokens";
+import { appendSecurityAudit } from "@/server/security/audit";
+import { sendImmediateEmail } from "@/server/email/service";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const RegisterSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
+  password: z
+    .string()
+    .min(12, "Password must be at least 12 characters.")
+    .max(128)
+    .refine((value) => /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value), {
+      message: "Password must include uppercase, lowercase and a number.",
+    }),
+});
+
+function registrationRequiresEmailVerification(): boolean {
+  return (process.env.REGISTRATION_REQUIRE_EMAIL_VERIFICATION ?? "false").toLowerCase() === "true";
+}
+
+const ACCOUNT_NUMBER_ATTEMPTS = 10;
+
+/** POST /api/register — create a uniquely numbered simulation account. */
+export async function POST(req: Request) {
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
+  const parsed = RegisterSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid registration.", details: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  const { name, email, password } = parsed.data;
+
+  // Avoid an expensive bcrypt operation for an email that already exists. The
+  // unique constraint below remains the authoritative race-safe check.
+  const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, emailVerifiedAt: true } });
+  if (existing) {
+    return NextResponse.json(
+      {
+        error: "An account with that email already exists.",
+        // True only when the existing account is still unverified, so the
+        // client can offer a resend-verification action in that case alone.
+        needsVerification: !existing.emailVerifiedAt,
+      },
+      { status: 409 },
+    );
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const requireEmailVerification = registrationRequiresEmailVerification();
+
+  for (let attempt = 0; attempt < ACCOUNT_NUMBER_ATTEMPTS; attempt += 1) {
+    const accountNo = String(randomInt(1_000_000, 10_000_000));
+    try {
+      const user = await withSerializableRetry(
+        async (tx) => {
+          const created = await tx.user.create({
+            data: {
+              name,
+              email,
+              passwordHash,
+              accountNo,
+              verified: !requireEmailVerification,
+              emailVerifiedAt: requireEmailVerification ? null : new Date(),
+            },
+            select: { id: true, email: true, name: true, accountNo: true },
+          });
+          await ensureUserLedgerAccount(tx, created.id, "AVAILABLE");
+          await refreshLedgerProjections(tx, created.id);
+          await appendAuditEvent(tx, {
+            actorId: created.id,
+            action: "ACCOUNT_CREATED",
+            entityType: "User",
+            entityId: created.id,
+            metadata: { asset: "USD" },
+          });
+          return created;
+        },
+        { operation: `registration for ${email}` },
+      );
+      let verificationDelivery: "sent" | "preview" | "not_configured" | "failed" = "not_configured";
+      let verificationPreviewUrl: string | undefined;
+      if (requireEmailVerification && user.email) {
+        const issued = await issueSecurityToken({
+          userId: user.id,
+          type: "EMAIL_VERIFICATION",
+        });
+        const verificationUrl = new URL("/verify-email", applicationOrigin());
+        verificationUrl.searchParams.set("token", issued.token);
+
+        if (securityEmailProviderConfigured()) {
+          try {
+            await deliverSecurityEmail({
+              to: user.email,
+              template: "verify-email",
+              actionUrl: verificationUrl.toString(),
+              expiresAt: issued.expiresAt,
+              userId: user.id,
+              idempotencyKey: `security-token-${issued.record.id}`,
+            });
+            await appendSecurityAudit({
+              actorId: user.id,
+              action: "EMAIL_VERIFICATION_DELIVERED",
+              entityType: "SecurityToken",
+              entityId: issued.record.id,
+            });
+            verificationDelivery = "sent";
+          } catch (error) {
+            verificationDelivery = "failed";
+            console.error("Registration verification delivery failed", error);
+            await appendSecurityAudit({
+              actorId: user.id,
+              action: "EMAIL_VERIFICATION_DELIVERY_FAILED",
+              entityType: "SecurityToken",
+              entityId: issued.record.id,
+            });
+          }
+        } else if (developmentEmailPreviewEnabled()) {
+          verificationDelivery = "preview";
+          verificationPreviewUrl = verificationUrl.toString();
+          await appendSecurityAudit({
+            actorId: user.id,
+            action: "EMAIL_VERIFICATION_PREVIEW_CREATED",
+            entityType: "SecurityToken",
+            entityId: issued.record.id,
+          });
+        }
+      }
+      if (!requireEmailVerification && user.email) {
+        try {
+          await sendImmediateEmail({
+            userId: user.id,
+            to: user.email,
+            template: "welcome",
+            variables: { name: user.name ?? "there", actionUrl: new URL("/account", applicationOrigin()).toString() },
+            idempotencyKey: `welcome-${user.id}`,
+          });
+        } catch (error) {
+          console.error("Welcome email delivery failed", error);
+        }
+      }
+      return NextResponse.json(
+        {
+          ok: true,
+          user,
+          emailVerified: !requireEmailVerification,
+          loginAllowed: !requireEmailVerification,
+          verificationDelivery,
+          ...(verificationPreviewUrl ? { verificationPreviewUrl } : {}),
+        },
+        { status: 201 },
+      );
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        const targets = Array.isArray(error.meta?.target) ? error.meta.target.map(String) : [];
+        if (targets.includes("email")) {
+          return NextResponse.json(
+            { error: "An account with that email already exists." },
+            { status: 409 },
+          );
+        }
+        if (targets.includes("accountNo")) continue;
+      }
+      console.error("Registration failed:", error);
+      return NextResponse.json({ error: "Unable to create the account." }, { status: 500 });
+    }
+  }
+
+  return NextResponse.json(
+    { error: "Unable to allocate an account number. Please retry." },
+    { status: 503 },
+  );
+}

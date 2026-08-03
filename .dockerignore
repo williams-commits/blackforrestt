@@ -1,0 +1,14 @@
+.git
+.next
+node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.example
+coverage
+*.zip
+.DS_Store
+tsconfig.tsbuildinfo
+tests/fixtures/
+uploads/
+.zcode

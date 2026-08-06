@@ -1,9 +1,9 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
-import { companyLegalName, supportEmail, brandName } from "@/lib/branding";
+import { companyLegalName, supportEmail } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: `AML Policy — ${brandName()}` };
+export const metadata = { title: "AML Policy" };
 
 export default function AmlPage() {
   return (

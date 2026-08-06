@@ -1,9 +1,9 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
-import { supportEmail, brandName } from "@/lib/branding";
+import { supportEmail } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: `KYC Policy — ${brandName()}` };
+export const metadata = { title: "KYC Policy" };
 
 export default function KycPage() {
   return (

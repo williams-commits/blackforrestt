@@ -3,7 +3,7 @@ import { companyLegalName, supportEmail, companyAddress, brandName, brandTradema
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: `Terms of Service — ${brandName()}` };
+export const metadata = { title: "Terms of Service" };
 
 export default function TermsPage() {
   return (

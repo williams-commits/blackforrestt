@@ -16,7 +16,9 @@ const siteUrl = `https://${domain}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: { default: `${name} — Multi-asset Trading`, template: `%s | ${name}` },
+  // Template: a page setting `title: "About Us"` renders as
+  // "About Us — Black Forest Digital". The default covers the landing page.
+  title: { default: `${name} — Multi-asset Trading`, template: `%s — ${name}` },
   description: "Trade forex, commodities, indices and crypto on a lightning-fast platform with real-time quotes, advanced charting, and tight spreads.",
   applicationName: name,
   keywords: ["trading", "forex", "CFD", "commodities", "indices", "crypto", "online broker", "trading platform"],

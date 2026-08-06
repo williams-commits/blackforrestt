@@ -1,10 +1,9 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
-import { brandName } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
 
-export const metadata = { title: `Beginners Guide — ${brandName()}` };
+export const metadata = { title: "Beginners Trading Guide" };
 
 export default function BeginnersPage() {
   return (

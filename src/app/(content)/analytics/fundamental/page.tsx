@@ -1,10 +1,9 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
-import { brandName } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
 
-export const metadata = { title: `Fundamental Analysis — ${brandName()}` };
+export const metadata = { title: "Fundamental Analysis" };
 
 export default function FundamentalPage() {
   return (

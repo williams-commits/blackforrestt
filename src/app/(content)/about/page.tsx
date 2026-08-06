@@ -3,7 +3,7 @@ import { companyLegalName, brandName, companyAddress } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: `About Us — ${brandName()}` };
+export const metadata = { title: "About Us" };
 
 export default function AboutPage() {
   return (

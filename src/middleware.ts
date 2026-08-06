@@ -106,9 +106,16 @@ function domainRedirect(req: Request): NextResponse | null {
     }
   }
 
-  // On the trade subdomain: bounce marketing content routes to the apex.
+  // On the trade subdomain: bounce marketing routes to the apex.
+  // The landing page ("/") and all (content) routes are marketing — they
+  // belong on the apex domain. Without this, clicking the logo on
+  // trade.blackforrestt.com stays on the trade subdomain instead of going
+  // to the marketing site.
   if (host === tradeSub) {
-    if (MARKETING_DOMAIN_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    const isMarketing =
+      pathname === "/" ||
+      MARKETING_DOMAIN_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+    if (isMarketing) {
       url.hostname = brandDomain;
       return NextResponse.redirect(url, 307);
     }

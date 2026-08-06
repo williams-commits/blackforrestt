@@ -39,7 +39,7 @@ export default function PrivacyPage() {
         <p>We may update this policy from time to time. Material changes will be notified by email or in-platform notice. Continued use after a change constitutes acceptance.</p>
       </Section>
       <Section title="8. Contact">
-        <p>{companyLegalName()}{companyAddress() ? `, ${companyAddress()}` : ", 13 Ramsgate Street, London, England, E8 2FD"}. Email: {supportEmail()}.</p>
+        <p>{companyLegalName()}{companyAddress() ? `, ${companyAddress()}` : ""}. Email: {supportEmail()}.</p>
       </Section>
     </ArticleLayout>
   );

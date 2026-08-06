@@ -1,7 +1,7 @@
 import { InformersWidget } from "@/components/landing/InformersWidget";
-import { brandDomain } from "@/lib/branding";
+import { brandName, brandDomain } from "@/lib/branding";
 
-export const metadata = { title: "Market Informers — Black Forest Digital" };
+export const metadata = { title: `Market Informers — ${brandName()}` };
 
 /** Server component: reads the brand domain once and passes it to the client widget. */
 export default function InformersPage() {

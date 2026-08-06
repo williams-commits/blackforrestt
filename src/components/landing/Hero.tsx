@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { absoluteTradeUrl,  } from "@/lib/branding";
+import { absoluteTradeUrl, tradeOrigin } from "@/lib/branding";
 
 /** Hero: headline + subheadline + dual CTA + a platform mockup. */
 export function Hero() {
@@ -47,7 +47,7 @@ export function Hero() {
               <span className="h-2.5 w-2.5 rounded-full bg-down/60" />
               <span className="h-2.5 w-2.5 rounded-full bg-brand/60" />
               <span className="h-2.5 w-2.5 rounded-full bg-up/60" />
-              <span className="ml-3 text-[10px] text-text-faint">trade.blackforestd.net</span>
+              <span className="ml-3 text-[10px] text-text-faint">{tradeOrigin().replace(/^https?:\/\//, "")}</span>
             </div>
             <div className="grid grid-cols-3 gap-px bg-border">
               <MockCol rows={["AUDCAD", "EURUSD", "GBPUSD", "USDJPY"]} />

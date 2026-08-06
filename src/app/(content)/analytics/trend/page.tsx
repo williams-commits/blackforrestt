@@ -1,6 +1,8 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
+import { brandName } from "@/lib/branding";
 
-export const metadata = { title: "Determining Trend Potential — Black Forest Digital" };
+
+export const metadata = { title: `Determining Trend Potential — ${brandName()}` };
 
 export default function TrendPage() {
   return (

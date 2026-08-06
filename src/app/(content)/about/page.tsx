@@ -1,5 +1,5 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
-import { companyLegalName, brandName } from "@/lib/branding";
+import { companyLegalName, brandName, companyAddress } from "@/lib/branding";
 
 export const metadata = { title: `About Us — ${brandName()}` };
 
@@ -32,7 +32,7 @@ export default function AboutPage() {
           fees, slow execution, and opaque pricing. We set out to build the opposite.
         </p>
         <p>
-          Headquartered at 13 Ramsgate Street, London, we serve traders worldwide with access to forex,
+          {companyAddress() ? <>Headquartered at {companyAddress()}, we serve</> : "We serve"} traders worldwide with access to forex,
           commodities, indices, and digital assets — all from one account, on one platform that works on any
           device. Our matching infrastructure streams live prices over WebSockets, so the rate you see is the
           rate you get.

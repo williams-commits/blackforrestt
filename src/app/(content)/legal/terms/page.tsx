@@ -1,5 +1,5 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
-import { companyLegalName, supportEmail, companyAddress, brandName } from "@/lib/branding";
+import { companyLegalName, supportEmail, companyAddress, brandName, brandTrademark } from "@/lib/branding";
 
 export const metadata = { title: `Terms of Service — ${brandName()}` };
 
@@ -25,7 +25,7 @@ export default function TermsPage() {
         <p>You agree not to: exploit errors in pricing or software (&quot;arbitrage of system errors&quot;); use the platform for money laundering or any illegal purpose; reverse-engineer, scrape, or overload our infrastructure; or share your account. Violations may result in immediate closure and forfeiture of balances derived from prohibited activity.</p>
       </Section>
       <Section title="7. Intellectual property">
-        <p>The platform, its branding, content, and software are the property of {companyLegalName()} and protected by applicable law. &quot;blckforest&quot; is a trademark of {companyLegalName()}. You may not copy, redistribute, or create derivative works without our written permission.</p>
+        <p>The platform, its branding, content, and software are the property of {companyLegalName()} and protected by applicable law. {brandTrademark()} is a trademark of {companyLegalName()}. You may not copy, redistribute, or create derivative works without our written permission.</p>
       </Section>
       <Section title="8. Limitation of liability">
         <p>To the maximum extent permitted by law, {companyLegalName()} shall not be liable for indirect, incidental, or consequential damages, or for any loss of profit, arising from your use of the platform. Our aggregate liability is limited to the amount of fees you paid us in the preceding three months.</p>
@@ -34,7 +34,7 @@ export default function TermsPage() {
         <p>We may revise these terms periodically. Material changes will be notified by email or in-platform notice. Continued use after the effective date constitutes acceptance of the revised terms.</p>
       </Section>
       <Section title="10. Contact">
-        <p>{companyLegalName()}{companyAddress() ? `, ${companyAddress()}` : ", 13 Ramsgate Street, London, England, E8 2FD"}. Email: {supportEmail()}.</p>
+        <p>{companyLegalName()}{companyAddress() ? `, ${companyAddress()}` : ""}. Email: {supportEmail()}.</p>
       </Section>
     </ArticleLayout>
   );

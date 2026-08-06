@@ -1,6 +1,8 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
+import { brandName } from "@/lib/branding";
 
-export const metadata = { title: "Fundamental Analysis — Black Forest Digital" };
+
+export const metadata = { title: `Fundamental Analysis — ${brandName()}` };
 
 export default function FundamentalPage() {
   return (

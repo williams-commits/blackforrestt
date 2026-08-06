@@ -1,8 +1,8 @@
 import { ArticleLayout } from "@/components/landing/ArticleLayout";
 import { ContactForm } from "@/components/landing/ContactForm";
-import { companyAddress, supportEmail } from "@/lib/branding";
+import { brandName, companyAddress, supportEmail } from "@/lib/branding";
 
-export const metadata = { title: "Contact — Black Forest Digital" };
+export const metadata = { title: `Contact — ${brandName()}` };
 
 /** Server component: reads branding env vars once and passes them to the client form. */
 export default function ContactPage() {

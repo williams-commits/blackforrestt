@@ -27,14 +27,7 @@ export function Footer() {
               and indices.
             </p>
             <address className="mt-5 not-italic text-sm text-white/70 leading-relaxed">
-              {companyAddress() ? (
-                <>{companyAddress()}<br /></>
-              ) : (
-                <>
-                    13 Ramsgate Street<br />
-                    London, England, E8 2FD<br />
-                </>
-              )}
+              {companyAddress() && <>{companyAddress()}<br /></>}
               <span className="text-white/50">{supportEmail()}</span>
             </address>
           </div>

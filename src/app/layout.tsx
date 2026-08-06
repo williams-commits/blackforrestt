@@ -1,14 +1,36 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
-import { brandName } from "@/lib/branding";
+import { brandName, brandDomain, brandShortName } from "@/lib/branding";
 
 const name = brandName();
+const domain = brandDomain();
+const siteUrl = `https://${domain}`;
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: { default: `${name} — Multi-asset Trading`, template: `%s | ${name}` },
-  description: "A multi-asset trading platform for forex, commodities, indices and crypto.",
-  robots: { index: true, follow: true },
+  description: "Trade forex, commodities, indices and crypto on a lightning-fast platform with real-time quotes, advanced charting, and tight spreads.",
+  applicationName: name,
+  keywords: ["trading", "forex", "CFD", "commodities", "indices", "crypto", "online broker", "trading platform"],
+  authors: [{ name: brandShortName() }],
+  creator: brandShortName(),
+  publisher: name,
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteUrl,
+    siteName: name,
+    title: `${name} — Multi-asset Trading`,
+    description: "Trade forex, commodities, indices and crypto on a lightning-fast platform with real-time quotes, advanced charting, and tight spreads.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${name} — Multi-asset Trading`,
+    description: "Trade forex, commodities, indices and crypto on a lightning-fast platform.",
+  },
   icons: [
     { rel: "icon", url: "/favicon.svg" },
     { rel: "shortcut icon", url: "/favicon.svg" },

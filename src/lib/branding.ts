@@ -32,12 +32,12 @@ export function companyLegalName(): string {
 
 /** Support/contact email shown in the UI and legal pages. */
 export function supportEmail(): string {
-  return (process.env.SUPPORT_EMAIL || "support@example.com").trim();
+  return (process.env.SUPPORT_EMAIL || "support@blackforrestt.com").trim();
 }
 
-/** Public domain (e.g. "blackforestd.net"). */
+/** Public domain (e.g. "blackforrestt.com"). */
 export function brandDomain(): string {
-  return (process.env.BRAND_DOMAIN || "example.com").trim();
+  return (process.env.BRAND_DOMAIN || "blackforrestt.com").trim();
 }
 
 /**
@@ -80,7 +80,7 @@ export function companyAddress(): string {
   return (process.env.COMPANY_ADDRESS || "").trim();
 }
 
-/** Brand trademark symbol (e.g. "blckforest™"). */
+/** Brand trademark symbol (e.g. "Black Forest™"). */
 export function brandTrademark(): string {
-  return (process.env.BRAND_TM || "blckforest™").trim();
+  return (process.env.BRAND_TM || "Black Forest™").trim();
 }

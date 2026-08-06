@@ -1,6 +1,8 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 import { companyLegalName, supportEmail, companyAddress, brandName } from "@/lib/branding";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: `Privacy Policy — ${brandName()}` };
 
 export default function PrivacyPage() {

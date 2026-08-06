@@ -3,6 +3,13 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { brandName, brandDomain, brandShortName } from "@/lib/branding";
 
+// Force dynamic rendering so branding values (brandName, brandDomain, etc.)
+// are read from process.env at request time, not baked into static HTML at
+// build time. This allows changing SUPPORT_EMAIL, BRAND_DOMAIN, etc. in
+// .env.production with only a container recreate (--force-recreate), instead
+// of requiring a full image rebuild.
+export const dynamic = "force-dynamic";
+
 const name = brandName();
 const domain = brandDomain();
 const siteUrl = `https://${domain}`;

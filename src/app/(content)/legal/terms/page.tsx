@@ -1,6 +1,8 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 import { companyLegalName, supportEmail, companyAddress, brandName, brandTrademark } from "@/lib/branding";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: `Terms of Service — ${brandName()}` };
 
 export default function TermsPage() {

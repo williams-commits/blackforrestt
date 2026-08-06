@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { clientTradeUrl } from "@/lib/branding";
 
 interface ContactFormProps {
   /** Branding values passed from the server so the client and server render match. */
@@ -106,7 +107,7 @@ export function ContactForm({ address, email }: ContactFormProps) {
         <div className="bg-brand-soft border border-brand/30 rounded-xl p-5">
           <h3 className="text-sm font-semibold text-brand">Already a client?</h3>
           <p className="mt-1 text-xs text-text-muted">The fastest way to get help is our in-platform live chat.</p>
-          <a href="/login" className="mt-3 inline-block text-xs font-semibold text-brand hover:underline">Log in →</a>
+          <a href={clientTradeUrl("/login")} className="mt-3 inline-block text-xs font-semibold text-brand hover:underline">Log in →</a>
         </div>
       </aside>
     </div>

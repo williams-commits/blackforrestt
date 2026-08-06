@@ -33,6 +33,41 @@ export function brandDomain(): string {
   return (process.env.BRAND_DOMAIN ?? "example.com").trim();
 }
 
+/**
+ * The authenticated application subdomain origin (e.g.
+ * "https://trade.blackforrestt.com"). The trade subdomain hosts login/register,
+ * the trading terminal, account portal, admin console, and the authenticated
+ * API surface. The apex domain (`blackforrestt.com`) serves marketing only.
+ *
+ * Override the subdomain prefix with the `TRADE_SUBDOMAIN` env var (default
+ * "trade") if you ever use a different label (e.g. "app").
+ *
+ * Server-only: reads BRAND_DOMAIN at runtime. For client components, use
+ * `clientTradeUrl()` instead (which reads NEXT_PUBLIC_ vars baked at build).
+ */
+export function tradeOrigin(): string {
+  const sub = (process.env.TRADE_SUBDOMAIN ?? "trade").trim();
+  return `https://${sub}.${brandDomain()}`;
+}
+
+/** Build an absolute URL on the trade subdomain for a relative path (server). */
+export function absoluteTradeUrl(path = "/"): string {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${tradeOrigin()}${normalized}`;
+}
+
+/**
+ * Client-safe trade origin for use in client components. Reads
+ * NEXT_PUBLIC_TRADE_ORIGIN (an absolute origin baked at build time). When unset
+ * (e.g. local development with a single domain), falls back to "" so relative
+ * links are used — keeping the link on the same origin.
+ */
+export function clientTradeUrl(path = "/"): string {
+  const origin = (process.env.NEXT_PUBLIC_TRADE_ORIGIN ?? "").trim();
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return origin ? `${origin}${normalized}` : normalized;
+}
+
 /** Registered company address shown in the footer and legal pages. */
 export function companyAddress(): string {
   return (process.env.COMPANY_ADDRESS ?? "").trim();

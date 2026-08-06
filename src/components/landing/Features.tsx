@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { absoluteTradeUrl } from "@/lib/branding";
 
 /** Section heading helper used across feature sections. */
 function SectionHead({ eyebrow, title, subtitle }: { eyebrow: string; title: string; subtitle?: string }) {
@@ -87,7 +88,7 @@ export function Education() {
               </li>
             ))}
           </ul>
-          <Link href="/register" className="inline-block mt-8 px-5 py-2.5 rounded-lg bg-brand text-white text-sm font-semibold hover:brightness-110 transition">
+          <Link href={absoluteTradeUrl("/register")} className="inline-block mt-8 px-5 py-2.5 rounded-lg bg-brand text-white text-sm font-semibold hover:brightness-110 transition">
             Start Learning
           </Link>
         </div>
@@ -123,7 +124,7 @@ export function Support() {
           to start practicing right away.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href="/register" className="px-6 py-3 rounded-lg bg-white text-brand font-semibold hover:bg-canvas transition">
+          <Link href={absoluteTradeUrl("/register")} className="px-6 py-3 rounded-lg bg-white text-brand font-semibold hover:bg-canvas transition">
             Open Free Account
           </Link>
           <Link href="/trade/AUDCAD" className="px-6 py-3 rounded-lg bg-white/15 text-white font-semibold hover:bg-white/25 transition border border-white/30">

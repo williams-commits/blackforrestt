@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { Logo } from "@/components/trade/Logo";
 import { companyLegalName, supportEmail, companyAddress, brandTrademark } from "@/lib/branding";
+import Image from "next/image";
+const logos = [
+  "/payments/visa.png",
+  "/payments/mastercard.png",
+  "/payments/bitcoin.jpg",
+  "/payments/amex.jpg",
+  "/payments/maestro.png",
+  // "/payments/ethereum.png",
+];
 
 /** Marketing footer: contact, risk disclaimers, payment icons, legal. */
 export function Footer() {
@@ -43,10 +52,8 @@ export function Footer() {
         {/* Payment icons */}
         <div className="mt-10 pt-8 border-t border-white/10 flex flex-wrap items-center gap-3">
           <span className="text-xs text-white/40 mr-2">We accept:</span>
-          {["VISA", "Mastercard", "Maestro", "USDT", "BTC", "Wire"].map((p) => (
-            <span key={p} className="px-2.5 py-1 rounded bg-white/10 text-white/70 text-[11px] font-medium">
-              {p}
-            </span>
+          {logos.map((p) => (
+            <Image key={p} src={p} alt={p} width={38} height={24}  />
           ))}
         </div>
 

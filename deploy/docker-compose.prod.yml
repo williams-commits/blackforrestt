@@ -9,6 +9,9 @@ services:
         condition: service_healthy
     environment:
       DOMAIN: ${DOMAIN:?Set DOMAIN}
+      # Optional: authenticated application subdomain (e.g. trade.blackforrestt.com).
+      # When empty, Caddy runs in single-domain mode (backward compatible).
+      TRADE_DOMAIN: ${TRADE_DOMAIN:-}
       CADDY_EMAIL: ${CADDY_EMAIL:?Set CADDY_EMAIL}
     ports:
       - "80:80"
@@ -92,6 +95,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
+        NEXT_PUBLIC_TRADE_ORIGIN: ${NEXT_PUBLIC_TRADE_ORIGIN:-}
     init: true
     restart: unless-stopped
     env_file:

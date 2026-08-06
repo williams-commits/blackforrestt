@@ -154,9 +154,10 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
 
           <Button
             type="submit"
+            variant="brand"
             loading={submitting}
             loadingLabel="Submitting verification"
-            className="bg-brand text-white hover:brightness-110"
+            className="w-full"
           >
             Submit for verification
           </Button>

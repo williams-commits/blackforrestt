@@ -3,15 +3,15 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: blckforest
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-blckforest}
-      POSTGRES_DB: blckforest
+      POSTGRES_USER: blackforrestt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-blackforrestt}
+      POSTGRES_DB: blackforrestt
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U blckforest -d blckforest"]
+      test: ["CMD-SHELL", "pg_isready -U blackforrestt -d blackforrestt"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -92,7 +92,7 @@ services:
       minio-init:
         condition: service_completed_successfully
     environment:
-      DATABASE_URL: postgresql://blckforest:${POSTGRES_PASSWORD:-blckforest}@postgres:5432/blckforest?schema=public
+      DATABASE_URL: postgresql://blackforrestt:${POSTGRES_PASSWORD:-blackforrestt}@postgres:5432/blackforrestt?schema=public
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in your environment or .env file}
       FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?Set FIELD_ENCRYPTION_KEY to a base64 32-byte key}
       SECURITY_HASH_PEPPER: ${SECURITY_HASH_PEPPER:?Set SECURITY_HASH_PEPPER}

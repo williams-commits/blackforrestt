@@ -20,6 +20,11 @@ ARG NEXT_PUBLIC_WS_URL=""
 ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
 ARG NEXT_PUBLIC_BRAND_NAME
 ENV NEXT_PUBLIC_BRAND_NAME=$NEXT_PUBLIC_BRAND_NAME
+# Absolute origin of the trade subdomain (e.g. https://trade.blackforrestt.com).
+# Baked into client bundles so marketing links (Login/Register CTAs) point at
+# the authenticated subdomain. Empty = single-domain mode (relative links).
+ARG NEXT_PUBLIC_TRADE_ORIGIN=""
+ENV NEXT_PUBLIC_TRADE_ORIGIN=$NEXT_PUBLIC_TRADE_ORIGIN
 RUN npm run build
 RUN npm prune --omit=dev
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/trade/Logo";
+import { clientTradeUrl } from "@/lib/branding";
 
 interface MenuGroup {
   label: string;
@@ -41,9 +42,9 @@ const MENUS: MenuGroup[] = [
     items: [
       { label: "Beginners guide", href: "/education/beginners" },
       { label: "Advanced guide", href: "/education/advanced" },
-      { label: "Beginners VODs", href: "/education/beginners-vods" },
-      { label: "Advanced VODs", href: "/education/advanced-vods" },
-      { label: "Cryptocurrency VODs", href: "/education/crypto-vods" },
+      // { label: "Beginners VODs", href: "/education/beginners-vods" },
+      // { label: "Advanced VODs", href: "/education/advanced-vods" },
+      // { label: "Cryptocurrency VODs", href: "/education/crypto-vods" },
     ],
   },
 ];
@@ -98,7 +99,7 @@ export function Navbar() {
               </button>
               {open === menu.label ? (
                 <div className="absolute left-0 top-full pt-1">
-                  <div className="min-w-[220px] rounded-lg border border-border bg-canvas py-2 shadow-card">
+                  <div className="min-w-55 rounded-lg border border-border bg-canvas py-2 shadow-card">
                     {menu.items.map((item) => (
                       <Link
                         key={item.href}
@@ -121,13 +122,13 @@ export function Navbar() {
             <button type="button" className="rounded px-2 py-1 text-text-muted hover:text-text">FR</button>
           </div>
           <Link
-            href="/login"
+            href={clientTradeUrl("/login")}
             className="hidden px-2 py-2 text-sm font-medium text-text transition-colors hover:text-brand sm:inline-flex lg:px-4"
           >
             Log in
           </Link>
           <Link
-            href="/register"
+            href={clientTradeUrl("/register")}
             className="hidden rounded bg-brand px-3 py-2 text-xs font-semibold text-white transition hover:brightness-110 sm:inline-flex lg:px-4 lg:text-sm"
           >
             Open Account
@@ -138,7 +139,7 @@ export function Navbar() {
             aria-expanded={mobileOpen}
             aria-controls="mobile-navigation"
             onClick={() => setMobileOpen((value) => !value)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded border border-border text-text hover:bg-panel-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand lg:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded border border-border text-text hover:bg-panel-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand lg:hidden"
           >
             {mobileOpen ? <CloseIcon /> : <MenuIcon />}
           </button>
@@ -179,10 +180,10 @@ export function Navbar() {
             })}
 
             <div className="mt-auto grid gap-2 pt-6 sm:grid-cols-2">
-              <Link href="/login" className="rounded border border-border px-4 py-3 text-center text-sm font-semibold text-text hover:border-brand">
+              <Link href={clientTradeUrl("/login")} className="rounded border border-border px-4 py-3 text-center text-sm font-semibold text-text hover:border-brand">
                 Log in
               </Link>
-              <Link href="/register" className="rounded bg-brand px-4 py-3 text-center text-sm font-semibold text-white hover:brightness-110">
+              <Link href={clientTradeUrl("/register")} className="rounded bg-brand px-4 py-3 text-center text-sm font-semibold text-white hover:brightness-110">
                 Open Account
               </Link>
             </div>

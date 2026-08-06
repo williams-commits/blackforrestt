@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { absoluteTradeUrl,  } from "@/lib/branding";
 
 /** Hero: headline + subheadline + dual CTA + a platform mockup. */
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-panel to-canvas">
+    <section className="relative overflow-hidden bg-linear-to-b from-panel to-canvas">
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-20 lg:py-28 grid lg:grid-cols-2 gap-12 items-center">
         <div>
           <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-soft text-brand text-xs font-semibold mb-6">
@@ -20,13 +21,13 @@ export function Hero() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href="/register"
+              href={absoluteTradeUrl("/register")}
               className="px-6 py-3 rounded-lg bg-brand text-white font-semibold hover:brightness-110 transition shadow-card"
             >
               Open Free Account
             </Link>
             <Link
-              href="/trade/AUDCAD"
+              href={absoluteTradeUrl("/trade/AUDCAD")}
               className="px-6 py-3 rounded-lg bg-canvas border border-border font-semibold hover:bg-panel transition"
             >
               Launch Platform →
@@ -34,6 +35,8 @@ export function Hero() {
           </div>
           <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-text-muted">
             <Stat value="24/7" label="Support" />
+            <Stat value="100+" label="Markets" />
+            <Stat value="0.0s" label="Execution" />
           </div>
         </div>
 
@@ -77,7 +80,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex items-baseline gap-1.5">
       <span className="text-xl font-bold text-text tnum">{value}</span>
-      <span>{label}</span>
+      <span className="text-text-faint">{label}</span>
     </div>
   );
 }

@@ -73,6 +73,76 @@ Internet → Caddy (80/443, automatic HTTPS) → app:3000 (Next.js + WebSocket)
 
 ---
 
+## Domain split (marketing + trade subdomain)
+
+The platform supports a two-domain setup:
+
+| Domain | Routes | Purpose |
+|--------|--------|---------|
+| `blackforrestt.com` (apex) | `/`, `/about`, `/analytics/*`, `/tools/*`, `/education/*`, `/legal/*`, `/api/instruments`, `/api/health` | Marketing site + live market data for the landing page |
+| `trade.blackforrestt.com` | `/login`, `/register`, `/trade/[symbol]`, `/account`, `/reports`, `/admin`, `/api/auth/*`, `/api/account/*`, etc. | Authenticated application |
+
+Both domains are served by the **same Next.js app** (one container, port 3000). Caddy routes each domain to `app:3000`; the app's **middleware** enforces which routes belong on which domain, redirecting users who land on the wrong origin:
+
+- `blackforrestt.com/account` → 307 redirect to `trade.blackforrestt.com/account`
+- `trade.blackforrestt.com/about` → 307 redirect to `blackforrestt.com/about`
+
+Domain routing is only enforced when `BRAND_DOMAIN` is set. Local development on `localhost` / `127.0.0.1` bypasses it entirely.
+
+### Setup (first time)
+
+**1. Create a DNS A record for the trade subdomain:**
+
+| Record | Host | Value |
+|--------|------|-------|
+| A | `trade` | `<server IP>` (same as the apex) |
+
+Caddy automatically obtains a separate TLS certificate for the subdomain.
+
+**2. Configure `.env.production`:**
+
+```env
+# Apex domain (marketing):
+DOMAIN=blackforrestt.com
+
+# Trade subdomain (authenticated app):
+TRADE_DOMAIN=trade.blackforrestt.com
+TRADE_SUBDOMAIN=trade
+
+# Both origins must be in APP_ORIGIN (comma-separated — the origin gate
+# already supports this):
+APP_ORIGIN=https://blackforrestt.com,https://trade.blackforrestt.com
+
+# Auth.js canonical origin = the trade subdomain (where login happens):
+AUTH_URL=https://trade.blackforrestt.com
+
+# Baked into client bundles at build time so marketing CTAs link to the
+# trade subdomain. Must be set BEFORE building the image:
+NEXT_PUBLIC_TRADE_ORIGIN=https://trade.blackforrestt.com
+```
+
+**3. Rebuild + redeploy** (`NEXT_PUBLIC_TRADE_ORIGIN` is a build-time arg, so the image must be rebuilt):
+
+```bash
+docker compose --env-file .env.production -f deploy/docker-compose.prod.yml build --no-cache app
+bash deploy/deploy.sh
+```
+
+### Single-domain mode (backward compatible)
+
+If `TRADE_DOMAIN` and `NEXT_PUBLIC_TRADE_ORIGIN` are empty, the platform runs in single-domain mode: all routes are served on the apex domain, marketing links are relative, and no cross-domain redirects occur. This is the default for local development.
+
+### Session cookies
+
+Auth.js v5 with JWT strategy scopes the session cookie to the host that the login request hits. Since login happens on `trade.blackforrestt.com`, the cookie is scoped to that subdomain — it does not leak to the marketing site. No cross-subdomain cookie sharing is required.
+
+### How the links work
+
+- **Marketing → trade:** landing CTAs ("Open Free Account", "Log in") use `absoluteTradeUrl()` (server components) or `clientTradeUrl()` (client components) from `src/lib/branding.ts`, which read `NEXT_PUBLIC_TRADE_ORIGIN`.
+- **Trade → marketing:** authenticated pages can link to the apex using standard relative links only if the user navigates away from the app — but in practice the trade subdomain is self-contained.
+
+---
+
 ## Server requirements
 
 - **OS:** Ubuntu 22.04 or 24.04 LTS (or any Linux with Docker support)
@@ -224,7 +294,7 @@ $DC ps
 sudo ss -ltnp | grep -E ':80|:443'
 
 # Public health endpoint (expect {"status":"ready","engine":"up"}):
-curl -sS https://yourdomain.com/api/health
+curl -sS https://blackforrestt.com/api/health
 ```
 
 ### 7. Create the first admin user
@@ -238,8 +308,20 @@ $DC exec -T postgres psql -U blackforrestt -d blackforrestt <<'SQL'
 SELECT id, email, "createdAt" FROM "User" ORDER BY "createdAt" LIMIT 5;
 
 -- Grant SUPER_ADMIN (replace <user-id>):
-INSERT INTO "AdminRoleAssignment" ("userId", role, "assignedById", reason, "createdAt")
-VALUES ('<user-id>', 'SUPER_ADMIN', '<user-id>', 'Initial admin', NOW());
+INSERT INTO "AdminRoleAssignment" ("userId", role, "assignedById", reason)
+VALUES ('<user-id>', 'SUPER_ADMIN', '<user-id>', 'Initial admin');
+SQL
+```
+
+```bash
+$DC exec -T postgres psql -U blackforrestt -d blackforrestt <<'SQL'
+-- Grant SUPER_ADMIN (replace <user-id>):
+SELECT * FROM "AdminRoleAssignment";
+SQL
+
+$DC exec -T postgres psql -U blackforrestt -d blackforrestt <<'SQL'
+INSERT INTO "AdminRoleAssignment" ("id", "userId", role, "assignedById", "reason")
+VALUES (gen_random_uuid(), 'cmsdpl5uv0007r324qehtle4i', 'SUPER_ADMIN', 'cmsdpl5uv0007r324qehtle4i', 'Initial admin');
 SQL
 ```
 
@@ -464,6 +546,8 @@ sudo ss -ltnp | grep -E ':80|:443' || echo "(nothing on 80/443 — Caddy not sta
 | `MINIO_ROOT_USER is missing a value` | Missing `--env-file` flag | Add `--env-file .env.production` to every manual compose command |
 | `env file .env.production not found` | File doesn't exist at repo root | `cp deploy/.env.production.example .env.production` + edit |
 | Ports 80/443 closed, Caddy shows `Created` | App not healthy → Caddy never starts (dependency cascade) | Fix the app health first (rows above); Caddy starts automatically once app is healthy |
+| `trade.blackforrestt.com` won't load (apex works) | Missing DNS A record for `trade` subdomain, or `TRADE_DOMAIN` not set in `.env.production` | Add A record `trade → server IP`; set `TRADE_DOMAIN=trade.blackforrestt.com` in `.env.production`; restart Caddy: `$DC up -d --no-deps caddy` |
+| Marketing CTA still links to `/login` (relative) | `NEXT_PUBLIC_TRADE_ORIGIN` wasn't set at build time | Set it in `.env.production`, then `build --no-cache app` (it's a build-time arg baked into client bundles) |
 | Caddy up but TLS cert fails | DNS A record wrong, or 80/443 blocked by firewall | Verify `dig yourdomain.com` → server IP; check `ufw status`; `$DC logs caddy` for ACME errors |
 | Finnhub `429` reconnect storm in logs | Free-tier Finnhub rate-limiting the server IP | Set `MARKET_DATA_MODE=simulation`, `$DC up -d --no-deps app` |
 | Preflight failure on startup | Placeholder secret, or dev bypass enabled | `$DC run --rm app npm run production:check` — read each failure line |
@@ -682,6 +766,8 @@ cp .env.example .env
 # Edit .env: replace the three secret placeholders with openssl output
 
 npm ci
+# Pull images 
+docker compose pull postgres redis minio minio-init 
 docker compose up -d postgres redis minio minio-init
 npm run db:generate
 npm run db:deploy
@@ -704,6 +790,51 @@ docker compose build app
 docker compose run --rm app sh -c "npx prisma migrate deploy && npm run db:seed && npm run auth:doctor"
 docker compose up -d app
 docker compose logs -f app
+```
+
+Drop DB 
+```bash
+docker exec -it blackforrestt-postgres-1 psql -U blckforest   
+```
+
+Check if DB is running 
+```bash
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='blckforest';
+```
+
+# List all databases in running postgres container
+```bash
+docker exec $(docker ps -q -f "ancestor=postgres:17-alpine") psql -U blackforrestt -l
+```
+
+# Connect to the database directly
+```bash
+docker exec -it $(docker ps -q -f "ancestor=postgres:17-alpine") psql -U blackforrestt -d blackforrestt
+```
+
+# Or if you know the container name (e.g., blackforrestt-postgres-1)
+```bash
+docker exec -it blackforrestt-postgres-1 psql -U blackforrestt -d blackforrestt
+```
+
+# 1. Stop containers and delete volumes (this nukes the database)
+```bash
+docker compose down -v --remove-orphans
+```
+
+# 2. Edit .env with new credentials
+# (change POSTGRES_PASSWORD, DATABASE_URL, etc.)
+
+# 3. Edit docker-compose.yml if needed (POSTGRES_USER, POSTGRES_DB, etc.)
+
+# 4. Bring everything back up with fresh empty database
+```bash
+docker compose up -d
+```
+
+# 5. Run migrations to rebuild schema
+```bash
+npm run db:deploy
 ```
 
 ### Local login repair

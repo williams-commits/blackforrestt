@@ -16,8 +16,8 @@ export function Logo({
         <rect x="11" y="19" width="2" height="3.5" fill="var(--color-brand)" />
       </svg>
       <span className="text-base font-semibold tracking-tight">
-        <span className={inverted ? "text-white" : "text-text"}>blck</span>
-        <span className="text-brand">forest</span>
+        <span className={inverted ? "text-white" : "text-text"}>Black</span>
+        <span className="text-brand">Forest</span>
       </span>
     </Link>
   );

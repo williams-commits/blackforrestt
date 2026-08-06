@@ -20,7 +20,7 @@ export function ConnectionDot({ status }: { status: SocketStatus }) {
         ) : null}
         <span className={`relative inline-flex h-2 w-2 rounded-full ${state.color}`} />
       </span>
-      <span className={state.text}>{state.label}</span>
+      <span className={`${state.text} hidden lg:inline`}>{state.label}</span>
     </div>
   );
 }

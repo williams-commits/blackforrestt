@@ -35,7 +35,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletMode, setWalletMode] = useState<"deposit" | "withdraw">("deposit");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 10 });
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 

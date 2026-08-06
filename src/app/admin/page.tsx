@@ -8,6 +8,15 @@ import { simplePaymentApproval } from "@/server/payments";
 
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Admin Console",
+  description: "Operations console for platform administrators.",
+  robots: { index: false, follow: false },
+}
+
+
 export default async function AdminPage() {
   let context;
   try {

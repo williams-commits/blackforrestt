@@ -8,6 +8,18 @@ import { disabledPaymentMethodNames } from "@/lib/paymentMethods";
 
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ symbol: string }> }): Promise<Metadata> {
+  const { symbol } = await params;
+  return {
+    title: `${symbol.toUpperCase()} Chart`,
+    description: `Live ${symbol.toUpperCase()} trading chart with real-time prices, technical indicators and order execution.`,
+    robots: { index: false, follow: false },
+  };
+}
+
+
 interface PageProps {
   params: Promise<{ symbol: string }>;
   searchParams: Promise<{ tf?: string | string[] }>;

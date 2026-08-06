@@ -10,6 +10,15 @@ import { disabledPaymentMethodNames } from "@/lib/paymentMethods";
 
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Account",
+  description: "Manage your account, positions, transactions, payments and verification.",
+  robots: { index: false, follow: false },
+}
+
+
 const VALID_TABS = ["overview", "positions", "transactions", "payments", "reports", "verification", "settings"] as const;
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {

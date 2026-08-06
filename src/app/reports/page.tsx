@@ -12,6 +12,15 @@ import {
 
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Reports",
+  description: "Account statements, trading history and tax reports.",
+  robots: { index: false, follow: false },
+}
+
+
 const PAGE_SIZE = 50;
 const SYMBOL_PATTERN = /^[A-Z0-9._-]{2,20}$/;
 

@@ -1,18 +1,29 @@
 import Link from "next/link";
 import { Logo } from "@/components/trade/Logo";
-import { companyLegalName, supportEmail, companyAddress, brandTrademark } from "@/lib/branding";
+import { companyLegalName, supportEmail, companyAddress, brandTrademark, clientTradeUrl } from "@/lib/branding";
 import Image from "next/image";
-const logos = [
-  "/payments/visa.png",
-  "/payments/mastercard.png",
-  "/payments/bitcoin.jpg",
-  "/payments/amex.jpg",
-  "/payments/maestro.png",
-  // "/payments/ethereum.png",
+
+interface PaymentLogo {
+  src: string;
+  alt: string;
+  /** Natural aspect ratio (width / height) used to avoid distortion. */
+  aspect: number;
+}
+
+// Payment method logos. width is fixed at 38px; height is derived from the
+// natural aspect ratio so icons aren't squashed. All source images are in
+// public/payments/.
+const logos: PaymentLogo[] = [
+  { src: "/payments/visa.png", alt: "Visa", aspect: 1200 / 762 },
+  { src: "/payments/mastercard.png", alt: "Mastercard", aspect: 1280 / 995 },
+  { src: "/payments/maestro.png", alt: "Maestro", aspect: 2000 / 1227 },
+  { src: "/payments/amex.jpg", alt: "American Express", aspect: 1790 / 1106 },
+  { src: "/payments/bitcoin.png", alt: "Bitcoin", aspect: 849 / 255 },
 ];
 
 /** Marketing footer: contact, risk disclaimers, payment icons, legal. */
 export function Footer() {
+  const iconW = 38;
   return (
     <footer className="bg-text text-white/80">
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-14">
@@ -33,7 +44,12 @@ export function Footer() {
           </div>
 
           {/* Company */}
-          <FooterCol title="Company" links={[["About Us", "/about"], ["Contacts", "/contact"], ["Open Account", "/register"], ["Log in", "/login"]]} />
+          <FooterCol title="Company" links={[
+            ["About Us", "/about"],
+            ["Contacts", "/contact"],
+            ["Open Account", clientTradeUrl("/register")],
+            ["Log in", clientTradeUrl("/login")],
+          ]} />
 
           {/* Tools */}
           <FooterCol title="Tools" links={[["Informers", "/tools/informers"], ["Calendars", "/tools/calendars"], ["Calculators", "/tools/calculators"], ["Signals", "/tools/signals"]]} />
@@ -45,8 +61,16 @@ export function Footer() {
         {/* Payment icons */}
         <div className="mt-10 pt-8 border-t border-white/10 flex flex-wrap items-center gap-3">
           <span className="text-xs text-white/40 mr-2">We accept:</span>
-          {logos.map((p) => (
-            <Image key={p} src={p} alt={p} width={38} height={24}  />
+          {logos.map((logo) => (
+            <Image
+              key={logo.src}
+              src={logo.src}
+              alt={logo.alt}
+              width={iconW}
+              height={Math.round(iconW / logo.aspect)}
+              sizes="38px"
+              className="object-contain opacity-70"
+            />
           ))}
         </div>
 

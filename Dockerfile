@@ -18,7 +18,7 @@ RUN npx prisma generate
 
 ARG NEXT_PUBLIC_WS_URL=""
 ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
-ARG NEXT_PUBLIC_BRAND_NAME
+ARG NEXT_PUBLIC_BRAND_NAME="Black Forest Digital"
 ENV NEXT_PUBLIC_BRAND_NAME=$NEXT_PUBLIC_BRAND_NAME
 # Absolute origin of the trade subdomain (e.g. https://trade.blackforrestt.com).
 # Baked into client bundles so marketing links (Login/Register CTAs) point at

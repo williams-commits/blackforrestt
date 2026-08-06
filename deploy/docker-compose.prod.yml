@@ -96,6 +96,7 @@ services:
       args:
         NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
         NEXT_PUBLIC_TRADE_ORIGIN: ${NEXT_PUBLIC_TRADE_ORIGIN:-}
+        NEXT_PUBLIC_BRAND_NAME: ${NEXT_PUBLIC_BRAND_NAME:-Black Forest Digital}
     init: true
     restart: unless-stopped
     env_file:

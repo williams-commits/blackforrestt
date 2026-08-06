@@ -6,31 +6,38 @@
  *
  * The email subsystem (src/server/email/templates.ts) keeps its own EMAIL_*
  * vars but defaults EMAIL_BRAND_NAME to brandName() so the two stay consistent.
+ *
+ * IMPORTANT: these helpers use `||` (not `??`) because Next.js bake-time env
+ * vars can arrive as empty strings (e.g. an unset Docker build ARG defaults to
+ * ""). `??` only catches null/undefined, so an empty string would silently win
+ * over the fallback — producing an empty brand name in the title. `||` treats
+ * empty strings as falsy, so the fallback always applies when no real value is
+ * present.
  */
 
 /** Public brand name shown in the UI (e.g. "Black Forest Digital"). Client-safe via NEXT_PUBLIC_. */
 export function brandName(): string {
-  return (process.env.NEXT_PUBLIC_BRAND_NAME ?? process.env.BRAND_NAME ?? "Black Forest Digital").trim();
+  return (process.env.NEXT_PUBLIC_BRAND_NAME || process.env.BRAND_NAME || "Black Forest Digital").trim();
 }
 
 /** Short brand name for tight spaces / wordmark (e.g. "Black Forest"). */
 export function brandShortName(): string {
-  return (process.env.BRAND_NAME ?? "Black Forest").trim();
+  return (process.env.BRAND_NAME || "Black Forest").trim();
 }
 
 /** Registered legal entity name used in legal pages and the footer (e.g. "Black Forest Digital LTD"). */
 export function companyLegalName(): string {
-  return (process.env.COMPANY_LEGAL_NAME ?? `${brandName()} LTD`).trim();
+  return (process.env.COMPANY_LEGAL_NAME || `${brandName()} LTD`).trim();
 }
 
 /** Support/contact email shown in the UI and legal pages. */
 export function supportEmail(): string {
-  return (process.env.SUPPORT_EMAIL ?? "support@example.com").trim();
+  return (process.env.SUPPORT_EMAIL || "support@example.com").trim();
 }
 
 /** Public domain (e.g. "blackforestd.net"). */
 export function brandDomain(): string {
-  return (process.env.BRAND_DOMAIN ?? "example.com").trim();
+  return (process.env.BRAND_DOMAIN || "example.com").trim();
 }
 
 /**
@@ -46,7 +53,7 @@ export function brandDomain(): string {
  * `clientTradeUrl()` instead (which reads NEXT_PUBLIC_ vars baked at build).
  */
 export function tradeOrigin(): string {
-  const sub = (process.env.TRADE_SUBDOMAIN ?? "trade").trim();
+  const sub = (process.env.TRADE_SUBDOMAIN || "trade").trim();
   return `https://${sub}.${brandDomain()}`;
 }
 
@@ -63,17 +70,17 @@ export function absoluteTradeUrl(path = "/"): string {
  * links are used — keeping the link on the same origin.
  */
 export function clientTradeUrl(path = "/"): string {
-  const origin = (process.env.NEXT_PUBLIC_TRADE_ORIGIN ?? "").trim();
+  const origin = (process.env.NEXT_PUBLIC_TRADE_ORIGIN || "").trim();
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return origin ? `${origin}${normalized}` : normalized;
 }
 
 /** Registered company address shown in the footer and legal pages. */
 export function companyAddress(): string {
-  return (process.env.COMPANY_ADDRESS ?? "").trim();
+  return (process.env.COMPANY_ADDRESS || "").trim();
 }
 
 /** Brand trademark symbol (e.g. "blckforest™"). */
 export function brandTrademark(): string {
-  return (process.env.BRAND_TM ?? "blckforest™").trim();
+  return (process.env.BRAND_TM || "blckforest™").trim();
 }

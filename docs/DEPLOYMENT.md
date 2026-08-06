@@ -334,6 +334,10 @@ When you pull new code or change `.env.production`:
 ```bash
 cd /opt/blackforrestt
 git pull origin main
+docker compose --env-file .env.production -f deploy/docker-compose.prod.yml build --no-cache app
+
+# If only .env.production is changed
+docker compose --env-file .env.production -f deploy/docker-compose.prod.yml up -d --no-deps --force-recreate app
 
 # Always back up before deploying:
 ./deploy/backup.sh

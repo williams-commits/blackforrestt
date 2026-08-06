@@ -14,16 +14,36 @@ export function ContactForm({ address, email }: ContactFormProps) {
   const [emailState, setEmail] = useState("");
   const [subject, setSubject] = useState("General enquiry");
   const [message, setMessage] = useState("");
+  const [company, setCompany] = useState(""); // honeypot — must stay empty
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    // No backend endpoint yet — simulate a successful submission.
-    await new Promise((r) => setTimeout(r, 800));
+    setError("");
+    try {
+      const res = await fetch("/api/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email: emailState, subject, message, company }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 429) {
+          setError("You've sent a few messages recently. Please wait a few minutes and try again.");
+        } else {
+          setError(body.error || "Something went wrong. Please try again or email us directly.");
+        }
+        setLoading(false);
+        return;
+      }
+      setSent(true);
+    } catch {
+      setError("Network error. Please check your connection and try again.");
+    }
     setLoading(false);
-    setSent(true);
   }
 
   return (
@@ -76,6 +96,14 @@ export function ContactForm({ address, email }: ContactFormProps) {
               <label className="block text-xs text-text-muted mb-1.5">Message</label>
               <textarea required rows={5} value={message} onChange={(e) => setMessage(e.target.value)} className="w-full bg-canvas border border-border rounded px-3 py-2 text-sm outline-none focus:border-brand resize-none" placeholder="How can we help?" />
             </div>
+            {/* Honeypot: hidden from humans, bots fill it. Field name "company" looks attractive to spammers. */}
+            <div aria-hidden="true" className="absolute -left-[9999px]">
+              <label>Company (leave empty)</label>
+              <input tabIndex={-1} autoComplete="off" onChange={(e) => setCompany(e.target.value)} value={company} />
+            </div>
+            {error && (
+              <p className="text-sm text-down bg-down/10 border border-down/30 rounded-lg px-3 py-2">{error}</p>
+            )}
             <button type="submit" disabled={loading} className="h-10 px-6 rounded-lg bg-brand text-white text-sm font-semibold hover:brightness-110 disabled:opacity-50">
               {loading ? "Sending…" : "Send message"}
             </button>
@@ -106,7 +134,9 @@ export function ContactForm({ address, email }: ContactFormProps) {
         </div>
         <div className="bg-brand-soft border border-brand/30 rounded-xl p-5">
           <h3 className="text-sm font-semibold text-brand">Already a client?</h3>
-          <p className="mt-1 text-xs text-text-muted">The fastest way to get help is our in-platform live chat.</p>
+          <p className="mt-1 text-xs text-text-muted">
+            Existing clients can open a support case directly from their account portal for faster assistance.
+          </p>
           <a href={clientTradeUrl("/login")} className="mt-3 inline-block text-xs font-semibold text-brand hover:underline">Log in →</a>
         </div>
       </aside>

@@ -31,8 +31,12 @@ const Create = z.object({
   email: z.string().trim().toLowerCase().email().max(320),
   subject: z.enum(CATEGORIES).default("General enquiry"),
   message: z.string().trim().min(10).max(5000),
-  // Honeypot: must be empty. Bots fill hidden fields; humans never see it.
-  company: z.string().max(0).optional(),
+  // Honeypot: accept ANY string here (so zod never rejects it). After parsing,
+  // if it's non-empty we silently drop the submission. Browsers often autofill
+  // hidden "company" fields despite autoComplete="off", so we must never show
+  // a validation error for this field — that would leak the honeypot and
+  // confuse real users.
+  company: z.string().optional(),
 });
 
 const RATE_LIMIT_WINDOW_SECONDS = 15 * 60; // 15 minutes

@@ -96,10 +96,17 @@ export function ContactForm({ address, email }: ContactFormProps) {
               <label className="block text-xs text-text-muted mb-1.5">Message</label>
               <textarea required rows={5} value={message} onChange={(e) => setMessage(e.target.value)} className="w-full bg-canvas border border-border rounded px-3 py-2 text-sm outline-none focus:border-brand resize-none" placeholder="How can we help?" />
             </div>
-            {/* Honeypot: hidden from humans, bots fill it. Field name "company" looks attractive to spammers. */}
-            <div aria-hidden="true" className="absolute -left-[9999px]">
-              <label>Company (leave empty)</label>
-              <input tabIndex={-1} autoComplete="off" onChange={(e) => setCompany(e.target.value)} value={company} />
+            {/* Honeypot: visually hidden and ignored by humans. Bots fill it. */}
+            {/* tabIndex=-1, aria-hidden, autocomplete=new-password (browsers won't fill it), name is innocuous. */}
+            <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", top: "auto", width: 1, height: 1, overflow: "hidden" }}>
+              <label>Company name (do not fill)</label>
+              <input
+                tabIndex={-1}
+                autoComplete="new-password"
+                name="company_name_optional"
+                onChange={(e) => setCompany(e.target.value)}
+                value={company}
+              />
             </div>
             {error && (
               <p className="text-sm text-down bg-down/10 border border-down/30 rounded-lg px-3 py-2">{error}</p>

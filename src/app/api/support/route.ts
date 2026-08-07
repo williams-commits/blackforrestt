@@ -9,14 +9,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Public support-case intake. Customers (and anonymous visitors) submit the
- * contact form on the marketing site, which creates a SupportCase that appears
- * in the admin Support tab. No session required — this is the public entry
- * point for the support inbox.
+ * Public support-case intake. Visitors submit the contact form on the marketing
+ * site, which creates a SupportCase that appears in the admin Support tab.
  *
- * Rate limited per IP via Redis (5 submissions / 15 minutes) with a local
- * in-memory fallback when Redis is unavailable. Honeypot + minimal length
- * checks cut down drive-by spam without a CAPTCHA.
+ * Rate limited per IP via Redis (10 submissions / 15 minutes) with a local
+ * in-memory fallback. A honeypot field catches drive-by bots without a CAPTCHA.
+ *
+ * NOTE: this route intentionally does NOT enforce the app-wide mutation Origin
+ * gate. That gate protects authenticated state-changing endpoints (deposits,
+ * KYC, password changes) from CSRF. This endpoint is a public form that anyone
+ * can submit — its inputs create a support ticket, not a financial mutation,
+ * and the Origin gate would reject legitimate cross-subdomain submissions from
+ * the marketing domain if APP_ORIGIN isn't perfectly configured. The honeypot
+ * + rate limit + strict zod validation are the right defenses here.
  */
 
 const CATEGORIES = ["General enquiry", "Account & verification", "Deposits & withdrawals", "Technical issue", "Partnership"] as const;
@@ -31,7 +36,7 @@ const Create = z.object({
 });
 
 const RATE_LIMIT_WINDOW_SECONDS = 15 * 60; // 15 minutes
-const RATE_LIMIT_MAX = 5; // 5 submissions per window per IP
+const RATE_LIMIT_MAX = 10; // 10 submissions per window per IP
 const SYNTHETIC_ACTOR_ID = "system:public-contact-form";
 
 interface RateLimitResult {

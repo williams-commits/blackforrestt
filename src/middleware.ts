@@ -14,6 +14,7 @@ const PROTECTED_APIS = [
   "/api/security/mfa",
   "/api/security/sessions",
   "/api/security/step-up",
+  "/api/support/cases",
 ];
 
 /**
@@ -44,6 +45,7 @@ const TRADE_DOMAIN_PREFIXES = [
   "/api/security",
   "/api/admin",
   "/api/register",
+  "/api/support/cases",
 ];
 
 /**
@@ -143,7 +145,11 @@ export default auth((req) => {
   // when the site is reached through an allowed reverse-proxy host or local
   // alias (for example 127.0.0.1 instead of localhost).
   const isAuthApi = pathname.startsWith("/api/auth/");
-  if (!isAuthApi && pathname.startsWith("/api/") && !mutationOriginAllowed(req)) {
+  // The public support intake form is unauthenticated and accepts submissions
+  // from both domains; the Origin gate would reject cross-subdomain POSTs if
+  // APP_ORIGIN isn't perfectly configured. Honeypot + rate limit defend it.
+  const isPublicSupportApi = pathname === "/api/support";
+  if (!isAuthApi && !isPublicSupportApi && pathname.startsWith("/api/") && !mutationOriginAllowed(req)) {
     return NextResponse.json({ error: "Cross-origin request rejected." }, { status: 403 });
   }
   if (isGuestOnlyPage && req.auth?.user?.id) {

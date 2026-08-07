@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 }
 
 
-const VALID_TABS = ["overview", "positions", "transactions", "payments", "reports", "verification", "settings"] as const;
+const VALID_TABS = ["overview", "positions", "transactions", "payments", "reports", "verification", "support", "settings"] as const;
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;
@@ -130,7 +130,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6">
         <AccountShell
-          initialTab={initialTab as "overview" | "positions" | "transactions" | "payments" | "reports" | "verification" | "settings" | undefined}
+          initialTab={initialTab as "overview" | "positions" | "transactions" | "payments" | "reports" | "verification" | "support" | "settings" | undefined}
           user={{
             id: user.id,
             name: user.name ?? user.email ?? "Trader",

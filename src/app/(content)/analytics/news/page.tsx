@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { ArticleLayout } from "@/components/landing/ArticleLayout";
 
@@ -22,15 +23,22 @@ interface NewsResponse {
 }
 
 const FILTERS = ["general", "forex", "crypto", "merger"] as const;
+const FILTER_KEY: Record<(typeof FILTERS)[number], "catGeneral" | "catForex" | "catCrypto" | "catMerger"> = {
+  general: "catGeneral",
+  forex: "catForex",
+  crypto: "catCrypto",
+  merger: "catMerger",
+};
 
 export default function NewsPage() {
+  const t = useTranslations("news");
   const [category, setCategory] = useState<(typeof FILTERS)[number]>("general");
 
   const { data, error, isLoading } = useQuery<NewsResponse>({
     queryKey: ["market-news", category],
     queryFn: async () => {
       const res = await fetch(`/api/market-news?category=${category}`, { cache: "no-store" });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "News unavailable");
+      if (!res.ok) throw new Error(t("errorThrow"));
       return (await res.json()) as NewsResponse;
     },
     refetchInterval: 60_000,
@@ -41,12 +49,12 @@ export default function NewsPage() {
 
   return (
     <ArticleLayout
-      eyebrow="Analytics"
-      title="Market News"
-      description="Breaking headlines and analysis from the wire, filtered by category. Updates automatically."
+      eyebrow={t("eyebrow")}
+      title={t("title")}
+      description={t("description")}
       sidebar={
         <div className="bg-panel border border-border rounded-xl p-5">
-          <h3 className="text-sm font-semibold mb-3">Category</h3>
+          <h3 className="text-sm font-semibold mb-3">{t("category")}</h3>
           <div className="flex flex-wrap gap-1.5">
             {FILTERS.map((c) => (
               <button
@@ -55,24 +63,24 @@ export default function NewsPage() {
                 onClick={() => setCategory(c)}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${c === category ? "bg-brand text-white border-brand" : "bg-canvas border-border text-text-muted hover:border-brand"}`}
               >
-                {c.charAt(0).toUpperCase() + c.slice(1)}
+                {t(FILTER_KEY[c])}
               </button>
             ))}
           </div>
           <p className="mt-4 text-[11px] text-text-faint">
-            {data?.cached ? "Showing cached headlines (feed temporarily unavailable)." : "Headlines refresh every minute."}
+            {data?.cached ? t("noteCached") : t("noteDefault")}
           </p>
         </div>
       }
     >
       {error ? (
         <div className="bg-canvas border border-border rounded-xl p-5 text-sm text-text-muted" role="alert">
-          {error instanceof Error ? error.message : "News is unavailable right now."}
+          {error instanceof Error ? error.message : t("error")}
         </div>
       ) : isLoading ? (
-        <div className="bg-canvas border border-border rounded-xl p-5 text-sm text-text-faint">Loading headlines…</div>
+        <div className="bg-canvas border border-border rounded-xl p-5 text-sm text-text-faint">{t("loading")}</div>
       ) : items.length === 0 ? (
-        <div className="bg-canvas border border-border rounded-xl p-5 text-sm text-text-faint">No headlines in this category right now.</div>
+        <div className="bg-canvas border border-border rounded-xl p-5 text-sm text-text-faint">{t("empty")}</div>
       ) : (
         <div className="space-y-3">
           {items.map((n) => (

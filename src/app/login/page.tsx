@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/authClient";
 
 function LoginForm() {
+  const t = useTranslations("auth");
   const params = useSearchParams();
   const callbackUrl = safeCallbackUrl(params.get("callbackUrl"));
   const formId = useId();
@@ -36,12 +38,12 @@ function LoginForm() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setResendState({ loading: false, message: data?.error ?? "Could not resend the email. Try again later." });
+        setResendState({ loading: false, message: data?.error ?? t("resendFail") });
       } else {
-        setResendState({ loading: false, message: "If an account exists for that email, a new verification link has been sent." });
+        setResendState({ loading: false, message: t("resendOk") });
       }
     } catch {
-      setResendState({ loading: false, message: "Could not reach the service. Check your connection and try again." });
+      setResendState({ loading: false, message: t("networkError") });
     }
   }
 
@@ -101,7 +103,7 @@ function LoginForm() {
     <form onSubmit={submit} className="w-full max-w-sm" aria-describedby={error ? errorId : undefined}>
       <div className="mb-5">
         <label htmlFor={emailId} className="block text-[11px] text-text-muted mb-1">
-          Email
+          {t("email")}
         </label>
         <input
           id={emailId}
@@ -117,7 +119,7 @@ function LoginForm() {
       </div>
       <div className="mb-5">
         <label htmlFor={passwordId} className="block text-[11px] text-text-muted mb-1">
-          Password
+          {t("password")}
         </label>
         <input
           id={passwordId}
@@ -132,7 +134,7 @@ function LoginForm() {
       </div>
       <div className="mb-5">
         <label htmlFor={mfaId} className="block text-[11px] text-text-muted mb-1">
-          Authenticator or recovery code
+          {t("mfa")}
         </label>
         <input
           id={mfaId}
@@ -142,7 +144,7 @@ function LoginForm() {
           onChange={(e) => setMfaCode(e.target.value)}
           autoComplete="one-time-code"
           inputMode="numeric"
-          placeholder="Required when MFA is enabled"
+          placeholder={t("mfaPlaceholder")}
           className="w-full h-10 bg-canvas border border-border rounded px-3 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
         />
       </div>
@@ -159,16 +161,16 @@ function LoginForm() {
 
       {showResend && (
         <div className="mb-3 rounded border border-brand/30 bg-brand-soft px-3 py-2 text-xs">
-          <p className="text-text-muted mb-2">Your email is registered but not verified. Verify it to sign in.</p>
+          <p className="text-text-muted mb-2">{t("resendNeeded")}</p>
           <Button
             type="button"
             variant="brand"
             loading={resendState.loading}
-            loadingLabel="Sending"
+            loadingLabel={t("resendSending")}
             onClick={resendVerification}
             className="w-full"
           >
-            Resend verification email
+            {t("resendBtn")}
           </Button>
           {resendState.message && (
             <p role="status" className="mt-2 text-[11px] text-text-muted">{resendState.message}</p>
@@ -180,21 +182,21 @@ function LoginForm() {
         type="submit"
         variant="brand"
         loading={loading}
-        loadingLabel="Signing in"
+        loadingLabel={t("signingIn")}
         className="w-full"
       >
-        Sign in
+        {t("signIn")}
       </Button>
 
       <p className="text-center text-xs text-text-muted mt-5">
-        Don&apos;t have an account?{" "}
+        {t("noAccount")}{" "}
         <Link href="/register" className="text-brand hover:underline">
-          Register
+          {t("register")}
         </Link>
       </p>
       <p className="text-center text-[11px] text-text-faint mt-3">
         <Link href="/forgot-password" className="text-brand hover:underline">
-          Forgot password?
+          {t("forgotPassword")}
         </Link>
       </p>
     </form>
@@ -202,6 +204,7 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
+  const t = useTranslations("auth");
   return (
     <main id="main-content" tabIndex={-1} className="flex min-h-dvh items-center justify-center bg-panel px-4 py-8 sm:py-10">
       <div className="w-full max-w-sm flex flex-col items-center">
@@ -209,14 +212,14 @@ export default function LoginPage() {
           <Logo className="text-lg" />
         </div>
         <div className="w-full rounded-lg border border-border bg-canvas p-5 shadow-panel sm:p-8">
-          <h1 className="text-lg font-semibold text-center mb-1">Welcome back</h1>
-          <p className="text-xs text-text-muted text-center mb-6">Sign in to your trading account</p>
-          <Suspense fallback={<div className="h-64" aria-label="Loading sign-in form" />}>
+          <h1 className="text-lg font-semibold text-center mb-1">{t("loginH1")}</h1>
+          <p className="text-xs text-text-muted text-center mb-6">{t("loginSub")}</p>
+          <Suspense fallback={<div className="h-64" aria-label={t("loadingForm")} />}>
             <LoginForm />
           </Suspense>
         </div>
         <p className="text-[11px] text-text-faint mt-6 text-center max-w-xs">
-          Black Forest platform. Trading forex and CFDs carries a high level of risk.
+          {t("riskNote")}
         </p>
       </div>
     </main>

@@ -152,9 +152,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
   return (
     <div className="min-h-screen bg-panel">
-      <header className="sticky top-0 z-20 flex h-12 items-center gap-4 border-b border-border bg-canvas px-4">
+      <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-canvas px-3 py-1 sm:flex-nowrap sm:px-4">
         <Logo />
-        <nav className="flex items-center gap-4 text-xs">
+        <nav className="order-3 w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 hidden lg:flex">
           <Link href="/trade/AUDCAD" className="text-text-muted hover:text-text">Trade</Link>
           <Link href="/account" className="text-text-muted hover:text-text">Account</Link>
           <span className="font-medium text-text">Reports</span>

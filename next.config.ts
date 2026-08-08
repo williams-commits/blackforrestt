@@ -1,4 +1,9 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+// Wire next-intl's message-loading + locale resolver (src/i18n/request.ts) into
+// the build. This is the non-routing (cookie-based) mode — no [locale] segment.
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -47,4 +52,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

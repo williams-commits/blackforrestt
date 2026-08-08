@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Logo } from "@/components/trade/Logo";
 import { companyLegalName, supportEmail, companyAddress, brandTrademark, clientTradeUrl } from "@/lib/branding";
 import Image from "next/image";
@@ -22,10 +23,16 @@ const logos: PaymentLogo[] = [
 ];
 
 /** Marketing footer: contact, risk disclaimers, payment icons, legal. */
-export function Footer() {
+export async function Footer() {
+  const t = await getTranslations("footer");
+  const tLinks = await getTranslations("footer.links");
+  const tCols = await getTranslations("footer.columns");
   const iconW = 38;
+  const company = companyLegalName();
+  const tm = brandTrademark();
+
   return (
-    <footer className="bg-text text-white/80">
+    <footer className="bg-surface-dark text-white/80">
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-14">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand + contact */}
@@ -34,8 +41,7 @@ export function Footer() {
               <Logo inverted />
             </div>
             <p className="mt-4 text-sm text-white/60 max-w-xs">
-              {companyLegalName()} — a premier online trading platform for forex, commodities,
-              and indices.
+              {t("tagline", { company })}
             </p>
             <address className="mt-5 not-italic text-sm text-white/70 leading-relaxed">
               {companyAddress() && <>{companyAddress()}<br /></>}
@@ -44,23 +50,42 @@ export function Footer() {
           </div>
 
           {/* Company */}
-          <FooterCol title="Company" links={[
-            ["About Us", "/about"],
-            ["Contacts", "/contact"],
-            ["Open Account", clientTradeUrl("/register")],
-            ["Log in", clientTradeUrl("/login")],
+          <FooterCol title={tCols("company")} linkLabels={{
+            about: tLinks("about"), contact: tLinks("contact"),
+            openAccount: tLinks("openAccount"), login: tLinks("login"),
+          }} links={[
+            ["about", "/about"],
+            ["contact", "/contact"],
+            ["openAccount", clientTradeUrl("/register")],
+            ["login", clientTradeUrl("/login")],
           ]} />
 
           {/* Tools */}
-          <FooterCol title="Tools" links={[["Informers", "/tools/informers"], ["Calendars", "/tools/calendars"], ["Calculators", "/tools/calculators"], ["Signals", "/tools/signals"]]} />
+          <FooterCol title={tCols("tools")} linkLabels={{
+            informers: tLinks("informers"), calendars: tLinks("calendars"),
+            calculators: tLinks("calculators"), signals: tLinks("signals"),
+          }} links={[
+            ["informers", "/tools/informers"],
+            ["calendars", "/tools/calendars"],
+            ["calculators", "/tools/calculators"],
+            ["signals", "/tools/signals"],
+          ]} />
 
           {/* Legal */}
-          <FooterCol title="Legal" links={[["Privacy Policy", "/legal/privacy"], ["AML Policy", "/legal/aml"], ["KYC Policy", "/legal/kyc"], ["Terms of Service", "/legal/terms"]]} />
+          <FooterCol title={tCols("legal")} linkLabels={{
+            privacy: tLinks("privacy"), aml: tLinks("aml"),
+            kyc: tLinks("kyc"), terms: tLinks("terms"),
+          }} links={[
+            ["privacy", "/legal/privacy"],
+            ["aml", "/legal/aml"],
+            ["kyc", "/legal/kyc"],
+            ["terms", "/legal/terms"],
+          ]} />
         </div>
 
         {/* Payment icons */}
         <div className="mt-10 pt-8 border-t border-white/10 flex flex-wrap items-center gap-3">
-          <span className="text-xs text-white/40 mr-2">We accept:</span>
+          <span className="text-xs text-white/40 mr-2">{t("weAccept")}</span>
           {logos.map((logo) => (
             <Image
               key={logo.src}
@@ -75,28 +100,19 @@ export function Footer() {
         </div>
 
         {/* Risk warning */}
-        <div className="mt-8 text-xs text-white/45 leading-relaxed space-y-3">
+        <div className="mt-8 text-xs text-white/45 leading-relaxed space-y-3 font-prose">
           <p>
-            <strong className="text-white/70">Risk Warning:</strong> Operations offered by this site
-            can only be carried out by fully capable adults. Transactions in financial instruments
-            offered, featured or mentioned on our website may be considered high-risk transactions
-            and the carrying out of such transactions may result in the loss of all invested capital.
+            <strong className="text-white/70">{t("riskWarning")}</strong> {t("risk1")}
           </p>
-          <p>
-            We do not provide any services to citizens and/or residents of the United States, Syria,
-            Sudan, Iran, and North Korea. Trading is only available to persons aged 18 and over.
-          </p>
-          <p>
-            Please read our Privacy, AML, and KYC policies before opening an account. Past performance
-            does not guarantee future results.
-          </p>
+          <p>{t("risk2")}</p>
+          <p>{t("risk3")}</p>
         </div>
 
         {/* Bottom bar */}
         <div className="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/40">
-          <span>© 2026 {companyLegalName()}. All rights reserved.</span>
+          <span>{t("copyright", { company })}</span>
           <div className="flex items-center gap-4">
-            <span>{brandTrademark()} is a trademark of {companyLegalName()}.</span>
+            <span>{t("trademark", { tm, company })}</span>
           </div>
         </div>
       </div>
@@ -104,15 +120,15 @@ export function Footer() {
   );
 }
 
-function FooterCol({ title, links }: { title: string; links: [string, string][] }) {
+function FooterCol({ title, linkLabels, links }: { title: string; linkLabels: Record<string, string>; links: [string, string][] }) {
   return (
     <div>
       <h4 className="text-white font-semibold text-sm mb-4">{title}</h4>
       <ul className="space-y-2.5">
-        {links.map(([label, href]) => (
+        {links.map(([key, href]) => (
           <li key={href}>
             <Link href={href} className="text-sm text-white/60 hover:text-white transition-colors">
-              {label}
+              {linkLabels[key]}
             </Link>
           </li>
         ))}

@@ -22,18 +22,119 @@
   --color-text-muted: #687483;
   --color-text-faint: #9aa5b1;
 
-  --font-mono: "SF Mono", "JetBrains Mono", "Roboto Mono", ui-monospace, monospace;
-  --font-sans: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  --font-mono: var(--font-mono-loaded), "SF Mono", "JetBrains Mono", "Roboto Mono", ui-monospace, monospace;
+  --font-sans: var(--font-sans-loaded), "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
+  --font-serif: var(--font-serif-loaded), "Newsreader", Georgia, "Times New Roman", serif;
 
   --radius-panel: 4px;
 
   --shadow-panel: 0 1px 2px rgba(16, 24, 40, 0.06);
   --shadow-card: 0 12px 32px rgba(16, 24, 40, 0.10);
+
+  /* A fixed dark surface for intentionally-inverted regions (the marketing
+     footer). Deliberately NOT derived from --color-text, which flips between
+     themes — this stays dark in both light and dim so the footer reads as a
+     stable dark band with white text in either mode. */
+  --color-surface-dark: #17202a;
 }
 
 :root {
   color-scheme: light;
+}
+
+/*
+  Dim mode — site-wide token swap.
+  The same utilities (bg-canvas, text-text, border-border, …) reskin the whole
+  app (landing, trade terminal, account, admin) by redefining the underlying
+  CSS variables under a `.dim` class on <html>. No `dark:` class churn needed.
+  Brand/up/down hues are kept, slightly desaturated for the darker canvas.
+*/
+html.dim {
+  color-scheme: dark;
+  --color-canvas: #0e1116;
+  --color-panel: #161b22;
+  --color-panel-2: #1c232c;
+  --color-panel-3: #2a323d;
+  --color-border: #2a323d;
+  --color-border-soft: #222932;
+  --color-up: #4cba6a;
+  --color-down: #f15b5b;
+  --color-brand: #fd9444;
+  --color-brand-soft: #3a2410;
+  --color-text: #e6edf3;
+  --color-text-muted: #9aa7b4;
+  --color-text-faint: #6b7785;
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.45);
+  /* In dim mode the footer darkens further so it still reads as a distinct
+     band against the (already dark) canvas. */
+  --color-surface-dark: #06090d;
+}
+
+/* Serif prose for long-form / editorial copy. Pairs with mono labels & data. */
+.font-prose {
+  font-family: var(--font-serif);
+  font-feature-settings: "kern", "liga";
+}
+
+/*
+  Editorial prose container used by content pages (ArticleLayout). Serif body for
+  readability, with measured spacing and themed links / lists / quotes. Replaces
+  the previously-undefined `prose-content` class so all education / legal /
+  analytics / about copy inherits the same typographic system as the landing page.
+*/
+.prose-content {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--color-text);
+}
+.prose-content p {
+  margin: 0;
+}
+.prose-content > section + section,
+.prose-content > * + * {
+  margin-top: 1.25rem;
+}
+.prose-content a {
+  color: var(--color-brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-content a:hover {
+  filter: brightness(1.1);
+}
+.prose-content strong,
+.prose-content b {
+  font-weight: 700;
+  color: var(--color-text);
+}
+.prose-content ul,
+.prose-content ol {
+  padding-left: 1.25rem;
+}
+.prose-content ul {
+  list-style: disc;
+}
+.prose-content ol {
+  list-style: decimal;
+}
+.prose-content li::marker {
+  color: var(--color-brand);
+}
+.prose-content code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: var(--color-panel-2);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.prose-content blockquote {
+  border-left: 3px solid var(--color-brand);
+  padding-left: 1rem;
+  color: var(--color-text-muted);
+  font-style: italic;
 }
 
 html,

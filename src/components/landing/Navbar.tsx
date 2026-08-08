@@ -4,47 +4,51 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/trade/Logo";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { useTranslations } from "next-intl";
 import { clientTradeUrl } from "@/lib/branding";
 
 interface MenuGroup {
-  label: string;
-  items: { label: string; href: string }[];
+  /** Translation key under `nav` for the group label (e.g. "company"). */
+  key: string;
+  items: { /** Translation key under `nav.menu`. */ key: string; href: string }[];
 }
 
 const MENUS: MenuGroup[] = [
   {
-    label: "Company",
+    key: "company",
     items: [
-      { label: "About Us", href: "/about" },
-      { label: "Contacts", href: "/contact" },
+      { key: "about", href: "/about" },
+      { key: "contact", href: "/contact" },
     ],
   },
   {
-    label: "Tools",
+    key: "tools",
     items: [
-      { label: "Informers", href: "/tools/informers" },
-      { label: "Calendars", href: "/tools/calendars" },
-      { label: "Calculators", href: "/tools/calculators" },
-      { label: "Signals", href: "/tools/signals" },
+      { key: "informers", href: "/tools/informers" },
+      { key: "calendars", href: "/tools/calendars" },
+      { key: "calculators", href: "/tools/calculators" },
+      { key: "signals", href: "/tools/signals" },
     ],
   },
   {
-    label: "Analytics",
+    key: "analytics",
     items: [
-      { label: "News", href: "/analytics/news" },
-      { label: "Technical Analysis", href: "/analytics/technical" },
-      { label: "Fundamental Analysis", href: "/analytics/fundamental" },
-      { label: "Determining trend potential", href: "/analytics/trend" },
+      { key: "news", href: "/analytics/news" },
+      { key: "technical", href: "/analytics/technical" },
+      { key: "fundamental", href: "/analytics/fundamental" },
+      { key: "trend", href: "/analytics/trend" },
     ],
   },
   {
-    label: "Education",
+    key: "education",
     items: [
-      { label: "Beginners guide", href: "/education/beginners" },
-      { label: "Advanced guide", href: "/education/advanced" },
-      // { label: "Beginners VODs", href: "/education/beginners-vods" },
-      // { label: "Advanced VODs", href: "/education/advanced-vods" },
-      // { label: "Cryptocurrency VODs", href: "/education/crypto-vods" },
+      { key: "beginners", href: "/education/beginners" },
+      { key: "advanced", href: "/education/advanced" },
+      // { key: "beginnersVods", href: "/education/beginners-vods" },
+      // { key: "advancedVods", href: "/education/advanced-vods" },
+      // { key: "cryptoVods", href: "/education/crypto-vods" },
     ],
   },
 ];
@@ -52,6 +56,7 @@ const MENUS: MenuGroup[] = [
 /** Responsive marketing navbar with desktop dropdowns and a mobile navigation sheet. */
 export function Navbar() {
   const pathname = usePathname();
+  const t = useTranslations("nav");
   const [open, setOpen] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileGroup, setMobileGroup] = useState<string | null>(null);
@@ -85,19 +90,21 @@ export function Navbar() {
           <Logo className="gap-1.5 sm:gap-2" />
         </div>
 
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
-          {MENUS.map((menu) => (
-            <div key={menu.label} className="relative" onMouseEnter={() => setOpen(menu.label)}>
+        <nav className="hidden items-center gap-1 lg:flex" aria-label={t("company")}>
+          {MENUS.map((menu) => {
+            const groupLabel = t(menu.key);
+            return (
+            <div key={menu.key} className="relative" onMouseEnter={() => setOpen(menu.key)}>
               <button
                 type="button"
-                aria-expanded={open === menu.label}
+                aria-expanded={open === menu.key}
                 className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-text transition-colors hover:text-brand"
-                onClick={() => setOpen((value) => (value === menu.label ? null : menu.label))}
+                onClick={() => setOpen((value) => (value === menu.key ? null : menu.key))}
               >
-                {menu.label}
-                <Chevron open={open === menu.label} />
+                {groupLabel}
+                <Chevron open={open === menu.key} />
               </button>
-              {open === menu.label ? (
+              {open === menu.key ? (
                 <div className="absolute left-0 top-full pt-1">
                   <div className="min-w-55 rounded-lg border border-border bg-canvas py-2 shadow-card">
                     {menu.items.map((item) => (
@@ -106,36 +113,35 @@ export function Navbar() {
                         href={item.href}
                         className="block px-4 py-2 text-sm text-text-muted transition-colors hover:bg-panel hover:text-brand"
                       >
-                        {item.label}
+                        {t(`menu.${item.key}`)}
                       </Link>
                     ))}
                   </div>
                 </div>
               ) : null}
             </div>
-          ))}
+            );
+          })}
         </nav>
 
         <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2 lg:gap-4">
-          <div className="hidden items-center gap-1 text-xs md:flex">
-            <button type="button" className="rounded bg-panel-2 px-2 py-1 font-semibold text-text">EN</button>
-            <button type="button" className="rounded px-2 py-1 text-text-muted hover:text-text">FR</button>
-          </div>
+          <ThemeToggle className="hidden sm:inline-flex" />
+          <LanguageSwitcher className="hidden sm:block" />
           <Link
             href={clientTradeUrl("/login")}
             className="hidden px-2 py-2 text-sm font-medium text-text transition-colors hover:text-brand sm:inline-flex lg:px-4"
           >
-            Log in
+            {t("login")}
           </Link>
           <Link
             href={clientTradeUrl("/register")}
             className="hidden rounded bg-brand px-3 py-2 text-xs font-semibold text-white transition hover:brightness-110 sm:inline-flex lg:px-4 lg:text-sm"
           >
-            Open Account
+            {t("openAccount")}
           </Link>
           <button
             type="button"
-            aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-label={mobileOpen ? t("closeMenu") : t("openMenu")}
             aria-expanded={mobileOpen}
             aria-controls="mobile-navigation"
             onClick={() => setMobileOpen((value) => !value)}
@@ -150,16 +156,17 @@ export function Navbar() {
         <div id="mobile-navigation" className="fixed inset-x-0 top-16 z-50 h-[calc(100dvh-4rem)] overflow-y-auto border-t border-border bg-canvas lg:hidden">
           <nav className="mx-auto flex min-h-full max-w-3xl flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-3" aria-label="Mobile navigation">
             {MENUS.map((menu) => {
-              const expanded = mobileGroup === menu.label;
+              const groupLabel = t(menu.key);
+              const expanded = mobileGroup === menu.key;
               return (
-                <section key={menu.label} className="border-b border-border-soft">
+                <section key={menu.key} className="border-b border-border-soft">
                   <button
                     type="button"
                     aria-expanded={expanded}
-                    onClick={() => setMobileGroup((value) => (value === menu.label ? null : menu.label))}
+                    onClick={() => setMobileGroup((value) => (value === menu.key ? null : menu.key))}
                     className="flex w-full items-center justify-between py-4 text-left text-sm font-semibold text-text"
                   >
-                    {menu.label}
+                    {groupLabel}
                     <Chevron open={expanded} />
                   </button>
                   {expanded ? (
@@ -170,7 +177,7 @@ export function Navbar() {
                           href={item.href}
                           className="rounded px-3 py-3 text-sm text-text-muted hover:bg-panel-2 hover:text-brand"
                         >
-                          {item.label}
+                          {t(`menu.${item.key}`)}
                         </Link>
                       ))}
                     </div>
@@ -181,10 +188,10 @@ export function Navbar() {
 
             <div className="mt-auto grid gap-2 pt-6 sm:grid-cols-2">
               <Link href={clientTradeUrl("/login")} className="rounded border border-border px-4 py-3 text-center text-sm font-semibold text-text hover:border-brand">
-                Log in
+                {t("login")}
               </Link>
               <Link href={clientTradeUrl("/register")} className="rounded bg-brand px-4 py-3 text-center text-sm font-semibold text-white hover:brightness-110">
-                Open Account
+                {t("openAccount")}
               </Link>
             </div>
           </nav>

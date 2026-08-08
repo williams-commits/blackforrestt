@@ -1,47 +1,55 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
+import { getTranslations } from "next-intl/server";
 import { companyLegalName, supportEmail, companyAddress } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Privacy Policy" };
+export async function generateMetadata() {
+  const t = await getTranslations("privacy");
+  return { title: t("metaTitle") };
+}
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const t = await getTranslations("privacy");
+  const company = companyLegalName();
+  const email = supportEmail();
+  const address = companyAddress();
   return (
-    <ArticleLayout eyebrow="Legal" title="Privacy Policy" description={`Last updated: July 2026. This policy describes how ${companyLegalName()} collects, uses, and protects your personal information.`}>
-      <Section title="1. Information we collect">
-        <p>We collect information you provide directly when you register, verify your identity, or contact us:</p>
+    <ArticleLayout eyebrow={t("eyebrow")} title={t("title")} description={t("description", { company })}>
+      <Section title={t("s1Title")}>
+        <p>{t("s1Intro")}</p>
         <ul className="list-disc pl-5 space-y-1 marker:text-brand">
-          <li>Account data: name, email, country, and a generated trading account number.</li>
-          <li>Identity verification (KYC): government-issued ID and proof of address, as required by regulation.</li>
-          <li>Transaction data: deposits, withdrawals, and full trading history.</li>
-          <li>Technical data: IP address, device type, and usage logs, used for security and fraud prevention.</li>
+          <li>{t("s1Item1")}</li>
+          <li>{t("s1Item2")}</li>
+          <li>{t("s1Item3")}</li>
+          <li>{t("s1Item4")}</li>
         </ul>
       </Section>
-      <Section title="2. How we use your information">
+      <Section title={t("s2Title")}>
         <ul className="list-disc pl-5 space-y-1 marker:text-brand">
-          <li>To open, operate, and secure your trading account.</li>
-          <li>To comply with AML/KYC and other legal obligations.</li>
-          <li>To process deposits, withdrawals, and execute your orders.</li>
-          <li>To provide support and improve our services.</li>
+          <li>{t("s2Item1")}</li>
+          <li>{t("s2Item2")}</li>
+          <li>{t("s2Item3")}</li>
+          <li>{t("s2Item4")}</li>
         </ul>
       </Section>
-      <Section title="3. Data sharing">
-        <p>We do not sell your personal data. We share it only with: regulated payment processors to move your funds; identity-verification providers to complete KYC; and competent authorities where legally required to do so. All third parties are bound by confidentiality obligations.</p>
+      <Section title={t("s3Title")}>
+        <p>{t("s3Body")}</p>
       </Section>
-      <Section title="4. Data security">
-        <p>Personal data is encrypted in transit and at rest. Wallets are segregated from company funds. Access to personal data is restricted to authorised personnel on a least-privilege basis and is logged.</p>
+      <Section title={t("s4Title")}>
+        <p>{t("s4Body")}</p>
       </Section>
-      <Section title="5. Data retention">
-        <p>We retain your data for as long as your account is active, and for the period required by applicable law after closure (typically 5–7 years for transaction and KYC records).</p>
+      <Section title={t("s5Title")}>
+        <p>{t("s5Body")}</p>
       </Section>
-      <Section title="6. Your rights">
-        <p>Subject to applicable law, you may request access to, correction of, or deletion of your personal data, and you may object to or restrict certain processing. To exercise these rights, contact {supportEmail()}.</p>
+      <Section title={t("s6Title")}>
+        <p>{t("s6Body", { email })}</p>
       </Section>
-      <Section title="7. Changes to this policy">
-        <p>We may update this policy from time to time. Material changes will be notified by email or in-platform notice. Continued use after a change constitutes acceptance.</p>
+      <Section title={t("s7Title")}>
+        <p>{t("s7Body")}</p>
       </Section>
-      <Section title="8. Contact">
-        <p>{companyLegalName()}{companyAddress() ? `, ${companyAddress()}` : ""}. Email: {supportEmail()}.</p>
+      <Section title={t("s8Title")}>
+        <p>{t("s8Body", { company, address, email })}</p>
       </Section>
     </ArticleLayout>
   );

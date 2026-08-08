@@ -293,8 +293,8 @@ function MenuItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-2 text-left text-xs hover:bg-panel-2 transition-colors ${
-        danger ? "text-down" : "text-text"
+      className={`w-full flex items-center gap-3 px-4 py-2 text-left text-xs transition-colors cursor-pointer ${
+        danger ? "text-down hover:bg-down/10" : "text-text hover:bg-panel-2"
       }`}
     >
       <span className={danger ? "text-down" : "text-text-muted"}>{icon}</span>

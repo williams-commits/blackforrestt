@@ -1,18 +1,23 @@
 import { ArticleLayout } from "@/components/landing/ArticleLayout";
 import { ContactForm } from "@/components/landing/ContactForm";
+import { getTranslations } from "next-intl/server";
 import { companyAddress, supportEmail } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Contact" };
+export async function generateMetadata() {
+  const t = await getTranslations("contact");
+  return { title: t("metaTitle") };
+}
 
 /** Server component: reads branding env vars once and passes them to the client form. */
-export default function ContactPage() {
+export default async function ContactPage() {
+  const t = await getTranslations("contact");
   return (
     <ArticleLayout
-      eyebrow="Company"
-      title="Get in touch"
-      description="Our support team is available 24/7. We typically respond within one business day."
+      eyebrow={t("eyebrow")}
+      title={t("title")}
+      description={t("description")}
     >
       <ContactForm address={companyAddress()} email={supportEmail()} />
     </ArticleLayout>

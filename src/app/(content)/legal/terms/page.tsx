@@ -1,43 +1,33 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
+import { getTranslations } from "next-intl/server";
 import { companyLegalName, supportEmail, companyAddress, brandName, brandTrademark } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Terms of Service" };
+export async function generateMetadata() {
+  const t = await getTranslations("terms");
+  return { title: t("metaTitle") };
+}
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const t = await getTranslations("terms");
+  const company = companyLegalName();
+  const email = supportEmail();
+  const address = companyAddress();
+  const brand = brandName();
+  const tm = brandTrademark();
   return (
-    <ArticleLayout eyebrow="Legal" title="Terms of Service" description={`Last updated: July 2026. These terms govern your use of the ${brandName()} platform. By opening an account you agree to be bound by them.`}>
-      <Section title="1. Eligibility">
-        <p>You must be at least 18 years old and legally capable of entering into a binding contract to use this platform. We do not provide services to citizens or residents of the United States, Syria, Sudan, Iran, or North Korea. You represent that you are not resident in, or trading from, any restricted jurisdiction.</p>
-      </Section>
-      <Section title="2. Your account">
-        <p>You are responsible for maintaining the confidentiality of your login credentials and for all activity under your account. You agree to provide accurate information at registration and to keep it updated. We may suspend or close accounts that breach these terms or that we suspect of fraudulent activity.</p>
-      </Section>
-      <Section title="3. Risk acknowledgement">
-        <p>Trading forex, CFDs, and other leveraged products carries a high level of risk and can result in the loss of all invested capital. You acknowledge that you understand these risks, that past performance does not guarantee future results, and that you are trading voluntarily with funds you can afford to lose. You should not trade with borrowed money.</p>
-      </Section>
-      <Section title="4. Fees and pricing">
-        <p>Spreads, commissions, and swap charges are displayed in the platform before you trade. We may change our fee schedule with notice. Demo accounts carry no real financial value and are provided for practice only.</p>
-      </Section>
-      <Section title="5. Execution">
-        <p>We aim to execute orders promptly at quoted prices. However, in fast or illiquid markets, execution may be delayed or the price may move (&quot;slippage&quot;). We are not liable for losses arising from market conditions, connectivity issues on your side, or force majeure events.</p>
-      </Section>
-      <Section title="6. Prohibited conduct">
-        <p>You agree not to: exploit errors in pricing or software (&quot;arbitrage of system errors&quot;); use the platform for money laundering or any illegal purpose; reverse-engineer, scrape, or overload our infrastructure; or share your account. Violations may result in immediate closure and forfeiture of balances derived from prohibited activity.</p>
-      </Section>
-      <Section title="7. Intellectual property">
-        <p>The platform, its branding, content, and software are the property of {companyLegalName()} and protected by applicable law. {brandTrademark()} is a trademark of {companyLegalName()}. You may not copy, redistribute, or create derivative works without our written permission.</p>
-      </Section>
-      <Section title="8. Limitation of liability">
-        <p>To the maximum extent permitted by law, {companyLegalName()} shall not be liable for indirect, incidental, or consequential damages, or for any loss of profit, arising from your use of the platform. Our aggregate liability is limited to the amount of fees you paid us in the preceding three months.</p>
-      </Section>
-      <Section title="9. Changes to these terms">
-        <p>We may revise these terms periodically. Material changes will be notified by email or in-platform notice. Continued use after the effective date constitutes acceptance of the revised terms.</p>
-      </Section>
-      <Section title="10. Contact">
-        <p>{companyLegalName()}{companyAddress() ? `, ${companyAddress()}` : ""}. Email: {supportEmail()}.</p>
-      </Section>
+    <ArticleLayout eyebrow={t("eyebrow")} title={t("title")} description={t("description", { brand })}>
+      <Section title={t("s1Title")}><p>{t("s1Body")}</p></Section>
+      <Section title={t("s2Title")}><p>{t("s2Body")}</p></Section>
+      <Section title={t("s3Title")}><p>{t("s3Body")}</p></Section>
+      <Section title={t("s4Title")}><p>{t("s4Body")}</p></Section>
+      <Section title={t("s5Title")}><p>{t("s5Body")}</p></Section>
+      <Section title={t("s6Title")}><p>{t("s6Body")}</p></Section>
+      <Section title={t("s7Title")}><p>{t("s7Body", { company, tm })}</p></Section>
+      <Section title={t("s8Title")}><p>{t("s8Body", { company })}</p></Section>
+      <Section title={t("s9Title")}><p>{t("s9Body")}</p></Section>
+      <Section title={t("s10Title")}><p>{t("s10Body", { company, address, email })}</p></Section>
     </ArticleLayout>
   );
 }

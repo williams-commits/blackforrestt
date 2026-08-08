@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Logo } from "@/components/trade/Logo";
@@ -11,6 +12,7 @@ import { signInFailureMessage } from "@/lib/authClient";
 const PASSWORD_REQUIREMENT = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,128}$/;
 
 export default function RegisterPage() {
+  const t = useTranslations("auth");
   const formId = useId();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -34,15 +36,15 @@ export default function RegisterPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setResendState({ loading: false, message: data?.error ?? "Could not resend the email. Try again later." });
+        setResendState({ loading: false, message: data?.error ?? t("resendFail") });
       } else if (data?.previewUrl) {
         setVerificationPreviewUrl(data.previewUrl);
-        setResendState({ loading: false, message: "A new development verification link was generated below." });
+        setResendState({ loading: false, message: t("devPreviewResend") });
       } else {
-        setResendState({ loading: false, message: "If an account exists for that email, a new verification link has been sent." });
+        setResendState({ loading: false, message: t("resendOk") });
       }
     } catch {
-      setResendState({ loading: false, message: "Could not reach the service. Check your connection and try again." });
+      setResendState({ loading: false, message: t("networkError") });
     }
   }
 
@@ -54,19 +56,19 @@ export default function RegisterPage() {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedName) {
-      setError("Enter your full name.");
+      setError(t("errName"));
       return;
     }
     if (!PASSWORD_REQUIREMENT.test(password)) {
-      setError("Use 12–128 characters with uppercase, lowercase and a number.");
+      setError(t("errPwd"));
       return;
     }
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      setError(t("errMatch"));
       return;
     }
     if (!agree) {
-      setError("Accept the Terms of Service and Privacy Policy to continue.");
+      setError(t("errAgree"));
       return;
     }
 
@@ -88,7 +90,7 @@ export default function RegisterPage() {
         startingBalance?: string;
       } | null;
       if (!res.ok) {
-        setError(data?.error ?? "Registration failed. Please try again.");
+        setError(data?.error ?? t("errRegister"));
         // Offer resend only when the existing account is registered but unverified.
         if (res.status === 409 && data?.needsVerification) setShowResend(true);
         return;
@@ -107,7 +109,7 @@ export default function RegisterPage() {
         });
         const signInError = signInFailureMessage(result);
         if (signInError) {
-          setSuccess(`Account created. Sign in to continue.`);
+          setSuccess(t("okCreated"));
           setError(signInError);
           return;
         }
@@ -118,13 +120,13 @@ export default function RegisterPage() {
       setVerificationPreviewUrl(data?.verificationPreviewUrl ?? null);
       setSuccess(
         data?.verificationDelivery === "sent"
-          ? "Account created. Check your email and verify it before signing in."
+          ? t("okSent")
           : data?.verificationDelivery === "preview"
-            ? "Account created. Use the development verification link below, then sign in."
-            : "Account created, but verification email delivery is unavailable.",
+            ? t("okPreview")
+            : t("okNoMail"),
       );
     } catch {
-      setError("Unable to reach the service. Check your connection and try again.");
+      setError(t("errNetwork"));
     } finally {
       setLoading(false);
     }
@@ -144,9 +146,9 @@ export default function RegisterPage() {
           <Logo className="text-lg" />
         </div>
         <div className="w-full bg-canvas border border-border rounded-lg shadow-panel p-8">
-          <h1 className="text-lg font-semibold text-center mb-1">Create your account</h1>
+          <h1 className="text-lg font-semibold text-center mb-1">{t("createH1")}</h1>
           <p className="text-xs text-text-muted text-center mb-6">
-            Sign up to start trading your account.
+            {t("createSub")}
           </p>
 
           {success ? (
@@ -154,33 +156,33 @@ export default function RegisterPage() {
               {success}
               {verificationPreviewUrl && (
                 <a href={verificationPreviewUrl} className="block mt-3 text-brand hover:underline">
-                  Verify this development account
+                  {t("verifyDev")}
                 </a>
               )}
               <div className="mt-3 border-t border-up/20 pt-3">
-                <p className="text-[11px] text-text-muted mb-2">Didn&rsquo;t receive the email?</p>
+                <p className="text-[11px] text-text-muted mb-2">{t("noEmail")}</p>
                 <Button
                   type="button"
                   variant="brand"
                   loading={resendState.loading}
-                  loadingLabel="Sending"
+                  loadingLabel={t("resendSending")}
                   onClick={resendVerification}
                   className="w-full"
                 >
-                  Resend verification email
+                  {t("resendBtn")}
                 </Button>
                 {resendState.message && (
                   <p role="status" className="mt-2 text-[11px] text-text-muted">{resendState.message}</p>
                 )}
               </div>
               <Link href="/login" className="block mt-3 text-brand hover:underline">
-                Continue to sign in
+                {t("continueSignIn")}
               </Link>
             </div>
           ) : <form onSubmit={submit} className="w-full" aria-describedby={error ? errorId : undefined}>
             <div className="mb-4">
               <label htmlFor={nameId} className="block text-[11px] text-text-muted mb-1">
-                Full name
+                {t("fullName")}
               </label>
               <input
                 id={nameId}
@@ -195,7 +197,7 @@ export default function RegisterPage() {
             </div>
             <div className="mb-4">
               <label htmlFor={emailId} className="block text-[11px] text-text-muted mb-1">
-                Email
+                {t("email")}
               </label>
               <input
                 id={emailId}
@@ -211,7 +213,7 @@ export default function RegisterPage() {
             </div>
             <div className="mb-4">
               <label htmlFor={passwordId} className="block text-[11px] text-text-muted mb-1">
-                Password
+                {t("password")}
               </label>
               <input
                 id={passwordId}
@@ -226,12 +228,12 @@ export default function RegisterPage() {
                 className="w-full h-10 bg-canvas border border-border rounded px-3 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
               />
               <p id={`${passwordId}-hint`} className="mt-1 text-[10px] text-text-faint">
-                12–128 characters with uppercase, lowercase and a number.
+                {t("pwdHint")}
               </p>
             </div>
             <div className="mb-4">
               <label htmlFor={confirmId} className="block text-[11px] text-text-muted mb-1">
-                Confirm password
+                {t("confirmPassword")}
               </label>
               <input
                 id={confirmId}
@@ -256,15 +258,10 @@ export default function RegisterPage() {
                 className="mt-0.5 accent-brand"
               />
               <span>
-                I agree to the{" "}
-                <Link href="/legal/terms" target="_blank" className="text-brand hover:underline">
-                  Terms of Service
-                </Link>{" "}
-                and{" "}
-                <Link href="/legal/privacy" target="_blank" className="text-brand hover:underline">
-                  Privacy Policy
-                </Link>
-                .
+                {t.rich("agree", {
+                  terms: (chunks) => <Link href="/legal/terms" target="_blank" className="text-brand hover:underline">{chunks}</Link>,
+                  privacy: (chunks) => <Link href="/legal/privacy" target="_blank" className="text-brand hover:underline">{chunks}</Link>,
+                })}
               </span>
             </label>
 
@@ -280,23 +277,23 @@ export default function RegisterPage() {
 
             {showResend && (
               <div className="mb-3 rounded border border-brand/30 bg-brand-soft px-3 py-2 text-xs">
-                <p className="text-text-muted mb-2">This email is registered but not verified. Resend the verification link to sign in.</p>
+                <p className="text-text-muted mb-2">{t("resendUnverified")}</p>
                 <Button
                   type="button"
                   variant="brand"
                   loading={resendState.loading}
-                  loadingLabel="Sending"
+                  loadingLabel={t("resendSending")}
                   onClick={resendVerification}
                   className="w-full"
                 >
-                  Resend verification email
+                  {t("resendBtn")}
                 </Button>
                 {resendState.message && (
                   <p role="status" className="mt-2 text-[11px] text-text-muted">{resendState.message}</p>
                 )}
                 {verificationPreviewUrl && (
                   <a href={verificationPreviewUrl} className="mt-2 block text-center text-brand hover:underline">
-                    Open the development verification link
+                    {t("devLink")}
                   </a>
                 )}
               </div>
@@ -306,22 +303,22 @@ export default function RegisterPage() {
               type="submit"
               variant="brand"
               loading={loading}
-              loadingLabel="Creating account"
+              loadingLabel={t("creating")}
               className="w-full"
             >
-              Create account
+              {t("createBtn")}
             </Button>
           </form>}
 
           <p className="text-center text-xs text-text-muted mt-5">
-            Already have an account?{" "}
+            {t("haveAccount")}{" "}
             <Link href="/login" className="text-brand hover:underline">
-              Sign in
+              {t("signIn")}
             </Link>
           </p>
         </div>
         <p className="text-[11px] text-text-faint mt-6 text-center max-w-xs">
-          Black Forest platform. Trading forex and CFDs carries a high level of risk.
+          {t("riskNote")}
         </p>
       </div>
     </main>

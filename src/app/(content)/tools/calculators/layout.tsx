@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
-export const metadata: Metadata = {
-  title: "Trading Calculators",
-  description: "Free trading calculators — position size, margin, pip value, profit/loss, and risk-reward ratio.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("calculators");
+  return { title: t("metaTitle"), description: t("metaDesc") };
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return children;

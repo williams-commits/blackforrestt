@@ -113,9 +113,9 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="min-h-screen bg-panel">
-      <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-canvas px-3 py-2 sm:flex-nowrap sm:px-4">
+      <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-canvas px-3 py-1 sm:flex-nowrap sm:px-4">
         <Logo />
-        <nav className="order-3 flex w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 sm:w-auto">
+        <nav className="order-3 w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 hidden lg:flex">
           <Link href="/trade/AUDCAD" className="text-text-muted hover:text-text">Trade</Link>
           <span className="text-text font-medium">Account</span>
           <Link href="/reports" className="text-text-muted hover:text-text">Reports</Link>

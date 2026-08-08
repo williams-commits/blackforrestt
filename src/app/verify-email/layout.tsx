@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
-export const metadata: Metadata = {
-  title: "Verify Email",
-  description: "Confirm your email address to activate your account.",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("auth");
+  return { title: t("verifyMetaTitle"), description: t("verifyMetaDesc"), robots: { index: false, follow: false } };
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return children;

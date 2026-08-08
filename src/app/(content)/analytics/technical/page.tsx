@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 
@@ -28,10 +29,10 @@ interface InstrumentListItem {
 
 const INTERVALS = ["1m", "5m", "15m", "1h", "4h", "1d"] as const;
 
-const BIAS_STYLE: Record<Bias, { chip: string; label: string; arrow: string }> = {
-  bullish: { chip: "bg-up/15 text-up", label: "Bullish bias", arrow: "↑" },
-  bearish: { chip: "bg-down/15 text-down", label: "Bearish bias", arrow: "↓" },
-  neutral: { chip: "bg-brand-soft text-brand", label: "Neutral / Range", arrow: "↔" },
+const BIAS_STYLE: Record<Bias, { chip: string; arrow: string; labelKey: "biasBullish" | "biasBearish" | "biasNeutral"; trendKey: "trendHigher" | "trendLower" | "trendRange" }> = {
+  bullish: { chip: "bg-up/15 text-up", arrow: "↑", labelKey: "biasBullish", trendKey: "trendHigher" },
+  bearish: { chip: "bg-down/15 text-down", arrow: "↓", labelKey: "biasBearish", trendKey: "trendLower" },
+  neutral: { chip: "bg-brand-soft text-brand", arrow: "↔", labelKey: "biasNeutral", trendKey: "trendRange" },
 };
 
 function fmt(value: number | null | undefined, digits: number): string {
@@ -40,6 +41,7 @@ function fmt(value: number | null | undefined, digits: number): string {
 }
 
 export default function TechnicalPage() {
+  const t = useTranslations("technical");
   const [symbol, setSymbol] = useState("EURUSD");
   const [tf, setTf] = useState<(typeof INTERVALS)[number]>("1h");
 
@@ -57,7 +59,7 @@ export default function TechnicalPage() {
     queryKey: ["technical", symbol, tf],
     queryFn: async () => {
       const res = await fetch(`/api/analysis/technical?symbol=${symbol}&interval=${tf}`, { cache: "no-store" });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Analysis unavailable");
+      if (!res.ok) throw new Error(t("errorThrow"));
       return (await res.json()) as AnalysisResponse;
     },
     refetchInterval: 5_000,
@@ -70,14 +72,14 @@ export default function TechnicalPage() {
 
   return (
     <ArticleLayout
-      eyebrow="Analytics"
-      title="Technical Analysis"
-      description="Live technical breakdowns computed from current price action — moving averages, RSI, ATR, and support/resistance levels."
+      eyebrow={t("eyebrow")}
+      title={t("title")}
+      description={t("description")}
     >
       {/* Controls */}
       <div className="bg-canvas border border-border rounded-xl p-4 mb-4 flex flex-wrap items-center gap-3">
         <label className="text-[11px] text-text-muted">
-          Instrument
+          {t("instrument")}
           <select
             value={symbol}
             onChange={(e) => setSymbol(e.target.value)}
@@ -89,7 +91,7 @@ export default function TechnicalPage() {
           </select>
         </label>
         <label className="text-[11px] text-text-muted">
-          Timeframe
+          {t("timeframe")}
           <select
             value={tf}
             onChange={(e) => setTf(e.target.value as (typeof INTERVALS)[number])}
@@ -102,16 +104,16 @@ export default function TechnicalPage() {
 
       {analysis.error ? (
         <div className="bg-canvas border border-border rounded-xl p-5 text-sm text-text-muted" role="alert">
-          {analysis.error instanceof Error ? analysis.error.message : "Analysis is unavailable right now."}
+          {analysis.error instanceof Error ? analysis.error.message : t("error")}
         </div>
       ) : !data ? (
-        <div className="bg-canvas border border-border rounded-xl p-5 text-sm text-text-faint">Computing analysis…</div>
+        <div className="bg-canvas border border-border rounded-xl p-5 text-sm text-text-faint">{t("loading")}</div>
       ) : (
         <div className="bg-canvas border border-border rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-border bg-panel-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-base font-bold">{data.symbol}</span>
-              <span className={`text-[11px] px-2 py-0.5 rounded font-medium ${biasStyle.chip}`}>{biasStyle.label}</span>
+              <span className={`text-[11px] px-2 py-0.5 rounded font-medium ${biasStyle.chip}`}>{t(biasStyle.labelKey)}</span>
             </div>
             <span className="text-[11px] text-text-faint">{data.interval.toUpperCase()} · {new Date(data.asOf).toLocaleTimeString("en-GB")}</span>
           </div>
@@ -120,17 +122,17 @@ export default function TechnicalPage() {
               <p>
                 {data.symbol} trades at <strong>{fmt(data.price, digits)}</strong>{" "}
                 ({data.changePct >= 0 ? "+" : ""}{data.changePct.toFixed(2)}% on the day). The {data.interval.toUpperCase()}{" "}
-                structure is <strong>{biasStyle.label.toLowerCase()}</strong>: SMA(20) sits at {fmt(data.indicators.sma20, digits)}{" "}
+                structure is <strong>{t(biasStyle.labelKey).toLowerCase()}</strong>: SMA(20) sits at {fmt(data.indicators.sma20, digits)}{" "}
                 and SMA(50) at {fmt(data.indicators.sma50, digits)}. RSI(14) reads {data.indicators.rsi14 != null ? data.indicators.rsi14.toFixed(1) : "—"}.
               </p>
             </Section>
             <div className="grid grid-cols-3 gap-3">
-              <Level label="24h High" value={fmt(data.high24h, digits)} />
-              <Level label="Resistance" value={fmt(data.levels.resistance, digits)} />
-              <Level label="Current" value={fmt(data.price, digits)} highlight />
-              <Level label="Support" value={fmt(data.levels.support, digits)} />
-              <Level label="24h Low" value={fmt(data.low24h, digits)} />
-              <Level label="Trend" value={`${biasStyle.arrow} ${data.bias === "neutral" ? "Range" : data.bias === "bullish" ? "Higher" : "Lower"}`} />
+              <Level label={t("l24hHigh")} value={fmt(data.high24h, digits)} />
+              <Level label={t("lResistance")} value={fmt(data.levels.resistance, digits)} />
+              <Level label={t("lCurrent")} value={fmt(data.price, digits)} highlight />
+              <Level label={t("lSupport")} value={fmt(data.levels.support, digits)} />
+              <Level label={t("l24hLow")} value={fmt(data.low24h, digits)} />
+              <Level label={t("lTrend")} value={t(biasStyle.trendKey)} />
             </div>
             <Section>
               <p>
@@ -143,13 +145,8 @@ export default function TechnicalPage() {
         </div>
       )}
 
-      <Section title="How to read this analysis">
-        <p>
-          <strong>Support</strong> is a price level where buying interest tends to emerge; <strong>resistance</strong>
-          is where selling pressure builds. The <strong>trend</strong> direction tells you whether to bias
-          your trades long (↑), short (↓), or stay flat (↔). Always pair technical levels with sound risk
-          management — never risk more than 1–2% of your account on a single trade.
-        </p>
+      <Section title={t("howTitle")}>
+        <p>{t("howBody")}</p>
       </Section>
     </ArticleLayout>
   );

@@ -12,7 +12,7 @@ export function ConnectionDot({ status }: { status: SocketStatus }) {
 
   return (
     <div className="flex items-center gap-1.5 text-[11px]" role="status" aria-live="polite">
-      <span className="relative flex h-2 w-2" aria-hidden="true">
+      <span className="relative hidden lg:flex h-2 w-2" aria-hidden="true">
         {status === "connecting" ? (
           <span
             className={`absolute inline-flex h-full w-full animate-ping rounded-full ${state.color} opacity-60`}

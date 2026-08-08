@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
-export const metadata: Metadata = {
-  title: "Cryptocurrency Video Course",
-  description: "Cryptocurrency trading video course — blockchain basics, market structure, risk management, and avoiding scams.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("cryptoVod");
+  return { title: t("metaTitle"), description: t("metaDesc") };
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return children;

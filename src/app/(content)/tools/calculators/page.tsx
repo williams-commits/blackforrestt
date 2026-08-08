@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 
 interface Instrument {
   symbol: string;
-  name: string;
+  nameKey: string;
   digits: number;
   pipSize: number;
   pipValue: number;
@@ -15,19 +16,21 @@ interface Instrument {
 
 // Mirrors the seeded instruments (kept here so the page is static-friendly).
 const INSTRUMENTS: Instrument[] = [
-  { symbol: "AUDCAD", name: "Australian Dollar / Canadian Dollar", digits: 5, pipSize: 0.0001, pipValue: 7.4, marginPerLot: 1000, contractSize: 100000 },
-  { symbol: "EURUSD", name: "Euro / US Dollar", digits: 5, pipSize: 0.0001, pipValue: 10, marginPerLot: 1000, contractSize: 100000 },
-  { symbol: "GBPUSD", name: "British Pound / US Dollar", digits: 5, pipSize: 0.0001, pipValue: 10, marginPerLot: 1000, contractSize: 100000 },
-  { symbol: "USDJPY", name: "US Dollar / Japanese Yen", digits: 3, pipSize: 0.01, pipValue: 9.1, marginPerLot: 1000, contractSize: 100000 },
-  { symbol: "AUDUSD", name: "Australian Dollar / US Dollar", digits: 5, pipSize: 0.0001, pipValue: 10, marginPerLot: 1000, contractSize: 100000 },
-  { symbol: "USDCAD", name: "US Dollar / Canadian Dollar", digits: 5, pipSize: 0.0001, pipValue: 7.4, marginPerLot: 1000, contractSize: 100000 },
-  { symbol: "NZDUSD", name: "New Zealand Dollar / US Dollar", digits: 5, pipSize: 0.0001, pipValue: 10, marginPerLot: 1000, contractSize: 100000 },
-  { symbol: "EURGBP", name: "Euro / British Pound", digits: 5, pipSize: 0.0001, pipValue: 12.7, marginPerLot: 1000, contractSize: 100000 },
+  { symbol: "AUDCAD", nameKey: "AUDCAD", digits: 5, pipSize: 0.0001, pipValue: 7.4, marginPerLot: 1000, contractSize: 100000 },
+  { symbol: "EURUSD", nameKey: "EURUSD", digits: 5, pipSize: 0.0001, pipValue: 10, marginPerLot: 1000, contractSize: 100000 },
+  { symbol: "GBPUSD", nameKey: "GBPUSD", digits: 5, pipSize: 0.0001, pipValue: 10, marginPerLot: 1000, contractSize: 100000 },
+  { symbol: "USDJPY", nameKey: "USDJPY", digits: 3, pipSize: 0.01, pipValue: 9.1, marginPerLot: 1000, contractSize: 100000 },
+  { symbol: "AUDUSD", nameKey: "AUDUSD", digits: 5, pipSize: 0.0001, pipValue: 10, marginPerLot: 1000, contractSize: 100000 },
+  { symbol: "USDCAD", nameKey: "USDCAD", digits: 5, pipSize: 0.0001, pipValue: 7.4, marginPerLot: 1000, contractSize: 100000 },
+  { symbol: "NZDUSD", nameKey: "NZDUSD", digits: 5, pipSize: 0.0001, pipValue: 10, marginPerLot: 1000, contractSize: 100000 },
+  { symbol: "EURGBP", nameKey: "EURGBP", digits: 5, pipSize: 0.0001, pipValue: 12.7, marginPerLot: 1000, contractSize: 100000 },
 ];
 
 type Calc = "pip" | "margin" | "profit";
 
 export default function CalculatorsPage() {
+  const t = useTranslations("calculators");
+  const tInst = useTranslations("calculators.instruments");
   const [calc, setCalc] = useState<Calc>("pip");
   const [symbol, setSymbol] = useState("EURUSD");
   const [volume, setVolume] = useState("0.10");
@@ -51,15 +54,21 @@ export default function CalculatorsPage() {
     }
   }
 
+  const tabs: [Calc, string][] = [
+    ["pip", t("tabPip")],
+    ["margin", t("tabMargin")],
+    ["profit", t("tabProfit")],
+  ];
+
   return (
     <ArticleLayout
-      eyebrow="Tools"
-      title="Trading Calculators"
-      description="Plan your trades precisely. Calculate pip value, margin requirements, and potential profit before you risk a cent."
+      eyebrow={t("eyebrow")}
+      title={t("title")}
+      description={t("description")}
     >
       <Section>
         <div className="grid grid-cols-3 gap-1 bg-panel-2 border border-border rounded-lg p-1 text-sm w-full max-w-md">
-          {([["pip", "Pip Value"], ["margin", "Margin"], ["profit", "Profit / Loss"]] as const).map(([k, label]) => (
+          {tabs.map(([k, label]) => (
             <button
               key={k}
               onClick={() => setCalc(k)}
@@ -74,18 +83,18 @@ export default function CalculatorsPage() {
       {/* Calculator card */}
       <div className="bg-canvas border border-border rounded-xl p-6 shadow-card max-w-2xl">
         <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="Instrument">
+          <Field label={t("instrument")}>
             <select
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}
               className="w-full h-10 bg-canvas border border-border rounded px-2 text-sm outline-none focus:border-brand"
             >
               {INSTRUMENTS.map((i) => (
-                <option key={i.symbol} value={i.symbol}>{i.symbol} — {i.name}</option>
+                <option key={i.symbol} value={i.symbol}>{i.symbol} — {tInst(i.nameKey)}</option>
               ))}
             </select>
           </Field>
-          <Field label="Volume (lots)">
+          <Field label={t("volume")}>
             <input
               type="number"
               step="0.01"
@@ -98,7 +107,7 @@ export default function CalculatorsPage() {
 
           {calc === "profit" && (
             <>
-              <Field label="Entry price">
+              <Field label={t("entryPrice")}>
                 <input
                   type="number"
                   step={inst.pipSize}
@@ -108,7 +117,7 @@ export default function CalculatorsPage() {
                   className="w-full h-10 bg-canvas border border-border rounded px-3 text-sm tnum outline-none focus:border-brand placeholder:text-text-faint"
                 />
               </Field>
-              <Field label="Exit price">
+              <Field label={t("exitPrice")}>
                 <input
                   type="number"
                   step={inst.pipSize}
@@ -126,44 +135,35 @@ export default function CalculatorsPage() {
         <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
           {calc === "pip" && (
             <>
-              <Result label="Pip Value" value={`$${pipValue.toFixed(2)}`} highlight />
-              <Result label="Pip Size" value={inst.pipSize.toString()} />
-              <Result label="Contract Size" value={inst.contractSize.toLocaleString()} />
-              <Result label="Units" value={(vol * inst.contractSize).toLocaleString()} />
+              <Result label={t("rPipValue")} value={`$${pipValue.toFixed(2)}`} highlight />
+              <Result label={t("rPipSize")} value={inst.pipSize.toString()} />
+              <Result label={t("rContractSize")} value={inst.contractSize.toLocaleString()} />
+              <Result label={t("rUnits")} value={(vol * inst.contractSize).toLocaleString()} />
             </>
           )}
           {calc === "margin" && (
             <>
-              <Result label="Required Margin" value={`$${margin.toFixed(2)}`} highlight />
-              <Result label="Margin / Lot" value={`$${inst.marginPerLot}`} />
-              <Result label="Volume" value={`${vol.toFixed(2)} lots`} />
-              <Result label="Notional" value={`$${(vol * inst.contractSize * (Number(entry) || 1)).toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
+              <Result label={t("rRequiredMargin")} value={`$${margin.toFixed(2)}`} highlight />
+              <Result label={t("rMarginPerLot")} value={`$${inst.marginPerLot}`} />
+              <Result label={t("volume")} value={`${vol.toFixed(2)} lots`} />
+              <Result label={t("rNotional")} value={`$${(vol * inst.contractSize * (Number(entry) || 1)).toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
             </>
           )}
           {calc === "profit" && (
             <>
-              <Result label="Profit / Loss" value={`${profit >= 0 ? "+" : ""}$${profit.toFixed(2)}`} highlight valueClass={profit >= 0 ? "text-up" : "text-down"} />
-              <Result label="Pips" value={`${pips >= 0 ? "+" : ""}${pips.toFixed(1)}`} valueClass={pips >= 0 ? "text-up" : "text-down"} />
-              <Result label="Pip Value" value={`$${pipValue.toFixed(2)}`} />
-              <Result label="Volume" value={`${vol.toFixed(2)} lots`} />
+              <Result label={t("rProfitLoss")} value={`${profit >= 0 ? "+" : ""}$${profit.toFixed(2)}`} highlight valueClass={profit >= 0 ? "text-up" : "text-down"} />
+              <Result label={t("rPips")} value={`${pips >= 0 ? "+" : ""}${pips.toFixed(1)}`} valueClass={pips >= 0 ? "text-up" : "text-down"} />
+              <Result label={t("rPipValue")} value={`$${pipValue.toFixed(2)}`} />
+              <Result label={t("volume")} value={`${vol.toFixed(2)} lots`} />
             </>
           )}
         </div>
       </div>
 
-      <Section title="How it works">
-        <p>
-          <strong>Pip value</strong> is the monetary worth of a one-pip move for your position size. It&apos;s
-          calculated as: <code className="text-brand">pip value per lot × volume (lots)</code>. For EURUSD at 0.10 lots, one pip = $1.00.
-        </p>
-        <p>
-          <strong>Margin</strong> is the collateral required to open a position. With 1:100 leverage, one standard
-          lot (100,000 units) of EURUSD requires roughly $1,000 in margin.
-        </p>
-        <p>
-          <strong>Profit / Loss</strong> is the difference between your entry and exit, expressed in pips, then
-          converted to account currency using the pip value.
-        </p>
+      <Section title={t("howTitle")}>
+        <p>{t("howPip")}</p>
+        <p>{t("howMargin")}</p>
+        <p>{t("howProfit")}</p>
       </Section>
     </ArticleLayout>
   );

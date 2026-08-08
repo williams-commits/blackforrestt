@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 
@@ -24,8 +25,14 @@ interface CalendarResponse {
 }
 
 const CURRENCIES = ["ALL", "USD", "EUR", "GBP", "JPY", "AUD", "CAD", "NZD", "CHF"] as const;
+const IMPACT_LABEL_KEY: Record<Impact, "impHigh" | "impMedium" | "impLow"> = {
+  high: "impHigh",
+  medium: "impMedium",
+  low: "impLow",
+};
 
 export default function CalendarPage() {
+  const t = useTranslations("calendars");
   const [filter, setFilter] = useState<(typeof CURRENCIES)[number]>("ALL");
   const [impactFilter, setImpactFilter] = useState<"all" | Impact>("all");
 
@@ -40,10 +47,10 @@ export default function CalendarPage() {
       if (currenciesParam) params.set("currencies", currenciesParam);
       if (impactParam) params.set("impact", impactParam);
       const res = await fetch(`/api/economic-calendar?${params.toString()}`, { cache: "no-store" });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Calendar unavailable");
+      if (!res.ok) throw new Error(t("errorThrow"));
       return (await res.json()) as CalendarResponse;
     },
-    refetchInterval: 300_000, // 5 min — matches the server cache TTL
+    refetchInterval: 300_000,
     retry: 1,
   });
 
@@ -51,9 +58,9 @@ export default function CalendarPage() {
 
   return (
     <ArticleLayout
-      eyebrow="Tools"
-      title="Economic Calendar"
-      description="Track market-moving events from the economic wire. All times are in your local timezone."
+      eyebrow={t("eyebrow")}
+      title={t("title")}
+      description={t("description")}
     >
       {/* Filters */}
       <Section>
@@ -74,7 +81,7 @@ export default function CalendarPage() {
               onClick={() => setImpactFilter(imp)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition ${impactFilter === imp ? "bg-text text-canvas" : "bg-panel border border-border text-text-muted hover:text-text"}`}
             >
-              {imp === "all" ? "All impact" : imp}
+              {imp === "all" ? t("filterImpactAll") : t(IMPACT_LABEL_KEY[imp])}
             </button>
           ))}
         </div>
@@ -86,29 +93,29 @@ export default function CalendarPage() {
           <table className="w-full">
             <thead className="bg-panel-2 border-b border-border">
               <tr>
-                <th className="text-left text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">Date / Time</th>
-                <th className="text-left text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">Currency</th>
-                <th className="text-left text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">Impact</th>
-                <th className="text-left text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">Event</th>
-                <th className="text-right text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">Actual</th>
-                <th className="text-right text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">Forecast</th>
-                <th className="text-right text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">Previous</th>
+                <th className="text-left text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">{t("thDateTime")}</th>
+                <th className="text-left text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">{t("thCurrency")}</th>
+                <th className="text-left text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">{t("thImpact")}</th>
+                <th className="text-left text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">{t("thEvent")}</th>
+                <th className="text-right text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">{t("thActual")}</th>
+                <th className="text-right text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">{t("thForecast")}</th>
+                <th className="text-right text-[11px] uppercase text-text-faint font-medium px-4 py-2.5">{t("thPrevious")}</th>
               </tr>
             </thead>
             <tbody>
               {error ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-down text-sm">
-                    {error instanceof Error ? error.message : "Unable to load the calendar right now."}
+                    {error instanceof Error ? error.message : t("error")}
                   </td>
                 </tr>
               ) : isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-text-faint text-sm">Loading economic events…</td>
+                  <td colSpan={7} className="px-4 py-10 text-center text-text-faint text-sm">{t("loading")}</td>
                 </tr>
               ) : events.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-text-faint text-sm">No events match these filters.</td>
+                  <td colSpan={7} className="px-4 py-10 text-center text-text-faint text-sm">{t("empty")}</td>
                 </tr>
               ) : (
                 events.map((e) => (
@@ -120,7 +127,7 @@ export default function CalendarPage() {
                       <span className="text-xs font-semibold px-2 py-0.5 rounded bg-panel-2 border border-border">{e.currency}</span>
                     </td>
                     <td className="px-4 py-2.5">
-                      <ImpactDot impact={e.impact} />
+                      <ImpactDot impact={e.impact} label={t(IMPACT_LABEL_KEY[e.impact])} />
                     </td>
                     <td className="px-4 py-2.5 text-sm font-medium">{e.title}</td>
                     <td className="px-4 py-2.5 text-sm text-right tnum font-medium">{e.actual ?? "—"}</td>
@@ -132,31 +139,23 @@ export default function CalendarPage() {
             </tbody>
           </table>
         </div>
-        {data?.cached && <p className="mt-2 text-[11px] text-text-faint">Showing cached events — the source is temporarily unavailable.</p>}
+        {data?.cached && <p className="mt-2 text-[11px] text-text-faint">{t("cached")}</p>}
       </Section>
 
-      <Section title="How to use this calendar">
-        <p>
-          Red dots mark <strong>high-impact</strong> events that historically cause the largest price moves —
-          always check your open positions around these times. Orange dots are medium impact, and yellow dots
-          are low impact.
-        </p>
-        <p>
-          Compare the <strong>forecast</strong> to the <strong>previous</strong> value. A larger-than-expected
-          deviation (the &quot;surprise&quot;) is what typically moves markets — not the number itself.
-        </p>
+      <Section title={t("howTitle")}>
+        <p>{t("howP1")}</p>
+        <p>{t("howP2")}</p>
       </Section>
     </ArticleLayout>
   );
 }
 
-function ImpactDot({ impact }: { impact: Impact }) {
+function ImpactDot({ impact, label }: { impact: Impact; label: string }) {
   const map = { high: "bg-down", medium: "bg-brand", low: "bg-up" } as const;
-  const label = { high: "High", medium: "Medium", low: "Low" } as const;
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className={`h-2 w-2 rounded-full ${map[impact]}`} />
-      <span className="text-[11px] text-text-muted">{label[impact]}</span>
+      <span className="text-[11px] text-text-muted">{label}</span>
     </span>
   );
 }

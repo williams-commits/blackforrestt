@@ -1,74 +1,69 @@
 import Link from "next/link";
-import { absoluteTradeUrl, tradeOrigin } from "@/lib/branding";
+import { getTranslations } from "next-intl/server";
+import { absoluteTradeUrl } from "@/lib/branding";
+import { LivePrice } from "@/components/landing/LivePrice";
+import { getFeaturedInstrument } from "@/lib/landingData";
 
-/** Hero: headline + subheadline + dual CTA + a platform mockup. */
-export function Hero() {
+/**
+ * Hero — headline, dual CTA, and two cards: a live featured market and a
+ * "new this week" education chapter strip. The featured card hydrates into a
+ * LivePrice client island that polls /api/instruments; the chapter card is
+ * static editorial prose.
+ */
+export async function Hero() {
+  const t = await getTranslations("hero");
+  const featured = getFeaturedInstrument();
+
   return (
-    <section className="relative overflow-hidden bg-linear-to-b from-panel to-canvas">
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-20 lg:py-28 grid lg:grid-cols-2 gap-12 items-center">
-        <div>
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-soft text-brand text-xs font-semibold mb-6">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-            Trusted by traders worldwide
-          </span>
-          <h1 className="text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">
-            Navigate the Future with{" "}
-            <span className="text-brand">Premier Online Trading</span>
-          </h1>
-          <p className="mt-5 text-lg text-text-muted max-w-lg">
-            Trade forex, commodities, and indices on a lightning-fast platform built for serious
-            traders. Real-time quotes, advanced charting, and the tools to stay ahead of the market.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href={absoluteTradeUrl("/register")}
-              className="px-6 py-3 rounded-lg bg-brand text-white font-semibold hover:brightness-110 transition shadow-card"
-            >
-              Open Free Account
-            </Link>
-            <Link
-              href={absoluteTradeUrl("/trade/AUDCAD")}
-              className="px-6 py-3 rounded-lg bg-canvas border border-border font-semibold hover:bg-panel transition"
-            >
-              Launch Platform →
-            </Link>
+    <section id="hero" className="relative overflow-hidden bg-linear-to-b from-panel to-canvas scroll-mt-24">
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-16 lg:py-24">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-10 items-center">
+          {/* Left: pitch */}
+          <div>
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-soft text-brand text-xs font-semibold mb-6">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+              {t("badge")}
+            </span>
+            <h1 className="text-4xl lg:text-5xl font-extrabold leading-[1.05] tracking-tight">
+              {t.rich("title", {
+                accent: (chunks) => <span className="text-brand">{chunks}</span>,
+              })}
+            </h1>
+            <p className="font-prose mt-5 text-lg leading-relaxed text-text-muted max-w-xl">
+              {t("subtitle")}
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href={absoluteTradeUrl("/register")}
+                className="px-6 py-3 rounded-lg bg-brand text-white font-semibold hover:brightness-110 transition shadow-card"
+              >
+                {t("ctaPrimary")}
+              </Link>
+              <Link
+                href={absoluteTradeUrl("/trade/XAUUSD")}
+                className="px-6 py-3 rounded-lg bg-canvas border border-border font-semibold hover:bg-panel transition font-mono text-sm"
+              >
+                {t("ctaSecondary")}
+              </Link>
+            </div>
+            <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-text-muted">
+              <Stat value="24/7" label={t("stats.support")} />
+              <Stat value="45+" label={t("stats.markets")} />
+              <Stat value="0.0s" label={t("stats.execution")} />
+            </div>
           </div>
-          <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-text-muted">
-            <Stat value="24/7" label="Support" />
-            <Stat value="100+" label="Markets" />
-            <Stat value="0.0s" label="Execution" />
-          </div>
-        </div>
 
-        {/* Platform mockup */}
-        <div className="relative">
-          <div className="rounded-xl border border-border bg-canvas shadow-card overflow-hidden">
-            <div className="flex items-center gap-1.5 h-8 px-3 bg-panel-2 border-b border-border">
-              <span className="h-2.5 w-2.5 rounded-full bg-down/60" />
-              <span className="h-2.5 w-2.5 rounded-full bg-brand/60" />
-              <span className="h-2.5 w-2.5 rounded-full bg-up/60" />
-              <span className="ml-3 text-[10px] text-text-faint">{tradeOrigin().replace(/^https?:\/\//, "")}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-px bg-border">
-              <MockCol rows={["AUDCAD", "EURUSD", "GBPUSD", "USDJPY"]} />
-              <div className="bg-canvas p-3 col-span-2">
-                <div className="text-xs font-semibold mb-2">AUDCAD</div>
-                <div className="h-28 flex items-end gap-1">
-                  {[40, 55, 48, 62, 70, 58, 75, 82, 68, 90, 78, 95].map((h, i) => (
-                    <div
-                      key={i}
-                      className={`flex-1 rounded-sm ${i % 3 === 0 ? "bg-up/70" : "bg-down/60"}`}
-                      style={{ height: `${h}%` }}
-                    />
-                  ))}
-                </div>
-                <div className="mt-3 flex justify-between text-[10px] text-text-faint">
-                  <span>Bid 0.89180</span>
-                  <span className="text-up">+0.12%</span>
-                  <span>Ask 0.89202</span>
-                </div>
+          {/* Right: featured market + new this week */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            {featured ? (
+              <LivePrice initial={featured} />
+            ) : (
+              <div className="rounded-xl border border-border bg-panel p-5 text-sm text-text-muted">
+                {t("loadingMarkets")}
               </div>
-            </div>
+            )}
+
+            <NewThisWeekCard />
           </div>
         </div>
       </div>
@@ -76,23 +71,49 @@ export function Hero() {
   );
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
+async function NewThisWeekCard() {
+  const t = await getTranslations("hero.newThisWeek");
+  const chapterKeys = ["c1", "c2", "c3"] as const;
   return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-xl font-bold text-text tnum">{value}</span>
-      <span className="text-text-faint">{label}</span>
+    <div className="rounded-xl border border-border bg-panel p-5 flex flex-col">
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] uppercase tracking-widest text-brand font-semibold">
+          {t("label")}
+        </div>
+        <span className="text-[10px] font-mono text-text-faint">{t("series")}</span>
+      </div>
+      <p className="font-prose mt-2 text-sm leading-snug text-text">
+        {t("blurb")}
+      </p>
+      <ul className="mt-4 space-y-3 flex-1">
+        {chapterKeys.map((c) => (
+          <li key={c} className="group">
+            <a href="#confidence" className="block">
+              <div className="flex items-center gap-2 text-[10px]">
+                <span className="px-1.5 py-0.5 rounded bg-brand-soft text-brand font-semibold uppercase tracking-wider">
+                  {t(`chapters.${c}.tag`)}
+                </span>
+                <span className="text-text-faint font-mono">{t(`chapters.${c}.meta`)}</span>
+              </div>
+              <div className="font-prose mt-1 text-sm text-text group-hover:text-brand transition">
+                {t(`chapters.${c}.title`)}
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
+      <a href="#confidence" className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:gap-2 transition-all">
+        {t("viewAll")}
+      </a>
     </div>
   );
 }
 
-function MockCol({ rows }: { rows: string[] }) {
+function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <div className="bg-panel p-2 space-y-1">
-      {rows.map((r) => (
-        <div key={r} className="text-[10px] text-text-muted px-1.5 py-1 rounded hover:bg-panel-2">
-          {r}
-        </div>
-      ))}
+    <div className="flex items-baseline gap-1.5">
+      <span className="text-xl font-bold text-text tnum font-mono">{value}</span>
+      <span className="text-text-faint">{label}</span>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Pagination } from "@/components/ui/Pagination";
 import { useForexStore } from "@/lib/store";
 import { fmtPct, fmtPrice } from "@/lib/format";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import type { InstrumentCategory, InstrumentView } from "@/lib/types";
 
 interface Props {
@@ -194,10 +195,13 @@ function AssetCard({
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold tracking-tight">
-          {base}
-          {quote ? <span className="text-text-faint"> / {quote}</span> : null}
-        </span>
+        <div className="flex items-center gap-2 min-w-0">
+          <InstrumentIcon symbol={instrument.symbol} size={20} />
+          <span className="text-xs font-semibold tracking-tight">
+            {base}
+            {quote ? <span className="text-text-faint"> / {quote}</span> : null}
+          </span>
+        </div>
         <span className="text-[8px] font-medium uppercase text-text-faint">{instrument.category}</span>
       </div>
       <span className="truncate text-[9px] text-text-faint">{instrument.name}</span>

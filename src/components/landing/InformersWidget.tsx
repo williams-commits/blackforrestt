@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 import { useTheme } from "@/components/ThemeProvider";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 
 interface Instrument {
   symbol: string;
@@ -71,6 +72,7 @@ export function InformersWidget({ domain }: InformersWidgetProps) {
               const up = i.changePct >= 0;
               return (
                 <div key={i.symbol} className="flex items-baseline gap-2">
+                  <span className="flex items-center"><InstrumentIcon symbol={i.symbol} size={16} /></span>
                   <span className="text-sm font-semibold text-text">{i.symbol}</span>
                   <span className="text-sm tnum text-text">{i.mid.toFixed(i.digits)}</span>
                   <span className={`text-xs tnum ${up ? "text-up" : "text-down"}`}>
@@ -104,7 +106,10 @@ export function InformersWidget({ domain }: InformersWidgetProps) {
                 return (
                   <tr key={i.symbol} className="border-t border-border">
                     <td className="px-4 py-2">
-                      <div className="text-sm font-medium text-text">{i.symbol}</div>
+                      <div className="flex items-center gap-2">
+                        <InstrumentIcon symbol={i.symbol} size={16} />
+                        <div className="text-sm font-medium text-text">{i.symbol}</div>
+                      </div>
                       <div className="text-[11px] text-text-muted">{i.name}</div>
                     </td>
                     <td className="px-4 py-2 text-right text-sm tnum text-down">{i.bid.toFixed(i.digits)}</td>

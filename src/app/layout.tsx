@@ -40,7 +40,7 @@ const serif = Newsreader({
   ThemeProvider). Defaults to light. Must stay a plain string — no JSX — so it
   serializes verbatim.
 */
-const themeNoFlashScript = `(function(){try{var t=localStorage.getItem('blckforest-theme');if(t==='dim'){document.documentElement.classList.add('dim');}}catch(e){}})();`;
+const themeNoFlashScript = `(function(){try{var t=document.cookie.match(/blckforest-theme=(\\w+)/);t=t?t[1]:localStorage.getItem('blckforest-theme');if(t==='dim'){document.documentElement.classList.add('dim');}}catch(e){}})();`;
 
 // Force dynamic rendering so branding values (brandName, brandDomain, etc.)
 // are read from process.env at request time, not baked into static HTML at

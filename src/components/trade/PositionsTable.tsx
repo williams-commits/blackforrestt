@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useForexStore } from "@/lib/store";
 import { closePosition } from "@/hooks/useOpenPosition";
 import { fmtPrice, fmtNum } from "@/lib/format";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import type { InstrumentView, PositionView } from "@/lib/types";
 
 interface Props {
@@ -28,7 +29,9 @@ export function PositionsTable({ instruments }: Props) {
   const [tab, setTab] = useState<Tab>("open");
 
   const digitsFor = (symbol: string) => instruments.find((i) => i.symbol === symbol)?.digits ?? 5;
-  const totalFloating = positions.reduce((s, p) => s + p.netProfit, 0);
+  // Match AccountBar's floatingPl: profit + swap (excludes commission, which is
+  // already booked into balance at order-open to avoid double-counting in equity).
+  const totalFloating = positions.reduce((s, p) => s + p.profit + p.swap, 0);
 
   return (
     <div className="flex flex-col h-full bg-canvas border-t border-border">
@@ -52,7 +55,7 @@ export function PositionsTable({ instruments }: Props) {
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] text-text-faint uppercase">Floating P/L</span>
               <span className={`text-[12px] font-bold tnum ${totalFloating >= 0 ? "text-up" : "text-down"}`}>
-                {totalFloating >= 0 ? "+" : ""}{totalFloating.toFixed(2)} USD
+                {totalFloating >= 0 ? "+" : ""}{fmtNum(totalFloating, 2)} USD
               </span>
             </div>
           </div>
@@ -102,20 +105,21 @@ function OpenPositionsTable({
   }
 
   return (
+    <div className="min-w-max">
     <table className="w-full">
       <thead className="sticky top-0 bg-panel-2 z-10">
         <tr>
-          <Th>Time</Th>
+          <Th className="hidden sm:table-cell">Time</Th>
           <Th>Type</Th>
           <Th>Asset</Th>
           <Th className="text-right">Volume</Th>
           <Th className="text-right">Open Rate</Th>
-          <Th className="text-right">S/L</Th>
-          <Th className="text-right">T/P</Th>
-          <Th className="text-right">Swap</Th>
-          <Th className="text-right">Commission</Th>
+          <Th className="text-right hidden md:table-cell">S/L</Th>
+          <Th className="text-right hidden md:table-cell">T/P</Th>
+          <Th className="text-right hidden lg:table-cell">Swap</Th>
+          <Th className="text-right hidden lg:table-cell">Commission</Th>
           <Th className="text-right">Current</Th>
-          <Th className="text-right">Profit</Th>
+          <Th className="text-right">Net P/L</Th>
           <Th></Th>
         </tr>
       </thead>
@@ -125,7 +129,7 @@ function OpenPositionsTable({
           const up = p.netProfit >= 0;
           return (
             <tr key={p.id} className={`border-t border-border-soft hover:bg-panel-2/50 transition-colors ${idx % 2 === 1 ? "bg-panel/30" : ""}`}>
-              <Td className="text-text-muted tnum">{fmtTime(p.openedAt)}</Td>
+              <Td className="text-text-muted tnum hidden sm:table-cell">{fmtTime(p.openedAt)}</Td>
               <Td>
                 <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${
                   p.side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"
@@ -133,13 +137,13 @@ function OpenPositionsTable({
                   {p.side === "BUY" ? "▲" : "▼"} {p.type === "STRIKE" ? "STRIKE" : "CFD"} {p.side}
                 </span>
               </Td>
-              <Td className="font-semibold">{p.symbol}</Td>
+              <Td className="font-semibold"><span className="flex items-center gap-1.5"><InstrumentIcon symbol={p.symbol} size={14} />{p.symbol}</span></Td>
               <Td className="text-right tnum">{fmtNum(p.volume, 2)}</Td>
               <Td className="text-right tnum">{fmtPrice(p.openRate, digits)}</Td>
-              <Td className="text-right tnum text-text-muted">{p.stopLoss != null ? fmtPrice(p.stopLoss, digits) : "—"}</Td>
-              <Td className="text-right tnum text-text-muted">{p.takeProfit != null ? fmtPrice(p.takeProfit, digits) : "—"}</Td>
-              <Td className="text-right tnum text-text-muted">{fmtNum(p.swap, 2)}</Td>
-              <Td className="text-right tnum text-text-muted">{fmtNum(p.commission + p.tradingCommission, 2)}</Td>
+              <Td className="text-right tnum text-text-muted hidden md:table-cell">{p.stopLoss != null ? fmtPrice(p.stopLoss, digits) : "—"}</Td>
+              <Td className="text-right tnum text-text-muted hidden md:table-cell">{p.takeProfit != null ? fmtPrice(p.takeProfit, digits) : "—"}</Td>
+              <Td className="text-right tnum text-text-muted hidden lg:table-cell">{fmtNum(p.swap, 2)}</Td>
+              <Td className="text-right tnum text-text-muted hidden lg:table-cell">{fmtNum(p.commission + p.tradingCommission, 2)}</Td>
               <Td className="text-right tnum">{fmtPrice(p.currentRate, digits)}</Td>
               <Td className={`text-right tnum font-bold ${up ? "text-up" : "text-down"}`}>
                 {up ? "+" : ""}{fmtNum(p.netProfit, 2)}
@@ -149,10 +153,10 @@ function OpenPositionsTable({
                   disabled={busy === p.id}
                   onClick={async () => {
                     setBusy(p.id);
-                    await closePosition(p.id);
-                    setBusy(null);
+                        await closePosition(p.id);
+                        setBusy(null);
                   }}
-                  className="text-[10px] px-2 py-0.5 rounded border border-border text-text-muted hover:text-down hover:border-down/50 disabled:opacity-50 transition-colors"
+                  className="flex h-7 w-7 items-center justify-center rounded border border-border text-text-muted hover:text-down hover:border-down/50 hover:bg-down/10 disabled:opacity-50 transition-colors text-xs"
                 >
                   {busy === p.id ? "…" : "✕"}
                 </button>
@@ -162,6 +166,7 @@ function OpenPositionsTable({
         })}
       </tbody>
     </table>
+    </div>
   );
 }
 
@@ -251,7 +256,7 @@ function HistoryTable({ digitsFor }: { digitsFor: (s: string) => number }) {
               <tr key={p.id} className={`border-t border-border-soft ${idx % 2 === 1 ? "bg-panel/30" : ""}`}>
                 <Td className="text-text-muted tnum">{fmtTime(p.closedAt ?? p.openedAt)}</Td>
                 <Td><span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${p.side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>{p.side === "BUY" ? "▲" : "▼"} {p.side}</span></Td>
-                <Td className="font-semibold">{p.symbol}</Td>
+                <Td className="font-semibold"><span className="flex items-center gap-1.5"><InstrumentIcon symbol={p.symbol} size={14} />{p.symbol}</span></Td>
                 <Td className="text-right tnum">{fmtNum(p.volume, 2)}</Td>
                 <Td className="text-right tnum">{fmtPrice(p.openRate, digits)}</Td>
                 <Td className="text-right tnum">{fmtPrice(p.currentRate, digits)}</Td>

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForexStore } from "@/lib/store";
 import { fmtPrice, fmtPct } from "@/lib/format";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import type { InstrumentCategory } from "@/lib/types";
 
 interface Props {
@@ -82,12 +83,15 @@ export function InstrumentSelector({ activeSymbol }: Props) {
                         i.symbol === activeSymbol ? "bg-brand-soft" : ""
                       }`}
                     >
-                      <div className="min-w-0">
-                        <div className="text-[11px] font-semibold truncate leading-tight">{i.name}</div>
-                        <div className="text-[9px] text-text-faint truncate leading-tight flex items-center gap-1">
-                          <span>{i.symbol}</span>
-                          <span aria-hidden="true">·</span>
-                          <span>{fmtPrice(i.mid, i.digits)}</span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <InstrumentIcon symbol={i.symbol} size={16} />
+                        <div className="min-w-0">
+                          <div className="text-[11px] font-semibold truncate leading-tight">{i.name}</div>
+                          <div className="text-[9px] text-text-faint truncate leading-tight flex items-center gap-1">
+                            <span>{i.symbol}</span>
+                            <span aria-hidden="true">·</span>
+                            <span>{fmtPrice(i.mid, i.digits)}</span>
+                          </div>
                         </div>
                       </div>
                       <div className={`text-[9px] tnum font-medium leading-tight ${up ? "text-up" : "text-down"}`}>

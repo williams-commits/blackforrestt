@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { clientTradeUrl } from "@/lib/branding";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import type { InstrumentCategory, InstrumentView } from "@/lib/types";
 import { CATEGORY_LABEL, formatPrice, formatChange } from "@/lib/landingUi";
 
@@ -71,8 +72,9 @@ export function SectionTicker({ category, initial }: SectionTickerProps) {
                 <td className="py-2.5 pr-4">
                   <a
                     href={clientTradeUrl(`/trade/${r.symbol}`)}
-                    className="font-semibold text-text hover:text-brand transition"
+                    className="flex items-center gap-2 font-semibold text-text hover:text-brand transition"
                   >
+                    <InstrumentIcon symbol={r.symbol} size={16} />
                     {r.symbol}
                   </a>
                 </td>

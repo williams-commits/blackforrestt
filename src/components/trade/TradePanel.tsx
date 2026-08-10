@@ -6,6 +6,7 @@ import { useOpenPosition } from "@/hooks/useOpenPosition";
 import { fmtPrice, fmtNum } from "@/lib/format";
 import type { InstrumentView, PositionSide } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { isExecutableQuote, quoteAgeMs } from "@/lib/marketFreshness";
 
 interface Props {
@@ -138,6 +139,7 @@ export function TradePanel({ instrument }: Props) {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2">
+              <InstrumentIcon symbol={instrument.symbol} size={24} />
               <h2 className="text-base font-bold tracking-tight">{instrument.symbol}</h2>
               <span className="text-[8px] font-semibold uppercase px-1.5 py-0.5 rounded bg-brand-soft text-brand">
                 {instrument.category}
@@ -156,7 +158,7 @@ export function TradePanel({ instrument }: Props) {
               role="tab"
               aria-selected={type === t}
               onClick={() => { setType(t); clearMessages(); }}
-              className={`flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all ${
+              className={`flex-1 py-2.5 text-[11px] font-medium rounded-md transition-all ${
                 type === t
                   ? "bg-canvas text-text shadow-sm"
                   : "text-text-muted hover:text-text"
@@ -173,20 +175,20 @@ export function TradePanel({ instrument }: Props) {
         <div className="grid grid-cols-2 gap-2">
           {/* Sell / Bid */}
           <div className="flex flex-col items-center justify-center bg-down/5 border border-down/20 rounded-lg py-2.5">
-            <span className="text-[9px] font-semibold uppercase text-down tracking-wide">Sell</span>
+            <span className="text-[10px] font-semibold uppercase text-down tracking-wide">Sell</span>
             <span className="text-lg font-bold tnum text-down leading-tight mt-0.5">
               {fmtPrice(bid, instrument.digits)}
             </span>
           </div>
           {/* Buy / Ask */}
           <div className="flex flex-col items-center justify-center bg-up/5 border border-up/20 rounded-lg py-2.5">
-            <span className="text-[9px] font-semibold uppercase text-up tracking-wide">Buy</span>
+            <span className="text-[10px] font-semibold uppercase text-up tracking-wide">Buy</span>
             <span className="text-lg font-bold tnum text-up leading-tight mt-0.5">
               {fmtPrice(ask, instrument.digits)}
             </span>
           </div>
         </div>
-        <div className="flex items-center justify-center gap-3 mt-2 text-[9px] text-text-faint">
+        <div className="flex items-center justify-center gap-3 mt-2 text-[10px] text-text-faint">
           <span>Spread <span className="tnum text-text-muted font-medium">{fmtPrice(spread, instrument.digits)}</span></span>
           <span className="w-px h-3 bg-border" />
           <span>Pip <span className="tnum text-text-muted font-medium">{instrument.pipSize}</span></span>
@@ -206,7 +208,7 @@ export function TradePanel({ instrument }: Props) {
             max="100"
             value={volume}
             onChange={(e) => { setVolume(e.target.value); clearMessages(); }}
-            className="w-full h-10 bg-canvas border border-border rounded-lg px-3 text-sm tnum font-semibold outline-none focus:border-brand transition-colors"
+            className="w-full h-11 bg-canvas border border-border rounded-lg px-3 text-sm tnum font-semibold outline-none focus:border-brand transition-colors"
           />
         </div>
         <div className="grid grid-cols-4 gap-1 mt-1.5">
@@ -215,7 +217,7 @@ export function TradePanel({ instrument }: Props) {
               key={v}
               type="button"
               onClick={() => { setVolume(v.toFixed(2)); clearMessages(); }}
-              className={`h-7 text-[10px] rounded-md font-medium transition-colors ${
+              className={`h-9 text-[10px] rounded-md font-medium transition-colors ${
                 volume === v.toFixed(2)
                   ? "bg-brand text-white"
                   : "bg-panel-2 text-text-muted hover:text-text hover:bg-panel-3"
@@ -251,7 +253,7 @@ export function TradePanel({ instrument }: Props) {
                   type="button"
                   aria-pressed={expiryMinutes === String(m)}
                   onClick={() => { setExpiryMinutes(String(m)); clearMessages(); }}
-                  className={`h-8 text-[10px] rounded-md font-medium transition-colors ${
+                  className={`h-9 text-[10px] rounded-md font-medium transition-colors ${
                     expiryMinutes === String(m)
                       ? "bg-brand text-white"
                       : "bg-panel-2 text-text-muted hover:text-text hover:bg-panel-3"
@@ -301,7 +303,7 @@ export function TradePanel({ instrument }: Props) {
                     value={stopLoss}
                     onChange={(e) => { setStopLoss(e.target.value); clearMessages(); }}
                     placeholder="—"
-                    className="w-full h-9 bg-canvas border border-border rounded-lg pl-7 pr-2 text-xs tnum outline-none focus:border-brand placeholder:text-text-faint transition-colors"
+                    className="w-full h-11 bg-canvas border border-border rounded-lg pl-7 pr-2 text-xs tnum outline-none focus:border-brand placeholder:text-text-faint transition-colors"
                   />
                 </div>
               </div>
@@ -316,7 +318,7 @@ export function TradePanel({ instrument }: Props) {
                     value={takeProfit}
                     onChange={(e) => { setTakeProfit(e.target.value); clearMessages(); }}
                     placeholder="—"
-                    className="w-full h-9 bg-canvas border border-border rounded-lg pl-7 pr-2 text-xs tnum outline-none focus:border-brand placeholder:text-text-faint transition-colors"
+                    className="w-full h-11 bg-canvas border border-border rounded-lg pl-7 pr-2 text-xs tnum outline-none focus:border-brand placeholder:text-text-faint transition-colors"
                   />
                 </div>
               </div>
@@ -382,7 +384,7 @@ export function TradePanel({ instrument }: Props) {
 function SummaryRow({ label, value, valueClass = "" }: { label: string; value: string; valueClass?: string }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[10px] text-text-muted">{label}</span>
+      <span className="text-[11px] text-text-muted">{label}</span>
       <span className={`text-[11px] tnum text-text ${valueClass}`}>{value}</span>
     </div>
   );

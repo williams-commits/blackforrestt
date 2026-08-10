@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { clientTradeUrl } from "@/lib/branding";
 import type { InstrumentView } from "@/lib/types";
 import { formatPrice, formatChange } from "@/lib/landingUi";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 
 interface LivePriceProps {
   /** Initial server-rendered instrument (avoids layout shift / empty flash). */
@@ -53,6 +54,7 @@ export function LivePrice({ initial }: LivePriceProps) {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
+            <InstrumentIcon symbol={inst.symbol} size={24} />
             <span className="font-mono text-sm font-semibold tracking-tight">{inst.symbol}</span>
             <span className="text-xs text-text-faint">{inst.name}</span>
           </div>

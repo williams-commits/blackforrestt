@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { InstrumentView } from "@/lib/types";
 import { Pagination } from "@/components/ui/Pagination";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 
 type PositionRow = {
   id: string;
@@ -63,7 +64,7 @@ export function PositionHistory({ open, closed, instruments }: Props) {
               const profitable = position.netProfit >= 0;
               return (
                 <tr key={position.id} className="border-b border-border-soft hover:bg-panel-2">
-                  <Td className="font-medium">{position.symbol}</Td>
+                  <Td className="font-medium"><span className="flex items-center gap-1.5"><InstrumentIcon symbol={position.symbol} size={14} />{position.symbol}</span></Td>
                   <Td className="text-text-muted">{position.type}</Td>
                   <Td><span className={position.side === "BUY" ? "text-up" : "text-down"}>{position.side}</span></Td>
                   <Td className="text-right tnum">{position.volume.toFixed(2)}</Td>

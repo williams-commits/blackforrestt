@@ -8,6 +8,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useForexStore } from "@/lib/store";
 import { fmtNum } from "@/lib/format";
 import { ConnectionDot } from "./ConnectionDot";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Logo } from "./Logo";
 import { WalletModal } from "@/components/account/WalletModal";
 import type { SocketStatus } from "@/lib/ws/client";
@@ -119,29 +120,31 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
         </button>
       )}
 
-      {/* Metrics strip */}
-      <div className="order-3 flex w-full items-center gap-4 overflow-x-auto border-t border-border px-3 py-2 sm:order-0 sm:w-auto sm:border-t-0 sm:py-0">
-        <Metric label="ACCOUNT" value={account?.accountNo ?? "—"} />
+      {/* Metrics strip — mobile shows priority metrics + horizontal scroll for the rest */}
+      <div className="order-3 flex w-full items-center gap-3 overflow-x-auto border-t border-border px-3 py-1.5 sm:order-0 sm:w-auto sm:gap-4 sm:border-t-0 sm:py-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <Metric label="ACCOUNT" value={account?.accountNo ?? "—"} className="hidden lg:flex" />
         <Metric label="BALANCE" value={fmtUsd(account?.balance)} />
-        <Metric label="CREDIT" value={fmtUsd(account?.credit)} />
-        <Metric label="MARGIN" value={fmtUsd(account?.margin)} />
         <Metric label="EQUITY" value={fmtUsd(account?.equity)} />
-        <Metric
-          label="MARGIN LEVEL"
-          value={account?.marginLevel != null ? `${fmtNum(account.marginLevel, 2)}%` : "—"}
-        />
         <Metric label="FREE" value={fmtUsd(account?.free)} />
         <Metric
           label="P/L"
           value={`${floating >= 0 ? "+" : ""}${fmtNum(floating, 2)}`}
           valueClass={floatingUp ? "text-up" : "text-down"}
         />
+        <Metric label="CREDIT" value={fmtUsd(account?.credit)} className="hidden md:flex" />
+        <Metric label="MARGIN" value={fmtUsd(account?.margin)} className="hidden md:flex" />
+        <Metric
+          label="MARGIN LEVEL"
+          value={account?.marginLevel != null ? `${fmtNum(account.marginLevel, 2)}%` : "—"}
+          className="hidden md:flex"
+        />
       </div>
 
-      {/* Connection + clock (kept inline, compact) */}
+      {/* Connection + clock + theme toggle (kept inline, compact) */}
       <div className="ml-auto flex shrink-0 items-center gap-2 px-2 sm:px-3">
         <ConnectionDot status={wsStatus} />
         <span className="text-[11px] text-text-muted tnum hidden lg:inline">{clock}</span>
+        <ThemeToggle className="h-8 w-8" />
       </div>
 
       {/* User dropdown trigger */}
@@ -158,7 +161,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
           <span className="w-7 h-7 rounded-full bg-brand-soft flex items-center justify-center text-brand font-semibold text-xs">
             {initial}
           </span>
-          <span className="text-xs font-medium hidden sm:inline">{userName}</span>
+          <span className="text-xs font-medium hidden sm:inline max-w-[120px] truncate">{userName}</span>
           <svg
             width="12"
             height="12"
@@ -257,14 +260,16 @@ function Metric({
   label,
   value,
   valueClass = "",
+  className = "",
 }: {
   label: string;
   value: string;
   valueClass?: string;
+  className?: string;
 }) {
   return (
-    <div className="flex flex-col gap-0 shrink-0 leading-tight">
-      <span className="text-[9px] text-text-faint leading-none mb-0.5">{label}</span>
+    <div className={`flex flex-col gap-0 shrink-0 leading-tight ${className}`}>
+      <span className="text-[10px] text-text-faint leading-none mb-0.5">{label}</span>
       <span className={`text-[12px] tnum leading-none font-medium ${valueClass}`}>{value}</span>
     </div>
   );

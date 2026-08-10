@@ -19,6 +19,7 @@ import {
 import { useForexStore } from "@/lib/store";
 import { TIMEFRAMES, type Candle, type CandleInterval, type InstrumentView } from "@/lib/types";
 import { fmtPrice } from "@/lib/format";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import {
   computeSMASeries,
   computeEMASeries,
@@ -70,6 +71,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
   const prevCandleCount = useRef(0);
   const candlesRef = useRef<Candle[]>([]);
   const barSpacingRef = useRef(8);
+  const userZoomedRef = useRef(false);
 
   const interval = useForexStore((state) => state.interval);
   const setInterval = useForexStore((state) => state.setInterval);
@@ -404,7 +406,11 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
       macdLineRef.current.setData(macd.map((p) => ({ time: p.time as UTCTimestamp, value: p.macd })));
       macdSignalRef.current.setData(macd.map((p) => ({ time: p.time as UTCTimestamp, value: p.signal })));
     }
-    chartRef.current?.timeScale().fitContent();
+    // Only auto-fit when the user hasn't manually zoomed (otherwise their zoom
+    // gets overridden on every live candle update).
+    if (!userZoomedRef.current) {
+      chartRef.current?.timeScale().fitContent();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncKey, candleCount, candles, chartType, maPeriod]);
 
@@ -501,9 +507,16 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
   const zoom = (direction: "in" | "out") => {
     const scale = chartRef.current?.timeScale();
     if (!scale) return;
+    userZoomedRef.current = true;
     const multiplier = direction === "in" ? 1.25 : 0.8;
     barSpacingRef.current = Math.min(40, Math.max(2, barSpacingRef.current * multiplier));
     scale.applyOptions({ barSpacing: barSpacingRef.current });
+  };
+
+  const fitChart = () => {
+    userZoomedRef.current = false;
+    barSpacingRef.current = 8;
+    chartRef.current?.timeScale().fitContent();
   };
 
   const toggleFullscreen = async () => {
@@ -521,6 +534,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
     >
       <div className="flex shrink-0 flex-col border-b border-border bg-panel-2 sm:flex-row sm:items-center">
         <div className="flex min-w-0 items-center gap-2 px-3 py-2 sm:py-0">
+          <InstrumentIcon symbol={instrument.symbol} size={20} />
           <span className="text-sm font-bold tracking-tight">{instrument.symbol}</span>
           <span className="text-[10px] font-medium text-text-faint">{instrument.name}</span>
           <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[9px] font-medium uppercase text-brand">
@@ -546,18 +560,29 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
           ) : null}
         </div>
 
-        <div className="flex min-w-0 items-center gap-1 overflow-x-auto border-t border-border px-2 py-1.5 sm:ml-auto sm:border-l sm:border-t-0">
+        {/* Mobile: timeframes get priority row; desktop: all controls inline */}
+        <div className="flex items-center gap-1 overflow-x-auto border-t border-border px-2 py-1.5 sm:hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {TIMEFRAMES.map((timeframe) => (
+            <button
+              key={timeframe}
+              type="button"
+              aria-pressed={interval === timeframe}
+              aria-label={`Use ${timeframe} timeframe`}
+              onClick={() => selectTimeframe(timeframe)}
+              className={`shrink-0 rounded px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                interval === timeframe ? "bg-brand text-white" : "text-text-muted hover:bg-panel-3 hover:text-text"
+              }`}
+            >
+              {timeframe}
+            </button>
+          ))}
+          <div className="mx-1 h-4 w-px shrink-0 bg-border" />
           <ChartButton label="Candlestick chart" active={chartType === "candles"} onClick={() => selectChartType("candles")}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M7 4v3M7 17v3M7 7v10" strokeLinecap="round" />
               <rect x="5" y="7" width="4" height="10" rx="1" fill="currentColor" stroke="none" />
               <path d="M17 6v2M17 19v2M17 8v11" strokeLinecap="round" />
               <rect x="15" y="8" width="4" height="11" rx="1" />
-            </svg>
-          </ChartButton>
-          <ChartButton label="Line chart" active={chartType === "line"} onClick={() => selectChartType("line")}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M4 17l5-6 4 3 7-9" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </ChartButton>
           <div className="relative">
@@ -612,7 +637,30 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
           </div>
           <ChartButton label="Zoom in" onClick={() => zoom("in")}>＋</ChartButton>
           <ChartButton label="Zoom out" onClick={() => zoom("out")}>−</ChartButton>
-          <ChartButton label="Fit all candles" onClick={() => chartRef.current?.timeScale().fitContent()}>Fit</ChartButton>
+          <ChartButton label="Fit all candles" onClick={() => fitChart()}>Fit</ChartButton>
+          <ChartButton label={fullscreen ? "Exit full screen" : "Full screen"} active={fullscreen} onClick={() => void toggleFullscreen()}>
+            {fullscreen ? "Exit" : "Full"}
+          </ChartButton>
+        </div>
+
+        {/* Desktop: all controls inline (chart-type, indicators, zoom, fit, fullscreen, timeframes) */}
+        <div className="hidden min-w-0 items-center gap-1 overflow-x-auto border-t border-border px-2 py-1.5 sm:ml-auto sm:flex sm:border-l sm:border-t-0">
+          <ChartButton label="Candlestick chart" active={chartType === "candles"} onClick={() => selectChartType("candles")}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M7 4v3M7 17v3M7 7v10" strokeLinecap="round" />
+              <rect x="5" y="7" width="4" height="10" rx="1" fill="currentColor" stroke="none" />
+              <path d="M17 6v2M17 19v2M17 8v11" strokeLinecap="round" />
+              <rect x="15" y="8" width="4" height="11" rx="1" />
+            </svg>
+          </ChartButton>
+          <ChartButton label="Line chart" active={chartType === "line"} onClick={() => selectChartType("line")}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M4 17l5-6 4 3 7-9" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </ChartButton>
+          <ChartButton label="Zoom in" onClick={() => zoom("in")}>＋</ChartButton>
+          <ChartButton label="Zoom out" onClick={() => zoom("out")}>−</ChartButton>
+          <ChartButton label="Fit all candles" onClick={() => fitChart()}>Fit</ChartButton>
           <ChartButton label={fullscreen ? "Exit full screen" : "Full screen"} active={fullscreen} onClick={() => void toggleFullscreen()}>
             {fullscreen ? "Exit" : "Full"}
           </ChartButton>

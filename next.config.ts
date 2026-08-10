@@ -7,6 +7,16 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const isProduction = process.env.NODE_ENV === "production";
 
+// The app uses a two-domain architecture: the apex (e.g. blackforrestt.com)
+// serves marketing, and the trade subdomain (e.g. trade.blackforrestt.com)
+// hosts the auth API + terminal. Auth.js's client SessionProvider fetches
+// /api/auth/session from the trade subdomain, which is cross-origin relative
+// to the apex. CSP connect-src must allow both origins.
+const brandDomain = process.env.BRAND_DOMAIN || "blackforrestt.com";
+const tradeSubdomain = process.env.TRADE_SUBDOMAIN || "trade";
+const tradeOrigin = `https://${tradeSubdomain}.${brandDomain}`;
+const apexOrigin = `https://${brandDomain}`;
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -22,7 +32,10 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://i.ytimg.com",
       "font-src 'self' data:",
-      "connect-src 'self' ws: wss:",
+      // Allow both the apex + trade subdomain (Auth.js session fetches,
+      // live instrument data, WebSocket). 'self' covers same-origin; the
+      // explicit origins cover the cross-domain auth/session API calls.
+      `connect-src 'self' ${apexOrigin} ${tradeOrigin} ws: wss:`,
       // Allow YouTube embeds for the education video courses.
       "frame-src 'self' https://www.youtube.com https://youtube.com",
       "frame-ancestors 'none'",

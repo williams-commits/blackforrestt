@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { clientTradeUrl } from "@/lib/branding";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import type { InstrumentCategory, InstrumentView } from "@/lib/types";
 import { CATEGORY_LABEL, formatPrice, formatChange } from "@/lib/landingUi";
 
@@ -166,7 +167,8 @@ export function TradingPlayground({ initial }: TradingPlaygroundProps) {
                         href={clientTradeUrl(`/trade/${inst.symbol}`)}
                         className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-x-4 px-4 py-2.5 hover:bg-panel-2 transition border-b border-border-soft last:border-0"
                       >
-                        <span className="flex items-baseline gap-2 min-w-0">
+                        <span className="flex items-center gap-2 min-w-0">
+                          <InstrumentIcon symbol={inst.symbol} size={18} />
                           <span className="font-mono text-sm font-semibold text-text">{inst.symbol}</span>
                           <span className="truncate text-xs text-text-muted font-sans">{inst.name}</span>
                         </span>

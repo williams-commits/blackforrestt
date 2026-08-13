@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * blckforest wordmark with a simple tree-mark glyph.
@@ -11,6 +11,10 @@ import { useMemo } from "react";
  * errors when the trade→apex domain redirect happens.
  *
  * On the apex domain (or localhost), it uses `<Link>` for client-side routing.
+ *
+ * The href is computed in useEffect (not during render) to avoid React
+ * hydration mismatch (#418) — the server always renders `href="/"` and the
+ * client updates it after mount.
  */
 export function Logo({
   className = "",
@@ -20,15 +24,17 @@ export function Logo({
   /** Use on dark backgrounds: renders the wordmark in white instead of dark. */
   inverted?: boolean;
 }) {
-  const { href, external } = useMemo(() => {
-    if (typeof window === "undefined") return { href: "/", external: false };
+  const [href, setHref] = useState("/");
+  const [external, setExternal] = useState(false);
+
+  useEffect(() => {
     const host = window.location.hostname;
     const parts = host.split(".");
     // On the trade subdomain (e.g. trade.blackforrestt.com), link to apex.
     if (parts.length >= 3 && parts[0] !== "www") {
-      return { href: `https://${parts.slice(1).join(".")}`, external: true };
+      setHref(`https://${parts.slice(1).join(".")}`);
+      setExternal(true);
     }
-    return { href: "/", external: false };
   }, []);
 
   const cls = `flex items-center gap-2 select-none ${className}`;

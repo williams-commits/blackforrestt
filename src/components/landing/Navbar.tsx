@@ -186,13 +186,20 @@ export function Navbar() {
               );
             })}
 
-            <div className="mt-auto grid gap-2 pt-6 sm:grid-cols-2">
-              <Link href={clientTradeUrl("/login")} className="rounded border border-border px-4 py-3 text-center text-sm font-semibold text-text hover:border-brand">
-                {t("login")}
-              </Link>
-              <Link href={clientTradeUrl("/register")} className="rounded bg-brand px-4 py-3 text-center text-sm font-semibold text-white hover:brightness-110">
-                {t("openAccount")}
-              </Link>
+            <div className="mt-auto space-y-3 pt-6">
+              {/* Language + theme controls for mobile */}
+              <div className="flex items-center justify-center gap-3">
+                <LanguageSwitcher />
+                <ThemeToggle />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Link href={clientTradeUrl("/login")} className="rounded border border-border px-4 py-3 text-center text-sm font-semibold text-text hover:border-brand">
+                  {t("login")}
+                </Link>
+                <Link href={clientTradeUrl("/register")} className="rounded bg-brand px-4 py-3 text-center text-sm font-semibold text-white hover:brightness-110">
+                  {t("openAccount")}
+                </Link>
+              </div>
             </div>
           </nav>
         </div>

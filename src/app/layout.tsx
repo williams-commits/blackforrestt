@@ -7,7 +7,7 @@ import { Providers } from "@/components/providers";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FormatLocaleBridge } from "@/components/FormatLocaleBridge";
 import { brandName, brandDomain, brandShortName } from "@/lib/branding";
-import { LOCALE_BCP47, LOCALE_OG } from "@/i18n/config";
+import { LOCALE_BCP47, LOCALE_OG, RTL_LOCALES } from "@/i18n/config";
 
 /*
   Self-hosted fonts via next/font. CSP `font-src 'self' data:` permits these
@@ -97,11 +97,12 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   const htmlLang = LOCALE_BCP47[locale as keyof typeof LOCALE_BCP47] ?? "en";
+  const isRTL = RTL_LOCALES.has(locale);
   // Load messages for the client provider (same resolver as request.ts).
   const messages = (await import(`../messages/${locale}.json`)).default;
 
   return (
-    <html lang={htmlLang} className={`${sans.variable} ${mono.variable} ${serif.variable}`}>
+    <html lang={htmlLang} dir={isRTL ? "rtl" : "ltr"} className={`${sans.variable} ${mono.variable} ${serif.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
       </head>

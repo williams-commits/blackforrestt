@@ -7,13 +7,11 @@
  * restructure or middleware rewrite — the two-domain split and all <Link>/
  * router.push/redirect calls stay intact.
  *
- * Arabic (ar) + RTL mirroring is intentionally NOT in this phase; it is tracked
- * as a follow-up because it requires converting ~192 physical-directional
- * utilities to logical ones, swapping the chart price axis, and adding an
- * Arabic font via next/font.
+ * Arabic (ar) requires RTL — the layout auto-switches to `dir="rtl"` when ar
+ * is active (handled in layout.tsx via the LOCALE_RTL map).
  */
 
-export const locales = ["en", "fr", "de", "es"] as const;
+export const locales = ["en", "fr", "de", "es", "ja", "zh", "ru", "ar", "ko"] as const;
 export type Locale = (typeof locales)[number];
 
 export const defaultLocale: Locale = "en";
@@ -27,15 +25,28 @@ export const LOCALE_BCP47: Record<Locale, string> = {
   fr: "fr",
   de: "de",
   es: "es",
+  ja: "ja",
+  zh: "zh-CN",
+  ru: "ru",
+  ar: "ar",
+  ko: "ko",
 };
 
-/** OpenGraph locale codes (en_US, fr_FR, de_DE, es_ES). */
+/** OpenGraph locale codes. */
 export const LOCALE_OG: Record<Locale, string> = {
   en: "en_US",
   fr: "fr_FR",
   de: "de_DE",
   es: "es_ES",
+  ja: "ja_JP",
+  zh: "zh_CN",
+  ru: "ru_RU",
+  ar: "ar_SA",
+  ko: "ko_KR",
 };
+
+/** RTL locales — the layout switches to dir="rtl" for these. */
+export const RTL_LOCALES: ReadonlySet<string> = new Set(["ar"]);
 
 /** UI display metadata for the language switcher. */
 export const LOCALE_DISPLAY: Record<Locale, { label: string; native: string; flag: string }> = {
@@ -43,6 +54,11 @@ export const LOCALE_DISPLAY: Record<Locale, { label: string; native: string; fla
   fr: { label: "French", native: "Français", flag: "🇫🇷" },
   de: { label: "German", native: "Deutsch", flag: "🇩🇪" },
   es: { label: "Spanish", native: "Español", flag: "🇪🇸" },
+  ja: { label: "Japanese", native: "日本語", flag: "🇯🇵" },
+  zh: { label: "Chinese", native: "中文", flag: "🇨🇳" },
+  ru: { label: "Russian", native: "Русский", flag: "🇷🇺" },
+  ar: { label: "Arabic", native: "العربية", flag: "🇶🇦" },
+  ko: { label: "Korean", native: "한국어", flag: "🇰🇷" },
 };
 
 /** Coerce an arbitrary string (cookie/Accept-Language token) to a supported Locale. */
@@ -51,8 +67,10 @@ export function normalizeLocale(value: string | null | undefined): Locale {
   const lower = value.toLowerCase();
   // Exact match
   if ((locales as readonly string[]).includes(lower)) return lower as Locale;
-  // Prefix match (e.g. "en-US" → "en", "de-AT" → "de")
+  // Prefix match (e.g. "en-US" → "en", "de-AT" → "de", "zh-TW" → "zh")
   const prefix = lower.split(/[-_]/)[0];
   if ((locales as readonly string[]).includes(prefix)) return prefix as Locale;
+  // Chinese variants: zh-CN, zh-TW, zh-HK all → zh
+  if (prefix === "zh") return "zh";
   return defaultLocale;
 }

@@ -253,8 +253,12 @@ export async function withdrawalRiskHold(
   if (!user) {
     throw new PaymentError("Account not found.", 404, "USER_NOT_FOUND");
   }
-  if (!user.verified && process.env.ALLOW_UNVERIFIED_WITHDRAWALS?.toLowerCase() !== "true") {
-    throw new PaymentError("Complete identity verification before withdrawing funds.", 403, "KYC_REQUIRED");
+  if (!user.verified) {
+    // Per-user/group KYC requirement (falls back to global env var default).
+    const settings = await import("./userSettings").then((m) => m.resolveUserSettings(input.userId));
+    if (settings.withdrawals.requireKyc) {
+      throw new PaymentError("Complete identity verification before withdrawing funds.", 403, "KYC_REQUIRED");
+    }
   }
   const passwordThreshold = new Date(now.getTime() - passwordChangeCoolingOffHours() * 3_600_000);
   if (user.passwordChangedAt && user.passwordChangedAt > passwordThreshold) {

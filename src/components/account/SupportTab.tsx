@@ -19,11 +19,11 @@ interface SupportCase {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  OPEN: "bg-blue-100 text-blue-700",
-  IN_PROGRESS: "bg-amber-100 text-amber-700",
-  WAITING_CUSTOMER: "bg-purple-100 text-purple-700",
-  RESOLVED: "bg-green-100 text-green-700",
-  CLOSED: "bg-gray-100 text-gray-600",
+  OPEN: "bg-brand-soft text-brand",
+  IN_PROGRESS: "bg-brand/15 text-brand",
+  WAITING_CUSTOMER: "bg-panel-3 text-text-muted",
+  RESOLVED: "bg-up/15 text-up",
+  CLOSED: "bg-panel-2 text-text-faint",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -98,7 +98,7 @@ export function SupportTab() {
           Our team typically responds within one business day. Your case reference will appear below once submitted.
         </p>
         {successRef && (
-          <div className="mb-4 rounded-lg border border-green/30 bg-green/10 px-4 py-3 text-sm text-green-700">
+          <div className="mb-4 rounded-lg border border-up/30 bg-up/10 px-4 py-3 text-sm text-up">
             ✓ Case created — your reference is <strong>{successRef}</strong>. We&apos;ll reply by email.
           </div>
         )}
@@ -127,11 +127,11 @@ export function SupportTab() {
               placeholder="Describe your issue or question…"
             />
           </div>
-          {error && <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+          {error && <p className="rounded-lg border border-down/30 bg-down/10 px-3 py-2 text-sm text-down">{error}</p>}
           <button
             type="submit"
             disabled={submitting || message.trim().length < 10}
-            className="h-10 rounded-lg bg-brand px-6 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-50"
+            className="h-10 rounded-lg bg-brand px-6 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-50 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           >
             {submitting ? "Submitting…" : "Submit case"}
           </button>

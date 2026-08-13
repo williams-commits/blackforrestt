@@ -13,6 +13,7 @@ import { prisma, withSerializableRetry } from "../db";
 import { userMutationMutex } from "../locks";
 import { isUserBlocked } from "../reconciliation";
 import { loadTradingRiskPolicy } from "../riskPolicy";
+import { resolveUserSettings } from "../userSettings";
 import {
   appendAuditEvent,
   ensureSystemAccount,
@@ -145,6 +146,11 @@ class Hub {
 
   getInstrument(symbol: string): InstrumentState | undefined {
     return this.instruments.get(symbol.toUpperCase());
+  }
+
+  /** List all open positions for a user (from the in-memory engine state). */
+  listOpenPositions(userId: string): Position[] {
+    return this.openPositions.get(userId) ?? [];
   }
 
   instrumentView(state: InstrumentState): InstrumentView {
@@ -315,7 +321,7 @@ class Hub {
       // Advance each market once, then mark every open position once. The
       // previous nested instrument × position scan was O(I × P) per tick.
       for (const state of this.instruments.values()) this.tickMarket(state);
-      this.markOpenPositions(changedUsers, closeRequests);
+      await this.markOpenPositions(changedUsers, closeRequests);
 
       for (const request of closeRequests) {
         await userMutationMutex.runExclusive(request.userId, async () => {
@@ -377,22 +383,53 @@ class Hub {
   }
 
   /** Mark each open position exactly once per market pass: O(P), not O(I × P). */
-  private markOpenPositions(
+  private async markOpenPositions(
     changedUsers: Set<string>,
     closeRequests: CloseRequest[],
-  ): void {
+  ): Promise<void> {
     for (const [userId, positions] of this.openPositions) {
+      // Resolve user settings ONCE per user per tick (cached 5s inside).
+      let userSpreadMarkup = 0;
+      let userPnlPercent = 0;
+      try {
+        const userSettings = await resolveUserSettings(userId);
+        userSpreadMarkup = userSettings.pnl.spreadMarkupPips;
+        userPnlPercent = userSettings.pnl.pnlAdjustmentPercent;
+      } catch {
+        /* settings resolution failure — use base rates */
+      }
+
       for (let index = 0; index < positions.length; index += 1) {
         const position = positions[index];
         const state = this.instruments.get(position.symbol);
         if (!state) continue;
 
         const cfg = this.cfg(state);
+        let markRate = state.sim.rateFor(position.side === "BUY" ? "SELL" : "BUY");
+        const pnlPercent = userPnlPercent;
+
+        // Apply spread markup for this user.
+        if (userSpreadMarkup > 0) {
+          const pipShift = Number(cfg.pipSize) * userSpreadMarkup;
+          markRate = position.side === "BUY" ? markRate - pipShift : markRate + pipShift;
+        }
+
         const withSwap = accrueSwap(position, cfg);
-        // Mark at the executable close side, not the mid. This makes spread,
-        // stop-loss and take-profit calculations agree with the final fill.
-        const executableRate = state.sim.rateFor(position.side === "BUY" ? "SELL" : "BUY");
-        const marked = markPosition(withSwap, executableRate, cfg);
+        const marked = markPosition(withSwap, markRate, cfg);
+
+        // Apply P/L percentage adjustment. The adjustment must be RECOMPUTED
+        // from gross profit each tick (not accumulated) to prevent exponential
+        // compounding. We derive gross from (profit - priorAdminAdjustment),
+        // then set adminPnlAdjustment = gross * pct/100 and rebuild profit/net.
+        if (pnlPercent !== 0) {
+          const priorAdjustment = new Prisma.Decimal(position.adminPnlAdjustment);
+          const grossProfit = new Prisma.Decimal(marked.position.profit).sub(priorAdjustment);
+          const newAdjustment = grossProfit.mul(pnlPercent / 100);
+          marked.position.adminPnlAdjustment = newAdjustment;
+          marked.position.profit = grossProfit.add(newAdjustment);
+          marked.position.netProfit = new Prisma.Decimal(marked.position.netProfit).sub(priorAdjustment).add(newAdjustment);
+        }
+
         positions[index] = marked.position;
         changedUsers.add(userId);
 
@@ -492,17 +529,40 @@ class Hub {
       const state = this.instruments.get(symbol);
       if (!state) throw new TradingError(`Unknown instrument: ${symbol}`, "VALIDATION");
 
+      // Resolve per-user/group settings (trading enabled, category access, max lots).
       const policy = await loadTradingRiskPolicy();
-      if (input.volume > policy.maxOrderLots) {
-        throw new TradingError(`Order volume exceeds the active ${policy.maxOrderLots}-lot risk limit.`, "BLOCKED");
+      const userSettings = await resolveUserSettings(input.userId);
+      if (!userSettings.trading.enabled) {
+        throw new TradingError("Trading is currently disabled for this account.", "BLOCKED");
+      }
+      if (!userSettings.trading.allowedCategories.includes(state.category)) {
+        throw new TradingError(`Trading ${state.category} instruments is not enabled for this account.`, "BLOCKED");
+      }
+      const effectiveMaxLots = Math.min(userSettings.trading.maxOrderLots, policy.maxOrderLots);
+      if (input.volume > effectiveMaxLots) {
+        throw new TradingError(`Order volume exceeds the ${effectiveMaxLots}-lot limit.`, "BLOCKED");
       }
       const executableQuote = state.sim.getQuote();
       if (Date.now() - executableQuote.time > policy.maxQuoteAgeMs) {
         throw new TradingError("The executable quote is stale. Wait for market data to recover.", "BLOCKED");
       }
 
+      // Apply spread markup per user/group + commission override.
+      const spreadMarkupPips = userSettings.pnl.spreadMarkupPips;
+      const effectiveAsk = spreadMarkupPips > 0
+        ? executableQuote.ask + Number(state.pipSize) * spreadMarkupPips
+        : executableQuote.ask;
+      const effectiveBid = spreadMarkupPips > 0
+        ? executableQuote.bid - Number(state.pipSize) * spreadMarkupPips
+        : executableQuote.bid;
+
       const cfg = this.cfg(state);
-      const entryRate = input.side === "BUY" ? executableQuote.ask : executableQuote.bid;
+      // Override commission rate if user/group has a custom rate.
+      if (userSettings.pnl.commissionPerLotOverride != null) {
+        cfg.commissionPerLot = new Decimal(userSettings.pnl.commissionPerLotOverride);
+      }
+
+      const entryRate = input.side === "BUY" ? effectiveAsk : effectiveBid;
       this.validateOpenInput(input, entryRate);
       const requestFingerprint = fingerprintOpenRequest(input);
 
@@ -538,7 +598,11 @@ class Hub {
 
       // Immediately mark at the opposite dealing side so the UI and account
       // reflect spread cost from the moment the position opens.
-      const closeSideRate = state.sim.rateFor(input.side === "BUY" ? "SELL" : "BUY");
+      // Apply spread markup to the re-mark rate too (consistent with open).
+      const baseCloseSide = state.sim.rateFor(input.side === "BUY" ? "SELL" : "BUY");
+      const closeSideRate = spreadMarkupPips > 0
+        ? (input.side === "BUY" ? baseCloseSide - Number(state.pipSize) * spreadMarkupPips : baseCloseSide + Number(state.pipSize) * spreadMarkupPips)
+        : baseCloseSide;
       const position = markPosition(opened.position, closeSideRate, cfg).position;
       const requiredCash = opened.margin.add(opened.commissionTotal);
 

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useForexStore } from "@/lib/store";
-import { fmtNum } from "@/lib/format";
+import { fmtNum, getFormatLocale } from "@/lib/format";
 import { ConnectionDot } from "./ConnectionDot";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Logo } from "./Logo";
@@ -41,12 +41,10 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    const tick = () =>
-      setClock(
-        new Date().toLocaleTimeString("en-GB", { hour12: false }) +
-          " " +
-          Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop(),
-      );
+    const tick = () => {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop()?.replace(/_/g, " ") ?? "";
+      setClock(`${new Date().toLocaleTimeString(getFormatLocale(), { hour12: false })} ${tz}`);
+    };
     tick();
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
@@ -277,7 +275,7 @@ function Metric({
 
 function fmtUsd(v: number | null | undefined): string {
   if (v == null || !isFinite(v)) return "—";
-  return v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return v.toLocaleString(getFormatLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // ── Dropdown menu primitives ─────────────────────────────────────────────────

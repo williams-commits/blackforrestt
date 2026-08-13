@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { KycReview } from "./KycReview";
 import { PaymentsReview, type PaymentRequestRow } from "./PaymentsReview";
 import { ReconciliationReview } from "./ReconciliationReview";
+import { GroupsPanel } from "./GroupsPanel";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
 import { Dialog } from "@/components/ui/Dialog";
@@ -25,7 +26,8 @@ type TabKey =
   | "risk"
   | "audit"
   | "health"
-  | "changes";
+  | "changes"
+  | "groups";
 
 interface Props {
   userName: string;
@@ -76,6 +78,7 @@ function useResource<T>(url: string, pollMs?: number): Resource<T> {
 const TAB_DEFINITIONS: Array<{ key: TabKey; label: string; permission: Permission }> = [
   { key: "overview", label: "Overview", permission: "ADMIN_DASHBOARD" },
   { key: "users", label: "Users", permission: "USER_READ" },
+  { key: "groups", label: "Groups", permission: "USER_READ" },
   { key: "kyc", label: "KYC", permission: "KYC_READ" },
   { key: "payments", label: "Payments", permission: "PAYMENT_READ" },
   { key: "ledger", label: "Ledger", permission: "LEDGER_READ" },
@@ -143,6 +146,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
 
       {tab === "overview" && <OverviewPanel />}
       {tab === "users" && <UsersPanel canAdjustBalance={can("USER_BALANCE_ADJUST")} />}
+      {tab === "groups" && <GroupsPanel canManage={can("USER_ACCESS_MANAGE")} />}
       {tab === "kyc" && <KycPanel canDecide={can("KYC_DECIDE")} canAccess={can("KYC_DOCUMENT_ACCESS")} />}
       {tab === "payments" && <PaymentsPanel canPrepare={can("PAYMENT_PREPARE")} canApprove={can("PAYMENT_APPROVE")} simpleApproval={simpleApproval} />}
       {tab === "ledger" && <LedgerPanel />}
@@ -230,7 +234,11 @@ function PaginatedUsers({
   const totalPages = Math.max(1, Math.ceil(users.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const visibleUsers = users.slice((safePage - 1) * pageSize, safePage * pageSize);
-  useEffect(() => setPage(1), [users]);
+  // Only reset page if the data changed in a way that invalidates the current page
+  // (not on every silent poll refresh which would yank the admin back to page 1).
+  useEffect(() => {
+    if (safePage > totalPages) setPage(1);
+  }, [safePage, totalPages]);
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-canvas">
       <div className="overflow-x-auto">

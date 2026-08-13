@@ -35,7 +35,7 @@ const securityHeaders = [
       // Allow both the apex + trade subdomain (Auth.js session fetches,
       // live instrument data, WebSocket). 'self' covers same-origin; the
       // explicit origins cover the cross-domain auth/session API calls.
-      `connect-src 'self' ${apexOrigin} ${tradeOrigin} ws: wss:`,
+      `connect-src 'self' ${apexOrigin} ${tradeOrigin} wss://${tradeSubdomain}.${brandDomain}${isProduction ? "" : " ws://localhost:* ws://127.0.0.1:*"}`,
       // Allow YouTube embeds for the education video courses.
       "frame-src 'self' https://www.youtube.com https://youtube.com",
       "frame-ancestors 'none'",

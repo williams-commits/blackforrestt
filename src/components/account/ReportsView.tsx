@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 
 export interface ReportRow {
   id: string;
@@ -132,7 +133,7 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
               const up = row.netProfit >= 0;
               return (
                 <tr key={row.id} className="border-b border-border-soft hover:bg-panel-2">
-                  <Td className="font-medium">{row.symbol}</Td>
+                  <Td className="font-medium"><span className="flex items-center gap-1.5"><InstrumentIcon symbol={row.symbol} size={14} />{row.symbol}</span></Td>
                   <Td className="text-text-muted">{row.type}</Td>
                   <Td><span className={row.side === "BUY" ? "text-up" : "text-down"}>{row.side}</span></Td>
                   <Td className="text-right tnum">{row.volume.toFixed(2)}</Td>
@@ -191,7 +192,7 @@ function Card({ label, value, valueClass = "", sub }: { label: string; value: st
   return <div className="rounded-lg border border-border bg-canvas p-4"><div className="text-[11px] uppercase text-text-faint">{label}</div><div className={`mt-1 text-xl font-semibold tnum ${valueClass}`}>{value}</div>{sub && <div className="mt-0.5 text-[11px] text-text-faint">{sub}</div>}</div>;
 }
 function ExtremCard({ title, row, positive }: { title: string; row: ReportRow | null; positive: boolean }) {
-  return <div className="rounded-lg border border-border bg-canvas p-4"><div className="mb-2 text-[11px] uppercase text-text-faint">{title}</div>{row ? <div className="flex items-center justify-between"><div><div className="text-sm font-medium">{row.symbol}</div><div className="text-[11px] text-text-muted">{row.side} · {row.volume.toFixed(2)} lots</div></div><div className={`text-lg font-semibold tnum ${positive ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</div></div> : <div className="text-xs text-text-faint">—</div>}</div>;
+  return <div className="rounded-lg border border-border bg-canvas p-4"><div className="mb-2 text-[11px] uppercase text-text-faint">{title}</div>{row ? <div className="flex items-center justify-between"><div className="flex items-center gap-2"><InstrumentIcon symbol={row.symbol} size={18} /><div><div className="text-sm font-medium">{row.symbol}</div><div className="text-[11px] text-text-muted">{row.side} · {row.volume.toFixed(2)} lots</div></div></div><div className={`text-lg font-semibold tnum ${positive ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</div></div> : <div className="text-xs text-text-faint">—</div>}</div>;
 }
 function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <th className={`whitespace-nowrap px-3 py-2 text-left text-[10px] font-medium uppercase text-text-faint ${className}`}>{children}</th>; }
 function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <td className={`whitespace-nowrap px-3 py-2 text-xs ${className}`}>{children}</td>; }

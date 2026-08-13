@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { hub } from "@/server/engine/hub";
-import { prisma } from "@/server/db";
+import { prisma, resolveUserId } from "@/server/db";
 import { Dashboard } from "@/components/trade/Dashboard";
 import { TIMEFRAMES, type CandleInterval, type InstrumentView } from "@/lib/types";
 import { getMarketDataMode } from "@/server/engine/marketDataMode";
-import { disabledPaymentMethodNames } from "@/lib/paymentMethods";
+import { resolveUserSettings } from "@/server/userSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -64,14 +64,21 @@ export default async function TradePage({ params, searchParams }: PageProps) {
   const instrument = instruments.find((i) => i.symbol.toUpperCase() === symbolParam.toUpperCase());
   if (!instrument) notFound();
 
+  // Resolve per-user settings (trading enabled, deposit UI, payment methods).
+  const session = await import("@/auth").then((m) => m.auth());
+  const userId = await resolveUserId(session?.user?.id);
+  const settings = await resolveUserSettings(userId);
+
   return (
     <Dashboard
       instrument={instrument}
       instruments={instruments}
       initialInterval={resolveInterval(query.tf)}
       marketDataMode={getMarketDataMode()}
-      depositUiEnabled={(process.env.DEPOSIT_UI_ENABLED ?? "true").toLowerCase() !== "false"}
-      disabledPaymentMethods={disabledPaymentMethodNames()}
+      depositUiEnabled={settings.deposits.uiEnabled}
+      disabledPaymentMethods={["CARD", "BANK_TRANSFER", "CRYPTO"].filter(
+        (m) => !settings.deposits.allowedMethods.includes(m),
+      )}
     />
   );
 }

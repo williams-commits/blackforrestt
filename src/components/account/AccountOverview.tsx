@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { WalletModal } from "./WalletModal";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 
 interface Props {
   user: { name: string; email: string; accountNo: string; createdAt: Date | string; verified: boolean };
@@ -82,9 +83,12 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
         <div className="space-y-2">
           {wallets.map((w) => (
             <div key={w.asset} className="flex items-center justify-between py-2 border-b border-border-soft last:border-0">
-              <div>
-                <div className="text-sm font-medium">{w.asset}</div>
-                <div className="text-[11px] text-text-faint">Locked: {w.locked.toFixed(2)}</div>
+              <div className="flex items-center gap-2">
+                <InstrumentIcon symbol={w.asset} size={18} />
+                <div>
+                  <div className="text-sm font-medium">{w.asset}</div>
+                  <div className="text-[11px] text-text-faint">Locked: {w.locked.toFixed(2)}</div>
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-sm tnum">{w.free.toFixed(2)}</div>

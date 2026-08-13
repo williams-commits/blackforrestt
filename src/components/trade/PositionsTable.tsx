@@ -151,12 +151,18 @@ function OpenPositionsTable({
               <Td>
                 <button
                   disabled={busy === p.id}
+                  aria-label={`Close ${p.symbol} position`}
                   onClick={async () => {
                     setBusy(p.id);
-                        await closePosition(p.id);
-                        setBusy(null);
+                    const ok = await closePosition(p.id);
+                    setBusy(null);
+                    if (!ok) {
+                      // Surface failure — closePosition swallows errors internally
+                      const ev = new CustomEvent("blckforest:toast", { detail: { type: "error", message: `Failed to close ${p.symbol}. Try again or contact support.` } });
+                      window.dispatchEvent(ev);
+                    }
                   }}
-                  className="flex h-7 w-7 items-center justify-center rounded border border-border text-text-muted hover:text-down hover:border-down/50 hover:bg-down/10 disabled:opacity-50 transition-colors text-xs"
+                  className="flex h-8 w-8 items-center justify-center rounded border border-border text-text-muted hover:text-down hover:border-down/50 hover:bg-down/10 disabled:opacity-50 transition-colors text-xs"
                 >
                   {busy === p.id ? "…" : "✕"}
                 </button>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTheme } from "@/components/ThemeProvider";
 import {
   createChart,
   ColorType,
@@ -15,6 +16,7 @@ import {
   type ISeriesApi,
   type MouseEventParams,
   type UTCTimestamp,
+  type LogicalRange,
 } from "lightweight-charts";
 import { useForexStore } from "@/lib/store";
 import { TIMEFRAMES, type Candle, type CandleInterval, type InstrumentView } from "@/lib/types";
@@ -53,6 +55,8 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { theme } = useTheme();
+  const isDim = theme === "dim";
   const panelRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -93,7 +97,17 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
   const [indicatorPos, setIndicatorPos] = useState({ top: 0, right: 0 });
   const [hoveredOhlc, setHoveredOhlc] = useState<DisplayOhlc | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
-  const indicatorBtnRef = useRef<HTMLSpanElement>(null);
+
+  /** Toggle indicators menu — uses the clicked button's rect for positioning
+   * so it works correctly on both mobile and desktop strips. */
+  const toggleIndicators = (e: React.MouseEvent) => {
+    const target = e.currentTarget as HTMLElement;
+    if (!showIndicators && target) {
+      const rect = target.getBoundingClientRect();
+      setIndicatorPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setShowIndicators((v) => !v);
+  };
 
   candlesRef.current = candles;
 
@@ -139,30 +153,30 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
     const chart = createChart(container, {
       autoSize: true,
       layout: {
-        background: { type: ColorType.Solid, color: "#ffffff" },
-        textColor: "#6b7280",
+        background: { type: ColorType.Solid, color: isDim ? "#0e1116" : "#ffffff" },
+        textColor: isDim ? "#9aa7b4" : "#6b7280",
         fontFamily: "inherit",
         attributionLogo: true,
       },
       grid: {
-        vertLines: { color: "rgba(222,226,230,0.55)" },
-        horzLines: { color: "rgba(222,226,230,0.55)" },
+        vertLines: { color: isDim ? "rgba(42,50,61,0.5)" : "rgba(222,226,230,0.55)" },
+        horzLines: { color: isDim ? "rgba(42,50,61,0.5)" : "rgba(222,226,230,0.55)" },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: "rgba(134,142,150,0.65)", labelBackgroundColor: "#343a40" },
-        horzLine: { color: "rgba(134,142,150,0.65)", labelBackgroundColor: "#343a40" },
+        vertLine: { color: isDim ? "rgba(154,167,180,0.5)" : "rgba(134,142,150,0.65)", labelBackgroundColor: isDim ? "#1c232c" : "#343a40" },
+        horzLine: { color: isDim ? "rgba(154,167,180,0.5)" : "rgba(134,142,150,0.65)", labelBackgroundColor: isDim ? "#1c232c" : "#343a40" },
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
       handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
       kineticScroll: { mouse: true, touch: true },
       rightPriceScale: {
-        borderColor: "#dee2e6",
+        borderColor: isDim ? "#2a323d" : "#dee2e6",
         scaleMargins: { top: 0.08, bottom: 0.24 },
         minimumWidth: 74,
       },
       timeScale: {
-        borderColor: "#dee2e6",
+        borderColor: isDim ? "#2a323d" : "#dee2e6",
         timeVisible: true,
         secondsVisible: false,
         rightOffset: 10,
@@ -175,12 +189,12 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
     let priceSeries: ISeriesApi<"Candlestick"> | ISeriesApi<"Line">;
     if (chartType === "candles") {
       const series = chart.addSeries(CandlestickSeries, {
-        upColor: "#16803b",
-        downColor: "#dc2626",
-        borderUpColor: "#16803b",
-        borderDownColor: "#dc2626",
-        wickUpColor: "#16803b",
-        wickDownColor: "#dc2626",
+        upColor: isDim ? "#4cba6a" : "#2b8a3e",
+        downColor: isDim ? "#f15b5b" : "#e03131",
+        borderUpColor: isDim ? "#4cba6a" : "#2b8a3e",
+        borderDownColor: isDim ? "#f15b5b" : "#e03131",
+        wickUpColor: isDim ? "#4cba6a" : "#2b8a3e",
+        wickDownColor: isDim ? "#f15b5b" : "#e03131",
         priceLineVisible: true,
         lastValueVisible: true,
       });
@@ -234,7 +248,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
       maSeriesRef.current = null;
       volumeSeriesRef.current = null;
     };
-  }, [chartType]);
+  }, [chartType, isDim]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -362,6 +376,16 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
     if (!series || candleCount === 0) return;
     prevCandleCount.current = candleCount;
 
+    // Save the user's visible range before setData() — setData() resets the
+    // scroll/zoom position. We restore it after if the user has manually zoomed.
+    let savedRange: LogicalRange | null = null;
+    if (userZoomedRef.current) {
+      savedRange = chartRef.current?.timeScale().getVisibleLogicalRange() ?? null;
+    }
+
+    const upColor = isDim ? "rgba(76,186,106,0.32)" : "rgba(43,138,62,0.32)";
+    const downColor = isDim ? "rgba(241,91,91,0.30)" : "rgba(224,49,49,0.30)";
+
     if (chartType === "candles") {
       seriesRef.current?.setData(
         candles.map((candle) => ({
@@ -382,7 +406,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
       candles.map((candle) => ({
         time: candle.time as UTCTimestamp,
         value: candle.volume,
-        color: candle.close >= candle.open ? "rgba(22,128,59,0.32)" : "rgba(220,38,38,0.30)",
+        color: candle.close >= candle.open ? upColor : downColor,
       })),
     );
     if (maSeriesRef.current && candleCount >= maPeriod) {
@@ -402,14 +426,16 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
     }
     if (macdHistRef.current && macdLineRef.current && macdSignalRef.current && candleCount >= 35) {
       const macd = computeMACD(candles);
-      macdHistRef.current.setData(macd.map((p) => ({ time: p.time as UTCTimestamp, value: p.histogram, color: p.histogram >= 0 ? "rgba(22,128,59,0.5)" : "rgba(220,38,38,0.5)" })));
+      macdHistRef.current.setData(macd.map((p) => ({ time: p.time as UTCTimestamp, value: p.histogram, color: p.histogram >= 0 ? upColor : downColor })));
       macdLineRef.current.setData(macd.map((p) => ({ time: p.time as UTCTimestamp, value: p.macd })));
       macdSignalRef.current.setData(macd.map((p) => ({ time: p.time as UTCTimestamp, value: p.signal })));
     }
-    // Only auto-fit when the user hasn't manually zoomed (otherwise their zoom
-    // gets overridden on every live candle update).
+    // Only auto-fit when the user hasn't manually zoomed. If they have zoomed,
+    // restore their saved visible range (setData resets it).
     if (!userZoomedRef.current) {
       chartRef.current?.timeScale().fitContent();
+    } else if (savedRange) {
+      chartRef.current?.timeScale().setVisibleLogicalRange(savedRange);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncKey, candleCount, candles, chartType, maPeriod]);
@@ -585,56 +611,20 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
               <rect x="15" y="8" width="4" height="11" rx="1" />
             </svg>
           </ChartButton>
-          <div className="relative">
-            <span ref={indicatorBtnRef}>
-              <ChartButton
-                label="Chart indicators"
-                active={showMA || showEMA || showBollinger || showRSI || showMACD}
-                onClick={() => {
-                  if (!showIndicators && indicatorBtnRef.current) {
-                    const rect = indicatorBtnRef.current.getBoundingClientRect();
-                    setIndicatorPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
-                  }
-                  setShowIndicators((value) => !value);
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M4 16c3 0 4-8 7-8s4 8 7 8 2-4 2-4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </ChartButton>
-            </span>
-            {showIndicators && typeof document !== "undefined" && createPortal(
-              <>
-                <button type="button" className="fixed inset-0 z-9998 cursor-default" aria-label="Close indicators menu" onClick={() => setShowIndicators(false)} />
-                <div className="fixed z-9999 min-w-48 rounded border border-border bg-canvas py-1 shadow-xl" style={{ top: indicatorPos.top, right: indicatorPos.right }}>
-                  <div className="px-3 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-wide text-text-faint">Overlays</div>
-                  <button type="button" role="menuitemcheckbox" aria-checked={showMA} onClick={toggleMA} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
-                    <span>SMA ({maPeriod})</span>
-                    <span className={`h-3 w-3 rounded border ${showMA ? "border-brand bg-brand" : "border-border"}`} />
-                  </button>
-                  <button type="button" role="menuitemcheckbox" aria-checked={showEMA} onClick={toggleEMA} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
-                    <span>EMA ({emaPeriod})</span>
-                    <span className={`h-3 w-3 rounded border ${showEMA ? "border-brand bg-brand" : "border-border"}`} />
-                  </button>
-                  <button type="button" role="menuitemcheckbox" aria-checked={showBollinger} onClick={toggleBollinger} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
-                    <span>Bollinger ({bollingerPeriod}, {bollingerStdDev}σ)</span>
-                    <span className={`h-3 w-3 rounded border ${showBollinger ? "border-brand bg-brand" : "border-border"}`} />
-                  </button>
-                  <div className="mx-3 my-1 border-t border-border-soft" />
-                  <div className="px-3 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-wide text-text-faint">Oscillators</div>
-                  <button type="button" role="menuitemcheckbox" aria-checked={showRSI} onClick={toggleRSI} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
-                    <span>RSI ({rsiPeriod})</span>
-                    <span className={`h-3 w-3 rounded border ${showRSI ? "border-brand bg-brand" : "border-border"}`} />
-                  </button>
-                  <button type="button" role="menuitemcheckbox" aria-checked={showMACD} onClick={toggleMACD} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
-                    <span>MACD (12, 26, 9)</span>
-                    <span className={`h-3 w-3 rounded border ${showMACD ? "border-brand bg-brand" : "border-border"}`} />
-                  </button>
-                </div>
-              </>,
-              document.body,
-            )}
-          </div>
+          <ChartButton label="Line chart" active={chartType === "line"} onClick={() => selectChartType("line")}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M4 17l5-6 4 3 7-9" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </ChartButton>
+          <ChartButton
+            label="Chart indicators"
+            active={showMA || showEMA || showBollinger || showRSI || showMACD}
+            onClick={toggleIndicators}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M4 16c3 0 4-8 7-8s4 8 7 8 2-4 2-4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </ChartButton>
           <ChartButton label="Zoom in" onClick={() => zoom("in")}>＋</ChartButton>
           <ChartButton label="Zoom out" onClick={() => zoom("out")}>−</ChartButton>
           <ChartButton label="Fit all candles" onClick={() => fitChart()}>Fit</ChartButton>
@@ -656,6 +646,15 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
           <ChartButton label="Line chart" active={chartType === "line"} onClick={() => selectChartType("line")}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M4 17l5-6 4 3 7-9" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </ChartButton>
+          <ChartButton
+            label="Chart indicators"
+            active={showMA || showEMA || showBollinger || showRSI || showMACD}
+            onClick={toggleIndicators}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M4 16c3 0 4-8 7-8s4 8 7 8 2-4 2-4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </ChartButton>
           <ChartButton label="Zoom in" onClick={() => zoom("in")}>＋</ChartButton>
@@ -692,6 +691,40 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
       ) : null}
 
       <div ref={containerRef} data-testid="professional-chart-canvas" className="min-h-112 flex-1 touch-none lg:min-h-0" />
+
+      {/* Indicators portal — standalone (not nested in either control strip).
+          Position is set by toggleIndicators() from whichever button was clicked. */}
+      {showIndicators && typeof document !== "undefined" && createPortal(
+        <>
+          <button type="button" className="fixed inset-0 z-9998 cursor-default" aria-label="Close indicators menu" onClick={() => setShowIndicators(false)} />
+          <div className="fixed z-9999 min-w-48 rounded border border-border bg-canvas py-1 shadow-xl" style={{ top: indicatorPos.top, right: indicatorPos.right }}>
+            <div className="px-3 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-wide text-text-faint">Overlays</div>
+            <button type="button" role="menuitemcheckbox" aria-checked={showMA} onClick={toggleMA} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
+              <span>SMA ({maPeriod})</span>
+              <span className={`h-3 w-3 rounded border ${showMA ? "border-brand bg-brand" : "border-border"}`} />
+            </button>
+            <button type="button" role="menuitemcheckbox" aria-checked={showEMA} onClick={toggleEMA} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
+              <span>EMA ({emaPeriod})</span>
+              <span className={`h-3 w-3 rounded border ${showEMA ? "border-brand bg-brand" : "border-border"}`} />
+            </button>
+            <button type="button" role="menuitemcheckbox" aria-checked={showBollinger} onClick={toggleBollinger} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
+              <span>Bollinger ({bollingerPeriod}, {bollingerStdDev}σ)</span>
+              <span className={`h-3 w-3 rounded border ${showBollinger ? "border-brand bg-brand" : "border-border"}`} />
+            </button>
+            <div className="mx-3 my-1 border-t border-border-soft" />
+            <div className="px-3 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-wide text-text-faint">Oscillators</div>
+            <button type="button" role="menuitemcheckbox" aria-checked={showRSI} onClick={toggleRSI} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
+              <span>RSI ({rsiPeriod})</span>
+              <span className={`h-3 w-3 rounded border ${showRSI ? "border-brand bg-brand" : "border-border"}`} />
+            </button>
+            <button type="button" role="menuitemcheckbox" aria-checked={showMACD} onClick={toggleMACD} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
+              <span>MACD (12, 26, 9)</span>
+              <span className={`h-3 w-3 rounded border ${showMACD ? "border-brand bg-brand" : "border-border"}`} />
+            </button>
+          </div>
+        </>,
+        document.body,
+      )}
     </div>
   );
 }
@@ -704,7 +737,7 @@ function ChartButton({
 }: {
   label: string;
   active?: boolean;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent) => void;
   children: React.ReactNode;
 }) {
   return (

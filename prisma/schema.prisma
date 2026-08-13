@@ -174,6 +174,8 @@ model User {
   reconciliationBlocks ReconciliationBlock[]
   adminRoles           AdminRoleAssignment[]
   emailDeliveries      EmailDelivery[]
+  groupMemberships     UserGroupMembership[]
+  profile              UserProfile?
 }
 
 enum SecurityTokenType {
@@ -886,4 +888,46 @@ model AdminChangeRequest {
   @@index([status, domain, createdAt])
   @@index([requestedById, createdAt])
   @@index([reviewedById, reviewedAt])
+}
+
+/// Admin-created group for bulk user management (VIP, Demo, High-Risk, etc.).
+/// Settings cascade: UserProfile → UserGroup → global defaults.
+model UserGroup {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String   @default("#6366f1")
+  settings    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members   UserGroupMembership[]
+  profiles  UserProfile[]
+
+  @@index([name])
+}
+
+/// Join table linking a user to a group. A user may belong to multiple groups.
+model UserGroupMembership {
+  id         String   @id @default(cuid())
+  userId     String
+  groupId    String
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group UserGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([groupId])
+}
+
+/// Per-user settings overrides (1:1 with User). Null fields fall back to group/global.
+model UserProfile {
+  userId   String  @id
+  settings Json    @default("{}")
+  groupId  String?
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group UserGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 }

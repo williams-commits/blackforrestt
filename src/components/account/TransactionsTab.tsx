@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Pagination } from "@/components/ui/Pagination";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 
 interface Txn {
   id: string;
@@ -60,7 +61,17 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
                   <tr key={transaction.id} className="border-b border-border-soft hover:bg-panel-2">
                     <Td className="text-text-muted tnum">{fmtDate(transaction.createdAt)}</Td>
                     <Td><TypeBadge type={transaction.type} /></Td>
-                    <Td className="max-w-64 truncate text-text-muted" title={transaction.description ?? undefined}>{transaction.description ?? "—"}</Td>
+                    <Td className="max-w-64">
+                      <span className="flex items-center gap-1.5">
+                        {(() => {
+                          const sym = extractSymbol(transaction);
+                          return sym ? <InstrumentIcon symbol={sym} size={14} /> : null;
+                        })()}
+                        <span className="truncate text-text-muted" title={transaction.description ?? undefined}>
+                          {transaction.description ?? "—"}
+                        </span>
+                      </span>
+                    </Td>
                     <Td className="text-text-faint tnum">{transaction.reference ?? "—"}</Td>
                     <Td><StatusBadge status={transaction.status} /></Td>
                     <Td className={`text-right font-medium tnum ${credit ? "text-up" : "text-down"}`}>
@@ -111,4 +122,17 @@ function Td({ children, className = "", title }: { children?: React.ReactNode; c
 }
 function fmtDate(value: string): string {
   return new Date(value).toLocaleString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * Trade-related transaction descriptions always start with the instrument
+ * symbol (e.g. "EURUSD opening commission", "XAUUSD manual_close realized P&L").
+ * Extract it so we can show the InstrumentIcon badge. Returns null for
+ * non-instrument transactions (deposits, withdrawals, bonuses).
+ */
+const INSTRUMENT_TXN_TYPES = new Set(["COMMISSION", "SWAP", "TRADE_PNL", "REVERSAL", "NEGATIVE_BALANCE_PROTECTION"]);
+function extractSymbol(txn: Txn): string | null {
+  if (!INSTRUMENT_TXN_TYPES.has(txn.type) || !txn.description) return null;
+  const match = txn.description.match(/^([A-Z0-9]{2,10})\b/);
+  return match ? match[1] : null;
 }

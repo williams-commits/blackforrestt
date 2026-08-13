@@ -6,7 +6,7 @@ import { AccountShell } from "@/components/account/AccountShell";
 import { AccountUserMenu } from "@/components/account/AccountUserMenu";
 import type { InstrumentView } from "@/lib/types";
 import { ADDRESS_DOCUMENT_TYPES, IDENTITY_DOCUMENT_TYPES } from "@/lib/kyc";
-import { disabledPaymentMethodNames } from "@/lib/paymentMethods";
+import { resolveUserSettings } from "@/server/userSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +111,9 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
     };
   }
 
+  // Resolve per-user settings.
+  const settings = await resolveUserSettings(userId);
+
   return (
     <div className="min-h-screen bg-panel">
       <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-canvas px-3 py-1 sm:flex-nowrap sm:px-4">
@@ -187,8 +190,10 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
             reviewedAt: kyc.reviewedAt?.toISOString() ?? null,
           } : null}
           instruments={instrumentMap}
-          depositUiEnabled={(process.env.DEPOSIT_UI_ENABLED ?? "true").toLowerCase() !== "false"}
-          disabledPaymentMethods={disabledPaymentMethodNames()}
+          depositUiEnabled={settings.deposits.uiEnabled}
+          disabledPaymentMethods={["CARD", "BANK_TRANSFER", "CRYPTO"].filter(
+            (m) => !settings.deposits.allowedMethods.includes(m),
+          )}
           reconciliation={{
             activeBlocks: activeBlocks.map((block) => ({ ...block, createdAt: block.createdAt.toISOString() })),
             openCaseCount,

@@ -67,7 +67,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: `${name} — ${t("titleDefault")}`, template: `%s — ${name}` },
     description,
     applicationName: name,
-    keywords: ["trading", "forex", "CFD", "commodities", "indices", "crypto", "online broker", "trading platform"],
+    keywords: ["trading", "forex", "CFD", "commodities", "indices", "crypto", "online broker", "trading platform", "trading tools", "trading education", "trading signals", "trading strategies", "trading analysis", "trading community", "trading resources", "trading news", "trading insights", "trading tips", "trading guides", "trading tutorials", "trading webinars", "trading events", "trading competitions", "trading challenges", "Canada", "United States", "Europe", "Asia", "Australia", "Africa", "Latin America"],
     authors: [{ name: brandShortName() }],
     creator: brandShortName(),
     publisher: name,

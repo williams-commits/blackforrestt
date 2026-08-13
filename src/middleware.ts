@@ -33,7 +33,11 @@ const TRADE_DOMAIN_PREFIXES = [
   "/account",
   "/reports",
   "/admin",
-  "/api/auth",
+  // NOTE: /api/auth is intentionally NOT redirected — the next-auth
+  // SessionProvider polls /api/auth/session on every page (including the
+  // apex marketing domain). Redirecting it causes a cross-origin CORS
+  // failure. The endpoint works same-origin on both domains; on the apex
+  // it simply returns unauthenticated (no session cookie on that origin).
   "/api/account",
   "/api/kyc",
   "/api/password",

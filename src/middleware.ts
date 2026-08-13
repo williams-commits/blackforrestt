@@ -33,11 +33,11 @@ const TRADE_DOMAIN_PREFIXES = [
   "/account",
   "/reports",
   "/admin",
-  // NOTE: /api/auth is intentionally NOT redirected — the next-auth
-  // SessionProvider polls /api/auth/session on every page (including the
-  // apex marketing domain). Redirecting it causes a cross-origin CORS
-  // failure. The endpoint works same-origin on both domains; on the apex
-  // it simply returns unauthenticated (no session cookie on that origin).
+  // NOTE: /api/auth and /api/notifications are intentionally NOT redirected —
+  // they are called by the root layout's Providers (SessionProvider +
+  // ToastNotifications) on EVERY page including the apex marketing domain.
+  // Redirecting them causes cross-origin CORS failures. They work same-origin
+  // on both domains; on the apex they return unauthenticated/empty.
   "/api/account",
   "/api/kyc",
   "/api/password",
@@ -45,7 +45,6 @@ const TRADE_DOMAIN_PREFIXES = [
   "/api/profile",
   "/api/transactions",
   "/api/wallet",
-  "/api/notifications",
   "/api/security",
   "/api/admin",
   "/api/register",

@@ -18,6 +18,30 @@ export async function createSecuritySession(input: {
 }) {
   const now = new Date();
   return prisma.$transaction(async (tx) => {
+    // Revoke any prior active sessions for the same (userId, deviceId) so
+    // repeat logins from the same browser don't accumulate duplicate rows.
+    const prior = await tx.securitySession.findMany({
+      where: {
+        userId: input.userId,
+        deviceId: input.deviceId,
+        revokedAt: null,
+      },
+      select: { id: true },
+    });
+    if (prior.length > 0) {
+      await tx.securitySession.updateMany({
+        where: { id: { in: prior.map((s) => s.id) } },
+        data: { revokedAt: now },
+      });
+      await appendAuditEvent(tx, {
+        actorId: input.userId,
+        action: "SESSIONS_REVOKED",
+        entityType: "SecuritySession",
+        entityId: input.userId,
+        metadata: { count: prior.length, reason: "SUPERSEDED" },
+      });
+    }
+
     const session = await tx.securitySession.create({
       data: {
         id: randomSessionId(),

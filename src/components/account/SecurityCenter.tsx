@@ -7,9 +7,45 @@ import { toast } from "@/lib/toast";
 interface SessionView {
   id: string;
   deviceName: string;
+  browser: string;
+  os: string;
+  deviceType: string;
+  createdAt: string;
   lastSeenAt: string;
-  revokedAt: string | null;
+  mfaVerifiedAt: string | null;
   current: boolean;
+}
+
+/** Compact relative-time formatter: "Active now", "5 min ago", "3 days ago". */
+function formatRelative(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 60_000) return "Active now";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} hr ago`;
+  return `${Math.floor(diff / 86_400_000)} days ago`;
+}
+
+/** Distinct colour per browser for the icon circle. */
+const BROWSER_COLORS: Record<string, string> = {
+  Chrome: "#4285F4",
+  Safari: "#1B88CA",
+  Firefox: "#E66000",
+  Edge: "#0078D7",
+  Opera: "#FF1B2D",
+  Chromium: "#4285F4",
+};
+
+function BrowserIcon({ browser }: { browser: string }) {
+  const color = BROWSER_COLORS[browser] ?? "#9aa5b1";
+  const letter = browser === "Unknown" ? "🌐" : browser[0];
+  return (
+    <span
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+      style={{ background: color }}
+    >
+      {letter}
+    </span>
+  );
 }
 
 export function SecurityCenter() {
@@ -22,6 +58,7 @@ export function SecurityCenter() {
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const [mfaResponse, sessionsResponse] = await Promise.all([
@@ -86,12 +123,14 @@ export function SecurityCenter() {
   }
 
   async function revoke(sessionId: string) {
+    setRevokingId(sessionId);
     const response = await fetch("/api/security/sessions", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId }),
     });
-    if (response.ok) toast.success("Session revoked");
+    setRevokingId(null);
+    if (response.ok) toast.success("Session revoked", "That device has been signed out.");
     else toast.error("Unable to revoke session");
     await refresh();
   }
@@ -101,7 +140,7 @@ export function SecurityCenter() {
     const response = await fetch("/api/security/sessions", { method: "POST" });
     const data = await response.json().catch(() => null) as { error?: string; revokedCount?: number } | null;
     setLoading(false);
-    if (response.ok) toast.success("Sessions revoked", `${data?.revokedCount ?? 0} other session(s) revoked.`);
+    if (response.ok) toast.success("Sessions revoked", `${data?.revokedCount ?? 0} other device(s) signed out.`);
     else toast.error("Unable to revoke sessions", data?.error ?? "Unable to revoke other sessions.");
     await refresh();
   }
@@ -126,8 +165,11 @@ export function SecurityCenter() {
     await refresh();
   }
 
+  const otherCount = sessions.filter((s) => !s.current).length;
+
   return (
-    <section className="space-y-4 rounded-lg border border-border bg-canvas p-6">
+    <section className="space-y-5 rounded-lg border border-border bg-canvas p-6">
+      {/* ── Header ── */}
       <div>
         <h3 className="text-sm font-medium">Security center</h3>
         <p className="mt-1 text-[11px] text-text-faint">
@@ -135,6 +177,7 @@ export function SecurityCenter() {
         </p>
       </div>
 
+      {/* ── MFA enrollment ── */}
       {!enabled && !secret && (
         <div className="flex gap-2">
           <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Current password" aria-label="Current password for MFA enrollment" className="h-10 flex-1 rounded border border-border bg-canvas px-3 text-sm" />
@@ -169,22 +212,84 @@ export function SecurityCenter() {
       )}
       {notice && <p role="status" className="text-xs text-text-muted">{notice}</p>}
 
-      <div>
-        <h4 className="mb-2 text-xs font-medium">Devices and sessions</h4>
-        <Button type="button" size="sm" loading={loading} onClick={() => void revokeOthers()} className="mb-2">
-          Revoke other sessions
-        </Button>
-        <ul className="space-y-2">
-          {sessions.map((session) => (
-            <li key={session.id} className="flex items-center justify-between rounded border border-border-soft p-2 text-xs">
-              <span>
-                {session.deviceName} {session.current ? "· current" : ""}
-                <span className="block text-text-faint">Last seen {new Date(session.lastSeenAt).toLocaleString()}</span>
-              </span>
-              {!session.revokedAt && <Button type="button" size="sm" onClick={() => void revoke(session.id)}>Revoke</Button>}
-            </li>
-          ))}
-        </ul>
+      {/* ── Active sessions ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-xs font-semibold text-text">Active sessions</h4>
+            <p className="text-[11px] text-text-faint">
+              {sessions.length} device{sessions.length === 1 ? "" : "s"} signed in
+            </p>
+          </div>
+          {otherCount > 0 && (
+            <Button
+              type="button"
+              size="sm"
+              variant="sell"
+              loading={loading}
+              onClick={() => void revokeOthers()}
+            >
+              Sign out all others ({otherCount})
+            </Button>
+          )}
+        </div>
+
+        {sessions.length === 0 ? (
+          <div className="rounded-lg border border-border-soft bg-panel p-4 text-center">
+            <p className="text-xs text-text-muted">No active sessions found.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {sessions.map((session) => (
+              <div
+                key={session.id}
+                className={`flex items-center gap-3 rounded-lg border p-3 transition ${
+                  session.current
+                    ? "border-brand/30 bg-brand-soft/20"
+                    : "border-border bg-panel hover:border-brand/30"
+                }`}
+              >
+                <BrowserIcon browser={session.browser} />
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-xs font-medium text-text">
+                      {session.browser === "Unknown" && session.os === "Unknown"
+                        ? session.deviceName
+                        : `${session.browser} on ${session.os}`}
+                    </span>
+                    {session.current && (
+                      <span className="shrink-0 rounded-full bg-brand/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-brand">
+                        This device
+                      </span>
+                    )}
+                    {session.mfaVerifiedAt && !session.current && (
+                      <span className="shrink-0 rounded-full bg-up/10 px-1.5 py-0.5 text-[9px] font-semibold text-up">
+                        MFA
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-text-faint">
+                    <span>{formatRelative(session.lastSeenAt)}</span>
+                    <span className="text-border">·</span>
+                    <span className="capitalize">{session.deviceType}</span>
+                  </div>
+                </div>
+
+                {!session.current && (
+                  <button
+                    type="button"
+                    onClick={() => void revoke(session.id)}
+                    disabled={revokingId === session.id}
+                    className="shrink-0 rounded-md border border-border px-3 py-1.5 text-[11px] font-medium text-text-muted transition hover:border-down/40 hover:text-down disabled:opacity-50"
+                  >
+                    {revokingId === session.id ? "Revoking…" : "Revoke"}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

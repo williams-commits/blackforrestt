@@ -154,10 +154,12 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
           onChange={(v) => update(["deposits", "uiEnabled"], v)}
         />
         <div>
-          <p className="text-xs text-text-muted mb-1.5">Allowed payment methods</p>
+          <p className="text-xs text-text-muted mb-1.5">Allowed payment methods (Deposit and Withdrawal)</p>
           <div className="flex flex-wrap gap-2">
             {ALL_METHODS.map((method) => {
-              const active = s.deposits?.allowedMethods?.includes(method) ?? true;
+              const active = s.deposits?.allowedMethods?.includes(method)
+                ?? defaults?.deposits.allowedMethods.includes(method)
+                ?? true;
               return (
                 <button
                   key={method}

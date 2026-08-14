@@ -15,6 +15,7 @@
  */
 
 import { prisma } from "./db";
+import { PAYMENT_METHODS, disabledPaymentMethods } from "./paymentMethodDetails";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -111,7 +112,9 @@ function getGlobalDefaults(): ResolvedSettings {
     },
     deposits: {
       uiEnabled: (process.env.DEPOSIT_UI_ENABLED ?? "true").toLowerCase() !== "false",
-      allowedMethods: ["CARD", "BANK_TRANSFER", "CRYPTO"],
+      // Derive from PAYMENT_METHODS_DISABLED so the admin UI, client wallet
+      // selector, and API enforcement all agree on which methods are available.
+      allowedMethods: PAYMENT_METHODS.filter((m) => !disabledPaymentMethods().has(m)),
     },
     withdrawals: {
       requireKyc: (process.env.ALLOW_UNVERIFIED_WITHDRAWALS ?? "false").toLowerCase() !== "true"

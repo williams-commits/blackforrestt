@@ -6,6 +6,7 @@ import {
   revokeAllSecuritySessions,
   revokeSecuritySession,
 } from "@/server/security/sessions";
+import { parseUserAgent } from "@/lib/device";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,23 +16,32 @@ const RevokeSchema = z.object({ sessionId: z.string().min(10).max(128) });
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const now = new Date();
   const rows = await prisma.securitySession.findMany({
-    where: { userId: session.user.id },
+    where: {
+      userId: session.user.id,
+      revokedAt: null,
+      expiresAt: { gt: now },
+    },
     orderBy: { lastSeenAt: "desc" },
-    take: 100,
+    take: 50,
   });
   return NextResponse.json({
-    sessions: rows.map((row) => ({
-      id: row.id,
-      deviceName: row.deviceName,
-      userAgent: row.userAgent,
-      createdAt: row.createdAt.toISOString(),
-      lastSeenAt: row.lastSeenAt.toISOString(),
-      expiresAt: row.expiresAt.toISOString(),
-      revokedAt: row.revokedAt?.toISOString() ?? null,
-      mfaVerifiedAt: row.mfaVerifiedAt?.toISOString() ?? null,
-      current: row.id === session.securitySessionId,
-    })),
+    sessions: rows.map((row) => {
+      const ua = parseUserAgent(row.userAgent);
+      return {
+        id: row.id,
+        deviceName: row.deviceName,
+        browser: ua.browser,
+        os: ua.os,
+        deviceType: ua.deviceType,
+        createdAt: row.createdAt.toISOString(),
+        lastSeenAt: row.lastSeenAt.toISOString(),
+        expiresAt: row.expiresAt.toISOString(),
+        mfaVerifiedAt: row.mfaVerifiedAt?.toISOString() ?? null,
+        current: row.id === session.securitySessionId,
+      };
+    }),
   });
 }
 

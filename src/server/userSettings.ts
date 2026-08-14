@@ -47,12 +47,19 @@ export interface BalanceSettings {
   maxCreditBonus?: number;
 }
 
+export interface ReferralSettings {
+  enabled?: boolean;
+  referrerReward?: number;
+  referredReward?: number;
+}
+
 export interface UserSettingsConfig {
   trading?: TradingSettings;
   deposits?: DepositSettings;
   withdrawals?: WithdrawalSettings;
   pnl?: PnlSettings;
   balance?: BalanceSettings;
+  referrals?: ReferralSettings;
 }
 
 /** Fully resolved settings (all fields guaranteed non-null). */
@@ -80,6 +87,11 @@ export interface ResolvedSettings {
   balance: {
     demoStartingBalance: number;
     maxCreditBonus: number;
+  };
+  referrals: {
+    enabled: boolean;
+    referrerReward: number;
+    referredReward: number;
   };
   /** The group name if resolved from a group (for UI display). */
   groupName: string | null;
@@ -117,6 +129,11 @@ function getGlobalDefaults(): ResolvedSettings {
       demoStartingBalance: 10000,
       maxCreditBonus: 5000,
     },
+    referrals: {
+      enabled: true,
+      referrerReward: 25,
+      referredReward: 10,
+    },
     groupName: null,
     groupColor: null,
   };
@@ -151,6 +168,11 @@ function applyLayer(base: ResolvedSettings, layer: UserSettingsConfig | null): R
     balance: {
       demoStartingBalance: layer.balance?.demoStartingBalance ?? base.balance.demoStartingBalance,
       maxCreditBonus: layer.balance?.maxCreditBonus ?? base.balance.maxCreditBonus,
+    },
+    referrals: {
+      enabled: layer.referrals?.enabled ?? base.referrals.enabled,
+      referrerReward: layer.referrals?.referrerReward ?? base.referrals.referrerReward,
+      referredReward: layer.referrals?.referredReward ?? base.referrals.referredReward,
     },
     groupName: base.groupName,
     groupColor: base.groupColor,

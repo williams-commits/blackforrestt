@@ -5,6 +5,7 @@ import { KycReview } from "./KycReview";
 import { PaymentsReview, type PaymentRequestRow } from "./PaymentsReview";
 import { ReconciliationReview } from "./ReconciliationReview";
 import { GroupsPanel } from "./GroupsPanel";
+import { SettingsForm, type UserSettingsConfig } from "./SettingsForm";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
 import { Dialog } from "@/components/ui/Dialog";
@@ -198,6 +199,7 @@ interface UserRow {
 function UsersPanel({ canAdjustBalance }: { canAdjustBalance: boolean }) {
   const resource = useResource<{ users: UserRow[] }>("/api/admin/users?limit=200", 15_000);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+  const [settingsUser, setSettingsUser] = useState<UserRow | null>(null);
   return (
     <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>
       {resource.data ? (
@@ -207,12 +209,18 @@ function UsersPanel({ canAdjustBalance }: { canAdjustBalance: boolean }) {
             users={resource.data.users}
             canAdjustBalance={canAdjustBalance}
             onManageBalance={setSelectedUser}
+            onEditSettings={setSettingsUser}
           />
           <UserBalanceDialog
             user={selectedUser}
             open={Boolean(selectedUser)}
             onClose={() => setSelectedUser(null)}
             onAdjusted={async () => { await resource.refresh({ silent: true }); }}
+          />
+          <UserSettingsDialog
+            user={settingsUser}
+            open={Boolean(settingsUser)}
+            onClose={() => setSettingsUser(null)}
           />
         </div>
       ) : null}
@@ -224,10 +232,12 @@ function PaginatedUsers({
   users,
   canAdjustBalance,
   onManageBalance,
+  onEditSettings,
 }: {
   users: UserRow[];
   canAdjustBalance: boolean;
   onManageBalance: (user: UserRow) => void;
+  onEditSettings: (user: UserRow) => void;
 }) {
   const pageSize = 25;
   const [page, setPage] = useState(1);
@@ -254,7 +264,7 @@ function PaginatedUsers({
                 <td className="p-2 text-right tnum">{formatUsd(user.metrics?.balance ?? "0")}</td>
                 <td className="p-2 text-right tnum">{formatUsd(user.metrics?.equity ?? "0")}</td>
                 <td className="p-2">{user._count.positions} positions<div className={user._count.reconciliationBlocks ? "text-down" : "text-text-faint"}>{user._count.reconciliationBlocks} blocks</div></td>
-                {canAdjustBalance ? <td className="p-2 text-right"><Button size="sm" onClick={() => onManageBalance(user)}>Manage balance</Button></td> : null}
+                {canAdjustBalance ? <td className="p-2 text-right whitespace-nowrap"><Button size="sm" onClick={() => onManageBalance(user)}>Manage balance</Button> <Button size="sm" variant="default" onClick={() => onEditSettings(user)}>Settings</Button></td> : null}
               </tr>
             ))}
             {users.length === 0 ? <tr><td colSpan={canAdjustBalance ? 8 : 7} className="p-8 text-center text-text-muted">No users found.</td></tr> : null}
@@ -281,6 +291,78 @@ interface UserFinanceResponse {
   metrics: { balance: string; equity: string; free: string; margin: string; floatingPl: string } | null;
   wallet: { asset: string; free: string; locked: string } | null;
   transactions: UserFinanceTransaction[];
+}
+
+/** Per-user settings dialog — loads existing profile, shows the SettingsForm,
+ *  saves via PATCH /api/admin/users/[id]/profile. */
+function UserSettingsDialog({ user, open, onClose }: { user: UserRow | null; open: boolean; onClose: () => void }) {
+  const [settings, setSettings] = useState<UserSettingsConfig>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user || !open) return;
+    setLoading(true);
+    setError(null);
+    fetch(`/api/admin/users/${user.id}/profile`, { cache: "no-store" })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Failed to load settings");
+        const data = await res.json();
+        setSettings((data.profile?.settings as UserSettingsConfig) ?? {});
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load settings."))
+      .finally(() => setLoading(false));
+  }, [user, open]);
+
+  const handleSave = async (newSettings: UserSettingsConfig) => {
+    if (!user) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/profile`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: newSettings }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Failed to save settings");
+      }
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save settings.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!open || !user) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div
+        className="flex max-h-[88dvh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-canvas shadow-card"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border px-5 py-3">
+          <div>
+            <h3 className="text-sm font-bold">User Settings</h3>
+            <p className="text-[11px] text-text-muted">{user.name ?? "Unnamed"} · {user.email ?? "—"}</p>
+          </div>
+          <button onClick={onClose} className="text-text-muted hover:text-text text-lg leading-none">✕</button>
+        </div>
+        <div className="overflow-y-auto px-5 py-4">
+          {error && <div className="mb-3 rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error}</div>}
+          {loading ? (
+            <p className="text-sm text-text-muted">Loading settings…</p>
+          ) : (
+            <SettingsForm initial={settings} onSave={handleSave} saving={saving} saveLabel="Save User Settings" />
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function UserBalanceDialog({

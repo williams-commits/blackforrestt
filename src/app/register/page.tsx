@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Logo } from "@/components/trade/Logo";
@@ -14,6 +15,8 @@ const PASSWORD_REQUIREMENT = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,128}$/;
 export default function RegisterPage() {
   const t = useTranslations("auth");
   const formId = useId();
+  const searchParams = useSearchParams();
+  const referralCode = searchParams.get("ref") ?? "";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -78,7 +81,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: normalizedName, email: normalizedEmail, password }),
+        body: JSON.stringify({ name: normalizedName, email: normalizedEmail, password, ...(referralCode ? { referralCode } : {}) }),
       });
 
       const data = (await res.json().catch(() => null)) as {
@@ -150,6 +153,13 @@ export default function RegisterPage() {
           <p className="text-xs text-text-muted text-center mb-6">
             {t("createSub")}
           </p>
+
+          {referralCode && (
+            <div className="mb-4 flex items-center justify-center gap-2 rounded-lg bg-brand-soft border border-brand/30 px-3 py-2 text-xs text-brand">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 12v8H4v-8M16 6l-4-4-4 4M12 2v13" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span>Referred by <strong>{referralCode}</strong></span>
+            </div>
+          )}
 
           {success ? (
             <div role="status" className="text-sm bg-up/10 border border-up/30 text-up rounded p-4">

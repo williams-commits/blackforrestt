@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 }
 
 
-const VALID_TABS = ["overview", "positions", "transactions", "payments", "reports", "verification", "support", "settings"] as const;
+const VALID_TABS = ["overview", "positions", "transactions", "payments", "reports", "verification", "support", "referrals", "settings"] as const;
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;

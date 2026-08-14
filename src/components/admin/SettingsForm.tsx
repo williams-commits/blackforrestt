@@ -33,6 +33,11 @@ export interface UserSettingsConfig {
     demoStartingBalance?: number;
     maxCreditBonus?: number;
   };
+  referrals?: {
+    enabled?: boolean;
+    referrerReward?: number;
+    referredReward?: number;
+  };
 }
 
 const ALL_CATEGORIES = ["FOREX", "CRYPTO", "COMMODITY", "INDEX", "STOCK"];
@@ -46,10 +51,28 @@ interface Props {
   saveLabel?: string;
 }
 
+interface GlobalDefaults {
+  trading: { enabled: boolean; allowedCategories: string[]; maxOrderLots: number; marginWarningPercent: number };
+  deposits: { uiEnabled: boolean; allowedMethods: string[] };
+  withdrawals: { requireKyc: boolean; dailyLimit: number | null; monthlyLimit: number | null };
+  pnl: { spreadMarkupPips: number; commissionPerLotOverride: number | null; pnlAdjustmentPercent: number };
+  balance: { demoStartingBalance: number; maxCreditBonus: number };
+  referrals: { enabled: boolean; referrerReward: number; referredReward: number };
+}
+
 export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Save Settings" }: Props) {
   const [s, setS] = useState<UserSettingsConfig>(initial);
+  const [defaults, setDefaults] = useState<GlobalDefaults | null>(null);
 
   useEffect(() => { setS(initial); }, [initial]);
+
+  // Load global defaults (from .env) to show as hints.
+  useEffect(() => {
+    fetch("/api/admin/settings/defaults", { cache: "no-store" })
+      .then(async (res) => res.ok ? (await res.json()).defaults : null)
+      .then((d) => d ? setDefaults(d) : null)
+      .catch(() => {});
+  }, []);
 
   const update = (path: string[], value: unknown) => {
     setS((prev) => {
@@ -74,13 +97,17 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
     update(path, next);
   };
 
+  /** Combine a human description with the env default value for hint display. */
+  const fmtHint = (desc: string, defVal?: number | null, prefix = "", suffix = "") =>
+    defVal != null ? `${desc} · Default: ${prefix}${defVal}${suffix}` : desc;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* ── Trading ── */}
       <SettingsSection title="Trading">
         <Toggle
           label="Trading enabled"
-          checked={s.trading?.enabled ?? true}
+          checked={s.trading?.enabled ?? defaults?.trading.enabled ?? true}
           onChange={(v) => update(["trading", "enabled"], v)}
         />
         <div>
@@ -106,14 +133,16 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         <NumberInput
           label="Max order volume (lots)"
           value={s.trading?.maxOrderLots}
-          placeholder="100"
+          placeholder={defaults ? String(defaults.trading.maxOrderLots) : "100"}
           onChange={(v) => update(["trading", "maxOrderLots"], v)}
+          hint={fmtHint("Maximum lots per order", defaults?.trading.maxOrderLots)}
         />
         <NumberInput
           label="Margin warning (%)"
           value={s.trading?.marginWarningPercent}
-          placeholder="125"
+          placeholder={defaults ? String(defaults.trading.marginWarningPercent) : "125"}
           onChange={(v) => update(["trading", "marginWarningPercent"], v)}
+          hint={fmtHint("Equity/margin ratio that triggers a warning", defaults?.trading.marginWarningPercent, "", "%")}
         />
       </SettingsSection>
 
@@ -121,7 +150,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
       <SettingsSection title="Deposits">
         <Toggle
           label="Deposit UI enabled"
-          checked={s.deposits?.uiEnabled ?? true}
+          checked={s.deposits?.uiEnabled ?? defaults?.deposits.uiEnabled ?? true}
           onChange={(v) => update(["deposits", "uiEnabled"], v)}
         />
         <div>
@@ -150,20 +179,22 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
       <SettingsSection title="Withdrawals">
         <Toggle
           label="Require KYC verification"
-          checked={s.withdrawals?.requireKyc ?? true}
+          checked={s.withdrawals?.requireKyc ?? defaults?.withdrawals.requireKyc ?? true}
           onChange={(v) => update(["withdrawals", "requireKyc"], v)}
         />
         <NumberInput
           label="Daily withdrawal limit (USD)"
           value={s.withdrawals?.dailyLimit ?? undefined}
-          placeholder="No limit"
+          placeholder={defaults?.withdrawals.dailyLimit ? String(defaults.withdrawals.dailyLimit) : "No limit"}
           onChange={(v) => update(["withdrawals", "dailyLimit"], v)}
+          hint={fmtHint("Leave empty for no daily limit", defaults?.withdrawals.dailyLimit ?? undefined, "$")}
         />
         <NumberInput
           label="Monthly withdrawal limit (USD)"
           value={s.withdrawals?.monthlyLimit ?? undefined}
-          placeholder="No limit"
+          placeholder={defaults?.withdrawals.monthlyLimit ? String(defaults.withdrawals.monthlyLimit) : "No limit"}
           onChange={(v) => update(["withdrawals", "monthlyLimit"], v)}
+          hint={fmtHint("Leave empty for no monthly limit", defaults?.withdrawals.monthlyLimit ?? undefined, "$")}
         />
       </SettingsSection>
 
@@ -174,21 +205,21 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
           value={s.pnl?.spreadMarkupPips}
           placeholder="0"
           onChange={(v) => update(["pnl", "spreadMarkupPips"], v)}
-          hint="Extra pips added to the spread for this user/group"
+          hint={fmtHint("Extra pips added to the spread for this user/group", defaults?.pnl.spreadMarkupPips)}
         />
         <NumberInput
           label="Commission per lot override (USD)"
           value={s.pnl?.commissionPerLotOverride ?? undefined}
           placeholder="Use instrument default"
           onChange={(v) => update(["pnl", "commissionPerLotOverride"], v)}
-          hint="Leave empty to use the instrument's default commission"
+          hint={fmtHint("Leave empty to use the instrument's default commission", defaults?.pnl.commissionPerLotOverride ?? undefined, "$")}
         />
         <NumberInput
           label="P/L adjustment (%)"
           value={s.pnl?.pnlAdjustmentPercent}
           placeholder="0"
           onChange={(v) => update(["pnl", "pnlAdjustmentPercent"], v)}
-          hint="Negative value reduces displayed P/L (e.g. -5 = -5%)"
+          hint={fmtHint("Negative value reduces displayed P/L (e.g. -5 = -5%)", defaults?.pnl.pnlAdjustmentPercent, "", "%")}
         />
       </SettingsSection>
 
@@ -197,14 +228,39 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         <NumberInput
           label="Demo starting balance (USD)"
           value={s.balance?.demoStartingBalance}
-          placeholder="10000"
+          placeholder={defaults ? String(defaults.balance.demoStartingBalance) : "10000"}
           onChange={(v) => update(["balance", "demoStartingBalance"], v)}
+          hint={fmtHint("Starting balance for new demo accounts", defaults?.balance.demoStartingBalance, "$")}
         />
         <NumberInput
           label="Max credit/bonus (USD)"
           value={s.balance?.maxCreditBonus}
-          placeholder="5000"
+          placeholder={defaults ? String(defaults.balance.maxCreditBonus) : "5000"}
           onChange={(v) => update(["balance", "maxCreditBonus"], v)}
+          hint={fmtHint("Caps total bonus accumulation per user", defaults?.balance.maxCreditBonus, "$")}
+        />
+      </SettingsSection>
+
+      {/* ── Referrals ── */}
+      <SettingsSection title="Referrals">
+        <Toggle
+          label="Referrals enabled"
+          checked={s.referrals?.enabled ?? defaults?.referrals.enabled ?? true}
+          onChange={(v) => update(["referrals", "enabled"], v)}
+        />
+        <NumberInput
+          label="Referrer reward (USD)"
+          value={s.referrals?.referrerReward}
+          placeholder={defaults ? String(defaults.referrals.referrerReward) : "25"}
+          onChange={(v) => update(["referrals", "referrerReward"], v)}
+          hint={fmtHint("Bonus paid to the person who shared the referral link", defaults?.referrals.referrerReward, "$")}
+        />
+        <NumberInput
+          label="Referred reward (USD)"
+          value={s.referrals?.referredReward}
+          placeholder={defaults ? String(defaults.referrals.referredReward) : "10"}
+          onChange={(v) => update(["referrals", "referredReward"], v)}
+          hint={fmtHint("Bonus paid to the new user who used the referral link", defaults?.referrals.referredReward, "$")}
         />
       </SettingsSection>
 
@@ -227,8 +283,8 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-panel/50 p-4">
-      <h4 className="text-xs font-bold uppercase tracking-wide text-text-faint mb-3">{title}</h4>
+    <div className="rounded-xl border border-border bg-panel p-4">
+      <h4 className="text-[10px] font-bold uppercase tracking-wider text-text-faint mb-3">{title}</h4>
       <div className="space-y-3">{children}</div>
     </div>
   );
@@ -241,10 +297,10 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative h-5 w-9 rounded-full transition-colors ${checked ? "bg-brand" : "bg-panel-3"}`}
+        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${checked ? "bg-brand" : "bg-panel-3"}`}
         aria-pressed={checked}
       >
-        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`} />
+        <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-150 ${checked ? "translate-x-4" : "translate-x-0"}`} />
       </button>
     </label>
   );

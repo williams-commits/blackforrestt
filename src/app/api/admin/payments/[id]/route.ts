@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { AdminError, requireAdmin } from "@/server/admin";
+import { prisma } from "@/server/db";
 import { PaymentAmountSchema } from "@/server/moneyValidation";
 import {
   approvePayment,
@@ -77,6 +78,24 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       }
     }
     if (!result) return NextResponse.json({ error: "Unsupported payment command." }, { status: 400 });
+
+    // If this was an APPROVE action, check for a pending referral reward.
+    if (parsed.data.action === "APPROVE" && result.status === "APPROVED" && !result.replayed) {
+      try {
+        const payment = await prisma.paymentRequest.findUnique({
+          where: { id },
+          select: { userId: true, type: true },
+        });
+        if (payment?.type === "DEPOSIT") {
+          const { processReferralReward } = await import("@/server/referrals");
+          await processReferralReward(payment.userId, actorId);
+        }
+      } catch (error) {
+        console.error("Referral reward processing failed", error);
+        // Non-fatal — payment is already approved.
+      }
+    }
+
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     if (error instanceof PaymentError) {

@@ -10,13 +10,14 @@ import { SettingsTab } from "./SettingsTab";
 import { ReportsView } from "./ReportsView";
 import { PaymentTimeline } from "./PaymentTimeline";
 import { SupportTab } from "./SupportTab";
+import { ReferralTab } from "./ReferralTab";
 import type { InstrumentView, PositionView } from "@/lib/types";
 import { useForexStore } from "@/lib/store";
 import type { ServerMessage } from "@/lib/ws/client";
 import { Tabs } from "@/components/ui/Tabs";
 import { AccountReconciliationStatus, type ReconciliationStatus } from "./AccountReconciliationStatus";
 
-type Tab = "overview" | "positions" | "transactions" | "payments" | "reports" | "verification" | "settings" | "support";
+type Tab = "overview" | "positions" | "transactions" | "payments" | "reports" | "verification" | "support" | "settings" | "referrals";
 const ACCOUNT_TAB_STORAGE_KEY = "blckforest:account-tab";
 
 interface Props {
@@ -90,6 +91,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "reports", label: "Reports" },
   { key: "verification", label: "Verification" },
   { key: "support", label: "Support" },
+  { key: "referrals", label: "Referrals" },
   { key: "settings", label: "Settings" },
 ];
 
@@ -226,6 +228,7 @@ export function AccountShell(props: Props) {
       )}
       {tab === "verification" && <VerificationTab kyc={props.kyc} checklist={props.kycChecklist} onSubmitted={() => selectTab("overview")} />}
       {tab === "support" && <SupportTab />}
+      {tab === "referrals" && <ReferralTab />}
       {tab === "settings" && <SettingsTab user={props.user} />}
     </div>
   );

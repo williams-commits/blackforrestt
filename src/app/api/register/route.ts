@@ -18,6 +18,7 @@ import {
 } from "@/server/security/tokens";
 import { appendSecurityAudit } from "@/server/security/audit";
 import { sendImmediateEmail } from "@/server/email/service";
+import { createReferral } from "@/server/referrals";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ const RegisterSchema = z.object({
     .refine((value) => /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value), {
       message: "Password must include uppercase, lowercase and a number.",
     }),
+  referralCode: z.string().trim().max(20).optional(),
 });
 
 function registrationRequiresEmailVerification(): boolean {
@@ -106,6 +108,17 @@ export async function POST(req: Request) {
         },
         { operation: `registration for ${email}` },
       );
+
+      // Process referral code if provided.
+      if (parsed.data.referralCode) {
+        try {
+          await createReferral(parsed.data.referralCode, user.id);
+        } catch (error) {
+          console.error("Referral creation failed", error);
+          // Non-fatal — user is still created successfully.
+        }
+      }
+
       let verificationDelivery: "sent" | "preview" | "not_configured" | "failed" = "not_configured";
       let verificationPreviewUrl: string | undefined;
       if (requireEmailVerification && user.email) {

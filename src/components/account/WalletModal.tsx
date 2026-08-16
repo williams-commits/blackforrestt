@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { toast } from "@/lib/toast";
 import type { WalletAddressEntry } from "@/server/userSettings";
+import { WITHDRAWAL_CRYPTO_NETWORKS } from "@/lib/paymentNetworks";
+
+/** Widened view of the server-enforced presets for string-indexed lookups. */
+const WITHDRAWAL_NETWORKS: Record<string, readonly string[]> = WITHDRAWAL_CRYPTO_NETWORKS;
 
 type WalletMode = "deposit" | "withdraw";
 type PaymentMethod = "CARD" | "BANK_TRANSFER" | "CRYPTO";
@@ -35,6 +39,7 @@ const EMPTY_BANK = { accountName: "", accountNumber: "", institution: "", countr
 const EMPTY_CRYPTO = { asset: "USDT", network: "TRON (TRC20)", transactionHash: "", senderAddress: "", walletAddress: "", destinationTag: "" };
 
 const ALL_METHODS: PaymentMethod[] = ["BANK_TRANSFER", "CARD", "CRYPTO"];
+const AMOUNT_PRESETS = [100, 500, 1000, 5000];
 function defaultMethod(disabled: PaymentMethod[] = []): PaymentMethod {
   return ALL_METHODS.find((m) => !disabled.includes(m)) ?? "BANK_TRANSFER";
 }
@@ -254,21 +259,77 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
   }
 
   const isDeposit = mode === "deposit";
+
+  // Live amount preview — confirms what the user is about to request and sets
+  // expectations for the review flow (different for deposits vs withdrawals).
+  const amountValue = Number(amount);
+  const amountPreviewText = amount && !Number.isNaN(amountValue) && amountValue > 0
+    ? `${isDeposit ? "Depositing" : "Withdrawing"} ${amountValue.toLocaleString("en-US", { style: "currency", currency: "USD" })} — ${
+        isDeposit
+          ? "payment proof is required, then finance review before settlement."
+          : "available funds are reserved immediately and released after review."
+      }`
+    : "Choose a preset or enter any amount up to $1,000,000.";
+
   return (
     <Dialog open={open} onClose={loading ? () => undefined : onClose} title="Wallet" description={isDeposit ? "Create a deposit request and upload proof for finance review." : "Reserve available funds for a reviewed withdrawal."} className="max-w-xl">
       <div className="max-h-[min(82dvh,760px)] overflow-y-auto overscroll-contain p-4 sm:p-5">
-        <div className={`mb-5 grid ${depositEnabled ? "grid-cols-2" : "grid-cols-1"} gap-1 rounded border border-border bg-panel-2 p-0.5 text-xs`} role="tablist" aria-label="Wallet operation">
+        <div className={`mb-5 grid ${depositEnabled ? "grid-cols-2" : "grid-cols-1"} gap-1 rounded-lg border border-border bg-panel-2 p-1 text-xs`} role="tablist" aria-label="Wallet operation">
           {depositEnabled && (
-            <button type="button" role="tab" aria-selected={isDeposit} onClick={() => switchMode("deposit")} className={`rounded py-2 ${isDeposit ? "bg-up font-medium text-white" : "text-text-muted hover:text-text"}`}>Deposit</button>
+            <button type="button" role="tab" aria-selected={isDeposit} onClick={() => switchMode("deposit")} className={`flex items-center justify-center gap-1.5 rounded-md py-2.5 transition ${isDeposit ? "bg-up font-semibold text-white shadow-sm" : "text-text-muted hover:text-text"}`}>
+              <span aria-hidden>↓</span> Deposit
+            </button>
           )}
-          <button type="button" role="tab" aria-selected={!isDeposit} onClick={() => switchMode("withdraw")} className={`rounded py-2 ${!isDeposit ? "bg-down font-medium text-white" : "text-text-muted hover:text-text"}`}>Withdraw</button>
+          <button type="button" role="tab" aria-selected={!isDeposit} onClick={() => switchMode("withdraw")} className={`flex items-center justify-center gap-1.5 rounded-md py-2.5 transition ${!isDeposit ? "bg-down font-semibold text-white shadow-sm" : "text-text-muted hover:text-text"}`}>
+            <span aria-hidden>↑</span> Withdraw
+          </button>
         </div>
 
         <form onSubmit={submit} className="space-y-4">
+          {/* ── Amount — hero input with selected-state presets (trade-handle parity:
+              exact-match highlights; manual entry clears the selection) ── */}
           <div>
-            <label htmlFor={amountId} className="mb-1 block text-[11px] text-text-muted">Amount (USD)</label>
-            <div className="relative"><span aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted">$</span><input id={amountId} type="number" inputMode="decimal" min="0.00000001" max="1000000" step="any" required value={amount} onChange={(event) => { setAmount(event.target.value); invalidateRequestKey(); }} placeholder="0.00" className="h-10 w-full rounded border border-border bg-canvas pl-7 pr-2 text-sm outline-none focus:border-brand" /></div>
-            <div className="mt-2 grid grid-cols-4 gap-1" aria-label="Preset amounts">{[100,500,1000,5000].map((value) => <button key={value} type="button" onClick={() => { setAmount(String(value)); invalidateRequestKey(); }} className="h-8 rounded bg-panel-2 text-[11px] text-text-muted hover:bg-panel-3">{value.toLocaleString("en-US")}</button>)}</div>
+            <div className="flex items-baseline justify-between">
+              <label htmlFor={amountId} className="text-[11px] font-medium text-text-muted">Amount</label>
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-text-faint">USD</span>
+            </div>
+            <div className="relative mt-1">
+              <span aria-hidden className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-medium text-text-faint">$</span>
+              <input
+                id={amountId}
+                type="number"
+                inputMode="decimal"
+                min="0.00000001"
+                max="1000000"
+                step="any"
+                required
+                value={amount}
+                onChange={(event) => { setAmount(event.target.value); invalidateRequestKey(); }}
+                placeholder="0.00"
+                className="h-12 w-full rounded-lg border border-border bg-canvas pl-8 pr-3 text-lg font-semibold tnum outline-none transition-colors focus:border-brand"
+              />
+            </div>
+            <div className="mt-2 grid grid-cols-4 gap-1.5" role="group" aria-label="Preset amounts">
+              {AMOUNT_PRESETS.map((value) => {
+                const selected = amount === String(value);
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => { setAmount(String(value)); invalidateRequestKey(); }}
+                    className={`h-9 rounded-md text-xs font-medium tnum transition-colors ${
+                      selected ? "bg-brand text-white shadow-sm" : "bg-panel-2 text-text-muted hover:bg-panel-3 hover:text-text"
+                    }`}
+                  >
+                    {value.toLocaleString("en-US")}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-[11px] text-text-faint" aria-live="polite">
+              {amountPreviewText}
+            </p>
           </div>
 
           <div>
@@ -346,10 +407,38 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                   <p className="text-[11px] text-text-faint">Send only {selectedWallet?.asset ?? cryptoDetails.asset} on {selectedWallet?.network ?? cryptoDetails.network} to this address, then paste the transaction hash below.</p>
                 </div>
               )}
-              {/* Manual asset/network entry — only when no platform wallets are
-                  configured for deposits (wallet selection drives these values
-                  otherwise). Withdrawals always use manual entry. */}
-              {!(isDeposit && walletAddresses.length > 0) && <div className="grid grid-cols-[110px_1fr] gap-2"><select value={cryptoDetails.asset} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,asset:e.target.value}));}} aria-label="Crypto asset" className="h-10 rounded border border-border bg-canvas px-3 text-sm"><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></select><input required maxLength={120} value={cryptoDetails.network} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,network:e.target.value}));}} placeholder="Network, e.g. TRON (TRC20)" aria-label="Blockchain network" className="h-10 min-w-0 rounded border border-border bg-canvas px-3 text-sm" /></div>}
+              {/* Withdrawals: asset + network are locked to the supported set
+                  (USDT → TRC20/BEP20, BTC → Bitcoin) — network is a preset
+                  select, not free text. Deposits keep free entry unless admin
+                  wallets are configured (wallet selection drives the values). */}
+              {!isDeposit ? (
+                <div className="grid grid-cols-[110px_1fr] gap-2">
+                  <select
+                    value={cryptoDetails.asset}
+                    onChange={(e) => {
+                      const asset = e.target.value;
+                      setWalletIndex(null);
+                      setCryptoDetails((v) => ({ ...v, asset, network: WITHDRAWAL_NETWORKS[asset]?.[0] ?? v.network }));
+                    }}
+                    aria-label="Crypto asset"
+                    className="h-10 rounded border border-border bg-canvas px-3 text-sm"
+                  >
+                    {Object.keys(WITHDRAWAL_NETWORKS).map((asset) => <option key={asset}>{asset}</option>)}
+                  </select>
+                  <select
+                    value={cryptoDetails.network}
+                    onChange={(e) => setCryptoDetails((v) => ({ ...v, network: e.target.value }))}
+                    aria-label="Blockchain network"
+                    className="h-10 min-w-0 rounded border border-border bg-canvas px-3 text-sm"
+                  >
+                    {(WITHDRAWAL_NETWORKS[cryptoDetails.asset] ?? []).map((network) => (
+                      <option key={network}>{network}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : !(walletAddresses.length > 0) && (
+                <div className="grid grid-cols-[110px_1fr] gap-2"><select value={cryptoDetails.asset} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,asset:e.target.value}));}} aria-label="Crypto asset" className="h-10 rounded border border-border bg-canvas px-3 text-sm"><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></select><input required maxLength={120} value={cryptoDetails.network} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,network:e.target.value}));}} placeholder="Network, e.g. TRON (TRC20)" aria-label="Blockchain network" className="h-10 min-w-0 rounded border border-border bg-canvas px-3 text-sm" /></div>
+              )}
               {isDeposit ? <><input required maxLength={256} value={cryptoDetails.transactionHash} onChange={(e)=>setCryptoDetails((v)=>({...v,transactionHash:e.target.value}))} placeholder="Transaction hash" aria-label="Transaction hash" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /><input maxLength={256} value={cryptoDetails.senderAddress} onChange={(e)=>setCryptoDetails((v)=>({...v,senderAddress:e.target.value}))} placeholder="Sender wallet address (optional)" aria-label="Sender wallet address" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /></> : <><input required maxLength={256} value={cryptoDetails.walletAddress} onChange={(e)=>setCryptoDetails((v)=>({...v,walletAddress:e.target.value}))} placeholder="Destination wallet address" aria-label="Destination wallet address" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /><input maxLength={120} value={cryptoDetails.destinationTag} onChange={(e)=>setCryptoDetails((v)=>({...v,destinationTag:e.target.value}))} placeholder="Destination tag / memo (optional)" aria-label="Destination tag or memo" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /></>}
             </>}
           </fieldset>

@@ -548,7 +548,10 @@ export async function approvePayment(input: {
     if (await replayedCommand(tx, { paymentRequestId: request.id, type: "APPROVED", commandKey: input.commandKey, payload })) {
       return { status: request.status, replayed: true };
     }
-    if (request.userId === input.actorId) {
+    // Maker-checker segregation applies only in strict dual-review mode. In
+    // simple/single-reviewer deployments the admin is often also a customer,
+    // and must be able to approve their own account's payment request.
+    if (strictDualFinanceReview() && request.userId === input.actorId) {
       throw new PaymentError("A payment maker cannot approve their own request.", 403);
     }
     if (strictDualFinanceReview() && request.preparedBy === input.actorId) {

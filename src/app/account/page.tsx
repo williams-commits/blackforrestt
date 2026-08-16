@@ -120,7 +120,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <Logo />
         {/* Visible on every breakpoint — previously hidden below lg, which left
             phones with no way to reach Trade/Reports from the account portal. */}
-        <nav className="order-3 flex w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 sm:w-auto lg:flex">
+        <nav className="order-3 hidden lg:flex w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 sm:w-auto">
           <Link href="/trade/AUDCAD" className="whitespace-nowrap text-text-muted hover:text-text">Trade</Link>
           <span className="whitespace-nowrap text-text font-medium">Account</span>
           <Link href="/reports" className="whitespace-nowrap text-text-muted hover:text-text">Reports</Link>

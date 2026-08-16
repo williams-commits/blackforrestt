@@ -61,12 +61,30 @@ const WithdrawalCard = z.object({
   cardBrand: z.enum(["VISA", "MASTERCARD", "AMEX", "OTHER"]),
   last4: lastFour,
 });
-const WithdrawalCrypto = z.object({
-  asset: z.enum(["USDT", "USDC", "BTC", "ETH"]),
-  network: shortText,
-  walletAddress: z.string().trim().min(8).max(256),
-  destinationTag: z.string().trim().min(1).max(120).optional(),
-});
+
+/** Withdrawals are restricted to USDT (TRC20 / BEP20) and BTC (Bitcoin).
+ *  The preset network list is enforced server-side — the UI presets are a
+ *  convenience, not the control. Single source: lib/paymentNetworks. */
+export { WITHDRAWAL_CRYPTO_NETWORKS, type WithdrawalCryptoAsset } from "@/lib/paymentNetworks";
+import { WITHDRAWAL_CRYPTO_NETWORKS } from "@/lib/paymentNetworks";
+
+const WithdrawalCrypto = z
+  .object({
+    asset: z.enum(["USDT", "BTC"]),
+    network: shortText,
+    walletAddress: z.string().trim().min(8).max(256),
+    destinationTag: z.string().trim().min(1).max(120).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const allowed = WITHDRAWAL_CRYPTO_NETWORKS[data.asset];
+    if (!(allowed as readonly string[]).includes(data.network)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["network"],
+        message: `Network must be one of: ${allowed.join(", ")}.`,
+      });
+    }
+  });
 
 function normalizeMethod(value: unknown): unknown {
   if (typeof value !== "string") return value;

@@ -12,12 +12,14 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Logo } from "./Logo";
 import { WalletModal } from "@/components/account/WalletModal";
 import type { SocketStatus } from "@/lib/ws/client";
+import type { WalletAddressEntry } from "@/server/userSettings";
 
 interface Props {
   wsStatus: SocketStatus;
   onOpenAssets?: () => void;
   depositUiEnabled?: boolean;
   disabledPaymentMethods?: string[];
+  walletAddresses?: WalletAddressEntry[];
 }
 
 /**
@@ -28,7 +30,7 @@ interface Props {
  * panel containing quick actions (Deposit, Account, Reports, Admin) and sign
  * out — instead of cluttering the header with inline links.
  */
-export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, disabledPaymentMethods = [] }: Props) {
+export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, disabledPaymentMethods = [], walletAddresses = [] }: Props) {
   const account = useForexStore((s) => s.account);
   const { data: session } = useSession();
   const router = useRouter();
@@ -247,6 +249,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
         mode={walletMode}
         depositEnabled={depositUiEnabled}
         disabledMethods={disabledPaymentMethods as ("CARD" | "BANK_TRANSFER" | "CRYPTO")[]}
+        walletAddresses={walletAddresses}
         onClose={() => setWalletOpen(false)}
         onDone={() => router.refresh()}
       />

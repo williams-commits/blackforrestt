@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { Button } from "@/components/ui/Button";
+import { fmtDate } from "@/lib/dates";
 
 interface ReferralData {
   code: string;
@@ -47,14 +50,46 @@ export function ReferralTab() {
     } catch { /* clipboard blocked */ }
   };
 
-  if (loading) return <p className="text-sm text-text-muted">Loading referrals…</p>;
-  if (error) return <p className="text-sm text-down">{error}</p>;
+  // Skeleton mirroring the loaded layout: share card → 4 stat cards → table.
+  if (loading) {
+    return (
+      <div className="space-y-5" role="status" aria-label="Loading referrals">
+        <div className="space-y-3 rounded-lg border border-border bg-canvas p-5">
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="h-3 w-72" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="rounded-lg border border-border bg-canvas p-4">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mt-2 h-6 w-16" />
+            </div>
+          ))}
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-28" />
+          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+        </div>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="rounded-lg border border-down/30 bg-down/10 p-5 text-center">
+        <p className="text-sm text-down">{error}</p>
+        <Button type="button" size="sm" variant="ghost" className="mt-3" onClick={() => { setError(null); setLoading(true); void refresh(); }}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
   if (!data) return null;
 
   return (
     <div className="space-y-5">
       {/* Share card */}
-      <div className="rounded-xl border border-border bg-canvas p-5">
+      <div className="rounded-lg border border-border bg-canvas p-5">
         <h3 className="text-sm font-bold mb-1">Your Referral Link</h3>
         <p className="text-xs text-text-muted mb-3">Share this link. When your referral makes their first deposit, you both earn a bonus.</p>
         <div className="flex items-center gap-2">
@@ -89,11 +124,11 @@ export function ReferralTab() {
       <div>
         <h3 className="text-sm font-bold mb-3">Referral History</h3>
         {data.referrals.length === 0 ? (
-          <div className="rounded-xl border border-border bg-panel p-8 text-center">
+          <div className="rounded-lg border border-border bg-canvas p-8 text-center">
             <p className="text-sm text-text-muted">No referrals yet. Share your link to start earning.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-border">
+          <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-sm">
               <thead className="bg-panel-2 text-text-faint">
                 <tr>
@@ -111,7 +146,7 @@ export function ReferralTab() {
                       <div className="text-[10px] text-text-faint">{r.referred.email}</div>
                     </td>
                     <td className="px-3 py-2 text-xs text-text-muted hidden sm:table-cell">
-                      {new Date(r.createdAt).toLocaleDateString()}
+                      {fmtDate(r.createdAt)}
                     </td>
                     <td className="px-3 py-2 text-center">
                       <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${

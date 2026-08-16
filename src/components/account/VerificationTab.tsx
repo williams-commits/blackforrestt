@@ -34,6 +34,18 @@ function dateYearsAgo(years: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** Curated country list for KYC — keeps compliance data clean vs free text. */
+const KYC_COUNTRIES = [
+  "Argentina", "Australia", "Austria", "Belgium", "Brazil", "Canada", "Chile", "China", "Colombia",
+  "Czech Republic", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hong Kong",
+  "Hungary", "Iceland", "India", "Indonesia", "Ireland", "Israel", "Italy", "Japan", "Kenya",
+  "Latvia", "Liechtenstein", "Lithuania", "Luxembourg", "Malaysia", "Malta", "Mexico", "Monaco",
+  "Netherlands", "New Zealand", "Nigeria", "Norway", "Pakistan", "Philippines", "Poland", "Portugal",
+  "Qatar", "Romania", "Saudi Arabia", "Singapore", "Slovakia", "Slovenia", "South Africa",
+  "South Korea", "Spain", "Sweden", "Switzerland", "Thailand", "Turkey", "Ukraine",
+  "United Arab Emirates", "United Kingdom", "United States", "Vietnam",
+].sort();
+
 async function responseError(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as { error?: string };
@@ -50,6 +62,21 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
   const [error, setError] = useState<string | null>(null);
   const status = kyc?.status ?? "NOT_SUBMITTED";
   const docTypeId = useId();
+
+  // "No scan issues" only counts as progress once documents actually exist —
+  // an empty account has zero pending/blocked, which must not read as 20% done.
+  const hasDocuments =
+    checklist.cleanDocuments > 0 || checklist.pendingDocuments > 0 || checklist.blockedDocuments > 0;
+  const noScanIssues = hasDocuments && checklist.pendingDocuments === 0 && checklist.blockedDocuments === 0;
+
+  const steps = [
+    status !== "NOT_SUBMITTED",
+    checklist.cleanIdentityDocuments > 0,
+    checklist.cleanAddressDocuments > 0,
+    noScanIssues,
+    status === "APPROVED",
+  ];
+  const progress = Math.round((steps.filter(Boolean).length / steps.length) * 100);
 
   async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -81,12 +108,18 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
     <div className="max-w-2xl space-y-4">
       <StatusBanner status={status} kyc={kyc} />
       <section aria-labelledby="verification-checklist-heading" className="rounded-lg border border-border bg-canvas p-4">
-        <h3 id="verification-checklist-heading" className="text-sm font-medium">Verification checklist</h3>
+        <div className="flex items-center justify-between gap-3">
+          <h3 id="verification-checklist-heading" className="text-sm font-medium">Verification checklist</h3>
+          <span className="text-[10px] font-semibold tnum text-text-muted">{progress}% complete</span>
+        </div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-panel-3" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Verification progress">
+          <div className={`h-full rounded-full transition-all ${progress === 100 ? "bg-up" : "bg-brand"}`} style={{ width: `${progress}%` }} />
+        </div>
         <ol className="mt-3 space-y-2 text-xs">
           <ChecklistItem complete={status !== "NOT_SUBMITTED"} label="Identity and address details submitted" />
           <ChecklistItem complete={checklist.cleanIdentityDocuments > 0} label={`Identity document verified (${checklist.cleanIdentityDocuments})`} />
           <ChecklistItem complete={checklist.cleanAddressDocuments > 0} label={`Proof of address verified (${checklist.cleanAddressDocuments})`} />
-          <ChecklistItem complete={checklist.pendingDocuments === 0 && checklist.blockedDocuments === 0} label="No document scan issues outstanding" />
+          <ChecklistItem complete={noScanIssues} label={hasDocuments ? "No document scan issues outstanding" : "Upload documents for scanning"} />
           <ChecklistItem complete={status === "APPROVED"} label="Compliance review approved" />
         </ol>
       </section>
@@ -117,7 +150,21 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
               min={dateYearsAgo(120)}
               max={dateYearsAgo(18)}
             />
-            <Field label="Country" name="country" placeholder="Canada" required maxLength={100} />
+            <div>
+              <label htmlFor="country-field" className="mb-1 block text-[11px] text-text-muted">Country</label>
+              <select
+                id="country-field"
+                name="country"
+                required
+                defaultValue=""
+                className="h-10 w-full rounded border border-border bg-canvas px-2 text-sm outline-none focus:border-brand focus-visible:ring-1 focus-visible:ring-brand"
+              >
+                <option value="" disabled>Select country</option>
+                {KYC_COUNTRIES.map((country) => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <Field label="Address" name="address" required maxLength={200} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -157,13 +204,32 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
             variant="brand"
             loading={submitting}
             loadingLabel="Submitting verification"
-            className="w-full"
           >
             Submit for verification
           </Button>
         </form>
       ) : null}
 
+      {status === "PENDING" && kyc && (
+        <section aria-labelledby="pending-summary-heading" className="rounded-lg border border-border bg-canvas p-6">
+          <h3 id="pending-summary-heading" className="text-sm font-medium">Submitted details</h3>
+          <p className="mt-1 text-[11px] text-text-faint">Under compliance review — this is what we received.</p>
+          <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
+            <SummaryRow label="Name" value={[kyc.firstName, kyc.lastName].filter(Boolean).join(" ")} />
+            <SummaryRow label="Document type" value={kyc.docType ?? "—"} />
+          </dl>
+        </section>
+      )}
+
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between border-b border-border-soft py-1.5 last:border-0">
+      <dt className="text-text-muted">{label}</dt>
+      <dd className="font-medium">{value || "—"}</dd>
     </div>
   );
 }

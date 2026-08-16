@@ -29,6 +29,41 @@ export interface TradingSettings {
 export interface DepositSettings {
   uiEnabled?: boolean;
   allowedMethods?: string[];
+  walletAddresses?: WalletAddressEntry[];
+}
+
+/** A platform crypto wallet shown to users on the deposit screen. */
+export interface WalletAddressEntry {
+  /** Optional display name, e.g. "Main USDT". */
+  label?: string;
+  /** Asset ticker: USDT | USDC | BTC | ETH. */
+  asset: string;
+  /** Network name, e.g. "TRON (TRC20)". */
+  network: string;
+  /** The deposit address users pay to. */
+  address: string;
+}
+
+/**
+ * Parse DEPOSIT_WALLET_ADDRESSES (global default wallet list).
+ * Format: "asset:network:address;asset:network:address" — semicolon-separated
+ * entries, colon-separated fields. Addresses never contain : or ; so this
+ * stays env-friendly (no quoting dance like JSON in .env files).
+ * Invalid entries are ignored. Unset/empty → [].
+ */
+export function parseEnvWalletAddresses(raw = process.env.DEPOSIT_WALLET_ADDRESSES ?? ""): WalletAddressEntry[] {
+  return raw
+    .split(";")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const parts = entry.split(":").map((p) => p.trim());
+      if (parts.length !== 3) return null;
+      const [asset, network, address] = parts;
+      if (!asset || !network || address.length < 8) return null;
+      return { asset: asset.toUpperCase(), network, address } satisfies WalletAddressEntry;
+    })
+    .filter((entry): entry is WalletAddressEntry => entry !== null);
 }
 
 export interface WithdrawalSettings {
@@ -74,6 +109,7 @@ export interface ResolvedSettings {
   deposits: {
     uiEnabled: boolean;
     allowedMethods: string[];
+    walletAddresses: WalletAddressEntry[];
   };
   withdrawals: {
     requireKyc: boolean;
@@ -115,6 +151,7 @@ function getGlobalDefaults(): ResolvedSettings {
       // Derive from PAYMENT_METHODS_DISABLED so the admin UI, client wallet
       // selector, and API enforcement all agree on which methods are available.
       allowedMethods: PAYMENT_METHODS.filter((m) => !disabledPaymentMethods().has(m)),
+      walletAddresses: parseEnvWalletAddresses(),
     },
     withdrawals: {
       requireKyc: (process.env.ALLOW_UNVERIFIED_WITHDRAWALS ?? "false").toLowerCase() !== "true"
@@ -157,6 +194,12 @@ function applyLayer(base: ResolvedSettings, layer: UserSettingsConfig | null): R
     deposits: {
       uiEnabled: layer.deposits?.uiEnabled ?? base.deposits.uiEnabled,
       allowedMethods: layer.deposits?.allowedMethods ?? base.deposits.allowedMethods,
+      // First non-empty list wins; an empty array means "not set" so cleared
+      // lists inherit from the layer below (user → group → env default).
+      walletAddresses:
+        layer.deposits?.walletAddresses && layer.deposits.walletAddresses.length > 0
+          ? layer.deposits.walletAddresses
+          : base.deposits.walletAddresses,
     },
     withdrawals: {
       requireKyc: layer.withdrawals?.requireKyc ?? base.withdrawals.requireKyc,

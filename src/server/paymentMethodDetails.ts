@@ -43,6 +43,10 @@ const DepositCrypto = z.object({
   network: shortText,
   transactionHash: z.string().trim().min(12).max(256),
   senderAddress: z.string().trim().min(8).max(256).optional(),
+  // Platform wallet the user was shown to pay to (set by the deposit UI when
+  // admin-configured wallets exist). Recorded for finance review.
+  depositAddress: z.string().trim().min(8).max(256).optional(),
+  depositWalletLabel: z.string().trim().min(1).max(60).optional(),
 });
 
 const WithdrawalBank = z.object({
@@ -107,7 +111,11 @@ export function preparePaymentMethodDetails(flow: PaymentFlow, method: PaymentMe
   } else {
     const address = normalized.walletAddress ?? normalized.senderAddress;
     const suffix = address ? ` · ${address.slice(0, 6)}…${address.slice(-4)}` : "";
-    summary = `${normalized.asset} · ${normalized.network}${suffix}`;
+    // Deposits: show which platform wallet the user paid to (if configured).
+    const paidTo = flow === "DEPOSIT" && normalized.depositAddress
+      ? ` → ${normalized.depositAddress.slice(0, 6)}…${normalized.depositAddress.slice(-4)}`
+      : "";
+    summary = `${normalized.asset} · ${normalized.network}${suffix}${paidTo}`;
   }
   return {
     normalized,

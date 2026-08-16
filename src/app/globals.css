@@ -204,10 +204,26 @@ input[type="range"]::-moz-range-thumb {
   border: 2px solid var(--color-canvas);
 }
 
-button[type="button"]{
+button[type="button"], button{
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Skeleton shimmer — premium loading placeholder sweep (theme-aware). */
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--color-panel) 40%,
+    var(--color-panel-3) 50%,
+    var(--color-panel) 60%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
 }
 
 /* Modal entrance animation */

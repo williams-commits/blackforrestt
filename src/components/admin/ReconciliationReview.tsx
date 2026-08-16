@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Dialog } from "@/components/ui/Dialog";
 import { Pagination } from "@/components/ui/Pagination";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 interface RunRow {
   id: string;
@@ -149,7 +150,19 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
     }
   }
 
-  if (loading) return <div className="text-sm text-text-muted">Loading reconciliation controls…</div>;
+  if (loading) {
+    return (
+      <div className="space-y-5" role="status" aria-label="Loading reconciliation">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-56" />
+          <Skeleton className="h-3 w-80" />
+        </div>
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-36 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -212,9 +225,9 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
             </article>
           ))}
           {cases.length === 0 && <div className="rounded border border-border bg-canvas p-5 text-sm text-text-muted text-center">No reconciliation cases.</div>}
-        </div>
-        <div className="mt-2 overflow-hidden rounded border border-border">
-          <Pagination page={safeCasePage} pageSize={PAGE_SIZE} totalItems={cases.length} onPageChange={setCasePage} label="reconciliation cases" compact />
+          <div className="mt-2 rounded-lg border border-border bg-canvas">
+            <Pagination page={safeCasePage} pageSize={PAGE_SIZE} totalItems={cases.length} onPageChange={setCasePage} label="reconciliation cases" compact />
+          </div>
         </div>
       </section>
 

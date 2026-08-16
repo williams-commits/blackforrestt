@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/lib/toast";
 
 interface SessionView {
@@ -52,6 +53,7 @@ export function SecurityCenter() {
   const [enabled, setEnabled] = useState(false);
   const [remaining, setRemaining] = useState(0);
   const [sessions, setSessions] = useState<SessionView[]>([]);
+  const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [secret, setSecret] = useState<string | null>(null);
@@ -74,6 +76,8 @@ export function SecurityCenter() {
       const data = await sessionsResponse.json() as { sessions: SessionView[] };
       setSessions(data.sessions);
     }
+    // Mark loaded either way so the empty state is truthful, never a flash.
+    setSessionsLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -234,7 +238,19 @@ export function SecurityCenter() {
           )}
         </div>
 
-        {sessions.length === 0 ? (
+        {!sessionsLoaded ? (
+          <div className="space-y-2" role="status" aria-label="Loading sessions">
+            {[0, 1].map((i) => (
+              <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-panel p-3">
+                <Skeleton className="h-9 w-9 rounded-full" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-40" />
+                  <Skeleton className="h-2.5 w-24" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : sessions.length === 0 ? (
           <div className="rounded-lg border border-border-soft bg-panel p-4 text-center">
             <p className="text-xs text-text-muted">No active sessions found.</p>
           </div>

@@ -15,7 +15,9 @@ import type { InstrumentView, PositionView } from "@/lib/types";
 import { useForexStore } from "@/lib/store";
 import type { ServerMessage } from "@/lib/ws/client";
 import { Tabs } from "@/components/ui/Tabs";
+import { ScrollFade } from "@/components/ui/ScrollFade";
 import { AccountReconciliationStatus, type ReconciliationStatus } from "./AccountReconciliationStatus";
+import type { WalletAddressEntry } from "@/server/userSettings";
 
 type Tab = "overview" | "positions" | "transactions" | "payments" | "reports" | "verification" | "support" | "settings" | "referrals";
 const ACCOUNT_TAB_STORAGE_KEY = "blckforest:account-tab";
@@ -74,6 +76,7 @@ interface Props {
   reconciliation: ReconciliationStatus;
   depositUiEnabled: boolean;
   disabledPaymentMethods?: string[];
+  walletAddresses?: WalletAddressEntry[];
   kycChecklist: {
     cleanDocuments: number;
     cleanIdentityDocuments: number;
@@ -114,9 +117,23 @@ export function AccountShell(props: Props) {
     if (stored && TABS.some((item) => item.key === stored)) setTab(stored as Tab);
   }, [props.initialTab]);
 
+  // Browser Back/Forward move between tabs (URL is kept in sync below).
+  useEffect(() => {
+    const onPopState = () => {
+      const param = new URLSearchParams(window.location.search).get("tab");
+      if (param && TABS.some((item) => item.key === param)) setTab(param as Tab);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   function selectTab(next: Tab): void {
     setTab(next);
     window.localStorage.setItem(ACCOUNT_TAB_STORAGE_KEY, next);
+    // Keep ?tab= in the URL so deep links, refresh, and Back/Forward work.
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", next);
+    window.history.pushState(null, "", url);
   }
 
   useEffect(() => {
@@ -137,8 +154,11 @@ export function AccountShell(props: Props) {
 
   // Periodic fallback refresh so the page stays in sync with DB changes that
   // don't arrive over the WebSocket (admin actions, payment/KYC status updates).
+  // Skipped while the tab is hidden to avoid pointless background churn.
   useEffect(() => {
-    const timer = window.setInterval(() => router.refresh(), 30_000);
+    const timer = window.setInterval(() => {
+      if (!document.hidden) router.refresh();
+    }, 30_000);
     return () => window.clearInterval(timer);
   }, [router]);
 
@@ -165,29 +185,62 @@ export function AccountShell(props: Props) {
     ? [...liveOpenPositions, ...props.positions.filter((position) => position.status === "CLOSED")]
     : props.positions;
 
+  const openPositionCount = positions.filter((position) => position.status === "OPEN").length;
+  const verificationNeeded = props.kyc && props.kyc.status !== "APPROVED";
+  // Reconciliation is only surfaced as a full panel when something needs the
+  // user's attention; a healthy account shows a slim status chip instead.
+  const reconAttention =
+    props.reconciliation.activeBlocks.length > 0 ||
+    props.reconciliation.openCaseCount > 0 ||
+    props.reconciliation.paymentMismatchCount > 0 ||
+    props.reconciliation.lastRun?.status === "FAILED";
+
+  const tabsWithBadges = TABS.map((item) => {
+    if (item.key === "positions" && openPositionCount > 0) {
+      return { ...item, label: <>{item.label}<span className="ml-1.5 rounded-full bg-panel-3 px-1.5 py-0.5 text-[9px] font-bold text-text-muted">{openPositionCount}</span></> };
+    }
+    if (item.key === "verification" && verificationNeeded) {
+      return { ...item, label: <>{item.label}<span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">!</span></> };
+    }
+    return item;
+  });
+  const activeTabLabel = TABS.find((item) => item.key === tab)?.label ?? "Account";
+
   return (
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-lg font-semibold">My Account</h1>
-        {props.kyc && props.kyc.status !== "APPROVED" && (
+        {verificationNeeded && (
           <button
             onClick={() => selectTab("verification")}
-            className="text-xs px-3 py-1.5 rounded bg-brand-soft text-brand hover:brightness-95"
+            className="rounded border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-medium text-brand transition hover:brightness-95"
           >
-            ⚠ Complete verification
+            Complete verification
           </button>
         )}
       </div>
 
-      <AccountReconciliationStatus status={props.reconciliation} />
+      {reconAttention ? (
+        <AccountReconciliationStatus status={props.reconciliation} />
+      ) : (
+        <div className="mb-5 flex items-center gap-2 rounded-lg border border-up/25 bg-up/5 px-3 py-2">
+          <span className="h-2 w-2 rounded-full bg-up" aria-hidden />
+          <p className="text-[11px] text-text-muted">
+            Account integrity verified — balances, positions, and payments reconciled.
+          </p>
+        </div>
+      )}
 
-      <Tabs
-        tabs={TABS}
-        active={tab}
-        onChange={(key) => selectTab(key as Tab)}
-        label="Account sections"
-        className="mb-5 overflow-x-auto"
-      />
+      <ScrollFade className="mb-5">
+        <Tabs
+          tabs={tabsWithBadges}
+          active={tab}
+          onChange={(key) => selectTab(key as Tab)}
+          label="Account sections"
+        />
+      </ScrollFade>
+
+      <div role="tabpanel" aria-label={typeof activeTabLabel === "string" ? activeTabLabel : tab}>
 
       {tab === "overview" && (
         <AccountOverview
@@ -197,6 +250,8 @@ export function AccountShell(props: Props) {
           openCount={positions.filter((position) => position.status === "OPEN").length}
           depositUiEnabled={props.depositUiEnabled}
           disabledPaymentMethods={props.disabledPaymentMethods}
+          walletAddresses={props.walletAddresses}
+          onOpenVerification={() => selectTab("verification")}
         />
       )}
       {tab === "positions" && (
@@ -204,6 +259,7 @@ export function AccountShell(props: Props) {
           open={positions.filter((p) => p.status === "OPEN").map((p) => ({ ...p, openedAt: new Date(p.openedAt), closedAt: p.closedAt ? new Date(p.closedAt) : null }))}
           closed={positions.filter((p) => p.status === "CLOSED").map((p) => ({ ...p, openedAt: new Date(p.openedAt), closedAt: p.closedAt ? new Date(p.closedAt) : null }))}
           instruments={props.instruments}
+          fetchCap={100}
         />
       )}
       {tab === "transactions" && <TransactionsTab transactions={props.transactions} />}
@@ -230,6 +286,7 @@ export function AccountShell(props: Props) {
       {tab === "support" && <SupportTab />}
       {tab === "referrals" && <ReferralTab />}
       {tab === "settings" && <SettingsTab user={props.user} />}
+      </div>
     </div>
   );
 }

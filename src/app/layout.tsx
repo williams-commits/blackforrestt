@@ -6,6 +6,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FormatLocaleBridge } from "@/components/FormatLocaleBridge";
+import { TopProgressBar } from "@/components/ui/TopProgressBar";
 import { brandName, brandDomain, brandShortName } from "@/lib/branding";
 import { LOCALE_BCP47, LOCALE_OG, RTL_LOCALES } from "@/i18n/config";
 
@@ -108,6 +109,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="bg-canvas text-text antialiased">
         <a href="#main-content" className="skip-link">Skip to main content</a>
+        <TopProgressBar />
         <ThemeProvider>
           <NextIntlClientProvider locale={locale} messages={messages}>
             <FormatLocaleBridge />

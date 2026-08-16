@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const CATEGORIES = ["General enquiry", "Account & verification", "Deposits & withdrawals", "Technical issue", "Partnership"] as const;
 
@@ -92,7 +93,7 @@ export function SupportTab() {
   return (
     <div className="space-y-6">
       {/* Create new case */}
-      <section className="rounded-xl border border-border bg-canvas p-5">
+      <section className="rounded-lg border border-border bg-canvas p-5">
         <h3 className="text-sm font-semibold mb-1">Open a support case</h3>
         <p className="text-xs text-text-muted mb-4">
           Our team typically responds within one business day. Your case reference will appear below once submitted.
@@ -139,10 +140,21 @@ export function SupportTab() {
       </section>
 
       {/* Case history */}
-      <section className="rounded-xl border border-border bg-canvas p-5">
+      <section className="rounded-lg border border-border bg-canvas p-5">
         <h3 className="mb-4 text-sm font-semibold">Your support cases</h3>
         {loading ? (
-          <p className="text-sm text-text-muted">Loading…</p>
+          <div className="space-y-3" role="status" aria-label="Loading support cases">
+            {[0, 1].map((i) => (
+              <div key={i} className="space-y-2 rounded-lg border border-border p-4">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-4 w-16 rounded" />
+                </div>
+                <Skeleton className="h-3.5 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            ))}
+          </div>
         ) : cases.length === 0 ? (
           <p className="text-sm text-text-muted">You haven&apos;t opened any support cases yet.</p>
         ) : (
@@ -152,7 +164,7 @@ export function SupportTab() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs text-text-faint">{c.reference}</span>
-                    <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[c.status] ?? "bg-gray-100 text-gray-600"}`}>
+                    <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[c.status] ?? "bg-panel-3 text-text-muted"}`}>
                       {STATUS_LABELS[c.status] ?? c.status}
                     </span>
                   </div>

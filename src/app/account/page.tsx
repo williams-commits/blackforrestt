@@ -118,10 +118,12 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
     <div className="min-h-screen bg-panel">
       <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-canvas px-3 py-1 sm:flex-nowrap sm:px-4">
         <Logo />
-        <nav className="order-3 w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 hidden lg:flex">
-          <Link href="/trade/AUDCAD" className="text-text-muted hover:text-text">Trade</Link>
-          <span className="text-text font-medium">Account</span>
-          <Link href="/reports" className="text-text-muted hover:text-text">Reports</Link>
+        {/* Visible on every breakpoint — previously hidden below lg, which left
+            phones with no way to reach Trade/Reports from the account portal. */}
+        <nav className="order-3 flex w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 sm:w-auto lg:flex">
+          <Link href="/trade/AUDCAD" className="whitespace-nowrap text-text-muted hover:text-text">Trade</Link>
+          <span className="whitespace-nowrap text-text font-medium">Account</span>
+          <Link href="/reports" className="whitespace-nowrap text-text-muted hover:text-text">Reports</Link>
         </nav>
         <AccountUserMenu
           displayName={user.name ?? user.email ?? "Trader"}
@@ -194,6 +196,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           disabledPaymentMethods={["CARD", "BANK_TRANSFER", "CRYPTO"].filter(
             (m) => !settings.deposits.allowedMethods.includes(m),
           )}
+          walletAddresses={settings.deposits.walletAddresses}
           reconciliation={{
             activeBlocks: activeBlocks.map((block) => ({ ...block, createdAt: block.createdAt.toISOString() })),
             openCaseCount,

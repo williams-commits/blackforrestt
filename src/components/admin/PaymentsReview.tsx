@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
 import { useCommandDialog } from "@/components/ui/useCommandDialog";
+import { FilterChip } from "@/components/ui/DataTable";
+import { CsvExportButton } from "@/components/ui/CsvExport";
+import { fmtDateTime } from "@/lib/dates";
 import { createDeviceId } from "@/lib/device";
 
 export interface PaymentRequestRow {
@@ -46,12 +49,19 @@ export function PaymentsReview({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "DEPOSIT" | "WITHDRAWAL">("ALL");
   const commandKeys = useRef(new Map<string, string>());
   const { openCommand, commandDialog } = useCommandDialog();
 
-  const totalPages = Math.max(1, Math.ceil(requests.length / PAGE_SIZE));
+  const filtered = useMemo(
+    () => requests.filter((r) => typeFilter === "ALL" || r.type === typeFilter),
+    [requests, typeFilter],
+  );
+  useEffect(() => { setPage(1); }, [typeFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const visibleRequests = requests.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const visibleRequests = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const reviewPolicy = canPrepare && canApprove
     ? "Finance prepares and approves reviewed requests from this queue; production can enforce separate reviewers."
     : "A first finance reviewer prepares the request; a second reviewer approves the ledger settlement.";
@@ -114,6 +124,22 @@ export function PaymentsReview({
         <span className="rounded bg-panel-2 px-2 py-1 text-xs text-text-muted">{requests.length} Total</span>
       </div>
       {error && <div role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error}</div>}
+      <div className="flex flex-wrap items-center gap-2">
+        {(["ALL", "DEPOSIT", "WITHDRAWAL"] as const).map((value) => (
+          <FilterChip key={value} active={typeFilter === value} onClick={() => setTypeFilter(value)}>
+            {value === "ALL" ? "All" : value === "DEPOSIT" ? "Deposits" : "Withdrawals"}
+          </FilterChip>
+        ))}
+        <CsvExportButton
+          filename="payment-queue"
+          columns={["Created", "Client", "Account", "Type", "Status", "Method", "Amount", "Reference"]}
+          rows={filtered.map((r) => [
+            fmtDateTime(r.createdAt), r.user.name ?? r.user.email ?? "Unknown", r.user.accountNo ?? "",
+            r.type, r.status, r.methodLabel, `${r.asset} ${r.amount}`, r.userReference ?? "",
+          ])}
+          disabled={filtered.length === 0}
+        />
+      </div>
       <div className="overflow-x-auto rounded-lg border border-border bg-canvas">
         <table className="w-full min-w-225 text-left text-xs">
           <thead className="bg-panel-2 text-text-muted">
@@ -151,7 +177,7 @@ export function PaymentsReview({
             {requests.length === 0 && <tr><td colSpan={7} className="px-3 py-10 text-center text-text-muted">No pending payment requests.</td></tr>}
           </tbody>
         </table>
-        <Pagination page={safePage} pageSize={PAGE_SIZE} totalItems={requests.length} onPageChange={setPage} label="payment requests" compact />
+        <Pagination page={safePage} pageSize={PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="payment requests" compact />
       </div>
       {commandDialog}
     </section>

@@ -26,6 +26,7 @@ export async function GET() {
         deposits: {
           uiEnabled: defaults.deposits.uiEnabled,
           allowedMethods: defaults.deposits.allowedMethods,
+          walletAddresses: defaults.deposits.walletAddresses,
         },
         withdrawals: {
           requireKyc: defaults.withdrawals.requireKyc,
@@ -50,6 +51,7 @@ export async function GET() {
       env: {
         DEPOSIT_UI_ENABLED: process.env.DEPOSIT_UI_ENABLED ?? "(unset → true)",
         PAYMENT_METHODS_DISABLED: process.env.PAYMENT_METHODS_DISABLED ?? "(unset → none)",
+        DEPOSIT_WALLET_ADDRESSES: process.env.DEPOSIT_WALLET_ADDRESSES ?? "(unset → none)",
         ALLOW_UNVERIFIED_WITHDRAWALS: process.env.ALLOW_UNVERIFIED_WITHDRAWALS ?? "(unset → false)",
         MAX_POSITION_LOTS: process.env.MAX_POSITION_LOTS ?? "(unset → 100)",
         REGISTRATION_REQUIRE_EMAIL_VERIFICATION: process.env.REGISTRATION_REQUIRE_EMAIL_VERIFICATION ?? "(unset → false)",

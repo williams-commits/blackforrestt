@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { WalletAddressEntry } from "@/server/userSettings";
 
 /**
  * Reusable settings form for both group settings and per-user profile overrides.
@@ -18,6 +19,7 @@ export interface UserSettingsConfig {
   deposits?: {
     uiEnabled?: boolean;
     allowedMethods?: string[];
+    walletAddresses?: WalletAddressEntry[];
   };
   withdrawals?: {
     requireKyc?: boolean;
@@ -42,6 +44,7 @@ export interface UserSettingsConfig {
 
 const ALL_CATEGORIES = ["FOREX", "CRYPTO", "COMMODITY", "INDEX", "STOCK"];
 const ALL_METHODS = ["CARD", "BANK_TRANSFER", "CRYPTO"];
+const WALLET_ASSETS = ["USDT", "USDC", "BTC", "ETH"];
 
 interface Props {
   initial: UserSettingsConfig;
@@ -53,7 +56,7 @@ interface Props {
 
 interface GlobalDefaults {
   trading: { enabled: boolean; allowedCategories: string[]; maxOrderLots: number; marginWarningPercent: number };
-  deposits: { uiEnabled: boolean; allowedMethods: string[] };
+  deposits: { uiEnabled: boolean; allowedMethods: string[]; walletAddresses: WalletAddressEntry[] };
   withdrawals: { requireKyc: boolean; dailyLimit: number | null; monthlyLimit: number | null };
   pnl: { spreadMarkupPips: number; commissionPerLotOverride: number | null; pnlAdjustmentPercent: number };
   balance: { demoStartingBalance: number; maxCreditBonus: number };
@@ -87,12 +90,17 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
     });
   };
 
-  const toggleArrayItem = (path: string[], item: string) => {
-    let current: string[] = [];
-    try {
-      const resolved = path.reduce<unknown>((acc, key) => (acc as Record<string, unknown>)?.[key], s);
-      if (Array.isArray(resolved)) current = resolved as string[];
-    } catch { /* default empty */ }
+  const toggleArrayItem = (path: string[], item: string, base?: string[]) => {
+    // When nothing is stored yet, start from the effective (inherited/default)
+    // list so the FIRST click only flips ONE chip instead of silently
+    // materializing a single-item array that disables everything else.
+    let current = base ?? [];
+    if (!base) {
+      try {
+        const resolved = path.reduce<unknown>((acc, key) => (acc as Record<string, unknown>)?.[key], s);
+        if (Array.isArray(resolved)) current = resolved as string[];
+      } catch { /* default empty */ }
+    }
     const next = current.includes(item) ? current.filter((x) => x !== item) : [...current, item];
     update(path, next);
   };
@@ -100,6 +108,18 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
   /** Combine a human description with the env default value for hint display. */
   const fmtHint = (desc: string, defVal?: number | null, prefix = "", suffix = "") =>
     defVal != null ? `${desc} · Default: ${prefix}${defVal}${suffix}` : desc;
+
+  const wallets = s.deposits?.walletAddresses ?? [];
+  // Effective chip lists: stored override, else the resolved default.
+  const effectiveCategories = s.trading?.allowedCategories ?? defaults?.trading.allowedCategories ?? ALL_CATEGORIES;
+  const categoriesInherited = s.trading?.allowedCategories == null;
+  const effectiveMethods = s.deposits?.allowedMethods ?? defaults?.deposits.allowedMethods ?? ALL_METHODS;
+  const methodsInherited = s.deposits?.allowedMethods == null;
+  const dirty = JSON.stringify(s) !== JSON.stringify(initial);
+  const setWallets = (next: WalletAddressEntry[]) => update(["deposits", "walletAddresses"], next);
+  const updateWallet = (index: number, patch: Partial<WalletAddressEntry>) => {
+    setWallets(wallets.map((w, i) => (i === index ? { ...w, ...patch } : w)));
+  };
 
   return (
     <div className="space-y-5">
@@ -111,15 +131,18 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
           onChange={(v) => update(["trading", "enabled"], v)}
         />
         <div>
-          <p className="text-xs text-text-muted mb-1.5">Allowed instrument categories</p>
+          <div className="flex items-baseline justify-between">
+            <p className="text-xs text-text-muted mb-1.5">Allowed instrument categories</p>
+            {categoriesInherited && <span className="text-[9px] font-semibold uppercase tracking-wide text-text-faint">Inherited</span>}
+          </div>
           <div className="flex flex-wrap gap-2">
             {ALL_CATEGORIES.map((cat) => {
-              const active = s.trading?.allowedCategories?.includes(cat) ?? true;
+              const active = effectiveCategories.includes(cat);
               return (
                 <button
                   key={cat}
                   type="button"
-                  onClick={() => toggleArrayItem(["trading", "allowedCategories"], cat)}
+                  onClick={() => toggleArrayItem(["trading", "allowedCategories"], cat, effectiveCategories)}
                   className={`rounded-md px-2.5 py-1 text-[11px] font-medium border transition ${
                     active ? "bg-brand text-white border-brand" : "bg-panel-2 text-text-muted border-border"
                   }`}
@@ -154,17 +177,18 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
           onChange={(v) => update(["deposits", "uiEnabled"], v)}
         />
         <div>
-          <p className="text-xs text-text-muted mb-1.5">Allowed payment methods (Deposit and Withdrawal)</p>
+          <div className="flex items-baseline justify-between">
+            <p className="text-xs text-text-muted mb-1.5">Allowed payment methods (Deposit and Withdrawal)</p>
+            {methodsInherited && <span className="text-[9px] font-semibold uppercase tracking-wide text-text-faint">Inherited</span>}
+          </div>
           <div className="flex flex-wrap gap-2">
             {ALL_METHODS.map((method) => {
-              const active = s.deposits?.allowedMethods?.includes(method)
-                ?? defaults?.deposits.allowedMethods.includes(method)
-                ?? true;
+              const active = effectiveMethods.includes(method);
               return (
                 <button
                   key={method}
                   type="button"
-                  onClick={() => toggleArrayItem(["deposits", "allowedMethods"], method)}
+                  onClick={() => toggleArrayItem(["deposits", "allowedMethods"], method, effectiveMethods)}
                   className={`rounded-md px-2.5 py-1 text-[11px] font-medium border transition ${
                     active ? "bg-brand text-white border-brand" : "bg-panel-2 text-text-muted border-border"
                   }`}
@@ -175,6 +199,81 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
             })}
           </div>
         </div>
+      </SettingsSection>
+
+      {/* ── Deposit Wallets ── */}
+      <SettingsSection title="Deposit Wallets (Crypto)">
+        <p className="text-[11px] text-text-muted">
+          Crypto addresses shown to users on the deposit screen. User-level wallets
+          override group wallets; group wallets override the global default
+          {defaults && defaults.deposits.walletAddresses.length > 0
+            ? ` (${defaults.deposits.walletAddresses.length} from environment)`
+            : ""}.
+          Leave empty to inherit.
+        </p>
+        {wallets.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border bg-canvas px-3 py-4 text-center">
+            <p className="text-[11px] text-text-faint">
+              No wallets set — using the next layer up (group / global default).
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {wallets.map((wallet, index) => (
+              <div key={index} className="rounded-lg border border-border bg-canvas p-2.5 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-text-faint">#{index + 1}</span>
+                  <input
+                    value={wallet.label ?? ""}
+                    onChange={(e) => updateWallet(index, { label: e.target.value })}
+                    placeholder="Label (optional), e.g. Main USDT"
+                    maxLength={40}
+                    className="h-8 flex-1 rounded border border-border bg-canvas px-2 text-xs outline-none focus:border-brand"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setWallets(wallets.filter((_, i) => i !== index))}
+                    aria-label={`Remove wallet ${index + 1}`}
+                    className="h-7 w-7 shrink-0 rounded border border-border text-text-muted transition hover:border-down/40 hover:text-down"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-[100px_1fr]">
+                  <select
+                    value={WALLET_ASSETS.includes(wallet.asset) ? wallet.asset : "USDT"}
+                    onChange={(e) => updateWallet(index, { asset: e.target.value })}
+                    aria-label="Asset"
+                    className="h-8 rounded border border-border bg-canvas px-2 text-xs outline-none focus:border-brand"
+                  >
+                    {WALLET_ASSETS.map((a) => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                  <input
+                    value={wallet.network}
+                    onChange={(e) => updateWallet(index, { network: e.target.value })}
+                    placeholder="Network, e.g. TRON (TRC20)"
+                    maxLength={60}
+                    className="h-8 rounded border border-border bg-canvas px-2 text-xs outline-none focus:border-brand"
+                  />
+                </div>
+                <input
+                  value={wallet.address}
+                  onChange={(e) => updateWallet(index, { address: e.target.value })}
+                  placeholder="Deposit address"
+                  maxLength={256}
+                  className="h-8 w-full rounded border border-border bg-canvas px-2 font-mono text-xs outline-none focus:border-brand"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setWallets([...wallets, { asset: "USDT", network: "", address: "" }])}
+          className="w-full rounded-lg border border-dashed border-border py-2 text-xs font-medium text-text-muted transition hover:border-brand/50 hover:text-brand"
+        >
+          + Add wallet
+        </button>
       </SettingsSection>
 
       {/* ── Withdrawals ── */}
@@ -267,7 +366,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
       </SettingsSection>
 
       {/* ── Save ── */}
-      <div className="pt-2 border-t border-border-soft">
+      <div className="flex items-center gap-3 border-t border-border-soft pt-3">
         <button
           type="button"
           onClick={() => void onSave(s)}
@@ -276,6 +375,18 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         >
           {saving ? "Saving…" : saveLabel}
         </button>
+        {dirty && !saving && (
+          <>
+            <span className="text-[11px] text-brand">Unsaved changes</span>
+            <button
+              type="button"
+              onClick={() => setS(initial)}
+              className="rounded-lg border border-border px-3 py-2 text-[11px] font-medium text-text-muted transition hover:text-text"
+            >
+              Reset
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

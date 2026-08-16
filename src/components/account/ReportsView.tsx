@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
+import { CsvExportButton } from "@/components/ui/CsvExport";
+import { fmtDateTime } from "@/lib/dates";
 
 export interface ReportRow {
   id: string;
@@ -39,18 +41,28 @@ export interface ReportServerState {
 export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: ReportServerState }) {
   const [localSymbol, setLocalSymbol] = useState<string>("ALL");
   const [localSide, setLocalSide] = useState<string>("ALL");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   const localSymbols = useMemo(() => Array.from(new Set(rows.map((r) => r.symbol))).sort(), [rows]);
   const symbol = server?.filters.symbol ?? localSymbol;
   const side = server?.filters.side ?? localSide;
   const symbols = server?.symbols ?? localSymbols;
 
-  const filtered = useMemo(
-    () => server
-      ? rows
-      : rows.filter((r) => (symbol === "ALL" || r.symbol === symbol) && (side === "ALL" || r.side === side)),
-    [rows, server, side, symbol],
-  );
+  const filtered = useMemo(() => {
+    const from = fromDate ? new Date(fromDate).getTime() : null;
+    const to = toDate ? new Date(toDate).getTime() + 86_399_999 : null;
+    return rows.filter((r) => {
+      if (!server) {
+        if (symbol !== "ALL" && r.symbol !== symbol) return false;
+        if (side !== "ALL" && r.side !== side) return false;
+      }
+      const closed = new Date(r.closedAt).getTime();
+      if (from != null && closed < from) return false;
+      if (to != null && closed > to) return false;
+      return true;
+    });
+  }, [rows, server, side, symbol, fromDate, toDate]);
 
   const localStats = useMemo(() => calculateStats(filtered), [filtered]);
   const stats = server?.summary ?? localStats;
@@ -71,6 +83,25 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <ExtremCard title="Best Trade" row={stats.best} positive />
         <ExtremCard title="Worst Trade" row={stats.worst} positive={false} />
+      </div>
+
+      {/* Date-range applies to both modes (client-side over the fetched page). */}
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-muted">
+        <label className="flex items-center gap-1">
+          From
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="Closed after" className="h-8 rounded border border-border bg-canvas px-2 text-xs outline-none focus:border-brand" />
+        </label>
+        <span className="text-text-faint">→</span>
+        <label className="flex items-center gap-1">
+          To
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="Closed before" className="h-8 rounded border border-border bg-canvas px-2 text-xs outline-none focus:border-brand" />
+        </label>
+        <CsvExportButton
+          filename="trade-report"
+          columns={["Symbol", "Type", "Side", "Volume", "Swap", "Commission", "Net P&L", "Closed"]}
+          rows={filtered.map((r) => [r.symbol, r.type, r.side, r.volume.toFixed(2), r.swap.toFixed(2), r.commission.toFixed(2), r.netProfit.toFixed(2), fmtDateTime(r.closedAt)])}
+          disabled={filtered.length === 0}
+        />
       </div>
 
       {server ? (
@@ -120,7 +151,7 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
       )}
 
       <div className="overflow-hidden overflow-x-auto rounded-lg border border-border bg-canvas">
-        <table className="w-full">
+        <table className="w-full min-w-[820px]">
           <thead className="border-b border-border-soft bg-panel-2">
             <tr>
               <Th>Symbol</Th><Th>Type</Th><Th>Side</Th><Th className="text-right">Volume</Th>
@@ -132,7 +163,7 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
             {filtered.map((row) => {
               const up = row.netProfit >= 0;
               return (
-                <tr key={row.id} className="border-b border-border-soft hover:bg-panel-2">
+                <tr key={row.id} className="border-b border-border-soft last:border-b-0 hover:bg-panel-2">
                   <Td className="font-medium"><span className="flex items-center gap-1.5"><InstrumentIcon symbol={row.symbol} size={14} />{row.symbol}</span></Td>
                   <Td className="text-text-muted">{row.type}</Td>
                   <Td><span className={row.side === "BUY" ? "text-up" : "text-down"}>{row.side}</span></Td>
@@ -140,7 +171,7 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
                   <Td className="text-right tnum text-text-muted">{fmtSigned(row.swap)}</Td>
                   <Td className="text-right tnum text-text-muted">{fmtSigned(-row.commission)}</Td>
                   <Td className={`text-right tnum font-medium ${up ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</Td>
-                  <Td className="text-[11px] text-text-faint tnum">{fmtDate(row.closedAt)}</Td>
+                  <Td className="text-[11px] text-text-faint">{fmtDateTime(row.closedAt)}</Td>
                 </tr>
               );
             })}
@@ -197,4 +228,3 @@ function ExtremCard({ title, row, positive }: { title: string; row: ReportRow | 
 function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <th className={`whitespace-nowrap px-3 py-2 text-left text-[10px] font-medium uppercase text-text-faint ${className}`}>{children}</th>; }
 function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <td className={`whitespace-nowrap px-3 py-2 text-xs ${className}`}>{children}</td>; }
 function fmtSigned(value: number): string { return `${value >= 0 ? "+" : ""}${value.toFixed(2)}`; }
-function fmtDate(value: string): string { return new Date(value).toLocaleString("en-US", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }); }

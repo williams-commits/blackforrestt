@@ -1,8 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { FilterChip } from "@/components/ui/DataTable";
+import { fmtDateTime } from "@/lib/dates";
 
 interface PaymentProofView {
   id: string;
@@ -33,11 +37,36 @@ interface PaymentView {
 
 const PAGE_SIZE = 10;
 
+const STATUS_STYLES: Record<PaymentView["status"], string> = {
+  PENDING: "bg-brand-soft text-brand",
+  AWAITING_APPROVAL: "bg-brand/10 text-brand border border-brand/30",
+  APPROVED: "bg-up/10 text-up",
+  REJECTED: "bg-down/10 text-down",
+  CANCELLED: "bg-panel-3 text-text-muted",
+  REVERSED: "bg-panel-3 text-text-muted border border-border",
+};
+
+const PROOF_STYLES: Record<PaymentProofView["status"], string> = {
+  CLEAN: "bg-up/10 text-up",
+  PENDING_SCAN: "bg-brand-soft text-brand",
+  BLOCKED: "bg-down/10 text-down",
+  QUARANTINED: "bg-down/10 text-down",
+};
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1_048_576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1_048_576).toFixed(1)} MB`;
+}
+
 export function PaymentTimeline() {
   const [requests, setRequests] = useState<PaymentView[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "DEPOSIT" | "WITHDRAWAL">("ALL");
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
   const keys = useRef(new Map<string, string>());
 
   const refresh = useCallback(async () => {
@@ -48,25 +77,32 @@ export function PaymentTimeline() {
   }, []);
 
   useEffect(() => {
-    void refresh().catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Unable to load payments."));
+    void refresh()
+      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Unable to load payments."))
+      .finally(() => setLoading(false));
   }, [refresh]);
 
-  // Auto-sync: poll every 30s so payment statuses (approvals, rejections) update live.
+  // Auto-sync: poll every 30s while visible so statuses update live.
   useEffect(() => {
     const timer = window.setInterval(() => {
-      void refresh().catch(() => undefined);
+      if (!document.hidden) void refresh().catch(() => undefined);
     }, 30_000);
     return () => window.clearInterval(timer);
   }, [refresh]);
 
+  const filtered = useMemo(
+    () => requests.filter((r) => typeFilter === "ALL" || r.type === typeFilter),
+    [requests, typeFilter],
+  );
 
-  const totalPages = Math.max(1, Math.ceil(requests.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const visibleRequests = requests.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const visibleRequests = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [typeFilter]);
 
   async function upload(requestId: string, file: File) {
     setBusy(requestId);
@@ -101,6 +137,7 @@ export function PaymentTimeline() {
       const data = await response.json().catch(() => null) as { error?: string } | null;
       if (!response.ok) throw new Error(data?.error ?? "Unable to cancel payment request.");
       keys.current.delete(requestId);
+      setConfirmCancelId(null);
       await refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to cancel payment request.");
@@ -109,52 +146,110 @@ export function PaymentTimeline() {
     }
   }
 
+  const pendingCount = requests.filter((r) => r.status === "PENDING" || r.status === "AWAITING_APPROVAL").length;
+
   return (
     <section className="space-y-4" aria-labelledby="payments-heading">
-      <div>
-        <h2 id="payments-heading" className="text-sm font-semibold">Payment requests</h2>
-        <p className="mt-1 text-xs text-text-muted">Deposit proofs are required and verified before finance review. Optional withdrawal supporting documents use the same private quarantine and scanning workflow.</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 id="payments-heading" className="text-sm font-semibold">Payment requests</h2>
+          <p className="mt-1 text-xs text-text-muted">Deposit proofs are required and verified before finance review. Optional withdrawal supporting documents use the same private quarantine and scanning workflow.</p>
+        </div>
+        {pendingCount > 0 && (
+          <span className="rounded-full border border-brand/30 bg-brand-soft px-2.5 py-1 text-[10px] font-semibold text-brand">
+            {pendingCount} awaiting review
+          </span>
+        )}
       </div>
+
       {error && <p role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error}</p>}
-      {requests.length === 0 && <p className="rounded border border-border bg-canvas px-4 py-10 text-center text-xs text-text-muted">No payment requests yet.</p>}
-      <ul className="space-y-3">
-        {visibleRequests.map((request) => {
-          const canCancel = request.status === "PENDING" || request.status === "AWAITING_APPROVAL";
-          const hasCleanProof = request.proofs.some((proof) => proof.status === "CLEAN");
-          const proofRequired = request.type === "DEPOSIT" && !hasCleanProof;
-          const canUploadSupport = request.status === "PENDING" && (proofRequired || request.type === "WITHDRAWAL");
-          return (
-            <li key={request.id} className="rounded-lg border border-border bg-canvas p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium">{request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} · {request.asset} {request.amount}</p>
-                  <p className="mt-1 text-xs text-text-muted">{request.methodLabel} · {new Date(request.createdAt).toLocaleString()}</p>
-                  {request.methodDetailsSummary && <p className="mt-1 text-xs text-text-faint">Details: {request.methodDetailsSummary}</p>}
-                  {request.riskHoldUntil && new Date(request.riskHoldUntil) > new Date() && <p className="mt-1 text-xs text-brand">Beneficiary cooling-off until {new Date(request.riskHoldUntil).toLocaleString()}.</p>}
-                  {request.reviewerNote && <p className="mt-1 text-xs text-text-muted">Finance note: {request.reviewerNote}</p>}
-                </div>
-                <span className="rounded bg-panel-2 px-2 py-1 text-[11px] text-text-muted">{request.status}</span>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {canUploadSupport && (
-                  <label className="inline-flex cursor-pointer items-center rounded border border-border px-3 py-1.5 text-xs text-brand hover:bg-panel-2">
-                    <input type="file" accept="image/jpeg,image/png,application/pdf" className="sr-only" disabled={busy === request.id} onChange={(event) => {
-                      const file = event.currentTarget.files?.[0];
-                      if (file) void upload(request.id, file);
-                      event.currentTarget.value = "";
-                    }} />
-                    {busy === request.id ? "Uploading document…" : proofRequired ? "Upload required payment proof" : "Upload supporting document"}
-                  </label>
-                )}
-                {request.proofs.map((proof) => <span key={proof.id} className="text-[11px] text-text-faint">Proof: {proof.status}</span>)}
-                {canCancel && <Button type="button" size="sm" variant="ghost" loading={busy === request.id} onClick={() => void cancel(request.id)}>Cancel request</Button>}
-                {request.reconciliationStatus === "MISMATCHED" && <span className="text-xs text-down">Settlement reconciliation needs review.</span>}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      <Pagination page={safePage} pageSize={PAGE_SIZE} totalItems={requests.length} onPageChange={setPage} label="payment requests" />
+
+      <div className="flex items-center gap-1.5">
+        {(["ALL", "DEPOSIT", "WITHDRAWAL"] as const).map((value) => (
+          <FilterChip key={value} active={typeFilter === value} onClick={() => setTypeFilter(value)}>
+            {value === "ALL" ? "All" : value === "DEPOSIT" ? "Deposits" : "Withdrawals"}
+          </FilterChip>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="space-y-2 rounded-lg border border-border bg-canvas p-4">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-3 w-64" />
+              <Skeleton className="h-8 w-32" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          {filtered.length === 0 && (
+            <p className="rounded border border-border bg-canvas px-4 py-10 text-center text-xs text-text-muted">
+              No {typeFilter === "ALL" ? "payment requests" : typeFilter === "DEPOSIT" ? "deposits" : "withdrawals"} yet.
+            </p>
+          )}
+          <ul className="space-y-3">
+            {visibleRequests.map((request) => {
+              const canCancel = request.status === "PENDING" || request.status === "AWAITING_APPROVAL";
+              const hasCleanProof = request.proofs.some((proof) => proof.status === "CLEAN");
+              const proofRequired = request.type === "DEPOSIT" && !hasCleanProof;
+              const canUploadSupport = request.status === "PENDING" && (proofRequired || request.type === "WITHDRAWAL");
+              return (
+                <li key={request.id} className="rounded-lg border border-border bg-canvas p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium">{request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} · {request.asset} {request.amount}</p>
+                      <p className="mt-1 text-xs text-text-muted">{request.methodLabel} · {fmtDateTime(request.createdAt)}</p>
+                      {request.methodDetailsSummary && <p className="mt-1 text-xs text-text-faint">Details: {request.methodDetailsSummary}</p>}
+                      {request.riskHoldUntil && new Date(request.riskHoldUntil) > new Date() && <p className="mt-1 text-xs text-brand">Beneficiary cooling-off until {fmtDateTime(request.riskHoldUntil)}.</p>}
+                      {request.reviewerNote && <p className="mt-1 text-xs text-text-muted">Finance note: {request.reviewerNote}</p>}
+                    </div>
+                    <span className={`rounded px-2 py-1 text-[10px] font-medium ${STATUS_STYLES[request.status]}`}>
+                      {request.status.replaceAll("_", " ")}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {canUploadSupport && (
+                      <label className="inline-flex cursor-pointer items-center rounded border border-border px-3 py-1.5 text-xs text-brand hover:bg-panel-2">
+                        <input type="file" accept="image/jpeg,image/png,application/pdf" className="sr-only" disabled={busy === request.id} onChange={(event) => {
+                          const file = event.currentTarget.files?.[0];
+                          if (file) void upload(request.id, file);
+                          event.currentTarget.value = "";
+                        }} />
+                        {busy === request.id ? "Uploading document…" : proofRequired ? "Upload required payment proof" : "Upload supporting document"}
+                      </label>
+                    )}
+                    {request.proofs.map((proof) => (
+                      <span key={proof.id} className={`rounded px-1.5 py-0.5 text-[10px] ${PROOF_STYLES[proof.status]}`} title={`${proof.declaredMime} · ${formatBytes(proof.sizeBytes)} · ${fmtDateTime(proof.uploadedAt)}`}>
+                        Proof · {proof.status.replaceAll("_", " ").toLowerCase()} · {formatBytes(proof.sizeBytes)}
+                      </span>
+                    ))}
+                    {canCancel && (
+                      <Button type="button" size="sm" variant="ghost" loading={busy === request.id} onClick={() => setConfirmCancelId(request.id)}>
+                        Cancel request
+                      </Button>
+                    )}
+                    {request.reconciliationStatus === "MISMATCHED" && <span className="text-xs text-down">Settlement reconciliation needs review.</span>}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <Pagination page={safePage} pageSize={PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="payment requests" />
+        </>
+      )}
+
+      <ConfirmDialog
+        open={confirmCancelId !== null}
+        title="Cancel this request?"
+        message="This cancels the payment request. The action cannot be undone — you would need to submit a new request to proceed."
+        confirmLabel="Cancel request"
+        cancelLabel="Keep it"
+        busy={busy === confirmCancelId}
+        onConfirm={() => confirmCancelId && void cancel(confirmCancelId)}
+        onCancel={() => setConfirmCancelId(null)}
+      />
     </section>
   );
 }

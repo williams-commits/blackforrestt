@@ -11,6 +11,7 @@ import { PositionsTable } from "./PositionsTable";
 import { AssetModal } from "./AssetModal";
 import { Dialog } from "@/components/ui/Dialog";
 import { MarketStatusBanner } from "./MarketStatusBanner";
+import type { WalletAddressEntry } from "@/server/userSettings";
 
 interface Props {
   instrument: InstrumentView;
@@ -19,6 +20,7 @@ interface Props {
   marketDataMode: string;
   depositUiEnabled?: boolean;
   disabledPaymentMethods?: string[];
+  walletAddresses?: WalletAddressEntry[];
 }
 
 /** Responsive professional trading workspace. */
@@ -29,6 +31,7 @@ export function Dashboard({
   marketDataMode,
   depositUiEnabled = true,
   disabledPaymentMethods = [],
+  walletAddresses = [],
 }: Props) {
   const interval = useForexStore((state) => state.interval);
   const setInterval = useForexStore((state) => state.setInterval);
@@ -44,7 +47,7 @@ export function Dashboard({
 
   return (
     <div className="flex min-h-dvh w-full flex-col overflow-x-hidden bg-canvas md:h-dvh md:overflow-hidden lg:h-screen">
-      <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} onOpenAssets={() => setAssetModalOpen(true)} />
+      <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} walletAddresses={walletAddresses} onOpenAssets={() => setAssetModalOpen(true)} />
       <MarketStatusBanner marketDataMode={marketDataMode} wsStatus={status} />
 
       {/* Chart + order panel — tablet (md) gets side-by-side, desktop (lg) gets the full layout */}

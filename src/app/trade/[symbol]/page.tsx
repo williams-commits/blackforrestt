@@ -79,6 +79,7 @@ export default async function TradePage({ params, searchParams }: PageProps) {
       disabledPaymentMethods={["CARD", "BANK_TRANSFER", "CRYPTO"].filter(
         (m) => !settings.deposits.allowedMethods.includes(m),
       )}
+      walletAddresses={settings.deposits.walletAddresses}
     />
   );
 }

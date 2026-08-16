@@ -18,33 +18,38 @@ export async function GET(request: Request) {
     const parsed = Query.safeParse({ q: url.searchParams.get("q") ?? undefined, limit: url.searchParams.get("limit") ?? undefined });
     if (!parsed.success) return NextResponse.json({ error: "Invalid user query." }, { status: 400 });
     const q = parsed.data.q;
-    const users = await prisma.user.findMany({
-      where: q ? {
-        OR: [
-          { email: { contains: q, mode: "insensitive" } },
-          { name: { contains: q, mode: "insensitive" } },
-          { accountNo: { contains: q } },
-        ],
-      } : undefined,
-      orderBy: { createdAt: "desc" },
-      take: parsed.data.limit,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        accountNo: true,
-        verified: true,
-        emailVerifiedAt: true,
-        lockedUntil: true,
-        mfaEnabledAt: true,
-        createdAt: true,
-        metrics: { select: { balance: true, equity: true, floatingPl: true, marginLevel: true } },
-        kyc: { select: { status: true } },
-        adminRoles: { where: { revokedAt: null }, select: { role: true, assignedAt: true } },
-        _count: { select: { positions: true, securitySessions: true, reconciliationBlocks: true } },
-      },
-    });
-    return NextResponse.json({ users: users.map((user) => ({
+    const where = q ? {
+      OR: [
+        { email: { contains: q, mode: "insensitive" as const } },
+        { name: { contains: q, mode: "insensitive" as const } },
+        { accountNo: { contains: q } },
+      ],
+    } : undefined;
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: parsed.data.limit,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          accountNo: true,
+          verified: true,
+          emailVerifiedAt: true,
+          lockedUntil: true,
+          mfaEnabledAt: true,
+          createdAt: true,
+          metrics: { select: { balance: true, equity: true, floatingPl: true, marginLevel: true } },
+          kyc: { select: { status: true } },
+          adminRoles: { where: { revokedAt: null }, select: { role: true, assignedAt: true } },
+          _count: { select: { positions: true, securitySessions: true, reconciliationBlocks: true } },
+        },
+      }),
+      // Honest total so the UI can disclose truncation ("showing first 200 of N").
+      prisma.user.count({ where }),
+    ]);
+    return NextResponse.json({ total, users: users.map((user) => ({
       ...user,
       emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
       lockedUntil: user.lockedUntil?.toISOString() ?? null,

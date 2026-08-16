@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { SettingsForm, type UserSettingsConfig } from "./SettingsForm";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { toast } from "@/lib/toast";
 
 interface Group {
   id: string;
@@ -92,7 +95,20 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
       {error && <div className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error}</div>}
 
       {loading ? (
-        <p className="text-sm text-text-muted">Loading groups…</p>
+        <div className="space-y-2.5" role="status" aria-label="Loading groups">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="rounded-xl border border-border bg-canvas p-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-5 w-5 rounded-full" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-64" />
+                </div>
+                <Skeleton className="h-7 w-16 rounded-md" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : groups.length === 0 ? (
         <div className="rounded-xl border border-border bg-panel p-8 text-center">
           <p className="text-sm text-text-muted">No groups yet. Create one to start managing users in bulk.</p>
@@ -237,7 +253,13 @@ function GroupMemberPreview({ groupId }: { groupId: string }) {
     return () => { active = false; };
   }, [groupId]);
 
-  if (loading) return <p className="text-[11px] text-text-faint">Loading members…</p>;
+  if (loading) {
+    return (
+      <div className="flex flex-wrap gap-1.5" role="status" aria-label="Loading members">
+        {[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-6 w-24 rounded-full" />)}
+      </div>
+    );
+  }
   if (!members || members.length === 0) return <p className="text-[11px] text-text-faint">No members</p>;
 
   const totalBalance = members.reduce((s, m) => s + m.user.balance, 0);
@@ -546,6 +568,8 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
   const [detail, setDetail] = useState<GroupDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<{ userId: string; label: string } | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -561,9 +585,46 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
     }
   }, [groupId]);
 
+  const confirmRemove = (userId: string, label: string) => setRemoving({ userId, label });
+
+  const removeMember = async () => {
+    if (!removing) return;
+    setRemoveBusy(true);
+    try {
+      const res = await fetch(`/api/admin/groups/${groupId}/members?userId=${removing.userId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        toast.error("Remove failed", body.error ?? "Failed to remove member.");
+        return;
+      }
+      toast.success("Member removed", `${removing.label} no longer belongs to this group.`);
+      setRemoving(null);
+      void refresh();
+    } catch {
+      toast.error("Remove failed", "Network error — could not remove member.");
+    } finally {
+      setRemoveBusy(false);
+    }
+  };
+
   useEffect(() => { void refresh(); }, [refresh]);
 
-  if (loading) return <p className="text-sm text-text-muted">Loading group…</p>;
+  if (loading) {
+    return (
+      <div className="space-y-5" role="status" aria-label="Loading group">
+        <Skeleton className="h-3.5 w-28" />
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-5 w-5 rounded-full" />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton className="h-5 w-44" />
+            <Skeleton className="h-3 w-72" />
+          </div>
+        </div>
+        <Skeleton className="h-44 w-full" />
+        <Skeleton className="h-60 w-full" />
+      </div>
+    );
+  }
   if (error || !detail) return <div className="text-sm text-down">{error ?? "Group not found"}</div>;
 
   return (
@@ -635,19 +696,7 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
                     {canManage && (
                       <td className="px-3 py-2">
                         <button
-                          onClick={async () => {
-                            try {
-                              const res = await fetch(`/api/admin/groups/${groupId}/members?userId=${m.user.id}`, { method: "DELETE" });
-                              if (!res.ok) {
-                                const body = await res.json().catch(() => ({}));
-                                alert(body.error ?? "Failed to remove member");
-                                return;
-                              }
-                              void refresh();
-                            } catch {
-                              alert("Network error — could not remove member");
-                            }
-                          }}
+                          onClick={() => confirmRemove(m.user.id, m.user.name ?? m.user.email ?? "this member")}
                           className="text-[10px] text-text-muted hover:text-down transition"
                         >
                           Remove
@@ -661,6 +710,16 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={removing !== null}
+        title="Remove member from group?"
+        message={removing ? `Remove ${removing.label} from this group? They will fall back to global default settings.` : ""}
+        confirmLabel="Remove member"
+        busy={removeBusy}
+        onConfirm={() => void removeMember()}
+        onCancel={() => setRemoving(null)}
+      />
     </div>
   );
 }

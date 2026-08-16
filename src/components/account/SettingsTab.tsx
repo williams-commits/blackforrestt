@@ -1,9 +1,10 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { SecurityCenter } from "./SecurityCenter";
+import { fmtDate } from "@/lib/dates";
 
 interface User {
   id: string;
@@ -24,6 +25,19 @@ async function readJson(response: Response): Promise<{ error?: string }> {
   }
 }
 
+/** Password policy score: 0–4 based on the server's requirements. */
+function passwordStrength(value: string): { score: number; label: string; tone: string } {
+  if (!value) return { score: 0, label: "", tone: "" };
+  let score = 0;
+  if (value.length >= 12) score++;
+  if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score++;
+  if (/[0-9]/.test(value)) score++;
+  if (/[^A-Za-z0-9]/.test(value) && value.length >= 14) score++;
+  const labels = ["Weak", "Fair", "Good", "Strong"];
+  const tones = ["bg-down", "bg-brand", "bg-up/70", "bg-up"];
+  return { score, label: labels[Math.min(score - 1, 3)], tone: tones[Math.min(score - 1, 3)] };
+}
+
 /** Editable profile and password security settings. */
 export function SettingsTab({ user }: { user: User }) {
   const router = useRouter();
@@ -31,10 +45,25 @@ export function SettingsTab({ user }: { user: User }) {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [passwordNotice, setPasswordNotice] = useState<Notice>(null);
   const [profileNotice, setProfileNotice] = useState<Notice>(null);
+
+  const profileDirty = name.trim() !== user.name;
+  const passwordDirty = current !== "" || next !== "" || confirm !== "";
+
+  // Guard against losing unsaved edits to a refresh/close mid-edit.
+  useEffect(() => {
+    if (!profileDirty && !passwordDirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [profileDirty, passwordDirty]);
+
+  const strength = passwordStrength(next);
+  const passwordFieldType = showPasswords ? "text" : "password";
 
   async function saveProfile(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -130,7 +159,7 @@ export function SettingsTab({ user }: { user: User }) {
           <ReadonlyField label="Account number" value={user.accountNo} />
           <ReadonlyField
             label="Member since"
-            value={new Date(user.createdAt).toLocaleDateString("en-US")}
+            value={fmtDate(user.createdAt)}
           />
           <ReadonlyField
             label="Verification"
@@ -162,7 +191,7 @@ export function SettingsTab({ user }: { user: User }) {
         </div>
         <Field
           label="Current password"
-          type="password"
+          type={passwordFieldType}
           value={current}
           onChange={(value) => {
             setCurrent(value);
@@ -171,22 +200,34 @@ export function SettingsTab({ user }: { user: User }) {
           autoComplete="current-password"
           required
         />
-        <Field
-          label="New password"
-          type="password"
-          value={next}
-          onChange={(value) => {
-            setNext(value);
-            setPasswordNotice(null);
-          }}
-          autoComplete="new-password"
-          required
-          minLength={12}
-          maxLength={128}
-        />
+        <div>
+          <Field
+            label="New password"
+            type={passwordFieldType}
+            value={next}
+            onChange={(value) => {
+              setNext(value);
+              setPasswordNotice(null);
+            }}
+            autoComplete="new-password"
+            required
+            minLength={12}
+            maxLength={128}
+          />
+          {next && (
+            <div className="mt-1.5 flex items-center gap-2" aria-live="polite">
+              <div className="flex h-1 flex-1 gap-1">
+                {[0, 1, 2, 3].map((i) => (
+                  <span key={i} className={`h-full flex-1 rounded-full transition-colors ${i < strength.score ? strength.tone : "bg-panel-3"}`} />
+                ))}
+              </div>
+              <span className="w-12 text-right text-[10px] text-text-faint">{strength.label}</span>
+            </div>
+          )}
+        </div>
         <Field
           label="Confirm new password"
-          type="password"
+          type={passwordFieldType}
           value={confirm}
           onChange={(value) => {
             setConfirm(value);
@@ -197,6 +238,15 @@ export function SettingsTab({ user }: { user: User }) {
           minLength={12}
           maxLength={128}
         />
+        <label className="flex w-fit cursor-pointer items-center gap-2 text-[11px] text-text-muted">
+          <input
+            type="checkbox"
+            checked={showPasswords}
+            onChange={(event) => setShowPasswords(event.target.checked)}
+            className="h-3.5 w-3.5 accent-brand"
+          />
+          Show passwords
+        </label>
 
         <NoticeView notice={passwordNotice} />
 

@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { WalletModal } from "./WalletModal";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
+import { Button } from "@/components/ui/Button";
+import { fmtDate } from "@/lib/dates";
+import type { WalletAddressEntry } from "@/server/userSettings";
 
 interface Props {
   user: { name: string; email: string; accountNo: string; createdAt: Date | string; verified: boolean };
@@ -20,66 +23,104 @@ interface Props {
   openCount: number;
   depositUiEnabled?: boolean;
   disabledPaymentMethods?: string[];
+  walletAddresses?: WalletAddressEntry[];
+  onOpenVerification?: () => void;
 }
 
-/** Account summary cards: profile, balance stats, wallets. */
-export function AccountOverview({ user, metrics, wallets, openCount, depositUiEnabled = true, disabledPaymentMethods = [] }: Props) {
+/** Account summary: profile, equity hero with risk metrics, wallets. */
+export function AccountOverview({ user, metrics, wallets, openCount, depositUiEnabled = true, disabledPaymentMethods = [], walletAddresses = [], onOpenVerification }: Props) {
   const router = useRouter();
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletMode, setWalletMode] = useState<"deposit" | "withdraw">("deposit");
   const floating = metrics.floatingPl;
   const floatingUp = floating >= 0;
+  const money = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const walletTotal = wallets.reduce((sum, w) => sum + w.free + w.locked, 0);
+  const walletLocked = wallets.reduce((sum, w) => sum + w.locked, 0);
+
+  // Margin-level risk bands: below 100% the account can be margin-called,
+  // below 125% it is in the warning band (matches the trading engine default).
+  const ml = metrics.marginLevel;
+  const mlTone = ml == null ? "text-text" : ml < 100 ? "text-down" : ml < 125 ? "text-brand" : "text-up";
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       {/* Profile card */}
       <div className="bg-canvas border border-border rounded-lg p-5">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-brand-soft flex items-center justify-center text-brand font-semibold text-lg">
             {(user.name || user.email)[0]?.toUpperCase()}
           </div>
-          <div>
-            <div className="font-semibold text-sm">{user.name}</div>
-            <div className="text-xs text-text-muted">{user.email}</div>
+          <div className="min-w-0">
+            <div className="font-semibold text-sm truncate">{user.name}</div>
+            <div className="text-xs text-text-muted truncate">{user.email}</div>
           </div>
         </div>
         <dl className="mt-4 space-y-2 text-xs">
           <Row label="Account Number" value={user.accountNo} />
-          <Row label="Member Since" value={new Date(user.createdAt).toLocaleDateString("en-GB")} />
-          <Row
-            label="Status"
-            value={user.verified ? "Verified" : "Unverified"}
-            valueClass={user.verified ? "text-up" : "text-down"}
-          />
+          <Row label="Member Since" value={fmtDate(user.createdAt)} />
+          <div className="flex items-center justify-between">
+            <dt className="text-text-muted">Status</dt>
+            <dd>
+              {user.verified ? (
+                <span className="tnum text-up">Verified</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onOpenVerification}
+                  className="rounded-full border border-down/40 bg-down/10 px-2 py-0.5 text-[10px] font-semibold text-down transition hover:bg-down/20"
+                >
+                  Unverified — verify now
+                </button>
+              )}
+            </dd>
+          </div>
           <Row label="Open Positions" value={String(openCount)} />
         </dl>
       </div>
 
-      {/* Balance stats */}
+      {/* Equity hero + risk metrics */}
       <div className="bg-canvas border border-border rounded-lg p-5">
-        <h3 className="text-xs font-medium text-text-muted uppercase mb-4">Account Balance</h3>
-        <div className="space-y-3">
-          <StatBig label="Balance" value={usd(metrics.balance)} />
-          <StatBig label="Equity" value={usd(metrics.equity)} />
-          <StatBig
-            label="Floating P/L"
-            value={`${floating >= 0 ? "+" : ""}${floating.toFixed(2)}`}
-            valueClass={floatingUp ? "text-up" : "text-down"}
-          />
-          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border-soft">
-            <StatSmall label="Margin" value={usd(metrics.margin)} />
-            <StatSmall label="Free" value={usd(metrics.free)} />
-            <StatSmall label="Credit" value={usd(metrics.credit)} />
-            <StatSmall
-              label="Margin Level"
-              value={metrics.marginLevel != null ? `${metrics.marginLevel.toFixed(2)}%` : "—"}
-            />
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-medium text-text-muted uppercase">Equity</h3>
+          <span className="text-[10px] text-text-faint">All values in USD</span>
+        </div>
+        <p className="mt-2 text-3xl font-semibold tnum leading-tight">{money(metrics.equity)}</p>
+        <p className={`mt-1 text-xs font-medium tnum ${floatingUp ? "text-up" : "text-down"}`}>
+          {floatingUp ? "▲" : "▼"} {money(Math.abs(floating))} floating P/L
+        </p>
+        <p className="mt-1 text-[10px] text-text-faint">Equity = balance + floating P/L on open positions.</p>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border-soft pt-3">
+          <StatSmall label="Balance" value={money(metrics.balance)} />
+          <StatSmall label="Credit" value={money(metrics.credit)} />
+          <StatSmall label="Margin" value={money(metrics.margin)} hint="Collateral currently held against open positions." />
+          <StatSmall label="Free Margin" value={money(metrics.free)} hint="Margin available to open new positions." />
+        </div>
+        <div className="mt-3 border-t border-border-soft pt-3">
+          <div className="flex items-baseline justify-between" title="Margin level = equity ÷ margin. Below 125% is a warning; below 100% risks a margin call.">
+            <span className="text-[11px] text-text-faint">Margin Level</span>
+            <span className={`text-sm font-semibold tnum ${mlTone}`}>
+              {ml != null ? `${ml.toFixed(2)}%` : "—"}
+            </span>
           </div>
+          {ml != null && ml < 125 && (
+            <p className={`mt-1 text-[10px] ${ml < 100 ? "text-down" : "text-brand"}`}>
+              {ml < 100 ? "Margin call territory — reduce exposure or deposit funds." : "Approaching margin thresholds — monitor open positions."}
+            </p>
+          )}
         </div>
       </div>
 
       {/* Wallets */}
       <div className="bg-canvas border border-border rounded-lg p-5">
-        <h3 className="text-xs font-medium text-text-muted uppercase mb-4">Wallets</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-medium text-text-muted uppercase">Wallets</h3>
+          <span className="text-xs tnum font-semibold">{money(walletTotal)}</span>
+        </div>
+        {walletLocked > 0 && (
+          <p className="text-[10px] text-text-faint">{money(walletLocked)} locked in pending operations</p>
+        )}
         <div className="space-y-2">
           {wallets.map((w) => (
             <div key={w.asset} className="flex items-center justify-between py-2 border-b border-border-soft last:border-0">
@@ -87,31 +128,26 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
                 <InstrumentIcon symbol={w.asset} size={18} />
                 <div>
                   <div className="text-sm font-medium">{w.asset}</div>
-                  <div className="text-[11px] text-text-faint">Locked: {w.locked.toFixed(2)}</div>
+                  {w.locked > 0 && <div className="text-[11px] text-text-muted">{w.locked.toFixed(2)} locked</div>}
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-sm tnum">{w.free.toFixed(2)}</div>
+                <div className="text-[10px] text-text-faint">available</div>
               </div>
             </div>
           ))}
           {wallets.length === 0 && <div className="text-xs text-text-faint py-4 text-center">No wallets.</div>}
         </div>
         <div className={`grid gap-2 mt-4 ${depositUiEnabled ? "grid-cols-2" : "grid-cols-1"}`}>
-          {depositUiEnabled ? (
-            <button
-              onClick={() => { setWalletMode("deposit"); setWalletOpen(true); }}
-              className="h-9 rounded bg-up text-white text-xs font-semibold hover:brightness-110"
-            >
+          {depositUiEnabled && (
+            <Button type="button" size="sm" variant="buy" onClick={() => { setWalletMode("deposit"); setWalletOpen(true); }}>
               Deposit
-            </button>
-          ) : null}
-          <button
-            onClick={() => { setWalletMode("withdraw"); setWalletOpen(true); }}
-            className="h-9 rounded bg-panel-2 border border-border text-text-muted text-xs font-medium hover:text-text hover:bg-panel-3"
-          >
+            </Button>
+          )}
+          <Button type="button" size="sm" onClick={() => { setWalletMode("withdraw"); setWalletOpen(true); }}>
             Withdraw
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -120,6 +156,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
         mode={walletMode}
         depositEnabled={depositUiEnabled}
         disabledMethods={disabledPaymentMethods as ("CARD" | "BANK_TRANSFER" | "CRYPTO")[]}
+        walletAddresses={walletAddresses}
         onClose={() => setWalletOpen(false)}
         onDone={() => router.refresh()}
       />
@@ -135,23 +172,12 @@ function Row({ label, value, valueClass = "" }: { label: string; value: string; 
     </div>
   );
 }
-function StatBig({ label, value, valueClass = "" }: { label: string; value: string; valueClass?: string }) {
+
+function StatSmall({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="flex items-baseline justify-between">
-      <span className="text-xs text-text-muted">{label}</span>
-      <span className={`text-lg font-semibold tnum ${valueClass}`}>{value}</span>
-    </div>
-  );
-}
-function StatSmall({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-[11px] text-text-faint">{label}</div>
+    <div title={hint}>
+      <div className="text-[11px] text-text-faint">{label}{hint && <span aria-hidden className="ml-1 cursor-help">ⓘ</span>}</div>
       <div className="text-sm tnum">{value}</div>
     </div>
   );
-}
-
-function usd(v: number): string {
-  return v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " USD";
 }

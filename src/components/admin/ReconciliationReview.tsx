@@ -56,7 +56,8 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [actionDialog, setActionDialog] = useState<{ kind: "resolve" | "release"; id: string } | null>(null);
+  const [bulkSummary, setBulkSummary] = useState("");
+  const [actionDialog, setActionDialog] = useState<{ kind: "resolve" | "release" | "bulk"; id?: string } | null>(null);
   const [actionNote, setActionNote] = useState("");
   const [blockPage, setBlockPage] = useState(1);
   const [casePage, setCasePage] = useState(1);
@@ -150,6 +151,28 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
     }
   }
 
+  async function bulkResolve(note: string) {
+    const normalizedNote = note.trim();
+    if (normalizedNote.length < 3) return;
+    setBusy("bulk");
+    setError("");
+    try {
+      const result = await jsonRequest<{ releasedBlocks: number; resolvedCases: number }>("/api/admin/reconciliation/bulk-resolve", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ note: normalizedNote }),
+      });
+      setActionDialog(null);
+      setActionNote("");
+      await refresh();
+      setBulkSummary(`Released ${result.releasedBlocks} block(s) and resolved ${result.resolvedCases} case(s).`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to bulk-resolve reconciliation items.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-5" role="status" aria-label="Loading reconciliation">
@@ -176,10 +199,22 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
           {canManage && <button type="button" disabled={busy !== null} onClick={() => void runNow()} className="px-3 py-2 rounded bg-brand text-white text-xs disabled:opacity-50">
             {busy === "run" ? "Running…" : "Run now"}
           </button>}
+          {canManage && (blocks.length > 0 || cases.length > 0) && (
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => { setActionNote(""); setBulkSummary(""); setActionDialog({ kind: "bulk" }); }}
+              className="px-3 py-2 rounded border border-down/50 text-down text-xs hover:bg-down/10 disabled:opacity-50"
+              title="Releases every active block and resolves every unresolved case across all users — not just this page."
+            >
+              {busy === "bulk" ? "Resolving all…" : "Release all & resolve all"}
+            </button>
+          )}
         </div>
       </div>
 
       {error && <div role="alert" className="rounded border border-down/40 bg-down/10 px-3 py-2 text-sm text-down">{error}</div>}
+      {bulkSummary && !error && <div role="status" className="rounded border border-up/40 bg-up/10 px-3 py-2 text-sm text-up">{bulkSummary}</div>}
 
       <section>
         <h3 className="text-sm font-semibold mb-2">Active blocks [{blocks.length}]</h3>
@@ -248,10 +283,12 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
       <Dialog
         open={actionDialog !== null}
         onClose={() => { if (!busy) { setActionDialog(null); setActionNote(""); } }}
-        title={actionDialog?.kind === "release" ? "Release account block" : "Resolve reconciliation case"}
+        title={actionDialog?.kind === "release" ? "Release account block" : actionDialog?.kind === "bulk" ? "Release all & resolve all" : "Resolve reconciliation case"}
         description={actionDialog?.kind === "release"
           ? "Release only after the underlying discrepancy has been independently verified as resolved."
-          : "The case can be resolved only after all linked active blocks have been released."}
+          : actionDialog?.kind === "bulk"
+            ? "Releases every active reconciliation block and resolves every unresolved case for all users — including items beyond this page. This cannot be undone per-item; the reason is recorded in the audit trail."
+            : "The case can be resolved only after all linked active blocks have been released."}
         className="max-w-lg"
       >
         <form
@@ -259,8 +296,9 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
           onSubmit={(event) => {
             event.preventDefault();
             if (!actionDialog) return;
-            if (actionDialog.kind === "release") void release(actionDialog.id, actionNote);
-            else void commandCase(actionDialog.id, "RESOLVE", actionNote);
+            if (actionDialog.kind === "release") void release(actionDialog.id!, actionNote);
+            else if (actionDialog.kind === "bulk") void bulkResolve(actionNote);
+            else void commandCase(actionDialog.id!, "RESOLVE", actionNote);
           }}
         >
           <div>
@@ -278,8 +316,8 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" disabled={busy !== null} onClick={() => { setActionDialog(null); setActionNote(""); }} className="px-3 py-2 rounded border border-border text-xs disabled:opacity-50">Cancel</button>
-            <button type="submit" disabled={busy !== null || actionNote.trim().length < 3} className="px-3 py-2 rounded bg-brand text-white text-xs disabled:opacity-50">
-              {busy ? "Saving…" : actionDialog?.kind === "release" ? "Release block" : "Resolve case"}
+            <button type="submit" disabled={busy !== null || actionNote.trim().length < 3} className={`px-3 py-2 rounded text-white text-xs disabled:opacity-50 ${actionDialog?.kind === "bulk" ? "bg-down" : "bg-brand"}`}>
+              {busy ? "Saving…" : actionDialog?.kind === "release" ? "Release block" : actionDialog?.kind === "bulk" ? "Release all & resolve all" : "Resolve case"}
             </button>
           </div>
         </form>

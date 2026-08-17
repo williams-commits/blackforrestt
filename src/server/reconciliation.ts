@@ -801,3 +801,45 @@ export async function resolveCase(input: {
     return true;
   });
 }
+
+/** Bulk cleanup: release every active block and resolve every unresolved case
+ *  in one audited transaction. For clearing large backlogs (the per-item
+ *  release/resolve flow is impractical at scale) after the discrepancies have
+ *  been reviewed or the scheduler disabled. Blocks are released before cases
+ *  resolve, preserving the single-item invariant by construction. */
+export async function bulkResolveAll(input: {
+  actorId: string;
+  note: string;
+}): Promise<{ releasedBlocks: number; resolvedCases: number }> {
+  const note = input.note.trim();
+  if (note.length < 3) throw new Error("A resolution reason of at least 3 characters is required.");
+  const now = new Date();
+
+  return withSerializableRetry(async (tx) => {
+    const releasedBlocks = await tx.reconciliationBlock.updateMany({
+      where: { releasedAt: null },
+      data: { releasedAt: now, releasedBy: input.actorId, releaseNote: note.slice(0, 500) },
+    });
+    const resolvedCases = await tx.reconciliationCase.updateMany({
+      where: { status: { in: ["OPEN", "ACKNOWLEDGED"] } },
+      data: {
+        status: "RESOLVED",
+        resolutionNote: note.slice(0, 1_000),
+        resolvedAt: now,
+        acknowledgedAt: now,
+      },
+    });
+    await appendAuditEvent(tx, {
+      actorId: input.actorId,
+      action: "RECONCILIATION_BULK_RESOLVED",
+      entityType: "Reconciliation",
+      entityId: "bulk",
+      metadata: {
+        releasedBlocks: releasedBlocks.count,
+        resolvedCases: resolvedCases.count,
+        note: note.slice(0, 240),
+      },
+    });
+    return { releasedBlocks: releasedBlocks.count, resolvedCases: resolvedCases.count };
+  });
+}

@@ -6,13 +6,15 @@ import { useState } from "react";
  *  addresses, transaction hashes) render in monospace with a copy button so
  *  finance reviewers can inspect and reuse the complete strings. */
 export function MethodDetailsGrid({ details }: { details: Record<string, string> }) {
-  const [copied, setCopied] = useState<string | null>(null);
+  // Keyed by field label (unique per grid) — keying by value would light up
+  // every button sharing the same string (e.g. repeated addresses).
+  const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
 
-  async function copy(value: string) {
+  async function copy(label: string, value: string) {
     try {
       await navigator.clipboard.writeText(value);
-      setCopied(value);
-      setTimeout(() => setCopied((current) => (current === value ? null : current)), 1_500);
+      setCopiedLabel(label);
+      setTimeout(() => setCopiedLabel((current) => (current === label ? null : current)), 1_500);
     } catch {
       // Clipboard unavailable (permissions/embedded contexts) — value stays selectable.
     }
@@ -30,10 +32,10 @@ export function MethodDetailsGrid({ details }: { details: Record<string, string>
               {long && (
                 <button
                   type="button"
-                  onClick={() => void copy(value)}
+                  onClick={() => void copy(label, value)}
                   className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-text-faint hover:bg-panel-3 hover:text-brand"
                 >
-                  {copied === value ? "✓ Copied" : "Copy"}
+                  {copiedLabel === label ? "✓ Copied" : "Copy"}
                 </button>
               )}
             </dd>

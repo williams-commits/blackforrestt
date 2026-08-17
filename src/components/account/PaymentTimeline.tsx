@@ -6,7 +6,11 @@ import { Pagination } from "@/components/ui/Pagination";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FilterChip } from "@/components/ui/DataTable";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { MethodDetailsGrid } from "@/components/payments/MethodDetailsGrid";
 import { fmtDateTime } from "@/lib/dates";
+import { PAYMENT_PROOF_MAX_BYTES } from "@/lib/paymentProofs";
+import type { ServerMessage } from "@/lib/ws/client";
 
 interface PaymentProofView {
   id: string;
@@ -27,6 +31,7 @@ interface PaymentView {
   method: string;
   methodLabel: string;
   methodDetailsSummary: string | null;
+  methodDetails: Record<string, string> | null;
   beneficiarySummary: string | null;
   riskHoldUntil: string | null;
   reconciliationStatus: "PENDING" | "MATCHED" | "MISMATCHED";
@@ -67,6 +72,7 @@ export function PaymentTimeline() {
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState<"ALL" | "DEPOSIT" | "WITHDRAWAL">("ALL");
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const keys = useRef(new Map<string, string>());
 
   const refresh = useCallback(async () => {
@@ -90,6 +96,23 @@ export function PaymentTimeline() {
     return () => window.clearInterval(timer);
   }, [refresh]);
 
+  // Fund approvals/rejections/reversals arrive as ledger pushes — refresh
+  // immediately instead of waiting for the 30s poll.
+  useEffect(() => {
+    let pending: ReturnType<typeof setTimeout> | null = null;
+    const handleRealtime = (event: Event) => {
+      const message = (event as CustomEvent<ServerMessage>).detail;
+      if (message?.type !== "account" || message.reason !== "ledger") return;
+      if (pending) clearTimeout(pending);
+      pending = setTimeout(() => void refresh().catch(() => undefined), 250);
+    };
+    window.addEventListener("blckforest:realtime", handleRealtime);
+    return () => {
+      window.removeEventListener("blckforest:realtime", handleRealtime);
+      if (pending) clearTimeout(pending);
+    };
+  }, [refresh]);
+
   const filtered = useMemo(
     () => requests.filter((r) => typeFilter === "ALL" || r.type === typeFilter),
     [requests, typeFilter],
@@ -105,6 +128,10 @@ export function PaymentTimeline() {
   useEffect(() => { setPage(1); }, [typeFilter]);
 
   async function upload(requestId: string, file: File) {
+    if (file.size > PAYMENT_PROOF_MAX_BYTES) {
+      setError("The supporting document must be 1 MB or smaller.");
+      return;
+    }
     setBusy(requestId);
     setError(null);
     try {
@@ -201,10 +228,21 @@ export function PaymentTimeline() {
                     <div>
                       <p className="text-sm font-medium">{request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} · {request.asset} {request.amount}</p>
                       <p className="mt-1 text-xs text-text-muted">{request.methodLabel} · {fmtDateTime(request.createdAt)}</p>
-                      {request.methodDetailsSummary && <p className="mt-1 text-xs text-text-faint">Details: {request.methodDetailsSummary}</p>}
-                      {request.riskHoldUntil && new Date(request.riskHoldUntil) > new Date() && <p className="mt-1 text-xs text-brand">Beneficiary cooling-off until {fmtDateTime(request.riskHoldUntil)}.</p>}
-                      {request.reviewerNote && <p className="mt-1 text-xs text-text-muted">Finance note: {request.reviewerNote}</p>}
-                    </div>
+                    {request.methodDetailsSummary && <p className="mt-1 text-xs text-text-faint">Details: {request.methodDetailsSummary}</p>}
+                    {request.riskHoldUntil && new Date(request.riskHoldUntil) > new Date() && <p className="mt-1 text-xs text-brand">Beneficiary cooling-off until {fmtDateTime(request.riskHoldUntil)}.</p>}
+                    {request.reviewerNote && <p className="mt-1 text-xs text-text-muted">Finance note: {request.reviewerNote}</p>}
+                    {request.methodDetails && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(expandedId === request.id ? null : request.id)}
+                        aria-expanded={expandedId === request.id}
+                        className="mt-1.5 inline-flex items-center gap-1 text-xs text-brand hover:underline"
+                      >
+                        {expandedId === request.id ? "Hide full details" : "Show full details"}
+                        <span aria-hidden className="text-[9px]">{expandedId === request.id ? "▲" : "▼"}</span>
+                      </button>
+                    )}
+                  </div>
                     <span className={`rounded px-2 py-1 text-[10px] font-medium ${STATUS_STYLES[request.status]}`}>
                       {request.status.replaceAll("_", " ")}
                     </span>
@@ -221,9 +259,11 @@ export function PaymentTimeline() {
                       </label>
                     )}
                     {request.proofs.map((proof) => (
-                      <span key={proof.id} className={`rounded px-1.5 py-0.5 text-[10px] ${PROOF_STYLES[proof.status]}`} title={`${proof.declaredMime} · ${formatBytes(proof.sizeBytes)} · ${fmtDateTime(proof.uploadedAt)}`}>
-                        Proof · {proof.status.replaceAll("_", " ").toLowerCase()} · {formatBytes(proof.sizeBytes)}
-                      </span>
+                      <Tooltip key={proof.id} text={`${proof.declaredMime} · ${formatBytes(proof.sizeBytes)} · ${fmtDateTime(proof.uploadedAt)}`}>
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] ${PROOF_STYLES[proof.status]}`}>
+                          Proof · {proof.status.replaceAll("_", " ").toLowerCase()} · {formatBytes(proof.sizeBytes)}
+                        </span>
+                      </Tooltip>
                     ))}
                     {canCancel && (
                       <Button type="button" size="sm" variant="ghost" loading={busy === request.id} onClick={() => setConfirmCancelId(request.id)}>
@@ -232,6 +272,11 @@ export function PaymentTimeline() {
                     )}
                     {request.reconciliationStatus === "MISMATCHED" && <span className="text-xs text-down">Settlement reconciliation needs review.</span>}
                   </div>
+                  {expandedId === request.id && request.methodDetails && (
+                    <div className="mt-3 border-t border-border-soft pt-3">
+                      <MethodDetailsGrid details={request.methodDetails} />
+                    </div>
+                  )}
                 </li>
               );
             })}

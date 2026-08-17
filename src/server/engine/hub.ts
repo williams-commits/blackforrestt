@@ -109,7 +109,7 @@ export type HubEmission =
   | { kind: "quote"; quote: Quote }
   | { kind: "candle"; symbol: string; interval: CandleInterval; candle: Candle }
   | { kind: "position"; userId: string; position: PositionView }
-  | { kind: "account"; userId: string; account: AccountMetricsView }
+  | { kind: "account"; userId: string; account: AccountMetricsView; reason?: "ledger" }
   | { kind: "instruments"; instruments: InstrumentView[] };
 
 interface CloseRequest {
@@ -1242,10 +1242,13 @@ class Hub {
     return this.calculateMetrics(userId);
   }
 
-  /** Publish the latest committed account projection to authenticated clients. */
+  /** Publish the latest committed account projection to authenticated clients.
+   *  Tagged reason:"ledger" — sent when funds move outside the trading engine
+   *  (payment approval/rejection/reversal, admin adjustments) so UIs can refresh
+   *  server-rendered data, unlike the high-frequency tick-loop pushes. */
   async publishAccountMetrics(userId: string): Promise<AccountMetricsView> {
     const metrics = await this.calculateMetrics(userId);
-    this.broadcast({ kind: "account", userId, account: metrics });
+    this.broadcast({ kind: "account", userId, account: metrics, reason: "ledger" });
     return metrics;
   }
 

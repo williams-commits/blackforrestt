@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForexStore } from "@/lib/store";
 import { closePosition } from "@/hooks/useOpenPosition";
 import { fmtPrice, fmtNum } from "@/lib/format";
-import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
+import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";
 import type { InstrumentView, PositionView } from "@/lib/types";
 
 interface Props {
@@ -91,6 +92,7 @@ function OpenPositionsTable({
   busy: string | null;
   setBusy: (v: string | null) => void;
 }) {
+  const router = useRouter();
   if (positions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-text-faint gap-2 py-6">
@@ -128,7 +130,11 @@ function OpenPositionsTable({
           const digits = digitsFor(p.symbol);
           const up = p.netProfit >= 0;
           return (
-            <tr key={p.id} className={`border-t border-border-soft hover:bg-panel-2/50 transition-colors ${idx % 2 === 1 ? "bg-panel/30" : ""}`}>
+            <tr
+              key={p.id}
+              onClick={rowNavigate(router, p.symbol)}
+              className={`cursor-pointer border-t border-border-soft hover:bg-panel-2/50 transition-colors ${idx % 2 === 1 ? "bg-panel/30" : ""}`}
+            >
               <Td className="text-text-muted tnum hidden sm:table-cell">{fmtTime(p.openedAt)}</Td>
               <Td>
                 <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${
@@ -137,7 +143,7 @@ function OpenPositionsTable({
                   {p.side === "BUY" ? "▲" : "▼"} {p.type === "STRIKE" ? "STRIKE" : "CFD"} {p.side}
                 </span>
               </Td>
-              <Td className="font-semibold"><span className="flex items-center gap-1.5"><InstrumentIcon symbol={p.symbol} size={14} />{p.symbol}</span></Td>
+              <Td className="font-semibold"><SymbolLink symbol={p.symbol} /></Td>
               <Td className="text-right tnum">{fmtNum(p.volume, 2)}</Td>
               <Td className="text-right tnum">{fmtPrice(p.openRate, digits)}</Td>
               <Td className="text-right tnum text-text-muted hidden md:table-cell">{p.stopLoss != null ? fmtPrice(p.stopLoss, digits) : "—"}</Td>
@@ -178,6 +184,7 @@ function OpenPositionsTable({
 
 /** Trade history tab — fetches closed positions from the API. */
 function HistoryTable({ digitsFor }: { digitsFor: (s: string) => number }) {
+  const router = useRouter();
   const [history, setHistory] = useState<PositionView[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -259,10 +266,14 @@ function HistoryTable({ digitsFor }: { digitsFor: (s: string) => number }) {
             const digits = digitsFor(p.symbol);
             const up = p.netProfit >= 0;
             return (
-              <tr key={p.id} className={`border-t border-border-soft ${idx % 2 === 1 ? "bg-panel/30" : ""}`}>
+              <tr
+                key={p.id}
+                onClick={rowNavigate(router, p.symbol)}
+                className={`cursor-pointer border-t border-border-soft hover:bg-panel-2/50 transition-colors ${idx % 2 === 1 ? "bg-panel/30" : ""}`}
+              >
                 <Td className="text-text-muted tnum">{fmtTime(p.closedAt ?? p.openedAt)}</Td>
                 <Td><span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${p.side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>{p.side === "BUY" ? "▲" : "▼"} {p.side}</span></Td>
-                <Td className="font-semibold"><span className="flex items-center gap-1.5"><InstrumentIcon symbol={p.symbol} size={14} />{p.symbol}</span></Td>
+                <Td className="font-semibold"><SymbolLink symbol={p.symbol} /></Td>
                 <Td className="text-right tnum">{fmtNum(p.volume, 2)}</Td>
                 <Td className="text-right tnum">{fmtPrice(p.openRate, digits)}</Td>
                 <Td className="text-right tnum">{fmtPrice(p.currentRate, digits)}</Td>

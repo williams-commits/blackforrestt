@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { AdminError, requireAdmin } from "@/server/admin";
 import { prisma } from "@/server/db";
+import { hub } from "@/server/engine/hub";
 import { PaymentAmountSchema } from "@/server/moneyValidation";
 import {
   approvePayment,
@@ -79,20 +80,29 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     }
     if (!result) return NextResponse.json({ error: "Unsupported payment command." }, { status: 400 });
 
-    // If this was an APPROVE action, check for a pending referral reward.
-    if (parsed.data.action === "APPROVE" && result.status === "APPROVED" && !result.replayed) {
-      try {
-        const payment = await prisma.paymentRequest.findUnique({
-          where: { id },
-          select: { userId: true, type: true },
+    // APPROVE/REJECT/REVERSE move or release funds: broadcast a fresh account
+    // snapshot so the customer's open sessions update live (instead of waiting
+    // for their 30s fallback poll). First-time approvals also settle any
+    // pending referral reward for deposits.
+    if ((parsed.data.action === "APPROVE" || parsed.data.action === "REJECT" || parsed.data.action === "REVERSE") && !result.replayed) {
+      const payment = await prisma.paymentRequest.findUnique({
+        where: { id },
+        select: { userId: true, type: true },
+      });
+      if (payment) {
+        await hub.publishAccountMetrics(payment.userId).catch((error) => {
+          console.error("Unable to broadcast payment account update", error);
+          // Non-fatal — the payment command itself already committed.
         });
-        if (payment?.type === "DEPOSIT") {
-          const { processReferralReward } = await import("@/server/referrals");
-          await processReferralReward(payment.userId, actorId);
+        if (parsed.data.action === "APPROVE" && result.status === "APPROVED" && payment.type === "DEPOSIT") {
+          try {
+            const { processReferralReward } = await import("@/server/referrals");
+            await processReferralReward(payment.userId, actorId);
+          } catch (error) {
+            console.error("Referral reward processing failed", error);
+            // Non-fatal — payment is already approved.
+          }
         }
-      } catch (error) {
-        console.error("Referral reward processing failed", error);
-        // Non-fatal — payment is already approved.
       }
     }
 

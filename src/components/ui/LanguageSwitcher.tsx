@@ -73,7 +73,7 @@ export function LanguageSwitcher({ className = "" }: { className?: string }) {
         <div
           role="listbox"
           aria-label={t("label")}
-          className="absolute right-0 bottom-full mb-1 min-w-44 rounded-lg border border-border bg-canvas py-1 shadow-card z-50"
+          className="absolute right-0 top-full mt-1 min-w-44 rounded-lg border border-border bg-canvas py-1 shadow-card z-50"
         >
           {locales.map((loc) => {
             const info = LOCALE_DISPLAY[loc];

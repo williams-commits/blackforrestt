@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { WalletModal } from "./WalletModal";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { Button } from "@/components/ui/Button";
+import { InfoHint } from "@/components/ui/InfoHint";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { fmtDate } from "@/lib/dates";
 import type { WalletAddressEntry } from "@/server/userSettings";
 
@@ -92,14 +94,14 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
         <p className="mt-1 text-[10px] text-text-faint">Equity = balance + floating P/L on open positions.</p>
 
         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border-soft pt-3">
-          <StatSmall label="Balance" value={money(metrics.balance)} />
-          <StatSmall label="Credit" value={money(metrics.credit)} />
+          <StatSmall label="Balance" value={money(metrics.balance)} hint="Settled funds: approved deposits/withdrawals and closed-trade P/L. Excludes floating P/L." />
+          <StatSmall label="Credit" value={money(metrics.credit)} hint="Bonus or administrative credit granted to the account." />
           <StatSmall label="Margin" value={money(metrics.margin)} hint="Collateral currently held against open positions." />
           <StatSmall label="Free Margin" value={money(metrics.free)} hint="Margin available to open new positions." />
         </div>
         <div className="mt-3 border-t border-border-soft pt-3">
-          <div className="flex items-baseline justify-between" title="Margin level = equity ÷ margin. Below 125% is a warning; below 100% risks a margin call.">
-            <span className="text-[11px] text-text-faint">Margin Level</span>
+          <div className="flex items-center justify-between">
+            <span className="flex items-center text-[11px] text-text-faint">Margin Level<InfoHint text="Margin level = equity ÷ margin. Below 125% is a warning; below 100% risks a margin call." /></span>
             <span className={`text-sm font-semibold tnum ${mlTone}`}>
               {ml != null ? `${ml.toFixed(2)}%` : "—"}
             </span>
@@ -128,12 +130,18 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
                 <InstrumentIcon symbol={w.asset} size={18} />
                 <div>
                   <div className="text-sm font-medium">{w.asset}</div>
-                  {w.locked > 0 && <div className="text-[11px] text-text-muted">{w.locked.toFixed(2)} locked</div>}
+                  {w.locked > 0 && (
+                    <div className="text-[11px] text-text-muted">
+                      <Tooltip text="Reserved for pending withdrawals and open positions.">{w.locked.toFixed(2)} locked</Tooltip>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-sm tnum">{w.free.toFixed(2)}</div>
-                <div className="text-[10px] text-text-faint">available</div>
+                <div className="text-[10px] text-text-faint">
+                  <Tooltip text="Free funds available to withdraw or trade.">available</Tooltip>
+                </div>
               </div>
             </div>
           ))}
@@ -175,8 +183,8 @@ function Row({ label, value, valueClass = "" }: { label: string; value: string; 
 
 function StatSmall({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div title={hint}>
-      <div className="text-[11px] text-text-faint">{label}{hint && <span aria-hidden className="ml-1 cursor-help">ⓘ</span>}</div>
+    <div>
+      <div className="flex items-center text-[11px] text-text-faint">{label}{hint && <InfoHint text={hint} />}</div>
       <div className="text-sm tnum">{value}</div>
     </div>
   );

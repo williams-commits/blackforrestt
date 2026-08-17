@@ -15,6 +15,13 @@ export async function POST(_request: Request, context: { params: Promise<{ proof
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof PaymentError) return NextResponse.json({ error: error.message }, { status: error.status });
-    throw error;
+    // Storage/scanner outages must not surface as an opaque 500 — the client
+    // shows this message and the proof stays PENDING_SCAN so a retry is safe.
+    console.error("Payment proof finalization failed", error);
+    return NextResponse.json({
+      error: process.env.NODE_ENV === "production"
+        ? "Payment proof verification is temporarily unavailable. Please try again shortly."
+        : "Payment proof verification is unavailable. Check MinIO and KYC_SCANNER, then retry.",
+    }, { status: 503 });
   }
 }

@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { InstrumentView } from "@/lib/types";
 import { Pagination } from "@/components/ui/Pagination";
-import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { TableShell, Th, Td, EmptyRow, TotalsRow, FilterChip, type SortDirection } from "@/components/ui/DataTable";
 import { CsvExportButton } from "@/components/ui/CsvExport";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";
 import { fmtDateTime } from "@/lib/dates";
 
 type PositionRow = {
@@ -37,6 +39,7 @@ type SortKey = "openedAt" | "symbol" | "volume" | "netProfit";
 
 /** Sortable, filterable position history with totals and CSV export. */
 export function PositionHistory({ open, closed, instruments, fetchCap }: Props) {
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<"ALL" | "OPEN" | "CLOSED">("ALL");
   const [symbolFilter, setSymbolFilter] = useState<string>("ALL");
@@ -118,7 +121,11 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
           </select>
           <span className="ml-auto text-[10px] text-text-faint tnum">
             {rows.length} shown · Net P/L {allFilteredProfit >= 0 ? "+" : ""}{allFilteredProfit.toFixed(2)}
-            {capped && <span className="ml-1.5 text-brand" title="The server loads the most recent positions first.">· showing latest {fetchCap}</span>}
+            {capped && (
+              <Tooltip text="The server loads the most recent positions first.">
+                <span className="ml-1.5 text-brand">· showing latest {fetchCap}</span>
+              </Tooltip>
+            )}
           </span>
           <CsvExportButton filename="positions" columns={["Symbol", "Type", "Side", "Volume", "Open Rate", "Current/Close", "Net Profit", "Status", "Opened", "Closed"]} rows={csvRows} disabled={rows.length === 0} />
         </>
@@ -139,8 +146,12 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
         {visibleRows.map((position) => {
           const profitable = position.netProfit >= 0;
           return (
-            <tr key={position.id} className="border-b border-border-soft last:border-b-0 hover:bg-panel-2">
-              <Td className="font-medium"><span className="flex items-center gap-1.5"><InstrumentIcon symbol={position.symbol} size={14} />{position.symbol}</span></Td>
+            <tr
+              key={position.id}
+              onClick={rowNavigate(router, position.symbol)}
+              className="cursor-pointer border-b border-border-soft last:border-b-0 hover:bg-panel-2"
+            >
+              <Td className="font-medium"><SymbolLink symbol={position.symbol} /></Td>
               <Td className="text-text-muted">{position.type}</Td>
               <Td><span className={position.side === "BUY" ? "text-up" : "text-down"}>{position.side}</span></Td>
               <Td align="right">{position.volume.toFixed(2)}</Td>

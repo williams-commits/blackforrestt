@@ -22,6 +22,7 @@ import {
   verifyUserAccountingProjection,
 } from "../src/server/ledger.js";
 import { closeStorage, deleteObject } from "../src/server/storage.js";
+import { PAYMENT_PROOF_MAX_BYTES } from "../src/lib/paymentProofs.js";
 
 const prisma = new PrismaClient();
 const PDF_FIXTURE = Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(96, 0x41)]);
@@ -255,6 +256,16 @@ test("finance can reject a prepared withdrawal and release its reserved funds", 
   const invariant = await verifyUserAccountingProjection(customer.id);
   assert.equal(invariant.valid, true, invariant.violations.join(", "));
   assert.equal(invariant.balances.available.toFixed(8), "100.00000000");
+});
+
+test("payment proofs above the configured size cap are rejected before storage", async () => {
+  const customer = await createUser("payment-oversize-customer");
+  const request = await createDepositRequest(customer.id);
+  const oversized = Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(PAYMENT_PROOF_MAX_BYTES, 0x41)]);
+  await assert.rejects(
+    receivePaymentProof({ userId: customer.id, paymentRequestId: request.id, declaredMime: "application/pdf", bytes: oversized }),
+    /size must be between/,
+  );
 });
 
 test.after(async () => {

@@ -88,6 +88,35 @@ services:
     restart: "no"
     networks: [backend]
 
+  # ClamAV daemon consumed by the scanner gateway below. Needs ~1 GB RAM and
+  # downloads signature updates on first boot (start_period covers this).
+  # Official images are amd64-only; add `platform: linux/amd64` on ARM hosts.
+  clamav:
+    image: clamav/clamav:1.4
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 10m
+    networks: [backend]
+
+  # HTTP adapter implementing the MALWARE_SCANNER_URL contract the app expects.
+  malware-scanner:
+    image: ${SCANNER_IMAGE:-blckforest-scanner:latest}
+    build:
+      context: ./scanner
+    restart: unless-stopped
+    environment:
+      CLAMD_HOST: clamav
+      CLAMD_PORT: "3310"
+      SCANNER_TOKEN: ${MALWARE_SCANNER_TOKEN:-}
+    depends_on:
+      clamav:
+        condition: service_healthy
+    networks: [backend]
+
   app:
     image: ${APP_IMAGE:-blckforest-app:latest}
     build:
@@ -106,6 +135,10 @@ services:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
+      # Points at the in-stack scanner gateway; override only to use an
+      # external scanning service. KYC_SCANNER=http comes from .env.production.
+      MALWARE_SCANNER_URL: ${MALWARE_SCANNER_URL:-http://malware-scanner:8080/scan}
+      MALWARE_SCANNER_TOKEN: ${MALWARE_SCANNER_TOKEN:-}
       AUTH_TRUST_HOST: "true"
       DEV_EMAIL_PREVIEW: "false"
       ALLOW_LOCAL_STUB_SCANNER: "false"

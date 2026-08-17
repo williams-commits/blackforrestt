@@ -8,6 +8,7 @@ import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { toast } from "@/lib/toast";
 import type { WalletAddressEntry } from "@/server/userSettings";
 import { WITHDRAWAL_CRYPTO_NETWORKS } from "@/lib/paymentNetworks";
+import { PAYMENT_PROOF_MAX_BYTES } from "@/lib/paymentProofs";
 
 /** Widened view of the server-enforced presets for string-indexed lookups. */
 const WITHDRAWAL_NETWORKS: Record<string, readonly string[]> = WITHDRAWAL_CRYPTO_NETWORKS;
@@ -201,7 +202,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
       if (mode === "withdraw" && cryptoDetails.walletAddress.trim().length < 8) return "Enter the destination wallet address.";
     }
     if (mode === "deposit" && !proofFile) return "Upload the payment receipt or transaction proof before submitting a deposit.";
-    if (proofFile && proofFile.size > 10_485_760) return "The supporting document must be 10 MB or smaller.";
+    if (proofFile && proofFile.size > PAYMENT_PROOF_MAX_BYTES) return "The supporting document must be 1 MB or smaller.";
     return null;
   }
 
@@ -486,7 +487,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
 
           {!isDeposit && needsStepUp && <div className="space-y-3 rounded border border-brand/30 bg-brand-soft p-3"><p className="text-xs text-text-muted">Confirm this withdrawal with your password and authenticator or recovery code.</p><input type="password" required maxLength={128} value={currentPassword} onChange={(e)=>setCurrentPassword(e.target.value)} autoComplete="current-password" placeholder="Current password" aria-label="Current password" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /><input type="text" required maxLength={64} value={mfaCode} onChange={(e)=>setMfaCode(e.target.value)} autoComplete="one-time-code" placeholder="Authenticator or recovery code" aria-label="Authenticator or recovery code" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /></div>}
 
-          <div><label htmlFor={proofId} className="mb-1 block text-[11px] text-text-muted">{isDeposit ? "Payment proof (required)" : "Supporting document (optional)"}</label><input id={proofId} type="file" accept="image/jpeg,image/png,application/pdf" required={isDeposit} onChange={(event)=>{setProofFile(event.currentTarget.files?.[0] ?? null); invalidateRequestKey();}} className="block w-full rounded border border-border bg-canvas p-2 text-xs file:mr-3 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-2 file:text-xs" /><p className="mt-1 text-[11px] text-text-faint">JPEG, PNG, or PDF, maximum 10 MB. Files are quarantined, scanned, and stored privately.</p></div>
+          <div><label htmlFor={proofId} className="mb-1 block text-[11px] text-text-muted">{isDeposit ? "Payment proof (required)" : "Supporting document (optional)"}</label><input id={proofId} type="file" accept="image/jpeg,image/png,application/pdf" required={isDeposit} onChange={(event)=>{setProofFile(event.currentTarget.files?.[0] ?? null); invalidateRequestKey();}} className="block w-full rounded border border-border bg-canvas p-2 text-xs file:mr-3 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-2 file:text-xs" /><p className="mt-1 text-[11px] text-text-faint">JPEG, PNG, or PDF, maximum 1 MB. Files are quarantined, scanned, and stored privately.</p></div>
 
           {progress && <p role="status" className="rounded border border-brand/20 bg-brand-soft px-3 py-2 text-xs text-text-muted">{progress}</p>}
           {error && <div role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error}</div>}

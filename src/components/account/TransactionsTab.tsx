@@ -6,6 +6,7 @@ import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { TableShell, Th, Td, EmptyRow, FilterChip, TableSearch, type SortDirection } from "@/components/ui/DataTable";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { StatCard } from "@/components/ui/StatCard";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { fmtDateTime } from "@/lib/dates";
 
 interface Txn {
@@ -167,21 +168,26 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
                 <Td className="max-w-64">
                   <span className="flex items-center gap-1.5">
                     {sym ? <InstrumentIcon symbol={sym} size={14} /> : null}
-                    <span className="truncate text-text-muted" title={transaction.description ?? undefined}>
-                      {transaction.description ?? "—"}
-                    </span>
+                    {transaction.description ? (
+                      <Tooltip text={transaction.description}>
+                        <span className="truncate text-text-muted">{transaction.description}</span>
+                      </Tooltip>
+                    ) : (
+                      <span className="text-text-muted">—</span>
+                    )}
                   </span>
                 </Td>
                 <Td>
                   {transaction.reference ? (
-                    <button
-                      type="button"
-                      onClick={() => void copyReference(transaction.reference!)}
-                      title="Copy reference"
-                      className="tnum text-text-faint transition hover:text-brand"
-                    >
-                      {copiedRef === transaction.reference ? "✓ Copied" : transaction.reference}
-                    </button>
+                    <Tooltip text="Copy reference">
+                      <button
+                        type="button"
+                        onClick={() => void copyReference(transaction.reference!)}
+                        className="tnum text-text-faint transition hover:text-brand"
+                      >
+                        {copiedRef === transaction.reference ? "✓ Copied" : transaction.reference}
+                      </button>
+                    </Tooltip>
                   ) : (
                     <span className="text-text-faint">—</span>
                   )}

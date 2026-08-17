@@ -265,7 +265,7 @@ function deliver(client: ClientState, emission: HubEmission): void {
       break;
     case "account":
       if (client.userId === emission.userId && (client.accountSubscribed || client.subs.size > 0)) {
-        send(client.ws, { type: "account", account: emission.account });
+        send(client.ws, { type: "account", account: emission.account, reason: emission.reason });
       }
       break;
     case "instruments":

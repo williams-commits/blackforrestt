@@ -4,6 +4,7 @@ import { prisma, resolveUserId } from "@/server/db";
 import { auth } from "@/auth";
 import { Logo } from "@/components/trade/Logo";
 import { AccountUserMenu } from "@/components/account/AccountUserMenu";
+import { RealtimeRefresh } from "@/components/account/RealtimeRefresh";
 import {
   ReportsView,
   type ReportRow,
@@ -29,6 +30,8 @@ type ReportsPageProps = {
     page?: string | string[];
     symbol?: string | string[];
     side?: string | string[];
+    from?: string | string[];
+    to?: string | string[];
   }>;
 };
 
@@ -49,6 +52,13 @@ function parseSymbol(value: string | undefined): string {
 function parseSide(value: string | undefined): "ALL" | "BUY" | "SELL" {
   const normalized = value?.trim().toUpperCase();
   return normalized === "BUY" || normalized === "SELL" ? normalized : "ALL";
+}
+
+/** Strict YYYY-MM-DD date filter, interpreted as UTC day boundaries. */
+function parseDateParam(value: string | undefined): string | null {
+  const normalized = value?.trim() ?? "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return null;
+  return Number.isNaN(new Date(`${normalized}T00:00:00.000Z`).getTime()) ? null : normalized;
 }
 
 function toReportRow(position: {
@@ -85,12 +95,24 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const requestedPage = parsePage(firstParam(params.page));
   const symbol = parseSymbol(firstParam(params.symbol));
   const side = parseSide(firstParam(params.side));
+  const from = parseDateParam(firstParam(params.from));
+  const to = parseDateParam(firstParam(params.to));
 
+  // One shared predicate keeps the table, pagination, aggregates, and the
+  // best/worst cards consistent for every filter — including the date range.
   const where: Prisma.PositionWhereInput = {
     userId,
     status: "CLOSED",
     ...(symbol !== "ALL" ? { symbol } : {}),
     ...(side !== "ALL" ? { side } : {}),
+    ...(from || to
+      ? {
+          closedAt: {
+            ...(from ? { gte: new Date(`${from}T00:00:00.000Z`) } : {}),
+            ...(to ? { lte: new Date(`${to}T23:59:59.999Z`) } : {}),
+          },
+        }
+      : {}),
   };
 
   const [user, total, symbolRows] = await Promise.all([
@@ -137,6 +159,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
   const grossWin = Number(winningTotals._sum.netProfit ?? 0);
   const grossLoss = Math.abs(Number(losingTotals._sum.netProfit ?? 0));
+  // "Best Trade" features a winning trade and "Worst Trade" a losing one.
+  // When every trade is a winner (or every trade loses), the extreme is the
+  // same sign as its opposite card — showing a profitable trade as the red
+  // "Worst Trade" reads wrong, so the card renders its empty state instead.
   const summary: ReportSummary = {
     net: Number(totals._sum.netProfit ?? 0),
     winRate: total > 0 ? (winningCount / total) * 100 : 0,
@@ -146,8 +172,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       Number(totals._sum.commission ?? 0) +
       Number(totals._sum.tradingCommission ?? 0),
     trades: total,
-    best: bestPosition ? toReportRow(bestPosition) : null,
-    worst: worstPosition ? toReportRow(worstPosition) : null,
+    best: bestPosition && Number(bestPosition.netProfit) > 0 ? toReportRow(bestPosition) : null,
+    worst: worstPosition && Number(worstPosition.netProfit) < 0 ? toReportRow(worstPosition) : null,
   };
 
   return (
@@ -169,12 +195,14 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-6">
         <h1 className="mb-4 text-lg font-semibold">Trade Reports</h1>
+        {/* Server-rendered stats: re-fetch when funds move or positions close. */}
+        <RealtimeRefresh />
         <ReportsView
           rows={positions.map(toReportRow)}
           server={{
             summary,
             symbols: symbolRows.map((row) => row.symbol),
-            filters: { symbol, side },
+            filters: { symbol, side, from, to },
             pagination: { page, pageCount, total, pageSize: PAGE_SIZE },
           }}
         />

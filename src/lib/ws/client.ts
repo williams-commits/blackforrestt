@@ -16,7 +16,7 @@ export type ServerMessage =
   | { type: "quote"; quote: Quote }
   | { type: "candle"; symbol: string; interval: CandleInterval; candle: Candle }
   | { type: "position"; position: PositionView }
-  | { type: "account"; account: AccountMetricsView }
+  | { type: "account"; account: AccountMetricsView; reason?: "ledger" }
   | { type: "instruments"; instruments: InstrumentView[] }
   | { type: "pong" };
 

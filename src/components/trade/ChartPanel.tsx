@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import {
   createChart,
+  createTextWatermark,
   ColorType,
   CrosshairMode,
   LineStyle,
@@ -14,7 +15,9 @@ import {
   LineSeries,
   type IChartApi,
   type ISeriesApi,
+  type ITextWatermarkPluginApi,
   type MouseEventParams,
+  type Time,
   type UTCTimestamp,
   type LogicalRange,
 } from "lightweight-charts";
@@ -28,6 +31,9 @@ import {
   computeBollinger,
   computeRSISeries,
   computeMACD,
+  ema,
+  rsi,
+  sma,
 } from "@/lib/indicators";
 
 interface Props {
@@ -72,6 +78,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
   const macdLineRef = useRef<ISeriesApi<"Line"> | null>(null);
   const macdSignalRef = useRef<ISeriesApi<"Line"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const watermarkRef = useRef<ITextWatermarkPluginApi<Time> | null>(null);
   const prevCandleCount = useRef(0);
   const candlesRef = useRef<Candle[]>([]);
   const barSpacingRef = useRef(8);
@@ -128,11 +135,17 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
 
     const storedType = window.localStorage.getItem(CHART_TYPE_STORAGE_KEY);
     if (storedType === "candles" || storedType === "line") setChartType(storedType);
-    setShowMA(window.localStorage.getItem(MA_STORAGE_KEY) === "true");
-    setShowEMA(window.localStorage.getItem(EMA_STORAGE_KEY) === "true");
-    setShowBollinger(window.localStorage.getItem(BB_STORAGE_KEY) === "true");
-    setShowRSI(window.localStorage.getItem(RSI_STORAGE_KEY) === "true");
-    setShowMACD(window.localStorage.getItem(MACD_STORAGE_KEY) === "true");
+    // First visit defaults: EMA 20 + RSI on (TradingView-style starting view).
+    // An explicitly stored choice — including "false" — always wins.
+    const storedFlag = (key: string, fallback: boolean) => {
+      const stored = window.localStorage.getItem(key);
+      return stored === null ? fallback : stored === "true";
+    };
+    setShowMA(storedFlag(MA_STORAGE_KEY, false));
+    setShowEMA(storedFlag(EMA_STORAGE_KEY, true));
+    setShowBollinger(storedFlag(BB_STORAGE_KEY, false));
+    setShowRSI(storedFlag(RSI_STORAGE_KEY, true));
+    setShowMACD(storedFlag(MACD_STORAGE_KEY, false));
   }, [searchParams, setInterval]);
 
   useEffect(() => {
@@ -249,6 +262,34 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
       volumeSeriesRef.current = null;
     };
   }, [chartType, isDim]);
+
+  // ── TradingView-style watermark: faded symbol behind the price action ────
+  useEffect(() => {
+    const pane = chartRef.current?.panes()[0];
+    if (!pane) return;
+    watermarkRef.current?.detach();
+    watermarkRef.current = createTextWatermark(pane, {
+      horzAlign: "center",
+      vertAlign: "center",
+      lines: [
+        {
+          text: instrument.symbol,
+          color: isDim ? "rgba(154,167,180,0.09)" : "rgba(107,114,128,0.10)",
+          fontSize: 44,
+          fontStyle: "700",
+        },
+        {
+          text: `${instrument.name} · ${interval}`,
+          color: isDim ? "rgba(154,167,180,0.07)" : "rgba(107,114,128,0.08)",
+          fontSize: 15,
+        },
+      ],
+    });
+    return () => {
+      watermarkRef.current?.detach();
+      watermarkRef.current = null;
+    };
+  }, [instrument.symbol, instrument.name, interval, isDim, chartType]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -552,6 +593,31 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
     else await panel.requestFullscreen();
   };
 
+  // Active-indicator legend (TradingView-style): live value + remove handle.
+  const legendChips: Array<{ color: string; label: string; value: string | null; onRemove: () => void }> = [];
+  if (showMA) {
+    const value = sma(candles, maPeriod);
+    legendChips.push({ color: "#2563eb", label: `SMA ${maPeriod}`, value: value != null ? fmtPrice(value, instrument.digits) : null, onRemove: toggleMA });
+  }
+  if (showEMA) {
+    const value = ema(candles, emaPeriod);
+    legendChips.push({ color: "#f97316", label: `EMA ${emaPeriod}`, value: value != null ? fmtPrice(value, instrument.digits) : null, onRemove: toggleEMA });
+  }
+  if (showBollinger) {
+    const bands = computeBollinger(candles, bollingerPeriod, bollingerStdDev);
+    const last = bands[bands.length - 1];
+    legendChips.push({ color: "#6366f1", label: `BB (${bollingerPeriod}, ${bollingerStdDev}σ)`, value: last ? fmtPrice(last.middle, instrument.digits) : null, onRemove: toggleBollinger });
+  }
+  if (showRSI) {
+    const value = rsi(candles, rsiPeriod);
+    legendChips.push({ color: "#7c3aed", label: `RSI ${rsiPeriod}`, value: value != null ? value.toFixed(1) : null, onRemove: toggleRSI });
+  }
+  if (showMACD) {
+    const macd = computeMACD(candles);
+    const last = macd[macd.length - 1];
+    legendChips.push({ color: "#2563eb", label: "MACD (12, 26, 9)", value: last ? last.macd.toFixed(instrument.digits) : null, onRemove: toggleMACD });
+  }
+
   return (
     <div
       ref={panelRef}
@@ -690,7 +756,16 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
         </div>
       ) : null}
 
-      <div ref={containerRef} data-testid="professional-chart-canvas" className="min-h-112 flex-1 touch-none lg:min-h-0" />
+      <div className="relative min-h-112 flex-1 lg:min-h-0">
+        <div ref={containerRef} data-testid="professional-chart-canvas" className="h-full w-full touch-none" />
+        {legendChips.length > 0 && (
+          <div className="pointer-events-none absolute left-2 top-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
+            {legendChips.map((chip) => (
+              <LegendChip key={chip.label} color={chip.color} label={chip.label} value={chip.value} onRemove={chip.onRemove} />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Indicators portal — standalone (not nested in either control strip).
           Position is set by toggleIndicators() from whichever button was clicked. */}
@@ -753,6 +828,26 @@ function ChartButton({
     >
       {children}
     </button>
+  );
+}
+
+/** TradingView-style active-indicator chip: series color dot, live value,
+ *  and a remove (✕) handle that detaches the indicator from the chart. */
+function LegendChip({ color, label, value, onRemove }: { color: string; label: string; value: string | null; onRemove: () => void }) {
+  return (
+    <span className="pointer-events-auto flex items-center gap-1.5 rounded border border-border-soft bg-canvas/85 px-1.5 py-0.5 text-[10px] tnum shadow-sm backdrop-blur-sm">
+      <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+      <span className="font-medium text-text-muted">{label}</span>
+      {value != null && <span className="text-text">{value}</span>}
+      <button
+        type="button"
+        aria-label={`Remove ${label} indicator`}
+        onClick={onRemove}
+        className="rounded px-1 text-[9px] leading-none text-text-faint transition-colors hover:bg-down/10 hover:text-down"
+      >
+        ✕
+      </button>
+    </span>
   );
 }
 

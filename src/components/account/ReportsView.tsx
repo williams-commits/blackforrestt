@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { CsvExportButton } from "@/components/ui/CsvExport";
+import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";
 import { fmtDateTime } from "@/lib/dates";
 
 export interface ReportRow {
@@ -33,16 +35,17 @@ export interface ReportSummary {
 export interface ReportServerState {
   summary: ReportSummary;
   symbols: string[];
-  filters: { symbol: string; side: string };
+  filters: { symbol: string; side: string; from?: string | null; to?: string | null };
   pagination: { page: number; pageCount: number; total: number; pageSize: number };
 }
 
 /** Trade reports: performance summary + filterable closed-trades table. */
 export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: ReportServerState }) {
+  const router = useRouter();
   const [localSymbol, setLocalSymbol] = useState<string>("ALL");
   const [localSide, setLocalSide] = useState<string>("ALL");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [fromDate, setFromDate] = useState(server?.filters.from ?? "");
+  const [toDate, setToDate] = useState(server?.filters.to ?? "");
 
   const localSymbols = useMemo(() => Array.from(new Set(rows.map((r) => r.symbol))).sort(), [rows]);
   const symbol = server?.filters.symbol ?? localSymbol;
@@ -50,13 +53,14 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
   const symbols = server?.symbols ?? localSymbols;
 
   const filtered = useMemo(() => {
+    // Server mode: symbol/side/date filters were already applied server-side
+    // (same predicate drives the summary and pagination) — no re-filtering.
+    if (server) return rows;
     const from = fromDate ? new Date(fromDate).getTime() : null;
     const to = toDate ? new Date(toDate).getTime() + 86_399_999 : null;
     return rows.filter((r) => {
-      if (!server) {
-        if (symbol !== "ALL" && r.symbol !== symbol) return false;
-        if (side !== "ALL" && r.side !== side) return false;
-      }
+      if (symbol !== "ALL" && r.symbol !== symbol) return false;
+      if (side !== "ALL" && r.side !== side) return false;
       const closed = new Date(r.closedAt).getTime();
       if (from != null && closed < from) return false;
       if (to != null && closed > to) return false;
@@ -81,11 +85,12 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <ExtremCard title="Best Trade" row={stats.best} positive />
-        <ExtremCard title="Worst Trade" row={stats.worst} positive={false} />
+        <ExtremCard title="Best Trade" row={stats.best} positive emptyLabel="No winning trades" />
+        <ExtremCard title="Worst Trade" row={stats.worst} positive={false} emptyLabel="No losing trades" />
       </div>
 
-      {/* Date-range applies to both modes (client-side over the fetched page). */}
+      {/* Server mode: dates are submitted with the filter form and applied to
+          the table, pagination, and summary alike. Local mode: live filtering. */}
       <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-muted">
         <label className="flex items-center gap-1">
           From
@@ -106,6 +111,8 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
 
       {server ? (
         <form action="/reports" method="get" className="flex flex-wrap items-end gap-3">
+          {fromDate && <input type="hidden" name="from" value={fromDate} />}
+          {toDate && <input type="hidden" name="to" value={toDate} />}
           <label className="grid gap-1 text-[11px] text-text-muted">
             Symbol
             <select name="symbol" defaultValue={symbol} className="h-9 rounded border border-border bg-canvas px-2 text-sm outline-none focus:border-brand">
@@ -163,8 +170,12 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
             {filtered.map((row) => {
               const up = row.netProfit >= 0;
               return (
-                <tr key={row.id} className="border-b border-border-soft last:border-b-0 hover:bg-panel-2">
-                  <Td className="font-medium"><span className="flex items-center gap-1.5"><InstrumentIcon symbol={row.symbol} size={14} />{row.symbol}</span></Td>
+                <tr
+                  key={row.id}
+                  onClick={rowNavigate(router, row.symbol)}
+                  className="cursor-pointer border-b border-border-soft last:border-b-0 hover:bg-panel-2"
+                >
+                  <Td className="font-medium"><SymbolLink symbol={row.symbol} /></Td>
                   <Td className="text-text-muted">{row.type}</Td>
                   <Td><span className={row.side === "BUY" ? "text-up" : "text-down"}>{row.side}</span></Td>
                   <Td className="text-right tnum">{row.volume.toFixed(2)}</Td>
@@ -198,6 +209,10 @@ function calculateStats(rows: ReportRow[]): ReportSummary {
   const losses = rows.filter((row) => row.netProfit < 0);
   const grossWin = wins.reduce((sum, row) => sum + row.netProfit, 0);
   const grossLoss = Math.abs(losses.reduce((sum, row) => sum + row.netProfit, 0));
+  // Best features a winning trade, worst a losing one — when no such trade
+  // exists the card shows its empty state instead of a misleading extreme.
+  const bestRow = rows.reduce((best, row) => row.netProfit > (best?.netProfit ?? -Infinity) ? row : best, null as ReportRow | null);
+  const worstRow = rows.reduce((worst, row) => row.netProfit < (worst?.netProfit ?? Infinity) ? row : worst, null as ReportRow | null);
   return {
     net: rows.reduce((sum, row) => sum + row.netProfit, 0),
     winRate: rows.length ? (wins.length / rows.length) * 100 : 0,
@@ -205,8 +220,8 @@ function calculateStats(rows: ReportRow[]): ReportSummary {
     totalSwap: rows.reduce((sum, row) => sum + row.swap, 0),
     totalComm: rows.reduce((sum, row) => sum + row.commission, 0),
     trades: rows.length,
-    best: rows.reduce((best, row) => row.netProfit > (best?.netProfit ?? -Infinity) ? row : best, null as ReportRow | null),
-    worst: rows.reduce((worst, row) => row.netProfit < (worst?.netProfit ?? Infinity) ? row : worst, null as ReportRow | null),
+    best: bestRow && bestRow.netProfit > 0 ? bestRow : null,
+    worst: worstRow && worstRow.netProfit < 0 ? worstRow : null,
   };
 }
 
@@ -215,6 +230,8 @@ function ReportPageLink({ server, page, disabled, children }: { server: ReportSe
   const params = new URLSearchParams();
   if (server.filters.symbol !== "ALL") params.set("symbol", server.filters.symbol);
   if (server.filters.side !== "ALL") params.set("side", server.filters.side);
+  if (server.filters.from) params.set("from", server.filters.from);
+  if (server.filters.to) params.set("to", server.filters.to);
   params.set("page", String(page));
   return <Link href={`/reports?${params.toString()}`} className="rounded border border-border px-3 py-2 text-text hover:border-brand">{children}</Link>;
 }
@@ -222,8 +239,8 @@ function ReportPageLink({ server, page, disabled, children }: { server: ReportSe
 function Card({ label, value, valueClass = "", sub }: { label: string; value: string; valueClass?: string; sub?: string }) {
   return <div className="rounded-lg border border-border bg-canvas p-4"><div className="text-[11px] uppercase text-text-faint">{label}</div><div className={`mt-1 text-xl font-semibold tnum ${valueClass}`}>{value}</div>{sub && <div className="mt-0.5 text-[11px] text-text-faint">{sub}</div>}</div>;
 }
-function ExtremCard({ title, row, positive }: { title: string; row: ReportRow | null; positive: boolean }) {
-  return <div className="rounded-lg border border-border bg-canvas p-4"><div className="mb-2 text-[11px] uppercase text-text-faint">{title}</div>{row ? <div className="flex items-center justify-between"><div className="flex items-center gap-2"><InstrumentIcon symbol={row.symbol} size={18} /><div><div className="text-sm font-medium">{row.symbol}</div><div className="text-[11px] text-text-muted">{row.side} · {row.volume.toFixed(2)} lots</div></div></div><div className={`text-lg font-semibold tnum ${positive ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</div></div> : <div className="text-xs text-text-faint">—</div>}</div>;
+function ExtremCard({ title, row, positive, emptyLabel = "—" }: { title: string; row: ReportRow | null; positive: boolean; emptyLabel?: string }) {
+  return <div className="rounded-lg border border-border bg-canvas p-4"><div className="mb-2 text-[11px] uppercase text-text-faint">{title}</div>{row ? <div className="flex items-center justify-between"><div className="flex items-center gap-2"><InstrumentIcon symbol={row.symbol} size={18} /><div><div className="text-sm font-medium">{row.symbol}</div><div className="text-[11px] text-text-muted">{row.side} · {row.volume.toFixed(2)} lots</div></div></div><div className={`text-lg font-semibold tnum ${positive ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</div></div> : <div className="text-xs text-text-faint">{emptyLabel}</div>}</div>;
 }
 function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <th className={`whitespace-nowrap px-3 py-2 text-left text-[10px] font-medium uppercase text-text-faint ${className}`}>{children}</th>; }
 function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <td className={`whitespace-nowrap px-3 py-2 text-xs ${className}`}>{children}</td>; }

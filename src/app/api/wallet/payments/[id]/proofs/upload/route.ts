@@ -25,6 +25,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     if (error instanceof PaymentError) return NextResponse.json({ error: error.message }, { status: error.status });
-    throw error;
+    console.error("Payment proof upload failed", error);
+    return NextResponse.json({
+      error: process.env.NODE_ENV === "production"
+        ? "Payment proof upload is temporarily unavailable. Please try again shortly."
+        : "Payment proof upload is unavailable. Check MinIO, then retry.",
+    }, { status: 503 });
   }
 }

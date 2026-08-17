@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useToastStore, type Toast } from "@/lib/toast";
+import type { ServerMessage } from "@/lib/ws/client";
 
 interface NotificationToast {
   id: string;
@@ -46,9 +47,17 @@ export function ToastNotifications() {
 
     void load();
     const timer = window.setInterval(() => void load(), 12_000);
+    // Payment approvals (and other fund movements) create DB notifications —
+    // show them immediately instead of waiting for the 12s poll.
+    const handleRealtime = (event: Event) => {
+      const message = (event as CustomEvent<ServerMessage>).detail;
+      if (message?.type === "account" && message.reason === "ledger") void load();
+    };
+    window.addEventListener("blckforest:realtime", handleRealtime);
     return () => {
       active = false;
       window.clearInterval(timer);
+      window.removeEventListener("blckforest:realtime", handleRealtime);
     };
   }, [status]);
 

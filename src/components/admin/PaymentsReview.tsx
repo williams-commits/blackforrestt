@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
 import { useCommandDialog } from "@/components/ui/useCommandDialog";
 import { FilterChip } from "@/components/ui/DataTable";
 import { CsvExportButton } from "@/components/ui/CsvExport";
+import { MethodDetailsGrid } from "@/components/payments/MethodDetailsGrid";
 import { fmtDateTime } from "@/lib/dates";
 import { createDeviceId } from "@/lib/device";
 
@@ -18,6 +19,7 @@ export interface PaymentRequestRow {
   method: string;
   methodLabel: string;
   methodDetailsSummary: string | null;
+  methodDetails: Record<string, string> | null;
   userReference: string | null;
   externalReference: string | null;
   reviewerNote: string | null;
@@ -50,8 +52,18 @@ export function PaymentsReview({
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState<"ALL" | "DEPOSIT" | "WITHDRAWAL">("ALL");
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const commandKeys = useRef(new Map<string, string>());
   const { openCommand, commandDialog } = useCommandDialog();
+
+  function toggleExpanded(id: string) {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   const filtered = useMemo(
     () => requests.filter((r) => typeFilter === "ALL" || r.type === typeFilter),
@@ -144,6 +156,7 @@ export function PaymentsReview({
         <table className="w-full min-w-225 text-left text-xs">
           <thead className="bg-panel-2 text-text-muted">
             <tr>
+              <th className="w-8 px-2 py-2 font-medium" aria-label="Expand details" />
               <th className="px-3 py-2 font-medium">Created</th><th className="px-3 py-2 font-medium">Client</th>
               <th className="px-3 py-2 font-medium">Type</th><th className="px-3 py-2 font-medium">Method</th>
               <th className="px-3 py-2 font-medium text-right">Amount</th><th className="px-3 py-2 font-medium">Reference</th>
@@ -152,29 +165,52 @@ export function PaymentsReview({
           </thead>
           <tbody className="divide-y divide-border">
             {visibleRequests.map((item) => (
-              <tr key={item.id}>
-                <td className="px-3 py-3 text-text-muted">{new Date(item.createdAt).toLocaleString()}</td>
-                <td className="px-3 py-3"><div className="font-medium">{item.user.name ?? item.user.email ?? "Unknown"}</div><div className="text-text-faint">#{item.user.accountNo ?? "—"} · {item.user.verified ? "Verified" : "Unverified"}</div></td>
-                <td className="px-3 py-3"><span className={`rounded px-1.5 py-0.5 ${item.type === "DEPOSIT" ? "bg-up/10 text-up" : "bg-brand-soft text-brand"}`}>{item.type}</span></td>
-                <td className="px-3 py-3"><div>{item.methodLabel}</div><div className="text-[10px] text-text-faint">{item.methodDetailsSummary ?? "Details unavailable"}</div></td>
-                <td className="px-3 py-3 text-right font-semibold tnum">{item.asset} {item.amount}</td>
-                <td className="px-3 py-3 text-text-muted">{item.userReference ?? "—"}</td>
-                <td className="px-3 py-3">
-                  <div className="flex justify-end gap-2">
-                    {item.status === "PENDING" && canPrepare && !simpleApproval && <Button size="sm" loading={busy === item.id} onClick={() => decide(item.id, "PREPARE")}>Prepare</Button>}
-                    {item.status === "PENDING" && simpleApproval && canApprove && <Button size="sm" loading={busy === item.id} onClick={() => decide(item.id, "APPROVE")}>Approve</Button>}
-                    {item.status === "AWAITING_APPROVAL" && canApprove && <Button size="sm" loading={busy === item.id} onClick={() => decide(item.id, "APPROVE")}>Approve</Button>}
-                    {canPrepare && <Button size="sm" variant="ghost" disabled={busy === item.id} onClick={() => decide(item.id, "REJECT")}>Reject</Button>}
-                    {!canPrepare && !canApprove && <span className="text-text-faint">Read only</span>}
-                  </div>
-                  <div className="mt-1 text-right text-[10px] text-text-faint">
-                    {item.type === "DEPOSIT" ? `Proof: ${item.proofs.some((proof) => proof.status === "CLEAN") ? "clean" : "missing"}` : item.methodDetailsSummary ?? item.beneficiarySummary ?? "Destination missing"}
-                    {item.riskHoldUntil && new Date(item.riskHoldUntil) > new Date() ? " · cooling-off" : ""}
-                  </div>
-                </td>
-              </tr>
+              <Fragment key={item.id}>
+                <tr className={expandedIds.has(item.id) ? "bg-panel-2/50" : undefined}>
+                  <td className="px-2 py-3">
+                    {item.methodDetails && (
+                      <button
+                        type="button"
+                        onClick={() => toggleExpanded(item.id)}
+                        aria-expanded={expandedIds.has(item.id)}
+                        aria-label={expandedIds.has(item.id) ? "Hide full payment details" : "Show full payment details"}
+                        className="rounded px-1.5 py-1 text-[10px] text-text-faint hover:bg-panel-3 hover:text-brand"
+                      >
+                        {expandedIds.has(item.id) ? "▲" : "▼"}
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-text-muted">{new Date(item.createdAt).toLocaleString()}</td>
+                  <td className="px-3 py-3"><div className="font-medium">{item.user.name ?? item.user.email ?? "Unknown"}</div><div className="text-text-faint">#{item.user.accountNo ?? "—"} · {item.user.verified ? "Verified" : "Unverified"}</div></td>
+                  <td className="px-3 py-3"><span className={`rounded px-1.5 py-0.5 ${item.type === "DEPOSIT" ? "bg-up/10 text-up" : "bg-brand-soft text-brand"}`}>{item.type}</span></td>
+                  <td className="px-3 py-3"><div>{item.methodLabel}</div><div className="text-[10px] text-text-faint">{item.methodDetailsSummary ?? "Details unavailable"}</div></td>
+                  <td className="px-3 py-3 text-right font-semibold tnum">{item.asset} {item.amount}</td>
+                  <td className="px-3 py-3 text-text-muted">{item.userReference ?? "—"}</td>
+                  <td className="px-3 py-3">
+                    <div className="flex justify-end gap-2">
+                      {item.status === "PENDING" && canPrepare && !simpleApproval && <Button size="sm" loading={busy === item.id} onClick={() => decide(item.id, "PREPARE")}>Prepare</Button>}
+                      {item.status === "PENDING" && simpleApproval && canApprove && <Button size="sm" loading={busy === item.id} onClick={() => decide(item.id, "APPROVE")}>Approve</Button>}
+                      {item.status === "AWAITING_APPROVAL" && canApprove && <Button size="sm" loading={busy === item.id} onClick={() => decide(item.id, "APPROVE")}>Approve</Button>}
+                      {canPrepare && <Button size="sm" variant="ghost" disabled={busy === item.id} onClick={() => decide(item.id, "REJECT")}>Reject</Button>}
+                      {!canPrepare && !canApprove && <span className="text-text-faint">Read only</span>}
+                    </div>
+                    <div className="mt-1 text-right text-[10px] text-text-faint">
+                      {item.type === "DEPOSIT" ? `Proof: ${item.proofs.some((proof) => proof.status === "CLEAN") ? "clean" : "missing"}` : item.methodDetailsSummary ?? item.beneficiarySummary ?? "Destination missing"}
+                      {item.riskHoldUntil && new Date(item.riskHoldUntil) > new Date() ? " · cooling-off" : ""}
+                    </div>
+                  </td>
+                </tr>
+                {expandedIds.has(item.id) && item.methodDetails && (
+                  <tr className="bg-panel-2/30">
+                    <td colSpan={8} className="px-4 py-3">
+                      <p className="mb-2 text-[10px] uppercase tracking-wide text-text-faint">Full payment details</p>
+                      <MethodDetailsGrid details={item.methodDetails} />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
-            {requests.length === 0 && <tr><td colSpan={7} className="px-3 py-10 text-center text-text-muted">No pending payment requests.</td></tr>}
+            {requests.length === 0 && <tr><td colSpan={8} className="px-3 py-10 text-center text-text-muted">No pending payment requests.</td></tr>}
           </tbody>
         </table>
         <Pagination page={safePage} pageSize={PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="payment requests" compact />

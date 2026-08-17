@@ -8,9 +8,10 @@ command -v docker >/dev/null || { echo "Docker is required." >&2; exit 1; }
 
 cd "$ROOT"
 "${COMPOSE[@]}" config --quiet
-"${COMPOSE[@]}" pull postgres redis minio minio-init caddy
-"${COMPOSE[@]}" build --pull app
-"${COMPOSE[@]}" up -d postgres redis minio minio-init
+"${COMPOSE[@]}" pull postgres redis minio minio-init caddy clamav
+"${COMPOSE[@]}" build --pull app malware-scanner
+# clamav starts early so signature downloads overlap with the migrate/seed steps.
+"${COMPOSE[@]}" up -d postgres redis minio minio-init clamav
 "${COMPOSE[@]}" run --rm app npx prisma migrate deploy
 # Seed tradeable instruments. Without this, hub.init() throws at boot
 # (src/server/engine/hub.ts: "No active instruments found"), the app never
@@ -18,7 +19,7 @@ cd "$ROOT"
 # starts, leaving ports 80/443 closed. The seed is idempotent (upsert by symbol).
 "${COMPOSE[@]}" run --rm app npm run db:seed
 "${COMPOSE[@]}" run --rm app npm run production:check
-"${COMPOSE[@]}" up -d app caddy
+"${COMPOSE[@]}" up -d malware-scanner app caddy
 "${COMPOSE[@]}" ps
 
 DOMAIN="$(grep -E '^DOMAIN=' .env.production | tail -1 | cut -d= -f2-)"
@@ -30,5 +31,5 @@ for attempt in {1..30}; do
   fi
   sleep 5
 done
-"${COMPOSE[@]}" logs --tail=200 app caddy
+"${COMPOSE[@]}" logs --tail=200 app caddy clamav malware-scanner
 exit 1

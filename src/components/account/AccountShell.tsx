@@ -140,7 +140,13 @@ export function AccountShell(props: Props) {
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
     const handleRealtime = (event: Event) => {
       const message = (event as CustomEvent<ServerMessage>).detail;
-      if (message?.type === "position" && message.position.status === "CLOSED") {
+      // Ledger pushes (payment approved/rejected/reversed/cancelled, admin
+      // adjustments) change server-rendered data — wallets, transactions,
+      // payment status — so re-fetch the page. Tick-loop account pushes only
+      // affect metrics, which the realtime store already renders.
+      const ledgerChanged = message?.type === "account" && message.reason === "ledger";
+      const positionClosed = message?.type === "position" && message.position.status === "CLOSED";
+      if (ledgerChanged || positionClosed) {
         if (refreshTimer) clearTimeout(refreshTimer);
         refreshTimer = setTimeout(() => router.refresh(), 250);
       }

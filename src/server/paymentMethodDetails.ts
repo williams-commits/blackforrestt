@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { encryptSensitiveString, hashBeneficiaryDetails } from "./security/crypto";
+import { decryptSensitiveString, encryptSensitiveString, hashBeneficiaryDetails } from "./security/crypto";
 
 export const PAYMENT_METHODS = ["CARD", "BANK_TRANSFER", "CRYPTO"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
@@ -149,4 +149,45 @@ export function paymentMethodLabel(method: PaymentMethod | string): string {
   if (normalized === "CRYPTO") return "Crypto";
   if (normalized === "CARD") return "Card";
   return String(method);
+}
+
+const DETAIL_LABELS: Record<string, string> = {
+  cardholderName: "Cardholder name",
+  cardBrand: "Card brand",
+  last4: "Card last four",
+  providerReference: "Provider reference",
+  accountName: "Account name",
+  accountNumber: "Account number / IBAN",
+  institution: "Institution",
+  country: "Country",
+  transferReference: "Transfer reference",
+  routingCode: "Routing code",
+  asset: "Asset",
+  network: "Network",
+  transactionHash: "Transaction hash",
+  senderAddress: "Sender address",
+  depositAddress: "Paid to deposit address",
+  depositWalletLabel: "Deposit wallet label",
+  walletAddress: "Destination wallet address",
+  destinationTag: "Destination tag",
+};
+
+/** Decrypt stored payment method details (or legacy beneficiary details) into
+ *  display-ready labeled pairs. Returns null when nothing is stored or the
+ *  payload cannot be decrypted. Callers are responsible for authorization:
+ *  only the owning customer or finance reviewers may receive the result. */
+export function revealMethodDetails(encrypted: string | null | undefined): Record<string, string> | null {
+  if (!encrypted) return null;
+  try {
+    const parsed = JSON.parse(decryptSensitiveString(encrypted)) as Record<string, unknown>;
+    const entries = Object.entries(parsed)
+      .filter(([key, value]) => key !== "flow" && key !== "method" && typeof value === "string" && value.length > 0)
+      .map(([key, value]) => [
+        DETAIL_LABELS[key] ?? key.replaceAll(/([A-Z])/g, " $1").replace(/^./, (character) => character.toUpperCase()),
+        String(value),
+      ] as [string, string]);
+    return entries.length > 0 ? Object.fromEntries(entries) : null;
+  } catch {
+    return null;
+  }
 }

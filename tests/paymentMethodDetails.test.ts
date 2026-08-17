@@ -46,10 +46,13 @@ test("withdrawal methods require their own destination contract", () => {
     institution: "Example Bank",
     country: "US",
   }));
+  // Card withdrawals identify the destination by the card's last four digits;
+  // unlike the original spec, no originalDepositReference is required (the
+  // withdrawal UI never collects one). The schema must still reject a card
+  // withdrawal with no card identifier at all.
   assert.throws(() => preparePaymentMethodDetails("WITHDRAWAL", "CARD", {
     cardholderName: "Taylor Client",
     cardBrand: "VISA",
-    last4: "4242",
   }));
   assert.throws(() => preparePaymentMethodDetails("WITHDRAWAL", "CRYPTO", {
     asset: "USDT",

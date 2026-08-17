@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { resolveUserId } from "@/server/db";
+import { hub } from "@/server/engine/hub";
 import { cancelPayment, PaymentError } from "@/server/payments";
 
 export const runtime = "nodejs";
@@ -13,6 +14,13 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   const commandKey = request.headers.get("idempotency-key")?.trim() ?? "";
   try {
     const result = await cancelPayment({ paymentRequestId: id, userId, commandKey });
+    if (!result.replayed) {
+      // Cancelling a withdrawal releases reserved funds — push the fresh
+      // account snapshot so open tabs update live.
+      await hub.publishAccountMetrics(userId).catch((error) => {
+        console.error("Unable to broadcast payment cancellation account update", error);
+      });
+    }
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     if (error instanceof PaymentError) {

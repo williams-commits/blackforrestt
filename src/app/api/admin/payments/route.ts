@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/server/db";
 import { AdminError, requireAdmin } from "@/server/admin";
-import { paymentMethodLabel } from "@/server/paymentMethodDetails";
+import { paymentMethodLabel, revealMethodDetails } from "@/server/paymentMethodDetails";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,6 +43,9 @@ export async function GET(req: Request) {
         method: item.method,
         methodLabel: paymentMethodLabel(item.method),
         methodDetailsSummary: item.methodDetailsSummary ?? item.beneficiarySummary,
+        // Full decrypted details (e.g. the complete sending wallet address)
+        // for the expandable finance-review view.
+        methodDetails: revealMethodDetails(item.methodDetailsEncrypted ?? item.beneficiaryEncrypted),
         userReference: item.userReference,
         externalReference: item.externalReference,
         reviewerNote: item.reviewerNote,

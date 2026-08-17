@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "@/components/ThemeProvider";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 /**
  * Light / dim theme toggle. Compact icon button that matches the navbar and
@@ -11,15 +12,16 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
   const isDim = theme === "dim";
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={isDim ? "Switch to light mode" : "Switch to dim mode"}
-      title={isDim ? "Light mode" : "Dim mode"}
-      className={`inline-flex items-center justify-center h-9 w-9 rounded-md border border-border bg-canvas text-text-muted hover:text-text hover:bg-panel transition ${className}`}
-    >
-      {isDim ? <SunIcon /> : <MoonIcon />}
-    </button>
+    <Tooltip text={isDim ? "Light mode" : "Dim mode"} placement="bottom">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={isDim ? "Switch to light mode" : "Switch to dim mode"}
+        className={`inline-flex items-center justify-center h-9 w-9 rounded-md border border-border bg-canvas text-text-muted hover:text-text hover:bg-panel transition ${className}`}
+      >
+        {isDim ? <SunIcon /> : <MoonIcon />}
+      </button>
+    </Tooltip>
   );
 }
 

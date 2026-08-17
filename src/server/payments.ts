@@ -28,6 +28,7 @@ import {
 } from "./security/crypto";
 import { getScanner, type ScanStatus } from "./security/scanner";
 import { queueUserEmail } from "./email/service";
+import { PAYMENT_PROOF_MAX_BYTES } from "@/lib/paymentProofs";
 
 type Tx = Prisma.TransactionClient;
 
@@ -49,8 +50,8 @@ export class PaymentError extends Error {
 }
 
 function paymentProofMaxBytes(): number {
-  const value = Number(process.env.PAYMENT_PROOF_MAX_BYTES ?? 10_485_760);
-  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 10_485_760;
+  const value = Number(process.env.PAYMENT_PROOF_MAX_BYTES ?? PAYMENT_PROOF_MAX_BYTES);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : PAYMENT_PROOF_MAX_BYTES;
 }
 
 function beneficiaryCoolingOffHours(): number {

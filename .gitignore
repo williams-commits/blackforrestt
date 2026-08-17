@@ -20,4 +20,4 @@ e2e/playwright-report/
 e2e/test-results/
 .next/
 node_modules/
-audit-2026-08-08T17-44-14.889Z.csv
+bugs.md

@@ -49,7 +49,7 @@ interface ForexState {
 
 export const useForexStore = create<ForexState>((set) => ({
   symbol: null,
-  interval: "1m",
+  interval: "5m",
   quote: null,
   candles: [],
   instruments: [],

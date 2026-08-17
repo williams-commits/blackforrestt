@@ -126,7 +126,7 @@ export function Dialog({
             type="button"
             onClick={onClose}
             aria-label={closeLabel}
-            className="rounded p-1 text-xl leading-none text-text-faint hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
+            className="rounded-lg py-1 px-2 flex items-center text-2xl leading-none text-text-faint hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
           >
             <span aria-hidden="true">×</span>
           </button>

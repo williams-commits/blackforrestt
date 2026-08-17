@@ -16,6 +16,7 @@
 
 import { prisma } from "./db";
 import { PAYMENT_METHODS, disabledPaymentMethods } from "./paymentMethodDetails";
+import { validateDepositAddress } from "@/lib/paymentNetworks";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -60,7 +61,10 @@ export function parseEnvWalletAddresses(raw = process.env.DEPOSIT_WALLET_ADDRESS
       const parts = entry.split(":").map((p) => p.trim());
       if (parts.length !== 3) return null;
       const [asset, network, address] = parts;
-      if (!asset || !network || address.length < 8) return null;
+      if (!asset || !network) return null;
+      // Structurally invalid addresses (placeholders, typos) must never be
+      // shown to users as payable — reject them at parse time.
+      if (validateDepositAddress(asset.toUpperCase(), network, address) !== null) return null;
       return { asset: asset.toUpperCase(), network, address } satisfies WalletAddressEntry;
     })
     .filter((entry): entry is WalletAddressEntry => entry !== null);

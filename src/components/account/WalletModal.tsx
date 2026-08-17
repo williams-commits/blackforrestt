@@ -3,6 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { QrCode } from "@/components/ui/QrCode";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { toast } from "@/lib/toast";
 import type { WalletAddressEntry } from "@/server/userSettings";
 import { WITHDRAWAL_CRYPTO_NETWORKS } from "@/lib/paymentNetworks";
@@ -66,6 +68,19 @@ function isDepositWalletContext(
 ): WalletAddressEntry | null {
   if (mode !== "deposit" || method !== "CRYPTO" || walletIndex === null) return null;
   return wallets[walletIndex] ?? null;
+}
+
+/**
+ * Wallet apps parse standard payment URIs best (they open a pre-filled send
+ * screen). BIP-21 "bitcoin:" for BTC, "tron:" for TRON; EVM chains have no
+ * universally-supported URI, so BEP20/ERC20 use the bare address.
+ * The copy button always copies the bare address.
+ */
+function depositQrPayload(wallet: WalletAddressEntry): string {
+  const key = `${wallet.asset} ${wallet.network}`.toUpperCase();
+  if (wallet.asset === "BTC" || key.includes("BITCOIN")) return `bitcoin:${wallet.address}`;
+  if (key.includes("TRC20") || key.includes("TRON")) return `tron:${wallet.address}`;
+  return wallet.address;
 }
 
 export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposit", depositEnabled = true, disabledMethods = [], walletAddresses = [] }: Props) {
@@ -373,12 +388,15 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                             : "border-border bg-canvas hover:border-brand/30"
                         }`}
                       >
-                        <span className="min-w-0">
-                          <span className="block text-xs font-medium text-text">
-                            {wallet.asset} · {wallet.network}
-                            {wallet.label ? <span className="text-text-faint"> · {wallet.label}</span> : null}
+                        <span className="flex min-w-0 items-center gap-2.5">
+                          <InstrumentIcon symbol={wallet.asset} size={26} />
+                          <span className="min-w-0">
+                            <span className="block text-xs font-medium text-text">
+                              {wallet.asset} · {wallet.network}
+                              {wallet.label ? <span className="text-text-faint"> · {wallet.label}</span> : null}
+                            </span>
+                            <span className="block truncate font-mono text-[11px] text-text-faint">{wallet.address}</span>
                           </span>
-                          <span className="block truncate font-mono text-[11px] text-text-faint">{wallet.address}</span>
                         </span>
                         <span className={`h-3.5 w-3.5 shrink-0 rounded-full border-2 transition ${
                           walletIndex === index ? "border-brand bg-brand" : "border-border"
@@ -387,21 +405,31 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                     ))}
                   </div>
                   {selectedWallet && (
-                    <div className="flex items-center gap-2 rounded-lg border border-border bg-panel p-2">
-                      <input
-                        readOnly
-                        value={selectedWallet.address}
-                        aria-label="Selected deposit address"
-                        onFocus={(e) => e.currentTarget.select()}
-                        className="h-8 min-w-0 flex-1 bg-transparent font-mono text-xs text-text outline-none"
+                    <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-panel p-3 sm:flex-row">
+                      <QrCode
+                        value={depositQrPayload(selectedWallet)}
+                        label={`Deposit address for ${selectedWallet.asset} on ${selectedWallet.network}`}
                       />
-                      <button
-                        type="button"
-                        onClick={() => void copyDepositAddress()}
-                        className="h-8 shrink-0 rounded-md bg-brand px-3 text-[11px] font-semibold text-white transition hover:brightness-110"
-                      >
-                        {copied ? "✓ Copied" : "Copy"}
-                      </button>
+                      <div className="flex min-w-0 flex-1 flex-col gap-2 self-stretch">
+                        <p className="text-[11px] font-medium text-text-muted">
+                          Pay <span className="font-semibold text-text">{selectedWallet.asset}</span> on{" "}
+                          <span className="font-semibold text-text">{selectedWallet.network}</span> only
+                        </p>
+                        <input
+                          readOnly
+                          value={selectedWallet.address}
+                          aria-label="Selected deposit address"
+                          onFocus={(e) => e.currentTarget.select()}
+                          className="h-9 w-full min-w-0 rounded-md border border-border bg-canvas px-2.5 font-mono text-xs text-text outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void copyDepositAddress()}
+                          className="h-9 shrink-0 rounded-md bg-brand px-3 text-[11px] font-semibold text-white transition hover:brightness-110"
+                        >
+                          {copied ? "✓ Copied" : "Copy address"}
+                        </button>
+                      </div>
                     </div>
                   )}
                   <p className="text-[11px] text-text-faint">Send only {selectedWallet?.asset ?? cryptoDetails.asset} on {selectedWallet?.network ?? cryptoDetails.network} to this address, then paste the transaction hash below.</p>
@@ -412,19 +440,24 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                   select, not free text. Deposits keep free entry unless admin
                   wallets are configured (wallet selection drives the values). */}
               {!isDeposit ? (
-                <div className="grid grid-cols-[110px_1fr] gap-2">
-                  <select
-                    value={cryptoDetails.asset}
-                    onChange={(e) => {
-                      const asset = e.target.value;
-                      setWalletIndex(null);
-                      setCryptoDetails((v) => ({ ...v, asset, network: WITHDRAWAL_NETWORKS[asset]?.[0] ?? v.network }));
-                    }}
-                    aria-label="Crypto asset"
-                    className="h-10 rounded border border-border bg-canvas px-3 text-sm"
-                  >
-                    {Object.keys(WITHDRAWAL_NETWORKS).map((asset) => <option key={asset}>{asset}</option>)}
-                  </select>
+                <div className="grid grid-cols-[150px_1fr] gap-2">
+                  <div className="relative">
+                    <span aria-hidden className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
+                      <InstrumentIcon symbol={cryptoDetails.asset} size={18} />
+                    </span>
+                    <select
+                      value={cryptoDetails.asset}
+                      onChange={(e) => {
+                        const asset = e.target.value;
+                        setWalletIndex(null);
+                        setCryptoDetails((v) => ({ ...v, asset, network: WITHDRAWAL_NETWORKS[asset]?.[0] ?? v.network }));
+                      }}
+                      aria-label="Crypto asset"
+                      className="h-10 w-full rounded border border-border bg-canvas pl-9 pr-2 text-sm"
+                    >
+                      {Object.keys(WITHDRAWAL_NETWORKS).map((asset) => <option key={asset}>{asset}</option>)}
+                    </select>
+                  </div>
                   <select
                     value={cryptoDetails.network}
                     onChange={(e) => setCryptoDetails((v) => ({ ...v, network: e.target.value }))}
@@ -437,7 +470,15 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                   </select>
                 </div>
               ) : !(walletAddresses.length > 0) && (
-                <div className="grid grid-cols-[110px_1fr] gap-2"><select value={cryptoDetails.asset} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,asset:e.target.value}));}} aria-label="Crypto asset" className="h-10 rounded border border-border bg-canvas px-3 text-sm"><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></select><input required maxLength={120} value={cryptoDetails.network} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,network:e.target.value}));}} placeholder="Network, e.g. TRON (TRC20)" aria-label="Blockchain network" className="h-10 min-w-0 rounded border border-border bg-canvas px-3 text-sm" /></div>
+                <div className="grid grid-cols-[150px_1fr] gap-2">
+                  <div className="relative">
+                    <span aria-hidden className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
+                      <InstrumentIcon symbol={cryptoDetails.asset} size={18} />
+                    </span>
+                    <select value={cryptoDetails.asset} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,asset:e.target.value}));}} aria-label="Crypto asset" className="h-10 w-full rounded border border-border bg-canvas pl-9 pr-2 text-sm"><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></select>
+                  </div>
+                  <input required maxLength={120} value={cryptoDetails.network} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,network:e.target.value}));}} placeholder="Network, e.g. TRON (TRC20)" aria-label="Blockchain network" className="h-10 min-w-0 rounded border border-border bg-canvas px-3 text-sm" />
+                </div>
               )}
               {isDeposit ? <><input required maxLength={256} value={cryptoDetails.transactionHash} onChange={(e)=>setCryptoDetails((v)=>({...v,transactionHash:e.target.value}))} placeholder="Transaction hash" aria-label="Transaction hash" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /><input maxLength={256} value={cryptoDetails.senderAddress} onChange={(e)=>setCryptoDetails((v)=>({...v,senderAddress:e.target.value}))} placeholder="Sender wallet address (optional)" aria-label="Sender wallet address" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /></> : <><input required maxLength={256} value={cryptoDetails.walletAddress} onChange={(e)=>setCryptoDetails((v)=>({...v,walletAddress:e.target.value}))} placeholder="Destination wallet address" aria-label="Destination wallet address" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /><input maxLength={120} value={cryptoDetails.destinationTag} onChange={(e)=>setCryptoDetails((v)=>({...v,destinationTag:e.target.value}))} placeholder="Destination tag / memo (optional)" aria-label="Destination tag or memo" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /></>}
             </>}

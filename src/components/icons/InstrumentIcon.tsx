@@ -53,6 +53,11 @@ const CRYPTO: Record<string, BadgeDef> = {
   LINKUSD: { bg: "#2a5ada", label: "⬡" },
   AVAXUSD: { bg: "#e84142", label: "▲" },
   MATICUSD: { bg: "#8247e5", label: "⬢" },
+  // Bare asset tickers (wallet/deposit flows) — same brand identities.
+  USDT: { bg: "#26a17b", label: "₮" },
+  USDC: { bg: "#2775ca", label: "$" },
+  BTC: { bg: "#f7931a", label: "₿" },
+  ETH: { bg: "#627eea", label: "Ξ" },
 };
 
 const COMMODITIES: Record<string, BadgeDef> = {

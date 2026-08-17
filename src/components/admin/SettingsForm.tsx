@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { WalletAddressEntry } from "@/server/userSettings";
+import { validateDepositAddress } from "@/lib/paymentNetworks";
 
 /**
  * Reusable settings form for both group settings and per-user profile overrides.
@@ -110,6 +111,12 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
     defVal != null ? `${desc} · Default: ${prefix}${defVal}${suffix}` : desc;
 
   const wallets = s.deposits?.walletAddresses ?? [];
+  // A wallet row is invalid when its address fails the per-network format
+  // check (catches placeholder values like "TXyZ...abc" before they reach users).
+  const walletErrors = wallets.map((w) =>
+    w.address.trim() === "" || w.network.trim() === "" ? null : validateDepositAddress(w.asset, w.network, w.address.trim()),
+  );
+  const hasWalletErrors = walletErrors.some(Boolean);
   // Effective chip lists: stored override, else the resolved default.
   const effectiveCategories = s.trading?.allowedCategories ?? defaults?.trading.allowedCategories ?? ALL_CATEGORIES;
   const categoriesInherited = s.trading?.allowedCategories == null;
@@ -261,8 +268,13 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
                   onChange={(e) => updateWallet(index, { address: e.target.value })}
                   placeholder="Deposit address"
                   maxLength={256}
-                  className="h-8 w-full rounded border border-border bg-canvas px-2 font-mono text-xs outline-none focus:border-brand"
+                  className={`h-8 w-full rounded border bg-canvas px-2 font-mono text-xs outline-none focus:border-brand ${
+                    walletErrors[index] ? "border-down/50" : "border-border"
+                  }`}
                 />
+                {walletErrors[index] && (
+                  <p className="text-[10px] text-down">{walletErrors[index]}</p>
+                )}
               </div>
             ))}
           </div>
@@ -370,12 +382,16 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         <button
           type="button"
           onClick={() => void onSave(s)}
-          disabled={saving}
+          disabled={saving || hasWalletErrors}
+          title={hasWalletErrors ? "Fix the invalid wallet address(es) above before saving." : undefined}
           className="rounded-lg bg-brand px-5 py-2.5 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50 transition"
         >
           {saving ? "Saving…" : saveLabel}
         </button>
-        {dirty && !saving && (
+        {hasWalletErrors && (
+          <span className="text-[11px] text-down">Fix the invalid wallet address{walletErrors.filter(Boolean).length > 1 ? "es" : ""} above to save.</span>
+        )}
+        {dirty && !saving && !hasWalletErrors && (
           <>
             <span className="text-[11px] text-brand">Unsaved changes</span>
             <button

@@ -142,7 +142,7 @@ services:
       AUTH_TRUST_HOST: "true"
       DEV_EMAIL_PREVIEW: "false"
       ALLOW_LOCAL_STUB_SCANNER: "false"
-      RECONCILIATION_ENABLED: "true"
+      RECONCILIATION_ENABLED: ${RECONCILIATION_ENABLED:-true}
       FINNHUB_CANDLE_MODE: ${FINNHUB_CANDLE_MODE:-disabled}
     expose: ["3000"]
     depends_on:

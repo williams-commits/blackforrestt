@@ -653,7 +653,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
         </div>
 
         {/* Mobile: timeframes get priority row; desktop: all controls inline */}
-        <div className="flex items-center gap-1 overflow-x-auto border-t border-border px-2 py-1.5 sm:hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex items-center gap-1 overflow-x-auto border-t border-border px-2 py-1.5 sm:hidden [scrollbar:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {TIMEFRAMES.map((timeframe) => (
             <button
               key={timeframe}

@@ -103,7 +103,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const messages = (await import(`../messages/${locale}.json`)).default;
 
   return (
-    <html lang={htmlLang} dir={isRTL ? "rtl" : "ltr"} className={`${sans.variable} ${mono.variable} ${serif.variable}`}>
+    // suppressHydrationWarning: the no-flash theme script (below) adds the
+    // `dim` class to <html> before React hydrates, so the server-rendered
+    // className intentionally differs from the live DOM for dim-theme users.
+    <html
+      lang={htmlLang}
+      dir={isRTL ? "rtl" : "ltr"}
+      className={`${sans.variable} ${mono.variable} ${serif.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
       </head>

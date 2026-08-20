@@ -1,8 +1,8 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Logo } from "@/components/trade/Logo";
@@ -12,9 +12,17 @@ import { signInFailureMessage } from "@/lib/authClient";
 
 const PASSWORD_REQUIREMENT = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,128}$/;
 
+/** Referral attribution persistence: a ?ref= code is remembered for 30 days so
+ *  visitors who leave the registration page and come back later keep their
+ *  referral (re-injected into the URL). Cleared after successful registration. */
+const REFERRAL_STORAGE_KEY = "blckforest:referral";
+const REFERRAL_TTL_MS = 30 * 24 * 60 * 60 * 1_000;
+const REFERRAL_PATTERN = /^[A-Za-z0-9]{4,20}$/;
+
 export default function RegisterPage() {
   const t = useTranslations("auth");
   const formId = useId();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const referralCode = searchParams.get("ref") ?? "";
   const [name, setName] = useState("");
@@ -28,6 +36,39 @@ export default function RegisterPage() {
   const [verificationPreviewUrl, setVerificationPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resendState, setResendState] = useState<{ loading: boolean; message: string | null }>({ loading: false, message: null });
+
+  useEffect(() => {
+    const urlCode = searchParams.get("ref");
+    if (urlCode) {
+      // Persist valid codes on arrival; invalid ones are ignored.
+      if (REFERRAL_PATTERN.test(urlCode)) {
+        try {
+          localStorage.setItem(REFERRAL_STORAGE_KEY, JSON.stringify({ code: urlCode, savedAt: Date.now() }));
+        } catch {
+          /* storage unavailable — attribution works for this visit only */
+        }
+      }
+      return;
+    }
+    // No ref in the URL: restore a recently saved code so returning visitors
+    // keep their referral attribution (injected back into the URL).
+    try {
+      const raw = localStorage.getItem(REFERRAL_STORAGE_KEY);
+      if (!raw) return;
+      const stored = JSON.parse(raw) as { code?: unknown; savedAt?: unknown };
+      const code = typeof stored.code === "string" ? stored.code : "";
+      const savedAt = typeof stored.savedAt === "number" ? stored.savedAt : 0;
+      if (!REFERRAL_PATTERN.test(code) || Date.now() - savedAt > REFERRAL_TTL_MS) {
+        localStorage.removeItem(REFERRAL_STORAGE_KEY);
+        return;
+      }
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("ref", code);
+      router.replace(`/register?${params.toString()}`, { scroll: false });
+    } catch {
+      /* corrupted entry or unavailable storage — registration proceeds unattributed */
+    }
+  }, [searchParams, router]);
 
   async function resendVerification() {
     setResendState({ loading: true, message: null });
@@ -97,6 +138,13 @@ export default function RegisterPage() {
         // Offer resend only when the existing account is registered but unverified.
         if (res.status === 409 && data?.needsVerification) setShowResend(true);
         return;
+      }
+
+      // Registration accepted — the referral attribution is consumed.
+      try {
+        localStorage.removeItem(REFERRAL_STORAGE_KEY);
+      } catch {
+        /* non-fatal */
       }
 
       if (data?.loginAllowed) {

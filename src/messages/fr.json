@@ -244,7 +244,17 @@
     "risk2": "Nous ne fournissons aucun service aux citoyens et/ou résidents des États-Unis, de Syrie, du Soudan, d'Iran et de la Corée du Nord. Le trading n'est disponible que pour les personnes âgées de 18 ans et plus.",
     "risk3": "Veuillez lire nos politiques de confidentialité, d'AML et de KYC avant d'ouvrir un compte. Les performances passées ne garantissent pas les résultats futurs.",
     "copyright": "© 2026 {company}. Tous droits réservés.",
-    "trademark": "{tm} est une marque de {company}."
+    "trademark": "{tm} est une marque de {company}.",
+    "assurance": {
+      "title": "Assurances de trading :",
+      "registration": "Courtier enregistré",
+      "registrationNote": "Enregistrement de courtage licencié",
+      "segregated": "Fonds clients ségrégués",
+      "compensation": "Régime d'indemnisation des investisseurs",
+      "protection": "Protection contre solde négatif",
+      "security": "Sécurisé SSL · Conforme RGPD",
+      "payments": "Sécurité des paiements PCI DSS"
+    }
   },
   "language": {
     "label": "Langue",

@@ -25,6 +25,7 @@ const logos: PaymentLogo[] = [
 /** Marketing footer: contact, risk disclaimers, payment icons, legal. */
 export async function Footer() {
   const t = await getTranslations("footer");
+  const tA = await getTranslations("footer.assurance");
   const tLinks = await getTranslations("footer.links");
   const tCols = await getTranslations("footer.columns");
   const iconW = 38;
@@ -83,8 +84,19 @@ export async function Footer() {
           ]} />
         </div>
 
+        {/* Trading assurance — broker registration & investor protections */}
+        <div className="mt-10 pt-8 border-t border-white/10 flex flex-wrap items-center gap-2.5">
+          <span className="text-xs text-white/40 mr-2">{tA("title")}</span>
+          <AssuranceBadge icon={<ShieldCheckIcon />} label={tA("registration")} note={tA("registrationNote")} emphasized />
+          <AssuranceBadge icon={<BankIcon />} label={tA("segregated")} />
+          <AssuranceBadge icon={<UmbrellaIcon />} label={tA("compensation")} />
+          <AssuranceBadge icon={<ShieldIcon />} label={tA("protection")} />
+          <AssuranceBadge icon={<LockIcon />} label={tA("security")} />
+          <AssuranceBadge icon={<CardIcon />} label={tA("payments")} />
+        </div>
+
         {/* Payment icons */}
-        <div className="mt-10 pt-8 border-t border-white/10 flex flex-wrap items-center gap-3">
+        <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center gap-3">
           <span className="text-xs text-white/40 mr-2">{t("weAccept")}</span>
           {logos.map((logo) => (
             <Image
@@ -134,5 +146,79 @@ function FooterCol({ title, linkLabels, links }: { title: string; linkLabels: Re
         ))}
       </ul>
     </div>
+  );
+}
+
+/** Trust badge: icon + label (and optional small sublabel for the
+ *  registration/license item) styled to match the dark footer. */
+function AssuranceBadge({ icon, label, note, emphasized = false }: { icon: React.ReactNode; label: string; note?: string; emphasized?: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-2 rounded border px-3 py-1.5 ${emphasized ? "border-brand/50 bg-brand/10" : "border-white/10 bg-white/5"}`}>
+      <span className="text-brand shrink-0" aria-hidden="true">{icon}</span>
+      {note ? (
+        <span className="leading-tight">
+          <span className="block text-[11px] font-semibold text-white/80">{label}</span>
+          <span className="block text-[10px] text-white/50">{note}</span>
+        </span>
+      ) : (
+        <span className="text-[11px] text-white/70">{label}</span>
+      )}
+    </span>
+  );
+}
+
+function ShieldCheckIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2l8 3v6c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V5l8-3z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2l8 3v6c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V5l8-3z" />
+    </svg>
+  );
+}
+
+function BankIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 10l9-7 9 7" />
+      <path d="M5 10v9M9.5 10v9M14.5 10v9M19 10v9" />
+      <path d="M3 21h18" />
+    </svg>
+  );
+}
+
+function UmbrellaIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2a10 10 0 0 1 10 10H2A10 10 0 0 1 12 2z" />
+      <path d="M12 12v6a2 2 0 0 0 4 0" />
+      <path d="M12 2v1" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="10" width="16" height="11" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
+function CardIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M2 10h20" />
+      <path d="M6 15h4" />
+    </svg>
   );
 }

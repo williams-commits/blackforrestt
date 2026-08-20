@@ -244,7 +244,17 @@
     "risk2": "We do not provide any services to citizens and/or residents of the United States, Syria, Sudan, Iran, and North Korea. Trading is only available to persons aged 18 and over.",
     "risk3": "Please read our Privacy, AML, and KYC policies before opening an account. Past performance does not guarantee future results.",
     "copyright": "© 2026 {company}. All rights reserved.",
-    "trademark": "{tm} is a trademark of {company}."
+    "trademark": "{tm} is a trademark of {company}.",
+    "assurance": {
+      "title": "거래 보증:",
+      "registration": "등록 브로커",
+      "registrationNote": "라이선스 취득 브로커 등록",
+      "segregated": "고객 자금 분리 보관",
+      "compensation": "투자자 보상 제도",
+      "protection": "마이너스 잔고 보호",
+      "security": "SSL 보안 · GDPR 준수",
+      "payments": "PCI DSS 결제 보안"
+    }
   },
   "language": {
     "label": "언어",

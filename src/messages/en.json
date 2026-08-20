@@ -244,7 +244,17 @@
     "risk2": "We do not provide any services to citizens and/or residents of the United States, Syria, Sudan, Iran, and North Korea. Trading is only available to persons aged 18 and over.",
     "risk3": "Please read our Privacy, AML, and KYC policies before opening an account. Past performance does not guarantee future results.",
     "copyright": "© 2026 {company}. All rights reserved.",
-    "trademark": "{tm} is a trademark of {company}."
+    "trademark": "{tm} is a trademark of {company}.",
+    "assurance": {
+      "title": "Trading assurance:",
+      "registration": "Registered broker",
+      "registrationNote": "Licensed brokerage registration",
+      "segregated": "Segregated client funds",
+      "compensation": "Investor compensation scheme",
+      "protection": "Negative balance protection",
+      "security": "SSL secured · GDPR compliant",
+      "payments": "PCI DSS payment security"
+    }
   },
   "language": {
     "label": "Language",

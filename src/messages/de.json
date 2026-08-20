@@ -244,7 +244,17 @@
     "risk2": "Wir bieten keine Dienstleistungen für Staatsbürger und/oder Einwohner der Vereinigten Staaten, Syriens, Sudans, des Iran und Nordkoreas an. Trading ist nur für Personen ab 18 Jahren verfügbar.",
     "risk3": "Bitte lesen Sie vor der Kontoeröffnung unsere Datenschutz-, AML- und KYC-Richtlinien. Vergangene Performance ist keine Garantie für zukünftige Ergebnisse.",
     "copyright": "© 2026 {company}. Alle Rechte vorbehalten.",
-    "trademark": "{tm} ist eine Marke der {company}."
+    "trademark": "{tm} ist eine Marke der {company}.",
+    "assurance": {
+      "title": "Handelsabsicherung:",
+      "registration": "Registrierter Broker",
+      "registrationNote": "Lizenzierte Broker-Registrierung",
+      "segregated": "Getrennte Kundengelder",
+      "compensation": "Anlegerentschädigungssystem",
+      "protection": "Kein negativer Kontostand",
+      "security": "SSL-verschlüsselt · DSGVO-konform",
+      "payments": "PCI-DSS-Zahlungssicherheit"
+    }
   },
   "language": {
     "label": "Sprache",

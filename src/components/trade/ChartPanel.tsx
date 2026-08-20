@@ -56,6 +56,42 @@ function isInterval(value: string | null): value is CandleInterval {
   return value != null && (TIMEFRAMES as readonly string[]).includes(value);
 }
 
+/** Theme-dependent chart/series options shared by creation and live restyle.
+ *  Theme switches restyle the chart in place via applyOptions — the chart is
+ *  never disposed on theme change (disposing mid-paint races lightweight-
+ *  charts' render loop and throws "Object is disposed"). */
+function chartThemeOptions(dim: boolean) {
+  return {
+    layout: {
+      background: { type: ColorType.Solid, color: dim ? "#0e1116" : "#ffffff" },
+      textColor: dim ? "#9aa7b4" : "#6b7280",
+    },
+    grid: {
+      vertLines: { color: dim ? "rgba(42,50,61,0.5)" : "rgba(222,226,230,0.55)" },
+      horzLines: { color: dim ? "rgba(42,50,61,0.5)" : "rgba(222,226,230,0.55)" },
+    },
+    crosshair: {
+      vertLine: { color: dim ? "rgba(154,167,180,0.5)" : "rgba(134,142,150,0.65)", labelBackgroundColor: dim ? "#1c232c" : "#343a40" },
+      horzLine: { color: dim ? "rgba(154,167,180,0.5)" : "rgba(134,142,150,0.65)", labelBackgroundColor: dim ? "#1c232c" : "#343a40" },
+    },
+    rightPriceScale: { borderColor: dim ? "#2a323d" : "#dee2e6" },
+    timeScale: { borderColor: dim ? "#2a323d" : "#dee2e6" },
+  } as const;
+}
+
+function candleColors(dim: boolean) {
+  const up = dim ? "#4cba6a" : "#2b8a3e";
+  const down = dim ? "#f15b5b" : "#e03131";
+  return { upColor: up, downColor: down, borderUpColor: up, borderDownColor: down, wickUpColor: up, wickDownColor: down };
+}
+
+function volumeColors(dim: boolean) {
+  return {
+    up: dim ? "rgba(76,186,106,0.32)" : "rgba(43,138,62,0.32)",
+    down: dim ? "rgba(241,91,91,0.30)" : "rgba(224,49,49,0.30)",
+  };
+}
+
 /** Professional responsive chart with persistent timeframe and trading controls. */
 export function ChartPanel({ instrument, onOpenAssets }: Props) {
   const router = useRouter();
@@ -163,33 +199,26 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
     const container = containerRef.current;
     if (!container) return;
 
+    // Theme-dependent pieces are applied via chartThemeOptions/isDim below and
+    // kept in sync by the live-restyle effect; isDim is intentionally not a
+    // dependency — the chart is only disposed when the chart TYPE changes.
+    const dim = isDim;
+    const theme = chartThemeOptions(dim);
     const chart = createChart(container, {
       autoSize: true,
-      layout: {
-        background: { type: ColorType.Solid, color: isDim ? "#0e1116" : "#ffffff" },
-        textColor: isDim ? "#9aa7b4" : "#6b7280",
-        fontFamily: "inherit",
-        attributionLogo: true,
-      },
-      grid: {
-        vertLines: { color: isDim ? "rgba(42,50,61,0.5)" : "rgba(222,226,230,0.55)" },
-        horzLines: { color: isDim ? "rgba(42,50,61,0.5)" : "rgba(222,226,230,0.55)" },
-      },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: { color: isDim ? "rgba(154,167,180,0.5)" : "rgba(134,142,150,0.65)", labelBackgroundColor: isDim ? "#1c232c" : "#343a40" },
-        horzLine: { color: isDim ? "rgba(154,167,180,0.5)" : "rgba(134,142,150,0.65)", labelBackgroundColor: isDim ? "#1c232c" : "#343a40" },
-      },
+      ...theme,
+      layout: { ...theme.layout, fontFamily: "inherit", attributionLogo: true },
+      crosshair: { ...theme.crosshair, mode: CrosshairMode.Normal },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
       handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
       kineticScroll: { mouse: true, touch: true },
       rightPriceScale: {
-        borderColor: isDim ? "#2a323d" : "#dee2e6",
+        ...theme.rightPriceScale,
         scaleMargins: { top: 0.08, bottom: 0.24 },
         minimumWidth: 74,
       },
       timeScale: {
-        borderColor: isDim ? "#2a323d" : "#dee2e6",
+        ...theme.timeScale,
         timeVisible: true,
         secondsVisible: false,
         rightOffset: 10,
@@ -202,12 +231,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
     let priceSeries: ISeriesApi<"Candlestick"> | ISeriesApi<"Line">;
     if (chartType === "candles") {
       const series = chart.addSeries(CandlestickSeries, {
-        upColor: isDim ? "#4cba6a" : "#2b8a3e",
-        downColor: isDim ? "#f15b5b" : "#e03131",
-        borderUpColor: isDim ? "#4cba6a" : "#2b8a3e",
-        borderDownColor: isDim ? "#f15b5b" : "#e03131",
-        wickUpColor: isDim ? "#4cba6a" : "#2b8a3e",
-        wickDownColor: isDim ? "#f15b5b" : "#e03131",
+        ...candleColors(dim),
         priceLineVisible: true,
         lastValueVisible: true,
       });
@@ -260,14 +284,57 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
       lineSeriesRef.current = null;
       maSeriesRef.current = null;
       volumeSeriesRef.current = null;
+      // All indicator series belonged to the removed chart — drop their refs
+      // so nothing can touch a stale series before the indicator effects
+      // re-attach (they re-run on chartType changes for exactly this reason).
+      emaSeriesRef.current = null;
+      bbUpperRef.current = null;
+      bbMiddleRef.current = null;
+      bbLowerRef.current = null;
+      rsiSeriesRef.current = null;
+      macdHistRef.current = null;
+      macdLineRef.current = null;
+      macdSignalRef.current = null;
     };
-  }, [chartType, isDim]);
+    // isDim intentionally excluded: theme switches restyle via applyOptions
+    // (effect below) instead of disposing the chart.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chartType]);
+
+  // ── Live theme restyle: applyOptions keeps the chart (and the user's zoom
+  //     position) intact — no dispose/recreate, no paint race. ─────────────
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const theme = chartThemeOptions(isDim);
+    chart.applyOptions({ ...theme, crosshair: { ...theme.crosshair, mode: CrosshairMode.Normal } });
+    seriesRef.current?.applyOptions(candleColors(isDim));
+    const colors = volumeColors(isDim);
+    volumeSeriesRef.current?.setData(
+      candlesRef.current.map((candle) => ({
+        time: candle.time as UTCTimestamp,
+        value: candle.volume,
+        color: candle.close >= candle.open ? colors.up : colors.down,
+      })),
+    );
+  }, [isDim]);
 
   // ── TradingView-style watermark: faded symbol behind the price action ────
   useEffect(() => {
     const pane = chartRef.current?.panes()[0];
     if (!pane) return;
-    watermarkRef.current?.detach();
+    // detach() throws "Object is disposed" if the owning chart was already
+    // removed (the chart-creation effect's cleanup runs first on theme/chart
+    // switches) — the chart teardown destroys the watermark either way.
+    const safeDetach = () => {
+      try {
+        watermarkRef.current?.detach();
+      } catch {
+        /* chart already disposed — nothing to detach */
+      }
+      watermarkRef.current = null;
+    };
+    safeDetach();
     watermarkRef.current = createTextWatermark(pane, {
       horzAlign: "center",
       vertAlign: "center",
@@ -285,10 +352,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
         },
       ],
     });
-    return () => {
-      watermarkRef.current?.detach();
-      watermarkRef.current = null;
-    };
+    return safeDetach;
   }, [instrument.symbol, instrument.name, interval, isDim, chartType]);
 
   useEffect(() => {

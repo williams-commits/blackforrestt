@@ -244,7 +244,17 @@
     "risk2": "No prestamos servicios a ciudadanos y/o residentes de Estados Unidos, Siria, Sudán, Irán y Corea del Norte. El trading solo está disponible para personas mayores de 18 años.",
     "risk3": "Lea nuestras políticas de privacidad, AML y KYC antes de abrir una cuenta. El rendimiento pasado no garantiza resultados futuros.",
     "copyright": "© 2026 {company}. Todos los derechos reservados.",
-    "trademark": "{tm} es una marca de {company}."
+    "trademark": "{tm} es una marca de {company}.",
+    "assurance": {
+      "title": "Garantías de trading:",
+      "registration": "Bróker registrado",
+      "registrationNote": "Registro de brókería con licencia",
+      "segregated": "Fondos de clientes segregados",
+      "compensation": "Esquema de compensación al inversor",
+      "protection": "Protección de saldo negativo",
+      "security": "SSL seguro · Cumplimiento RGPD",
+      "payments": "Seguridad de pagos PCI DSS"
+    }
   },
   "language": {
     "label": "Idioma",

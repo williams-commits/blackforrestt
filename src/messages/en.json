@@ -883,7 +883,9 @@
     "pwWeak": "Weak",
     "pwFair": "Fair",
     "pwGood": "Good",
-    "pwStrong": "Strong"
+    "pwStrong": "Strong",
+    "showPwd": "Show password",
+    "hidePwd": "Hide password"
   },
   "trade": {
     "tpMarket": "Market",

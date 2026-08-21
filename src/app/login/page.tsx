@@ -7,6 +7,7 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Logo } from "@/components/trade/Logo";
 import { Button } from "@/components/ui/Button";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { browserDeviceIdentity } from "@/lib/device";
 import {
   AUTH_SERVICE_MESSAGE,
@@ -121,9 +122,8 @@ function LoginForm() {
         <label htmlFor={passwordId} className="block text-[11px] text-text-muted mb-1">
           {t("password")}
         </label>
-        <input
+        <PasswordInput
           id={passwordId}
-          type="password"
           required
           maxLength={128}
           value={password}

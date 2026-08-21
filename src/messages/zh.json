@@ -883,7 +883,9 @@
     "pwWeak": "弱",
     "pwFair": "一般",
     "pwGood": "良好",
-    "pwStrong": "强"
+    "pwStrong": "强",
+    "showPwd": "显示密码",
+    "hidePwd": "隐藏密码"
   },
   "trade": {
     "tpMarket": "Market",

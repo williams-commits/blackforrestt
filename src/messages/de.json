@@ -883,7 +883,9 @@
     "pwWeak": "Schwach",
     "pwFair": "Mäßig",
     "pwGood": "Gut",
-    "pwStrong": "Stark"
+    "pwStrong": "Stark",
+    "showPwd": "Passwort anzeigen",
+    "hidePwd": "Passwort verbergen"
   },
   "trade": {
     "tpMarket": "Market",

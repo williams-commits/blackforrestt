@@ -11,6 +11,7 @@ import { browserDeviceIdentity } from "@/lib/device";
 import { signInFailureMessage } from "@/lib/authClient";
 import { isValidPassword, PASSWORD_MIN_LENGTH } from "@/lib/passwordPolicy";
 import { PasswordStrength } from "@/components/ui/PasswordStrength";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 /** Referral attribution persistence: a ?ref= code is remembered for 30 days so
  *  visitors who leave the registration page and come back later keep their
@@ -273,9 +274,8 @@ export default function RegisterPage() {
               <label htmlFor={passwordId} className="block text-[11px] text-text-muted mb-1">
                 {t("password")}
               </label>
-              <input
+              <PasswordInput
                 id={passwordId}
-                type="password"
                 required
                 minLength={PASSWORD_MIN_LENGTH}
                 maxLength={128}
@@ -294,9 +294,8 @@ export default function RegisterPage() {
               <label htmlFor={confirmId} className="block text-[11px] text-text-muted mb-1">
                 {t("confirmPassword")}
               </label>
-              <input
+              <PasswordInput
                 id={confirmId}
-                type="password"
                 required
                 minLength={PASSWORD_MIN_LENGTH}
                 maxLength={128}

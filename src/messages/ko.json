@@ -883,7 +883,9 @@
     "pwWeak": "약함",
     "pwFair": "보통",
     "pwGood": "좋음",
-    "pwStrong": "강함"
+    "pwStrong": "강함",
+    "showPwd": "비밀번호 표시",
+    "hidePwd": "비밀번호 숨기기"
   },
   "trade": {
     "tpMarket": "Market",

@@ -883,7 +883,9 @@
     "pwWeak": "弱い",
     "pwFair": "普通",
     "pwGood": "良い",
-    "pwStrong": "強い"
+    "pwStrong": "強い",
+    "showPwd": "パスワードを表示",
+    "hidePwd": "パスワードを隠す"
   },
   "trade": {
     "tpMarket": "Market",

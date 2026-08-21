@@ -51,9 +51,15 @@ export function LanguageSwitcher({ className = "" }: { className?: string }) {
     // middleware persists the locale cookie on /<locale>/ URLs, and request.ts
     // resolves cookie-first; without an explicit "en" cookie, switching back
     // to English would keep rendering the previous language on unprefixed URLs.
+    // Written to BOTH scopes (host-only + dot-domain): older middleware
+    // versions created a host-only cookie, and a dot-domain-only write would
+    // leave that stale one winning — the browser sends host-only first.
     const domain = parts.slice(-2).join(".");
     const cookieDomain = domain.includes(".") ? `; domain=.${domain}` : "";
-    document.cookie = `${LOCALE_COOKIE}=${locale}; max-age=31536000; path=/${cookieDomain}; samesite=lax`;
+    document.cookie = `${LOCALE_COOKIE}=${locale}; max-age=31536000; path=/; samesite=lax`;
+    if (cookieDomain) {
+      document.cookie = `${LOCALE_COOKIE}=${locale}; max-age=31536000; path=/${cookieDomain}; samesite=lax`;
+    }
     try {
       localStorage.setItem(LOCALE_COOKIE, locale);
     } catch {

@@ -155,6 +155,34 @@ function domainRedirect(req: Request): NextResponse | null {
 }
 
 /**
+ * Cookie options for locale writes, scoped to the SAME dot-domain the
+ * LanguageSwitcher uses (.brandDomain). Without the domain attribute the
+ * middleware would create a HOST-ONLY cookie alongside the switcher's
+ * dot-domain one — the browser then sends both, host-only first, and the
+ * stale one wins (language appears stuck after switching back to English).
+ */
+function localeCookieOptions() {
+  return {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax" as const,
+  };
+}
+
+/** Write the locale cookie to BOTH scopes (host-only + dot-domain). Older
+ *  middleware versions created a host-only cookie; a dot-domain-only write
+ *  would leave that stale one winning, since browsers send host-only first.
+ *  The cookies API replaces by name, so the dot-domain variant is appended
+ *  as a raw Set-Cookie header to emit BOTH. */
+function setLocaleCookies(response: NextResponse, locale: string) {
+  response.cookies.set(LOCALE_COOKIE, locale, localeCookieOptions());
+  const brandDomain = (process.env.BRAND_DOMAIN ?? "").trim().toLowerCase();
+  if (brandDomain) {
+    response.headers.append("set-cookie", `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax; Domain=.${brandDomain}`);
+  }
+}
+
+/**
  * URL-based locales for search engines: marketing URLs may carry a locale
  * prefix (e.g. /fr/about). The prefix is stripped and the locale injected via
  * the NEXT_LOCALE cookie on the forwarded request, so the existing cookie
@@ -205,11 +233,7 @@ export default auth((req) => {
     if (localePrefix === DEFAULT_LOCALE) {
       const canonicalPath = originalPathname.replace(LOCALE_PREFIX_RE, "") || "/";
       const response = NextResponse.redirect(new URL(`${canonicalPath}${req.nextUrl.search}`, publicOrigin(req)), 308);
-      response.cookies.set(LOCALE_COOKIE, DEFAULT_LOCALE, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 365,
-        sameSite: "lax",
-      });
+      setLocaleCookies(response, DEFAULT_LOCALE);
       return response;
     }
     // Non-default locale: rewrite to the stripped path with the locale cookie
@@ -230,11 +254,7 @@ export default auth((req) => {
     // whose host can be the other origin (AUTH_URL), which turns the rewrite
     // into a cross-origin proxy that bounces between the domains forever.
     const response = NextResponse.rewrite(new URL(`${strippedPath}${req.nextUrl.search}`, publicOrigin(req)), { request: { headers } });
-    response.cookies.set(LOCALE_COOKIE, localePrefix, {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: "lax",
-    });
+    setLocaleCookies(response, localePrefix);
     return response;
   }
 

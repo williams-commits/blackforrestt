@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 import { getTranslations } from "next-intl/server";
+import { contentMetadata } from "@/lib/seo";
 import { companyLegalName, brandName, companyAddress } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
   const t = await getTranslations("about");
-  return { title: t("metaTitle") };
+  return contentMetadata("/about", t("metaTitle"));
 }
 
 /** Line-style value icons — consistent with the app's inline-SVG convention. */

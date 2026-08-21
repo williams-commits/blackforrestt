@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Logo } from "@/components/trade/Logo";
-import { companyLegalName, supportEmail, companyAddress, brandTrademark, clientTradeUrl } from "@/lib/branding";
+import { companyLegalName, supportEmail, companyAddress, brandTrademark, clientTradeUrl, companyRegistrationSummary } from "@/lib/branding";
 import Image from "next/image";
 
 interface PaymentLogo {
@@ -31,6 +31,9 @@ export async function Footer() {
   const iconW = 38;
   const company = companyLegalName();
   const tm = brandTrademark();
+  // Populated from the COMPANY_* env placeholders — empty until configured,
+  // in which case the generic translated note is shown instead.
+  const registrationSummary = companyRegistrationSummary();
 
   return (
     <footer className="bg-surface-dark text-white/80">
@@ -87,7 +90,7 @@ export async function Footer() {
         {/* Trading assurance — broker registration & investor protections */}
         <div className="mt-10 pt-8 border-t border-white/10 flex flex-wrap items-center gap-2.5">
           <span className="text-xs text-white/40 mr-2">{tA("title")}</span>
-          <AssuranceBadge icon={<ShieldCheckIcon />} label={tA("registration")} note={tA("registrationNote")} emphasized />
+          <AssuranceBadge icon={<ShieldCheckIcon />} label={tA("registration")} note={registrationSummary || tA("registrationNote")} emphasized />
           <AssuranceBadge icon={<BankIcon />} label={tA("segregated")} />
           <AssuranceBadge icon={<UmbrellaIcon />} label={tA("compensation")} />
           <AssuranceBadge icon={<ShieldIcon />} label={tA("protection")} />

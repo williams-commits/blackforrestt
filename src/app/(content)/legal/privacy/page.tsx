@@ -1,12 +1,13 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 import { getTranslations } from "next-intl/server";
+import { contentMetadata } from "@/lib/seo";
 import { companyLegalName, supportEmail, companyAddress } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
   const t = await getTranslations("privacy");
-  return { title: t("metaTitle") };
+  return contentMetadata("/legal/privacy", t("metaTitle"));
 }
 
 export default async function PrivacyPage() {

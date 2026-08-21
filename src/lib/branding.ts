@@ -80,6 +80,56 @@ export function companyAddress(): string {
   return (process.env.COMPANY_ADDRESS || "").trim();
 }
 
+/**
+ * Company registration & regulatory identity. All optional — empty string when
+ * unconfigured, in which case the UI shows the generic assurance badges and
+ * the JSON-LD Organization schema omits the identifiers. Configure in
+ * .env.production before claiming any regulatory status publicly.
+ */
+
+/** Incorporation/registration number with the company registry. */
+export function companyRegistrationNumber(): string {
+  return (process.env.COMPANY_REGISTRATION_NUMBER || "").trim();
+}
+
+/** Jurisdiction of incorporation (e.g. "Republic of Seychelles"). */
+export function companyJurisdiction(): string {
+  return (process.env.COMPANY_JURISDICTION || "").trim();
+}
+
+/** Licensing/regulatory authority name (e.g. "Financial Services Authority"). */
+export function companyRegulator(): string {
+  return (process.env.COMPANY_REGULATOR || "").trim();
+}
+
+/** License number issued by the regulator. */
+export function companyLicenseNumber(): string {
+  return (process.env.COMPANY_LICENSE_NUMBER || "").trim();
+}
+
+/** Investor compensation scheme the firm belongs to (e.g. "ICF"). */
+export function investorCompensationScheme(): string {
+  return (process.env.INVESTOR_COMPENSATION_SCHEME || "").trim();
+}
+
+/** One-line registration summary for the footer, about page, and JSON-LD.
+ *  Empty when nothing is configured. */
+export function companyRegistrationSummary(): string {
+  const parts: string[] = [];
+  if (companyRegulator()) parts.push(`${companyLegalName()} is licensed by ${companyRegulator()}`);
+  if (companyLicenseNumber()) parts.push(`License no. ${companyLicenseNumber()}`);
+  if (companyRegistrationNumber()) parts.push(`Reg. no. ${companyRegistrationNumber()}`);
+  if (companyJurisdiction()) parts.push(companyJurisdiction());
+  return parts.join(" · ");
+}
+
+/** True when any registration identifier is configured. */
+export function hasCompanyRegistration(): boolean {
+  return Boolean(
+    companyRegistrationNumber() || companyLicenseNumber() || companyRegulator() || companyJurisdiction(),
+  );
+}
+
 /** Brand trademark symbol (e.g. "Black Forest™"). */
 export function brandTrademark(): string {
   return (process.env.BRAND_TM || "Black Forest™").trim();

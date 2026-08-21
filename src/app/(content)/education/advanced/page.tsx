@@ -1,11 +1,12 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 import { getTranslations } from "next-intl/server";
+import { contentMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
   const t = await getTranslations("advanced");
-  return { title: t("metaTitle") };
+  return contentMetadata("/education/advanced", t("metaTitle"));
 }
 
 export default async function AdvancedPage() {

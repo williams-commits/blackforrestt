@@ -1,13 +1,14 @@
 import { ArticleLayout } from "@/components/landing/ArticleLayout";
 import { ContactForm } from "@/components/landing/ContactForm";
 import { getTranslations } from "next-intl/server";
+import { contentMetadata } from "@/lib/seo";
 import { companyAddress, supportEmail } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
   const t = await getTranslations("contact");
-  return { title: t("metaTitle") };
+  return contentMetadata("/contact", t("metaTitle"));
 }
 
 /** Server component: reads branding env vars once and passes them to the client form. */

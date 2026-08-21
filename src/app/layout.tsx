@@ -7,7 +7,18 @@ import { Providers } from "@/components/providers";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FormatLocaleBridge } from "@/components/FormatLocaleBridge";
 import { TopProgressBar } from "@/components/ui/TopProgressBar";
-import { brandName, brandDomain, brandShortName } from "@/lib/branding";
+import {
+  brandName,
+  brandDomain,
+  brandShortName,
+  companyLegalName,
+  companyAddress,
+  companyRegistrationNumber,
+  companyJurisdiction,
+  companyRegulator,
+  companyLicenseNumber,
+  supportEmail,
+} from "@/lib/branding";
 import { LOCALE_BCP47, LOCALE_OG, RTL_LOCALES } from "@/i18n/config";
 
 /*
@@ -68,10 +79,12 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: `${name} — ${t("titleDefault")}`, template: `%s — ${name}` },
     description,
     applicationName: name,
-    keywords: ["trading", "forex", "CFD", "commodities", "indices", "crypto", "online broker", "trading platform", "trading tools", "trading education", "trading signals", "trading strategies", "trading analysis", "trading community", "trading resources", "trading news", "trading insights", "trading tips", "trading guides", "trading tutorials", "trading webinars", "trading events", "trading competitions", "trading challenges", "Canada", "United States", "Europe", "Asia", "Australia", "Africa", "Latin America"],
+    // Focused, high-intent terms only — long keyword lists read as spam to
+    // crawlers and dilute relevance.
+    keywords: ["online broker", "forex trading", "CFD trading", "commodities", "indices", "crypto trading", "trading platform"],
     authors: [{ name: brandShortName() }],
     creator: brandShortName(),
-    publisher: name,
+    publisher: companyLegalName(),
     robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
     alternates: { canonical: "/" },
     openGraph: {
@@ -81,11 +94,13 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: name,
       title: `${name} — ${t("titleDefault")}`,
       description,
+      images: [{ url: "/og.png", width: 1200, height: 630, alt: `${name} — multi-asset trading platform` }],
     },
     twitter: {
       card: "summary_large_image",
       title: `${name} — ${t("titleDefault")}`,
       description: t("twitterDescription"),
+      images: ["/og.png"],
     },
     icons: [
       { rel: "icon", url: "/favicon.svg" },
@@ -102,6 +117,26 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Load messages for the client provider (same resolver as request.ts).
   const messages = (await import(`../messages/${locale}.json`)).default;
 
+  // Organization + WebSite structured data. Regulatory identifiers are only
+  // included when configured via the COMPANY_* env placeholders — never
+  // publish invented claims.
+  const organization: Record<string, unknown> = {
+    "@type": "Organization",
+    name: companyLegalName(),
+    alternateName: brandName(),
+    url: siteUrl,
+    logo: `${siteUrl}/favicon.svg`,
+    email: supportEmail(),
+  };
+  if (companyAddress()) organization.address = { "@type": "PostalAddress", streetAddress: companyAddress() };
+  if (companyJurisdiction()) organization.foundingLocation = { "@type": "Place", name: companyJurisdiction() };
+  if (companyRegistrationNumber()) organization.identifier = { "@type": "PropertyValue", name: "Company registration number", value: companyRegistrationNumber() };
+  if (companyRegulator()) organization.hasCredential = `${companyRegulator()}${companyLicenseNumber() ? ` license ${companyLicenseNumber()}` : ""}`;
+  const jsonLd = JSON.stringify([
+    { "@context": "https://schema.org", ...organization },
+    { "@context": "https://schema.org", "@type": "WebSite", name: brandName(), url: siteUrl },
+  ]);
+
   return (
     // suppressHydrationWarning: the no-flash theme script (below) adds the
     // `dim` class to <html> before React hydrates, so the server-rendered
@@ -114,6 +149,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       </head>
       <body className="bg-canvas text-text antialiased">
         <a href="#main-content" className="skip-link">Skip to main content</a>

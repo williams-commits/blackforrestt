@@ -12,6 +12,8 @@ import type { WalletAddressEntry } from "@/server/userSettings";
 
 interface Props {
   user: { name: string; email: string; accountNo: string; createdAt: Date | string; verified: boolean };
+  /** Live KYC review state — drives the Verification row. null = never submitted. */
+  kyc?: { status: "NOT_SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED"; note: string | null } | null;
   metrics: {
     balance: number;
     credit: number;
@@ -30,7 +32,7 @@ interface Props {
 }
 
 /** Account summary: profile, equity hero with risk metrics, wallets. */
-export function AccountOverview({ user, metrics, wallets, openCount, depositUiEnabled = true, disabledPaymentMethods = [], walletAddresses = [], onOpenVerification }: Props) {
+export function AccountOverview({ user, metrics, wallets, openCount, depositUiEnabled = true, disabledPaymentMethods = [], walletAddresses = [], kyc, onOpenVerification }: Props) {
   const router = useRouter();
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletMode, setWalletMode] = useState<"deposit" | "withdraw">("deposit");
@@ -62,21 +64,25 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
           <Row label="Account Number" value={user.accountNo} />
           <Row label="Member Since" value={fmtDate(user.createdAt)} />
           <div className="flex items-center justify-between">
-            <dt className="text-text-muted">Status</dt>
-            <dd>
-              {user.verified ? (
-                <span className="tnum text-up">Verified</span>
-              ) : (
+            <dt className="text-text-muted">Verification</dt>
+            <dd className="flex items-center gap-2">
+              <KycStatusChip status={kyc?.status ?? "NOT_SUBMITTED"} />
+              {((kyc?.status ?? "NOT_SUBMITTED") === "NOT_SUBMITTED" || kyc?.status === "REJECTED") && (
                 <button
                   type="button"
                   onClick={onOpenVerification}
-                  className="rounded-full border border-down/40 bg-down/10 px-2 py-0.5 text-[10px] font-semibold text-down transition hover:bg-down/20"
+                  className="text-[10px] font-semibold text-brand hover:underline"
                 >
-                  Unverified — verify now
+                  {kyc?.status === "REJECTED" ? "Resubmit →" : "Start →"}
                 </button>
               )}
             </dd>
           </div>
+          {kyc?.status === "REJECTED" && kyc.note && (
+            <p className="text-[10px] leading-snug text-down" title={kyc.note}>
+              Reason: {kyc.note}
+            </p>
+          )}
           <Row label="Open Positions" value={String(openCount)} />
         </dl>
       </div>
@@ -170,6 +176,18 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
       />
     </div>
   );
+}
+
+/** Honest KYC review state — explicit labels instead of a generic "Verified". */
+function KycStatusChip({ status }: { status: "NOT_SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED" }) {
+  const styles: Record<typeof status, { className: string; label: string }> = {
+    NOT_SUBMITTED: { className: "bg-panel-3 text-text-muted", label: "Not submitted" },
+    PENDING: { className: "bg-brand-soft text-brand", label: "Under review" },
+    APPROVED: { className: "bg-up/10 text-up", label: "Verified" },
+    REJECTED: { className: "bg-down/10 text-down", label: "Rejected" },
+  };
+  const { className, label } = styles[status];
+  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${className}`}>{label}</span>;
 }
 
 function Row({ label, value, valueClass = "" }: { label: string; value: string; valueClass?: string }) {

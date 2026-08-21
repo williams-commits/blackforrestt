@@ -257,6 +257,7 @@ export function AccountShell(props: Props) {
           depositUiEnabled={props.depositUiEnabled}
           disabledPaymentMethods={props.disabledPaymentMethods}
           walletAddresses={props.walletAddresses}
+          kyc={props.kyc ? { status: props.kyc.status, note: props.kyc.note } : null}
           onOpenVerification={() => selectTab("verification")}
         />
       )}

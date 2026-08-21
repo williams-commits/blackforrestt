@@ -9,8 +9,8 @@ import { Logo } from "@/components/trade/Logo";
 import { Button } from "@/components/ui/Button";
 import { browserDeviceIdentity } from "@/lib/device";
 import { signInFailureMessage } from "@/lib/authClient";
-
-const PASSWORD_REQUIREMENT = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,128}$/;
+import { isValidPassword, PASSWORD_MIN_LENGTH } from "@/lib/passwordPolicy";
+import { PasswordStrength } from "@/components/ui/PasswordStrength";
 
 /** Referral attribution persistence: a ?ref= code is remembered for 30 days so
  *  visitors who leave the registration page and come back later keep their
@@ -103,7 +103,7 @@ export default function RegisterPage() {
       setError(t("errName"));
       return;
     }
-    if (!PASSWORD_REQUIREMENT.test(password)) {
+    if (!isValidPassword(password)) {
       setError(t("errPwd"));
       return;
     }
@@ -277,7 +277,7 @@ export default function RegisterPage() {
                 id={passwordId}
                 type="password"
                 required
-                minLength={12}
+                minLength={PASSWORD_MIN_LENGTH}
                 maxLength={128}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -288,6 +288,7 @@ export default function RegisterPage() {
               <p id={`${passwordId}-hint`} className="mt-1 text-[10px] text-text-faint">
                 {t("pwdHint")}
               </p>
+              <PasswordStrength password={password} className="mt-1.5" />
             </div>
             <div className="mb-4">
               <label htmlFor={confirmId} className="block text-[11px] text-text-muted mb-1">
@@ -297,7 +298,7 @@ export default function RegisterPage() {
                 id={confirmId}
                 type="password"
                 required
-                minLength={12}
+                minLength={PASSWORD_MIN_LENGTH}
                 maxLength={128}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}

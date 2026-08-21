@@ -3,6 +3,8 @@
 import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { PasswordStrength } from "@/components/ui/PasswordStrength";
+import { PASSWORD_MIN_LENGTH, isValidPassword } from "@/lib/passwordPolicy";
 import { SecurityCenter } from "./SecurityCenter";
 import { fmtDate } from "@/lib/dates";
 
@@ -23,19 +25,6 @@ async function readJson(response: Response): Promise<{ error?: string }> {
   } catch {
     return {};
   }
-}
-
-/** Password policy score: 0–4 based on the server's requirements. */
-function passwordStrength(value: string): { score: number; label: string; tone: string } {
-  if (!value) return { score: 0, label: "", tone: "" };
-  let score = 0;
-  if (value.length >= 12) score++;
-  if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score++;
-  if (/[0-9]/.test(value)) score++;
-  if (/[^A-Za-z0-9]/.test(value) && value.length >= 14) score++;
-  const labels = ["Weak", "Fair", "Good", "Strong"];
-  const tones = ["bg-down", "bg-brand", "bg-up/70", "bg-up"];
-  return { score, label: labels[Math.min(score - 1, 3)], tone: tones[Math.min(score - 1, 3)] };
 }
 
 /** Editable profile and password security settings. */
@@ -62,7 +51,6 @@ export function SettingsTab({ user }: { user: User }) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [profileDirty, passwordDirty]);
 
-  const strength = passwordStrength(next);
   const passwordFieldType = showPasswords ? "text" : "password";
 
   async function saveProfile(event: React.FormEvent<HTMLFormElement>): Promise<void> {
@@ -104,10 +92,10 @@ export function SettingsTab({ user }: { user: User }) {
       setPasswordNotice({ kind: "err", text: "New passwords do not match." });
       return;
     }
-    if (next.length < 12 || !/[a-z]/.test(next) || !/[A-Z]/.test(next) || !/[0-9]/.test(next)) {
+    if (!isValidPassword(next)) {
       setPasswordNotice({
         kind: "err",
-        text: "Use at least 12 characters with uppercase, lowercase, and a number.",
+        text: `Use at least ${PASSWORD_MIN_LENGTH} characters.`,
       });
       return;
     }
@@ -186,7 +174,7 @@ export function SettingsTab({ user }: { user: User }) {
         <div>
           <h3 className="text-sm font-medium">Change password</h3>
           <p className="mt-1 text-[11px] text-text-faint">
-            Use at least 12 characters with uppercase, lowercase, and a number.
+            Use at least 6 characters.
           </p>
         </div>
         <Field
@@ -211,19 +199,10 @@ export function SettingsTab({ user }: { user: User }) {
             }}
             autoComplete="new-password"
             required
-            minLength={12}
+            minLength={PASSWORD_MIN_LENGTH}
             maxLength={128}
           />
-          {next && (
-            <div className="mt-1.5 flex items-center gap-2" aria-live="polite">
-              <div className="flex h-1 flex-1 gap-1">
-                {[0, 1, 2, 3].map((i) => (
-                  <span key={i} className={`h-full flex-1 rounded-full transition-colors ${i < strength.score ? strength.tone : "bg-panel-3"}`} />
-                ))}
-              </div>
-              <span className="w-12 text-right text-[10px] text-text-faint">{strength.label}</span>
-            </div>
-          )}
+          <PasswordStrength password={next} className="mt-1.5" />
         </div>
         <Field
           label="Confirm new password"
@@ -235,7 +214,7 @@ export function SettingsTab({ user }: { user: User }) {
           }}
           autoComplete="new-password"
           required
-          minLength={12}
+          minLength={PASSWORD_MIN_LENGTH}
           maxLength={128}
         />
         <label className="flex w-fit cursor-pointer items-center gap-2 text-[11px] text-text-muted">

@@ -823,7 +823,7 @@
     "createSub": "Registrieren Sie sich, um zu handeln.",
     "fullName": "Vollständiger Name",
     "confirmPassword": "Passwort bestätigen",
-    "pwdHint": "12–128 Zeichen mit Groß-, Kleinbuchstaben und einer Zahl.",
+    "pwdHint": "Mindestens 6 Zeichen.",
     "agree": "Ich stimme den <terms>Nutzungsbedingungen</terms> und der <privacy>Datenschutzrichtlinie</privacy> zu.",
     "termsLink": "Nutzungsbedingungen",
     "privacyLink": "Datenschutzrichtlinie",
@@ -831,7 +831,7 @@
     "creating": "Konto wird erstellt",
     "haveAccount": "Sie haben bereits ein Konto?",
     "errName": "Geben Sie Ihren vollständigen Namen ein.",
-    "errPwd": "Verwenden Sie 12–128 Zeichen mit Groß-, Kleinbuchstaben und einer Zahl.",
+    "errPwd": "Verwenden Sie mindestens 6 Zeichen.",
     "errMatch": "Passwörter stimmen nicht überein.",
     "errAgree": "Akzeptieren Sie die Nutzungsbedingungen und Datenschutzrichtlinie, um fortzufahren.",
     "errRegister": "Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
@@ -879,7 +879,11 @@
     "resetMetaTitle": "Passwort zurücksetzen",
     "resetMetaDesc": "Legen Sie ein neues Passwort für Ihr Konto fest.",
     "verifyMetaTitle": "E-Mail verifizieren",
-    "verifyMetaDesc": "Bestätigen Sie Ihre E-Mail-Adresse, um Ihr Konto zu aktivieren."
+    "verifyMetaDesc": "Bestätigen Sie Ihre E-Mail-Adresse, um Ihr Konto zu aktivieren.",
+    "pwWeak": "Schwach",
+    "pwFair": "Mäßig",
+    "pwGood": "Gut",
+    "pwStrong": "Stark"
   },
   "trade": {
     "tpMarket": "Market",

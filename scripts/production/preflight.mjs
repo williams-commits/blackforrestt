@@ -14,7 +14,13 @@ for (const name of ["AUTH_SECRET", "FIELD_ENCRYPTION_KEY", "SECURITY_HASH_PEPPER
   if (/change-me|replace-with|example/i.test(value(name))) failures.push(`${name} still contains a placeholder.`);
 }
 if (value("AUTH_URL") && !value("AUTH_URL").startsWith("https://")) warnings.push("AUTH_URL is not HTTPS.");
-if (value("REGISTRATION_REQUIRE_EMAIL_VERIFICATION").toLowerCase() !== "true") failures.push("REGISTRATION_REQUIRE_EMAIL_VERIFICATION must be true in production.");
+if (value("REGISTRATION_REQUIRE_EMAIL_VERIFICATION").toLowerCase() !== "true") {
+  // Deliberate product decision: frictionless signup without email
+  // verification. Accounts are auto-verified at creation. Kept as a warning so
+  // operators consciously choose this posture (unverified emails weaken
+  // password-reset delivery guarantees and abuse resistance).
+  warnings.push("REGISTRATION_REQUIRE_EMAIL_VERIFICATION is not 'true': accounts register without email verification.");
+}
 const emailProvider = value("EMAIL_PROVIDER").toLowerCase();
 if (!new Set(["resend", "http"]).has(emailProvider)) failures.push("EMAIL_PROVIDER must be resend or http in production.");
 if (emailProvider === "resend" && (!value("RESEND_API_KEY") || !value("EMAIL_FROM"))) failures.push("RESEND_API_KEY and EMAIL_FROM are required for EMAIL_PROVIDER=resend.");

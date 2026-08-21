@@ -19,6 +19,7 @@ import {
 import { appendSecurityAudit } from "@/server/security/audit";
 import { sendImmediateEmail } from "@/server/email/service";
 import { createReferral } from "@/server/referrals";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/passwordPolicy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,11 +29,8 @@ const RegisterSchema = z.object({
   email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
   password: z
     .string()
-    .min(12, "Password must be at least 12 characters.")
-    .max(128)
-    .refine((value) => /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value), {
-      message: "Password must include uppercase, lowercase and a number.",
-    }),
+    .min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`)
+    .max(PASSWORD_MAX_LENGTH),
   referralCode: z.string().trim().max(20).optional(),
 });
 

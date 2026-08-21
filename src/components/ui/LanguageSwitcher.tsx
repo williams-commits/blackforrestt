@@ -47,17 +47,10 @@ export function LanguageSwitcher({ className = "" }: { className?: string }) {
     if (locale === activeLocale) return;
     const host = window.location.hostname;
     const parts = host.split(".");
-    const onApex = parts.length <= 2 || parts[0] === "www";
-    if (onApex) {
-      // Marketing domain: navigate to the locale-prefixed URL. The middleware
-      // handles the cookie + rewrite; a full navigation keeps the URL honest.
-      const strip = new RegExp(`^/(${locales.join("|")})(?=/|$)`);
-      const path = window.location.pathname.replace(strip, "") || "/";
-      const target = locale === defaultLocale ? path : `/${locale}${path === "/" ? "" : path}`;
-      window.location.assign(`${target}${window.location.search}`);
-      return;
-    }
-    // Trade subdomain: cookie + reload (no locale-prefixed URLs here).
+    // The cookie MUST be set for every locale — including the default. The
+    // middleware persists the locale cookie on /<locale>/ URLs, and request.ts
+    // resolves cookie-first; without an explicit "en" cookie, switching back
+    // to English would keep rendering the previous language on unprefixed URLs.
     const domain = parts.slice(-2).join(".");
     const cookieDomain = domain.includes(".") ? `; domain=.${domain}` : "";
     document.cookie = `${LOCALE_COOKIE}=${locale}; max-age=31536000; path=/${cookieDomain}; samesite=lax`;
@@ -66,7 +59,17 @@ export function LanguageSwitcher({ className = "" }: { className?: string }) {
     } catch {
       /* storage unavailable — non-fatal */
     }
-    // Reload so SSR'd strings re-render in the new locale.
+    const onApex = parts.length <= 2 || parts[0] === "www";
+    if (onApex) {
+      // Marketing domain: navigate to the locale-prefixed URL (default locale
+      // unprefixed). Full navigation so the URL matches the chosen language.
+      const strip = new RegExp(`^/(${locales.join("|")})(?=/|$)`);
+      const path = window.location.pathname.replace(strip, "") || "/";
+      const target = locale === defaultLocale ? path : `/${locale}${path === "/" ? "" : path}`;
+      window.location.assign(`${target}${window.location.search}`);
+      return;
+    }
+    // Trade subdomain: cookie + reload (no locale-prefixed URLs here).
     window.location.reload();
   };
 

@@ -823,7 +823,7 @@
     "createSub": "Inscrivez-vous pour commencer à trader.",
     "fullName": "Nom complet",
     "confirmPassword": "Confirmer le mot de passe",
-    "pwdHint": "12 à 128 caractères avec majuscule, minuscule et un chiffre.",
+    "pwdHint": "Au moins 6 caractères.",
     "agree": "J'accepte les <terms>Conditions d'utilisation</terms> et la <privacy>Politique de confidentialité</privacy>.",
     "termsLink": "Conditions d'utilisation",
     "privacyLink": "Politique de confidentialité",
@@ -831,7 +831,7 @@
     "creating": "Création du compte",
     "haveAccount": "Vous avez déjà un compte ?",
     "errName": "Saisissez votre nom complet.",
-    "errPwd": "Utilisez 12 à 128 caractères avec majuscule, minuscule et un chiffre.",
+    "errPwd": "Utilisez au moins 6 caractères.",
     "errMatch": "Les mots de passe ne correspondent pas.",
     "errAgree": "Acceptez les Conditions d'utilisation et la Politique de confidentialité pour continuer.",
     "errRegister": "Échec de l'inscription. Veuillez réessayer.",
@@ -879,7 +879,11 @@
     "resetMetaTitle": "Réinitialiser le mot de passe",
     "resetMetaDesc": "Définissez un nouveau mot de passe pour votre compte.",
     "verifyMetaTitle": "Vérifier l'e-mail",
-    "verifyMetaDesc": "Confirmez votre adresse e-mail pour activer votre compte."
+    "verifyMetaDesc": "Confirmez votre adresse e-mail pour activer votre compte.",
+    "pwWeak": "Faible",
+    "pwFair": "Moyen",
+    "pwGood": "Bon",
+    "pwStrong": "Solide"
   },
   "trade": {
     "tpMarket": "Marché",

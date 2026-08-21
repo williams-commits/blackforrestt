@@ -5,6 +5,7 @@ import { prisma, resolveUserId } from "@/server/db";
 import { auth } from "@/auth";
 import { appendAuditEvent } from "@/server/ledger";
 import { appendSecurityAudit } from "@/server/security/audit";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/passwordPolicy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,11 +14,8 @@ const Schema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z
     .string()
-    .min(12, "New password must contain at least 12 characters.")
-    .max(128, "New password is too long.")
-    .regex(/[a-z]/, "New password must include a lowercase letter.")
-    .regex(/[A-Z]/, "New password must include an uppercase letter.")
-    .regex(/[0-9]/, "New password must include a number."),
+    .min(PASSWORD_MIN_LENGTH, `New password must contain at least ${PASSWORD_MIN_LENGTH} characters.`)
+    .max(PASSWORD_MAX_LENGTH, "New password is too long."),
 });
 
 /** POST /api/password — change the current user's password. */

@@ -182,8 +182,16 @@ export default auth((req) => {
 
   if (localePrefix) {
     // Prefixed default locale → permanent redirect to the unprefixed canonical.
+    // The cookie is stamped too: a visitor carrying a previous non-default
+    // locale cookie would otherwise see the old language on the unprefixed URL.
     if (localePrefix === DEFAULT_LOCALE) {
-      return NextResponse.redirect(new URL(originalPathname.replace(LOCALE_PREFIX_RE, "") || "/", req.url), 308);
+      const response = NextResponse.redirect(new URL(originalPathname.replace(LOCALE_PREFIX_RE, "") || "/", req.url), 308);
+      response.cookies.set(LOCALE_COOKIE, DEFAULT_LOCALE, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      });
+      return response;
     }
     // Non-default locale: rewrite to the stripped path with the locale cookie
     // injected into the forwarded request headers (read by request.ts) and
@@ -194,6 +202,10 @@ export default auth((req) => {
       ? cookie.replace(new RegExp(`${LOCALE_COOKIE}=[^;]*`), `${LOCALE_COOKIE}=${localePrefix}`)
       : `${cookie ? `${cookie}; ` : ""}${LOCALE_COOKIE}=${localePrefix}`;
     headers.set("cookie", updated);
+    // Marker so the sticky-prefix redirect below can tell this internally
+    // rewritten request apart from a fresh unprefixed one — without it the
+    // rewrite re-enters the middleware and redirects back to itself forever.
+    headers.set("x-locale-resolved", localePrefix);
     // A fresh same-origin URL (not the mutated nextUrl) keeps this an internal
     // rewrite — passing nextUrl makes dev-mode treat it as a proxy target.
     const response = NextResponse.rewrite(new URL(strippedPath, req.url), { request: { headers } });
@@ -203,6 +215,28 @@ export default auth((req) => {
       sameSite: "lax",
     });
     return response;
+  }
+
+  // Sticky locale prefix: an unprefixed marketing URL requested with a
+  // non-default locale cookie redirects to the prefixed URL, so the visible
+  // URL always matches the rendered language and shared links carry the
+  // language. Crawlers send no cookies and always see the unprefixed
+  // canonical. Skipped for API requests and on the trade host (the app area
+  // has no locale-prefixed URLs — there the cookie alone decides rendering).
+  const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
+  const brandDomainEnv = (process.env.BRAND_DOMAIN ?? "").trim().toLowerCase();
+  const onTradeHost = brandDomainEnv !== "" && requestHost(req) === `${(process.env.TRADE_SUBDOMAIN ?? "trade").trim()}.${brandDomainEnv}`;
+  if (
+    cookieLocale &&
+    (LOCALES as readonly string[]).includes(cookieLocale) &&
+    cookieLocale !== DEFAULT_LOCALE &&
+    !strippedPath.startsWith("/api/") &&
+    !onTradeHost &&
+    !req.headers.get("x-locale-resolved")
+  ) {
+    const target = new URL(`/${cookieLocale}${strippedPath}`, req.url);
+    target.search = req.nextUrl.search;
+    return NextResponse.redirect(target, 307);
   }
 
   const { pathname } = req.nextUrl;

@@ -823,7 +823,7 @@
     "createSub": "Regístrese para empezar a operar.",
     "fullName": "Nombre completo",
     "confirmPassword": "Confirmar contraseña",
-    "pwdHint": "12–128 caracteres con mayúsculas, minúsculas y un número.",
+    "pwdHint": "Al menos 6 caracteres.",
     "agree": "Acepto los <terms>Términos del servicio</terms> y la <privacy>Política de privacidad</privacy>.",
     "termsLink": "Términos del servicio",
     "privacyLink": "Política de privacidad",
@@ -831,7 +831,7 @@
     "creating": "Creando cuenta",
     "haveAccount": "¿Ya tiene una cuenta?",
     "errName": "Introduzca su nombre completo.",
-    "errPwd": "Use 12–128 caracteres con mayúsculas, minúsculas y un número.",
+    "errPwd": "Usa al menos 6 caracteres.",
     "errMatch": "Las contraseñas no coinciden.",
     "errAgree": "Acepte los Términos del servicio y la Política de privacidad para continuar.",
     "errRegister": "Error en el registro. Inténtelo de nuevo.",
@@ -879,7 +879,11 @@
     "resetMetaTitle": "Restablecer contraseña",
     "resetMetaDesc": "Establezca una nueva contraseña para su cuenta.",
     "verifyMetaTitle": "Verificar correo",
-    "verifyMetaDesc": "Confirme su dirección de correo para activar su cuenta."
+    "verifyMetaDesc": "Confirme su dirección de correo para activar su cuenta.",
+    "pwWeak": "Débil",
+    "pwFair": "Aceptable",
+    "pwGood": "Buena",
+    "pwStrong": "Fuerte"
   },
   "trade": {
     "tpMarket": "Mercado",

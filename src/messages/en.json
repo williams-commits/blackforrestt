@@ -823,7 +823,7 @@
     "createSub": "Sign up to start trading your account.",
     "fullName": "Full name",
     "confirmPassword": "Confirm password",
-    "pwdHint": "12–128 characters with uppercase, lowercase and a number.",
+    "pwdHint": "At least 6 characters.",
     "agree": "I agree to the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>.",
     "termsLink": "Terms of Service",
     "privacyLink": "Privacy Policy",
@@ -831,7 +831,7 @@
     "creating": "Creating account",
     "haveAccount": "Already have an account?",
     "errName": "Enter your full name.",
-    "errPwd": "Use 12–128 characters with uppercase, lowercase and a number.",
+    "errPwd": "Use at least 6 characters.",
     "errMatch": "Passwords do not match.",
     "errAgree": "Accept the Terms of Service and Privacy Policy to continue.",
     "errRegister": "Registration failed. Please try again.",
@@ -879,7 +879,11 @@
     "resetMetaTitle": "Reset Password",
     "resetMetaDesc": "Set a new password for your account.",
     "verifyMetaTitle": "Verify Email",
-    "verifyMetaDesc": "Confirm your email address to activate your account."
+    "verifyMetaDesc": "Confirm your email address to activate your account.",
+    "pwWeak": "Weak",
+    "pwFair": "Fair",
+    "pwGood": "Good",
+    "pwStrong": "Strong"
   },
   "trade": {
     "tpMarket": "Market",

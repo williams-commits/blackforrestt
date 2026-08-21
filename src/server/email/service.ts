@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { applicationOrigin, developmentEmailPreviewEnabled } from "../security/tokens";
-import { deliverRenderedEmail, emailProviderConfigured } from "./provider";
+import { deliverRenderedEmail, emailDeliveryEnabled, emailProviderConfigured } from "./provider";
 import { renderEmail, type EmailTemplateName, type EmailVariables } from "./templates";
 
 type Tx = Prisma.TransactionClient;
@@ -49,6 +49,9 @@ export async function queueUserEmail(
   });
   const rendered = renderEmail(input.template, variables);
   const providerConfigured = emailProviderConfigured();
+  const skipReason = !emailDeliveryEnabled()
+    ? "Email delivery is disabled (EMAIL_DELIVERY_ENABLED=false)."
+    : "Email provider is not configured.";
   await tx.emailDelivery.create({
     data: {
       userId: input.userId,
@@ -57,7 +60,7 @@ export async function queueUserEmail(
       subject: rendered.subject,
       variables: variables as Prisma.InputJsonValue,
       status: providerConfigured ? "PENDING" : "SKIPPED",
-      lastError: providerConfigured ? null : "Email provider is not configured.",
+      lastError: providerConfigured ? null : skipReason,
     },
   });
 }

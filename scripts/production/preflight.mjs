@@ -21,10 +21,17 @@ if (value("REGISTRATION_REQUIRE_EMAIL_VERIFICATION").toLowerCase() !== "true") {
   // password-reset delivery guarantees and abuse resistance).
   warnings.push("REGISTRATION_REQUIRE_EMAIL_VERIFICATION is not 'true': accounts register without email verification.");
 }
+const emailDeliveryEnabled = value("EMAIL_DELIVERY_ENABLED").toLowerCase() !== "false";
 const emailProvider = value("EMAIL_PROVIDER").toLowerCase();
-if (!new Set(["resend", "http"]).has(emailProvider)) failures.push("EMAIL_PROVIDER must be resend or http in production.");
-if (emailProvider === "resend" && (!value("RESEND_API_KEY") || !value("EMAIL_FROM"))) failures.push("RESEND_API_KEY and EMAIL_FROM are required for EMAIL_PROVIDER=resend.");
-if (emailProvider === "http" && (!value("EMAIL_API_URL") || !value("EMAIL_API_TOKEN") || !value("EMAIL_FROM"))) failures.push("EMAIL_API_URL, EMAIL_API_TOKEN and EMAIL_FROM are required for EMAIL_PROVIDER=http.");
+if (!emailDeliveryEnabled) {
+  // Deliberate kill-switch: no outbound email at all. Provider configuration
+  // becomes irrelevant; the app records SKIPPED rows instead of sending.
+  warnings.push("EMAIL_DELIVERY_ENABLED=false: ALL outbound email is disabled (verification, password reset, notifications).");
+} else {
+  if (!new Set(["resend", "http"]).has(emailProvider)) failures.push("EMAIL_PROVIDER must be resend or http in production.");
+  if (emailProvider === "resend" && (!value("RESEND_API_KEY") || !value("EMAIL_FROM"))) failures.push("RESEND_API_KEY and EMAIL_FROM are required for EMAIL_PROVIDER=resend.");
+  if (emailProvider === "http" && (!value("EMAIL_API_URL") || !value("EMAIL_API_TOKEN") || !value("EMAIL_FROM"))) failures.push("EMAIL_API_URL, EMAIL_API_TOKEN and EMAIL_FROM are required for EMAIL_PROVIDER=http.");
+}
 const scanner = (value("KYC_SCANNER") || "stub").toLowerCase();
 let loopbackOrigin = false;
 try {

@@ -2,7 +2,21 @@ import { randomUUID } from "node:crypto";
 import type { RenderedEmail } from "./templates";
 
 export type EmailProviderMode = "resend" | "http" | "disabled";
+
+/**
+ * Master kill-switch for ALL outbound email. Set EMAIL_DELIVERY_ENABLED=false
+ * in .env / .env.production to stop every delivery path — queued outbox emails,
+ * immediate sends, and security emails (verification / password reset) are
+ * recorded as SKIPPED / not_configured instead of sent, and the dispatcher
+ * never starts. Default: true.
+ */
+export function emailDeliveryEnabled(): boolean {
+  return (process.env.EMAIL_DELIVERY_ENABLED ?? "true").trim().toLowerCase() !== "false";
+}
+
 export function emailProviderMode(): EmailProviderMode {
+  // The delivery switch overrides any provider configuration.
+  if (!emailDeliveryEnabled()) return "disabled";
   const configured = (process.env.EMAIL_PROVIDER ?? (process.env.RESEND_API_KEY ? "resend" : process.env.EMAIL_API_URL ? "http" : "disabled")).toLowerCase();
   return configured === "resend" || configured === "http" ? configured : "disabled";
 }

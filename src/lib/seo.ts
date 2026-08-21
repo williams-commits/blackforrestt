@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { defaultLocale, locales } from "@/i18n/config";
 
 /**
  * Per-page SEO helpers.
@@ -8,10 +9,21 @@ import type { Metadata } from "next";
  * that all pages are duplicates of the homepage. Every content page MUST
  * override the canonical via contentMetadata() below.
  *
- * Descriptions are English-only by design: the site resolves language from a
- * cookie on a single URL, so crawlers only ever see the default-language page.
- * If the site moves to URL-based locales, move these into the message files.
+ * Descriptions are English-only: they match the default-language page that
+ * crawlers see at the unprefixed URL (the canonical). Translated variants are
+ * served at /<locale> URLs via the middleware locale routing.
  */
+
+/** Locale-prefixed variant of a path: "/about" → "/fr/about" (default: bare). */
+export function localePath(path: string, locale: string): string {
+  if (locale === defaultLocale) return path;
+  return `/${locale}${path === "/" ? "" : path}`;
+}
+
+/** hreflang alternates for a page across all supported locales. */
+export function languageAlternates(path: string): Record<string, string> {
+  return Object.fromEntries(locales.map((locale) => [locale, localePath(path, locale)]));
+}
 
 /** Default-language descriptions for public marketing pages. */
 const PAGE_DESCRIPTIONS: Record<string, string> = {
@@ -37,13 +49,14 @@ const PAGE_DESCRIPTIONS: Record<string, string> = {
 };
 
 /**
- * Metadata for content pages: translated title, page-specific canonical, and
- * an English description (see the note above).
+ * Metadata for content pages: translated title, page-specific canonical,
+ * hreflang alternates for every supported locale, and an English description
+ * (see the note above).
  */
 export function contentMetadata(path: string, title: string): Metadata {
   return {
     title,
     ...(PAGE_DESCRIPTIONS[path] ? { description: PAGE_DESCRIPTIONS[path] } : {}),
-    alternates: { canonical: path },
+    alternates: { canonical: path, languages: languageAlternates(path) },
   };
 }

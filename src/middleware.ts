@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { mutationOriginAllowed } from "@/server/security/origin";
 
+// Duplicated from @/i18n/config (importing that module here changes how the
+// middleware bundle is compiled — node: imports in the auth chain then fail
+// to resolve). Keep this list in sync with src/i18n/config.ts.
+const LOCALES = ["en", "fr", "de", "es", "ja", "zh", "ru", "ar", "ko"] as const;
+const DEFAULT_LOCALE = "en";
+const LOCALE_COOKIE = "NEXT_LOCALE";
+
 const PROTECTED_PAGES = ["/trade", "/account", "/reports"];
 const PROTECTED_APIS = [
   "/api/account",
@@ -101,7 +108,7 @@ function domainRedirect(req: Request): NextResponse | null {
   }
 
   const url = new URL(req.url);
-  const { pathname, search } = url;
+  const { pathname } = url;
 
   // On the apex domain: bounce trade/auth/admin routes to the trade subdomain.
   if (apex === brandDomain && pathname !== "/") {
@@ -130,13 +137,73 @@ function domainRedirect(req: Request): NextResponse | null {
 }
 
 /**
- * Protect authenticated client pages and APIs. Admin routes retain their own
- * explicit role checks. A valid authenticated session is always required.
+ * URL-based locales for search engines: marketing URLs may carry a locale
+ * prefix (e.g. /fr/about). The prefix is stripped and the locale injected via
+ * the NEXT_LOCALE cookie on the forwarded request, so the existing cookie
+ * resolver (src/i18n/request.ts) renders that language while the browser keeps
+ * the prefixed URL. Crawlers (cookie-less) see one consistent language per URL,
+ * which hreflang alternates + the sitemap advertise.
+ *
+ *   /about        → default locale (en), no prefix — canonical for en
+ *   /fr/about     → renders French (rewrite, URL preserved)
+ *   /en/about     → 308 redirect to /about (single canonical per language)
  */
+const LOCALE_PREFIX_RE = new RegExp(`^/(${LOCALES.join("|")})(?=/|$)`);
+
 export default auth((req) => {
+  // Locale-prefix extraction runs before everything: later checks (domain
+  // routing, auth) operate on the stripped path so prefixed URLs behave
+  // exactly like their unprefixed counterparts.
+  const prefixMatch = LOCALE_PREFIX_RE.exec(req.nextUrl.pathname);
+  const localePrefix = prefixMatch?.[1];
+  const originalPathname = req.nextUrl.pathname;
+  const strippedPath = localePrefix
+    ? req.nextUrl.pathname.slice(prefixMatch![0].length) || "/"
+    : req.nextUrl.pathname;
+  if (localePrefix) {
+    req.nextUrl.pathname = strippedPath;
+  }
+
   // Domain routing runs first, before auth — it's a pure host/path check.
   const redirect = domainRedirect(req);
-  if (redirect) return redirect;
+  if (redirect) {
+    // Preserve the locale prefix across cross-domain redirects (e.g. /fr/about
+    // opened on the trade host → apex /fr/about).
+    if (localePrefix) {
+      const location = redirect.headers.get("location");
+      if (location) {
+        const target = new URL(location);
+        target.pathname = originalPathname;
+        return NextResponse.redirect(target, 307);
+      }
+    }
+    return redirect;
+  }
+
+  if (localePrefix) {
+    // Prefixed default locale → permanent redirect to the unprefixed canonical.
+    if (localePrefix === DEFAULT_LOCALE) {
+      return NextResponse.redirect(new URL(originalPathname.replace(LOCALE_PREFIX_RE, "") || "/", req.url), 308);
+    }
+    // Non-default locale: rewrite to the stripped path with the locale cookie
+    // injected into the forwarded request headers (read by request.ts) and
+    // persisted on the response so subsequent unprefixed links keep the locale.
+    const headers = new Headers(req.headers);
+    const cookie = headers.get("cookie") ?? "";
+    const updated = cookie.includes(`${LOCALE_COOKIE}=`)
+      ? cookie.replace(new RegExp(`${LOCALE_COOKIE}=[^;]*`), `${LOCALE_COOKIE}=${localePrefix}`)
+      : `${cookie ? `${cookie}; ` : ""}${LOCALE_COOKIE}=${localePrefix}`;
+    headers.set("cookie", updated);
+    // A fresh same-origin URL (not the mutated nextUrl) keeps this an internal
+    // rewrite — passing nextUrl makes dev-mode treat it as a proxy target.
+    const response = NextResponse.rewrite(new URL(strippedPath, req.url), { request: { headers } });
+    response.cookies.set(LOCALE_COOKIE, localePrefix, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    });
+    return response;
+  }
 
   const { pathname } = req.nextUrl;
   const isProtectedPage = PROTECTED_PAGES.some((prefix) => pathname.startsWith(prefix));
@@ -201,5 +268,14 @@ export const config = {
     "/verify-email",
     // The root: landing on the apex, but redirect to trade if it ever needs to.
     "/",
+    // Locale-prefixed marketing URLs (/fr/about) — handled at the top of the
+    // middleware: prefix stripped, locale injected via the NEXT_LOCALE cookie.
+    // Locale-prefixed marketing URLs (/fr, /fr/about). NOTE: the segment is
+    // intentionally UNCONSTRAINED — custom-regex matchers like
+    // /:locale(en|fr|…) break the nodejs-runtime middleware compilation in
+    // Next 15.5 (node: imports in the auth chain stop resolving). The
+    // LOCALE_PREFIX_RE inside the middleware filters real locales; other
+    // first segments fall through untouched.
+    "/:locale/:path*",
   ],
 };

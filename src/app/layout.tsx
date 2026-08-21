@@ -20,6 +20,7 @@ import {
   supportEmail,
 } from "@/lib/branding";
 import { LOCALE_BCP47, LOCALE_OG, RTL_LOCALES } from "@/i18n/config";
+import { languageAlternates } from "@/lib/seo";
 
 /*
   Self-hosted fonts via next/font. CSP `font-src 'self' data:` permits these
@@ -86,7 +87,10 @@ export async function generateMetadata(): Promise<Metadata> {
     creator: brandShortName(),
     publisher: companyLegalName(),
     robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
-    alternates: { canonical: "/" },
+    // hreflang: the unprefixed URL is the default-locale (en) canonical; every
+    // other locale lives at /<locale> (middleware strips the prefix and sets
+    // the locale cookie — see src/middleware.ts).
+    alternates: { canonical: "/", languages: languageAlternates("/") },
     openGraph: {
       type: "website",
       locale: ogLocale,

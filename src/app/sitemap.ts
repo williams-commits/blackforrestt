@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 import { brandDomain } from "@/lib/branding";
+import { locales } from "@/i18n/config";
+import { localePath } from "@/lib/seo";
 
 /**
  * Dynamic sitemap for the marketing domain. Only public/marketing routes are
@@ -39,5 +41,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: now,
     changeFrequency,
     priority,
+    // One entry per page with hreflang alternates — crawlers discover every
+    // locale variant (/fr/about, /de/about, …) from the default-language URL.
+    alternates: {
+      languages: Object.fromEntries(
+        locales.map((locale) => [locale, `${base}${localePath(path, locale)}`]),
+      ) satisfies Record<string, string>,
+    },
   }));
 }

@@ -2,15 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { locales, LOCALE_DISPLAY, LOCALE_COOKIE, type Locale } from "@/i18n/config";
+import { defaultLocale, locales, LOCALE_DISPLAY, LOCALE_COOKIE, type Locale } from "@/i18n/config";
 
 /**
  * Working language dropdown. Replaces the decorative EN/FR buttons.
  *
- * Selecting a language sets the `NEXT_LOCALE` cookie (scoped to the brand apex
- * domain so it persists across the apex and trade.* subdomains) plus
- * localStorage, then reloads the page so server components re-render with the
- * new locale. The cookie is read by src/i18n/request.ts on every request.
+ * On the marketing apex: selecting a language navigates to the locale-prefixed
+ * URL (/fr/about) — the middleware strips the prefix, sets the NEXT_LOCALE
+ * cookie (scoped to the brand apex domain so it persists across the apex and
+ * trade.* subdomains), and the page renders in that language. The default
+ * locale (en) uses unprefixed URLs.
+ *
+ * On the trade subdomain (single-URL app area): the cookie is set directly and
+ * the page reloads so server components re-render with the new locale.
  */
 export function LanguageSwitcher({ className = "" }: { className?: string }) {
   const t = useTranslations("language");
@@ -41,8 +45,20 @@ export function LanguageSwitcher({ className = "" }: { className?: string }) {
   const select = (locale: Locale) => {
     setOpen(false);
     if (locale === activeLocale) return;
-    // Cookie: 1 year, shared across apex + trade.* subdomains.
-    const domain = window.location.hostname.split(".").slice(-2).join(".");
+    const host = window.location.hostname;
+    const parts = host.split(".");
+    const onApex = parts.length <= 2 || parts[0] === "www";
+    if (onApex) {
+      // Marketing domain: navigate to the locale-prefixed URL. The middleware
+      // handles the cookie + rewrite; a full navigation keeps the URL honest.
+      const strip = new RegExp(`^/(${locales.join("|")})(?=/|$)`);
+      const path = window.location.pathname.replace(strip, "") || "/";
+      const target = locale === defaultLocale ? path : `/${locale}${path === "/" ? "" : path}`;
+      window.location.assign(`${target}${window.location.search}`);
+      return;
+    }
+    // Trade subdomain: cookie + reload (no locale-prefixed URLs here).
+    const domain = parts.slice(-2).join(".");
     const cookieDomain = domain.includes(".") ? `; domain=.${domain}` : "";
     document.cookie = `${LOCALE_COOKIE}=${locale}; max-age=31536000; path=/${cookieDomain}; samesite=lax`;
     try {

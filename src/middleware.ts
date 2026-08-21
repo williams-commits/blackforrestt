@@ -83,6 +83,21 @@ function requestHost(req: Request): string {
 }
 
 /**
+ * The public origin of the incoming request, from proxy headers.
+ *
+ * NEVER build redirect/rewrite URLs from `req.url` here: with AUTH_URL set to
+ * the trade subdomain (as in production), middleware's req.url can carry that
+ * host regardless of the actual Host header — redirect targets then point at
+ * the wrong origin and the two domains bounce a request between them forever
+ * (ERR_TOO_MANY_REDIRECTS). This helper derives scheme + host from the real
+ * request headers instead.
+ */
+function publicOrigin(req: Request): string {
+  const proto = (req.headers.get("x-forwarded-proto") ?? "http").split(",")[0]!.trim() || "http";
+  return `${proto}://${requestHost(req)}`;
+}
+
+/**
  * Domain routing: ensure each route is served on its intended origin.
  *
  * - Apex domain (e.g. blackforrestt.com): marketing + public market data only.
@@ -107,7 +122,10 @@ function domainRedirect(req: Request): NextResponse | null {
     return null;
   }
 
-  const url = new URL(req.url);
+  // req.url's path is reliable; its host is not (see publicOrigin) — rebuild
+  // the URL on the real request origin.
+  const incoming = new URL(req.url);
+  const url = new URL(`${incoming.pathname}${incoming.search}`, publicOrigin(req));
   const { pathname } = url;
 
   // On the apex domain: bounce trade/auth/admin routes to the trade subdomain.
@@ -185,7 +203,8 @@ export default auth((req) => {
     // The cookie is stamped too: a visitor carrying a previous non-default
     // locale cookie would otherwise see the old language on the unprefixed URL.
     if (localePrefix === DEFAULT_LOCALE) {
-      const response = NextResponse.redirect(new URL(originalPathname.replace(LOCALE_PREFIX_RE, "") || "/", req.url), 308);
+      const canonicalPath = originalPathname.replace(LOCALE_PREFIX_RE, "") || "/";
+      const response = NextResponse.redirect(new URL(`${canonicalPath}${req.nextUrl.search}`, publicOrigin(req)), 308);
       response.cookies.set(LOCALE_COOKIE, DEFAULT_LOCALE, {
         path: "/",
         maxAge: 60 * 60 * 24 * 365,
@@ -206,9 +225,11 @@ export default auth((req) => {
     // rewritten request apart from a fresh unprefixed one — without it the
     // rewrite re-enters the middleware and redirects back to itself forever.
     headers.set("x-locale-resolved", localePrefix);
-    // A fresh same-origin URL (not the mutated nextUrl) keeps this an internal
-    // rewrite — passing nextUrl makes dev-mode treat it as a proxy target.
-    const response = NextResponse.rewrite(new URL(strippedPath, req.url), { request: { headers } });
+    // Absolute URL on the REAL request origin (Next requires a URL object; a
+    // relative string 500s). Built from publicOrigin(req) — never req.url,
+    // whose host can be the other origin (AUTH_URL), which turns the rewrite
+    // into a cross-origin proxy that bounces between the domains forever.
+    const response = NextResponse.rewrite(new URL(`${strippedPath}${req.nextUrl.search}`, publicOrigin(req)), { request: { headers } });
     response.cookies.set(LOCALE_COOKIE, localePrefix, {
       path: "/",
       maxAge: 60 * 60 * 24 * 365,
@@ -234,8 +255,7 @@ export default auth((req) => {
     !onTradeHost &&
     !req.headers.get("x-locale-resolved")
   ) {
-    const target = new URL(`/${cookieLocale}${strippedPath}`, req.url);
-    target.search = req.nextUrl.search;
+    const target = new URL(`/${cookieLocale}${strippedPath}${req.nextUrl.search}`, publicOrigin(req));
     return NextResponse.redirect(target, 307);
   }
 

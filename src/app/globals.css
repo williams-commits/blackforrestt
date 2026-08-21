@@ -290,3 +290,21 @@ body {
     font-size: 11px;
   }
 }
+
+/* ── Trade terminal scaling on large desktop monitors ─────────────────────
+   The terminal uses small fixed px sizes (10–12px fonts, 340px panels) tuned
+   for laptop densities. On large/high-resolution monitors running at native
+   scaling those pixels render physically tiny. Standardized CSS `zoom` scales
+   the whole workspace while viewport units (dvh/vh) still fill the screen, so
+   the layout stays a fixed-viewport app. MacBook-class widths are untouched. */
+@media (min-width: 1800px) and (min-height: 1000px) {
+  .trade-workspace {
+    zoom: 1.1;
+  }
+}
+
+@media (min-width: 2400px) and (min-height: 1300px) {
+  .trade-workspace {
+    zoom: 1.25;
+  }
+}

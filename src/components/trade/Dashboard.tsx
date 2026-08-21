@@ -46,7 +46,7 @@ export function Dashboard({
   }, [initialInterval, setInterval]);
 
   return (
-    <div className="flex min-h-dvh w-full flex-col overflow-x-hidden bg-canvas md:h-dvh md:overflow-hidden lg:h-screen">
+    <div className="trade-workspace flex min-h-dvh w-full flex-col overflow-x-hidden bg-canvas md:h-dvh md:overflow-hidden lg:h-screen">
       <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} walletAddresses={walletAddresses} onOpenAssets={() => setAssetModalOpen(true)} />
       {/* <MarketStatusBanner marketDataMode={marketDataMode} wsStatus={status} /> */}
 

@@ -194,11 +194,11 @@ function LoginForm() {
           {t("register")}
         </Link>
       </p>
-      <p className="text-center text-[11px] text-text-faint mt-3">
+      {/* <p className="text-center text-[11px] text-text-faint mt-3">
         <Link href="/forgot-password" className="text-brand hover:underline">
           {t("forgotPassword")}
         </Link>
-      </p>
+      </p> */}
     </form>
   );
 }

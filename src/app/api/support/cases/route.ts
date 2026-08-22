@@ -59,7 +59,7 @@ export async function GET() {
         resolvedAt: c.resolvedAt?.toISOString() ?? null,
       })),
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Unable to load your support cases." }, { status: 500 });
   }
 }

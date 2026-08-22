@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma, withSerializableRetry } from "@/server/db";
+import { withSerializableRetry } from "@/server/db";
 import { appendAuditEvent } from "@/server/ledger";
 import { getRedis } from "@/server/redis";
 

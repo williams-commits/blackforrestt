@@ -21,6 +21,7 @@ const TYPE_TONES: Record<string, string> = {
   ADMIN_MESSAGE: "bg-brand-soft text-brand",
   ADMIN_BROADCAST: "bg-brand-soft text-brand",
   ADMIN_CHAT: "bg-brand-soft text-brand",
+  CUSTOMER_MESSAGE: "bg-brand-soft text-brand",
   ACCOUNT_STATUS: "bg-down/10 text-down",
   PAYMENT_APPROVED: "bg-up/10 text-up",
   PAYMENT_REJECTED: "bg-down/10 text-down",

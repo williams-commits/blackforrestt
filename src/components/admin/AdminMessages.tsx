@@ -13,26 +13,46 @@ interface ThreadRow {
   lastMessageAt: string | null;
   lastMessage: string;
   lastFromAdmin: boolean;
+  unread: number;
+  status: "AWAITING_REPLY" | "REPLIED";
 }
 
 interface MessageRow {
   id: string;
   senderId: string;
+  senderName: string;
+  senderIsAdmin: boolean;
   recipientId: string;
   body: string;
   readAt: string | null;
   createdAt: string;
 }
 
-/** Admin chat inbox: thread list per customer, live chat pane, and the
- *  broadcast notification composer. */
+interface ThreadState {
+  viewerId: string;
+  user: { id: string; name: string | null; email: string | null; accountNo: string | null };
+  messages: MessageRow[];
+  hasMore: boolean;
+}
+
+const PAGE_SIZE = 100;
+
+/** Admin shared support inbox: searchable thread list with unread badges and
+ *  reply status, live chat pane with sender attribution and read receipts, and
+ *  the broadcast notification composer. Message direction comes from the API
+ *  (viewerId + senderIsAdmin) — the client never infers identity. */
 export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId: string; label: string } | null; onChatHandled: () => void }) {
   const [threads, setThreads] = useState<ThreadRow[]>([]);
+  const [totalUnread, setTotalUnread] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeUser, setActiveUser] = useState<{ id: string; label: string } | null>(null);
-  const [messages, setMessages] = useState<MessageRow[]>([]);
-  const [myId, setMyId] = useState<string | null>(null);
+  const [thread, setThread] = useState<ThreadState | null>(null);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [threadError, setThreadError] = useState<string | null>(null);
+  const [limit, setLimit] = useState(PAGE_SIZE);
+  const [search, setSearch] = useState("");
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [broadcastOpen, setBroadcastOpen] = useState(false);
@@ -42,13 +62,16 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
   const [bError, setBError] = useState<string | null>(null);
   const [bResult, setBResult] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const wasAtBottomRef = useRef(true);
 
   const loadThreads = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/messages", { cache: "no-store" });
-      const data = await response.json().catch(() => null) as { threads?: ThreadRow[]; error?: string } | null;
+      const data = await response.json().catch(() => null) as { threads?: ThreadRow[]; totalUnread?: number; error?: string } | null;
       if (!response.ok) throw new Error(data?.error ?? "Unable to load threads.");
       setThreads(data?.threads ?? []);
+      setTotalUnread(data?.totalUnread ?? 0);
+      setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to load threads.");
     } finally {
@@ -56,14 +79,11 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
     }
   }, []);
 
-  const loadThread = useCallback(async (userId: string) => {
-    const response = await fetch(`/api/admin/messages?userId=${encodeURIComponent(userId)}`, { cache: "no-store" });
-    const data = await response.json().catch(() => null) as { messages?: MessageRow[]; error?: string } | null;
+  const loadThread = useCallback(async (userId: string, currentLimit: number) => {
+    const response = await fetch(`/api/admin/messages?userId=${encodeURIComponent(userId)}&limit=${currentLimit}`, { cache: "no-store" });
+    const data = await response.json().catch(() => null) as (ThreadState & { error?: string }) | null;
     if (!response.ok) throw new Error(data?.error ?? "Unable to load the thread.");
-    setMessages(data?.messages ?? []);
-    // The admin is the party in every message of a thread they opened? No —
-    // infer: my id is the sender of any message whose recipient is this user
-    // AND whose sender is an admin; cheapest: match against thread rows.
+    if (data?.messages) setThread(data);
   }, []);
 
   useEffect(() => {
@@ -80,58 +100,54 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
     }
   }, [chatWith, onChatHandled]);
 
-  // Resolve my admin id once: sender of the most recent admin-sent message.
   useEffect(() => {
-    if (myId || threads.length === 0) return;
-    const adminThread = threads.find((t) => t.lastFromAdmin);
-    if (adminThread) {
-      // still ambiguous — instead fetch via a dedicated lightweight probe:
-      void (async () => {
-        const response = await fetch("/api/admin/overview", { cache: "no-store" });
-        if (response.ok) {
-          const data = await response.json() as { actor?: { id?: string } };
-          if (data.actor?.id) setMyId(data.actor.id);
-        }
-      })().catch(() => undefined);
-    } else {
-      void (async () => {
-        const response = await fetch("/api/admin/overview", { cache: "no-store" });
-        if (response.ok) {
-          const data = await response.json() as { actor?: { id?: string } };
-          if (data.actor?.id) setMyId(data.actor.id);
-        }
-      })().catch(() => undefined);
+    if (!activeUser) {
+      setThread(null);
+      return;
     }
-  }, [threads, myId]);
-
-  useEffect(() => {
-    if (!activeUser) return;
-    void loadThread(activeUser.id).catch((cause) => setError(cause instanceof Error ? cause.message : "Unable to load the thread."));
-    const timer = window.setInterval(() => { if (!document.hidden && activeUser) void loadThread(activeUser.id).catch(() => undefined); }, 10_000);
+    setThreadLoading(true);
+    setThreadError(null);
+    void loadThread(activeUser.id, limit)
+      .catch((cause) => setThreadError(cause instanceof Error ? cause.message : "Unable to load the thread."))
+      .finally(() => setThreadLoading(false));
+    const timer = window.setInterval(() => {
+      if (!document.hidden && activeUser) void loadThread(activeUser.id, limit).catch(() => undefined);
+    }, 10_000);
     return () => window.clearInterval(timer);
-  }, [activeUser, loadThread]);
+  }, [activeUser, limit, loadThread]);
 
+  const messageCount = thread?.messages.length ?? 0;
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "nearest" });
-  }, [messages.length]);
+    if (wasAtBottomRef.current) bottomRef.current?.scrollIntoView({ block: "nearest" });
+  }, [messageCount]);
+
+  function loadEarlier() {
+    setLimit((current) => Math.min(200, current + PAGE_SIZE));
+  }
 
   async function send(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!activeUser || !draft.trim() || sending) return;
+    const body = draft.trim();
+    if (!activeUser || !body || sending) return;
     setSending(true);
+    setThreadError(null);
     try {
       const response = await fetch("/api/admin/messages", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ userId: activeUser.id, body: draft }),
+        body: JSON.stringify({ userId: activeUser.id, body }),
       });
-      const data = await response.json().catch(() => ({}));
+      const data = await response.json().catch(() => ({})) as { message?: MessageRow; error?: string };
       if (!response.ok) throw new Error(data.error ?? "Send failed.");
       setDraft("");
-      await loadThread(activeUser.id);
-      await loadThreads();
+      // Optimistically append the serialized message the server returned, then
+      // refresh the inbox so last-message/unread state stays in sync.
+      if (data.message && thread && thread.messages[thread.messages.length - 1]?.id !== data.message.id) {
+        setThread((current) => current ? { ...current, messages: [...current.messages, data.message!] } : current);
+      }
+      await Promise.all([loadThread(activeUser.id, limit), loadThreads()]);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Send failed.");
+      setThreadError(cause instanceof Error ? cause.message : "Send failed.");
     } finally {
       setSending(false);
     }
@@ -164,73 +180,160 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
     return <div className="space-y-2" role="status" aria-label="Loading messages"><Skeleton className="h-10 w-1/2" /><Skeleton className="h-10 w-2/3" /><Skeleton className="h-10 w-1/3" /></div>;
   }
 
+  const needle = search.trim().toLowerCase();
+  const visibleThreads = threads.filter((thread) => {
+    if (unreadOnly && thread.unread === 0) return false;
+    if (!needle) return true;
+    return [thread.name, thread.email, thread.accountNo, thread.lastMessage]
+      .some((field) => field?.toLowerCase().includes(needle));
+  });
+
   return (
     <section className="space-y-3" aria-labelledby="admin-messages-heading">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 id="admin-messages-heading" className="text-sm font-semibold">Customer messages</h2>
-          <p className="text-xs text-text-muted mt-1">Direct two-way chat with customers, plus platform-wide broadcast notifications.</p>
+          <p className="text-xs text-text-muted mt-1">
+            Shared team inbox — every operator sees the same threads.{" "}
+            {totalUnread > 0
+              ? <span className="font-medium text-brand">{totalUnread} unread message{totalUnread === 1 ? "" : "s"}</span>
+              : "All caught up."}
+          </p>
         </div>
         <button type="button" onClick={() => { setBError(null); setBResult(null); setBroadcastOpen(true); }} className="rounded bg-brand px-3 py-2 text-xs font-medium text-white hover:brightness-95">
           Broadcast notification
         </button>
       </div>
 
-      {error && <div role="alert" className="rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">{error}</div>}
+      {error && (
+        <div role="alert" className="flex items-center justify-between gap-2 rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">
+          <span>{error}</span>
+          <button type="button" onClick={() => void loadThreads()} className="shrink-0 font-medium underline underline-offset-2">Retry</button>
+        </div>
+      )}
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(220px,320px)_minmax(0,1fr)]">
+      <div className="grid gap-3 lg:grid-cols-[minmax(240px,340px)_minmax(0,1fr)]">
         {/* Thread list */}
-        <div className="max-h-[32rem] overflow-y-auto rounded-lg border border-border bg-canvas">
-          {threads.length === 0 && <p className="p-6 text-center text-xs text-text-muted">No conversations yet. Open a user in the Users tab and press “Chat”.</p>}
-          {threads.map((thread) => (
-            <button
-              key={thread.userId}
-              type="button"
-              onClick={() => setActiveUser({ id: thread.userId, label: thread.name ?? thread.email ?? thread.userId })}
-              className={`block w-full border-b border-border-soft px-3 py-2.5 text-left last:border-0 hover:bg-panel-2 ${activeUser?.id === thread.userId ? "bg-panel-2" : ""}`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-xs font-medium">{thread.name ?? "Unnamed"}</span>
-                <span className="shrink-0 text-[9px] text-text-faint tnum">{thread.lastMessageAt ? fmtDateTime(thread.lastMessageAt) : ""}</span>
-              </div>
-              <div className="truncate text-[10px] text-text-faint">{thread.email ?? "—"} · #{thread.accountNo ?? "—"}</div>
-              <div className={`mt-1 truncate text-[10px] ${thread.lastFromAdmin ? "text-text-muted" : "text-brand font-medium"}`}>
-                {thread.lastFromAdmin ? "You: " : ""}{thread.lastMessage || "(no messages)"}
-              </div>
-            </button>
-          ))}
+        <div className="flex max-h-[36rem] flex-col rounded-lg border border-border bg-canvas">
+          <div className="space-y-2 border-b border-border-soft p-2">
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search name, email, account…"
+              aria-label="Search conversations"
+              className="w-full rounded border border-border bg-panel px-2.5 py-1.5 text-xs outline-none focus-visible:border-brand"
+            />
+            <label className="flex items-center gap-1.5 text-[10px] text-text-muted">
+              <input type="checkbox" checked={unreadOnly} onChange={(event) => setUnreadOnly(event.target.checked)} className="accent-brand" />
+              Unread only
+            </label>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {visibleThreads.length === 0 && (
+              <p className="p-6 text-center text-xs text-text-muted">
+                {threads.length === 0 ? "No conversations yet. Open a user in the Users tab and press “Chat”." : "No conversations match."}
+              </p>
+            )}
+            {visibleThreads.map((threadRow) => (
+              <button
+                key={threadRow.userId}
+                type="button"
+                onClick={() => { setLimit(PAGE_SIZE); setActiveUser({ id: threadRow.userId, label: threadRow.name ?? threadRow.email ?? threadRow.userId }); }}
+                aria-current={activeUser?.id === threadRow.userId ? "true" : undefined}
+                className={`block w-full border-b border-border-soft px-3 py-2.5 text-left last:border-0 hover:bg-panel-2 ${activeUser?.id === threadRow.userId ? "bg-panel-2" : ""}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`truncate text-xs ${threadRow.unread > 0 ? "font-semibold" : "font-medium"}`}>{threadRow.name ?? "Unnamed"}</span>
+                  <span className="shrink-0 text-[9px] text-text-faint tnum">{threadRow.lastMessageAt ? fmtDateTime(threadRow.lastMessageAt) : ""}</span>
+                </div>
+                <div className="truncate text-[10px] text-text-faint">{threadRow.email ?? "—"} · #{threadRow.accountNo ?? "—"}</div>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <span
+                    className={`shrink-0 rounded px-1 py-px text-[8px] font-bold uppercase tracking-wide ${
+                      threadRow.status === "AWAITING_REPLY" ? "bg-brand/15 text-brand" : "bg-panel-3 text-text-muted"
+                    }`}
+                  >
+                    {threadRow.status === "AWAITING_REPLY" ? "Awaiting reply" : "Replied"}
+                  </span>
+                  {threadRow.unread > 0 && (
+                    <span className="shrink-0 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">{threadRow.unread}</span>
+                  )}
+                  <span className={`truncate text-[10px] ${threadRow.lastFromAdmin ? "text-text-muted" : "text-text font-medium"}`}>
+                    {threadRow.lastFromAdmin ? "You: " : ""}{threadRow.lastMessage || "(no messages)"}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Chat pane */}
-        <div className="flex h-[32rem] flex-col rounded-lg border border-border bg-canvas">
+        <div className="flex h-[36rem] flex-col rounded-lg border border-border bg-canvas">
           {activeUser ? (
             <>
-              <div className="border-b border-border-soft px-4 py-2.5">
-                <div className="text-xs font-semibold">{activeUser.label}</div>
-                <button type="button" onClick={() => setActiveUser(null)} className="text-[10px] text-text-faint hover:text-text">close thread</button>
+              <div className="flex items-start justify-between gap-2 border-b border-border-soft px-4 py-2.5">
+                <div className="min-w-0">
+                  <div className="truncate text-xs font-semibold">{thread?.user ? (thread.user.name ?? thread.user.email ?? activeUser.label) : activeUser.label}</div>
+                  {thread?.user && (
+                    <div className="truncate text-[10px] text-text-faint">{thread.user.email ?? "—"} · #{thread.user.accountNo ?? "—"}</div>
+                  )}
+                </div>
+                <button type="button" onClick={() => { setActiveUser(null); setThread(null); }} className="shrink-0 text-[10px] text-text-faint hover:text-text">close thread</button>
               </div>
-              <div className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
-                {messages.map((message) => {
-                  const mine = myId !== null && message.senderId === myId;
+              <div
+                className="flex-1 space-y-2 overflow-y-auto px-4 py-3"
+                onScroll={(event) => {
+                  const el = event.currentTarget;
+                  wasAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+                }}
+              >
+                {threadLoading && !thread && <div className="space-y-2" role="status" aria-label="Loading thread"><Skeleton className="h-8 w-2/3" /><Skeleton className="h-8 w-1/2" /><Skeleton className="h-8 w-3/4" /></div>}
+                {thread && thread.hasMore && (
+                  <button type="button" onClick={loadEarlier} className="mx-auto block rounded border border-border px-2.5 py-1 text-[10px] text-text-muted hover:text-text">
+                    Load earlier messages
+                  </button>
+                )}
+                {thread?.messages.map((message) => {
+                  const mine = thread.viewerId === message.senderId;
+                  const label = mine ? "You" : message.senderIsAdmin ? `Support · ${message.senderName}` : (thread.user.name ?? thread.user.email ?? "Customer");
                   return (
                     <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[80%] rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${mine ? "bg-brand text-white" : "bg-panel-2"}`}>
-                        {message.body}
-                        <div className={`mt-1 text-[9px] tnum ${mine ? "text-white/60" : "text-text-faint"}`}>{fmtDateTime(message.createdAt)}</div>
+                      <div className={`max-w-[80%] ${mine ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
+                        <span className={`px-1 text-[9px] font-semibold uppercase tracking-wide ${mine ? "text-text-faint" : "text-text-muted"}`}>{label}</span>
+                        <div className={`rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${mine ? "bg-brand text-white" : "bg-panel-2 text-text"}`}>
+                          {message.body}
+                          <div className={`mt-1 flex items-center justify-end gap-1.5 text-[9px] tnum ${mine ? "text-white/60" : "text-text-faint"}`}>
+                            <span>{fmtDateTime(message.createdAt)}</span>
+                            {mine && <span aria-label={message.readAt ? "Read by customer" : "Not yet read"}>{message.readAt ? "✓ Read" : "✓ Sent"}</span>}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
                 })}
-                {messages.length === 0 && <p className="py-8 text-center text-xs text-text-muted">No messages yet — send the first one.</p>}
+                {thread && thread.messages.length === 0 && <p className="py-8 text-center text-xs text-text-muted">No messages yet — send the first one.</p>}
                 <div ref={bottomRef} />
               </div>
+              {threadError && (
+                <div role="alert" className="mx-4 mb-2 flex items-center justify-between gap-2 rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">
+                  <span>{threadError}</span>
+                  <button type="button" onClick={() => activeUser && void loadThread(activeUser.id, limit)} className="shrink-0 font-medium underline underline-offset-2">Retry</button>
+                </div>
+              )}
               <form onSubmit={send} className="flex items-end gap-2 border-t border-border-soft p-3">
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey && draft.trim() && !sending) {
+                      e.preventDefault();
+                      void send(e as unknown as React.FormEvent<HTMLFormElement>);
+                    }
+                  }}
                   rows={2}
                   maxLength={4000}
-                  placeholder="Reply…"
+                  placeholder="Reply… (Enter to send, Shift+Enter for a new line)"
                   aria-label="Reply message"
                   className="flex-1 resize-none rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand"
                 />

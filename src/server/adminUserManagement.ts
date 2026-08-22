@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { appendAuditEvent } from "./ledger";
 
@@ -164,58 +165,175 @@ export async function adminBroadcastNotification(input: {
 }
 
 // ── Direct messages (admin ↔ customer chat) ─────────────────────────────────
+//
+// Threading model: a customer has exactly one shared support thread — every
+// DirectMessage between that customer and ANY admin, regardless of which
+// operator sent or received it (like a shared support inbox). All read/unread
+// and direction logic below derives from sender identity, which is resolved
+// server-side and shipped with every message so clients never have to guess.
 
-/** User side: fetch their thread with admins. Marks admin→user messages read. */
-export async function getUserMessageThread(input: { userId: string; limit?: number }) {
-  const limit = Math.min(200, Math.max(1, input.limit ?? 100));
-  const messages = await prisma.directMessage.findMany({
-    where: { OR: [{ senderId: input.userId }, { recipientId: input.userId }] },
-    orderBy: { createdAt: "desc" },
-    take: limit,
-    select: {
-      id: true, senderId: true, recipientId: true, body: true, readAt: true, createdAt: true,
-    },
-  });
-  const unreadIds = messages.filter((m) => m.recipientId === input.userId && !m.readAt).map((m) => m.id);
-  if (unreadIds.length > 0) {
-    await prisma.directMessage.updateMany({ where: { id: { in: unreadIds } }, data: { readAt: new Date() } });
-  }
-  return messages.reverse();
+/** Wire format for a chat message. Sender identity is resolved server-side. */
+export interface SupportMessageView {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderIsAdmin: boolean;
+  recipientId: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
 }
 
-/** Send a direct message and an in-app notification to the recipient. */
+const MESSAGE_SELECT = {
+  id: true,
+  senderId: true,
+  recipientId: true,
+  body: true,
+  readAt: true,
+  createdAt: true,
+  sender: { select: { name: true, email: true, isAdmin: true } },
+} as const;
+
+type MessageRow = Prisma.DirectMessageGetPayload<{ select: typeof MESSAGE_SELECT }>;
+
+function serializeMessage(row: MessageRow): SupportMessageView {
+  return {
+    id: row.id,
+    senderId: row.senderId,
+    senderName: row.sender.name ?? row.sender.email ?? "Unknown user",
+    senderIsAdmin: row.sender.isAdmin,
+    recipientId: row.recipientId,
+    body: row.body,
+    readAt: row.readAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+function displayName(user: { name: string | null; email: string | null }): string {
+  return user.name ?? user.email ?? "Unknown user";
+}
+
+const MAX_THREAD_LIMIT = 200;
+function clampLimit(limit: number | undefined): number {
+  return Math.min(MAX_THREAD_LIMIT, Math.max(1, limit ?? 100));
+}
+
+/** Customer side: fetch their support thread with the admin team. Marks
+ *  admin→customer messages read and reports whether older history exists. */
+export async function getUserMessageThread(input: { userId: string; limit?: number }) {
+  const limit = clampLimit(input.limit);
+  const rows = await prisma.directMessage.findMany({
+    where: {
+      OR: [
+        { senderId: input.userId, recipient: { isAdmin: true } },
+        { sender: { isAdmin: true }, recipientId: input.userId },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit + 1,
+    select: MESSAGE_SELECT,
+  });
+  const hasMore = rows.length > limit;
+  const messages = (hasMore ? rows.slice(0, limit) : rows).reverse();
+  const unreadIds = messages.filter((m) => m.recipientId === input.userId && m.sender.isAdmin && !m.readAt).map((m) => m.id);
+  let readNow: Date | null = null;
+  if (unreadIds.length > 0) {
+    readNow = new Date();
+    await prisma.directMessage.updateMany({ where: { id: { in: unreadIds } }, data: { readAt: readNow } });
+  }
+  return {
+    messages: messages.map((m) => (readNow && unreadIds.includes(m.id) ? { ...m, readAt: m.readAt ?? readNow } : m)).map(serializeMessage),
+    hasMore,
+  };
+}
+
+/** Resolve which admin a customer's outgoing message should be routed to:
+ *  the admin who last replied in their thread (conversation continuity), or
+ *  the longest-tenured active admin for a fresh thread. Two indexed queries. */
+export async function resolveSupportRecipient(userId: string): Promise<string | null> {
+  const lastAdminReply = await prisma.directMessage.findFirst({
+    where: { recipientId: userId, sender: { isAdmin: true } },
+    orderBy: { createdAt: "desc" },
+    select: { senderId: true },
+  });
+  if (lastAdminReply) return lastAdminReply.senderId;
+  const fallback = await prisma.user.findFirst({
+    where: { isAdmin: true, deletedAt: null },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  return fallback?.id ?? null;
+}
+
+/** Send a direct message and an in-app notification to the recipient.
+ *  Returns the serialized message so callers can update without a refetch. */
 export async function sendDirectMessage(input: {
   senderId: string;
   recipientId: string;
   body: string;
   notify: boolean;
-}): Promise<void> {
+}): Promise<SupportMessageView> {
   const body = input.body.trim();
   if (body.length < 1 || body.length > 4000) throw new AdminUserManagementError("Message must be 1–4000 characters.");
-  await prisma.$transaction(async (tx) => {
-    const sender = await tx.user.findUnique({ where: { id: input.senderId }, select: { isAdmin: true, name: true } });
+  const created = await prisma.$transaction(async (tx) => {
+    const sender = await tx.user.findUnique({
+      where: { id: input.senderId },
+      select: { id: true, isAdmin: true, name: true, email: true },
+    });
     if (!sender) throw new AdminUserManagementError("Sender not found.", 404);
-    const recipient = await tx.user.findUnique({ where: { id: input.recipientId }, select: { id: true } });
+    const recipient = await tx.user.findUnique({
+      where: { id: input.recipientId },
+      select: { id: true, isAdmin: true, name: true, email: true },
+    });
     if (!recipient) throw new AdminUserManagementError("Recipient not found.", 404);
-    await tx.directMessage.create({
+    if (sender.isAdmin && recipient.isAdmin) {
+      throw new AdminUserManagementError("Operator-to-operator messages are not supported.");
+    }
+    const message = await tx.directMessage.create({
       data: { senderId: input.senderId, recipientId: input.recipientId, body },
+      select: MESSAGE_SELECT,
     });
     if (input.notify) {
       await tx.notification.create({
-        data: {
-          userId: input.recipientId,
-          type: sender.isAdmin ? "ADMIN_CHAT" : "CHAT_REPLY",
-          title: sender.isAdmin ? "New message from support" : "New reply from support",
-          body: body.slice(0, 240),
-          metadata: { chat: true },
-        },
+        data: sender.isAdmin
+          ? {
+              userId: input.recipientId,
+              type: "ADMIN_CHAT",
+              title: "New message from support",
+              body: body.slice(0, 240),
+              metadata: { chat: true, operatorId: input.senderId },
+            }
+          : {
+              userId: input.recipientId,
+              type: "CUSTOMER_MESSAGE",
+              title: `New message from ${displayName(sender)}`,
+              body: body.slice(0, 240),
+              metadata: { chat: true, customerId: input.senderId },
+            },
       });
     }
+    return message;
   });
+  return serializeMessage(created);
 }
 
-/** Admin side: thread overview — latest message + unread count per customer. */
-export async function adminMessageThreads() {
+export interface AdminThreadSummary {
+  userId: string;
+  email: string | null;
+  name: string | null;
+  accountNo: string | null;
+  lastMessageAt: string | null;
+  lastMessage: string;
+  lastFromAdmin: boolean;
+  /** Customer messages no operator has opened yet. */
+  unread: number;
+  /** AWAITING_REPLY = the ball is with support; REPLIED = with the customer. */
+  status: "AWAITING_REPLY" | "REPLIED";
+}
+
+/** Admin side: thread overview across the shared inbox — latest message,
+ *  unread count, and reply status per customer, plus the team's totals. */
+export async function adminMessageThreads(): Promise<{ threads: AdminThreadSummary[]; totalUnread: number }> {
   const customers = await prisma.user.findMany({
     where: {
       OR: [
@@ -225,53 +343,100 @@ export async function adminMessageThreads() {
     },
     select: {
       id: true, email: true, name: true, accountNo: true,
-      sentMessages: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true, body: true, senderId: true } },
-      receivedMessages: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true, body: true, senderId: true } },
+      // Latest support-thread message on each side — non-admin correspondence
+      // (off-band user-to-user messages) never leaks into the shared inbox.
+      sentMessages: {
+        where: { recipient: { isAdmin: true } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { createdAt: true, body: true, senderId: true },
+      },
+      receivedMessages: {
+        where: { sender: { isAdmin: true } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { createdAt: true, body: true, senderId: true },
+      },
     },
   });
+  // One grouped query for unread customer→admin messages across all threads.
+  const unreadByCustomer = await prisma.directMessage.groupBy({
+    by: ["senderId"],
+    where: { readAt: null, sender: { isAdmin: false }, recipient: { isAdmin: true } },
+    _count: { _all: true },
+  });
+  const unreadMap = new Map(unreadByCustomer.map((row) => [row.senderId, row._count._all]));
   const adminUsers = await prisma.user.findMany({ where: { isAdmin: true }, select: { id: true } });
   const adminIds = new Set(adminUsers.map((admin) => admin.id));
-  const threads = customers.map((customer) => {
+  const threads = customers.map((customer): AdminThreadSummary => {
     const latest = [customer.sentMessages[0], customer.receivedMessages[0]]
       .filter(Boolean)
       .sort((a, b) => b!.createdAt.getTime() - a!.createdAt.getTime())[0];
+    const lastFromAdmin = latest ? adminIds.has(latest.senderId) : false;
     return {
       userId: customer.id,
       email: customer.email,
       name: customer.name,
       accountNo: customer.accountNo,
-      lastMessageAt: latest?.createdAt ?? null,
+      lastMessageAt: latest?.createdAt.toISOString() ?? null,
       lastMessage: latest?.body?.slice(0, 120) ?? "",
-      lastFromAdmin: latest ? adminIds.has(latest.senderId) : false,
+      lastFromAdmin,
+      unread: unreadMap.get(customer.id) ?? 0,
+      status: lastFromAdmin ? "REPLIED" : "AWAITING_REPLY",
     };
-  }).sort((a, b) => (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0));
-  return threads;
+  }).sort((a, b) => (b.lastMessageAt ?? "").localeCompare(a.lastMessageAt ?? ""));
+  return { threads, totalUnread: threads.reduce((sum, thread) => sum + thread.unread, 0) };
 }
 
-/** Admin side: full thread with one customer. Marks admin's unread customer messages read. */
+/** Admin side: full shared-inbox thread with one customer, including who the
+ *  customer is and the viewing operator's identity. Opening a thread marks the
+ *  customer's messages read for the whole team (shared-inbox semantics). */
 export async function adminGetThread(input: { adminId: string; userId: string; limit?: number }) {
-  const limit = Math.min(200, Math.max(1, input.limit ?? 100));
-  const adminUsers = await prisma.user.findMany({ where: { isAdmin: true }, select: { id: true } });
-  const adminIds = adminUsers.map((admin) => admin.id);
-  const messages = await prisma.directMessage.findMany({
-    where: { OR: [{ senderId: input.userId }, { recipientId: input.userId }] },
-    orderBy: { createdAt: "desc" },
-    take: limit,
-    select: { id: true, senderId: true, recipientId: true, body: true, readAt: true, createdAt: true },
-  });
+  const limit = clampLimit(input.limit);
+  const [customer, rows] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: input.userId },
+      select: { id: true, name: true, email: true, accountNo: true, isAdmin: true },
+    }),
+    prisma.directMessage.findMany({
+      where: {
+        OR: [
+          { senderId: input.userId, recipient: { isAdmin: true } },
+          { sender: { isAdmin: true }, recipientId: input.userId },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit + 1,
+      select: MESSAGE_SELECT,
+    }),
+  ]);
+  if (!customer) throw new AdminUserManagementError("User not found.", 404);
+  const hasMore = rows.length > limit;
+  const messages = (hasMore ? rows.slice(0, limit) : rows).reverse();
   const unreadIds = messages
-    .filter((m) => adminIds.includes(m.recipientId) && !m.readAt)
+    .filter((m) => m.senderId === customer.id && !m.readAt)
     .map((m) => m.id);
+  let readNow: Date | null = null;
   if (unreadIds.length > 0) {
-    await prisma.directMessage.updateMany({ where: { id: { in: unreadIds } }, data: { readAt: new Date() } });
+    readNow = new Date();
+    await prisma.directMessage.updateMany({ where: { id: { in: unreadIds } }, data: { readAt: readNow } });
   }
-  return messages.reverse();
+  return {
+    viewerId: input.adminId,
+    user: {
+      id: customer.id,
+      name: customer.name,
+      email: customer.email,
+      accountNo: customer.accountNo,
+      isAdmin: customer.isAdmin,
+    },
+    messages: messages.map((m) => (readNow && unreadIds.includes(m.id) ? { ...m, readAt: m.readAt ?? readNow } : m)).map(serializeMessage),
+    hasMore,
+  };
 }
 
 export async function countUnreadDirectMessages(userId: string): Promise<number> {
-  const adminUsers = await prisma.user.findMany({ where: { isAdmin: true }, select: { id: true } });
-  if (adminUsers.length === 0) return 0;
   return prisma.directMessage.count({
-    where: { recipientId: userId, senderId: { in: adminUsers.map((a) => a.id) }, readAt: null },
+    where: { recipientId: userId, sender: { isAdmin: true }, readAt: null },
   });
 }

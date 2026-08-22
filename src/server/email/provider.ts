@@ -28,6 +28,12 @@ export function emailProviderConfigured(): boolean {
 }
 
 export async function deliverRenderedEmail(input: { to: string; rendered: RenderedEmail; idempotencyKey?: string }): Promise<{ providerMessageId: string }> {
+  // Hard invariant: the master switch is re-checked at the single network
+  // exit point — no caller can reach Resend/HTTP when delivery is disabled,
+  // regardless of upstream guards or provider configuration.
+  if (!emailDeliveryEnabled()) {
+    throw new Error("Email delivery is disabled (EMAIL_DELIVERY_ENABLED=false).");
+  }
   const mode = emailProviderMode();
   const idempotencyKey = input.idempotencyKey ?? randomUUID();
   if (mode === "resend") {

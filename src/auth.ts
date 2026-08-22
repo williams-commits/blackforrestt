@@ -91,6 +91,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           );
           return null;
         }
+        // Admin account-management states (suspend / block / soft-delete) all
+        // block sign-in. Audited so operators can see blocked attempts.
+        const managementBlockReason = user.deletedAt
+          ? "DELETED"
+          : user.blockedAt
+            ? "BLOCKED"
+            : user.suspendedAt
+              ? "SUSPENDED"
+              : null;
+        if (managementBlockReason) {
+          await prisma.$transaction((tx) =>
+            appendAuditEvent(tx, {
+              actorId: user.id,
+              action: "ACCOUNT_STATE_LOGIN_BLOCKED",
+              entityType: "User",
+              entityId: user.id,
+              metadata: { reason: managementBlockReason, networkHash: throttle.networkHash },
+            }),
+          );
+          return null;
+        }
         if (!user.emailVerifiedAt) {
           await prisma.$transaction((tx) =>
             appendAuditEvent(tx, {

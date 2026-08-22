@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KycReview } from "./KycReview";
 import { PaymentsReview, type PaymentRequestRow } from "./PaymentsReview";
 import { ReconciliationReview } from "./ReconciliationReview";
+import { AdminUserActions } from "./AdminUserActions";
+import { AdminMessages } from "./AdminMessages";
 import { GroupsPanel } from "./GroupsPanel";
 import { SettingsForm, type UserSettingsConfig } from "./SettingsForm";
 import { Button } from "@/components/ui/Button";
@@ -28,6 +30,7 @@ type TabKey =
   | "executions"
   | "reconciliation"
   | "support"
+  | "messages"
   | "instruments"
   | "risk"
   | "audit"
@@ -91,6 +94,7 @@ const TAB_DEFINITIONS: Array<{ key: TabKey; label: string; permission: Permissio
   { key: "executions", label: "Executions", permission: "EXECUTION_READ" },
   { key: "reconciliation", label: "Reconciliation", permission: "RECONCILIATION_READ" },
   { key: "support", label: "Support", permission: "SUPPORT_READ" },
+  { key: "messages", label: "Messages", permission: "SUPPORT_READ" },
   { key: "instruments", label: "Instruments", permission: "INSTRUMENT_READ" },
   { key: "risk", label: "Risk", permission: "RISK_READ" },
   { key: "audit", label: "Audit", permission: "AUDIT_READ" },
@@ -103,7 +107,7 @@ const NAV_SECTIONS: Array<{ label: string; tabs: TabKey[] }> = [
   { label: "Operations", tabs: ["overview", "users", "groups"] },
   { label: "Finance", tabs: ["kyc", "payments", "ledger", "executions", "reconciliation"] },
   { label: "Risk & Compliance", tabs: ["risk", "audit", "changes"] },
-  { label: "Platform", tabs: ["support", "instruments", "health"] },
+  { label: "Platform", tabs: ["support", "messages", "instruments", "health"] },
 ];
 
 const ADMIN_TAB_STORAGE_KEY = "blckforest:admin-tab";
@@ -119,6 +123,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
   );
   const allowedKeys = useMemo(() => new Set(allowedTabs.map((t) => t.key)), [allowedTabs]);
   const [tab, setTabState] = useState<TabKey>(allowedTabs[0]?.key ?? "overview");
+  const [chatWith, setChatWith] = useState<{ userId: string; label: string } | null>(null);
 
   // Restore tab: ?tab= in the URL wins, then the last-visited tab, then default.
   // Runs once — the permission-gated key set is read from the ref, not deps.
@@ -239,13 +244,14 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
         <div className="min-w-0 space-y-5">
 
       {tab === "overview" && <OverviewPanel />}
-      {tab === "users" && <UsersPanel canAdjustBalance={can("USER_BALANCE_ADJUST")} />}
+      {tab === "users" && <UsersPanel canAdjustBalance={can("USER_BALANCE_ADJUST")} canManage={can("USER_ACCESS_MANAGE")} onOpenChat={(user) => { setChatWith({ userId: user.id, label: user.name ?? user.email ?? user.id }); setTab("messages"); }} />}
       {tab === "groups" && <GroupsPanel canManage={can("USER_ACCESS_MANAGE")} />}
       {tab === "kyc" && <KycPanel canDecide={can("KYC_DECIDE")} canAccess={can("KYC_DOCUMENT_ACCESS")} />}
       {tab === "payments" && <PaymentsPanel canPrepare={can("PAYMENT_PREPARE")} canApprove={can("PAYMENT_APPROVE")} simpleApproval={simpleApproval} />}
       {tab === "ledger" && <LedgerPanel />}
       {tab === "executions" && <ExecutionsPanel canManage={can("EXECUTION_MANAGE")} />}
       {tab === "reconciliation" && <ReconciliationReview canManage={can("RECONCILIATION_MANAGE")} />}
+      {tab === "messages" && <AdminMessages chatWith={chatWith} onChatHandled={() => setChatWith(null)} />}
       {tab === "support" && <SupportPanel canManage={can("SUPPORT_MANAGE")} />}
       {tab === "instruments" && <InstrumentsPanel canManage={can("INSTRUMENT_MANAGE")} />}
       {tab === "risk" && <RiskPanel canManage={can("RISK_MANAGE")} />}
@@ -297,12 +303,13 @@ function OverviewPanel() {
 interface UserRow {
   id: string; email: string | null; name: string | null; accountNo: string | null; verified: boolean;
   lockedUntil: string | null; mfaEnabledAt: string | null; createdAt: string;
+  isAdmin: boolean; suspendedAt: string | null; blockedAt: string | null; deletedAt: string | null;
   adminRoles: Array<{ role: string }>;
   kyc: { status: string } | null;
   metrics: { balance: string; equity: string; floatingPl: string; marginLevel: string | null } | null;
   _count: { positions: number; securitySessions: number; reconciliationBlocks: number };
 }
-function UsersPanel({ canAdjustBalance }: { canAdjustBalance: boolean }) {
+function UsersPanel({ canAdjustBalance, canManage, onOpenChat }: { canAdjustBalance: boolean; canManage: boolean; onOpenChat: (user: UserRow) => void }) {
   // Debounced server-side search (the API supports ?q= across email/name/account).
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -333,8 +340,11 @@ function UsersPanel({ canAdjustBalance }: { canAdjustBalance: boolean }) {
           <PaginatedUsers
             users={resource.data.users}
             canAdjustBalance={canAdjustBalance}
+            canManage={canManage}
             onManageBalance={setSelectedUser}
             onEditSettings={setSettingsUser}
+            onOpenChat={onOpenChat}
+            onChanged={() => void resource.refresh({ silent: true })}
           />
           <UserBalanceDialog
             user={selectedUser}
@@ -356,13 +366,19 @@ function UsersPanel({ canAdjustBalance }: { canAdjustBalance: boolean }) {
 function PaginatedUsers({
   users,
   canAdjustBalance,
+  canManage,
   onManageBalance,
   onEditSettings,
+  onOpenChat,
+  onChanged,
 }: {
   users: UserRow[];
   canAdjustBalance: boolean;
+  canManage: boolean;
   onManageBalance: (user: UserRow) => void;
   onEditSettings: (user: UserRow) => void;
+  onOpenChat: (user: UserRow) => void;
+  onChanged: () => void;
 }) {
   const pageSize = 25;
   const [page, setPage] = useState(1);
@@ -425,6 +441,7 @@ function PaginatedUsers({
             <Th sortKey="equity" sort={sort} onSort={onSort} align="right">Equity</Th>
             <Th sortKey="positions" sort={sort} onSort={onSort}>Activity</Th>
             {canAdjustBalance ? <Th align="right">Finance</Th> : null}
+            {canManage ? <Th align="right">Account</Th> : null}
           </tr></thead>
           <tbody>
             {visibleUsers.map((user) => (
@@ -437,9 +454,14 @@ function PaginatedUsers({
                 <td className="p-2 text-right tnum">{formatUsd(user.metrics?.equity ?? "0")}</td>
                 <td className="p-2">{user._count.positions} positions<div className={user._count.reconciliationBlocks ? "text-down" : "text-text-faint"}>{user._count.reconciliationBlocks} blocks</div></td>
                 {canAdjustBalance ? <td className="p-2 text-right whitespace-nowrap"><Button size="sm" onClick={() => onManageBalance(user)}>Manage balance</Button> <Button size="sm" variant="default" onClick={() => onEditSettings(user)}>Settings</Button></td> : null}
+                {canManage ? (
+                  <td className="p-2 text-right">
+                    <AdminUserActions user={user} onChanged={onChanged} onOpenChat={(u) => onOpenChat(users.find((candidate) => candidate.id === u.id) ?? user)} />
+                  </td>
+                ) : null}
               </tr>
             ))}
-            {users.length === 0 ? <tr><td colSpan={canAdjustBalance ? 8 : 7} className="p-8 text-center text-text-muted">No users found.</td></tr> : null}
+            {users.length === 0 ? <tr><td colSpan={(canAdjustBalance ? 8 : 7) + (canManage ? 1 : 0)} className="p-8 text-center text-text-muted">No users found.</td></tr> : null}
           </tbody>
         </table>
       </div>

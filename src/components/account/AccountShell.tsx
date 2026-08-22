@@ -6,6 +6,8 @@ import { AccountOverview } from "./AccountOverview";
 import { PositionHistory } from "./PositionHistory";
 import { TransactionsTab } from "./TransactionsTab";
 import { VerificationTab } from "./VerificationTab";
+import { NotificationsTab } from "./NotificationsTab";
+import { MessagesTab } from "./MessagesTab";
 import { SettingsTab } from "./SettingsTab";
 import { ReportsView } from "./ReportsView";
 import { PaymentTimeline } from "./PaymentTimeline";
@@ -19,7 +21,7 @@ import { ScrollFade } from "@/components/ui/ScrollFade";
 import { AccountReconciliationStatus, type ReconciliationStatus } from "./AccountReconciliationStatus";
 import type { WalletAddressEntry } from "@/server/userSettings";
 
-type Tab = "overview" | "positions" | "transactions" | "payments" | "reports" | "verification" | "support" | "settings" | "referrals";
+type Tab = "overview" | "positions" | "transactions" | "payments" | "reports" | "verification" | "notifications" | "messages" | "support" | "settings" | "referrals";
 const ACCOUNT_TAB_STORAGE_KEY = "blckforest:account-tab";
 
 interface Props {
@@ -93,6 +95,8 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "payments", label: "Payments" },
   { key: "reports", label: "Reports" },
   { key: "verification", label: "Verification" },
+  { key: "notifications", label: "Notifications" },
+  { key: "messages", label: "Messages" },
   { key: "support", label: "Support" },
   { key: "referrals", label: "Referrals" },
   { key: "settings", label: "Settings" },
@@ -290,6 +294,8 @@ export function AccountShell(props: Props) {
         />
       )}
       {tab === "verification" && <VerificationTab kyc={props.kyc} checklist={props.kycChecklist} onSubmitted={() => selectTab("overview")} />}
+      {tab === "notifications" && <NotificationsTab />}
+      {tab === "messages" && <MessagesTab />}
       {tab === "support" && <SupportTab />}
       {tab === "referrals" && <ReferralTab />}
       {tab === "settings" && <SettingsTab user={props.user} />}

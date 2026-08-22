@@ -150,6 +150,11 @@ model User {
   emailVerifiedAt DateTime?
   failedLoginCount Int @default(0)
   lockedUntil DateTime?
+  // Account management (admin actions). Soft-delete keeps ledger history;
+  // all three states block login in auth.ts.
+  suspendedAt DateTime?
+  blockedAt   DateTime?
+  deletedAt   DateTime?
   passwordChangedAt DateTime?
   mfaSecretEncrypted String?
   mfaEnabledAt DateTime?
@@ -179,6 +184,24 @@ model User {
   referralCode         ReferralCode?
   referralsMade        Referral[]     @relation("ReferrerReferrals")
   referralReceived     Referral?      @relation("ReferredReferral")
+  sentMessages         DirectMessage[] @relation("SentDirectMessages")
+  receivedMessages     DirectMessage[] @relation("ReceivedDirectMessages")
+}
+
+// Admin ↔ customer direct chat. One thread per user↔admin pair is implied by
+// querying all messages between the customer and any admin (isAdmin sender).
+model DirectMessage {
+  id          String    @id @default(cuid())
+  senderId    String
+  sender      User      @relation("SentDirectMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   User      @relation("ReceivedDirectMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  body        String
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([recipientId, readAt, createdAt])
+  @@index([senderId, createdAt])
 }
 
 enum SecurityTokenType {

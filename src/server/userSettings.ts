@@ -321,3 +321,16 @@ export function invalidateUserSettings(userId: string): void {
 export function invalidateAllSettings(): void {
   cache.clear();
 }
+
+/**
+ * Whether a payment method is available to this user. Enforces the SAME
+ * resolution the UI renders from (env defaults → group → per-user profile), so
+ * an admin override in the console changes API behavior too — not just the
+ * selector the customer sees. Case-insensitive to tolerate hand-edited group
+ * settings JSON.
+ */
+export async function isPaymentMethodAllowed(userId: string, method: string): Promise<boolean> {
+  const settings = await resolveUserSettings(userId);
+  const needle = method.trim().toUpperCase();
+  return settings.deposits.allowedMethods.some((allowed) => allowed.trim().toUpperCase() === needle);
+}

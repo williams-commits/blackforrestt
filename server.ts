@@ -8,7 +8,7 @@ import { prisma } from "./src/server/db.js";
 import { closeRedis } from "./src/server/redis.js";
 import { reconciliationScheduler } from "./src/server/reconciliationScheduler.js";
 import { emailDispatcher } from "./src/server/email/service.js";
-import { closeStorage } from "./src/server/storage.js";
+import { closeStorage, ensureStorageBuckets } from "./src/server/storage.js";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "0.0.0.0";
@@ -35,6 +35,18 @@ async function main(): Promise<void> {
     if (!dev) {
       throw new Error("Production startup aborted because the trading engine is not ready.", { cause: error });
     }
+  }
+
+  // Self-provision the private object buckets (KYC + payment proofs). The
+  // deploy stack's one-shot minio-init container may not have run for the
+  // current prefix/bucket set — without this, every document upload 503s.
+  // Failures are logged, not fatal: the lazy retry in storage.ts still
+  // recovers on the next upload attempt.
+  try {
+    const created = await ensureStorageBuckets();
+    if (created.length > 0) console.log(`🪣 Created missing storage buckets: ${created.join(", ")}`);
+  } catch (error) {
+    console.warn("⚠️ Storage bucket bootstrap skipped (storage unavailable at boot — uploads will retry lazily):", error instanceof Error ? error.message : error);
   }
 
   const server = createServer((request, response) => {

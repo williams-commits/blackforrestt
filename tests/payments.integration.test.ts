@@ -21,7 +21,8 @@ import {
   refreshLedgerProjections,
   verifyUserAccountingProjection,
 } from "../src/server/ledger.js";
-import { closeStorage, deleteObject } from "../src/server/storage.js";
+import { closeStorage, deleteObject, ensureStorageBuckets, paymentProofQuarantineBucket, putPaymentProofQuarantineObject } from "../src/server/storage.js";
+import { isPaymentMethodAllowed, invalidateAllSettings } from "../src/server/userSettings.js";
 import { PAYMENT_PROOF_MAX_BYTES } from "../src/lib/paymentProofs.js";
 
 const prisma = new PrismaClient();
@@ -266,6 +267,80 @@ test("payment proofs above the configured size cap are rejected before storage",
     receivePaymentProof({ userId: customer.id, paymentRequestId: request.id, declaredMime: "application/pdf", bytes: oversized }),
     /size must be between/,
   );
+});
+
+test("payment method availability follows admin settings overrides, not just the env default", async () => {
+  const previousEnv = process.env.PAYMENT_METHODS_DISABLED;
+  process.env.PAYMENT_METHODS_DISABLED = "CARD,BANK_TRANSFER";
+  const customer = await createUser("methods-customer");
+  const group = await prisma.userGroup.create({
+    data: { name: `methods-group-${randomUUID()}`, settings: {} },
+  });
+  await prisma.userGroupMembership.create({ data: { userId: customer.id, groupId: group.id } });
+  try {
+    // Global default from env: only CRYPTO is available.
+    invalidateAllSettings();
+    assert.equal(await isPaymentMethodAllowed(customer.id, "CRYPTO"), true);
+    assert.equal(await isPaymentMethodAllowed(customer.id, "CARD"), false);
+
+    // Admin console scenario: a group override re-enables env-disabled methods
+    // and the API-level check honors it.
+    await prisma.userGroup.update({
+      where: { id: group.id },
+      data: { settings: { deposits: { allowedMethods: ["CARD", "BANK_TRANSFER", "CRYPTO"] } } },
+    });
+    invalidateAllSettings();
+    assert.equal(await isPaymentMethodAllowed(customer.id, "CARD"), true);
+    assert.equal(await isPaymentMethodAllowed(customer.id, "BANK_TRANSFER"), true);
+
+    // Groups can also tighten availability below the env default.
+    await prisma.userGroup.update({
+      where: { id: group.id },
+      data: { settings: { deposits: { allowedMethods: ["CARD"] } } },
+    });
+    invalidateAllSettings();
+    assert.equal(await isPaymentMethodAllowed(customer.id, "CARD"), true);
+    assert.equal(await isPaymentMethodAllowed(customer.id, "CRYPTO"), false);
+
+    // A per-user profile override outranks the group layer.
+    await prisma.userProfile.create({
+      data: { userId: customer.id, settings: { deposits: { allowedMethods: ["CRYPTO"] } } },
+    });
+    invalidateAllSettings();
+    assert.equal(await isPaymentMethodAllowed(customer.id, "CRYPTO"), true);
+    assert.equal(await isPaymentMethodAllowed(customer.id, "CARD"), false);
+
+    // Hand-edited group JSON with lowercase entries still resolves.
+    await prisma.userProfile.delete({ where: { userId: customer.id } });
+    await prisma.userGroup.update({
+      where: { id: group.id },
+      data: { settings: { deposits: { allowedMethods: ["card", "crypto"] } } },
+    });
+    invalidateAllSettings();
+    assert.equal(await isPaymentMethodAllowed(customer.id, "CARD"), true);
+    assert.equal(await isPaymentMethodAllowed(customer.id, "CRYPTO"), true);
+    assert.equal(await isPaymentMethodAllowed(customer.id, "BANK_TRANSFER"), false);
+  } finally {
+    process.env.PAYMENT_METHODS_DISABLED = previousEnv;
+    invalidateAllSettings();
+    await prisma.user.deleteMany({ where: { id: customer.id } });
+    await prisma.userGroup.deleteMany({ where: { id: group.id } });
+  }
+});
+
+test("storage bucket bootstrap is idempotent and keeps uploads working", async () => {
+  // First run provisions anything missing (buckets may already exist from the
+  // deploy stack's minio-init); the second run must be a no-op.
+  await ensureStorageBuckets();
+  const createdOnSecondRun = await ensureStorageBuckets();
+  assert.deepEqual(createdOnSecondRun, []);
+
+  // The payment-proof quarantine bucket accepts a write — the deposit/withdrawal
+  // supporting-document upload path depends on it.
+  const probeKey = `bootstrap-probe/${randomUUID()}`;
+  const probe = Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(32, 0x42)]);
+  await putPaymentProofQuarantineObject({ key: probeKey, contentType: "application/pdf", bytes: probe });
+  await deleteObject({ key: probeKey, bucket: paymentProofQuarantineBucket() }).catch(() => undefined);
 });
 
 test.after(async () => {

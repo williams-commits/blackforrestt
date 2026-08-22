@@ -6,11 +6,11 @@ import { userMutationMutex } from "@/server/locks";
 import { appendAuditEvent } from "@/server/ledger";
 import { PaymentAmountSchema } from "@/server/moneyValidation";
 import {
-  disabledPaymentMethods,
   DepositRequestSchema,
   paymentMethodLabel,
   preparePaymentMethodDetails,
 } from "@/server/paymentMethodDetails";
+import { isPaymentMethodAllowed } from "@/server/userSettings";
 import { queueUserEmail } from "@/server/email/service";
 
 export const runtime = "nodejs";
@@ -26,7 +26,10 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid deposit request.", details: parsed.error.flatten() }, { status: 400 });
   }
-  if (disabledPaymentMethods().has(parsed.data.method)) {
+  // Method availability follows the resolved user settings (env defaults →
+  // group → profile), so admin overrides change API behavior — the env var is
+  // only the global default, not a hard lock.
+  if (!(await isPaymentMethodAllowed(userId, parsed.data.method))) {
     return NextResponse.json({ error: "This payment method is not available.", code: "METHOD_DISABLED" }, { status: 400 });
   }
 

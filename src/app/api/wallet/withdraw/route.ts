@@ -13,11 +13,11 @@ import {
 import { PaymentAmountSchema } from "@/server/moneyValidation";
 import { PaymentError, withdrawalRiskHold } from "@/server/payments";
 import {
-  disabledPaymentMethods,
   paymentMethodLabel,
   preparePaymentMethodDetails,
   WithdrawalRequestSchema,
 } from "@/server/paymentMethodDetails";
+import { isPaymentMethodAllowed } from "@/server/userSettings";
 import { isUserBlocked } from "@/server/reconciliation";
 import { hasRecentStepUp } from "@/server/security/sessions";
 import { queueUserEmail } from "@/server/email/service";
@@ -46,7 +46,9 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid withdrawal request.", details: parsed.error.flatten() }, { status: 400 });
   }
-  if (disabledPaymentMethods().has(parsed.data.method)) {
+  // Method availability follows resolved user settings (env defaults → group →
+  // profile) — admin overrides apply to withdrawals exactly as to deposits.
+  if (!(await isPaymentMethodAllowed(userId, parsed.data.method))) {
     return NextResponse.json({ error: "This payment method is not available.", code: "METHOD_DISABLED" }, { status: 400 });
   }
 

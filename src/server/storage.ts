@@ -5,6 +5,7 @@ import {
   GetObjectCommand,
   CopyObjectCommand,
   DeleteObjectCommand,
+  CreateBucketCommand,
 } from "@aws-sdk/client-s3";
 
 /**
@@ -45,6 +46,61 @@ export function paymentProofQuarantineBucket(): string {
 
 export function paymentProofSealedBucket(): string {
   return `${bucketPrefix()}-payment-sealed`;
+}
+
+/** Every bucket the application reads or writes. Kept in sync with the
+ *  minio-init container in deploy/docker-compose.prod.yml. */
+function requiredBuckets(): string[] {
+  return [quarantineBucket(), sealedBucket(), paymentProofQuarantineBucket(), paymentProofSealedBucket()];
+}
+
+const BUCKET_EXISTS_ERRORS = new Set(["BucketAlreadyOwnedByYou", "BucketAlreadyExists"]);
+
+/**
+ * Idempotently create every bucket the app needs under the configured prefix.
+ *
+ * The deploy stack creates these via a one-shot `minio-init` container — but
+ * that only runs when the container is (re)created. If the prefix changed, or
+ * buckets were added after the stack first came up (e.g. the payment-proof
+ * buckets), the app would otherwise 503 on every upload until someone runs
+ * bootstrap commands by hand. Creating them here makes the application
+ * self-sufficient; "already exists" outcomes are treated as success so this is
+ * safe to run on every boot and before every retry.
+ *
+ * Returns the buckets it actually created (empty when all existed).
+ */
+export async function ensureStorageBuckets(): Promise<string[]> {
+  const s3 = getStorage();
+  const created: string[] = [];
+  for (const bucket of requiredBuckets()) {
+    try {
+      await s3.send(new CreateBucketCommand({ Bucket: bucket }));
+      created.push(bucket);
+    } catch (error) {
+      const name = (error as { name?: string; Code?: string })?.name ?? (error as { Code?: string })?.Code ?? "";
+      if (BUCKET_EXISTS_ERRORS.has(name)) continue;
+      throw error;
+    }
+  }
+  return created;
+}
+
+function isNoSuchBucketError(error: unknown): boolean {
+  const name = (error as { name?: string; Code?: string })?.name ?? (error as { Code?: string })?.Code ?? "";
+  return name === "NoSuchBucket";
+}
+
+/** Run a put, and if the target bucket is missing (fresh prefix, init container
+ *  never ran for it), create the buckets once and retry — uploads then succeed
+ *  instead of returning "temporarily unavailable" forever. */
+async function putWithBucketEnsure(put: () => Promise<void>): Promise<void> {
+  try {
+    await put();
+  } catch (error) {
+    if (!isNoSuchBucketError(error)) throw error;
+    await ensureStorageBuckets();
+    await put();
+  }
 }
 
 export function getStorage(): S3ClientT {
@@ -121,14 +177,16 @@ export async function putQuarantineObject(input: {
   bytes: Buffer;
 }): Promise<void> {
   const s3 = getStorage();
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: quarantineBucket(),
-      Key: input.key,
-      ContentType: input.contentType,
-      Body: input.bytes,
-      ...sseParams(),
-    }),
+  await putWithBucketEnsure(() =>
+    s3.send(
+      new PutObjectCommand({
+        Bucket: quarantineBucket(),
+        Key: input.key,
+        ContentType: input.contentType,
+        Body: input.bytes,
+        ...sseParams(),
+      }),
+    ).then(() => undefined),
   );
 }
 
@@ -139,14 +197,16 @@ export async function putPaymentProofQuarantineObject(input: {
   bytes: Buffer;
 }): Promise<void> {
   const s3 = getStorage();
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: paymentProofQuarantineBucket(),
-      Key: input.key,
-      ContentType: input.contentType,
-      Body: input.bytes,
-      ...sseParams(),
-    }),
+  await putWithBucketEnsure(() =>
+    s3.send(
+      new PutObjectCommand({
+        Bucket: paymentProofQuarantineBucket(),
+        Key: input.key,
+        ContentType: input.contentType,
+        Body: input.bytes,
+        ...sseParams(),
+      }),
+    ).then(() => undefined),
   );
 }
 

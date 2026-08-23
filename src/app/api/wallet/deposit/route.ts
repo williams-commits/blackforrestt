@@ -111,7 +111,9 @@ export async function POST(req: Request) {
           userId,
           type: "PAYMENT_CREATED",
           title: "Deposit request created",
-          body: "Upload and verify your payment proof so finance can review this deposit.",
+          body: parsed.data.method === "CARD"
+            ? "Your card deposit is queued for finance review against the card processor reference."
+            : "Upload and verify your payment proof so finance can review this deposit.",
           metadata: { paymentRequestId: paymentRequest.id },
         },
       });
@@ -145,7 +147,8 @@ export async function POST(req: Request) {
       transaction: result.transaction.id,
       paymentRequest: result.paymentRequest?.id,
       status: result.transaction.status,
-      proofRequired: true,
+      // Card deposits settle against the processor reference — no receipt needed.
+      proofRequired: parsed.data.method !== "CARD",
     }, { status: result.replayed ? 200 : 202 });
   });
 }

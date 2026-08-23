@@ -32,8 +32,8 @@ import { PAYMENT_PROOF_MAX_BYTES } from "@/lib/paymentProofs";
 
 type Tx = Prisma.TransactionClient;
 
-const ALLOWED_PROOF_MIME = ["image/jpeg", "image/png", "application/pdf"] as const;
-type AllowedProofMime = (typeof ALLOWED_PROOF_MIME)[number];
+/** Types a payment proof may resolve to, from magic bytes (see resolveProofMime). */
+type AllowedProofMime = "image/jpeg" | "image/png" | "application/pdf";
 
 export interface BeneficiaryDetails {
   accountName: string;
@@ -95,17 +95,18 @@ function detectMime(bytes: Buffer): AllowedProofMime | null {
   return null;
 }
 
-function normalizeProofMime(value: string, bytes: Buffer): AllowedProofMime {
-  const normalized = value.trim().toLowerCase().split(";", 1)[0];
-  const aliases: Record<string, AllowedProofMime> = {
-    "image/jpg": "image/jpeg",
-    "image/pjpeg": "image/jpeg",
-    "image/x-png": "image/png",
-  };
-  const declared = aliases[normalized] ?? normalized;
-  if ((ALLOWED_PROOF_MIME as readonly string[]).includes(declared)) return declared as AllowedProofMime;
+/**
+ * Resolve a payment proof's type from its magic bytes — the declared MIME is
+ * ignored for acceptance. Browsers derive file.type from OS registry mappings,
+ * where `.jpeg` files often carry an exotic non-empty type (image/jpx,
+ * vendor-specific, …) that would wrongly reject a genuine JPEG, while `.jpg`
+ * maps to image/jpeg and passes. Sniffing the content removes any dependency
+ * on the client's MIME reporting; finalize re-sniffs the stored object, so
+ * storage tampering between receive and finalize is still blocked.
+ */
+function resolveProofMime(bytes: Buffer): AllowedProofMime {
   const detected = detectMime(bytes);
-  if (detected && (!normalized || normalized === "application/octet-stream")) return detected;
+  if (detected) return detected;
   throw new PaymentError("Only JPEG, PNG, and PDF payment proofs are accepted.");
 }
 
@@ -300,13 +301,12 @@ export async function withdrawalRiskHold(
 export async function receivePaymentProof(input: {
   userId: string;
   paymentRequestId: string;
-  declaredMime: string;
   bytes: Buffer;
 }): Promise<{ proofId: string }> {
-  const declaredMime = normalizeProofMime(input.declaredMime, input.bytes);
   if (input.bytes.length <= 0 || input.bytes.length > paymentProofMaxBytes()) {
     throw new PaymentError(`Payment proof size must be between 1 and ${paymentProofMaxBytes()} bytes.`);
   }
+  const declaredMime = resolveProofMime(input.bytes);
   const request = await prisma.paymentRequest.findFirst({
     where: { id: input.paymentRequestId, userId: input.userId, status: "PENDING" },
     select: { id: true, type: true },
@@ -475,7 +475,11 @@ export async function preparePayment(input: {
     }
     if (request.userId === input.actorId) throw new PaymentError("A payment maker cannot prepare their own request.", 403);
     if (request.status !== "PENDING") throw new PaymentError(`Payment request is already ${request.status.toLowerCase()}.`, 409);
-    if (request.type === "DEPOSIT" && !request.proofs.some((proof) => proof.status === "CLEAN")) {
+    // Proof-of-payment receipts are required for bank and crypto deposits —
+    // those settle against free-form transfer references. Card deposits are
+    // verified against the card processor's transaction reference instead, so
+    // a receipt is optional supporting material for them.
+    if (request.type === "DEPOSIT" && request.method !== "CARD" && !request.proofs.some((proof) => proof.status === "CLEAN")) {
       throw new PaymentError("A clean payment proof is required before a deposit can be prepared.", 409);
     }
     if (request.type === "WITHDRAWAL") {

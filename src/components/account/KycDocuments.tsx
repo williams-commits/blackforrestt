@@ -73,8 +73,14 @@ export function KycDocuments() {
   }, [documents]);
 
   function validateFile(file: File): string | null {
-    const allowed = new Set(["image/jpeg", "image/jpg", "image/png", "application/pdf"]);
-    if (!allowed.has(file.type)) return "Only JPEG, PNG, and PDF documents are accepted.";
+    // Accept by extension OR browser MIME: the server verifies the actual
+    // magic bytes, and file.type comes from OS registry mappings that often
+    // report exotic types for .jpeg files (while .jpg reports image/jpeg).
+    const allowedMime = new Set(["image/jpeg", "image/jpg", "image/pjpeg", "image/png", "application/pdf"]);
+    const allowedExtension = /\.(jpe?g|png|pdf)$/i.test(file.name);
+    if (!allowedMime.has(file.type) && !allowedExtension) {
+      return "Only JPEG, PNG, and PDF documents are accepted.";
+    }
     if (file.size <= 0 || file.size > MAX_BYTES) return `Document must be between 1 byte and ${fmtSize(MAX_BYTES)}.`;
     return null;
   }

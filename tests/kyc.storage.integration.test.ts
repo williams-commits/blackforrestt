@@ -16,7 +16,6 @@ const prisma = new PrismaClient();
 // Test fixtures: valid PNG (8-byte signature + IHDR), valid PDF header, EICAR file.
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const PNG_FIXTURE = Buffer.concat([PNG_SIGNATURE, Buffer.from("IHDR test image body")]);
-const PDF_FIXTURE = Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(64, 0x41)]);
 // EICAR signature embedded inside a valid-looking PDF so it passes magic-byte
 // verification, exercising the scan-after-verify path (the scanner catches it).
 const EICAR_FIXTURE = Buffer.concat([
@@ -47,7 +46,6 @@ test("receive -> finalize produces a CLEAN sealed document with correct hash", a
     userId: user.id,
     kycSubmissionId: submission.id,
     docType: "PASSPORT",
-    declaredMime: "image/png",
     bytes: PNG_FIXTURE,
   });
 
@@ -79,7 +77,6 @@ test("EICAR bytes finalize to BLOCKED and never reach the sealed bucket", async 
     userId: user.id,
     kycSubmissionId: submission.id,
     docType: "ID_CARD",
-    declaredMime: "application/pdf",
     bytes: EICAR_FIXTURE,
   });
 
@@ -100,25 +97,23 @@ test("EICAR bytes finalize to BLOCKED and never reach the sealed bucket", async 
   assert.ok(audit);
 });
 
-test("size and MIME mismatch finalize to a rejection, object deleted, status not CLEAN", async () => {
+test("content that is not JPEG/PNG/PDF is rejected at receive time", async () => {
   const suffix = randomUUID();
   const { user, submission } = await setupUserAndSubmission(suffix);
 
-  // Declare PNG but upload PDF bytes.
-  const upload = await receiveUpload({
-    userId: user.id,
-    kycSubmissionId: submission.id,
-    docType: "DRIVING_LICENSE",
-    declaredMime: "image/png",
-    bytes: PDF_FIXTURE,
-  });
-
-  const outcome = await finalizeUpload({ documentId: upload.documentId, userId: user.id });
-  assert.equal(outcome.kind, "conflict");
-  if (outcome.kind !== "conflict") return;
-
-  const doc = await prisma.kycDocument.findUniqueOrThrow({ where: { id: upload.documentId } });
-  assert.notEqual(doc.status, "CLEAN");
+  // The document type is resolved from magic bytes, so unrecognized content is
+  // rejected immediately — whatever the browser declared about it.
+  await assert.rejects(
+    receiveUpload({
+      userId: user.id,
+      kycSubmissionId: submission.id,
+      docType: "DRIVING_LICENSE",
+      bytes: Buffer.alloc(64, 0x43),
+    }),
+    /Only JPEG, PNG, and PDF/,
+  );
+  const docs = await listDocuments(user.id);
+  assert.equal(docs.length, 0);
 });
 
 test("complianceDownload returns sealed bytes only for CLEAN documents and logs access", async () => {
@@ -138,7 +133,6 @@ test("complianceDownload returns sealed bytes only for CLEAN documents and logs 
     userId: user.id,
     kycSubmissionId: submission.id,
     docType: "PASSPORT",
-    declaredMime: "image/png",
     bytes: PNG_FIXTURE,
   });
   await finalizeUpload({ documentId: upload.documentId, userId: user.id });
@@ -178,7 +172,6 @@ test("a CLEAN document cannot be re-finalized or cancelled (immutability)", asyn
     userId: user.id,
     kycSubmissionId: submission.id,
     docType: "PASSPORT",
-    declaredMime: "image/png",
     bytes: PNG_FIXTURE,
   });
   await finalizeUpload({ documentId: upload.documentId, userId: user.id });
@@ -200,7 +193,6 @@ test("API responses and listings never expose raw storage bytes or object URLs",
     userId: user.id,
     kycSubmissionId: submission.id,
     docType: "PROOF_OF_ADDRESS",
-    declaredMime: "image/png",
     bytes: PNG_FIXTURE,
   });
   await finalizeUpload({ documentId: upload.documentId, userId: user.id });

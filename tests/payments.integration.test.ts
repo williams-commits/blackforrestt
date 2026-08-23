@@ -46,7 +46,7 @@ async function createUser(label: string, verified = true) {
   });
 }
 
-async function createDepositRequest(userId: string, amount = "50") {
+async function createDepositRequest(userId: string, amount = "50", method = "Bank transfer") {
   const suffix = randomUUID();
   const transaction = await prisma.transaction.create({
     data: {
@@ -66,7 +66,7 @@ async function createDepositRequest(userId: string, amount = "50") {
       type: "DEPOSIT",
       amount: money(amount),
       asset: "USD",
-      method: "Bank transfer",
+      method,
     },
   });
 }
@@ -138,7 +138,6 @@ async function cleanProof(paymentRequestId: string, userId: string) {
   const proof = await receivePaymentProof({
     userId,
     paymentRequestId,
-    declaredMime: "application/pdf",
     bytes: PDF_FIXTURE,
   });
   const finalized = await finalizePaymentProof({ userId, proofId: proof.proofId });
@@ -264,9 +263,58 @@ test("payment proofs above the configured size cap are rejected before storage",
   const request = await createDepositRequest(customer.id);
   const oversized = Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(PAYMENT_PROOF_MAX_BYTES, 0x41)]);
   await assert.rejects(
-    receivePaymentProof({ userId: customer.id, paymentRequestId: request.id, declaredMime: "application/pdf", bytes: oversized }),
+    receivePaymentProof({ userId: customer.id, paymentRequestId: request.id, bytes: oversized }),
     /size must be between/,
   );
+});
+
+test("proof acceptance depends on file content, not the browser-reported MIME", async () => {
+  const customer = await createUser("payment-jpeg-customer");
+  const request = await createDepositRequest(customer.id);
+  // A genuine JPEG (magic bytes FFD8FF…) is accepted regardless of how the
+  // OS/browser labelled it — .jpeg files often carry exotic registry MIME
+  // types that must not reject a real photo.
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(96, 0x42)]);
+  const received = await receivePaymentProof({ userId: customer.id, paymentRequestId: request.id, bytes: jpeg });
+  const finalized = await finalizePaymentProof({ userId: customer.id, proofId: received.proofId });
+  assert.equal(finalized.status, "CLEAN");
+  assert.equal(finalized.detectedMime, "image/jpeg");
+
+  // Content that is none of JPEG/PNG/PDF is rejected whatever it declares.
+  const garbage = Buffer.alloc(64, 0x43);
+  await assert.rejects(
+    receivePaymentProof({ userId: customer.id, paymentRequestId: request.id, bytes: garbage }),
+    /Only JPEG, PNG, and PDF/,
+  );
+});
+
+test("card deposits need no proof receipt; bank deposits still do", async () => {
+  const customer = await createUser("card-customer");
+  const maker = await createUser("finance-maker");
+  const checker = await createUser("finance-checker");
+
+  // Card deposit with NO proof: finance can prepare it straight away — it
+  // settles against the card processor reference.
+  const cardRequest = await createDepositRequest(customer.id, "50", "CARD");
+  const prepared = await preparePayment({ paymentRequestId: cardRequest.id, actorId: maker.id, commandKey: randomUUID() });
+  assert.equal(prepared.status, "AWAITING_APPROVAL");
+  const approved = await approvePayment({
+    paymentRequestId: cardRequest.id,
+    actorId: checker.id,
+    commandKey: randomUUID(),
+    externalReference: `CARD-${randomUUID()}`,
+  });
+  assert.equal(approved.status, "APPROVED");
+
+  // Bank/crypto-style deposit without a clean proof is still blocked at prepare.
+  const bankRequest = await createDepositRequest(customer.id, "50", "BANK_TRANSFER");
+  await assert.rejects(
+    preparePayment({ paymentRequestId: bankRequest.id, actorId: maker.id, commandKey: randomUUID() }),
+    /clean payment proof/,
+  );
+
+  const invariant = await verifyUserAccountingProjection(customer.id);
+  assert.equal(invariant.valid, true, invariant.violations.join(", "));
 });
 
 test("payment method availability follows admin settings overrides, not just the env default", async () => {

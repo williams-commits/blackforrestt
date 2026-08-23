@@ -195,7 +195,9 @@ export function PaymentsReview({
                       {!canPrepare && !canApprove && <span className="text-text-faint">Read only</span>}
                     </div>
                     <div className="mt-1 text-right text-[10px] text-text-faint">
-                      {item.type === "DEPOSIT" ? `Proof: ${item.proofs.some((proof) => proof.status === "CLEAN") ? "clean" : "missing"}` : item.methodDetailsSummary ?? item.beneficiarySummary ?? "Destination missing"}
+                      {item.type === "DEPOSIT" && item.method !== "CARD"
+                        ? `Proof: ${item.proofs.some((proof) => proof.status === "CLEAN") ? "clean" : "missing"}`
+                        : item.methodDetailsSummary ?? item.beneficiarySummary ?? "Destination missing"}
                       {item.riskHoldUntil && new Date(item.riskHoldUntil) > new Date() ? " · cooling-off" : ""}
                     </div>
                   </td>

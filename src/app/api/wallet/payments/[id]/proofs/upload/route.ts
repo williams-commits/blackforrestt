@@ -16,10 +16,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "A payment proof file is required." }, { status: 400 });
   try {
+    // The proof type is resolved from the file's magic bytes server-side
+    // (see resolveProofMime) — the browser's MIME reporting is not trusted,
+    // so OS-level .jpeg/.jpg mapping quirks can't reject valid files.
     const result = await receivePaymentProof({
       userId,
       paymentRequestId: id,
-      declaredMime: file.type || "application/octet-stream",
       bytes: Buffer.from(await file.arrayBuffer()),
     });
     return NextResponse.json(result, { status: 201 });

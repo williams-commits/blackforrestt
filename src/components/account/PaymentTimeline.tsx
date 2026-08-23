@@ -220,8 +220,12 @@ export function PaymentTimeline() {
             {visibleRequests.map((request) => {
               const canCancel = request.status === "PENDING" || request.status === "AWAITING_APPROVAL";
               const hasCleanProof = request.proofs.some((proof) => proof.status === "CLEAN");
-              const proofRequired = request.type === "DEPOSIT" && !hasCleanProof;
-              const canUploadSupport = request.status === "PENDING" && (proofRequired || request.type === "WITHDRAWAL");
+              // Bank and crypto deposits settle against free-form transfer
+              // references, so a scanned receipt is mandatory. Card deposits are
+              // verified via the processor reference — a receipt is optional.
+              const proofRequired = request.type === "DEPOSIT" && request.method !== "CARD" && !hasCleanProof;
+              const canUploadSupport = request.status === "PENDING"
+                && (proofRequired || request.type === "WITHDRAWAL" || (request.type === "DEPOSIT" && request.method === "CARD"));
               return (
                 <li key={request.id} className="rounded-lg border border-border bg-canvas p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">

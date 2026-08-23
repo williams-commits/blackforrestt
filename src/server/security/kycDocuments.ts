@@ -37,8 +37,8 @@ export async function ensureOwnSubmission(userId: string) {
   });
 }
 
-const ALLOWED_MIME = ["image/jpeg", "image/png", "application/pdf"] as const;
-type AllowedMime = (typeof ALLOWED_MIME)[number];
+/** Types a KYC document may resolve to, from magic bytes (see resolveDocumentMime). */
+type AllowedMime = "image/jpeg" | "image/png" | "application/pdf";
 
 function maxBytes(): number {
   const n = Number(process.env.KYC_MAX_BYTES ?? 10_485_760);
@@ -58,10 +58,18 @@ function detectMime(bytes: Buffer): AllowedMime | null {
   return null;
 }
 
-function assertAllowedMime(value: string): asserts value is AllowedMime {
-  if (!(ALLOWED_MIME as readonly string[]).includes(value)) {
-    throw new KycDocumentError("Unsupported document type. Only JPEG, PNG, and PDF are accepted.", 400);
-  }
+/**
+ * Resolve the document's type from its magic bytes. The declared MIME is
+ * ignored for acceptance: browsers derive file.type from OS registry mappings,
+ * where `.jpeg` files often carry an exotic non-empty type that would wrongly
+ * reject a genuine JPEG (while `.jpg` maps to image/jpeg and passes). Content
+ * sniffing removes that dependency; finalize re-sniffs the stored object, so
+ * storage tampering between receive and finalize is still blocked.
+ */
+function resolveDocumentMime(bytes: Buffer): AllowedMime {
+  const detected = detectMime(bytes);
+  if (detected) return detected;
+  throw new KycDocumentError("Unsupported document type. Only JPEG, PNG, and PDF are accepted.", 400);
 }
 
 export class KycDocumentError extends Error {
@@ -75,7 +83,6 @@ export interface ReceiveUploadInput {
   userId: string;
   kycSubmissionId: string;
   docType: string;
-  declaredMime: string;
   bytes: Buffer;
 }
 
@@ -95,10 +102,10 @@ export async function receiveUpload(input: ReceiveUploadInput): Promise<ReceiveU
   if (!(ALLOWED_DOC_TYPES as readonly string[]).includes(input.docType)) {
     throw new KycDocumentError("Invalid document type.");
   }
-  assertAllowedMime(input.declaredMime);
   if (input.bytes.length <= 0 || input.bytes.length > maxBytes()) {
     throw new KycDocumentError(`Document size must be between 1 and ${maxBytes()} bytes.`);
   }
+  const declaredMime = resolveDocumentMime(input.bytes);
 
   const submission = await prisma.kycSubmission.findUnique({
     where: { id: input.kycSubmissionId },
@@ -123,7 +130,7 @@ export async function receiveUpload(input: ReceiveUploadInput): Promise<ReceiveU
   const storageKey = `kyc/${input.userId}/${id}/v${version}`;
 
   // Stream the bytes to the quarantine bucket (SSE applied by the storage layer).
-  await putQuarantineObject({ key: storageKey, contentType: input.declaredMime, bytes: input.bytes });
+  await putQuarantineObject({ key: storageKey, contentType: declaredMime, bytes: input.bytes });
 
   try {
     const doc = await withSerializableRetry(async (tx) => {
@@ -135,7 +142,7 @@ export async function receiveUpload(input: ReceiveUploadInput): Promise<ReceiveU
           storageKey,
           bucket: quarantineBucket(),
           docType: input.docType,
-          declaredMime: input.declaredMime,
+          declaredMime,
           sizeBytes: input.bytes.length,
           // SHA-256 is filled at finalize; a placeholder keeps the NOT NULL column honest.
           sha256: "pending",
@@ -148,7 +155,7 @@ export async function receiveUpload(input: ReceiveUploadInput): Promise<ReceiveU
         action: "KYC_DOCUMENT_RECEIVED",
         entityType: "KycDocument",
         entityId: created.id,
-        metadata: { docType: input.docType, declaredMime: input.declaredMime, sizeBytes: input.bytes.length, version },
+        metadata: { docType: input.docType, declaredMime, sizeBytes: input.bytes.length, version },
       });
       return created;
     }, { operation: `receive KYC document ${id}` });

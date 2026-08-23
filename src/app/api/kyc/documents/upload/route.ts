@@ -10,13 +10,15 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "application/pdf"]);
-
 /**
  * POST /api/kyc/documents/upload
  * Receives a document as multipart/form-data (fields: docType, file) and writes
  * its bytes straight to private quarantine storage through the app (same-origin,
  * so no provider CORS is required). The document stays PENDING_SCAN until finalize.
+ *
+ * The document type is resolved from the file's magic bytes server-side — the
+ * browser's MIME reporting (file.type) is not trusted, so OS registry quirks
+ * that map .jpeg files to exotic types can't reject genuine JPEGs.
  */
 export async function POST(req: Request) {
   const session = await auth();
@@ -32,13 +34,6 @@ export async function POST(req: Request) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "A file is required." }, { status: 400 });
   }
-  const lowerName = file.name.toLowerCase();
-  const declaredMime = file.type === "image/jpg"
-    ? "image/jpeg"
-    : file.type || (lowerName.endsWith(".pdf") ? "application/pdf" : lowerName.endsWith(".png") ? "image/png" : /\.jpe?g$/.test(lowerName) ? "image/jpeg" : "application/octet-stream");
-  if (!ALLOWED_MIME.has(declaredMime)) {
-    return NextResponse.json({ error: "Only JPEG, PNG, and PDF documents are accepted." }, { status: 400 });
-  }
 
   const submission = await ensureOwnSubmission(userId);
   try {
@@ -46,7 +41,6 @@ export async function POST(req: Request) {
       userId,
       kycSubmissionId: submission.id,
       docType,
-      declaredMime,
       bytes: Buffer.from(await file.arrayBuffer()),
     });
     return NextResponse.json(result, { status: 201 });

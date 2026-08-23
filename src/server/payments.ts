@@ -656,7 +656,11 @@ export async function rejectPayment(input: {
     if (await replayedCommand(tx, { paymentRequestId: request.id, type: "REJECTED", commandKey: input.commandKey, payload })) {
       return { status: request.status, replayed: true };
     }
-    if (request.userId === input.actorId) throw new PaymentError("A payment maker cannot reject their own request.", 403);
+    // No self-rejection block here, unlike prepare/approve: rejection moves no
+    // money (a rejected withdrawal just releases the customer's own reserved
+    // funds — the same outcome the customer can already trigger via cancel),
+    // and admins legitimately reject their own test requests. The segregation
+    // controls live on the money-moving actions.
     if (request.status !== "PENDING" && request.status !== "AWAITING_APPROVAL") {
       throw new PaymentError(`Payment request is already ${request.status.toLowerCase()}.`, 409);
     }

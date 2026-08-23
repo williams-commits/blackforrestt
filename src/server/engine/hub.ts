@@ -53,6 +53,19 @@ import type {
 
 const { Decimal } = Prisma;
 
+/** Human wording for a position's close reason, used in customer notifications. */
+function closeReasonLabel(reason: string): string {
+  switch (reason) {
+    case "MANUAL": return "manual close";
+    case "STOP_LOSS": return "stop loss";
+    case "TAKE_PROFIT": return "take profit";
+    case "EXPIRY": return "expiry";
+    case "STOP_OUT": return "margin stop-out";
+    case "ADMIN": return "operations";
+    default: return reason.toLowerCase().replaceAll("_", " ");
+  }
+}
+
 interface InstrumentState {
   symbol: string;
   digits: number;
@@ -709,6 +722,21 @@ class Hub {
               simulation: true,
             },
           });
+          await tx.notification.create({
+            data: {
+              userId: input.userId,
+              type: "TRADE_OPENED",
+              title: "Trade opened",
+              body: `${input.side === "BUY" ? "Buy" : "Sell"} ${input.volume.toFixed(2)} ${symbol} at ${position.openRate.toFixed(cfg.digits)}.`,
+              metadata: {
+                positionId: created.id,
+                symbol,
+                side: input.side,
+                type: input.type,
+                volume: input.volume,
+              },
+            },
+          });
           return { record: created, replayed: false };
         },
         { operation: `open position ${input.userId}:${input.idempotencyKey}` },
@@ -1060,6 +1088,20 @@ class Hub {
             netProfit: allInNet.toFixed(8),
             simulation: true,
             operatorNote,
+          },
+        });
+        await tx.notification.create({
+          data: {
+            userId,
+            type: "TRADE_CLOSED",
+            title: `${position.symbol} closed ${allInNet.isNegative() ? "−" : "+"}${allInNet.abs().toFixed(2)} USD`,
+            body: `${position.side === "BUY" ? "Buy" : "Sell"} ${position.volume.toFixed(2)} ${position.symbol} closed by ${closeReasonLabel(reason)} at ${position.currentRate.toFixed(cfg.digits)}.`,
+            metadata: {
+              positionId,
+              symbol: position.symbol,
+              reason,
+              netProfit: allInNet.toFixed(8),
+            },
           },
         });
         return true;

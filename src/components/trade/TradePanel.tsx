@@ -17,7 +17,7 @@ interface Props {
  * Trade panel — enterprise-grade order ticket for placing forex/CFD trades.
  *
  * Two modes:
- *   - Market (CFD): open at current rate, hold, close manually. SL/TP optional.
+ *   - CFD: open at the current market rate, hold, close manually. SL/TP optional.
  *   - Strike: open at a strike rate, settle after expiry.
  *
  * Shows live bid/ask, volume with quick-select, margin/commission preview,
@@ -164,7 +164,7 @@ export function TradePanel({ instrument }: Props) {
                   : "text-text-muted hover:text-text"
               }`}
             >
-              {t === "CFD" ? "Market" : "Strike"}
+              {t}
             </button>
           ))}
         </div>
@@ -357,8 +357,10 @@ export function TradePanel({ instrument }: Props) {
         </div>
       )}
 
-      {/* ── Sell / Buy buttons ─────────────────────────────────────────────── */}
-      <div className="px-4 pb-4 mt-auto pt-1">
+      {/* ── Sell / Buy buttons — pinned to the bottom of the scroll area so
+              the dealing rates are always visible while adjusting the order
+              (especially in the mobile bottom sheet). ──────────────────── */}
+      <div className="sticky bottom-0 z-10 mt-auto border-t border-border bg-canvas px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <div className="grid grid-cols-2 gap-2">
           <Button variant="sell" size="md" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting sell order" onClick={() => submit("SELL")} className="h-16 rounded-lg">
             <span className="flex flex-col items-center leading-tight">
@@ -374,7 +376,7 @@ export function TradePanel({ instrument }: Props) {
           </Button>
         </div>
         <p className="text-center text-[9px] text-text-faint mt-2">
-          {!hasFreshQuote ? "Orders disabled — waiting for a fresh quote" : type === "CFD" ? "Market order — accepted at the displayed executable rate" : `Strike order — settles in ${expiryMinutes} min`}
+          {!hasFreshQuote ? "Orders disabled — waiting for a fresh quote" : type === "CFD" ? "CFD market order — accepted at the displayed executable rate" : `Strike order — settles in ${expiryMinutes} min`}
         </p>
       </div>
     </div>

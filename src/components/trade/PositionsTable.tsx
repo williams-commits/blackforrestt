@@ -63,24 +63,144 @@ export function PositionsTable({ instruments }: Props) {
         )}
       </div>
 
-      {/* Table body */}
-      <div className="flex-1 min-h-0 overflow-auto">
-        {tab === "open" ? (
-          <OpenPositionsTable
-            positions={positions}
-            digitsFor={digitsFor}
-            busy={busy}
-            setBusy={setBusy}
-          />
-        ) : (
+  {/* Table body — phones get full-width position cards (the close action is
+      always visible without horizontal scrolling); md+ keeps the dense table. */}
+  <div className="flex-1 min-h-0 overflow-auto">
+    {tab === "open" ? (
+      <>
+        <div className="md:hidden">
+          <OpenPositionCards positions={positions} digitsFor={digitsFor} busy={busy} setBusy={setBusy} />
+        </div>
+        <div className="hidden md:block">
+          <OpenPositionsTable positions={positions} digitsFor={digitsFor} busy={busy} setBusy={setBusy} />
+        </div>
+      </>
+    ) : (
+      <>
+        <div className="md:hidden">
+          <HistoryCards digitsFor={digitsFor} />
+        </div>
+        <div className="hidden md:block">
           <HistoryTable digitsFor={digitsFor} />
-        )}
-      </div>
+        </div>
+      </>
+    )}
+  </div>
+</div>
+);
+}
+
+/** Shared close action for a position, with inline failure feedback. */
+function makeCloseHandler(busy: string | null, setBusy: (v: string | null) => void) {
+  return async (position: { id: string; symbol: string }) => {
+    if (busy) return;
+    setBusy(position.id);
+    const ok = await closePosition(position.id);
+    setBusy(null);
+    if (!ok) {
+      // Surface failure — closePosition swallows errors internally
+      const ev = new CustomEvent("blckforest:toast", { detail: { type: "error", message: `Failed to close ${position.symbol}. Try again or contact support.` } });
+      window.dispatchEvent(ev);
+    }
+  };
+}
+
+function EmptyState({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full text-text-faint gap-2 py-6">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-40" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M3 9h18M9 21V9" />
+      </svg>
+      <span className="text-xs">{title}</span>
+      {hint && <span className="text-[10px] text-text-faint">{hint}</span>}
     </div>
   );
 }
 
-/** Open positions tab — live data from WS store. */
+function SideBadge({ side, type }: { side: "BUY" | "SELL"; type: "CFD" | "STRIKE" }) {
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+      side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"
+    }`}>
+      {side === "BUY" ? "▲" : "▼"} {type === "STRIKE" ? "STRIKE" : "CFD"} {side}
+    </span>
+  );
+}
+
+/**
+ * Phone layout for open positions. Each position is a full-width card: the
+ * thumb-sized Close button sits at the right edge of every card so closing a
+ * trade never requires scrolling — horizontally to reveal a table column or
+ * vertically past the floating Trade button. The bottom padding keeps the last
+ * card's Close clear of the fixed Trade FAB.
+ */
+function OpenPositionCards({
+  positions,
+  digitsFor,
+  busy,
+  setBusy,
+}: {
+  positions: PositionView[];
+  digitsFor: (s: string) => number;
+  busy: string | null;
+  setBusy: (v: string | null) => void;
+}) {
+  const router = useRouter();
+  const close = makeCloseHandler(busy, setBusy);
+  if (positions.length === 0) {
+    return <EmptyState title="No open positions" hint="Use the trade panel to open a position" />;
+  }
+
+  return (
+    <ul className="divide-y divide-border-soft pb-24">
+      {positions.map((p) => {
+        const digits = digitsFor(p.symbol);
+        const up = p.netProfit >= 0;
+        const closing = busy === p.id;
+        return (
+          <li
+            key={p.id}
+            onClick={rowNavigate(router, p.symbol)}
+            className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors active:bg-panel-2"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <SideBadge side={p.side} type={p.type} />
+                <span className="text-sm font-bold">{p.symbol}</span>
+                <span className="text-[11px] text-text-faint tnum">{fmtNum(p.volume, 2)}</span>
+              </div>
+              <div className="mt-0.5 flex items-center gap-1.5 text-[10px] tnum text-text-faint">
+                <span>{fmtPrice(p.openRate, digits)}</span>
+                <span aria-hidden>→</span>
+                <span className="font-medium text-text-muted">{fmtPrice(p.currentRate, digits)}</span>
+                <span aria-hidden>·</span>
+                <span>{fmtTime(p.openedAt)}</span>
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-col items-end leading-tight">
+              <span className={`text-sm font-bold tnum ${up ? "text-up" : "text-down"}`}>
+                {up ? "+" : ""}{fmtNum(p.netProfit, 2)}
+              </span>
+              <span className="text-[9px] uppercase tracking-wide text-text-faint">P/L USD</span>
+            </div>
+            <button
+              type="button"
+              disabled={closing}
+              aria-label={`Close ${p.symbol} position`}
+              onClick={(event) => { event.stopPropagation(); void close(p); }}
+              className="flex h-11 shrink-0 items-center justify-center gap-1 rounded-lg border border-down/40 bg-down/10 px-3 text-xs font-semibold text-down transition active:scale-95 disabled:opacity-50"
+            >
+              {closing ? "…" : "✕ Close"}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** Open positions tab (md+) — live data from WS store. */
 function OpenPositionsTable({
   positions,
   digitsFor,
@@ -93,17 +213,9 @@ function OpenPositionsTable({
   setBusy: (v: string | null) => void;
 }) {
   const router = useRouter();
+  const close = makeCloseHandler(busy, setBusy);
   if (positions.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-text-faint gap-2 py-6">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-40">
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <path d="M3 9h18M9 21V9" />
-        </svg>
-        <span className="text-xs">No open positions</span>
-        <span className="text-[10px] text-text-faint">Use the trade panel to open a position</span>
-      </div>
-    );
+    return <EmptyState title="No open positions" hint="Use the trade panel to open a position" />;
   }
 
   return (
@@ -136,13 +248,7 @@ function OpenPositionsTable({
               className={`cursor-pointer border-t border-border-soft hover:bg-panel-2/50 transition-colors ${idx % 2 === 1 ? "bg-panel/30" : ""}`}
             >
               <Td className="text-text-muted tnum hidden sm:table-cell">{fmtTime(p.openedAt)}</Td>
-              <Td>
-                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                  p.side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"
-                }`}>
-                  {p.side === "BUY" ? "▲" : "▼"} {p.type === "STRIKE" ? "STRIKE" : "CFD"} {p.side}
-                </span>
-              </Td>
+              <Td><SideBadge side={p.side} type={p.type} /></Td>
               <Td className="font-semibold"><SymbolLink symbol={p.symbol} /></Td>
               <Td className="text-right tnum">{fmtNum(p.volume, 2)}</Td>
               <Td className="text-right tnum">{fmtPrice(p.openRate, digits)}</Td>
@@ -158,16 +264,7 @@ function OpenPositionsTable({
                 <button
                   disabled={busy === p.id}
                   aria-label={`Close ${p.symbol} position`}
-                  onClick={async () => {
-                    setBusy(p.id);
-                    const ok = await closePosition(p.id);
-                    setBusy(null);
-                    if (!ok) {
-                      // Surface failure — closePosition swallows errors internally
-                      const ev = new CustomEvent("blckforest:toast", { detail: { type: "error", message: `Failed to close ${p.symbol}. Try again or contact support.` } });
-                      window.dispatchEvent(ev);
-                    }
-                  }}
+                  onClick={() => void close(p)}
                   className="flex h-8 w-8 items-center justify-center rounded border border-border text-text-muted hover:text-down hover:border-down/50 hover:bg-down/10 disabled:opacity-50 transition-colors text-xs"
                 >
                   {busy === p.id ? "…" : "✕"}
@@ -182,9 +279,8 @@ function OpenPositionsTable({
   );
 }
 
-/** Trade history tab — fetches closed positions from the API. */
-function HistoryTable({ digitsFor }: { digitsFor: (s: string) => number }) {
-  const router = useRouter();
+/** Trade-history data loading — shared by the phone cards and the md+ table. */
+function useHistoryData() {
   const [history, setHistory] = useState<PositionView[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -222,6 +318,10 @@ function HistoryTable({ digitsFor }: { digitsFor: (s: string) => number }) {
     return () => window.clearInterval(timer);
   }, [loadHistory]);
 
+  return { history, loading, loadingMore, nextCursor, error, loadHistory };
+}
+
+function HistoryEmptyState({ loading, error, retry }: { loading: boolean; error: string | null; retry: () => void }) {
   if (loading) {
     return <div role="status" className="flex items-center justify-center h-full text-text-faint text-xs">Loading trade history…</div>;
   }
@@ -229,20 +329,89 @@ function HistoryTable({ digitsFor }: { digitsFor: (s: string) => number }) {
     return (
       <div role="alert" className="flex flex-col items-center justify-center h-full gap-2 py-6 text-xs text-down">
         <span>{error}</span>
-        <button type="button" onClick={() => void loadHistory()} className="rounded border border-border px-3 py-1 text-text hover:border-brand">Retry</button>
+        <button type="button" onClick={retry} className="rounded border border-border px-3 py-1 text-text hover:border-brand">Retry</button>
       </div>
     );
   }
-  if (history.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-text-faint gap-2 py-6">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-40" aria-hidden="true">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 6v6l4 2" strokeLinecap="round" />
-        </svg>
-        <span className="text-xs">No trade history yet</span>
-      </div>
-    );
+  return (
+    <div className="flex flex-col items-center justify-center h-full text-text-faint gap-2 py-6">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-40" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 6v6l4 2" strokeLinecap="round" />
+      </svg>
+      <span className="text-xs">No trade history yet</span>
+    </div>
+  );
+}
+
+/** Phone layout for trade history — stacked cards, no horizontal scrolling. */
+function HistoryCards({ digitsFor }: { digitsFor: (s: string) => number }) {
+  const router = useRouter();
+  const { history, loading, loadingMore, nextCursor, error, loadHistory } = useHistoryData();
+
+  if (loading || error || history.length === 0) {
+    return <HistoryEmptyState loading={loading} error={error} retry={() => void loadHistory()} />;
+  }
+
+  return (
+    <div className="pb-24">
+      <ul className="divide-y divide-border-soft">
+        {history.map((p) => {
+          const digits = digitsFor(p.symbol);
+          const up = p.netProfit >= 0;
+          return (
+            <li
+              key={p.id}
+              onClick={rowNavigate(router, p.symbol)}
+              className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors active:bg-panel-2"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <SideBadge side={p.side} type={p.type} />
+                  <span className="text-sm font-bold">{p.symbol}</span>
+                  <span className="text-[11px] text-text-faint tnum">{fmtNum(p.volume, 2)}</span>
+                </div>
+                <div className="mt-0.5 flex items-center gap-1.5 text-[10px] tnum text-text-faint">
+                  <span>{fmtTime(p.closedAt ?? p.openedAt)}</span>
+                  <span aria-hidden>·</span>
+                  <span>{fmtPrice(p.openRate, digits)}</span>
+                  <span aria-hidden>→</span>
+                  <span className="font-medium text-text-muted">{fmtPrice(p.currentRate, digits)}</span>
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-col items-end leading-tight">
+                <span className={`text-sm font-bold tnum ${up ? "text-up" : "text-down"}`}>
+                  {up ? "+" : ""}{fmtNum(p.netProfit, 2)}
+                </span>
+                <span className="text-[9px] uppercase tracking-wide text-text-faint">USD</span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {nextCursor ? (
+        <div className="flex justify-center p-2">
+          <button
+            type="button"
+            disabled={loadingMore}
+            onClick={() => void loadHistory(nextCursor, true)}
+            className="rounded border border-border bg-canvas px-4 py-2 text-[11px] font-medium hover:border-brand disabled:opacity-50"
+          >
+            {loadingMore ? "Loading…" : "Load 25 more"}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Trade history tab (md+) — fetches closed positions from the API. */
+function HistoryTable({ digitsFor }: { digitsFor: (s: string) => number }) {
+  const router = useRouter();
+  const { history, loading, loadingMore, nextCursor, error, loadHistory } = useHistoryData();
+
+  if (loading || error || history.length === 0) {
+    return <HistoryEmptyState loading={loading} error={error} retry={() => void loadHistory()} />;
   }
 
   return (

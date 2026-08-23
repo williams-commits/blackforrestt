@@ -23,11 +23,12 @@ export function SymbolLink({ symbol, className = "" }: { symbol: string; classNa
 }
 
 /** Row-level click handler that opens the position's market in the trade
- *  terminal. Clicks on interactive elements inside the row (close buttons,
- *  inputs, nested links) are ignored. The SymbolLink inside each row remains
- *  the keyboard-accessible path to the same destination. */
+ *  terminal. Works for table rows and mobile position cards alike. Clicks on
+ *  interactive elements inside the row (close buttons, inputs, nested links)
+ *  are ignored. The SymbolLink inside each row remains the keyboard-accessible
+ *  path to the same destination. */
 export function rowNavigate(router: { push: (href: string) => void }, symbol: string) {
-  return (event: MouseEvent<HTMLTableRowElement>) => {
+  return (event: MouseEvent<HTMLElement>) => {
     if (event.target instanceof Element && event.target.closest("button, a, input, select, textarea, label, [role=button]")) return;
     router.push(tradeHref(symbol));
   };

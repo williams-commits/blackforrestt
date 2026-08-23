@@ -317,6 +317,27 @@ test("card deposits need no proof receipt; bank deposits still do", async () => 
   assert.equal(invariant.valid, true, invariant.violations.join(", "));
 });
 
+test("an admin may reject their own request — reserved funds are released, not settled", async () => {
+  // Admins are users too: when they test their own deposit/withdrawal wallet
+  // they must be able to reject it from the finance console. Rejection is the
+  // safe direction (it releases the customer's own reservation, exactly like
+  // the customer-side cancel) — segregation controls apply to prepare/approve.
+  const customer = await createUser("selfreject-customer");
+  const withdrawal = await createWithdrawalRequest(customer.id);
+  const rejected = await rejectPayment({
+    paymentRequestId: withdrawal.id,
+    actorId: customer.id,
+    commandKey: randomUUID(),
+    note: "Owner rejected their own test withdrawal.",
+  });
+  assert.equal(rejected.status, "REJECTED");
+
+  // The reservation was fully released — available balance is back to 100.
+  const invariant = await verifyUserAccountingProjection(customer.id);
+  assert.equal(invariant.valid, true, invariant.violations.join(", "));
+  assert.equal(invariant.balances.available.toFixed(8), "100.00000000");
+});
+
 test("payment method availability follows admin settings overrides, not just the env default", async () => {
   const previousEnv = process.env.PAYMENT_METHODS_DISABLED;
   process.env.PAYMENT_METHODS_DISABLED = "CARD,BANK_TRANSFER";

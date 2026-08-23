@@ -12,6 +12,20 @@ interface NotificationToast {
   body: string;
   readAt: string | null;
   createdAt: string;
+  metadata?: { reason?: string } | null;
+}
+
+/**
+ * Trade events the ACTING client already confirmed with an instant local toast
+ * (order accepted in the trade panel, manual close in the positions dock).
+ * Showing the DB notification too would double-toast the same action — it is
+ * still marked read here and remains in the notification history. Automatic
+ * closes (stop loss, take profit, expiry, stop-out, operator) have no acting
+ * client and still surface as DB toasts.
+ */
+function suppressedByLocalToast(item: NotificationToast): boolean {
+  if (item.type === "TRADE_OPENED") return true;
+  return item.type === "TRADE_CLOSED" && item.metadata?.reason === "MANUAL";
 }
 
 /** Renders ephemeral toasts (toast.success/error/info) + polled DB notifications. */
@@ -34,10 +48,18 @@ export function ToastNotifications() {
       const notifications = Array.isArray(payload.notifications) ? payload.notifications as NotificationToast[] : [];
       const unread = notifications.filter((item) => !item.readAt);
       const fresh = unread.filter((item) => !seen.current.has(item.id));
-      unread.forEach((item) => seen.current.add(item.id));
+      // Mark ids as seen ONLY when they are processed. Marking them earlier
+      // lets a StrictMode double-mounted effect consume the batch in its
+      // aborted first closure (active=false) — the remounted closure then
+      // finds nothing fresh and every toast is silently swallowed.
       if (!active || fresh.length === 0) return;
-
-      setDbToasts((current) => [...fresh, ...current].slice(0, 4));
+      fresh.forEach((item) => seen.current.add(item.id));
+      // Everything unread is acknowledged (badge clears), but locally-confirmed
+      // trade actions don't re-toast — the acting UI already showed one.
+      const displayable = fresh.filter((item) => !suppressedByLocalToast(item));
+      if (displayable.length > 0) {
+        setDbToasts((current) => [...displayable, ...current].slice(0, 4));
+      }
       await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
@@ -47,11 +69,16 @@ export function ToastNotifications() {
 
     void load();
     const timer = window.setInterval(() => void load(), 12_000);
-    // Payment approvals (and other fund movements) create DB notifications —
-    // show them immediately instead of waiting for the 12s poll.
+    // Trades, payment approvals (and other fund movements) create DB
+    // notifications — the 12s poll would show them up to 12s late, which reads
+    // as "no feedback". The realtime bridge already pushes position/account
+    // events within ~1s of the trade; refresh immediately when one arrives so
+    // the toast appears while the user is still looking at the screen.
     const handleRealtime = (event: Event) => {
       const message = (event as CustomEvent<ServerMessage>).detail;
-      if (message?.type === "account" && message.reason === "ledger") void load();
+      const isLedgerMovement = message?.type === "account" && message.reason === "ledger";
+      const isPositionEvent = message?.type === "position";
+      if (isLedgerMovement || isPositionEvent) void load();
     };
     window.addEventListener("blckforest:realtime", handleRealtime);
     return () => {

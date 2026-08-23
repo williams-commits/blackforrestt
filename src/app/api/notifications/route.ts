@@ -26,7 +26,7 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" },
       take: limit,
       skip: offset,
-      select: { id: true, type: true, title: true, body: true, readAt: true, createdAt: true },
+      select: { id: true, type: true, title: true, body: true, readAt: true, createdAt: true, metadata: true },
     }),
     prisma.notification.count({ where: { userId, readAt: null } }),
     countUnreadDirectMessages(userId),

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForexStore } from "@/lib/store";
 import { closePosition } from "@/hooks/useOpenPosition";
+import { toast } from "@/lib/toast";
 import { fmtPrice, fmtNum } from "@/lib/format";
 import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";
 import type { InstrumentView, PositionView } from "@/lib/types";
@@ -90,15 +91,23 @@ export function PositionsTable({ instruments }: Props) {
 );
 }
 
-/** Shared close action for a position, with inline failure feedback. */
+/** Shared close action for a position: instant toast with the realized result,
+ *  inline failure feedback. */
 function makeCloseHandler(busy: string | null, setBusy: (v: string | null) => void) {
   return async (position: { id: string; symbol: string }) => {
     if (busy) return;
     setBusy(position.id);
-    const ok = await closePosition(position.id);
+    const result = await closePosition(position.id);
     setBusy(null);
-    if (!ok) {
-      // Surface failure — closePosition swallows errors internally
+    if (result.ok) {
+      // The DB notification for the manual close arrives separately (history +
+      // other sessions); the acting user gets this immediate confirmation.
+      const profit = result.netProfit ?? 0;
+      toast.success(
+        `${result.symbol ?? position.symbol} closed`,
+        `Position closed at market. Realized P/L ${profit >= 0 ? "+" : "−"}${Math.abs(profit).toFixed(2)} USD.`,
+      );
+    } else {
       const ev = new CustomEvent("blckforest:toast", { detail: { type: "error", message: `Failed to close ${position.symbol}. Try again or contact support.` } });
       window.dispatchEvent(ev);
     }

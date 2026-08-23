@@ -92,23 +92,28 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
 
   const floating = account?.floatingPl ?? 0;
   const floatingUp = floating >= 0;
+  // Highlight margin metrics when margin level approaches call territory —
+  // below 125% is the warning band, below 100% risks a margin call.
+  const marginTight = account?.marginLevel != null && account.marginLevel > 0 && account.marginLevel < 125;
   const userName = session?.user?.name ?? session?.user?.email ?? "dev trader";
   const initial = userName[0]?.toUpperCase() ?? "U";
 
   return (
     <header className="relative z-40 flex min-h-11 shrink-0 flex-wrap items-center bg-canvas border-b border-border sm:flex-nowrap">
-      {/* Logo + TRADE label */}
-      <div className="flex items-center gap-2.5 px-3 shrink-0 border-r border-border h-full">
+      {/* Logo — the TRADE badge is desktop-only; on the phone it just repeated
+          where the user already is. */}
+      <div className="flex items-center gap-2.5 px-3 shrink-0 h-full">
         <Logo />
-        <span className="text-[10px] font-semibold text-brand bg-brand-soft px-1.5 py-0.5 rounded">TRADE</span>
+        <span className="hidden sm:inline-block text-[10px] font-semibold text-brand bg-brand-soft px-1.5 py-0.5 rounded">TRADE</span>
       </div>
 
-      {/* Assets button — opens the instrument picker modal */}
+      {/* Assets button — md+ only. On phones the chart header already has an
+          assets entry point; a second one here only crowded the top row. */}
       {onOpenAssets && (
         <button
           type="button"
           onClick={onOpenAssets}
-          className="flex items-center gap-1.5 px-3 h-full text-[11px] font-medium text-text-muted hover:text-text hover:bg-panel-2 border-r border-border transition-colors shrink-0"
+          className="hidden md:flex items-center gap-1.5 px-3 h-full text-[11px] font-medium text-text-muted hover:text-text hover:bg-panel-2 border-r border-border transition-colors shrink-0"
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -120,8 +125,10 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
         </button>
       )}
 
-      {/* Metrics strip — mobile shows priority metrics + horizontal scroll for the rest */}
-      <div className="order-3 flex w-full items-center gap-3 overflow-x-auto border-t border-border px-3 py-1.5 sm:order-0 sm:w-auto sm:gap-4 sm:border-t-0 sm:py-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      {/* Metrics strip — phones get a compact 2×3 grid: every key account
+          metric (margin and margin level included) visible at once with
+          consistent columns; sm+ keeps the single dense row. */}
+      <div className="order-3 grid w-full grid-cols-3 gap-x-3 gap-y-1.5 border-t border-border px-3 py-2 sm:order-0 sm:flex sm:w-auto sm:items-center sm:gap-4 sm:border-t-0 sm:py-0">
         <Metric label="ACCOUNT" value={account?.accountNo ?? "—"} className="hidden lg:flex" />
         <Metric label="BALANCE" value={fmtUsd(account?.balance)} />
         <Metric label="EQUITY" value={fmtUsd(account?.equity)} />
@@ -131,23 +138,33 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
           value={`${floating >= 0 ? "+" : ""}${fmtNum(floating, 2)}`}
           valueClass={floatingUp ? "text-up" : "text-down"}
         />
-        <Metric label="CREDIT" value={fmtUsd(account?.credit)} className="hidden md:flex" />
-        <Metric label="MARGIN" value={fmtUsd(account?.margin)} className="hidden md:flex" />
+        <Metric
+          label="MARGIN"
+          value={fmtUsd(account?.margin)}
+          valueClass={marginTight ? "text-down font-semibold" : ""}
+        />
         <Metric
           label="MARGIN LEVEL"
           value={account?.marginLevel != null ? `${fmtNum(account.marginLevel, 2)}%` : "—"}
-          className="hidden md:flex"
+          // No open position → the ratio is undefined; show a muted em dash so
+          // it reads "not applicable" rather than a broken value.
+          valueClass={account?.marginLevel == null ? "text-text-faint" : marginTight ? "text-down font-semibold" : ""}
         />
+        <Metric label="CREDIT" value={fmtUsd(account?.credit)} className="hidden md:flex" />
       </div>
 
-      {/* Connection + clock + theme toggle (kept inline, compact) */}
+      {/* Connection + clock + theme toggle. The theme toggle lives in the user
+          dropdown on phones — this row stays minimal: dot + avatar. */}
       <div className="ml-auto flex shrink-0 items-center gap-2 px-2 sm:px-3">
         <ConnectionDot status={wsStatus} />
         <span className="text-[11px] text-text-muted tnum hidden lg:inline">{clock}</span>
-        <ThemeToggle className="h-8 w-8" />
+        <span className="hidden sm:block">
+          <ThemeToggle className="h-8 w-8" />
+        </span>
       </div>
 
-      {/* User dropdown trigger */}
+      {/* User dropdown trigger — the name shows on phones too now that the
+          top row has room for it. */}
       <div className="relative shrink-0 border-l border-border">
         <button
           type="button"
@@ -156,12 +173,12 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
           aria-expanded={menuOpen}
           aria-label="Open account menu"
           onClick={() => (menuOpen ? setMenuOpen(false) : openMenu())}
-          className="flex items-center gap-2 h-11 px-3 hover:bg-panel-2 transition-colors"
+          className="flex items-center gap-2 h-11 px-2.5 sm:px-3 hover:bg-panel-2 transition-colors"
         >
           <span className="w-7 h-7 rounded-full bg-brand-soft flex items-center justify-center text-brand font-semibold text-xs">
             {initial}
           </span>
-          <span className="text-xs font-medium hidden sm:inline max-w-[120px] truncate">{userName}</span>
+          <span className="text-xs font-medium max-w-[92px] sm:max-w-[120px] truncate">{userName}</span>
           <svg
             width="12"
             height="12"
@@ -225,6 +242,14 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
             {session?.user?.role === "admin" && (
               <MenuLink href="/admin" onClick={() => setMenuOpen(false)} icon={<AdminIcon />} label="Admin Console" />
             )}
+          </div>
+
+          {/* Theme control — the header keeps its toggle from sm up; on phones
+              this is where dim mode lives. */}
+          <div className="flex items-center gap-3 border-t border-border px-4 py-2 text-xs text-text">
+            <span className="text-text-muted"><ThemeIcon /></span>
+            <span className="flex-1 font-medium">Dim mode</span>
+            <ThemeToggle className="h-7 w-7" />
           </div>
 
           {/* Sign out */}
@@ -381,6 +406,14 @@ function AdminIcon() {
   return (
     <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M12 2l9 4v6c0 5-3.8 9.3-9 10-5.2-.7-9-5-9-10V6l9-4z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function ThemeIcon() {
+  return (
+    <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" strokeLinecap="round" />
     </svg>
   );
 }

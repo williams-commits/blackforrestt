@@ -689,13 +689,27 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
       className={`flex h-full min-h-112 flex-col overflow-hidden border border-border bg-canvas shadow-panel lg:min-h-0 ${fullscreen ? "rounded-none" : "rounded-md"}`}
     >
       <div className="flex shrink-0 flex-col border-b border-border bg-panel-2 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 items-center gap-2 px-3 py-2 sm:py-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 sm:py-0">
           <InstrumentIcon symbol={instrument.symbol} size={20} />
           <span className="text-sm font-bold tracking-tight">{instrument.symbol}</span>
           <span className="text-[10px] font-medium text-text-faint">{instrument.name}</span>
           <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[9px] font-medium uppercase text-brand">
             {instrument.category}
           </span>
+          {/* Live price + session change — the TradingView-style anchor the eye
+              goes to first. Color follows the live tick direction. */}
+          {latestOhlc && (
+            <span className="flex items-baseline gap-1.5">
+              <span className={`text-base font-bold tnum leading-none ${latestOhlc.up ? "text-up" : "text-down"}`}>
+                {fmtPrice(latestOhlc.close, instrument.digits)}
+              </span>
+              {instrument.changePct !== 0 && (
+                <span className={`text-[10px] font-semibold tnum leading-none ${instrument.changePct > 0 ? "text-up" : "text-down"}`}>
+                  {instrument.changePct > 0 ? "▲" : "▼"} {Math.abs(instrument.changePct).toFixed(2)}%
+                </span>
+              )}
+            </span>
+          )}
           {onOpenAssets ? (
             <button
               type="button"

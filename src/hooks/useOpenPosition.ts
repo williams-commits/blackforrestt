@@ -91,14 +91,24 @@ export function useOpenPosition() {
   return { openPosition, loading, error, clearError, status, lastAcceptedAt };
 }
 
-/** Close a position by id. */
-export async function closePosition(positionId: string): Promise<boolean> {
+/** Close a position by id. Returns the closed position's symbol and net P/L
+ *  so callers can give immediate, exact feedback. */
+export async function closePosition(positionId: string): Promise<{ ok: boolean; symbol?: string; netProfit?: number }> {
   try {
     const response = await fetch(`/api/positions/${encodeURIComponent(positionId)}/close`, {
       method: "POST",
     });
-    return response.ok;
+    if (!response.ok) return { ok: false };
+    const data = (await response.json().catch(() => null)) as
+      | { position?: { symbol?: string; netProfit?: number } }
+      | null;
+    if (!data?.position) return { ok: false };
+    return {
+      ok: true,
+      symbol: data.position.symbol,
+      netProfit: typeof data.position.netProfit === "number" ? data.position.netProfit : undefined,
+    };
   } catch {
-    return false;
+    return { ok: false };
   }
 }

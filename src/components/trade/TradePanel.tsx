@@ -3,6 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import { useForexStore } from "@/lib/store";
 import { useOpenPosition } from "@/hooks/useOpenPosition";
+import { toast } from "@/lib/toast";
 import { fmtPrice, fmtNum } from "@/lib/format";
 import type { InstrumentView, PositionSide } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
@@ -127,6 +128,12 @@ export function TradePanel({ instrument }: Props) {
       takeProfit: type === "CFD" ? parsedTakeProfit : null,
     });
     if (ok) {
+      // Immediate local confirmation — the DB notification follows separately
+      // for history and other sessions.
+      toast.success(
+        "Order opened",
+        `${side === "BUY" ? "Buy" : "Sell"} ${vol.toFixed(2)} ${instrument.symbol} at ${entryRate.toFixed(instrument.digits)}.`,
+      );
       setStopLoss("");
       setTakeProfit("");
     }

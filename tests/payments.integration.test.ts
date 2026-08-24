@@ -12,6 +12,8 @@ import {
   reconcilePayment,
   rejectPayment,
   reversePayment,
+  withdrawalRiskHold,
+  PaymentError,
 } from "../src/server/payments.js";
 import {
   ensureSystemAccount,
@@ -32,6 +34,10 @@ process.env.PAYMENT_BENEFICIARY_COOLING_OFF_HOURS = "0";
 process.env.PAYMENT_PASSWORD_CHANGE_COOLING_OFF_HOURS = "0";
 process.env.PAYMENT_DAILY_WITHDRAWAL_LIMIT = "1000000";
 process.env.PAYMENT_DAILY_WITHDRAWAL_COUNT = "100";
+// Pin the approval workflow so a developer's local .env (simple-approval mode,
+// auto-loaded by tsx) cannot disable the maker-checker guards under test.
+process.env.PAYMENT_REQUIRE_DUAL_FINANCE_REVIEW = "true";
+process.env.SIMPLE_PAYMENT_APPROVAL = "false";
 
 async function createUser(label: string, verified = true) {
   const suffix = randomUUID();
@@ -391,6 +397,63 @@ test("payment method availability follows admin settings overrides, not just the
     assert.equal(await isPaymentMethodAllowed(customer.id, "BANK_TRANSFER"), false);
   } finally {
     process.env.PAYMENT_METHODS_DISABLED = previousEnv;
+    invalidateAllSettings();
+    await prisma.user.deleteMany({ where: { id: customer.id } });
+    await prisma.userGroup.deleteMany({ where: { id: group.id } });
+  }
+});
+
+test("withdrawal limits follow settings overrides and inherit the env preset", async () => {
+  // Env preset (set at the top of this file): 1,000,000/day.
+  const customer = await createUser("wlimit-customer");
+  const group = await prisma.userGroup.create({
+    data: { name: `wlimit-group-${randomUUID()}`, settings: {} },
+  });
+  await prisma.userGroupMembership.create({ data: { userId: customer.id, groupId: group.id } });
+  const fingerprint = prepareBeneficiary({
+    accountName: "Limit Test",
+    accountNumber: `US${randomUUID().replaceAll("-", "").slice(0, 16)}`,
+    institution: "Test Bank",
+    country: "US",
+  }).fingerprint;
+  const attempt = (amount: string) =>
+    prisma.$transaction((tx) => withdrawalRiskHold(tx, { userId: customer.id, amount: money(amount), beneficiaryFingerprint: fingerprint }));
+  try {
+    // No override → the .env preset applies: 60 passes.
+    invalidateAllSettings();
+    await attempt("60");
+
+    // Group daily limit of 50 OVERRIDES the env cap: 60 is rejected.
+    await prisma.userGroup.update({
+      where: { id: group.id },
+      data: { settings: { withdrawals: { dailyLimit: 50 } } },
+    });
+    invalidateAllSettings();
+    await assert.rejects(
+      attempt("60"),
+      (error: unknown) => error instanceof PaymentError && error.code === "WITHDRAWAL_VELOCITY_LIMIT",
+    );
+
+    // Daily explicitly unset (null → inherit env) with a monthly cap of 50:
+    // the daily check passes again, and the monthly check rejects.
+    await prisma.userGroup.update({
+      where: { id: group.id },
+      data: { settings: { withdrawals: { dailyLimit: null, monthlyLimit: 50 } } },
+    });
+    invalidateAllSettings();
+    await assert.rejects(
+      attempt("60"),
+      (error: unknown) => error instanceof PaymentError && error.code === "WITHDRAWAL_MONTHLY_LIMIT",
+    );
+
+    // Clearing the overrides returns to the env preset: 60 passes.
+    await prisma.userGroup.update({
+      where: { id: group.id },
+      data: { settings: { withdrawals: { dailyLimit: null, monthlyLimit: null } } },
+    });
+    invalidateAllSettings();
+    await attempt("60");
+  } finally {
     invalidateAllSettings();
     await prisma.user.deleteMany({ where: { id: customer.id } });
     await prisma.userGroup.deleteMany({ where: { id: group.id } });

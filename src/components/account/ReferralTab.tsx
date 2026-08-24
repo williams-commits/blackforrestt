@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { fmtDate } from "@/lib/dates";
+import type { ServerMessage } from "@/lib/ws/client";
 
 interface ReferralData {
   code: string;
@@ -26,20 +27,49 @@ export function ReferralTab() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (options: { silent?: boolean } = {}) => {
+    if (!options.silent) setLoading(true);
     try {
       const res = await fetch("/api/referrals", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load referrals");
       const json = await res.json();
       setData(json);
+      setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load referrals.");
+      // Silent (background) refreshes keep the last good data on screen.
+      if (!options.silent) setError(e instanceof Error ? e.message : "Unable to load referrals.");
     } finally {
-      setLoading(false);
+      if (!options.silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  // Auto-sync: a referral completes when the referred user's first deposit is
+  // approved — poll while visible so status/rewards update without a reload.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void refresh({ silent: true }).catch(() => undefined);
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
+
+  // Referral bonuses land as ledger pushes (deposit approval credits both
+  // sides) — refresh immediately instead of waiting for the 30s poll.
+  useEffect(() => {
+    let pending: ReturnType<typeof setTimeout> | null = null;
+    const handleRealtime = (event: Event) => {
+      const message = (event as CustomEvent<ServerMessage>).detail;
+      if (message?.type !== "account" || message.reason !== "ledger") return;
+      if (pending) clearTimeout(pending);
+      pending = setTimeout(() => void refresh({ silent: true }).catch(() => undefined), 250);
+    };
+    window.addEventListener("blckforest:realtime", handleRealtime);
+    return () => {
+      window.removeEventListener("blckforest:realtime", handleRealtime);
+      if (pending) clearTimeout(pending);
+    };
+  }, [refresh]);
 
   const copyLink = async () => {
     if (!data) return;
@@ -78,7 +108,7 @@ export function ReferralTab() {
     return (
       <div className="rounded-lg border border-down/30 bg-down/10 p-5 text-center">
         <p className="text-sm text-down">{error}</p>
-        <Button type="button" size="sm" variant="ghost" className="mt-3" onClick={() => { setError(null); setLoading(true); void refresh(); }}>
+        <Button type="button" size="sm" variant="ghost" className="mt-3" onClick={() => void refresh()}>
           Retry
         </Button>
       </div>

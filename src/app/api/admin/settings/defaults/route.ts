@@ -53,6 +53,7 @@ export async function GET() {
         PAYMENT_METHODS_DISABLED: process.env.PAYMENT_METHODS_DISABLED ?? "(unset → none)",
         DEPOSIT_WALLET_ADDRESSES: process.env.DEPOSIT_WALLET_ADDRESSES ?? "(unset → none)",
         ALLOW_UNVERIFIED_WITHDRAWALS: process.env.ALLOW_UNVERIFIED_WITHDRAWALS ?? "(unset → false)",
+        DEMO_STARTING_BALANCE: process.env.DEMO_STARTING_BALANCE ?? "(unset → 0, no auto-credit)",
         MAX_POSITION_LOTS: process.env.MAX_POSITION_LOTS ?? "(unset → 100)",
         REGISTRATION_REQUIRE_EMAIL_VERIFICATION: process.env.REGISTRATION_REQUIRE_EMAIL_VERIFICATION ?? "(unset → false)",
         MARKET_DATA_MODE: process.env.MARKET_DATA_MODE ?? "(unset → simulation)",

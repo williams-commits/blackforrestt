@@ -14,7 +14,7 @@ import { Dialog } from "@/components/ui/Dialog";
 import { useCommandDialog } from "@/components/ui/useCommandDialog";
 import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { Th, TableSearch, type SortDirection } from "@/components/ui/DataTable";
+import { Th, TableSearch, FilterChip, type SortDirection } from "@/components/ui/DataTable";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { createDeviceId } from "@/lib/device";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";
@@ -63,11 +63,18 @@ function useResource<T>(url: string, pollMs?: number): Resource<T> {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Stale-while-revalidate: when the URL changes (search queries), keep the
+  // previous data on screen while fetching — only the very first load of a
+  // module shows the skeleton. Without this, every keystroke flashes the
+  // whole table into a loading state.
+  const hasDataRef = useRef(false);
   const refresh = useCallback(async (options: { silent?: boolean } = {}) => {
-    if (!options.silent) setLoading(true);
+    if (!options.silent && !hasDataRef.current) setLoading(true);
     setError(null);
     try {
-      setData(await requestJson<T>(url));
+      const result = await requestJson<T>(url);
+      hasDataRef.current = true;
+      setData(result);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to load module.");
     } finally {
@@ -312,11 +319,15 @@ interface UserRow {
   _count: { positions: number; securitySessions: number; reconciliationBlocks: number };
 }
 function UsersPanel({ canAdjustBalance, canManage, onOpenChat }: { canAdjustBalance: boolean; canManage: boolean; onOpenChat: (user: UserRow) => void }) {
-  // Debounced server-side search (the API supports ?q= across email/name/account).
+  // Search behaves like the messages inbox: filtering is INSTANT over the
+  // loaded rows (same fields as the API matches — email, name, account), so
+  // the table responds on every keystroke. The debounced server query then
+  // refreshes the authoritative result set across the whole user base without
+  // flashing a loading state (stale-while-revalidate in useResource).
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => clearTimeout(timer);
   }, [search]);
   const url = `/api/admin/users?limit=1000${debouncedSearch ? `&q=${encodeURIComponent(debouncedSearch)}` : ""}`;
@@ -324,6 +335,18 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat }: { canAdjustBala
   const resource = useResource<{ users: UserRow[]; total: number }>(url, 15_000);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [settingsUser, setSettingsUser] = useState<UserRow | null>(null);
+
+  const needle = search.trim().toLowerCase();
+  const users = useMemo(() => {
+    const rows = resource.data?.users ?? [];
+    if (!needle) return rows;
+    return rows.filter((user) =>
+      (user.email ?? "").toLowerCase().includes(needle) ||
+      (user.name ?? "").toLowerCase().includes(needle) ||
+      (user.accountNo ?? "").includes(needle),
+    );
+  }, [resource.data, needle]);
+  const searchPending = search.trim() !== debouncedSearch;
   const truncated = resource.data ? resource.data.total > resource.data.users.length : false;
   return (
     <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>
@@ -332,15 +355,18 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat }: { canAdjustBala
           <SectionHeader title="Users and access" description="Identity, verification, account exposure, active roles, sessions, reconciliation restrictions, and audited balance operations." onRefresh={() => void resource.refresh()} />
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <TableSearch value={search} onChange={setSearch} placeholder="Search email, name, or account number…" label="Search users" />
-            {debouncedSearch && (
-              <span className="text-[10px] text-text-faint">{resource.data.users.length} of {resource.data.total} match “{debouncedSearch}”</span>
+            {needle && (
+              <span className="text-[10px] text-text-faint tnum" aria-live="polite">
+                {users.length} match{users.length === 1 ? "" : "es"}{searchPending ? " · searching…" : ""}
+              </span>
             )}
             {truncated && !debouncedSearch && (
               <span className="text-[10px] text-brand">showing first {resource.data.users.length} of {resource.data.total} — refine your search</span>
             )}
           </div>
           <PaginatedUsers
-            users={resource.data.users}
+            users={users}
+            emptyLabel={needle ? `No users match “${search.trim()}”.` : undefined}
             canAdjustBalance={canAdjustBalance}
             canManage={canManage}
             onManageBalance={setSelectedUser}
@@ -367,6 +393,7 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat }: { canAdjustBala
 
 function PaginatedUsers({
   users,
+  emptyLabel,
   canAdjustBalance,
   canManage,
   onManageBalance,
@@ -375,6 +402,8 @@ function PaginatedUsers({
   onChanged,
 }: {
   users: UserRow[];
+  /** Shown when the list is empty — lets an active search say "no match". */
+  emptyLabel?: string;
   canAdjustBalance: boolean;
   canManage: boolean;
   onManageBalance: (user: UserRow) => void;
@@ -483,7 +512,7 @@ function PaginatedUsers({
                 </td>
               </tr>
             ))}
-            {users.length === 0 ? <tr><td colSpan={8} className="p-8 text-center text-text-muted">No users found.</td></tr> : null}
+            {users.length === 0 ? <tr><td colSpan={8} className="p-8 text-center text-text-muted">{emptyLabel ?? "No users found."}</td></tr> : null}
           </tbody>
         </table>
       </div>
@@ -759,20 +788,47 @@ function LedgerPanel() {
 interface ExecutionPosition {
   id: string;
   symbol: string;
-  status: string;
+  instrument?: { name: string; category: string } | null;
+  user: { email: string | null; accountNo: string | null };
+  type?: string;
   side: string;
+  status: string;
   volume: string;
+  openRate?: string;
+  currentRate?: string;
+  commission?: string;
+  swap?: string;
   profit: string;
   adminPnlAdjustment: string;
   netProfit: string;
   openedAt: string;
-  user: { email: string | null; accountNo: string | null };
+  closedAt?: string | null;
+  closeReason?: string | null;
 }
 interface ExecutionResponse { executionMode: string; marketDataMode: string; engineReady: boolean; providerWarning: string; positions: ExecutionPosition[] }
+
+type ExecutionStatusFilter = "ALL" | "OPEN" | "CLOSED";
+
+/** Compact decimal for fixed-point strings like "0.10000000" → "0.1". */
+function fmtExecNumber(value: string | number): string {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return String(value);
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 8 }).format(numeric);
+}
+
+function pnlClass(value: number): string {
+  if (value > 0) return "text-up";
+  if (value < 0) return "text-down";
+  return "text-text-muted";
+}
+
 function ExecutionsPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<ExecutionResponse>("/api/admin/executions?limit=150");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<ExecutionStatusFilter>("ALL");
+  const [groupByUser, setGroupByUser] = useState(true);
   const { openCommand, commandDialog } = useCommandDialog();
 
   const { refresh } = resource;
@@ -835,28 +891,161 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
     } finally { setBusy(null); }
   }
 
+  // Instant client-side narrowing over the polled rows (same fields an admin
+  // would look up by): symbol, user email, or account number.
+  const allPositions = useMemo(() => resource.data?.positions ?? [], [resource.data]);
+  const openCount = allPositions.filter((p) => p.status === "OPEN").length;
+  const closedCount = allPositions.length - openCount;
+  const needle = search.trim().toLowerCase();
+  const filtered = useMemo(() => allPositions.filter((position) => {
+    if (statusFilter !== "ALL" && position.status !== statusFilter) return false;
+    if (!needle) return true;
+    return (
+      position.symbol.toLowerCase().includes(needle) ||
+      (position.user.email ?? "").toLowerCase().includes(needle) ||
+      (position.user.accountNo ?? "").includes(needle)
+    );
+  }), [allPositions, statusFilter, needle]);
+
+  // Collapsible per-user sections with exposure aggregates. Users holding open
+  // positions sort first and their section starts expanded.
+  const groups = useMemo(() => {
+    interface Group { key: string; label: string; accountNo: string | null; positions: ExecutionPosition[]; open: number; netPl: number }
+    const byUser = new Map<string, Group>();
+    for (const position of filtered) {
+      const key = position.user.email ?? position.user.accountNo ?? position.id;
+      const group = byUser.get(key) ?? { key, label: position.user.email ?? position.user.accountNo ?? "Unknown user", accountNo: position.user.accountNo, positions: [], open: 0, netPl: 0 };
+      group.positions.push(position);
+      group.open += position.status === "OPEN" ? 1 : 0;
+      group.netPl += Number(position.netProfit);
+      byUser.set(key, group);
+    }
+    return [...byUser.values()].sort((a, b) =>
+      b.open - a.open ||
+      b.netPl - a.netPl ||
+      a.label.localeCompare(b.label),
+    );
+  }, [filtered]);
+
+  const totalNetPl = filtered.reduce((sum, p) => sum + Number(p.netProfit), 0);
+  const filtering = needle !== "" || statusFilter !== "ALL";
+
+  const csvRows = filtered.map((p) => [
+    p.user.email ?? "", p.user.accountNo ?? "", p.symbol, p.type ?? "", p.side, p.status,
+    Number(p.volume), fmtDateTime(p.openedAt), p.closedAt ? fmtDateTime(p.closedAt) : "",
+    Number(p.profit).toFixed(2), Number(p.adminPnlAdjustment).toFixed(2), Number(p.netProfit).toFixed(2),
+  ]);
+
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div>
     <SectionHeader title="Execution and position surveillance" description={resource.data.providerWarning} onRefresh={() => void resource.refresh()} />
     <div className="mb-3 flex flex-wrap gap-2 text-xs"><span className="rounded bg-brand-soft px-2 py-1 text-brand">{resource.data.executionMode}</span><span className="rounded bg-panel-2 px-2 py-1">Feed: {resource.data.marketDataMode}</span><span className={`rounded px-2 py-1 ${resource.data.engineReady ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>Engine {resource.data.engineReady ? "ready" : "starting"}</span></div>
     {error && <p role="alert" className="mb-3 rounded bg-down/10 p-2 text-xs text-down">{error}</p>}
-    <div className="space-y-2">
-      {resource.data.positions.map((position) => <article key={position.id} className="rounded-lg border border-border bg-canvas p-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="text-sm font-semibold">{position.symbol} · {position.side} {position.volume}</div>
-            <div className="mt-1 text-xs text-text-muted">{position.user.email ?? position.user.accountNo ?? "Unknown user"} · {position.status} · opened {new Date(position.openedAt).toLocaleString()}</div>
-            <div className="mt-2 flex flex-wrap gap-3 text-xs tnum"><span>Gross P/L <strong>{position.profit}</strong></span><span>Dealer adjustment <strong>{position.adminPnlAdjustment}</strong></span><span>Net P/L <strong>{position.netProfit}</strong></span></div>
-          </div>
-          {canManage && position.status === "OPEN" && <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={busy !== null} onClick={() => void setProfit(position)} className="rounded border border-border px-2.5 py-1.5 text-xs hover:bg-panel-2 disabled:opacity-50">Set P/L</button>
-            <button type="button" disabled={busy !== null} onClick={() => void closePosition(position)} className="rounded bg-down px-2.5 py-1.5 text-xs text-white disabled:opacity-50">Close</button>
-          </div>}
-        </div>
-      </article>)}
-      {resource.data.positions.length === 0 && <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">No positions.</div>}
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+      <TableSearch value={search} onChange={setSearch} placeholder="Search symbol, email, or account number…" label="Search executions" />
+      <div className="flex gap-1.5" role="group" aria-label="Filter positions by status">
+        <FilterChip active={statusFilter === "ALL"} onClick={() => setStatusFilter("ALL")}>All · {allPositions.length}</FilterChip>
+        <FilterChip active={statusFilter === "OPEN"} onClick={() => setStatusFilter("OPEN")}>Open · {openCount}</FilterChip>
+        <FilterChip active={statusFilter === "CLOSED"} onClick={() => setStatusFilter("CLOSED")}>Closed · {closedCount}</FilterChip>
+      </div>
+      <FilterChip active={groupByUser} onClick={() => setGroupByUser((v) => !v)}>Group by user</FilterChip>
+      <CsvExportButton
+        filename="executions"
+        columns={["User", "Account", "Symbol", "Type", "Side", "Status", "Volume", "Opened", "Closed", "Gross P/L", "Adjustment", "Net P/L"]}
+        rows={csvRows}
+        disabled={filtered.length === 0}
+      />
+      <span className="text-[10px] text-text-faint tnum" aria-live="polite">
+        {filtering
+          ? `${filtered.length} of ${allPositions.length} positions`
+          : `${allPositions.length} positions · ${groups.length} user${groups.length === 1 ? "" : "s"}`}
+        {" · net P/L "}<span className={pnlClass(totalNetPl)}>{fmtExecNumber(totalNetPl.toFixed(2))}</span>
+      </span>
     </div>
+    {allPositions.length === 0 ? (
+      <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">No positions.</div>
+    ) : filtered.length === 0 ? (
+      <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">
+        No positions match {needle ? `“${search.trim()}”` : `the ${statusFilter.toLowerCase()} filter`}.
+      </div>
+    ) : groupByUser ? (
+      <div className="space-y-2">
+        {groups.map((group) => (
+          <details key={group.key} open={group.open > 0 ? true : undefined} className="rounded-lg border border-border bg-canvas">
+            <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-panel-2">
+              <span className="flex min-w-0 items-baseline gap-2">
+                <span className="truncate text-sm font-semibold">{group.label}</span>
+                {group.accountNo && group.accountNo !== group.label ? <span className="text-text-faint">#{group.accountNo}</span> : null}
+              </span>
+              <span className="flex flex-wrap items-center gap-2 text-text-muted tnum">
+                {group.open > 0 && <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand">{group.open} open</span>}
+                <span>{group.positions.length} position{group.positions.length === 1 ? "" : "s"}</span>
+                <span>Net P/L <strong className={pnlClass(group.netPl)}>{fmtExecNumber(group.netPl.toFixed(2))}</strong></span>
+              </span>
+            </summary>
+            <div className="space-y-2 border-t border-border p-2">
+              {group.positions.map((position) => (
+                <ExecutionPositionCard key={position.id} position={position} canManage={canManage} busy={busy !== null} onSetProfit={() => void setProfit(position)} onClose={() => void closePosition(position)} />
+              ))}
+            </div>
+          </details>
+        ))}
+      </div>
+    ) : (
+      <div className="space-y-2">
+        {filtered.map((position) => (
+          <ExecutionPositionCard key={position.id} position={position} canManage={canManage} busy={busy !== null} onSetProfit={() => void setProfit(position)} onClose={() => void closePosition(position)} />
+        ))}
+      </div>
+    )}
     {commandDialog}
   </div>}</ModuleState>;
+}
+
+function ExecutionPositionCard({
+  position,
+  canManage,
+  busy,
+  onSetProfit,
+  onClose,
+}: {
+  position: ExecutionPosition;
+  canManage: boolean;
+  busy: boolean;
+  onSetProfit: () => void;
+  onClose: () => void;
+}) {
+  const net = Number(position.netProfit);
+  return (
+    <article className="rounded-lg border border-border bg-canvas p-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-sm font-semibold">{position.symbol}</span>
+            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${position.side === "BUY" ? "bg-up/15 text-up" : "bg-down/15 text-down"}`}>{position.side}</span>
+            <span className="rounded bg-panel-2 px-1.5 py-0.5 text-[10px] font-medium text-text-muted">{position.type ?? "CFD"}</span>
+            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${position.status === "OPEN" ? "bg-brand-soft text-brand" : "bg-panel-3 text-text-muted"}`}>{position.status}</span>
+          </div>
+          <div className="mt-1 text-xs text-text-muted">
+            {fmtExecNumber(position.volume)} lots @ {fmtExecNumber(position.openRate ?? "0")}
+            {position.status === "OPEN" ? ` · mark ${fmtExecNumber(position.currentRate ?? "0")}` : ""}
+            {" · opened "}{fmtDateTime(position.openedAt)}
+            {position.closedAt ? ` · closed ${fmtDateTime(position.closedAt)}` : ""}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-3 text-xs tnum">
+            <span>Gross P/L <strong>{fmtExecNumber(position.profit)}</strong></span>
+            <span>Dealer adjustment <strong>{fmtExecNumber(position.adminPnlAdjustment)}</strong></span>
+            <span>Net P/L <strong className={pnlClass(net)}>{fmtExecNumber(position.netProfit)}</strong></span>
+            {Number(position.commission ?? 0) !== 0 && <span>Commission <strong>{fmtExecNumber(position.commission ?? "0")}</strong></span>}
+            {Number(position.swap ?? 0) !== 0 && <span>Swap <strong>{fmtExecNumber(position.swap ?? "0")}</strong></span>}
+          </div>
+        </div>
+        {canManage && position.status === "OPEN" && <div className="flex flex-wrap gap-2">
+          <button type="button" disabled={busy} onClick={onSetProfit} className="rounded border border-border px-2.5 py-1.5 text-xs hover:bg-panel-2 disabled:opacity-50">Set P/L</button>
+          <button type="button" disabled={busy} onClick={onClose} className="rounded bg-down px-2.5 py-1.5 text-xs text-white disabled:opacity-50">Close</button>
+        </div>}
+      </div>
+    </article>
+  );
 }
 
 interface SupportCase { id: string; reference: string; userId: string | null; subject: string; category: string; priority: string; status: string; assignedToId: string | null; description: string; createdAt: string }

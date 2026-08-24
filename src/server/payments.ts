@@ -28,6 +28,7 @@ import {
 } from "./security/crypto";
 import { getScanner, type ScanStatus } from "./security/scanner";
 import { queueUserEmail } from "./email/service";
+import { resolveUserSettings } from "./userSettings";
 import { PAYMENT_PROOF_MAX_BYTES } from "@/lib/paymentProofs";
 
 type Tx = Prisma.TransactionClient;
@@ -255,12 +256,11 @@ export async function withdrawalRiskHold(
   if (!user) {
     throw new PaymentError("Account not found.", 404, "USER_NOT_FOUND");
   }
-  if (!user.verified) {
-    // Per-user/group KYC requirement (falls back to global env var default).
-    const settings = await import("./userSettings").then((m) => m.resolveUserSettings(input.userId));
-    if (settings.withdrawals.requireKyc) {
-      throw new PaymentError("Complete identity verification before withdrawing funds.", 403, "KYC_REQUIRED");
-    }
+  // Per-user/group settings, falling back to the .env-derived global defaults
+  // for every field (KYC requirement and withdrawal limits alike).
+  const settings = await resolveUserSettings(input.userId);
+  if (!user.verified && settings.withdrawals.requireKyc) {
+    throw new PaymentError("Complete identity verification before withdrawing funds.", 403, "KYC_REQUIRED");
   }
   const passwordThreshold = new Date(now.getTime() - passwordChangeCoolingOffHours() * 3_600_000);
   if (user.passwordChangedAt && user.passwordChangedAt > passwordThreshold) {
@@ -279,8 +279,29 @@ export async function withdrawalRiskHold(
     select: { amount: true },
   });
   const total = today.reduce((sum, request) => sum.add(request.amount), money(0));
-  if (today.length >= dailyWithdrawalCountLimit() || total.add(input.amount).greaterThan(dailyWithdrawalLimit())) {
+  // A per-user/group daily limit OVERRIDES the env velocity cap; unset (null)
+  // inherits the env preset.
+  const effectiveDailyLimit = settings.withdrawals.dailyLimit ?? dailyWithdrawalLimit();
+  if (today.length >= dailyWithdrawalCountLimit() || total.add(input.amount).greaterThan(effectiveDailyLimit)) {
     throw new PaymentError("Withdrawal velocity limit reached. Contact support if this is urgent.", 429, "WITHDRAWAL_VELOCITY_LIMIT");
+  }
+  // Optional per-user/group monthly cap (no env counterpart — null = no limit).
+  const monthlyLimit = settings.withdrawals.monthlyLimit;
+  if (monthlyLimit != null) {
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const month = await tx.paymentRequest.findMany({
+      where: {
+        userId: input.userId,
+        type: "WITHDRAWAL",
+        createdAt: { gte: monthStart },
+        status: { in: ["PENDING", "AWAITING_APPROVAL", "APPROVED"] },
+      },
+      select: { amount: true },
+    });
+    const monthTotal = month.reduce((sum, request) => sum.add(request.amount), money(0));
+    if (monthTotal.add(input.amount).greaterThan(monthlyLimit)) {
+      throw new PaymentError("Monthly withdrawal limit reached. Contact support if this is urgent.", 429, "WITHDRAWAL_MONTHLY_LIMIT");
+    }
   }
 
   const existing = await tx.paymentRequest.findFirst({

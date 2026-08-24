@@ -170,7 +170,12 @@ function getGlobalDefaults(): ResolvedSettings {
       pnlAdjustmentPercent: 0,
     },
     balance: {
-      demoStartingBalance: 10000,
+      // Demo auto-credit for new accounts. 0 (or unset) preserves the legacy
+      // behavior: new accounts start empty and are funded via deposits.
+      demoStartingBalance: (() => {
+        const value = Number(process.env.DEMO_STARTING_BALANCE ?? 0);
+        return Number.isFinite(value) && value > 0 ? value : 0;
+      })(),
       maxCreditBonus: 5000,
     },
     referrals: {

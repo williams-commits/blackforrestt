@@ -11,6 +11,8 @@ import { fmtDate } from "@/lib/dates";
 import type { WalletAddressEntry } from "@/server/userSettings";
 
 interface Props {
+  /** Equity/margin ratio that marks the margin warning (user settings → env default 125). */
+  marginWarningPercent?: number;
   user: { name: string; email: string; accountNo: string; createdAt: Date | string; verified: boolean };
   /** Live KYC review state — drives the Verification row. null = never submitted. */
   kyc?: { status: "NOT_SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED"; note: string | null } | null;
@@ -32,7 +34,7 @@ interface Props {
 }
 
 /** Account summary: profile, equity hero with risk metrics, wallets. */
-export function AccountOverview({ user, metrics, wallets, openCount, depositUiEnabled = true, disabledPaymentMethods = [], walletAddresses = [], kyc, onOpenVerification }: Props) {
+export function AccountOverview({ user, metrics, wallets, openCount, depositUiEnabled = true, disabledPaymentMethods = [], walletAddresses = [], kyc, onOpenVerification, marginWarningPercent = 125, }: Props) {
   const router = useRouter();
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletMode, setWalletMode] = useState<"deposit" | "withdraw">("deposit");
@@ -43,9 +45,10 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
   const walletLocked = wallets.reduce((sum, w) => sum + w.locked, 0);
 
   // Margin-level risk bands: below 100% the account can be margin-called,
-  // below 125% it is in the warning band (matches the trading engine default).
+  // below the configured warning threshold it is in the warning band
+  // (user settings → env default 125%).
   const ml = metrics.marginLevel;
-  const mlTone = ml == null ? "text-text" : ml < 100 ? "text-down" : ml < 125 ? "text-brand" : "text-up";
+  const mlTone = ml == null ? "text-text" : ml < 100 ? "text-down" : ml < marginWarningPercent ? "text-brand" : "text-up";
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -107,7 +110,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
         </div>
         <div className="mt-3 border-t border-border-soft pt-3">
           <div className="flex items-center justify-between">
-            <span className="flex items-center text-[11px] text-text-faint">Margin Level<InfoHint text="Margin level = equity ÷ margin. Below 125% is a warning; below 100% risks a margin call." /></span>
+            <span className="flex items-center text-[11px] text-text-faint">Margin Level<InfoHint text={`Margin level = equity ÷ margin. Below ${marginWarningPercent}% is a warning; below 100% risks a margin call.`} /></span>
             <span className={`text-sm font-semibold tnum ${mlTone}`}>
               {ml != null ? `${ml.toFixed(2)}%` : "—"}
             </span>

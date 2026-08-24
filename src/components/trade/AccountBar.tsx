@@ -20,6 +20,8 @@ interface Props {
   depositUiEnabled?: boolean;
   disabledPaymentMethods?: string[];
   walletAddresses?: WalletAddressEntry[];
+  /** Equity/margin ratio that marks the margin warning (user settings → env default 125). */
+  marginWarningPercent?: number;
 }
 
 /**
@@ -30,7 +32,7 @@ interface Props {
  * panel containing quick actions (Deposit, Account, Reports, Admin) and sign
  * out — instead of cluttering the header with inline links.
  */
-export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, disabledPaymentMethods = [], walletAddresses = [] }: Props) {
+export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, disabledPaymentMethods = [], walletAddresses = [], marginWarningPercent = 125 }: Props) {
   const account = useForexStore((s) => s.account);
   const { data: session } = useSession();
   const router = useRouter();
@@ -93,8 +95,9 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
   const floating = account?.floatingPl ?? 0;
   const floatingUp = floating >= 0;
   // Highlight margin metrics when margin level approaches call territory —
-  // below 125% is the warning band, below 100% risks a margin call.
-  const marginTight = account?.marginLevel != null && account.marginLevel > 0 && account.marginLevel < 125;
+  // the warning band comes from resolved user settings (default 125%); below
+  // 100% risks a margin call.
+  const marginTight = account?.marginLevel != null && account.marginLevel > 0 && account.marginLevel < marginWarningPercent;
   const userName = session?.user?.name ?? session?.user?.email ?? "dev trader";
   const initial = userName[0]?.toUpperCase() ?? "U";
 

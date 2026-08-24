@@ -97,7 +97,17 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         if (parsed.data.action === "APPROVE" && result.status === "APPROVED" && payment.type === "DEPOSIT") {
           try {
             const { processReferralReward } = await import("@/server/referrals");
-            await processReferralReward(payment.userId, actorId);
+            const referral = await processReferralReward(payment.userId, actorId);
+            // The bonus postings changed BOTH ledgers after the snapshot above
+            // was broadcast: re-push the depositor (their sign-up bonus is now
+            // included) and push the referrer, whose balance/referral status
+            // otherwise never reaches their open sessions in real time.
+            if (referral.rewarded && referral.referrerId) {
+              await Promise.allSettled([
+                hub.publishAccountMetrics(payment.userId),
+                hub.publishAccountMetrics(referral.referrerId),
+              ]);
+            }
           } catch (error) {
             console.error("Referral reward processing failed", error);
             // Non-fatal — payment is already approved.

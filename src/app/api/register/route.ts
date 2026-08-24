@@ -6,9 +6,13 @@ import bcrypt from "bcryptjs";
 import { prisma, withSerializableRetry } from "@/server/db";
 import {
   appendAuditEvent,
+  ensureSystemAccount,
   ensureUserLedgerAccount,
+  money,
+  postLedgerTransaction,
   refreshLedgerProjections,
 } from "@/server/ledger";
+import { resolveUserSettings } from "@/server/userSettings";
 import {
   applicationOrigin,
   deliverSecurityEmail,
@@ -94,6 +98,28 @@ export async function POST(req: Request) {
             select: { id: true, email: true, name: true, accountNo: true },
           });
           await ensureUserLedgerAccount(tx, created.id, "AVAILABLE");
+          // Demo starting balance — resolved per new user (group/profile
+          // overrides don't exist yet at registration, so this is the global
+          // .env preset DEMO_STARTING_BALANCE; 0/unset = start empty, the
+          // legacy behavior).
+          const startingBalance = (await resolveUserSettings(created.id)).balance.demoStartingBalance;
+          if (startingBalance > 0) {
+            const funding = await ensureSystemAccount(tx, "DEMO_FUNDING_EXPENSE");
+            const available = await ensureUserLedgerAccount(tx, created.id, "AVAILABLE");
+            const amount = money(startingBalance.toFixed(2));
+            await postLedgerTransaction(tx, {
+              reference: `DEMO_START:${created.id}`,
+              kind: "DEMO_FUNDING",
+              description: "Demo account starting balance",
+              userId: created.id,
+              sourceType: "User",
+              sourceId: created.id,
+              lines: [
+                { accountId: funding.id, direction: "DEBIT", amount, asset: "USD" },
+                { accountId: available.id, direction: "CREDIT", amount, asset: "USD" },
+              ],
+            });
+          }
           await refreshLedgerProjections(tx, created.id);
           await appendAuditEvent(tx, {
             actorId: created.id,

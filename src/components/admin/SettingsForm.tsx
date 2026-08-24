@@ -300,7 +300,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
           value={s.withdrawals?.dailyLimit ?? undefined}
           placeholder={defaults?.withdrawals.dailyLimit ? String(defaults.withdrawals.dailyLimit) : "No limit"}
           onChange={(v) => update(["withdrawals", "dailyLimit"], v)}
-          hint={fmtHint("Leave empty for no daily limit", defaults?.withdrawals.dailyLimit ?? undefined, "$")}
+          hint={fmtHint("Overrides the env daily cap when set; empty inherits it", defaults?.withdrawals.dailyLimit ?? undefined, "$")}
         />
         <NumberInput
           label="Monthly withdrawal limit (USD)"
@@ -343,14 +343,14 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
           value={s.balance?.demoStartingBalance}
           placeholder={defaults ? String(defaults.balance.demoStartingBalance) : "10000"}
           onChange={(v) => update(["balance", "demoStartingBalance"], v)}
-          hint={fmtHint("Starting balance for new demo accounts", defaults?.balance.demoStartingBalance, "$")}
+          hint={fmtHint("Auto-credited to new accounts (0 = start empty)", defaults?.balance.demoStartingBalance, "$")}
         />
         <NumberInput
           label="Max credit/bonus (USD)"
           value={s.balance?.maxCreditBonus}
           placeholder={defaults ? String(defaults.balance.maxCreditBonus) : "5000"}
           onChange={(v) => update(["balance", "maxCreditBonus"], v)}
-          hint={fmtHint("Caps total bonus accumulation per user", defaults?.balance.maxCreditBonus, "$")}
+          hint={fmtHint("Caps total referral bonus accumulation per user", defaults?.balance.maxCreditBonus, "$")}
         />
       </SettingsSection>
 

@@ -80,6 +80,7 @@ export default async function TradePage({ params, searchParams }: PageProps) {
         (m) => !settings.deposits.allowedMethods.includes(m),
       )}
       walletAddresses={settings.deposits.walletAddresses}
+      marginWarningPercent={settings.trading.marginWarningPercent}
     />
   );
 }

@@ -74,6 +74,9 @@ export async function createReferral(
 
   // Resolve reward amounts from referrer's settings (per-group overrides).
   const settings = await resolveUserSettings(referrerCodeRow.userId);
+  // The referrer's referrals.enabled toggle governs their program: disabled
+  // means their code is not accepted (same as an invalid code).
+  if (!settings.referrals.enabled) return null;
   const referrerReward = settings.referrals?.referrerReward ?? 25;
   const referredReward = settings.referrals?.referredReward ?? 10;
 
@@ -100,7 +103,7 @@ export async function createReferral(
 export async function processReferralReward(
   referredUserId: string,
   actorId: string = "system",
-): Promise<{ rewarded: boolean; referralId?: string }> {
+): Promise<{ rewarded: boolean; referralId?: string; referrerId?: string }> {
   const referral = await prisma.referral.findUnique({
     where: { referredId: referredUserId },
     select: { id: true, referrerId: true, status: true, referrerReward: true, referredReward: true },
@@ -123,6 +126,16 @@ export async function processReferralReward(
   const referrerAmount = Number(referral.referrerReward);
   const referredAmount = Number(referral.referredReward);
 
+  // Per-user/group maxCreditBonus caps total bonus accumulation. Each side's
+  // reward is clamped to their remaining headroom (skipped entirely at 0) —
+  // resolved per user, defaulting to the platform cap when unset.
+  const [referrerHeadroom, referredHeadroom] = await Promise.all([
+    bonusHeadroom(referral.referrerId),
+    bonusHeadroom(referredUserId),
+  ]);
+  const cappedReferrerAmount = Math.max(0, Math.min(referrerAmount, referrerHeadroom));
+  const cappedReferredAmount = Math.max(0, Math.min(referredAmount, referredHeadroom));
+
   // Atomically update status first (prevents concurrent double-processing).
   const updated = await prisma.referral.updateMany({
     where: { id: referral.id, status: "PENDING" },
@@ -131,28 +144,32 @@ export async function processReferralReward(
   if (updated.count === 0) return { rewarded: false }; // Already processed.
 
   // Credit referrer (own transaction, idempotent key prevents double-credit).
-  await postClientEconomicEvent({
-    userId: referral.referrerId,
-    kind: "BONUS",
-    clientAmount: new Prisma.Decimal(referrerAmount),
-    asset: "USD",
-    idempotencyKey: `referral-referrer-${referral.id}`,
-    description: `Referral bonus — your referral made their first deposit`,
-    sourceType: "ReferralReward",
-    sourceId: referral.id,
-  });
+  if (cappedReferrerAmount > 0) {
+    await postClientEconomicEvent({
+      userId: referral.referrerId,
+      kind: "BONUS",
+      clientAmount: new Prisma.Decimal(cappedReferrerAmount),
+      asset: "USD",
+      idempotencyKey: `referral-referrer-${referral.id}`,
+      description: `Referral bonus — your referral made their first deposit`,
+      sourceType: "ReferralReward",
+      sourceId: referral.id,
+    });
+  }
 
   // Credit referred user.
-  await postClientEconomicEvent({
-    userId: referredUserId,
-    kind: "BONUS",
-    clientAmount: new Prisma.Decimal(referredAmount),
-    asset: "USD",
-    idempotencyKey: `referral-referred-${referral.id}`,
-    description: `Sign-up bonus from referral code`,
-    sourceType: "ReferralReward",
-    sourceId: referral.id,
-  });
+  if (cappedReferredAmount > 0) {
+    await postClientEconomicEvent({
+      userId: referredUserId,
+      kind: "BONUS",
+      clientAmount: new Prisma.Decimal(cappedReferredAmount),
+      asset: "USD",
+      idempotencyKey: `referral-referred-${referral.id}`,
+      description: `Sign-up bonus from referral code`,
+      sourceType: "ReferralReward",
+      sourceId: referral.id,
+    });
+  }
 
   // Audit.
   await prisma.$transaction(async (tx) => {
@@ -164,13 +181,34 @@ export async function processReferralReward(
       metadata: {
         referrerId: referral.referrerId,
         referredId: referredUserId,
-        referrerReward: referrerAmount,
-        referredReward: referredAmount,
+        referrerReward: cappedReferrerAmount,
+        referredReward: cappedReferredAmount,
+        ...(cappedReferrerAmount < referrerAmount || cappedReferredAmount < referredAmount
+          ? { cappedByMaxCreditBonus: true }
+          : {}),
       },
     });
   });
 
-  return { rewarded: true, referralId: referral.id };
+  return { rewarded: true, referralId: referral.id, referrerId: referral.referrerId };
+}
+
+/**
+ * Remaining bonus headroom for a user under their resolved balance
+ * .maxCreditBonus (per-user → group → platform default): the cap minus
+ * bonuses already granted (BONUS transactions). Returns a large number when
+ * no cap applies (null cap = unlimited).
+ */
+async function bonusHeadroom(userId: string): Promise<number> {
+  const settings = await resolveUserSettings(userId);
+  const cap = settings.balance.maxCreditBonus;
+  if (cap == null) return Number.POSITIVE_INFINITY;
+  const granted = await prisma.transaction.aggregate({
+    where: { userId, type: "BONUS", status: "COMPLETED" },
+    _sum: { amount: true },
+  });
+  const total = Number(granted._sum.amount ?? 0);
+  return Math.max(0, cap - total);
 }
 
 /** Increment click count when someone visits a referral link. */
@@ -205,6 +243,7 @@ export async function getReferralStats(userId: string) {
 
   const total = referrals.length;
   const completed = referrals.filter((r) => r.status === "COMPLETED").length;
+  const pending = referrals.filter((r) => r.status === "PENDING").length;
   const totalEarned = referrals
     .filter((r) => r.status === "COMPLETED")
     .reduce((sum, r) => sum + Number(r.referrerReward), 0);
@@ -212,7 +251,7 @@ export async function getReferralStats(userId: string) {
   return {
     code,
     link: `${process.env.TRADE_SUBDOMAIN || "trade"}.${process.env.BRAND_DOMAIN || "blackforrestt.com"}/register?ref=${code}`,
-    stats: { total, completed, pending: total - completed, totalEarned },
+    stats: { total, completed, pending, totalEarned },
     referrals: referrals.map((r) => ({
       id: r.id,
       status: r.status,

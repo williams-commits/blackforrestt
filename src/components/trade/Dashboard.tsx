@@ -21,6 +21,8 @@ interface Props {
   depositUiEnabled?: boolean;
   disabledPaymentMethods?: string[];
   walletAddresses?: WalletAddressEntry[];
+  /** Equity/margin ratio that marks the margin warning (settings → env default 125). */
+  marginWarningPercent?: number;
 }
 
 /** Responsive professional trading workspace. */
@@ -32,6 +34,7 @@ export function Dashboard({
   depositUiEnabled = true,
   disabledPaymentMethods = [],
   walletAddresses = [],
+  marginWarningPercent = 125,
 }: Props) {
   const interval = useForexStore((state) => state.interval);
   const setInterval = useForexStore((state) => state.setInterval);
@@ -47,7 +50,7 @@ export function Dashboard({
 
   return (
     <div className="trade-workspace flex min-h-dvh w-full flex-col overflow-x-hidden bg-canvas md:h-dvh md:overflow-hidden lg:h-screen">
-      <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} walletAddresses={walletAddresses} onOpenAssets={() => setAssetModalOpen(true)} />
+      <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} walletAddresses={walletAddresses} marginWarningPercent={marginWarningPercent} onOpenAssets={() => setAssetModalOpen(true)} />
       {/* <MarketStatusBanner marketDataMode={marketDataMode} wsStatus={status} /> */}
 
       {/* Chart + order panel — tablet (md) gets side-by-side, desktop (lg) gets the full layout */}

@@ -26,6 +26,8 @@ const ACCOUNT_TAB_STORAGE_KEY = "blckforest:account-tab";
 
 interface Props {
   initialTab?: Tab;
+  /** Equity/margin ratio that marks the margin warning (user settings → env default 125). */
+  marginWarningPercent?: number;
   user: { id: string; name: string; email: string; accountNo: string; createdAt: string; verified: boolean };
   metrics: {
     balance: number;
@@ -104,6 +106,7 @@ const TABS: { key: Tab; label: string }[] = [
 
 /** Tabbed account dashboard shell. */
 export function AccountShell(props: Props) {
+  const marginWarningPercent = props.marginWarningPercent ?? 125;
   const [tab, setTab] = useState<Tab>("overview");
   const router = useRouter();
   const realtimeAccount = useForexStore((state) => state.account);
@@ -263,6 +266,7 @@ export function AccountShell(props: Props) {
           walletAddresses={props.walletAddresses}
           kyc={props.kyc ? { status: props.kyc.status, note: props.kyc.note } : null}
           onOpenVerification={() => selectTab("verification")}
+          marginWarningPercent={marginWarningPercent}
         />
       )}
       {tab === "positions" && (

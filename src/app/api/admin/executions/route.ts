@@ -19,17 +19,22 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const parsed = Query.safeParse({ status: params.get("status") ?? undefined, limit: params.get("limit") ?? undefined });
     if (!parsed.success) return NextResponse.json({ error: "Invalid execution query." }, { status: 400 });
-    const positions = await prisma.position.findMany({
-      where: { status: parsed.data.status },
-      orderBy: parsed.data.status === "CLOSED" ? { closedAt: "desc" } : { openedAt: "desc" },
-      take: parsed.data.limit,
-      include: { user: { select: { email: true, accountNo: true } }, instrument: { select: { name: true, category: true } } },
-    });
+    const where = { status: parsed.data.status };
+    const [positions, total] = await Promise.all([
+      prisma.position.findMany({
+        where,
+        orderBy: parsed.data.status === "CLOSED" ? { closedAt: "desc" } : { openedAt: "desc" },
+        take: parsed.data.limit,
+        include: { user: { select: { email: true, accountNo: true } }, instrument: { select: { name: true, category: true } } },
+      }),
+      prisma.position.count({ where }),
+    ]);
     return NextResponse.json({
       executionMode: "INTERNAL",
       marketDataMode: getMarketDataMode(),
       engineReady: hub.isReady(),
       providerWarning: "Positions are executed against the internal price feed.",
+      total,
       positions: positions.map((position) => ({
         id: position.id,
         symbol: position.symbol,

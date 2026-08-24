@@ -17,9 +17,10 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const parsed = Query.safeParse({ userId: params.get("userId") ?? undefined, limit: params.get("limit") ?? undefined });
     if (!parsed.success) return NextResponse.json({ error: "Invalid ledger query." }, { status: 400 });
-    const [transactions, trial] = await Promise.all([
+    const where = { userId: parsed.data.userId };
+    const [transactions, trial, total] = await Promise.all([
       prisma.ledgerTransaction.findMany({
-        where: { userId: parsed.data.userId },
+        where,
         orderBy: { effectiveAt: "desc" },
         take: parsed.data.limit,
         include: {
@@ -31,9 +32,11 @@ export async function GET(request: Request) {
         by: ["asset", "direction"],
         _sum: { amount: true },
       }),
+      prisma.ledgerTransaction.count({ where }),
     ]);
     return NextResponse.json({
       trialBalance: trial.map((row) => ({ asset: row.asset, direction: row.direction, amount: row._sum.amount?.toFixed(8) ?? "0.00000000" })),
+      total,
       transactions: transactions.map((transaction) => ({
         id: transaction.id,
         reference: transaction.reference,

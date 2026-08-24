@@ -1,7 +1,9 @@
 "use client";
 
-import { useId, useState, useEffect } from "react";
+import { useId, useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/Button";
+import { Pagination } from "@/components/ui/Pagination";
+import { TableSearch } from "@/components/ui/DataTable";
 
 interface Submission {
   id: string;
@@ -35,16 +37,22 @@ interface Props {
   pending: Submission[];
   reviewed: Submission[];
   totalCount: number;
+  /** Total reviewed submissions in the database — the list is capped at the 50 most recent. */
+  reviewedTotal?: number;
   onQueueChange?: (pending: Submission[]) => void;
   canDecide?: boolean;
   canAccessDocuments?: boolean;
 }
+
+const QUEUE_PAGE_SIZE = 8;
+const REVIEWED_PAGE_SIZE = 10;
 
 /** Admin KYC review dashboard: queue of pending submissions + recent decisions. */
 export function KycReview({
   pending: initialPending,
   reviewed,
   totalCount,
+  reviewedTotal,
   onQueueChange,
   canDecide = false,
   canAccessDocuments = false,
@@ -60,7 +68,32 @@ export function KycReview({
   const [documents, setDocuments] = useState<DocumentView[]>([]);
   const [accessReason, setAccessReason] = useState("");
   const [accessDocId, setAccessDocId] = useState<string | null>(null);
+  const [queueSearch, setQueueSearch] = useState("");
+  const [queuePage, setQueuePage] = useState(1);
+  const [reviewedPage, setReviewedPage] = useState(1);
   const noteId = useId();
+
+  // Instant client-side narrowing of the queue — name, email, or account number.
+  const needle = queueSearch.trim().toLowerCase();
+  const filteredPending = useMemo(() => pending.filter((s) =>
+    !needle ||
+    `${s.firstName ?? ""} ${s.lastName ?? ""}`.toLowerCase().includes(needle) ||
+    (s.user.name ?? "").toLowerCase().includes(needle) ||
+    (s.user.email ?? "").toLowerCase().includes(needle) ||
+    (s.user.accountNo ?? "").includes(needle)
+  ), [pending, needle]);
+
+  const queueTotalPages = Math.max(1, Math.ceil(filteredPending.length / QUEUE_PAGE_SIZE));
+  const safeQueuePage = Math.min(queuePage, queueTotalPages);
+  const visiblePending = filteredPending.slice((safeQueuePage - 1) * QUEUE_PAGE_SIZE, safeQueuePage * QUEUE_PAGE_SIZE);
+  useEffect(() => { setQueuePage(1); }, [needle]);
+  useEffect(() => { if (queuePage > queueTotalPages) setQueuePage(queueTotalPages); }, [queuePage, queueTotalPages]);
+
+  const reviewedTotalResolved = reviewedTotal ?? reviewed.length;
+  const reviewedTotalPages = Math.max(1, Math.ceil(reviewed.length / REVIEWED_PAGE_SIZE));
+  const safeReviewedPage = Math.min(reviewedPage, reviewedTotalPages);
+  const visibleReviewed = reviewed.slice((safeReviewedPage - 1) * REVIEWED_PAGE_SIZE, safeReviewedPage * REVIEWED_PAGE_SIZE);
+  useEffect(() => { if (reviewedPage > reviewedTotalPages) setReviewedPage(reviewedTotalPages); }, [reviewedPage, reviewedTotalPages]);
 
   function updatePending(next: Submission[]) {
     setPending(next);
@@ -135,7 +168,12 @@ export function KycReview({
       // Remove from queue only after the server commits the decision.
       const next = pending.filter((submission) => submission.id !== selected.id);
       updatePending(next);
-      setSelected(next[0] ?? null);
+      // Advance to the next submission in the visible (filtered) queue — or
+      // the previous one when the last item was decided — so reviewing flows
+      // down the list instead of jumping back to the oldest entry.
+      const decidedIndex = filteredPending.findIndex((s) => s.id === selected.id);
+      const follow = filteredPending[decidedIndex + 1] ?? filteredPending[decidedIndex - 1] ?? null;
+      setSelected(follow && follow.id !== selected.id ? follow : next[0] ?? null);
       setRejectNote("");
     } catch {
       setError("Unable to reach the review service. Try again.");
@@ -150,7 +188,7 @@ export function KycReview({
         <h1 className="text-lg font-semibold">KYC Verification Queue</h1>
         <div className="flex gap-4 text-sm">
           <Stat label="Pending" value={pending.length} cls="text-brand" />
-          <Stat label="Reviewed (shown)" value={reviewed.length} />
+          <Stat label="Reviewed" value={reviewedTotalResolved} />
           <Stat label="Total submissions" value={totalCount} />
         </div>
       </div>
@@ -158,34 +196,47 @@ export function KycReview({
       <div className="grid lg:grid-cols-[320px_minmax(0,1fr)] gap-4">
         {/* Queue list */}
         <div className="space-y-2">
-          <h2 className="text-xs font-medium uppercase text-text-faint mb-1">Pending review</h2>
-          {pending.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              aria-pressed={selected?.id === s.id}
-              onClick={() => { setSelected(s); setError(null); }}
-              className={`w-full text-left rounded-lg border p-3 transition ${
-                selected?.id === s.id ? "border-brand bg-brand-soft" : "border-border bg-canvas hover:bg-panel-2"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">
-                  {s.firstName} {s.lastName}
-                </span>
-                <span className="text-[10px] text-text-faint">{s.submittedAt ? fmtAgo(s.submittedAt) : ""}</span>
-              </div>
-              <div className="text-xs text-text-muted">
-                {s.user.email} · #{s.user.accountNo ?? "—"}
-              </div>
-              <div className="text-[11px] text-text-faint mt-0.5">{s.docType} · {s.country}</div>
-            </button>
-          ))}
-          {pending.length === 0 && (
-            <div className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-text-faint">
-              Queue is empty — no pending submissions.
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-xs font-medium uppercase text-text-faint">Pending review · oldest first</h2>
+            <span className="text-[10px] text-text-faint tnum" aria-live="polite">
+              {needle ? `${filteredPending.length}/${pending.length}` : pending.length}
+            </span>
+          </div>
+          <TableSearch value={queueSearch} onChange={setQueueSearch} placeholder="Search name, email, account…" label="Search KYC queue" />
+          <div className="overflow-hidden rounded-lg border border-border bg-canvas">
+            <div className="space-y-1.5 p-1.5">
+              {visiblePending.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  aria-pressed={selected?.id === s.id}
+                  onClick={() => { setSelected(s); setError(null); }}
+                  className={`w-full text-left rounded-lg border p-3 transition ${
+                    selected?.id === s.id ? "border-brand bg-brand-soft" : "border-border bg-canvas hover:bg-panel-2"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      {s.firstName} {s.lastName}
+                    </span>
+                    <span className="text-[10px] text-text-faint">{s.submittedAt ? fmtAgo(s.submittedAt) : ""}</span>
+                  </div>
+                  <div className="text-xs text-text-muted">
+                    {s.user.email} · #{s.user.accountNo ?? "—"}
+                  </div>
+                  <div className="text-[11px] text-text-faint mt-0.5">{s.docType} · {s.country}</div>
+                </button>
+              ))}
+              {filteredPending.length === 0 && (
+                <div className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-text-faint">
+                  {needle ? `No pending submissions match “${queueSearch.trim()}”.` : "Queue is empty — no pending submissions."}
+                </div>
+              )}
             </div>
-          )}
+            {filteredPending.length > QUEUE_PAGE_SIZE && (
+              <Pagination page={safeQueuePage} pageSize={QUEUE_PAGE_SIZE} totalItems={filteredPending.length} onPageChange={setQueuePage} label="submissions" compact />
+            )}
+          </div>
         </div>
 
         {/* Detail panel */}
@@ -341,24 +392,34 @@ export function KycReview({
           )}
 
           {/* Recent decisions */}
-          <h2 className="text-xs font-medium uppercase text-text-faint mt-8 mb-2">Recent decisions</h2>
-          <div className="space-y-1.5">
-            {reviewed.map((s) => (
-              <div key={s.id} className="flex items-center justify-between rounded-lg border border-border bg-canvas px-3 py-2">
-                <div className="min-w-0">
-                  <span className="text-sm font-medium">{s.firstName} {s.lastName}</span>
-                  <span className="text-xs text-text-muted ml-2">{s.user.email}</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 mt-8 mb-2">
+            <h2 className="text-xs font-medium uppercase text-text-faint">Recent decisions</h2>
+            {reviewedTotalResolved > reviewed.length && (
+              <span className="text-[10px] text-brand">showing {reviewed.length} most recent of {reviewedTotalResolved}</span>
+            )}
+          </div>
+          <div className="overflow-hidden rounded-lg border border-border bg-canvas">
+            <div className="space-y-1.5 p-1.5">
+              {visibleReviewed.map((s) => (
+                <div key={s.id} className="flex items-center justify-between rounded-lg border border-border bg-canvas px-3 py-2">
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium">{s.firstName} {s.lastName}</span>
+                    <span className="text-xs text-text-muted ml-2">{s.user.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${s.status === "APPROVED" ? "bg-up/15 text-up" : "bg-down/15 text-down"}`}>
+                      {s.status}
+                    </span>
+                    <span className="text-[11px] text-text-faint">{s.reviewedAt ? fmtAgo(s.reviewedAt) : ""}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${s.status === "APPROVED" ? "bg-up/15 text-up" : "bg-down/15 text-down"}`}>
-                    {s.status}
-                  </span>
-                  <span className="text-[11px] text-text-faint">{s.reviewedAt ? fmtAgo(s.reviewedAt) : ""}</span>
-                </div>
-              </div>
-            ))}
-            {reviewed.length === 0 && (
-              <div className="text-xs text-text-faint py-3 text-center">No decisions yet.</div>
+              ))}
+              {reviewed.length === 0 && (
+                <div className="text-xs text-text-faint py-3 text-center">No decisions yet.</div>
+              )}
+            </div>
+            {reviewed.length > REVIEWED_PAGE_SIZE && (
+              <Pagination page={safeReviewedPage} pageSize={REVIEWED_PAGE_SIZE} totalItems={reviewed.length} onPageChange={setReviewedPage} label="decisions" compact />
             )}
           </div>
         </div>

@@ -770,8 +770,8 @@ interface KycSubmission {
   submittedAt: string | null; reviewedAt: string | null; user: { email: string | null; name: string | null; accountNo: string | null };
 }
 function KycPanel({ canDecide, canAccess }: { canDecide: boolean; canAccess: boolean }) {
-  const resource = useResource<{ pending: KycSubmission[]; reviewed: KycSubmission[]; total: number }>("/api/admin/kyc/workspace", 15_000);
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <KycReview pending={resource.data.pending} reviewed={resource.data.reviewed} totalCount={resource.data.total} canDecide={canDecide} canAccessDocuments={canAccess} onQueueChange={() => void resource.refresh()} />}</ModuleState>;
+  const resource = useResource<{ pending: KycSubmission[]; reviewed: KycSubmission[]; total: number; reviewedTotal?: number }>("/api/admin/kyc/workspace", 15_000);
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <KycReview pending={resource.data.pending} reviewed={resource.data.reviewed} totalCount={resource.data.total} reviewedTotal={resource.data.reviewedTotal} canDecide={canDecide} canAccessDocuments={canAccess} onQueueChange={() => void resource.refresh()} />}</ModuleState>;
 }
 
 function PaymentsPanel({ canPrepare, canApprove, simpleApproval = false }: { canPrepare: boolean; canApprove: boolean; simpleApproval?: boolean }) {
@@ -779,10 +779,131 @@ function PaymentsPanel({ canPrepare, canApprove, simpleApproval = false }: { can
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <PaymentsReview initialRequests={resource.data.requests} canPrepare={canPrepare} canApprove={canApprove} simpleApproval={simpleApproval} />}</ModuleState>;
 }
 
-interface LedgerResponse { trialBalance: Array<{ asset: string; direction: string; amount: string }>; transactions: Array<{ id: string; reference: string; kind: string; status: string; description: string; user: { email: string | null; accountNo: string | null } | null; effectiveAt: string; entries: Array<{ direction: string; amount: string; asset: string; account: { code: string; name: string } }> }> }
+interface LedgerEntryView { id: string; direction: string; amount: string; asset: string; account: { code: string; name: string } }
+interface LedgerTransactionView { id: string; reference: string; kind: string; status: string; description: string; userId: string | null; user: { email: string | null; accountNo: string | null } | null; sourceType: string | null; sourceId: string | null; effectiveAt: string; entries: LedgerEntryView[] }
+interface LedgerResponse { trialBalance: Array<{ asset: string; direction: string; amount: string }>; total: number; transactions: LedgerTransactionView[] }
+
+const LEDGER_PAGE_SIZE = 20;
+
+/** Client-facing money movement tone for a posting kind (internal kinds stay neutral). */
+function ledgerKindTone(kind: string): string {
+  if (kind === "DEPOSIT" || kind === "BONUS") return "bg-up/15 text-up";
+  if (kind === "WITHDRAWAL" || kind === "FEE") return "bg-down/15 text-down";
+  return "bg-panel-2 text-text-muted";
+}
+
+/** Text-only tone (amounts) matching the kind badge. */
+function ledgerKindTextTone(kind: string): string {
+  if (kind === "DEPOSIT" || kind === "BONUS") return "text-up";
+  if (kind === "WITHDRAWAL" || kind === "FEE") return "text-down";
+  return "text-text-muted";
+}
+
+/** Total credited per asset — for double-entry postings this is the gross amount moved. */
+function ledgerCreditTotals(entries: LedgerEntryView[]): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const entry of entries) {
+    if (entry.direction !== "CREDIT") continue;
+    totals.set(entry.asset, (totals.get(entry.asset) ?? 0) + Number(entry.amount));
+  }
+  return totals;
+}
+
 function LedgerPanel() {
-  const resource = useResource<LedgerResponse>("/api/admin/ledger?limit=100", 15_000);
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Double-entry ledger" description="Posted transaction headers and immutable debit/credit entries." onRefresh={() => void resource.refresh()} /><div className="flex flex-wrap gap-2">{resource.data.trialBalance.map((row) => <span key={`${row.asset}:${row.direction}`} className="rounded border border-border bg-canvas px-3 py-2 text-xs">{row.asset} {row.direction}: <strong className="tnum">{row.amount}</strong></span>)}</div><div className="space-y-2">{resource.data.transactions.map((item) => <details key={item.id} className="rounded-lg border border-border bg-canvas p-3"><summary className="cursor-pointer text-sm font-medium">{item.kind} · {item.reference} <span className="ml-2 text-xs text-text-muted">{new Date(item.effectiveAt).toLocaleString()}</span></summary><p className="mt-2 text-xs text-text-muted">{item.description} · {item.user?.email ?? "system"}</p><div className="mt-2 grid gap-1">{item.entries.map((entry) => <div key={`${entry.account.code}:${entry.direction}`} className="flex justify-between rounded bg-panel-2 px-2 py-1 text-xs"><span>{entry.direction} · {entry.account.name}</span><span className="tnum">{entry.asset} {entry.amount}</span></div>)}</div></details>)}{resource.data.transactions.length === 0 && <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">No ledger transactions.</div>}</div></div>}</ModuleState>;
+  const resource = useResource<LedgerResponse>("/api/admin/ledger?limit=200", 15_000);
+  const [search, setSearch] = useState("");
+  const [kindFilter, setKindFilter] = useState<string>("ALL");
+  const [page, setPage] = useState(1);
+
+  const all = useMemo(() => resource.data?.transactions ?? [], [resource.data]);
+  const needle = search.trim().toLowerCase();
+  // Kind chips cover the posting kinds present in the loaded window.
+  const kinds = useMemo(() => [...new Set(all.map((t) => t.kind))].sort(), [all]);
+  const filtered = useMemo(() => all.filter((t) => {
+    if (kindFilter !== "ALL" && t.kind !== kindFilter) return false;
+    if (!needle) return true;
+    return (
+      t.reference.toLowerCase().includes(needle) ||
+      t.kind.toLowerCase().includes(needle) ||
+      t.description.toLowerCase().includes(needle) ||
+      (t.user?.email ?? "").toLowerCase().includes(needle) ||
+      (t.user?.accountNo ?? "").includes(needle)
+    );
+  }), [all, kindFilter, needle]);
+  useEffect(() => { setPage(1); }, [needle, kindFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / LEDGER_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const visible = filtered.slice((safePage - 1) * LEDGER_PAGE_SIZE, safePage * LEDGER_PAGE_SIZE);
+  const filtering = needle !== "" || kindFilter !== "ALL";
+
+  const csvRows = filtered.flatMap((t) => t.entries.map((entry) => [
+    t.reference, t.kind, t.status, t.user?.email ?? "system", t.user?.accountNo ?? "",
+    fmtDateTime(t.effectiveAt), entry.direction, entry.account.name, entry.account.code,
+    entry.asset, Number(entry.amount).toFixed(8),
+  ]));
+
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4">
+    <SectionHeader title="Double-entry ledger" description="Posted transaction headers and immutable debit/credit entries." onRefresh={() => void resource.refresh()} />
+    <div className="flex flex-wrap gap-2">{resource.data.trialBalance.map((row) => <span key={`${row.asset}:${row.direction}`} className="rounded border border-border bg-canvas px-3 py-2 text-xs">{row.asset} {row.direction}: <strong className="tnum">{fmtExecNumber(row.amount)}</strong></span>)}</div>
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+      <TableSearch value={search} onChange={setSearch} placeholder="Search reference, kind, description, or user…" label="Search ledger" />
+      {kinds.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter postings by kind">
+          <FilterChip active={kindFilter === "ALL"} onClick={() => setKindFilter("ALL")}>All</FilterChip>
+          {kinds.map((kind) => <FilterChip key={kind} active={kindFilter === kind} onClick={() => setKindFilter(kind)}>{kind.replaceAll("_", " ")}</FilterChip>)}
+        </div>
+      )}
+      <CsvExportButton filename="ledger" columns={["Reference", "Kind", "Status", "User", "Account", "Effective", "Direction", "Account name", "Account code", "Asset", "Amount"]} rows={csvRows} disabled={filtered.length === 0} />
+      <span className="text-[10px] text-text-faint tnum" aria-live="polite">
+        {filtering ? `${filtered.length} of ${all.length} postings` : `${all.length} postings`}
+      </span>
+    </div>
+    {resource.data.total > all.length && (
+      <div className="rounded border border-brand/30 bg-brand-soft px-3 py-2 text-xs text-brand">Showing the {all.length} most recent postings of {resource.data.total.toLocaleString("en-US")} — narrow the window with the search or kind filters.</div>
+    )}
+    <div className="overflow-hidden rounded-lg border border-border bg-canvas">
+      <div className="space-y-2 p-2">
+        {visible.map((item) => {
+          const creditTotals = ledgerCreditTotals(item.entries);
+          return (
+            <details key={item.id} className="rounded-lg border border-border bg-canvas">
+              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 hover:bg-panel-2">
+                <span className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${ledgerKindTone(item.kind)}`}>{item.kind.replaceAll("_", " ")}</span>
+                  <span className="truncate font-mono text-xs font-medium" title={item.reference}>{item.reference}</span>
+                  <span className="text-[11px] text-text-faint">{fmtDateTime(item.effectiveAt)}</span>
+                </span>
+                <span className="flex items-center gap-2 text-xs">
+                  <span className="max-w-45 truncate text-text-muted" title={item.user?.email ?? undefined}>{item.user?.email ?? item.user?.accountNo ?? "system"}</span>
+                  <span className="rounded bg-panel-2 px-1.5 py-0.5 text-[10px] font-medium text-text-muted">{item.status}</span>
+                  {[...creditTotals.entries()].map(([asset, total]) => (
+                    <span key={asset} className={`tnum font-semibold ${ledgerKindTextTone(item.kind)}`}>{asset} {fmtExecNumber(total.toFixed(8))}</span>
+                  ))}
+                </span>
+              </summary>
+              <div className="space-y-2 border-t border-border p-3">
+                <p className="text-xs text-text-muted">{item.description}{item.sourceType ? ` · source ${item.sourceType}${item.sourceId ? ` ${item.sourceId}` : ""}` : ""}</p>
+                <div className="grid gap-1">
+                  {item.entries.map((entry) => (
+                    <div key={entry.id} className="flex items-center justify-between gap-2 rounded bg-panel-2 px-2 py-1 text-xs">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className={`rounded px-1 py-0.5 text-[9px] font-bold ${entry.direction === "DEBIT" ? "bg-down/10 text-down" : "bg-up/10 text-up"}`}>{entry.direction}</span>
+                        <span className="truncate" title={`${entry.account.name} (${entry.account.code})`}>{entry.account.name}</span>
+                      </span>
+                      <span className="shrink-0 font-medium tnum">{entry.asset} {fmtExecNumber(entry.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </details>
+          );
+        })}
+        {filtered.length === 0 && <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">{all.length === 0 ? "No ledger transactions." : `No postings match ${needle ? `“${search.trim()}”` : `the ${kindFilter.replaceAll("_", " ").toLowerCase()} filter`}.`}</div>}
+      </div>
+      {filtered.length > LEDGER_PAGE_SIZE && <Pagination page={safePage} pageSize={LEDGER_PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="postings" compact />}
+    </div>
+  </div>}</ModuleState>;
 }
 
 interface ExecutionPosition {
@@ -805,9 +926,11 @@ interface ExecutionPosition {
   closedAt?: string | null;
   closeReason?: string | null;
 }
-interface ExecutionResponse { executionMode: string; marketDataMode: string; engineReady: boolean; providerWarning: string; positions: ExecutionPosition[] }
+interface ExecutionResponse { executionMode: string; marketDataMode: string; engineReady: boolean; providerWarning: string; total: number; positions: ExecutionPosition[] }
 
 type ExecutionStatusFilter = "ALL" | "OPEN" | "CLOSED";
+
+const EXECUTIONS_PAGE_SIZE = 25;
 
 /** Compact decimal for fixed-point strings like "0.10000000" → "0.1". */
 function fmtExecNumber(value: string | number): string {
@@ -822,13 +945,19 @@ function pnlClass(value: number): string {
   return "text-text-muted";
 }
 
+/** Stable identity for grouping execution rows by user. */
+function executionUserKey(position: ExecutionPosition): string {
+  return position.user.email ?? position.user.accountNo ?? position.id;
+}
+
 function ExecutionsPanel({ canManage }: { canManage: boolean }) {
-  const resource = useResource<ExecutionResponse>("/api/admin/executions?limit=150");
+  const resource = useResource<ExecutionResponse>("/api/admin/executions?limit=200");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ExecutionStatusFilter>("ALL");
   const [groupByUser, setGroupByUser] = useState(true);
+  const [page, setPage] = useState(1);
   const { openCommand, commandDialog } = useCommandDialog();
 
   const { refresh } = resource;
@@ -907,13 +1036,31 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
     );
   }), [allPositions, statusFilter, needle]);
 
-  // Collapsible per-user sections with exposure aggregates. Users holding open
-  // positions sort first and their section starts expanded.
+  // Collapsible per-user sections with exposure aggregates, computed over the
+  // visible page. Users holding open positions sort first and their section
+  // starts expanded; the toolbar keeps the full filtered-set totals.
+  const totalPages = Math.max(1, Math.ceil(filtered.length / EXECUTIONS_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const visiblePositions = filtered.slice((safePage - 1) * EXECUTIONS_PAGE_SIZE, safePage * EXECUTIONS_PAGE_SIZE);
+  useEffect(() => { setPage(1); }, [needle, statusFilter]);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+
+  const userCount = new Set(filtered.map(executionUserKey)).size;
+  // Total filtered positions per user — lets page-scoped groups say "3 of 40"
+  // instead of understating a user's exposure when the page cuts into it.
+  const userTotals = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const position of filtered) {
+      const key = executionUserKey(position);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return counts;
+  }, [filtered]);
   const groups = useMemo(() => {
     interface Group { key: string; label: string; accountNo: string | null; positions: ExecutionPosition[]; open: number; netPl: number }
     const byUser = new Map<string, Group>();
-    for (const position of filtered) {
-      const key = position.user.email ?? position.user.accountNo ?? position.id;
+    for (const position of visiblePositions) {
+      const key = executionUserKey(position);
       const group = byUser.get(key) ?? { key, label: position.user.email ?? position.user.accountNo ?? "Unknown user", accountNo: position.user.accountNo, positions: [], open: 0, netPl: 0 };
       group.positions.push(position);
       group.open += position.status === "OPEN" ? 1 : 0;
@@ -925,7 +1072,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
       b.netPl - a.netPl ||
       a.label.localeCompare(b.label),
     );
-  }, [filtered]);
+  }, [visiblePositions]);
 
   const totalNetPl = filtered.reduce((sum, p) => sum + Number(p.netProfit), 0);
   const filtering = needle !== "" || statusFilter !== "ALL";
@@ -957,10 +1104,16 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
       <span className="text-[10px] text-text-faint tnum" aria-live="polite">
         {filtering
           ? `${filtered.length} of ${allPositions.length} positions`
-          : `${allPositions.length} positions · ${groups.length} user${groups.length === 1 ? "" : "s"}`}
+          : `${allPositions.length} positions · ${userCount} user${userCount === 1 ? "" : "s"}`}
         {" · net P/L "}<span className={pnlClass(totalNetPl)}>{fmtExecNumber(totalNetPl.toFixed(2))}</span>
+        {filtered.length > EXECUTIONS_PAGE_SIZE && ` · page ${safePage}/${totalPages}`}
       </span>
     </div>
+    {resource.data.total > allPositions.length && (
+      <div className="mb-3 rounded border border-brand/30 bg-brand-soft px-3 py-2 text-xs text-brand">
+        Showing the {allPositions.length} most recent positions of {resource.data.total.toLocaleString("en-US")} — narrow the window with the search or status filters.
+      </div>
+    )}
     {allPositions.length === 0 ? (
       <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">No positions.</div>
     ) : filtered.length === 0 ? (
@@ -968,33 +1121,46 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
         No positions match {needle ? `“${search.trim()}”` : `the ${statusFilter.toLowerCase()} filter`}.
       </div>
     ) : groupByUser ? (
-      <div className="space-y-2">
-        {groups.map((group) => (
-          <details key={group.key} open={group.open > 0 ? true : undefined} className="rounded-lg border border-border bg-canvas">
-            <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-panel-2">
-              <span className="flex min-w-0 items-baseline gap-2">
-                <span className="truncate text-sm font-semibold">{group.label}</span>
-                {group.accountNo && group.accountNo !== group.label ? <span className="text-text-faint">#{group.accountNo}</span> : null}
-              </span>
-              <span className="flex flex-wrap items-center gap-2 text-text-muted tnum">
-                {group.open > 0 && <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand">{group.open} open</span>}
-                <span>{group.positions.length} position{group.positions.length === 1 ? "" : "s"}</span>
-                <span>Net P/L <strong className={pnlClass(group.netPl)}>{fmtExecNumber(group.netPl.toFixed(2))}</strong></span>
-              </span>
-            </summary>
-            <div className="space-y-2 border-t border-border p-2">
-              {group.positions.map((position) => (
-                <ExecutionPositionCard key={position.id} position={position} canManage={canManage} busy={busy !== null} onSetProfit={() => void setProfit(position)} onClose={() => void closePosition(position)} />
-              ))}
-            </div>
-          </details>
-        ))}
+      <div className="overflow-hidden rounded-lg border border-border bg-canvas">
+        <div className="space-y-2 p-2">
+          {groups.map((group) => (
+            <details key={group.key} open={group.open > 0 ? true : undefined} className="rounded-lg border border-border bg-canvas">
+              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-panel-2">
+                <span className="flex min-w-0 items-baseline gap-2">
+                  <span className="truncate text-sm font-semibold">{group.label}</span>
+                  {group.accountNo && group.accountNo !== group.label ? <span className="text-text-faint">#{group.accountNo}</span> : null}
+                </span>
+                <span className="flex flex-wrap items-center gap-2 text-text-muted tnum">
+                  {group.open > 0 && <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand">{group.open} open</span>}
+                  <span>
+                    {(() => {
+                      const total = userTotals.get(group.key) ?? group.positions.length;
+                      return total > group.positions.length
+                        ? `${group.positions.length} of ${total} positions`
+                        : `${group.positions.length} position${group.positions.length === 1 ? "" : "s"}`;
+                    })()}
+                  </span>
+                  <span>Net P/L <strong className={pnlClass(group.netPl)}>{fmtExecNumber(group.netPl.toFixed(2))}</strong></span>
+                </span>
+              </summary>
+              <div className="space-y-2 border-t border-border p-2">
+                {group.positions.map((position) => (
+                  <ExecutionPositionCard key={position.id} position={position} canManage={canManage} busy={busy !== null} onSetProfit={() => void setProfit(position)} onClose={() => void closePosition(position)} />
+                ))}
+              </div>
+            </details>
+          ))}
+        </div>
+        {filtered.length > EXECUTIONS_PAGE_SIZE && <Pagination page={safePage} pageSize={EXECUTIONS_PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="positions" compact />}
       </div>
     ) : (
-      <div className="space-y-2">
-        {filtered.map((position) => (
-          <ExecutionPositionCard key={position.id} position={position} canManage={canManage} busy={busy !== null} onSetProfit={() => void setProfit(position)} onClose={() => void closePosition(position)} />
-        ))}
+      <div className="overflow-hidden rounded-lg border border-border bg-canvas">
+        <div className="space-y-2 p-2">
+          {visiblePositions.map((position) => (
+            <ExecutionPositionCard key={position.id} position={position} canManage={canManage} busy={busy !== null} onSetProfit={() => void setProfit(position)} onClose={() => void closePosition(position)} />
+          ))}
+        </div>
+        {filtered.length > EXECUTIONS_PAGE_SIZE && <Pagination page={safePage} pageSize={EXECUTIONS_PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="positions" compact />}
       </div>
     )}
     {commandDialog}

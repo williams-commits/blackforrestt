@@ -2,12 +2,25 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import {
   AdminChangeError,
   createAdminChangeRequest,
   reviewAdminChangeRequest,
 } from "../src/server/adminChanges.js";
+import {
+  AdminUserManagementError,
+  adminSendPasswordReset,
+  adminSetTemporaryPassword,
+} from "../src/server/adminUserManagement.js";
+import { consumeSecurityToken } from "../src/server/security/tokens.js";
 import { verifyAuditChain } from "../src/server/audit.js";
+
+// Pin email delivery to the development preview path so a developer's local
+// .env (real SMTP/HTTP provider) cannot make the reset test attempt a live
+// send — the link is returned instead of emailed.
+process.env.EMAIL_PROVIDER = "disabled";
+process.env.DEV_EMAIL_PREVIEW = "true";
 
 const prisma = new PrismaClient();
 
@@ -70,6 +83,133 @@ test("administrative role changes are replay-safe and require a different checke
   await assert.rejects(
     createAdminChangeRequest({ ...input, change: { ...input.change, payload: { ...input.change.payload, role: "AUDITOR" as const } } }),
     AdminChangeError,
+  );
+
+  const chain = await verifyAuditChain();
+  assert.equal(chain.valid, true, JSON.stringify(chain.failures));
+});
+
+test("admin-triggered password reset issues a single-use link and audits the actor", async () => {
+  const suffix = randomUUID();
+  const tail = suffix.replaceAll("-", "").slice(0, 11);
+  const [admin, customer, unverified, deleted] = await Promise.all([
+    prisma.user.create({ data: { email: `reset-admin-${suffix}@example.invalid`, accountNo: `a${tail}`, isAdmin: true } }),
+    prisma.user.create({ data: { email: `reset-customer-${suffix}@example.invalid`, accountNo: `u${tail}`, emailVerifiedAt: new Date() } }),
+    prisma.user.create({ data: { email: `reset-unverified-${suffix}@example.invalid`, accountNo: `v${tail}` } }),
+    prisma.user.create({ data: { email: `reset-deleted-${suffix}@example.invalid`, accountNo: `d${tail}`, emailVerifiedAt: new Date(), deletedAt: new Date() } }),
+  ]);
+
+  // Preview mode: the single-use link is returned instead of emailed.
+  const issued = await adminSendPasswordReset({ actorId: admin.id, userId: customer.id });
+  assert.equal(issued.sent, false);
+  assert.ok(issued.previewUrl?.includes("/reset-password?token="), issued.previewUrl);
+  assert.ok(issued.expiresAt.getTime() > Date.now());
+
+  // The admin action is attributed to the operator, not the target user.
+  const auditEvent = await prisma.auditEvent.findFirst({
+    where: { action: "PASSWORD_RESET_ADMIN_TRIGGERED", entityType: "User", entityId: customer.id },
+    orderBy: { sequence: "desc" },
+  });
+  assert.ok(auditEvent, "expected an audit event for the admin-triggered reset");
+  assert.equal(auditEvent.actorId, admin.id);
+
+  // Guards: unverified email and deleted accounts never receive reset links.
+  await assert.rejects(
+    adminSendPasswordReset({ actorId: admin.id, userId: unverified.id }),
+    (error: unknown) => error instanceof AdminUserManagementError && error.status === 409,
+  );
+  await assert.rejects(
+    adminSendPasswordReset({ actorId: admin.id, userId: deleted.id }),
+    (error: unknown) => error instanceof AdminUserManagementError && error.status === 409,
+  );
+
+  // The issued token works through the standard confirm flow exactly once —
+  // the same consume path the real /reset-password confirmation uses.
+  const token = new URL(issued.previewUrl!).searchParams.get("token")!;
+  let applied = false;
+  const consumed = await consumeSecurityToken({
+    token,
+    type: "PASSWORD_RESET",
+    apply: async () => {
+      applied = true;
+      return true;
+    },
+  });
+  assert.equal(consumed, true);
+  assert.equal(applied, true);
+  const replay = await consumeSecurityToken({
+    token,
+    type: "PASSWORD_RESET",
+    apply: async () => true,
+  });
+  assert.equal(replay, null);
+
+  const chain = await verifyAuditChain();
+  assert.equal(chain.valid, true, JSON.stringify(chain.failures));
+});
+
+test("admin-generated temporary password becomes the sign-in password and unlocks the account", async () => {
+  const suffix = randomUUID();
+  const tail = suffix.replaceAll("-", "").slice(0, 11);
+  const oldPasswordHash = await bcrypt.hash("OldPass123", 4);
+  const [admin, customer] = await Promise.all([
+    prisma.user.create({ data: { email: `temp-admin-${suffix}@example.invalid`, accountNo: `a${tail}`, isAdmin: true } }),
+    prisma.user.create({
+      data: {
+        email: `temp-customer-${suffix}@example.invalid`,
+        accountNo: `u${tail}`,
+        passwordHash: oldPasswordHash,
+        failedLoginCount: 5,
+        lockedUntil: new Date(Date.now() + 60_000),
+      },
+    }),
+  ]);
+  const session = await prisma.securitySession.create({
+    data: {
+      id: `sess-${suffix}`,
+      userId: customer.id,
+      deviceId: `dev-${suffix}`,
+      deviceName: "Integration test",
+      expiresAt: new Date(Date.now() + 3_600_000),
+    },
+  });
+
+  const result = await adminSetTemporaryPassword({ actorId: admin.id, userId: customer.id });
+  assert.match(result.temporaryPassword, /^[A-Za-z0-9]{6}$/);
+
+  // The generated code IS the user's password now — old one no longer works.
+  const updated = await prisma.user.findUniqueOrThrow({
+    where: { id: customer.id },
+    select: { passwordHash: true, failedLoginCount: true, lockedUntil: true, passwordChangedAt: true },
+  });
+  assert.notEqual(updated.passwordHash, oldPasswordHash);
+  assert.ok(updated.passwordHash, "expected a password hash after the temporary password was set");
+  assert.ok(await bcrypt.compare(result.temporaryPassword, updated.passwordHash));
+  assert.ok(!(await bcrypt.compare("OldPass123", updated.passwordHash)));
+
+  // Lockout cleared and every active session revoked — fresh sign-in required.
+  assert.equal(updated.failedLoginCount, 0);
+  assert.equal(updated.lockedUntil, null);
+  assert.ok(updated.passwordChangedAt);
+  const revoked = await prisma.securitySession.findUniqueOrThrow({ where: { id: session.id }, select: { revokedAt: true } });
+  assert.ok(revoked.revokedAt);
+
+  // Audited under the admin's identity, with zero password material recorded.
+  const auditEvent = await prisma.auditEvent.findFirst({
+    where: { action: "TEMPORARY_PASSWORD_SET", entityType: "User", entityId: customer.id },
+    orderBy: { sequence: "desc" },
+  });
+  assert.ok(auditEvent, "expected an audit event for the temporary password");
+  assert.equal(auditEvent.actorId, admin.id);
+  assert.ok(!JSON.stringify(auditEvent.metadata ?? {}).includes(result.temporaryPassword));
+
+  // Deleted accounts are rejected.
+  const deleted = await prisma.user.create({
+    data: { email: `temp-deleted-${suffix}@example.invalid`, accountNo: `d${tail}`, deletedAt: new Date() },
+  });
+  await assert.rejects(
+    adminSetTemporaryPassword({ actorId: admin.id, userId: deleted.id }),
+    (error: unknown) => error instanceof AdminUserManagementError && error.status === 409,
   );
 
   const chain = await verifyAuditChain();

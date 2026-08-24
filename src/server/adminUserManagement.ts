@@ -1,6 +1,16 @@
 import type { Prisma } from "@prisma/client";
+import { randomInt } from "node:crypto";
 import { prisma } from "./db";
 import { appendAuditEvent } from "./ledger";
+import { hashPassword } from "../auth";
+import {
+  applicationOrigin,
+  deliverSecurityEmail,
+  developmentEmailPreviewEnabled,
+  issueSecurityToken,
+  securityEmailProviderConfigured,
+} from "./security/tokens";
+import { appendSecurityAudit } from "./security/audit";
 
 /**
  * Admin account management: suspend / block / soft-delete users, send direct
@@ -129,6 +139,118 @@ export async function adminNotifyUser(input: {
       metadata: { title: title.slice(0, 240) },
     });
   });
+}
+
+/** Email the user a single-use password-reset link (admin-triggered recovery).
+ *  The admin never sees or sets the password — the user completes the reset
+ *  through the standard /reset-password flow, which revokes every active
+ *  session and clears any login lockout. Issuing the link invalidates any
+ *  previous unconsumed reset token for the account. */
+export async function adminSendPasswordReset(input: {
+  actorId: string;
+  userId: string;
+}): Promise<{ sent: boolean; previewUrl?: string; expiresAt: Date }> {
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: { email: true, emailVerifiedAt: true, deletedAt: true },
+  });
+  if (!user) throw new AdminUserManagementError("User not found.", 404);
+  if (user.deletedAt) throw new AdminUserManagementError("Deleted accounts cannot receive password resets.", 409);
+  if (!user.email || !user.emailVerifiedAt) {
+    throw new AdminUserManagementError("This account has no verified email — the user must verify their email before a reset link can be sent.", 409);
+  }
+
+  const providerConfigured = securityEmailProviderConfigured();
+  if (!providerConfigured && !developmentEmailPreviewEnabled()) {
+    throw new AdminUserManagementError("Email delivery is not configured.", 503);
+  }
+
+  const issued = await issueSecurityToken({ userId: input.userId, type: "PASSWORD_RESET" });
+  const url = new URL("/reset-password", applicationOrigin());
+  url.searchParams.set("token", issued.token);
+
+  // Attribute the trigger to the admin (token issuance itself is audited
+  // under the user's identity by issueSecurityToken).
+  await appendSecurityAudit({
+    actorId: input.actorId,
+    action: "PASSWORD_RESET_ADMIN_TRIGGERED",
+    entityType: "User",
+    entityId: input.userId,
+    metadata: { securityTokenId: issued.record.id, expiresAt: issued.expiresAt.toISOString() },
+  });
+
+  if (!providerConfigured) {
+    // Development preview mode — no provider, so return the raw single-use
+    // link for safe out-of-band handover instead of emailing it.
+    return { sent: false, previewUrl: url.toString(), expiresAt: issued.expiresAt };
+  }
+
+  try {
+    await deliverSecurityEmail({
+      to: user.email,
+      template: "password-reset",
+      actionUrl: url.toString(),
+      expiresAt: issued.expiresAt,
+      userId: input.userId,
+      idempotencyKey: `security-token-${issued.record.id}`,
+    });
+  } catch (error) {
+    console.error("Admin-triggered password reset email delivery failed", error);
+    throw new AdminUserManagementError("The reset link was issued but the email could not be delivered. Try again, or ask the user to use self-service recovery.", 503);
+  }
+  return { sent: true, expiresAt: issued.expiresAt };
+}
+
+const TEMPORARY_PASSWORD_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const TEMPORARY_PASSWORD_LENGTH = 6;
+
+/** Crypto-random alphanumeric temporary password (e.g. "fK7q2m"). */
+function generateTemporaryPassword(): string {
+  let code = "";
+  for (let i = 0; i < TEMPORARY_PASSWORD_LENGTH; i++) {
+    code += TEMPORARY_PASSWORD_ALPHABET[randomInt(TEMPORARY_PASSWORD_ALPHABET.length)];
+  }
+  return code;
+}
+
+/** Set a random 6-character alphanumeric temporary password for the user
+ *  (admin-triggered, e.g. phone support). Every active session is revoked and
+ *  any login lockout is cleared, so the user can sign in with the new
+ *  password immediately. The code is returned exactly ONCE — it is never
+ *  logged, audited, or emailed; the operator delivers it out-of-band. */
+export async function adminSetTemporaryPassword(input: {
+  actorId: string;
+  userId: string;
+}): Promise<{ temporaryPassword: string }> {
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: { deletedAt: true },
+  });
+  if (!user) throw new AdminUserManagementError("User not found.", 404);
+  if (user.deletedAt) throw new AdminUserManagementError("Deleted accounts cannot receive a temporary password.", 409);
+
+  const temporaryPassword = generateTemporaryPassword();
+  const passwordHash = await hashPassword(temporaryPassword);
+  const changedAt = new Date();
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: input.userId },
+      data: { passwordHash, passwordChangedAt: changedAt, failedLoginCount: 0, lockedUntil: null },
+    });
+    await tx.securitySession.updateMany({
+      where: { userId: input.userId, revokedAt: null },
+      data: { revokedAt: changedAt },
+    });
+    await appendAuditEvent(tx, {
+      actorId: input.actorId,
+      action: "TEMPORARY_PASSWORD_SET",
+      entityType: "User",
+      entityId: input.userId,
+      // Deliberately records no password material — only the side effects.
+      metadata: { sessionsRevoked: true, lockoutCleared: true },
+    });
+  }, { isolationLevel: "Serializable" });
+  return { temporaryPassword };
 }
 
 /** Broadcast an in-app notification to every active (non-deleted) user. */

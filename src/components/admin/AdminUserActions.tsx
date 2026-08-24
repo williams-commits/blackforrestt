@@ -19,7 +19,14 @@ export interface ManagedUserRow {
 type DialogKind =
   | { kind: "status"; action: "SUSPEND" | "UNSUSPEND" | "BLOCK" | "UNBLOCK" | "SOFT_DELETE" | "RESTORE" }
   | { kind: "notify" }
+  | { kind: "resetPassword" }
   | null;
+
+type ResetMode = "temporary" | "link";
+
+type ResetResult =
+  | { mode: "link"; sent: boolean; previewUrl?: string; expiresAt: string }
+  | { mode: "temporary"; temporaryPassword: string };
 
 const STATUS_LABELS: Record<string, { verb: string; tone: string }> = {
   SUSPEND: { verb: "Suspend", tone: "text-down" },
@@ -48,6 +55,9 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetResult, setResetResult] = useState<ResetResult | null>(null);
+  const [resetMode, setResetMode] = useState<ResetMode>("temporary");
+  const [copiedValue, setCopiedValue] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, right: 8 });
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -124,6 +134,38 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
     }
   }
 
+  async function submitPasswordReset() {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        resetMode === "temporary"
+          ? `/api/admin/users/${user.id}/temporary-password`
+          : `/api/admin/users/${user.id}/password-reset`,
+        { method: "POST" },
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "Reset failed.");
+      setResetResult(
+        resetMode === "temporary"
+          ? { mode: "temporary", temporaryPassword: data.temporaryPassword as string }
+          : { mode: "link", sent: data.sent !== false, previewUrl: data.previewUrl, expiresAt: data.expiresAt },
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Reset failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyValue(value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedValue(true);
+      setTimeout(() => setCopiedValue(false), 2000);
+    } catch { /* clipboard blocked */ }
+  }
+
   const statusAction: "SUSPEND" | "UNSUSPEND" | "BLOCK" | "UNBLOCK" | "SOFT_DELETE" | "RESTORE" =
     state === "deleted" ? "RESTORE"
     : state === "blocked" ? "UNBLOCK"
@@ -172,6 +214,12 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           {canManage && !user.isAdmin && (
             <>
               <div className="my-1 border-t border-border" />
+              <MenuItemRow
+                onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setResetResult(null); setResetMode("temporary"); setDialog({ kind: "resetPassword" }); }}
+                label="Reset password"
+                hint="Temporary code or emailed link"
+              />
+              <div className="my-1 border-t border-border" />
               <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: statusAction }); }} label={STATUS_LABELS[statusAction].verb} tone={STATUS_LABELS[statusAction].tone} />
               {secondaryAction && (
                 <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: secondaryAction }); }} label={STATUS_LABELS[secondaryAction].verb} tone="text-down" />
@@ -190,21 +238,89 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
 
       <Dialog
         open={dialog !== null}
-        onClose={() => { if (!busy) { setDialog(null); setError(null); } }}
-        title={dialog?.kind === "notify" ? "Send notification" : `${STATUS_LABELS[(dialog as { action: string } | null)?.action ?? ""]?.verb ?? "Confirm"} account`}
+        onClose={() => { if (!busy) { setDialog(null); setError(null); setResetResult(null); } }}
+        title={dialog?.kind === "notify"
+          ? "Send notification"
+          : dialog?.kind === "resetPassword"
+            ? resetResult
+              ? resetResult.mode === "temporary" ? "Temporary password set" : "Reset link ready"
+              : "Reset password"
+            : `${STATUS_LABELS[(dialog as { action: string } | null)?.action ?? ""]?.verb ?? "Confirm"} account`}
         description={dialog?.kind === "notify"
           ? `Delivered instantly to ${user.email ?? "the user"}'s notification history.`
-          : dialog?.action === "SOFT_DELETE"
-            ? "Soft-delete blocks sign-in and hides the account; all financial history is preserved and it can be restored."
-            : "The user is notified in-app and the action is written to the audit trail."}
+          : dialog?.kind === "resetPassword"
+            ? `Set a generated sign-in code for ${user.email ?? "the user"}, or email them a self-service reset link.`
+            : dialog?.action === "SOFT_DELETE"
+              ? "Soft-delete blocks sign-in and hides the account; all financial history is preserved and it can be restored."
+              : "The user is notified in-app and the action is written to the audit trail."}
         className="max-w-md"
       >
+        {dialog?.kind === "resetPassword" && resetResult ? (
+          <div className="p-5 space-y-4">
+            {resetResult.mode === "temporary" ? (
+              <>
+                <div className="rounded border border-up/30 bg-up/10 px-3 py-2 text-xs text-up">
+                  New sign-in password generated — it is shown below exactly once.
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <code className="min-w-0 flex-1 rounded border border-border bg-panel px-3 py-2.5 text-center font-mono text-xl font-bold tracking-widest">{resetResult.temporaryPassword}</code>
+                    <button type="button" onClick={() => void copyValue(resetResult.temporaryPassword)} className="shrink-0 rounded border border-border px-3 py-2.5 text-xs hover:bg-panel-2">
+                      {copiedValue ? "✓ Copied" : "Copy"}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-text-faint">
+                    Case-sensitive, 6 characters. Deliver it to the user through a secure channel — the user should
+                    change it after signing in (Account → Security).
+                  </p>
+                </div>
+                <p className="text-xs text-text-muted">
+                  All active sessions were signed out and any login lockout was cleared — the user signs in fresh
+                  with this password. This action is written to the audit trail (the password itself is never recorded).
+                </p>
+              </>
+            ) : (
+              <>
+                <div className={`rounded border px-3 py-2 text-xs ${resetResult.sent ? "border-up/30 bg-up/10 text-up" : "border-brand/30 bg-brand-soft text-brand"}`}>
+                  {resetResult.sent
+                    ? `Reset link emailed to ${user.email}.`
+                    : "Email delivery is not configured — use the link below."}
+                </div>
+                <p className="text-xs text-text-muted">
+                  Valid until {fmtDateTime(resetResult.expiresAt)}. The user sets their own new password;
+                  existing sessions stay signed in until the reset is completed.
+                </p>
+                {resetResult.previewUrl && (
+                  <div className="space-y-2">
+                    <label className="block text-xs font-medium">Single-use reset link</label>
+                    <div className="flex gap-2">
+                      <input
+                        readOnly
+                        value={resetResult.previewUrl}
+                        onClick={(e) => (e.target as HTMLInputElement).select()}
+                        className="h-9 min-w-0 flex-1 rounded border border-border bg-panel px-2 font-mono text-[11px] outline-none"
+                      />
+                      <button type="button" onClick={() => void copyValue(resetResult.previewUrl!)} className="shrink-0 rounded border border-border px-3 text-xs hover:bg-panel-2">
+                        {copiedValue ? "✓ Copied" : "Copy"}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-text-faint">Hand this to the user through a secure channel — anyone with the link can set the password.</p>
+                  </div>
+                )}
+              </>
+            )}
+            <div className="flex justify-end">
+              <button type="button" onClick={() => { setDialog(null); setError(null); setResetResult(null); }} className="rounded border border-border px-3 py-2 text-xs hover:bg-panel-2">Close</button>
+            </div>
+          </div>
+        ) : (
         <form
           className="p-5 space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
             if (!dialog) return;
             if (dialog.kind === "notify") void submitNotify();
+            else if (dialog.kind === "resetPassword") void submitPasswordReset();
             else void submitStatus(dialog.action);
           }}
         >
@@ -219,6 +335,41 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 <textarea id="notify-body" required minLength={3} maxLength={2000} rows={5} value={body} onChange={(e) => setBody(e.target.value)} className="w-full rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand" />
               </div>
             </>
+          ) : dialog?.kind === "resetPassword" ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Reset method">
+                <button
+                  type="button"
+                  onClick={() => setResetMode("temporary")}
+                  aria-pressed={resetMode === "temporary"}
+                  className={`rounded px-3 py-2 text-xs font-semibold ${resetMode === "temporary" ? "bg-brand text-white" : "border border-border bg-canvas hover:bg-panel-2"}`}
+                >
+                  Generate temporary password
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setResetMode("link")}
+                  aria-pressed={resetMode === "link"}
+                  className={`rounded px-3 py-2 text-xs font-semibold ${resetMode === "link" ? "bg-brand text-white" : "border border-border bg-canvas hover:bg-panel-2"}`}
+                >
+                  Email reset link
+                </button>
+              </div>
+              {resetMode === "temporary" ? (
+                <p className="text-xs text-text-muted">
+                  Generates a random 6-character alphanumeric password and sets it on{" "}
+                  <strong className="text-text">{user.email}</strong> immediately. All active sessions are signed out
+                  and any login lockout is cleared, so the user can sign in right away. The code is shown to you once —
+                  deliver it securely; the user should change it after signing in.
+                </p>
+              ) : (
+                <p className="text-xs text-text-muted">
+                  The link goes to <strong className="text-text">{user.email}</strong> and is valid for 30 minutes.
+                  Completing the reset signs out all of the user&apos;s active sessions and clears any login lockout.
+                  Issuing a new link invalidates previously issued, unused links. This action is written to the audit trail.
+                </p>
+              )}
+            </div>
           ) : (
             <div>
               <label className="mb-1 block text-xs font-medium" htmlFor="status-note">Note (optional, shown to the user in-app)</label>
@@ -233,11 +384,12 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           {error && <p role="alert" className="rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">{error}</p>}
           <div className="flex justify-end gap-2">
             <button type="button" disabled={busy} onClick={() => { setDialog(null); setError(null); }} className="rounded border border-border px-3 py-2 text-xs disabled:opacity-50">Cancel</button>
-            <button type="submit" disabled={busy} className={`rounded px-3 py-2 text-xs text-white disabled:opacity-50 ${dialog?.kind === "notify" ? "bg-brand" : "bg-down"}`}>
-              {busy ? "Working…" : dialog?.kind === "notify" ? "Send notification" : "Confirm"}
+            <button type="submit" disabled={busy} className={`rounded px-3 py-2 text-xs text-white disabled:opacity-50 ${dialog?.kind === "status" ? "bg-down" : "bg-brand"}`}>
+              {busy ? "Working…" : dialog?.kind === "notify" ? "Send notification" : dialog?.kind === "resetPassword" ? (resetMode === "temporary" ? "Generate password" : "Send reset link") : "Confirm"}
             </button>
           </div>
         </form>
+        )}
       </Dialog>
     </>
   );

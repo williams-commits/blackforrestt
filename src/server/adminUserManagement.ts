@@ -435,6 +435,32 @@ export async function adminGetThread(input: { adminId: string; userId: string; l
   };
 }
 
+/** Admin side: permanently remove a customer's entire support thread (a
+ *  moderation action). Writes an audit event recording what was removed —
+ *  message bodies are deleted, but the action itself stays accountable. */
+export async function adminDeleteThread(input: { actorId: string; userId: string }): Promise<{ deleted: number }> {
+  const customer = await prisma.user.findUnique({ where: { id: input.userId }, select: { id: true, isAdmin: true } });
+  if (!customer) throw new AdminUserManagementError("User not found.", 404);
+  if (customer.isAdmin) throw new AdminUserManagementError("Operator conversations cannot be deleted.", 400);
+  const where = {
+    OR: [
+      { senderId: input.userId, recipient: { isAdmin: true } },
+      { sender: { isAdmin: true }, recipientId: input.userId },
+    ],
+  };
+  return prisma.$transaction(async (tx) => {
+    const removed = await tx.directMessage.deleteMany({ where });
+    await appendAuditEvent(tx, {
+      actorId: input.actorId,
+      action: "ADMIN_CHAT_THREAD_DELETED",
+      entityType: "User",
+      entityId: input.userId,
+      metadata: { deletedMessages: removed.count },
+    });
+    return { deleted: removed.count };
+  });
+}
+
 export async function countUnreadDirectMessages(userId: string): Promise<number> {
   return prisma.directMessage.count({
     where: { recipientId: userId, sender: { isAdmin: true }, readAt: null },

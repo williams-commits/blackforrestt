@@ -689,7 +689,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
       className={`flex h-full min-h-112 flex-col overflow-hidden border border-border bg-canvas shadow-panel lg:min-h-0 ${fullscreen ? "rounded-none" : "rounded-md"}`}
     >
       <div className="flex shrink-0 flex-col border-b border-border bg-panel-2 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 sm:py-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 px-3 py-2 sm:py-0">
           <InstrumentIcon symbol={instrument.symbol} size={20} />
           <span className="text-sm font-bold tracking-tight">{instrument.symbol}</span>
           <span className="text-[10px] font-medium text-text-faint">{instrument.name}</span>
@@ -714,9 +714,10 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
             <button
               type="button"
               onClick={onOpenAssets}
-              className="rounded px-1.5 py-1 text-[10px] text-text-muted transition-colors hover:bg-panel-3 hover:text-text"
+              className="flex items-center gap-1.5 rounded px-1.5 py-1 text-[10px] text-text-muted transition-colors hover:bg-panel-3 hover:text-text"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg> 
+              <span className="text-[10px] font-semibold">Asset</span>
             </button>
           ) : null}
           {ohlc ? (
@@ -921,9 +922,9 @@ function LegendChip({ color, label, value, onRemove }: { color: string; label: s
         type="button"
         aria-label={`Remove ${label} indicator`}
         onClick={onRemove}
-        className="rounded px-1 text-[9px] leading-none text-text-faint transition-colors hover:bg-down/10 hover:text-down"
+        className="rounded p-1 text-[9px] leading-none text-text-faint transition-colors hover:bg-down/10 hover:text-down"
       >
-        ✕
+        {xIcon()}
       </button>
     </span>
   );
@@ -951,4 +952,23 @@ function computeSMA(candles: Candle[], period: number): { time: UTCTimestamp; va
     }
   }
   return result;
+}
+
+function xIcon (){
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className="h-4 w-4"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6 18L18 6M6 6l12 12"
+      />
+    </svg>
+  );
 }

@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AdminError, requireAdmin } from "@/server/admin";
 import { prisma } from "@/server/db";
+import { hub } from "@/server/engine/hub";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const Query = z.object({
   q: z.string().trim().max(120).optional(),
-  limit: z.coerce.number().int().min(1).max(200).default(100),
+  limit: z.coerce.number().int().min(1).max(1000).default(100),
 });
 
 export async function GET(request: Request) {
@@ -47,14 +48,24 @@ export async function GET(request: Request) {
           metrics: { select: { balance: true, equity: true, floatingPl: true, marginLevel: true } },
           kyc: { select: { status: true } },
           adminRoles: { where: { revokedAt: null }, select: { role: true, assignedAt: true } },
-          _count: { select: { positions: true, securitySessions: true, reconciliationBlocks: true } },
+          _count: {
+            select: {
+              // Open positions only — "is this user trading right now".
+              positions: { where: { status: "OPEN" } },
+              securitySessions: { where: { revokedAt: null, expiresAt: { gt: new Date() } } },
+              reconciliationBlocks: true,
+            },
+          },
         },
       }),
       // Honest total so the UI can disclose truncation ("showing first 200 of N").
       prisma.user.count({ where }),
     ]);
+    // Live presence from the process-wide engine hub (WebSocket connections).
+    const online = hub.onlineUserIds();
     return NextResponse.json({ total, users: users.map((user) => ({
       ...user,
+      online: online.has(user.id),
       emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
       lockedUntil: user.lockedUntil?.toISOString() ?? null,
       isAdmin: user.isAdmin,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { AdminError, hasAdminPermission, requireAdminContext } from "@/server/admin";
 import { prisma } from "@/server/db";
+import { hub } from "@/server/engine/hub";
 import { getMarketDataMode } from "@/server/engine/marketDataMode";
 
 export const runtime = "nodejs";
@@ -24,6 +25,8 @@ export async function GET() {
       openSupportCases,
       pendingChanges,
       auditEvents,
+      loggedInSessions,
+      tradingUsers,
     ] = await Promise.all([
       can("USER_READ") ? prisma.user.count() : null,
       can("USER_READ") ? prisma.user.count({ where: { verified: true } }) : null,
@@ -36,6 +39,22 @@ export async function GET() {
       can("SUPPORT_READ") ? prisma.supportCase.count({ where: { status: { in: ["OPEN", "IN_PROGRESS", "WAITING_CUSTOMER"] } } }) : null,
       can("CHANGE_REQUEST_READ") ? prisma.adminChangeRequest.count({ where: { status: "PENDING" } }) : null,
       can("AUDIT_READ") ? prisma.auditEvent.count() : null,
+      // Users with an unrevoked, unexpired security session (may be idle).
+      can("USER_READ")
+        ? prisma.securitySession.findMany({
+            where: { revokedAt: null, expiresAt: { gt: new Date() } },
+            select: { userId: true },
+            distinct: ["userId"],
+          })
+        : null,
+      // Distinct users holding at least one open position right now.
+      can("EXECUTION_READ")
+        ? prisma.position.findMany({
+            where: { status: "OPEN" },
+            select: { userId: true },
+            distinct: ["userId"],
+          })
+        : null,
     ]);
     return NextResponse.json({
       roles: context.roles,
@@ -47,6 +66,11 @@ export async function GET() {
       },
       stats: {
         ...(totalUsers != null ? { totalUsers, verifiedUsers } : {}),
+        // Live presence: WebSocket-connected users (online), authenticated
+        // sessions (logged in), and users holding open positions (trading).
+        ...(totalUsers != null ? { usersOnline: hub.onlineUserIds().size } : {}),
+        ...(loggedInSessions != null ? { usersLoggedIn: loggedInSessions.length } : {}),
+        ...(tradingUsers != null ? { usersTrading: tradingUsers.length } : {}),
         ...(openPositions != null ? { openPositions, closedPositions } : {}),
         ...(pendingKyc != null ? { pendingKyc } : {}),
         ...(pendingPayments != null ? { pendingPayments } : {}),

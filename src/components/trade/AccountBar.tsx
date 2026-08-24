@@ -178,7 +178,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
           <span className="w-7 h-7 rounded-full bg-brand-soft flex items-center justify-center text-brand font-semibold text-xs">
             {initial}
           </span>
-          <span className="text-xs font-medium max-w-[92px] sm:max-w-[120px] truncate">{userName}</span>
+          <span className="text-xs font-medium max-w-23 sm:max-w-30 truncate">{userName}</span>
           <svg
             width="12"
             height="12"

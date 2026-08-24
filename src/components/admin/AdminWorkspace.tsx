@@ -304,6 +304,8 @@ interface UserRow {
   id: string; email: string | null; name: string | null; accountNo: string | null; verified: boolean;
   lockedUntil: string | null; mfaEnabledAt: string | null; createdAt: string;
   isAdmin: boolean; suspendedAt: string | null; blockedAt: string | null; deletedAt: string | null;
+  /** Live presence — user has an open WebSocket right now. */
+  online: boolean;
   adminRoles: Array<{ role: string }>;
   kyc: { status: string } | null;
   metrics: { balance: string; equity: string; floatingPl: string; marginLevel: string | null } | null;
@@ -317,7 +319,7 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat }: { canAdjustBala
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(timer);
   }, [search]);
-  const url = `/api/admin/users?limit=200${debouncedSearch ? `&q=${encodeURIComponent(debouncedSearch)}` : ""}`;
+  const url = `/api/admin/users?limit=1000${debouncedSearch ? `&q=${encodeURIComponent(debouncedSearch)}` : ""}`;
 
   const resource = useResource<{ users: UserRow[]; total: number }>(url, 15_000);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
@@ -440,28 +442,48 @@ function PaginatedUsers({
             <Th sortKey="balance" sort={sort} onSort={onSort} align="right">Balance</Th>
             <Th sortKey="equity" sort={sort} onSort={onSort} align="right">Equity</Th>
             <Th sortKey="positions" sort={sort} onSort={onSort}>Activity</Th>
-            {canAdjustBalance ? <Th align="right">Finance</Th> : null}
-            {canManage ? <Th align="right">Account</Th> : null}
+            <Th align="right">Actions</Th>
           </tr></thead>
           <tbody>
             {visibleUsers.map((user) => (
               <tr key={user.id} className="border-t border-border">
-                <td className="p-2"><div className="font-medium">{user.name ?? "Unnamed"}</div><div className="text-text-faint">{user.email ?? "—"} · #{user.accountNo ?? "—"}</div></td>
+                <td className="p-2">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${user.online ? "bg-up" : "bg-panel-3"}`}
+                      title={user.online ? "Online — live session" : "Offline"}
+                      aria-label={user.online ? "Online" : "Offline"}
+                    />
+                    <span className="font-medium">{user.name ?? "Unnamed"}</span>
+                  </div>
+                  <div className="text-text-faint">{user.email ?? "—"} · #{user.accountNo ?? "—"}</div>
+                </td>
                 <td className="p-2">{user.kyc?.status ?? "NOT SUBMITTED"}<div className={user.verified ? "text-up" : "text-text-faint"}>{user.verified ? "Verified" : "Unverified"}</div></td>
                 <td className="p-2">MFA {user.mfaEnabledAt ? "enabled" : "off"}<div className={user.lockedUntil ? "text-down" : "text-text-faint"}>{user.lockedUntil ? "Locked" : `${user._count.securitySessions} session(s)`}</div></td>
                 <td className="p-2">{user.adminRoles.length ? user.adminRoles.map((role) => role.role).join(", ") : "Customer"}</td>
                 <td className="p-2 text-right tnum">{formatUsd(user.metrics?.balance ?? "0")}</td>
                 <td className="p-2 text-right tnum">{formatUsd(user.metrics?.equity ?? "0")}</td>
-                <td className="p-2">{user._count.positions} positions<div className={user._count.reconciliationBlocks ? "text-down" : "text-text-faint"}>{user._count.reconciliationBlocks} blocks</div></td>
-                {canAdjustBalance ? <td className="p-2 text-right whitespace-nowrap"><Button size="sm" onClick={() => onManageBalance(user)}>Manage balance</Button> <Button size="sm" variant="default" onClick={() => onEditSettings(user)}>Settings</Button></td> : null}
-                {canManage ? (
-                  <td className="p-2 text-right">
-                    <AdminUserActions user={user} onChanged={onChanged} onOpenChat={(u) => onOpenChat(users.find((candidate) => candidate.id === u.id) ?? user)} />
-                  </td>
-                ) : null}
+                <td className="p-2">
+                  <div className={user._count.positions > 0 ? "font-medium text-up" : ""}>
+                    {user._count.positions} open{user.online ? "" : ""}
+                  </div>
+                  <div className={user._count.reconciliationBlocks ? "text-down" : "text-text-faint"}>{user._count.reconciliationBlocks} blocks</div>
+                </td>
+                <td className="p-2 text-right">
+                  {(canManage || canAdjustBalance) && (
+                    <AdminUserActions
+                      user={user}
+                      onChanged={onChanged}
+                      onOpenChat={(u) => onOpenChat(users.find((candidate) => candidate.id === u.id) ?? user)}
+                      onManageBalance={canAdjustBalance ? (u) => onManageBalance(users.find((candidate) => candidate.id === u.id) ?? user) : undefined}
+                      onEditSettings={canAdjustBalance ? (u) => onEditSettings(users.find((candidate) => candidate.id === u.id) ?? user) : undefined}
+                      canManage={canManage}
+                    />
+                  )}
+                </td>
               </tr>
             ))}
-            {users.length === 0 ? <tr><td colSpan={(canAdjustBalance ? 8 : 7) + (canManage ? 1 : 0)} className="p-8 text-center text-text-muted">No users found.</td></tr> : null}
+            {users.length === 0 ? <tr><td colSpan={8} className="p-8 text-center text-text-muted">No users found.</td></tr> : null}
           </tbody>
         </table>
       </div>

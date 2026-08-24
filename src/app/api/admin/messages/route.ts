@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AdminError, requireAdmin } from "@/server/admin";
-import { AdminUserManagementError, adminGetThread, adminMessageThreads, sendDirectMessage } from "@/server/adminUserManagement";
+import { AdminUserManagementError, adminDeleteThread, adminGetThread, adminMessageThreads, sendDirectMessage } from "@/server/adminUserManagement";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +36,25 @@ const SendSchema = z.object({
   userId: z.string().trim().min(1),
   body: z.string().trim().min(1).max(4000),
 });
+
+/** DELETE /api/admin/messages?userId= — moderation: remove a customer's entire
+ *  support thread. Audited; not available for operator-to-operator traffic. */
+export async function DELETE(req: Request) {
+  try {
+    const actorId = await requireAdmin("SUPPORT_MANAGE");
+    const userId = new URL(req.url).searchParams.get("userId");
+    if (!userId) return NextResponse.json({ error: "A userId is required." }, { status: 400 });
+    const result = await adminDeleteThread({ actorId, userId });
+    return NextResponse.json({ ok: true, deleted: result.deleted });
+  } catch (error) {
+    if (error instanceof AdminUserManagementError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    const status = error instanceof AdminError ? error.status : 500;
+    if (status === 500) console.error("Admin thread delete failed", error);
+    return NextResponse.json({ error: status === 500 ? "Unable to delete the conversation." : error instanceof Error ? error.message : "Unable to delete the conversation." }, { status });
+  }
+}
 
 /** POST /api/admin/messages — send a direct message to a customer. */
 export async function POST(req: Request) {

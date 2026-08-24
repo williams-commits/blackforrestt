@@ -76,6 +76,7 @@ html.dim {
 .font-prose {
   font-family: var(--font-serif);
   font-feature-settings: "kern", "liga";
+  font-weight: 500;
 }
 
 /*
@@ -89,6 +90,7 @@ html.dim {
   font-size: 16px;
   line-height: 1.7;
   color: var(--color-text);
+  font-weight: 500;
 }
 .prose-content p {
   margin: 0;
@@ -146,6 +148,7 @@ body {
   background-color: var(--color-canvas);
   color: var(--color-text);
   font-family: var(--font-sans);
+  font-weight: 500;
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;

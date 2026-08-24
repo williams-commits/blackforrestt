@@ -62,7 +62,7 @@ export function AccountUserMenu({
           </div>
           <div className="p-1 text-xs">
             <AccountMenuLink href="/account" label="My account" onSelect={() => setOpen(false)} icon={<AccountIcon />} />
-            <AccountMenuLink href="/trade/AUDCAD" label="Trading terminal" onSelect={() => setOpen(false)} icon={<SettingsIcon />} />
+            <AccountMenuLink href="/trade/AUDCAD" label="Trading terminal" onSelect={() => setOpen(false)} icon={<TradeTerminal />} />
             <AccountMenuLink href="/reports" label="Trade reports" onSelect={() => setOpen(false)} icon={<ReportsIcon />} />
             {isAdmin && <AccountMenuLink href="/admin" label="Admin console" onSelect={() => setOpen(false)} icon={<SettingsIcon />} />}
           </div>
@@ -124,6 +124,16 @@ function SettingsIcon() {
     </svg>
   );
 }
+
+function TradeTerminal(){
+  return (
+    <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className={ic}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
+    </svg> 
+  );
+}
+
+
 
 function SignOutIcon() {
   return (

@@ -153,8 +153,28 @@ class Hub {
     return this.instruments.size > 0;
   }
 
-  listInstruments(): InstrumentState[] {
-    return Array.from(this.instruments.values());
+  // ── Live presence ──────────────────────────────────────────────────────────
+  // WebSocket connection counts per user, maintained by the WS gateway. The
+  // Hub is the process-wide singleton (the custom server and the route bundles
+  // share it), so admin APIs can read real-time presence from any module graph.
+  private onlineCounts = new Map<string, number>();
+
+  clientConnected(userId: string): void {
+    this.onlineCounts.set(userId, (this.onlineCounts.get(userId) ?? 0) + 1);
+  }
+
+  clientDisconnected(userId: string): void {
+    const current = this.onlineCounts.get(userId) ?? 0;
+    if (current <= 1) this.onlineCounts.delete(userId);
+    else this.onlineCounts.set(userId, current - 1);
+  }
+
+  /** Users with at least one live WebSocket (trade terminal or account page). */
+  onlineUserIds(): Set<string> {
+    return new Set(this.onlineCounts.keys());
+  }
+
+  listInstruments(): InstrumentState[] {    return Array.from(this.instruments.values());
   }
 
   getInstrument(symbol: string): InstrumentState | undefined {

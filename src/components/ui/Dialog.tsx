@@ -126,14 +126,33 @@ export function Dialog({
             type="button"
             onClick={onClose}
             aria-label={closeLabel}
-            className="rounded-lg py-1 px-2 flex items-center text-2xl leading-none text-text-faint hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
+            className="rounded-lg p-1 flex items-center text-2xl leading-none text-text-faint hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
           >
-            <span aria-hidden="true">×</span>
+            <span aria-hidden="true">{xIcon()}</span>
           </button>
         </div>
         {children}
       </div>
     </div>,
     document.body,
+  );
+}
+
+function xIcon (){
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className="h-5 w-5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6 18L18 6M6 6l12 12"
+      />
+    </svg>
   );
 }

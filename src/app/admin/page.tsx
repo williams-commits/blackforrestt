@@ -34,24 +34,49 @@ export default async function AdminPage() {
 
   return (
     <div className="min-h-screen bg-panel">
-      <header className="sticky top-0 z-30 flex min-h-12 flex-wrap items-center gap-4 border-b border-border bg-canvas px-4 py-2">
-        <Logo />
-        <span
-          className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-            isSimulation ? "border-brand/40 bg-brand-soft text-brand" : "border-down/40 bg-down/10 text-down"
-          }`}
-          title={`Market data mode: ${process.env.MARKET_DATA_MODE ?? "simulation"}`}
-        >
-          {isSimulation ? "Sim" : "Live"}
-        </span>
-        <nav className="flex items-center gap-4 text-xs" aria-label="Primary">
-          <Link href="/trade/AUDCAD" className="text-text-muted hover:text-text">Trade</Link>
-          <Link href="/account" className="text-text-muted hover:text-text">Account</Link>
-          <span className="font-medium text-text" aria-current="page">Operations</span>
-        </nav>
-        <div className="ml-auto flex items-center gap-3">
-          <span className="text-xs text-text-muted">{userName}</span>
-          <AdminSignOutButton />
+      {/* Operations header — deliberately distinct from the customer app: a
+          dark console bar with the environment badge and the operator's roles,
+          so nobody mistakes production for the trading UI. */}
+      <header className="sticky top-0 z-30 border-b border-slate-700 bg-slate-900 text-slate-100">
+        <div className="flex min-h-12 flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2">
+          <div className="flex items-center gap-3">
+            <Logo inverted />
+            <span className="hidden h-5 w-px bg-slate-700 sm:block" aria-hidden />
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M12 2l9 4v6c0 5-3.8 9.3-9 10-5.2-.7-9-5-9-10V6l9-4z" strokeLinejoin="round" />
+              </svg>
+              Operations Console
+            </span>
+          </div>
+
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+              isSimulation
+                ? "border-amber-400/50 bg-amber-400/10 text-amber-300"
+                : "border-red-400/60 bg-red-500/15 text-red-300"
+            }`}
+            title={`Market data mode: ${process.env.MARKET_DATA_MODE ?? "simulation"}`}
+          >
+            {isSimulation ? "SIM" : "Live"}
+          </span>
+
+          <nav className="flex items-center gap-3 text-xs" aria-label="Primary">
+            <Link href="/trade/AUDCAD" className="text-slate-400 transition hover:text-white">Trade</Link>
+            <Link href="/account" className="text-slate-400 transition hover:text-white">Account</Link>
+            <span className="font-medium text-white" aria-current="page">Operations</span>
+          </nav>
+
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {context.roles.slice(0, 3).map((role) => (
+              <span key={role} className="rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-300 ring-1 ring-inset ring-slate-700">
+                {role.replaceAll("_", " ")}
+              </span>
+            ))}
+            <span className="hidden h-5 w-px bg-slate-700 sm:block" aria-hidden />
+            <span className="max-w-40 truncate text-xs text-slate-300">{userName}</span>
+            <AdminSignOutButton />
+          </div>
         </div>
       </header>
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-screen-2xl px-4 py-6">

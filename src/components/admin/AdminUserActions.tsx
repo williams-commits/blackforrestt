@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Dialog } from "@/components/ui/Dialog";
 import { fmtDateTime } from "@/lib/dates";
 
@@ -29,12 +30,17 @@ const STATUS_LABELS: Record<string, { verb: string; tone: string }> = {
   RESTORE: { verb: "Restore", tone: "text-up" },
 };
 
-/** Row-level admin actions: account state, direct notification. Renders a
- *  compact inline menu; destructive actions confirm with a note first. */
-export function AdminUserActions({ user, onChanged, onOpenChat }: {
+/** Row-level admin actions behind one kebab menu (portal-rendered so the
+ *  table's overflow container can't clip it): notify, chat, finance, settings,
+ *  and the account-state controls. Destructive actions confirm with a note. */
+export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance, onEditSettings, canManage = false }: {
   user: ManagedUserRow;
   onChanged: () => void;
   onOpenChat: (user: ManagedUserRow) => void;
+  onManageBalance?: (user: ManagedUserRow) => void;
+  onEditSettings?: (user: ManagedUserRow) => void;
+  /** USER_ACCESS_MANAGE holders see the account-state controls. */
+  canManage?: boolean;
 }) {
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [note, setNote] = useState("");
@@ -42,10 +48,41 @@ export function AdminUserActions({ user, onChanged, onOpenChat }: {
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 8 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const state = user.deletedAt ? "deleted" : user.blockedAt ? "blocked" : user.suspendedAt ? "suspended" : "active";
 
-  async function submitStatus(action: NonNullable<DialogKind> & { kind: "status" } extends never ? never : "SUSPEND" | "UNSUSPEND" | "BLOCK" | "UNBLOCK" | "SOFT_DELETE" | "RESTORE") {
+  function openMenu() {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 4, right: Math.max(8, window.innerWidth - rect.right) });
+    }
+    setMenuOpen(true);
+  }
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target) && triggerRef.current && !triggerRef.current.contains(target)) {
+        setMenuOpen(false);
+      }
+    };
+    const close = () => setMenuOpen(false);
+    document.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [menuOpen]);
+
+  async function submitStatus(action: "SUSPEND" | "UNSUSPEND" | "BLOCK" | "UNBLOCK" | "SOFT_DELETE" | "RESTORE") {
     setBusy(true);
     setError(null);
     try {
@@ -97,30 +134,59 @@ export function AdminUserActions({ user, onChanged, onOpenChat }: {
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-end gap-1">
-        <span className={`mr-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase ${state === "active" ? "bg-up/10 text-up" : state === "suspended" ? "bg-brand-soft text-brand" : "bg-down/10 text-down"}`}>
+      <div className="flex items-center justify-end gap-1.5">
+        <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase ${state === "active" ? "bg-up/10 text-up" : state === "suspended" ? "bg-brand-soft text-brand" : "bg-down/10 text-down"}`}>
           {state}
         </span>
-        <button type="button" onClick={() => { setError(null); setNote(""); setDialog({ kind: "notify" }); }} className="rounded border border-border px-2 py-1 text-[10px] hover:bg-panel-2">Notify</button>
-        <button type="button" onClick={() => onOpenChat(user)} className="rounded border border-border px-2 py-1 text-[10px] hover:bg-panel-2">Chat</button>
-        {!user.isAdmin && (
-          <>
-            <button type="button" onClick={() => { setError(null); setNote(""); setDialog({ kind: "status", action: statusAction }); }} className={`rounded border border-border px-2 py-1 text-[10px] hover:bg-panel-2 ${STATUS_LABELS[statusAction].tone}`}>
-              {STATUS_LABELS[statusAction].verb}
-            </button>
-            {secondaryAction && (
-              <button type="button" onClick={() => { setError(null); setNote(""); setDialog({ kind: "status", action: secondaryAction }); }} className="rounded border border-border px-2 py-1 text-[10px] text-down hover:bg-down/10">
-                {STATUS_LABELS[secondaryAction].verb}
-              </button>
-            )}
-            {deleteAction && (
-              <button type="button" onClick={() => { setError(null); setNote(""); setDialog({ kind: "status", action: deleteAction }); }} className="rounded border border-down/40 px-2 py-1 text-[10px] text-down hover:bg-down/10">
-                {STATUS_LABELS[deleteAction].verb}
-              </button>
-            )}
-          </>
-        )}
+        <button
+          type="button"
+          ref={triggerRef}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          aria-label={`Actions for ${user.name ?? user.email ?? user.id}`}
+          onClick={() => (menuOpen ? setMenuOpen(false) : openMenu())}
+          className="flex h-6 w-7 items-center justify-center rounded border border-border text-text-muted hover:bg-panel-2 hover:text-text"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />
+          </svg>
+        </button>
       </div>
+
+      {menuOpen && typeof document !== "undefined" && createPortal(
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label={`Actions for ${user.name ?? user.email ?? user.id}`}
+          className="fixed z-9999 w-48 overflow-hidden rounded-lg border border-border bg-canvas py-1 shadow-xl"
+          style={{ top: menuPos.top, right: menuPos.right }}
+        >
+          <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "notify" }); }} label="Notify" hint="Send an in-app notification" />
+          <MenuItemRow onSelect={() => { setMenuOpen(false); onOpenChat(user); }} label="Chat" hint="Open support conversation" />
+          {onManageBalance && (
+            <MenuItemRow onSelect={() => { setMenuOpen(false); onManageBalance(user); }} label="Manage balance" hint="Audited finance operation" />
+          )}
+          {onEditSettings && (
+            <MenuItemRow onSelect={() => { setMenuOpen(false); onEditSettings(user); }} label="Settings" hint="Per-user overrides" />
+          )}
+          {canManage && !user.isAdmin && (
+            <>
+              <div className="my-1 border-t border-border" />
+              <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: statusAction }); }} label={STATUS_LABELS[statusAction].verb} tone={STATUS_LABELS[statusAction].tone} />
+              {secondaryAction && (
+                <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: secondaryAction }); }} label={STATUS_LABELS[secondaryAction].verb} tone="text-down" />
+              )}
+              {deleteAction && (
+                <>
+                  <div className="my-1 border-t border-border" />
+                  <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: deleteAction }); }} label={STATUS_LABELS[deleteAction].verb} tone="text-down" hint="Soft-delete; restorable" />
+                </>
+              )}
+            </>
+          )}
+        </div>,
+        document.body,
+      )}
 
       <Dialog
         open={dialog !== null}
@@ -174,5 +240,21 @@ export function AdminUserActions({ user, onChanged, onOpenChat }: {
         </form>
       </Dialog>
     </>
+  );
+}
+
+function MenuItemRow({ onSelect, label, hint, tone = "text-text" }: { onSelect: () => void; label: string; hint?: string; tone?: string }) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onSelect}
+      className="flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs transition-colors hover:bg-panel-2"
+    >
+      <span className={`min-w-0 flex-1 ${tone}`}>
+        <span className="block font-medium">{label}</span>
+        {hint && <span className="block text-[9px] text-text-faint">{hint}</span>}
+      </span>
+    </button>
   );
 }

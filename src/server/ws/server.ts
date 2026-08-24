@@ -143,6 +143,7 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
       messagesInWindow: 0,
     };
     clients.add(client);
+    hub.clientConnected(userId);
 
     send(ws, {
       type: "instruments",
@@ -170,8 +171,8 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
         }
       });
     });
-    ws.on("close", () => clients.delete(client));
-    ws.on("error", () => clients.delete(client));
+    ws.on("close", () => { clients.delete(client); hub.clientDisconnected(userId); });
+    ws.on("error", () => { clients.delete(client); hub.clientDisconnected(userId); });
   });
 
   const heartbeat = setInterval(() => {
@@ -179,6 +180,7 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
       if (!client.isAlive) {
         client.ws.terminate();
         clients.delete(client);
+        hub.clientDisconnected(client.userId);
         continue;
       }
       client.isAlive = false;
@@ -189,6 +191,7 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
 
   wss.on("close", () => {
     clearInterval(heartbeat);
+    for (const client of clients) hub.clientDisconnected(client.userId);
     clients.clear();
   });
 

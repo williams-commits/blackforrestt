@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog } from "@/components/ui/Dialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { toast } from "@/lib/toast";
 import { fmtDateTime } from "@/lib/dates";
 
 interface ThreadRow {
@@ -61,6 +63,8 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
   const [bBusy, setBBusy] = useState(false);
   const [bError, setBError] = useState<string | null>(null);
   const [bResult, setBResult] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(true);
 
@@ -176,6 +180,26 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
     }
   }
 
+  /** Moderation: permanently remove the customer's whole thread (audited). */
+  async function deleteThread() {
+    if (!activeUser) return;
+    setDeleteBusy(true);
+    try {
+      const response = await fetch(`/api/admin/messages?userId=${encodeURIComponent(activeUser.id)}`, { method: "DELETE" });
+      const data = await response.json().catch(() => ({})) as { deleted?: number; error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Delete failed.");
+      toast.success("Conversation deleted", `${data.deleted ?? 0} message(s) removed for ${activeUser.label}. The deletion is recorded in the audit trail.`);
+      setDeleteOpen(false);
+      setThread(null);
+      setActiveUser(null);
+      await loadThreads();
+    } catch (cause) {
+      toast.error("Delete failed", cause instanceof Error ? cause.message : "Unable to delete the conversation.");
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
   if (loading) {
     return <div className="space-y-2" role="status" aria-label="Loading messages"><Skeleton className="h-10 w-1/2" /><Skeleton className="h-10 w-2/3" /><Skeleton className="h-10 w-1/3" /></div>;
   }
@@ -214,7 +238,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
 
       <div className="grid gap-3 lg:grid-cols-[minmax(240px,340px)_minmax(0,1fr)]">
         {/* Thread list */}
-        <div className="flex max-h-[36rem] flex-col rounded-lg border border-border bg-canvas">
+        <div className="flex max-h-144 flex-col rounded-lg border border-border bg-canvas">
           <div className="space-y-2 border-b border-border-soft p-2">
             <input
               type="search"
@@ -269,7 +293,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
         </div>
 
         {/* Chat pane */}
-        <div className="flex h-[36rem] flex-col rounded-lg border border-border bg-canvas">
+        <div className="flex h-144 flex-col rounded-lg border border-border bg-canvas">
           {activeUser ? (
             <>
               <div className="flex items-start justify-between gap-2 border-b border-border-soft px-4 py-2.5">
@@ -279,7 +303,17 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                     <div className="truncate text-[10px] text-text-faint">{thread.user.email ?? "—"} · #{thread.user.accountNo ?? "—"}</div>
                   )}
                 </div>
-                <button type="button" onClick={() => { setActiveUser(null); setThread(null); }} className="shrink-0 text-[10px] text-text-faint hover:text-text">close thread</button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteOpen(true)}
+                    className="text-[10px] font-medium text-down/80 hover:text-down hover:underline underline-offset-2"
+                    title="Permanently delete this conversation (audited)"
+                  >
+                    delete
+                  </button>
+                  <button type="button" onClick={() => { setActiveUser(null); setThread(null); }} className="text-[10px] text-text-faint hover:text-text">close</button>
+                </div>
               </div>
               <div
                 className="flex-1 space-y-2 overflow-y-auto px-4 py-3"
@@ -349,6 +383,17 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Delete this conversation?"
+        message={`Every message in ${activeUser?.label ?? "this customer"}'s support thread will be permanently removed for the whole team. The deletion is written to the audit trail. This cannot be undone.`}
+        confirmLabel="Delete conversation"
+        cancelLabel="Keep it"
+        busy={deleteBusy}
+        onConfirm={() => void deleteThread()}
+        onCancel={() => setDeleteOpen(false)}
+      />
 
       <Dialog
         open={broadcastOpen}

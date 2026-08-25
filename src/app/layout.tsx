@@ -7,7 +7,7 @@ import { Providers } from "@/components/providers";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FormatLocaleBridge } from "@/components/FormatLocaleBridge";
 import { TopProgressBar } from "@/components/ui/TopProgressBar";
-import { brandDomain, currentBrandProfile } from "@/lib/branding";
+import { brandDomain, currentBrandProfile, safeBrandColor } from "@/lib/branding";
 import { LOCALE_BCP47, LOCALE_OG, RTL_LOCALES } from "@/i18n/config";
 import { languageAlternates } from "@/lib/seo";
 
@@ -110,6 +110,16 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const brand = await currentBrandProfile();
+  // Per-domain theme: a brand with an accentColor re-skins every --color-brand
+  // utility (buttons, links, badges, focus rings) for its host only. Soft
+  // tints and the dim-mode variant are derived with color-mix so one hex
+  // re-themes light + dark. Injected into <head> before any content — no
+  // flash of the default accent.
+  const brandAccent = safeBrandColor(brand.accentColor);
+  const brandThemeCss = brandAccent
+    ? `:root{--color-brand:${brandAccent};--color-brand-soft:color-mix(in srgb, ${brandAccent} 14%, #fff)}`
+      + `html.dim{--color-brand:color-mix(in srgb, ${brandAccent} 88%, #fff);--color-brand-soft:color-mix(in srgb, ${brandAccent} 24%, #000)}`
+    : null;
   const siteUrl = `https://${brandDomain()}`;
   const locale = await getLocale();
   const htmlLang = LOCALE_BCP47[locale as keyof typeof LOCALE_BCP47] ?? "en";
@@ -149,6 +159,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
+        {brandThemeCss && <style id="brand-accent" dangerouslySetInnerHTML={{ __html: brandThemeCss }} />}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       </head>
       <body className="bg-canvas text-text antialiased">

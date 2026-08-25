@@ -32,6 +32,8 @@ export const PRIMARY_BRAND_FALLBACK: BrandProfile = {
   ogImage: "",
   accentColor: "",
   glyph: null,
+  heroBadge: "",
+  heroSubtitle: "",
 };
 
 const BrandContext = createContext<BrandProfile>(PRIMARY_BRAND_FALLBACK);

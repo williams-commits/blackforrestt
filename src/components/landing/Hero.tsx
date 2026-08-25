@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { LivePrice } from "@/components/landing/LivePrice";
 import { getFeaturedInstrument } from "@/lib/landingData";
+import { currentBrandProfile } from "@/lib/branding";
 
 /**
  * Hero — headline, dual CTA, and two cards: a live featured market and a
@@ -12,6 +13,12 @@ import { getFeaturedInstrument } from "@/lib/landingData";
 export async function Hero() {
   const t = await getTranslations("hero");
   const featured = getFeaturedInstrument();
+  // Per-brand landing copy: a brand profile may override the hero badge and
+  // subtitle (BRAND_OVERRIDES heroBadge / heroSubtitle) so mirror domains get
+  // their own voice without separate translation files.
+  const brand = await currentBrandProfile();
+  const badge = brand.heroBadge || t("badge");
+  const subtitle = brand.heroSubtitle || t("subtitle");
 
   return (
     <section id="hero" className="relative overflow-hidden bg-linear-to-b from-panel to-canvas scroll-mt-24">
@@ -21,7 +28,7 @@ export async function Hero() {
           <div>
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-soft text-brand text-xs font-semibold mb-6">
               <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-              {t("badge")}
+              {badge}
             </span>
             <h1 className="text-4xl lg:text-5xl font-extrabold leading-[1.05] tracking-tight">
               {t.rich("title", {
@@ -29,7 +36,7 @@ export async function Hero() {
               })}
             </h1>
             <p className="font-prose mt-5 text-lg leading-relaxed text-text-muted max-w-xl">
-              {t("subtitle")}
+              {subtitle}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link

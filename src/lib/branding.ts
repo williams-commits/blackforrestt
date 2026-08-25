@@ -103,6 +103,10 @@ export interface BrandProfile {
   accentColor: string;
   /** Custom logo glyph (SVG path data) replacing the default tree mark. */
   glyph: BrandGlyph | null;
+  /** Landing hero badge text override (empty = translated default). */
+  heroBadge: string;
+  /** Landing hero subtitle override (empty = translated default). */
+  heroSubtitle: string;
 }
 
 /** SVG glyph rendered by the Logo component and the generated favicon. */
@@ -133,6 +137,8 @@ interface BrandOverride {
   ogImage?: string;
   accentColor?: string;
   glyph?: BrandGlyph | null;
+  heroBadge?: string;
+  heroSubtitle?: string;
 }
 
 /**
@@ -187,7 +193,15 @@ export function brandProfileForDomain(domain?: string | null): BrandProfile {
     ogImage: override.ogImage ?? "",
     accentColor: override.accentColor ?? "",
     glyph: override.glyph ?? null,
+    heroBadge: override.heroBadge ?? "",
+    heroSubtitle: override.heroSubtitle ?? "",
   };
+}
+
+/** Valid 3–8 digit hex color (with #), or null. Guards the CSS injection. */
+export function safeBrandColor(value: string | undefined | null): string | null {
+  const trimmed = (value ?? "").trim();
+  return /^#[0-9a-fA-F]{3,8}$/.test(trimmed) ? trimmed.toLowerCase() : null;
 }
 
 /** The apex origin serving email action links for a brand family. Linking the

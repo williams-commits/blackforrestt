@@ -357,8 +357,7 @@ export default auth((req) => {
   const isGuestOnlyPage = pathname === "/login" || pathname === "/register";
   const isProtectedApi = PROTECTED_APIS.some((prefix) => pathname.startsWith(prefix));
 
-  // Auth.js protects its own callback endpoints with its CSRF/state controls.
-  // Applying the app-wide Origin gate to /api/auth/* breaks credentials login
+  // Auth.js protects its own callback endpoints with its CSRF/state controls.  // Applying the app-wide Origin gate to /api/auth/* breaks credentials login
   // when the site is reached through an allowed reverse-proxy host or local
   // alias (for example 127.0.0.1 instead of localhost).
   const isAuthApi = pathname.startsWith("/api/auth/");
@@ -369,11 +368,14 @@ export default auth((req) => {
   if (!isAuthApi && !isPublicSupportApi && pathname.startsWith("/api/") && !mutationOriginAllowed(req)) {
     return NextResponse.json({ error: "Cross-origin request rejected." }, { status: 403 });
   }
+  // Both auth redirects below are built on publicOrigin(req) — the REAL
+  // request host — never req.nextUrl.clone(): with AUTH_URL pinned to the
+  // canonical trade host, req.nextUrl carries that host on every request, so
+  // a logged-in agilefgs visitor hitting /login would be redirected to the
+  // PRIMARY brand's /account (cross-brand session leak).
   if (isGuestOnlyPage && req.auth?.user?.id) {
-    const accountUrl = req.nextUrl.clone();
-    accountUrl.pathname = "/account";
-    accountUrl.search = "";
-    return NextResponse.redirect(accountUrl);
+    const accountUrl = new URL("/account", publicOrigin(req));
+    return NextResponse.redirect(accountUrl, 307);
   }
   if (!isProtectedPage && !isProtectedApi) return;
   if (req.auth?.user?.id) return;
@@ -382,10 +384,9 @@ export default auth((req) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const url = req.nextUrl.clone();
-  url.pathname = "/login";
+  const url = new URL("/login", publicOrigin(req));
   url.searchParams.set("callbackUrl", `${pathname}${req.nextUrl.search}`);
-  return NextResponse.redirect(url);
+  return NextResponse.redirect(url, 307);
 });
 
 export const config = {

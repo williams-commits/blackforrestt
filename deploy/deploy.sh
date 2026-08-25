@@ -7,6 +7,9 @@ COMPOSE=(docker compose --env-file "$ROOT/.env.production" -f "$ROOT/deploy/dock
 command -v docker >/dev/null || { echo "Docker is required." >&2; exit 1; }
 
 cd "$ROOT"
+# Render the Caddy config from the env (one site block per non-empty domain).
+# Compose mounts the rendered file; see render-caddy.sh for why.
+"$ROOT/deploy/render-caddy.sh" "$ROOT/.env.production"
 "${COMPOSE[@]}" config --quiet
 "${COMPOSE[@]}" pull postgres redis minio minio-init caddy clamav
 "${COMPOSE[@]}" build --pull app malware-scanner

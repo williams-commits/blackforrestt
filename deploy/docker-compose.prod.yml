@@ -18,13 +18,19 @@ services:
       DOMAIN_2: ${DOMAIN_2:-}
       # Optional trade subdomain for the mirror domain (tradeEnabled brands).
       TRADE_DOMAIN_2: ${TRADE_DOMAIN_2:-}
+      # Brand 3 slots — activate purely from .env.production (see the env
+      # example's "add a brand" recipe); Caddy skips empty blocks.
+      DOMAIN_3: ${DOMAIN_3:-}
+      TRADE_DOMAIN_3: ${TRADE_DOMAIN_3:-}
       CADDY_EMAIL: ${CADDY_EMAIL:?Set CADDY_EMAIL}
     ports:
       - "80:80"
       - "443:443"
       - "443:443/udp"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Rendered from .env.production by deploy/render-caddy.sh (deploy.sh
+      # regenerates it before compose runs) — one site block per active brand.
+      - ./Caddyfile.rendered:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     networks: [edge, backend]
@@ -129,7 +135,8 @@ services:
       context: ..
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}        NEXT_PUBLIC_BRAND_NAME: ${NEXT_PUBLIC_BRAND_NAME:-Black Forest Digital}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
+        NEXT_PUBLIC_BRAND_NAME: ${NEXT_PUBLIC_BRAND_NAME:-Black Forest Digital}
     init: true
     restart: unless-stopped
     env_file:

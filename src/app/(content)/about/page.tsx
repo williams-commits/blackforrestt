@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 import { getTranslations } from "next-intl/server";
 import { contentMetadata } from "@/lib/seo";
-import { companyLegalName, brandName, companyAddress } from "@/lib/branding";
+import { currentBrandProfile } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
@@ -51,11 +51,12 @@ const STAT_DEFS = [
 
 export default async function AboutPage() {
   const t = await getTranslations("about");
+  const brandProfile = await currentBrandProfile();
+  const company = brandProfile.legalName;
+  const brand = brandProfile.name;
+  const address = brandProfile.address;
   const tStats = await getTranslations("about.stats");
   const tValues = await getTranslations("about.values");
-  const company = companyLegalName();
-  const brand = brandName();
-  const address = companyAddress();
 
   return (
     <ArticleLayout

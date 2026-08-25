@@ -12,6 +12,7 @@ import {
 } from "../storage";
 import { getScanner, type ScanStatus } from "./scanner";
 import { hashNetworkIdentifier } from "./crypto";
+import { appendSecurityAudit } from "./audit";
 import { KYC_DOCUMENT_TYPE_VALUES, type KycDocumentType } from "@/lib/kyc";
 
 /**
@@ -340,17 +341,45 @@ export async function listDocuments(userId: string): Promise<PublicDocument[]> {
  * KycDocumentAccess and the audit chain, then return the object bytes for the
  * app to stream to the reviewer (same-origin, so no provider CORS is needed).
  */
+export type ComplianceDownloadResult =
+  | { ok: true; bytes: Buffer; contentType: string; documentId: string; docType: string }
+  /** not_found = no such (CLEAN, live) document row; storage_missing = the row
+   *  exists but its sealed object is gone (storage reset / purged volume). */
+  | { ok: false; reason: "not_found" | "storage_missing" };
+
 export async function complianceDownload(input: {
   documentId: string;
   actorId: string;
   reason: string;
   networkAddress?: string | null;
-}): Promise<{ bytes: Buffer; contentType: string; documentId: string; docType: string } | null> {
+}): Promise<ComplianceDownloadResult> {
   const doc = await prisma.kycDocument.findUnique({
     where: { id: input.documentId },
     select: { id: true, status: true, storageKey: true, userId: true, deletedAt: true, docType: true, detectedMime: true, declaredMime: true },
   });
-  if (!doc || doc.deletedAt || doc.status !== "CLEAN") return null;
+  if (!doc || doc.deletedAt || doc.status !== "CLEAN") return { ok: false, reason: "not_found" };
+
+  let bytes: Buffer;
+  try {
+    bytes = await readObjectBuffer({ key: doc.storageKey, bucket: sealedBucket() });
+  } catch (error) {
+    // The database says the document exists, but object storage cannot serve
+    // it (e.g. the storage volume was reset while rows survived). Surface a
+    // distinct, auditable outcome instead of an opaque 500.
+    console.error("Sealed KYC object read failed", {
+      documentId: doc.id,
+      storageKey: doc.storageKey,
+      error: error instanceof Error ? error.message : error,
+    });
+    await appendSecurityAudit({
+      actorId: input.actorId,
+      action: "KYC_DOCUMENT_STORAGE_MISSING",
+      entityType: "KycDocument",
+      entityId: doc.id,
+      metadata: { storageKey: doc.storageKey, reason: "object unreadable" },
+    });
+    return { ok: false, reason: "storage_missing" };
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.kycDocumentAccess.create({
@@ -370,8 +399,7 @@ export async function complianceDownload(input: {
     });
   }, { isolationLevel: "Serializable" });
 
-  const bytes = await readObjectBuffer({ key: doc.storageKey, bucket: sealedBucket() });
-  return { bytes, contentType: doc.detectedMime ?? doc.declaredMime, documentId: doc.id, docType: doc.docType };
+  return { ok: true, bytes, contentType: doc.detectedMime ?? doc.declaredMime, documentId: doc.id, docType: doc.docType };
 }
 
 /** Cancel a not-yet-cleaned upload: delete the quarantine object and the row. */

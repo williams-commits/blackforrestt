@@ -4,13 +4,13 @@ import { prisma } from "./db";
 import { appendAuditEvent } from "./ledger";
 import { hashPassword } from "../auth";
 import {
-  applicationOrigin,
   deliverSecurityEmail,
   developmentEmailPreviewEnabled,
   issueSecurityToken,
   securityEmailProviderConfigured,
 } from "./security/tokens";
 import { appendSecurityAudit } from "./security/audit";
+import { brandApexOrigin } from "../lib/branding";
 
 /**
  * Admin account management: suspend / block / soft-delete users, send direct
@@ -152,7 +152,7 @@ export async function adminSendPasswordReset(input: {
 }): Promise<{ sent: boolean; previewUrl?: string; expiresAt: Date }> {
   const user = await prisma.user.findUnique({
     where: { id: input.userId },
-    select: { email: true, emailVerifiedAt: true, deletedAt: true },
+    select: { email: true, emailVerifiedAt: true, deletedAt: true, brandDomain: true },
   });
   if (!user) throw new AdminUserManagementError("User not found.", 404);
   if (user.deletedAt) throw new AdminUserManagementError("Deleted accounts cannot receive password resets.", 409);
@@ -166,7 +166,7 @@ export async function adminSendPasswordReset(input: {
   }
 
   const issued = await issueSecurityToken({ userId: input.userId, type: "PASSWORD_RESET" });
-  const url = new URL("/reset-password", applicationOrigin());
+  const url = new URL("/reset-password", brandApexOrigin(user.brandDomain ?? undefined));
   url.searchParams.set("token", issued.token);
 
   // Attribute the trigger to the admin (token issuance itself is audited

@@ -14,7 +14,7 @@ import {
 import { verifyMfaFactor } from "@/server/security/mfa";
 import { revokeAllSecuritySessions } from "@/server/security/sessions";
 import { appendSecurityAudit } from "@/server/security/audit";
-import { brandName } from "@/lib/branding";
+import { brandProfileForDomain } from "@/lib/branding";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     otpauthUri: totpUri({
       secret,
       email: user.email ?? user.id,
-      issuer: brandName(),
+      issuer: brandProfileForDomain(user.brandDomain).name,
     }),
   });
 }

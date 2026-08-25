@@ -143,10 +143,10 @@ test("complianceDownload returns sealed bytes only for CLEAN documents and logs 
     reason: "Compliance review of passport for account opening",
     networkAddress: "198.51.100.7",
   });
-  assert.ok(access, "expected sealed bytes for a CLEAN document");
-  assert.equal(access!.contentType, "image/png");
+  assert.ok(access?.ok, "expected sealed bytes for a CLEAN document");
+  assert.equal(access.contentType, "image/png");
   // The streamed bytes must equal the original fixture exactly.
-  assert.ok(access!.bytes.equals(PNG_FIXTURE));
+  assert.ok(access.bytes.equals(PNG_FIXTURE));
 
   // The access row records who/why.
   const accessRow = await prisma.kycDocumentAccess.findFirstOrThrow({
@@ -155,13 +155,32 @@ test("complianceDownload returns sealed bytes only for CLEAN documents and logs 
   assert.equal(accessRow.actorId, admin.id);
   assert.ok(accessRow.reason.includes("Compliance review"));
 
-  // An unknown / non-CLEAN document returns null.
+  // An unknown / non-CLEAN document is reported as not found.
   const blocked = await complianceDownload({
     documentId: randomUUID(),
     actorId: admin.id,
     reason: "should not resolve",
   });
-  assert.equal(blocked, null);
+  assert.deepEqual(blocked, { ok: false, reason: "not_found" });
+
+  // When the sealed object is missing (e.g. storage volume reset while rows
+  // survived), the outcome is distinguishable instead of an opaque throw.
+  const doc = await prisma.kycDocument.findUniqueOrThrow({
+    where: { id: upload.documentId },
+    select: { storageKey: true },
+  });
+  await deleteObject({ key: doc.storageKey, bucket: sealedBucket() });
+  const missing = await complianceDownload({
+    documentId: upload.documentId,
+    actorId: admin.id,
+    reason: "attempted review after storage loss",
+  });
+  assert.deepEqual(missing, { ok: false, reason: "storage_missing" });
+  const missingAudit = await prisma.auditEvent.findFirst({
+    where: { action: "KYC_DOCUMENT_STORAGE_MISSING", entityId: upload.documentId },
+    orderBy: { sequence: "desc" },
+  });
+  assert.ok(missingAudit, "expected a storage-missing audit event");
 });
 
 test("a CLEAN document cannot be re-finalized or cancelled (immutability)", async () => {

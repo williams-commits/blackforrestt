@@ -12,6 +12,12 @@ services:
       # Optional: authenticated application subdomain (e.g. trade.blackforrestt.com).
       # When empty, Caddy runs in single-domain mode (backward compatible).
       TRADE_DOMAIN: ${TRADE_DOMAIN:-}
+      # Optional mirror/alias apex domain serving the same files (e.g.
+      # blackforest.com). Also add it to BRAND_DOMAINS and APP_ORIGIN in the
+      # app environment so the middleware and origin gate recognize it.
+      DOMAIN_2: ${DOMAIN_2:-}
+      # Optional trade subdomain for the mirror domain (tradeEnabled brands).
+      TRADE_DOMAIN_2: ${TRADE_DOMAIN_2:-}
       CADDY_EMAIL: ${CADDY_EMAIL:?Set CADDY_EMAIL}
     ports:
       - "80:80"
@@ -123,9 +129,7 @@ services:
       context: ..
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
-        NEXT_PUBLIC_TRADE_ORIGIN: ${NEXT_PUBLIC_TRADE_ORIGIN:-}
-        NEXT_PUBLIC_BRAND_NAME: ${NEXT_PUBLIC_BRAND_NAME:-Black Forest Digital}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}        NEXT_PUBLIC_BRAND_NAME: ${NEXT_PUBLIC_BRAND_NAME:-Black Forest Digital}
     init: true
     restart: unless-stopped
     env_file:

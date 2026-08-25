@@ -1,5 +1,7 @@
 "use client";
 
+import { useBrand } from "@/components/providers";
+
 import { useEffect, useRef } from "react";
 import QRCodeStyling from "qr-code-styling";
 
@@ -30,6 +32,8 @@ export function QrCode({
   /** Overlay the BlackForest tree mark in the center. */
   withLogo?: boolean;
 }) {
+  const brand = useBrand();
+  const accent = brand.accentColor || BRAND_ORANGE;
   const containerRef = useRef<HTMLDivElement>(null);
   const disc = Math.round(size * 0.3);
 
@@ -71,9 +75,22 @@ export function QrCode({
               className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl bg-white"
               style={{ width: disc, height: disc }}
             >
-              <svg width={Math.round(disc * 0.62)} height={Math.round(disc * 0.62)} viewBox="0 0 24 24" fill="none">
-                <path d="M12 1.5 7.5 9H10l-3 5.5H9.5L7 19h10l-2.5-4.5H17l-3-5.5h2.5L12 1.5Z" fill={BRAND_ORANGE} />
-                <rect x="11" y="19" width="2" height="3.5" fill={BRAND_ORANGE} />
+              <svg
+                width={Math.round(disc * 0.62)}
+                height={Math.round(disc * 0.62)}
+                viewBox={brand.glyph?.viewBox ?? "0 0 24 24"}
+                fill="none"
+              >
+                {brand.glyph
+                  ? brand.glyph.paths.map((path, index) => (
+                      <path key={index} d={path.d} fill={path.fill === "ink" ? "#111827" : accent} />
+                    ))
+                  : (
+                    <>
+                      <path d="M12 1.5 7.5 9H10l-3 5.5H9.5L7 19h10l-2.5-4.5H17l-3-5.5h2.5L12 1.5Z" fill={accent} />
+                      <rect x="11" y="19" width="2" height="3.5" fill={accent} />
+                    </>
+                  )}
               </svg>
             </span>
           )}

@@ -1,7 +1,7 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 import { getTranslations } from "next-intl/server";
 import { contentMetadata } from "@/lib/seo";
-import { companyLegalName, supportEmail } from "@/lib/branding";
+import { currentBrandProfile } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +12,9 @@ export async function generateMetadata() {
 
 export default async function AmlPage() {
   const t = await getTranslations("aml");
-  const company = companyLegalName();
-  const email = supportEmail();
+  const brand = await currentBrandProfile();
+  const company = brand.legalName;
+  const email = brand.supportEmail;
   return (
     <ArticleLayout eyebrow={t("eyebrow")} title={t("title")} description={t("description", { company })}>
       <Section title={t("s1Title")}><p>{t("s1Body")}</p></Section>

@@ -20,6 +20,7 @@ import {
   issueSecurityToken,
   securityEmailProviderConfigured,
 } from "@/server/security/tokens";
+import { currentBrandProfile, brandApexOrigin } from "@/lib/branding";
 import { appendSecurityAudit } from "@/server/security/audit";
 import { sendImmediateEmail } from "@/server/email/service";
 import { createReferral } from "@/server/referrals";
@@ -80,6 +81,9 @@ export async function POST(req: Request) {
 
   const passwordHash = await bcrypt.hash(password, 12);
   const requireEmailVerification = registrationRequiresEmailVerification();
+  // Resolve the brand from the request host (signup on agilefgs.com stores
+  // that family; unconfigured hosts store the primary).
+  const signupBrand = await currentBrandProfile();
 
   for (let attempt = 0; attempt < ACCOUNT_NUMBER_ATTEMPTS; attempt += 1) {
     const accountNo = String(randomInt(1_000_000, 10_000_000));
@@ -94,6 +98,9 @@ export async function POST(req: Request) {
               accountNo,
               verified: !requireEmailVerification,
               emailVerifiedAt: requireEmailVerification ? null : new Date(),
+              // Brand family the signup happened under — drives all later
+              // transactional email rendering and brand-correct links.
+              brandDomain: signupBrand.domain,
             },
             select: { id: true, email: true, name: true, accountNo: true },
           });
@@ -150,7 +157,7 @@ export async function POST(req: Request) {
           userId: user.id,
           type: "EMAIL_VERIFICATION",
         });
-        const verificationUrl = new URL("/verify-email", applicationOrigin());
+        const verificationUrl = new URL("/verify-email", brandApexOrigin(signupBrand.domain));
         verificationUrl.searchParams.set("token", issued.token);
 
         if (securityEmailProviderConfigured()) {

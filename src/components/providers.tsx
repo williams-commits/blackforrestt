@@ -1,11 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { SessionProvider, useSession } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { socket, type ServerMessage } from "@/lib/ws/client";
 import { useForexStore } from "@/lib/store";
 import { ToastNotifications } from "@/components/ui/ToastNotifications";
+import type { BrandProfile } from "@/lib/branding";
+
+/** Client fallback when no provider is mounted (defensive — the root layout
+ *  always resolves the per-domain brand server-side and passes it down). */
+export const PRIMARY_BRAND_FALLBACK: BrandProfile = {
+  domain: "blackforrestt.com",
+  name: "Black Forest Digital",
+  shortName: "Black Forest",
+  legalName: "Black Forest Digital LTD",
+  supportEmail: "support@blackforrestt.com",
+  address: "",
+  trademark: "Black Forest™",
+  wordmark: ["Black", "Forest"],
+  companyRegistrationNumber: "",
+  companyJurisdiction: "",
+  companyRegulator: "",
+  companyLicenseNumber: "",
+  investorCompensationScheme: "",
+  tradeEnabled: true,
+  emailFrom: "",
+  emailReplyTo: "",
+  emailColor: "",
+  emailLogoUrl: "",
+  ogImage: "",
+  accentColor: "",
+  glyph: null,
+};
+
+const BrandContext = createContext<BrandProfile>(PRIMARY_BRAND_FALLBACK);
+
+/** Per-domain branding for client components (logo wordmark, name, emails).
+ *  The value is resolved from the request Host on the server — no hydration
+ *  mismatch, no client env baking. */
+export function useBrand(): BrandProfile {
+  return useContext(BrandContext);
+}
 
 /** Keep account metrics and open positions synchronized on every authenticated UI. */
 function AccountRealtimeBridge() {
@@ -41,8 +77,9 @@ function AccountRealtimeBridge() {
   return null;
 }
 
-/** Wraps the app with NextAuth, realtime account sync, and one Query client. */
-export function Providers({ children }: { children: React.ReactNode }) {
+/** Wraps the app with NextAuth, realtime account sync, one Query client, and
+ *  the per-domain brand profile resolved for this request. */
+export function Providers({ children, brand }: { children: React.ReactNode; brand?: BrandProfile }) {
   const [client] = useState(
     () =>
       new QueryClient({
@@ -52,12 +89,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }),
   );
   return (
-    <SessionProvider>
-      <QueryClientProvider client={client}>
-        <AccountRealtimeBridge />
-        <ToastNotifications />
-        {children}
-      </QueryClientProvider>
-    </SessionProvider>
+    <BrandContext.Provider value={brand ?? PRIMARY_BRAND_FALLBACK}>
+      <SessionProvider>
+        <QueryClientProvider client={client}>
+          <AccountRealtimeBridge />
+          <ToastNotifications />
+          {children}
+        </QueryClientProvider>
+      </SessionProvider>
+    </BrandContext.Provider>
   );
 }

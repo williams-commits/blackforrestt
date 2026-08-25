@@ -68,6 +68,9 @@ export function KycReview({
   const [documents, setDocuments] = useState<DocumentView[]>([]);
   const [accessReason, setAccessReason] = useState("");
   const [accessDocId, setAccessDocId] = useState<string | null>(null);
+  /** Blob URL kept when the browser blocks the async window.open — the admin
+   *  can still open the document with a deliberate click. */
+  const [manualDocUrl, setManualDocUrl] = useState<string | null>(null);
   const [queueSearch, setQueueSearch] = useState("");
   const [queuePage, setQueuePage] = useState(1);
   const [reviewedPage, setReviewedPage] = useState(1);
@@ -121,6 +124,10 @@ export function KycReview({
     if (accessReason.trim().length < 3 || !selected) return;
     setLoading(`access:${docId}`);
     setError(null);
+    setManualDocUrl((url) => {
+      if (url) URL.revokeObjectURL(url);
+      return null;
+    });
     try {
       const response = await fetch(`/api/admin/kyc/documents/${docId}/access-url`, {
         method: "POST",
@@ -136,7 +143,8 @@ export function KycReview({
       // The route streams the document bytes through the app origin (no CORS).
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
-      window.open(objectUrl, "_blank", "noopener,noreferrer");
+      const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
+      if (!opened) setManualDocUrl(objectUrl);
       setAccessDocId(null);
       setAccessReason("");
     } finally {
@@ -336,6 +344,15 @@ export function KycReview({
                 <p className="mt-2 text-[11px] text-text-faint">
                   Access is logged with your identity and reason. Downloads open in a new tab from a short-lived signed URL.
                 </p>
+                {manualDocUrl && (
+                  <div className="mt-2 rounded border border-brand/30 bg-brand-soft px-3 py-2 text-xs text-brand" role="status">
+                    The browser blocked the automatic pop-up —{" "}
+                    <a href={manualDocUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+                      open the document manually
+                    </a>
+                    .
+                  </div>
+                )}
               </div>
 
               {/* Reject note */}

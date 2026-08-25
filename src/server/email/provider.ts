@@ -36,9 +36,12 @@ export async function deliverRenderedEmail(input: { to: string; rendered: Render
   }
   const mode = emailProviderMode();
   const idempotencyKey = input.idempotencyKey ?? randomUUID();
+  // Per-brand sender overrides (multi-brand families) with the global env
+  // fallbacks — a family without an emailFrom override sends as the primary.
+  const from = input.rendered.from?.trim() || process.env.EMAIL_FROM?.trim();
+  const replyTo = input.rendered.replyTo?.trim() || process.env.EMAIL_REPLY_TO?.trim();
   if (mode === "resend") {
     const token = process.env.RESEND_API_KEY?.trim();
-    const from = process.env.EMAIL_FROM?.trim();
     if (!token || !from) throw new Error("RESEND_API_KEY and EMAIL_FROM are required.");
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -54,7 +57,7 @@ export async function deliverRenderedEmail(input: { to: string; rendered: Render
         subject: input.rendered.subject,
         html: input.rendered.html,
         text: input.rendered.text,
-        ...(process.env.EMAIL_REPLY_TO?.trim() ? { reply_to: process.env.EMAIL_REPLY_TO.trim() } : {}),
+        ...(replyTo ? { reply_to: replyTo } : {}),
       }),
       signal: AbortSignal.timeout(12_000),
     });
@@ -69,7 +72,7 @@ export async function deliverRenderedEmail(input: { to: string; rendered: Render
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
-      body: JSON.stringify({ to: input.to, from: process.env.EMAIL_FROM, replyTo: process.env.EMAIL_REPLY_TO, ...input.rendered }),
+      body: JSON.stringify({ to: input.to, from, replyTo, subject: input.rendered.subject, html: input.rendered.html, text: input.rendered.text }),
       signal: AbortSignal.timeout(12_000),
     });
     const data = await response.json().catch(() => null) as { id?: string } | null;

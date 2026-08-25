@@ -1,7 +1,7 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 import { getTranslations } from "next-intl/server";
 import { contentMetadata } from "@/lib/seo";
-import { companyLegalName, supportEmail, companyAddress, brandName, brandTrademark } from "@/lib/branding";
+import { currentBrandProfile } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +12,12 @@ export async function generateMetadata() {
 
 export default async function TermsPage() {
   const t = await getTranslations("terms");
-  const company = companyLegalName();
-  const email = supportEmail();
-  const address = companyAddress();
-  const brand = brandName();
-  const tm = brandTrademark();
+  const brandProfile = await currentBrandProfile();
+  const company = brandProfile.legalName;
+  const email = brandProfile.supportEmail;
+  const address = brandProfile.address;
+  const brand = brandProfile.name;
+  const tm = brandProfile.trademark;
   return (
     <ArticleLayout eyebrow={t("eyebrow")} title={t("title")} description={t("description", { brand })}>
       <Section title={t("s1Title")}><p>{t("s1Body")}</p></Section>

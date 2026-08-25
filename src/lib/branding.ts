@@ -35,9 +35,212 @@ export function supportEmail(): string {
   return (process.env.SUPPORT_EMAIL || "support@blackforrestt.com").trim();
 }
 
-/** Public domain (e.g. "blackforrestt.com"). */
+/**
+ * Every apex domain the platform answers on (e.g.
+ * ["blackforrestt.com", "agilefgs.com"]). Mirror/alias domains serve the
+ * SAME files as the primary until they get their own landing page.
+ *
+ * Configure via BRAND_DOMAINS (comma-separated); BRAND_DOMAIN alone still
+ * works and yields a single-entry list. The FIRST entry is canonical —
+ * authenticated routes on any apex redirect to the primary trade subdomain,
+ * so sessions and cookies live on exactly one host.
+ */
+export function brandDomains(): string[] {
+  const raw = (process.env.BRAND_DOMAINS || process.env.BRAND_DOMAIN || "").trim().toLowerCase();
+  const list = raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.includes(".") && !entry.includes("://"));
+  if (list.length > 0) return [...new Set(list)];
+  return ["blackforrestt.com"];
+}
+
+/**
+ * Per-request branding profile. Every domain in BRAND_DOMAINS resolves to a
+ * profile; domains without a BRAND_OVERRIDES entry inherit the primary brand
+ * (identical UI — the initial "same files, different domain" phase).
+ */
+export interface BrandProfile {
+  /** Apex domain of this brand family (e.g. "agilefgs.com"). */
+  domain: string;
+  /** Public brand name (e.g. "Agile FGS"). */
+  name: string;
+  /** Short name for tight spaces / metadata authors. */
+  shortName: string;
+  /** Registered legal entity for footers and legal pages. */
+  legalName: string;
+  /** Support/contact email shown in the UI. */
+  supportEmail: string;
+  /** Registered company address shown in the footer. */
+  address: string;
+  /** Trademark wordmark (e.g. "Agile FGS™"). */
+  trademark: string;
+  /** Two-tone logo wordmark parts — [plain, accent] (["Agile", "FGS"]). */
+  wordmark: [string, string];
+  companyRegistrationNumber: string;
+  companyJurisdiction: string;
+  companyRegulator: string;
+  companyLicenseNumber: string;
+  investorCompensationScheme: string;
+  /**
+   * True when this family's own trade subdomain (trade.<domain>) serves the
+   * authenticated app — requires DNS + a TLS cert (Caddy block). While false,
+   * app routes on this apex redirect to the CANONICAL trade subdomain and the
+   * family shows primary-brand app chrome.
+   */
+  tradeEnabled: boolean;
+  /** Transactional email sender (overrides the global EMAIL_FROM). */
+  emailFrom: string;
+  /** Transactional email reply-to (overrides EMAIL_REPLY_TO). */
+  emailReplyTo: string;
+  /** Accent color for email buttons and the generated favicon. */
+  emailColor: string;
+  /** Logo image URL for email headers (overrides EMAIL_LOGO_URL). */
+  emailLogoUrl: string;
+  /** Open Graph share image path (e.g. "/brands/agilefgs/og.png"). */
+  ogImage: string;
+  /** Brand accent color for the generated favicon glyph. */
+  accentColor: string;
+  /** Custom logo glyph (SVG path data) replacing the default tree mark. */
+  glyph: BrandGlyph | null;
+}
+
+/** SVG glyph rendered by the Logo component and the generated favicon. */
+export interface BrandGlyph {
+  viewBox: string;
+  paths: Array<{ d: string; fill?: "accent" | "ink" }>;
+}
+
+/** BRAND_OVERRIDES entry shape (all fields optional; missing = primary default). */
+interface BrandOverride {
+  name?: string;
+  shortName?: string;
+  legalName?: string;
+  supportEmail?: string;
+  address?: string;
+  trademark?: string;
+  wordmark?: [string, string];
+  companyRegistrationNumber?: string;
+  companyJurisdiction?: string;
+  companyRegulator?: string;
+  companyLicenseNumber?: string;
+  investorCompensationScheme?: string;
+  tradeEnabled?: boolean;
+  emailFrom?: string;
+  emailReplyTo?: string;
+  emailColor?: string;
+  emailLogoUrl?: string;
+  ogImage?: string;
+  accentColor?: string;
+  glyph?: BrandGlyph | null;
+}
+
+/**
+ * Per-domain brand overrides, keyed by apex domain, from the BRAND_OVERRIDES
+ * JSON env var. Example:
+ *
+ *   BRAND_OVERRIDES='{"agilefgs.com":{"name":"Agile FGS","shortName":"Agile FGS",
+ *     "legalName":"Agile FGS Ltd","supportEmail":"support@agilefgs.com",
+ *     "address":"…","trademark":"Agile FGS™","wordmark":["Agile","FGS"],
+ *     "tradeEnabled":true}}'
+ *
+ * Parsed lazily; invalid JSON is ignored (primary branding everywhere) rather
+ * than taking the site down.
+ */
+function brandOverrides(): Record<string, BrandOverride> {
+  const raw = (process.env.BRAND_OVERRIDES || "").trim();
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as Record<string, BrandOverride>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    console.error("BRAND_OVERRIDES is not valid JSON — using primary branding for every domain.");
+    return {};
+  }
+}
+
+/** Resolve the brand profile for one apex domain (primary defaults + overrides).
+ *  Null/undefined resolves to the primary brand — every user created before
+ *  multi-branding, and unknown hosts. */
+export function brandProfileForDomain(domain?: string | null): BrandProfile {
+  const key = domain?.trim().toLowerCase() || brandDomains()[0];
+  const override = brandOverrides()[key] ?? {};
+  return {
+    domain: key,
+    name: override.name ?? brandName(),
+    shortName: override.shortName ?? brandShortName(),
+    legalName: override.legalName ?? companyLegalName(),
+    supportEmail: override.supportEmail ?? supportEmail(),
+    address: override.address ?? companyAddress(),
+    trademark: override.trademark ?? brandTrademark(),
+    wordmark: override.wordmark ?? ["Black", "Forest"],
+    companyRegistrationNumber: override.companyRegistrationNumber ?? companyRegistrationNumber(),
+    companyJurisdiction: override.companyJurisdiction ?? companyJurisdiction(),
+    companyRegulator: override.companyRegulator ?? companyRegulator(),
+    companyLicenseNumber: override.companyLicenseNumber ?? companyLicenseNumber(),
+    investorCompensationScheme: override.investorCompensationScheme ?? investorCompensationScheme(),
+    tradeEnabled: override.tradeEnabled === true,
+    emailFrom: override.emailFrom ?? "",
+    emailReplyTo: override.emailReplyTo ?? "",
+    emailColor: override.emailColor ?? "",
+    emailLogoUrl: override.emailLogoUrl ?? "",
+    ogImage: override.ogImage ?? "",
+    accentColor: override.accentColor ?? "",
+    glyph: override.glyph ?? null,
+  };
+}
+
+/** The apex origin serving email action links for a brand family. Linking the
+ *  apex is safe for every family: the middleware routes trade-host paths
+ *  (reset, verification) to the correct trade subdomain per family. */
+export function brandApexOrigin(domain?: string | null): string {
+  const family = domain?.trim().toLowerCase() || brandDomains()[0];
+  if (!process.env.APP_ORIGIN?.trim()) return applicationOriginFallback();
+  return `https://${family}`;
+}
+
+/** applicationOrigin()'s dev fallback duplicated here to avoid importing the
+ *  security/tokens chain (which pulls Prisma) into client-adjacent modules. */
+function applicationOriginFallback(): string {
+  const value = process.env.APP_ORIGIN?.split(",")[0]?.trim();
+  if (value) return new URL(value).origin;
+  return "http://localhost:3000";
+}
+
+/** Registration summary for a resolved profile (footer assurance badge). */
+export function brandRegistrationSummary(brand: BrandProfile): string {
+  const parts: string[] = [];
+  if (brand.companyRegulator) parts.push(`${brand.legalName} is licensed by ${brand.companyRegulator}`);
+  if (brand.companyLicenseNumber) parts.push(`License no. ${brand.companyLicenseNumber}`);
+  if (brand.companyRegistrationNumber) parts.push(`Reg. no. ${brand.companyRegistrationNumber}`);
+  if (brand.companyJurisdiction) parts.push(brand.companyJurisdiction);
+  return parts.join(" · ");
+}
+
+/**
+ * The brand profile for the CURRENT request, derived from the Host header
+ * (honoring the reverse proxy's X-Forwarded-Host). Falls back to the primary
+ * brand on localhost or an unconfigured host. Server components / route
+ * handlers only — client components read the profile from <Providers>.
+ */
+export async function currentBrandProfile(): Promise<BrandProfile> {
+  const { headers } = await import("next/headers");
+  const headerList = await headers();
+  const host = (headerList.get("x-forwarded-host") ?? headerList.get("host") ?? "")
+    .split(",")[0]!
+    .trim()
+    .toLowerCase()
+    .replace(/:\d+$/, "");
+  const stripped = host.startsWith("www.") ? host.slice(4) : host;
+  const family = brandDomains().find((domain) => stripped === domain || stripped.endsWith(`.${domain}`));
+  return brandProfileForDomain(family ?? brandDomains()[0]);
+}
+
+/** Public domain (e.g. "blackforrestt.com"). Always the canonical FIRST entry
+ *  of the configured domain list — links, emails, sitemap, and SEO canonicals
+ *  are built on it. */
 export function brandDomain(): string {
-  return (process.env.BRAND_DOMAIN || "blackforrestt.com").trim();
+  return brandDomains()[0];
 }
 
 /**
@@ -64,15 +267,16 @@ export function absoluteTradeUrl(path = "/"): string {
 }
 
 /**
- * Client-safe trade origin for use in client components. Reads
- * NEXT_PUBLIC_TRADE_ORIGIN (an absolute origin baked at build time). When unset
- * (e.g. local development with a single domain), falls back to "" so relative
- * links are used — keeping the link on the same origin.
+ * Client-safe trade URL for marketing CTAs. Always RELATIVE: on an apex
+ * domain the middleware routes /login, /register, /trade/... to the correct
+ * trade subdomain per brand family (trade.<family> when tradeEnabled, else
+ * the canonical trade host). A build-baked absolute origin cannot know the
+ * requesting family and would send mirror-domain visitors to the primary
+ * trade host. NEXT_PUBLIC_TRADE_ORIGIN is no longer read.
  */
 export function clientTradeUrl(path = "/"): string {
-  const origin = (process.env.NEXT_PUBLIC_TRADE_ORIGIN || "").trim();
   const normalized = path.startsWith("/") ? path : `/${path}`;
-  return origin ? `${origin}${normalized}` : normalized;
+  return normalized;
 }
 
 /** Registered company address shown in the footer and legal pages. */

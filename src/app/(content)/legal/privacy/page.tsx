@@ -1,7 +1,7 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 import { getTranslations } from "next-intl/server";
 import { contentMetadata } from "@/lib/seo";
-import { companyLegalName, supportEmail, companyAddress } from "@/lib/branding";
+import { currentBrandProfile } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +12,10 @@ export async function generateMetadata() {
 
 export default async function PrivacyPage() {
   const t = await getTranslations("privacy");
-  const company = companyLegalName();
-  const email = supportEmail();
-  const address = companyAddress();
+  const brand = await currentBrandProfile();
+  const company = brand.legalName;
+  const email = brand.supportEmail;
+  const address = brand.address;
   return (
     <ArticleLayout eyebrow={t("eyebrow")} title={t("title")} description={t("description", { company })}>
       <Section title={t("s1Title")}>

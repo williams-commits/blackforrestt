@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Logo } from "@/components/trade/Logo";
-import { companyLegalName, supportEmail, companyAddress, brandTrademark, clientTradeUrl, companyRegistrationSummary } from "@/lib/branding";
+import { currentBrandProfile, brandRegistrationSummary, clientTradeUrl } from "@/lib/branding";
 import Image from "next/image";
 
 interface PaymentLogo {
@@ -29,11 +29,14 @@ export async function Footer() {
   const tLinks = await getTranslations("footer.links");
   const tCols = await getTranslations("footer.columns");
   const iconW = 38;
-  const company = companyLegalName();
-  const tm = brandTrademark();
-  // Populated from the COMPANY_* env placeholders — empty until configured,
-  // in which case the generic translated note is shown instead.
-  const registrationSummary = companyRegistrationSummary();
+  // Per-domain brand (mirror domains like agilefgs.com show their own name,
+  // contact email, address, legal entity, and registration identity).
+  const brand = await currentBrandProfile();
+  const company = brand.legalName;
+  const tm = brand.trademark;
+  // Populated from the brand profile — empty until configured, in which case
+  // the generic translated note is shown instead.
+  const registrationSummary = brandRegistrationSummary(brand);
 
   return (
     <footer className="bg-surface-dark text-white/80">
@@ -48,8 +51,8 @@ export async function Footer() {
               {t("tagline", { company })}
             </p>
             <address className="mt-5 not-italic text-sm text-white/70 leading-relaxed">
-              {companyAddress() && <>{companyAddress()}<br /></>}
-              <span className="text-white/50">{supportEmail()}</span>
+              {brand.address && <>{brand.address}<br /></>}
+              <span className="text-white/50">{brand.supportEmail}</span>
             </address>
           </div>
 

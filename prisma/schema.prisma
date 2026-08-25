@@ -156,6 +156,11 @@ model User {
   blockedAt   DateTime?
   deletedAt   DateTime?
   passwordChangedAt DateTime?
+  // Apex domain of the brand family this account signed up under
+  // (multi-brand — BRAND_OVERRIDES). Null = primary brand; users created
+  // before per-domain branding. Drives transactional email rendering and
+  // brand-correct action links.
+  brandDomain String?
   mfaSecretEncrypted String?
   mfaEnabledAt DateTime?
   mfaLastUsedStep BigInt?

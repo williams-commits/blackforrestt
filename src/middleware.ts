@@ -9,6 +9,33 @@ const LOCALES = ["en", "fr", "de", "es", "ja", "zh", "ru", "ar", "ko"] as const;
 const DEFAULT_LOCALE = "en";
 const LOCALE_COOKIE = "NEXT_LOCALE";
 
+// Duplicated from @/lib/branding (same bundling concern as LOCALES above —
+// keep this list logic in sync with brandDomains()/brandDomain() there).
+// BRAND_DOMAINS is a comma-separated list of apex domains serving the same
+// files; the FIRST entry is canonical (redirect targets, cookies' dot-domain,
+// emails, SEO). BRAND_DOMAIN alone still works as a single-entry list.
+function brandDomainList(): string[] {
+  const raw = (process.env.BRAND_DOMAINS || process.env.BRAND_DOMAIN || "").trim().toLowerCase();
+  const list = raw.split(",").map((entry) => entry.trim()).filter((entry) => entry.includes(".") && !entry.includes("://"));
+  return list.length > 0 ? [...new Set(list)] : [];
+}
+
+// Domains whose BRAND_OVERRIDES entry sets "tradeEnabled": true — their apex
+// sends app routes to trade.<their own domain> (keeping users on-brand)
+// instead of the canonical trade host. Requires that subdomain's DNS + TLS
+// (Caddy block) to exist first. Minimal duplicate of the BRAND_OVERRIDES read
+// in src/lib/branding.ts (same bundling concern as brandDomainList above).
+function familyTradeEnabled(domain: string): boolean {
+  const raw = (process.env.BRAND_OVERRIDES || "").trim();
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, { tradeEnabled?: boolean }>;
+    return parsed[domain]?.tradeEnabled === true;
+  } catch {
+    return false;
+  }
+}
+
 const PROTECTED_PAGES = ["/trade", "/account", "/reports"];
 const PROTECTED_APIS = [
   "/api/account",
@@ -100,22 +127,28 @@ function publicOrigin(req: Request): string {
 /**
  * Domain routing: ensure each route is served on its intended origin.
  *
- * - Apex domain (e.g. blackforrestt.com): marketing + public market data only.
- *   Trade/auth/admin routes redirect to the trade subdomain.
- * - Trade subdomain (e.g. trade.blackforrestt.com): authenticated app only.
- *   Marketing content routes redirect to the apex domain.
+ * - Apex domains (e.g. blackforrestt.com AND any mirror domains configured in
+ *   BRAND_DOMAINS): marketing + public market data only. Trade/auth/admin
+ *   routes redirect to the CANONICAL trade subdomain (trade.<first domain>),
+ *   so authentication/cookies always live on one host.
+ * - Trade subdomains (e.g. trade.blackforrestt.com): authenticated app only.
+ *   Marketing content routes redirect back to the apex of the same domain
+ *   family, keeping mirror-domain visitors on the domain they arrived on.
  *
- * Only enforced when BRAND_DOMAIN is set (production). Local development on
+ * Only enforced when a brand domain is set (production). Local development on
  * localhost / 127.0.0.1 bypasses domain routing entirely.
  */
 function domainRedirect(req: Request): NextResponse | null {
-  const brandDomain = (process.env.BRAND_DOMAIN ?? "").trim().toLowerCase();
-  if (!brandDomain) return null; // not configured — skip domain routing
+  const domains = brandDomainList();
+  if (domains.length === 0) return null; // not configured — skip domain routing
+  const brandDomain = domains[0]; // canonical domain for cross-family targets
+  const tradeSubdomain = (process.env.TRADE_SUBDOMAIN ?? "trade").trim();
+  const tradeHosts = new Set(domains.map((domain) => `${tradeSubdomain}.${domain}`));
+  const tradeSub = tradeHosts.values().next().value as string; // canonical trade host
 
   const host = requestHost(req);
   // Strip a leading "www." so www.blackforrestt.com is treated as the apex.
   const apex = host.startsWith("www.") ? host.slice(4) : host;
-  const tradeSub = `${(process.env.TRADE_SUBDOMAIN ?? "trade").trim()}.${brandDomain}`;
 
   // Local development: don't redirect localhost / 127.0.0.1 / IP literals.
   if (host === "localhost" || host.startsWith("127.0.0.1") || /^\d+\.\d+\.\d+\.\d+$/.test(host)) {
@@ -128,29 +161,43 @@ function domainRedirect(req: Request): NextResponse | null {
   const url = new URL(`${incoming.pathname}${incoming.search}`, publicOrigin(req));
   const { pathname } = url;
 
-  // On the apex domain: bounce trade/auth/admin routes to the trade subdomain.
-  if (apex === brandDomain && pathname !== "/") {
+  // On any apex domain (primary or mirror): bounce trade/auth/admin routes to
+  // a trade subdomain. Families with tradeEnabled keep their users on-brand
+  // (trade.<same domain>); all others use the single canonical trade host.
+  if (domains.includes(apex) && pathname !== "/") {
     if (TRADE_DOMAIN_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-      url.hostname = tradeSub;
+      url.hostname = familyTradeEnabled(apex) ? `${tradeSubdomain}.${apex}` : tradeSub;
       return NextResponse.redirect(url, 307);
     }
   }
 
-  // On the trade subdomain: bounce marketing routes to the apex.
+  // On any trade subdomain: bounce marketing routes to the apex of the SAME
+  // domain family, so mirror-domain visitors stay on their domain.
   // The landing page ("/") and all (content) routes are marketing — they
   // belong on the apex domain. Without this, clicking the logo on
   // trade.blackforrestt.com stays on the trade subdomain instead of going
   // to the marketing site.
-  if (host === tradeSub) {
+  if (tradeHosts.has(host)) {
     const isMarketing =
       pathname === "/" ||
       MARKETING_DOMAIN_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
     if (isMarketing) {
-      url.hostname = brandDomain;
+      const family = domains.find((domain) => host === `${tradeSubdomain}.${domain}`) ?? brandDomain;
+      url.hostname = family;
       return NextResponse.redirect(url, 307);
     }
   }
 
+  return null;
+}
+
+/** The configured brand domain that owns this host (apex or subdomain of it),
+ *  or null for unknown hosts (e.g. localhost or an unconfigured alias). */
+function cookieDomainForHost(host: string): string | null {
+  const stripped = host.startsWith("www.") ? host.slice(4) : host;
+  for (const domain of brandDomainList()) {
+    if (stripped === domain || stripped.endsWith(`.${domain}`)) return domain;
+  }
   return null;
 }
 
@@ -173,12 +220,14 @@ function localeCookieOptions() {
  *  middleware versions created a host-only cookie; a dot-domain-only write
  *  would leave that stale one winning, since browsers send host-only first.
  *  The cookies API replaces by name, so the dot-domain variant is appended
- *  as a raw Set-Cookie header to emit BOTH. */
-function setLocaleCookies(response: NextResponse, locale: string) {
+ *  as a raw Set-Cookie header to emit BOTH. The dot-domain is derived from
+ *  the REQUEST host — a Domain=.primary.com attribute set while serving a
+ *  mirror domain would be rejected by the browser and silently dropped. */
+function setLocaleCookies(response: NextResponse, locale: string, req: Request) {
   response.cookies.set(LOCALE_COOKIE, locale, localeCookieOptions());
-  const brandDomain = (process.env.BRAND_DOMAIN ?? "").trim().toLowerCase();
-  if (brandDomain) {
-    response.headers.append("set-cookie", `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax; Domain=.${brandDomain}`);
+  const cookieDomain = cookieDomainForHost(requestHost(req));
+  if (cookieDomain) {
+    response.headers.append("set-cookie", `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax; Domain=.${cookieDomain}`);
   }
 }
 
@@ -233,7 +282,7 @@ export default auth((req) => {
     if (localePrefix === DEFAULT_LOCALE) {
       const canonicalPath = originalPathname.replace(LOCALE_PREFIX_RE, "") || "/";
       const response = NextResponse.redirect(new URL(`${canonicalPath}${req.nextUrl.search}`, publicOrigin(req)), 308);
-      setLocaleCookies(response, DEFAULT_LOCALE);
+      setLocaleCookies(response, DEFAULT_LOCALE, req);
       return response;
     }
     // Non-default locale: rewrite to the stripped path with the locale cookie
@@ -254,7 +303,7 @@ export default auth((req) => {
     // whose host can be the other origin (AUTH_URL), which turns the rewrite
     // into a cross-origin proxy that bounces between the domains forever.
     const response = NextResponse.rewrite(new URL(`${strippedPath}${req.nextUrl.search}`, publicOrigin(req)), { request: { headers } });
-    setLocaleCookies(response, localePrefix);
+    setLocaleCookies(response, localePrefix, req);
     return response;
   }
 
@@ -265,8 +314,8 @@ export default auth((req) => {
   // canonical. Skipped for API requests and on the trade host (the app area
   // has no locale-prefixed URLs — there the cookie alone decides rendering).
   const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
-  const brandDomainEnv = (process.env.BRAND_DOMAIN ?? "").trim().toLowerCase();
-  const onTradeHost = brandDomainEnv !== "" && requestHost(req) === `${(process.env.TRADE_SUBDOMAIN ?? "trade").trim()}.${brandDomainEnv}`;
+  const tradeSubdomainLabel = (process.env.TRADE_SUBDOMAIN ?? "trade").trim();
+  const onTradeHost = brandDomainList().some((domain) => requestHost(req) === `${tradeSubdomainLabel}.${domain}`);
   if (
     cookieLocale &&
     (LOCALES as readonly string[]).includes(cookieLocale) &&

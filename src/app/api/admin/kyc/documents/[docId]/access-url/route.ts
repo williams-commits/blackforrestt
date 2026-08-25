@@ -33,27 +33,38 @@ export async function POST(req: Request, { params }: { params: Promise<{ docId: 
     return NextResponse.json({ error: "A review reason is required." }, { status: 400 });
   }
 
-  const result = await complianceDownload({
-    documentId: docId,
-    actorId: adminId,
-    reason: parsed.data.reason,
-    networkAddress: requestNetworkAddress(req),
-  });
-  if (!result) {
-    return NextResponse.json(
-      { error: "Document is not available for compliance review." },
-      { status: 404 },
-    );
+  try {
+    const result = await complianceDownload({
+      documentId: docId,
+      actorId: adminId,
+      reason: parsed.data.reason,
+      networkAddress: requestNetworkAddress(req),
+    });
+    if (!result.ok) {
+      if (result.reason === "storage_missing") {
+        return NextResponse.json(
+          { error: "The document record exists, but its stored bytes are missing — secure storage was likely reset. Ask the customer to re-upload the document." },
+          { status: 410 },
+        );
+      }
+      return NextResponse.json(
+        { error: "Document is not available for compliance review." },
+        { status: 404 },
+      );
+    }
+    // Stream the bytes through the app origin as an inline attachment. The audit
+    // row and event were written inside complianceDownload.
+    return new NextResponse(new Uint8Array(result.bytes), {
+      status: 200,
+      headers: {
+        "Content-Type": result.contentType,
+        "Content-Length": String(result.bytes.length),
+        "Content-Disposition": `inline; filename="${result.docType}-${result.documentId}"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch (error) {
+    console.error("KYC document access failed", error);
+    return NextResponse.json({ error: "Unable to open the document. Try again." }, { status: 500 });
   }
-  // Stream the bytes through the app origin as an inline attachment. The audit
-  // row and event were written inside complianceDownload.
-  return new NextResponse(new Uint8Array(result.bytes), {
-    status: 200,
-    headers: {
-      "Content-Type": result.contentType,
-      "Content-Length": String(result.bytes.length),
-      "Content-Disposition": `inline; filename="${result.docType}-${result.documentId}"`,
-      "Cache-Control": "private, no-store",
-    },
-  });
 }

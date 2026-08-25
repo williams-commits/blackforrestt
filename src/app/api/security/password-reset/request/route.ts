@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/server/db";
 import {
-  applicationOrigin,
   deliverSecurityEmail,
   developmentEmailPreviewEnabled,
   issueSecurityToken,
   securityEmailProviderConfigured,
 } from "@/server/security/tokens";
 import { appendSecurityAudit } from "@/server/security/audit";
+import { brandApexOrigin } from "@/lib/branding";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,12 +27,12 @@ export async function POST(request: Request) {
   }
   const user = await prisma.user.findUnique({
     where: { email: parsed.data.email },
-    select: { id: true, email: true, emailVerifiedAt: true },
+    select: { id: true, email: true, emailVerifiedAt: true, brandDomain: true },
   });
   let previewUrl: string | undefined;
   if (user?.email && user.emailVerifiedAt) {
     const issued = await issueSecurityToken({ userId: user.id, type: "PASSWORD_RESET" });
-    const url = new URL("/reset-password", applicationOrigin());
+    const url = new URL("/reset-password", brandApexOrigin(user.brandDomain ?? undefined));
     url.searchParams.set("token", issued.token);
     if (providerConfigured) {
       try {

@@ -1,13 +1,39 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../db";
-import { applicationOrigin, developmentEmailPreviewEnabled } from "../security/tokens";
+import { developmentEmailPreviewEnabled } from "../security/tokens";
 import { deliverRenderedEmail, emailDeliveryEnabled, emailProviderConfigured } from "./provider";
 import { renderEmail, type EmailTemplateName, type EmailVariables } from "./templates";
+import { brandApexOrigin, brandProfileForDomain, brandDomains } from "../../lib/branding";
 
 type Tx = Prisma.TransactionClient;
 
 function cleanVariables(input: EmailVariables): EmailVariables {
   return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
+}
+
+/**
+ * Brand variables for a user's stored signup family. Carried INSIDE the email
+ * variables so queued deliveries re-render under the right brand inside the
+ * dispatcher process (which has no request context). Users without a stored
+ * brandDomain — everyone created before multi-branding — resolve to primary
+ * and render exactly as before.
+ */
+function brandVariables(brandDomain: string | null | undefined): EmailVariables {
+  const profile = brandProfileForDomain(brandDomain?.trim() || brandDomains()[0]);
+  return cleanVariables({
+    brandName: profile.name,
+    brandSupport: profile.supportEmail,
+    ...(profile.emailColor ? { brandColor: profile.emailColor } : {}),
+    ...(profile.emailLogoUrl ? { brandLogoUrl: profile.emailLogoUrl } : {}),
+    ...(profile.emailFrom ? { brandFrom: profile.emailFrom } : {}),
+    ...(profile.emailReplyTo ? { brandReplyTo: profile.emailReplyTo } : {}),
+  });
+}
+
+/** Brand-correct base origin for a user's action links (their family apex;
+ *  the middleware routes trade-host paths onward per family). */
+function userBrandOrigin(brandDomain: string | null | undefined): string {
+  return brandApexOrigin(brandDomain?.trim() || brandDomains()[0]);
 }
 
 function configuredInteger(name: string, fallback: number, minimum: number, maximum: number): number {
@@ -38,13 +64,14 @@ export async function queueUserEmail(
 ): Promise<void> {
   const user = await tx.user.findUnique({
     where: { id: input.userId },
-    select: { email: true, name: true },
+    select: { email: true, name: true, brandDomain: true },
   });
   if (!user?.email) return;
 
   const variables = cleanVariables({
     name: user.name ?? "there",
-    actionUrl: `${applicationOrigin()}/account`,
+    actionUrl: `${userBrandOrigin(user.brandDomain)}/account`,
+    ...brandVariables(user.brandDomain),
     ...(input.variables ?? {}),
   });
   const rendered = renderEmail(input.template, variables);
@@ -72,7 +99,15 @@ export async function sendImmediateEmail(input: {
   variables?: EmailVariables;
   idempotencyKey?: string;
 }): Promise<{ delivery: "sent" | "preview" | "not_configured"; previewUrl?: string }> {
-  const variables = cleanVariables(input.variables ?? {});
+  // Resolve the recipient's brand when we know the user (security emails do);
+  // explicit caller variables win over the derived brand defaults.
+  const brandDomain = input.userId
+    ? (await prisma.user.findUnique({ where: { id: input.userId }, select: { brandDomain: true } }))?.brandDomain
+    : null;
+  const variables = cleanVariables({
+    ...brandVariables(brandDomain),
+    ...(input.variables ?? {}),
+  });
   const rendered = renderEmail(input.template, variables);
   if (!emailProviderConfigured()) {
     if (developmentEmailPreviewEnabled() && typeof input.variables?.actionUrl === "string") {

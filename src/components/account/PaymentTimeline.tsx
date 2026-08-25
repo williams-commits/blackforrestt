@@ -9,7 +9,7 @@ import { FilterChip } from "@/components/ui/DataTable";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { MethodDetailsGrid } from "@/components/payments/MethodDetailsGrid";
 import { fmtDateTime } from "@/lib/dates";
-import { PAYMENT_PROOF_MAX_BYTES } from "@/lib/paymentProofs";
+import { PAYMENT_PROOF_MAX_BYTES, compressProofImage, isHeicFile } from "@/lib/paymentProofs";
 import type { ServerMessage } from "@/lib/ws/client";
 
 interface PaymentProofView {
@@ -128,15 +128,21 @@ export function PaymentTimeline() {
   useEffect(() => { setPage(1); }, [typeFilter]);
 
   async function upload(requestId: string, file: File) {
-    if (file.size > PAYMENT_PROOF_MAX_BYTES) {
-      setError("The supporting document must be 1 MB or smaller.");
-      return;
-    }
     setBusy(requestId);
     setError(null);
     try {
+      if (await isHeicFile(file)) {
+        setError("iPhone HEIC photos aren’t supported. Convert the photo to JPEG or PNG (or take a screenshot of it) and try again.");
+        return;
+      }
+      // Oversized JPEG/PNG images are resized locally; PDFs must already fit.
+      const prepared = await compressProofImage(file, PAYMENT_PROOF_MAX_BYTES);
+      if (prepared.size > PAYMENT_PROOF_MAX_BYTES) {
+        setError("The supporting document must be 1 MB or smaller. Images are resized automatically — export a smaller PDF or a more compressed image.");
+        return;
+      }
       const body = new FormData();
-      body.set("file", file);
+      body.set("file", prepared);
       const uploaded = await fetch(`/api/wallet/payments/${requestId}/proofs/upload`, { method: "POST", body });
       const uploadData = await uploaded.json().catch(() => null) as { proofId?: string; error?: string } | null;
       if (!uploaded.ok || !uploadData?.proofId) throw new Error(uploadData?.error ?? "Proof upload failed.");

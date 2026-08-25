@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useBrand } from "@/components/providers";
 
 /**
  * blckforest wordmark with a simple tree-mark glyph.
@@ -24,6 +25,7 @@ export function Logo({
   /** Use on dark backgrounds: renders the wordmark in white instead of dark. */
   inverted?: boolean;
 }) {
+  const brand = useBrand();
   const [href, setHref] = useState("/");
   const [external, setExternal] = useState(false);
 
@@ -38,15 +40,31 @@ export function Logo({
   }, []);
 
   const cls = `flex items-center gap-2 select-none ${className}`;
+  const glyph = brand.glyph;
   const inner = (
     <>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M12 1.5 7.5 9H10l-3 5.5H9.5L7 19h10l-2.5-4.5H17l-3-5.5h2.5L12 1.5Z" fill="var(--color-brand)" />
-        <rect x="11" y="19" width="2" height="3.5" fill="var(--color-brand)" />
+      <svg
+        width="22"
+        height="22"
+        viewBox={glyph?.viewBox ?? "0 0 24 24"}
+        fill="none"
+        aria-hidden="true"
+        style={brand.accentColor ? { color: brand.accentColor } : undefined}
+      >
+        {glyph
+          ? glyph.paths.map((path, index) => (
+              <path key={index} d={path.d} fill={path.fill === "ink" ? "currentColor" : "var(--color-brand)"} />
+            ))
+          : (
+            <>
+              <path d="M12 1.5 7.5 9H10l-3 5.5H9.5L7 19h10l-2.5-4.5H17l-3-5.5h2.5L12 1.5Z" fill="var(--color-brand)" />
+              <rect x="11" y="19" width="2" height="3.5" fill="var(--color-brand)" />
+            </>
+          )}
       </svg>
       <span className="text-base font-semibold tracking-tight">
-        <span className={inverted ? "text-white" : "text-text"}>Black</span>
-        <span className="text-brand">Forest</span>
+        <span className={inverted ? "text-white" : "text-text"}>{brand.wordmark[0]}</span>
+        <span className="text-brand">{brand.wordmark[1]}</span>
       </span>
     </>
   );

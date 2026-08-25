@@ -1,7 +1,7 @@
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 import { getTranslations } from "next-intl/server";
 import { contentMetadata } from "@/lib/seo";
-import { supportEmail } from "@/lib/branding";
+import { currentBrandProfile } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,8 @@ export async function generateMetadata() {
 
 export default async function KycPage() {
   const t = await getTranslations("kyc");
-  const email = supportEmail();
+  const brand = await currentBrandProfile();
+  const email = brand.supportEmail;
   return (
     <ArticleLayout eyebrow={t("eyebrow")} title={t("title")} description={t("description")}>
       <Section title={t("s1Title")}><p>{t("s1Body")}</p></Section>

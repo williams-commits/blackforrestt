@@ -8,7 +8,7 @@ import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { toast } from "@/lib/toast";
 import type { WalletAddressEntry } from "@/server/userSettings";
 import { WITHDRAWAL_CRYPTO_NETWORKS } from "@/lib/paymentNetworks";
-import { PAYMENT_PROOF_MAX_BYTES } from "@/lib/paymentProofs";
+import { PAYMENT_PROOF_MAX_BYTES, compressProofImage, isHeicFile } from "@/lib/paymentProofs";
 
 /** Widened view of the server-enforced presets for string-indexed lookups. */
 const WITHDRAWAL_NETWORKS: Record<string, readonly string[]> = WITHDRAWAL_CRYPTO_NETWORKS;
@@ -206,6 +206,22 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
     if (mode === "deposit" && method !== "CARD" && !proofFile) return "Upload the payment receipt or transaction proof before submitting a deposit.";
     if (proofFile && proofFile.size > PAYMENT_PROOF_MAX_BYTES) return "The supporting document must be 1 MB or smaller.";
     return null;
+  }
+
+  /** Validate and shrink the picked file BEFORE submit so the size/type rules
+   *  hold at the moment of upload instead of failing after the request was
+   *  already created. Rejects iPhone HEIC photos with actionable copy and
+   *  auto-resizes oversized JPEG/PNG images. */
+  async function prepareProofFile(file: File | null, input: HTMLInputElement): Promise<void> {
+    if (!file) { setProofFile(null); return; }
+    if (await isHeicFile(file)) {
+      input.value = "";
+      setProofFile(null);
+      setError("iPhone HEIC photos aren’t supported. Convert the photo to JPEG or PNG (or take a screenshot of it) and select that instead.");
+      return;
+    }
+    setError(null);
+    setProofFile(await compressProofImage(file, PAYMENT_PROOF_MAX_BYTES));
   }
 
   async function uploadProof(paymentRequestId: string, file: File): Promise<void> {
@@ -500,13 +516,13 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
               type="file"
               accept="image/jpeg,image/png,application/pdf"
               required={isDeposit && method !== "CARD"}
-              onChange={(event)=>{setProofFile(event.currentTarget.files?.[0] ?? null); invalidateRequestKey();}}
+              onChange={(event)=>{const input = event.currentTarget; void prepareProofFile(input.files?.[0] ?? null, input); invalidateRequestKey();}}
               className="block w-full rounded border border-border bg-canvas p-2 text-xs file:mr-3 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-2 file:text-xs"
             />
             <p className="mt-1 text-[11px] text-text-faint">
               {isDeposit && method === "CARD"
                 ? "A receipt is optional for card deposits — finance verifies the card processor reference. JPEG, PNG, or PDF, maximum 1 MB."
-                : "JPEG, PNG, or PDF, maximum 1 MB. Files are quarantined, scanned, and stored privately."}
+                : "JPEG, PNG, or PDF, maximum 1 MB. Images over the limit are resized automatically; PDFs must already be under 1 MB. Files are quarantined, scanned, and stored privately."}
             </p>
           </div>
 

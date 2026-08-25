@@ -40,3 +40,31 @@ test("email variables are HTML escaped", () => {
   assert.doesNotMatch(rendered.html, /<img src=x/);
   assert.match(rendered.html, /&lt;img src=x/);
 });
+
+test("brand variables restyle the email without touching env config", () => {
+  const rendered = renderEmail("welcome", {
+    name: "Agile User",
+    actionUrl: "https://agilefgs.com/account",
+    brandName: "Agile FGS",
+    brandSupport: "support@agilefgs.com",
+    brandColor: "#0ea5e9",
+    brandFrom: "no-reply@agilefgs.com",
+    brandReplyTo: "help@agilefgs.com",
+  });
+  // Header, footer support address, subject, and button accent all follow the
+  // brand variables; the from/replyTo ride along for the provider layer.
+  assert.match(rendered.subject, /Welcome to Agile FGS/);
+  assert.match(rendered.html, /Agile FGS/);
+  assert.match(rendered.html, /support@agilefgs\.com/);
+  assert.match(rendered.html, /background:#0ea5e9/);
+  assert.match(rendered.html, /border-bottom:4px solid #0ea5e9/);
+  assert.equal(rendered.from, "no-reply@agilefgs.com");
+  assert.equal(rendered.replyTo, "help@agilefgs.com");
+});
+
+test("emails without brand variables keep the primary env identity", () => {
+  const rendered = renderEmail("generic-notification", { name: "Plain", message: "Hello" });
+  assert.equal(rendered.from, undefined);
+  assert.equal(rendered.replyTo, undefined);
+  assert.match(rendered.html, new RegExp(process.env.EMAIL_BRAND_NAME || "Black Forest"));
+});

@@ -20,11 +20,9 @@ function brandDomainList(): string[] {
   return list.length > 0 ? [...new Set(list)] : [];
 }
 
-// Domains whose BRAND_OVERRIDES entry sets "tradeEnabled": true — their apex
-// sends app routes to trade.<their own domain> (keeping users on-brand)
-// instead of the canonical trade host. Requires that subdomain's DNS + TLS
-// (Caddy block) to exist first. Minimal duplicate of the BRAND_OVERRIDES read
-// in src/lib/branding.ts (same bundling concern as brandDomainList above).
+// "tradeEnabled": true in BRAND_OVERRIDES — minimal duplicate of the
+// BRAND_OVERRIDES read in src/lib/branding.ts (same bundling concern as
+// brandDomainList above). Invalid JSON safely means "not enabled".
 function familyTradeEnabled(domain: string): boolean {
   const raw = (process.env.BRAND_OVERRIDES || "").trim();
   if (!raw) return false;
@@ -34,6 +32,32 @@ function familyTradeEnabled(domain: string): boolean {
   } catch {
     return false;
   }
+}
+
+// Trade host serving a brand family's app, or null when the family has none.
+// Resolution order — the DEPLOYMENT'S OWN declaration wins:
+//   1. The DOMAIN_N / TRADE_DOMAIN_N env pairs (exactly what Caddy serves —
+//      set in .env.production). This is the primary signal: if you stood up
+//      TRADE_DOMAIN_2, routing follows automatically.
+//   2. "tradeEnabled": true in BRAND_OVERRIDES (operator asserts the
+//      subdomain's DNS + TLS exist even without a TRADE_DOMAIN_N pair).
+//   3. Neither → the family's app traffic uses the canonical trade host.
+// Reading only BRAND_OVERRIDES caused a silent cross-brand leak: forgetting
+// the JSON flag sent agilefgs.com/logins to trade.blackforrestt.com while
+// Caddy was happily serving trade.agilefgs.com.
+function familyTradeHost(domain: string): string | null {
+  const pairs: Array<[string | undefined, string | undefined]> = [
+    [process.env.DOMAIN, process.env.TRADE_DOMAIN],
+    [process.env.DOMAIN_2, process.env.TRADE_DOMAIN_2],
+    [process.env.DOMAIN_3, process.env.TRADE_DOMAIN_3],
+  ];
+  for (const [apexVar, tradeVar] of pairs) {
+    const apex = (apexVar ?? "").trim().toLowerCase();
+    const trade = (tradeVar ?? "").trim().toLowerCase();
+    if (apex === domain && trade) return trade;
+  }
+  if (familyTradeEnabled(domain)) return `${(process.env.TRADE_SUBDOMAIN ?? "trade").trim()}.${domain}`;
+  return null;
 }
 
 const PROTECTED_PAGES = ["/trade", "/account", "/reports"];
@@ -162,11 +186,11 @@ function domainRedirect(req: Request): NextResponse | null {
   const { pathname } = url;
 
   // On any apex domain (primary or mirror): bounce trade/auth/admin routes to
-  // a trade subdomain. Families with tradeEnabled keep their users on-brand
-  // (trade.<same domain>); all others use the single canonical trade host.
+  // that family's trade host (from DOMAIN_N/TRADE_DOMAIN_N or tradeEnabled);
+  // families without one fall back to the canonical trade host.
   if (domains.includes(apex) && pathname !== "/") {
     if (TRADE_DOMAIN_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-      url.hostname = familyTradeEnabled(apex) ? `${tradeSubdomain}.${apex}` : tradeSub;
+      url.hostname = familyTradeHost(apex) ?? tradeSub;
       return NextResponse.redirect(url, 307);
     }
   }

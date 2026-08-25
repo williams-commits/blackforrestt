@@ -9,7 +9,6 @@ import { TableOfContents, type TocItem } from "@/components/landing/TableOfConte
 import { ProgressChecklist } from "@/components/landing/ProgressChecklist";
 import { StickyCta } from "@/components/landing/StickyCta";
 import { Footer } from "@/components/landing/Footer";
-import { absoluteTradeUrl } from "@/lib/branding";
 import { getLandingInstruments } from "@/lib/landingData";
 
 // Dynamic so branding values (support email, domain, brand name in the Footer
@@ -111,13 +110,13 @@ async function FinalCta() {
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link
-            href={absoluteTradeUrl("/register")}
+            href="/register"
             className="px-6 py-3 rounded-lg bg-brand text-white font-semibold hover:brightness-110 transition shadow-card"
           >
             {t("primary")}
           </Link>
           <Link
-            href={absoluteTradeUrl("/login")}
+            href="/login"
             className="px-6 py-3 rounded-lg bg-canvas border border-border font-semibold hover:bg-panel transition"
           >
             {t("secondary")}

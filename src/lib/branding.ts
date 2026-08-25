@@ -260,7 +260,11 @@ export function tradeOrigin(): string {
   return `https://${sub}.${brandDomain()}`;
 }
 
-/** Build an absolute URL on the trade subdomain for a relative path (server). */
+/** Build an absolute URL on the CANONICAL trade subdomain (server-only, e.g.
+ *  emails and API responses). NEVER use this for UI hrefs — render relative
+ *  links instead so the middleware routes each brand family to its own trade
+ *  host; an absolute URL here leaks mirror-domain visitors to the primary.
+ */
 export function absoluteTradeUrl(path = "/"): string {
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return `${tradeOrigin()}${normalized}`;

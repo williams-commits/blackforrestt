@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { absoluteTradeUrl } from "@/lib/branding";
 import { LivePrice } from "@/components/landing/LivePrice";
 import { getFeaturedInstrument } from "@/lib/landingData";
 
@@ -34,13 +33,13 @@ export async function Hero() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href={absoluteTradeUrl("/register")}
+                href="/register"
                 className="px-6 py-3 rounded-lg bg-brand text-white font-semibold hover:brightness-110 transition shadow-card"
               >
                 {t("ctaPrimary")}
               </Link>
               <Link
-                href={absoluteTradeUrl("/trade/XAUUSD")}
+                href="/trade/XAUUSD"
                 className="px-6 py-3 rounded-lg bg-canvas border border-border font-semibold hover:bg-panel transition font-mono text-sm"
               >
                 {t("ctaSecondary")}

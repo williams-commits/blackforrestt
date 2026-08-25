@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 import { useScrollSpy } from "@/hooks/useScrollSpy";
 import type { TocItem } from "@/components/landing/TableOfContents";
 import Link from "next/link";
-import { absoluteTradeUrl } from "@/lib/branding";
 
 interface ProgressChecklistProps {
   items: TocItem[];
@@ -68,7 +67,7 @@ export function ProgressChecklist({ items }: ProgressChecklistProps) {
       {done && (
         <div className="mt-3 rounded-md bg-up/10 px-2.5 py-1.5 text-[11px] text-up font-semibold">
           {t.rich("complete", {
-            link: (chunks) => <Link href={absoluteTradeUrl("/register")} className="underline hover:no-underline text-brand">{chunks}</Link>,
+            link: (chunks) => <Link href="/register" className="underline hover:no-underline text-brand">{chunks}</Link>,
           })}
         </div>
       )}

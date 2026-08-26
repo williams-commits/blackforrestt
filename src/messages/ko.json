@@ -811,7 +811,7 @@
     "noAccount": "계정이 없으신가요?",
     "register": "회원가입",
     "forgotPassword": "비밀번호를 잊으셨나요?",
-    "riskNote": "Black Forest 플랫폼. 외환 및 CFD 거래는 매우 높은 위험을 수반합니다.",
+    "riskNote": "외환 및 CFD 거래는 매우 높은 위험을 수반합니다.",
     "loadingForm": "로그인 양식 로딩 중",
     "resendNeeded": "이 이메일은 등록되었지만 인증되지 않았습니다. 로그인하려면 인증을 완료하세요.",
     "resendBtn": "인증 이메일 재전송",

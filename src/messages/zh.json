@@ -811,7 +811,7 @@
     "noAccount": "还没有账户？",
     "register": "注册",
     "forgotPassword": "忘记密码？",
-    "riskNote": "Black Forest 平台。外汇与CFD交易风险极高。",
+    "riskNote": "外汇与CFD交易风险极高。",
     "loadingForm": "正在加载登录表单",
     "resendNeeded": "该邮箱已注册但尚未验证。请先完成验证再登录。",
     "resendBtn": "重新发送验证邮件",

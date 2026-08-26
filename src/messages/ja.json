@@ -811,7 +811,7 @@
     "noAccount": "アカウントをお持ちでないですか？",
     "register": "登録",
     "forgotPassword": "パスワードをお忘れですか？",
-    "riskNote": "Black Forestプラットフォーム。外国為替とCFDの取引には高レベルのリスクが伴います。",
+    "riskNote": "外国為替とCFDの取引には高レベルのリスクが伴います。",
     "loadingForm": "サインインフォームを読み込み中",
     "resendNeeded": "このメールアドレスは登録済みですが未認証です。サインインするには認証してください。",
     "resendBtn": "認証メールを再送信",

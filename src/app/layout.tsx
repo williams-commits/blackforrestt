@@ -7,7 +7,7 @@ import { Providers } from "@/components/providers";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FormatLocaleBridge } from "@/components/FormatLocaleBridge";
 import { TopProgressBar } from "@/components/ui/TopProgressBar";
-import { brandDomain, currentBrandProfile, safeBrandColor } from "@/lib/branding";
+import { currentBrandProfile, safeBrandColor } from "@/lib/branding";
 import { LOCALE_BCP47, LOCALE_OG, RTL_LOCALES } from "@/i18n/config";
 import { languageAlternates } from "@/lib/seo";
 

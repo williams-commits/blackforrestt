@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AccountOverview } from "./AccountOverview";
 import { PositionHistory } from "./PositionHistory";
@@ -111,9 +111,47 @@ const TABS: { key: Tab; label: string }[] = [
 /** Tabbed account dashboard shell. */
 export function AccountShell(props: Props) {
   const marginWarningPercent = props.marginWarningPercent ?? 125;
-  const unreadNotifications = props.unreadNotifications ?? 0;
-  const unreadMessages = props.unreadMessages ?? 0;
-  const openSupportCases = props.openSupportCases ?? 0;
+  // Badge counts start from the server render and stay LIVE: a lightweight
+  // counts poll (+ realtime events) updates them without a full page refresh,
+  // and pokes the mounted tab to reload its data when something changed.
+  const [unreadNotifications, setUnreadNotifications] = useState(props.unreadNotifications ?? 0);
+  const [unreadMessages, setUnreadMessages] = useState(props.unreadMessages ?? 0);
+  const [openSupportCases, setOpenSupportCases] = useState(props.openSupportCases ?? 0);
+  const prevCounts = useRef({ unreadNotifications: props.unreadNotifications ?? 0, unreadMessages: props.unreadMessages ?? 0, openSupportCases: props.openSupportCases ?? 0 });
+  const refreshCounts = useCallback(async () => {
+    try {
+      const response = await fetch("/api/notifications?scope=counts", { cache: "no-store" });
+      if (!response.ok) return;
+      const data = await response.json() as { unreadCount?: number; unreadMessages?: number; openSupportCases?: number };
+      const next = {
+        unreadNotifications: data.unreadCount ?? 0,
+        unreadMessages: data.unreadMessages ?? 0,
+        openSupportCases: data.openSupportCases ?? 0,
+      };
+      setUnreadNotifications(next.unreadNotifications);
+      setUnreadMessages(next.unreadMessages);
+      setOpenSupportCases(next.openSupportCases);
+      const changed =
+        next.unreadNotifications !== prevCounts.current.unreadNotifications ||
+        next.unreadMessages !== prevCounts.current.unreadMessages ||
+        next.openSupportCases !== prevCounts.current.openSupportCases;
+      if (changed) {
+        prevCounts.current = next;
+        window.dispatchEvent(new CustomEvent("blckforest:counts-changed"));
+      }
+    } catch { /* transient — next poll retries */ }
+  }, []);
+  useEffect(() => {
+    const timer = window.setInterval(() => { if (!document.hidden) void refreshCounts(); }, 15_000);
+    // Realtime pushes (ledger/positions) often accompany notifications —
+    // refresh the counts immediately when one arrives.
+    const onRealtime = () => void refreshCounts();
+    window.addEventListener("blckforest:realtime", onRealtime);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("blckforest:realtime", onRealtime);
+    };
+  }, [refreshCounts]);
   const [tab, setTab] = useState<Tab>("overview");
   const router = useRouter();
   const realtimeAccount = useForexStore((state) => state.account);
@@ -316,7 +354,7 @@ export function AccountShell(props: Props) {
         />
       )}
       {tab === "verification" && <VerificationTab kyc={props.kyc} checklist={props.kycChecklist} onSubmitted={() => selectTab("overview")} />}
-      {tab === "notifications" && <NotificationsTab />}
+      {tab === "notifications" && <NotificationsTab onActivity={refreshCounts} onOpenMessages={() => selectTab("messages")} />}
       {tab === "messages" && <MessagesTab />}
       {tab === "support" && <SupportTab />}
       {tab === "referrals" && <ReferralTab />}

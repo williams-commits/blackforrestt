@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Pagination } from "@/components/ui/Pagination";
-import { fmtDateTime } from "@/lib/dates";
+import { Dialog } from "@/components/ui/Dialog";
+import { fmtAgo, fmtDateTime } from "@/lib/dates";
 
 interface NotificationRow {
   id: string;
@@ -32,14 +33,17 @@ const TYPE_TONES: Record<string, string> = {
   PAYMENT_REVERSED: "bg-panel-3 text-text-muted",
 };
 
-/** Persisted notification history — available whenever the user comes online. */
-export function NotificationsTab() {
+/** Persisted notification history — available whenever the user comes online.
+ *  Rows open a detail modal (mark-as-read for unread items; chat threads
+ *  deep-link to the Messages tab). Auto-syncs while visible. */
+export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: () => void; onOpenMessages?: () => void }) {
   const [items, setItems] = useState<NotificationRow[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<NotificationRow | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -58,7 +62,31 @@ export function NotificationsTab() {
 
   useEffect(() => {
     void load();
+    // Auto-sync: silent poll while visible + immediate refresh when the
+    // shell's badge watcher detects activity (new notification elsewhere).
+    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 15_000);
+    const onCountsChanged = () => void load();
+    window.addEventListener("blckforest:counts-changed", onCountsChanged);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("blckforest:counts-changed", onCountsChanged);
+    };
   }, [load]);
+
+  async function markRead(id: string) {
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ids: [id] }),
+      });
+      setItems((current) => current.map((item) => (item.id === id ? { ...item, readAt: new Date().toISOString() } : item)));
+      setUnreadCount((count) => Math.max(0, count - 1));
+      onActivity?.();
+    } catch {
+      setError("Unable to mark the notification read.");
+    }
+  }
 
   async function markAllRead() {
     setBusy(true);
@@ -104,9 +132,11 @@ export function NotificationsTab() {
 
       <ul className="space-y-2">
         {items.map((item) => (
-          <li
-            key={item.id}
-            className={`rounded-lg border p-3 ${item.readAt ? "border-border bg-canvas" : "border-brand/40 bg-brand-soft/30"}`}
+          <li key={item.id}>
+          <button
+            type="button"
+            onClick={() => setSelected(item)}
+            className={`w-full rounded-lg border p-3 text-left transition hover:border-brand/50 ${item.readAt ? "border-border bg-canvas" : "border-brand/40 bg-brand-soft/30"}`}
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -117,8 +147,9 @@ export function NotificationsTab() {
               </div>
               <span className="text-[10px] text-text-faint tnum">{fmtDateTime(item.createdAt)}</span>
             </div>
-            <p className="mt-1.5 text-xs text-text-muted leading-relaxed whitespace-pre-wrap">{item.body}</p>
-            {!item.readAt && <span className="mt-1 inline-block text-[10px] font-semibold text-brand">● unread</span>}
+            <p className="mt-1.5 line-clamp-2 text-xs text-text-muted leading-relaxed whitespace-pre-wrap">{item.body}</p>
+            {!item.readAt && <span className="mt-1 inline-block text-[10px] font-semibold text-brand">● unread — open to mark read</span>}
+          </button>
           </li>
         ))}
         {items.length === 0 && (
@@ -129,6 +160,43 @@ export function NotificationsTab() {
       </ul>
 
       <Pagination page={page} pageSize={PAGE_SIZE} totalItems={Math.max(items.length, page > 1 ? 1 : 0)} onPageChange={setPage} label="notifications" compact />
+
+      <Dialog
+        open={selected !== null}
+        onClose={() => setSelected(null)}
+        title={selected?.title ?? "Notification"}
+        description={selected ? `${fmtDateTime(selected.createdAt)} · ${fmtAgo(selected.createdAt)}` : undefined}
+        className="sm:max-w-md"
+      >
+        {selected && (
+          <div className="space-y-4 px-5 py-4">
+            <div className="flex items-center gap-2">
+              <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${TYPE_TONES[selected.type] ?? "bg-panel-3 text-text-muted"}`}>
+                {selected.type.replaceAll("_", " ").toLowerCase()}
+              </span>
+              {!selected.readAt && <span className="text-[10px] font-semibold text-brand">● unread</span>}
+            </div>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{selected.body}</p>
+            <div className="flex flex-wrap justify-end gap-2">
+              {(selected.type === "ADMIN_CHAT" || selected.type === "CUSTOMER_MESSAGE") && onOpenMessages && (
+                <Button type="button" variant="buy" onClick={() => { setSelected(null); onOpenMessages(); }}>
+                  Open conversation
+                </Button>
+              )}
+              {!selected.readAt && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => { void markRead(selected.id); setSelected({ ...selected, readAt: new Date().toISOString() }); }}
+                >
+                  Mark as read
+                </Button>
+              )}
+              <Button type="button" variant="ghost" onClick={() => setSelected(null)}>Close</Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
     </div>
   );
 }

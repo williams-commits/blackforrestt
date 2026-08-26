@@ -366,7 +366,7 @@ function clampLimit(limit: number | undefined): number {
 
 /** Customer side: fetch their support thread with the admin team. Marks
  *  admin→customer messages read and reports whether older history exists. */
-export async function getUserMessageThread(input: { userId: string; limit?: number }) {
+export async function getUserMessageThread(input: { userId: string; limit?: number; markRead?: boolean }) {
   const limit = clampLimit(input.limit);
   const rows = await prisma.directMessage.findMany({
     where: {
@@ -383,7 +383,10 @@ export async function getUserMessageThread(input: { userId: string; limit?: numb
   const messages = (hasMore ? rows.slice(0, limit) : rows).reverse();
   const unreadIds = messages.filter((m) => m.recipientId === input.userId && m.sender.isAdmin && !m.readAt).map((m) => m.id);
   let readNow: Date | null = null;
-  if (unreadIds.length > 0) {
+  // Read-marking is EXPLICIT (markRead !== false): background polls fetch the
+  // thread without consuming the unread state, so the Messages badge survives
+  // until the customer actually has the conversation in view.
+  if (unreadIds.length > 0 && input.markRead !== false) {
     readNow = new Date();
     await prisma.directMessage.updateMany({ where: { id: { in: unreadIds } }, data: { readAt: readNow } });
   }

@@ -61,6 +61,15 @@ export function SupportTab() {
 
   useEffect(() => {
     loadCases();
+    // Auto-sync: silent poll while visible + immediate refresh when the
+    // shell's badge watcher detects activity (a case changed status, etc.).
+    const timer = window.setInterval(() => { if (!document.hidden) void loadCases(); }, 30_000);
+    const onCountsChanged = () => void loadCases();
+    window.addEventListener("blckforest:counts-changed", onCountsChanged);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("blckforest:counts-changed", onCountsChanged);
+    };
   }, []);
 
   async function submit(e: React.FormEvent) {

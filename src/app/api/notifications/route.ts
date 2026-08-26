@@ -20,6 +20,16 @@ export async function GET(req: Request) {
   const limit = Math.min(100, Math.max(1, Number(params.get("limit") ?? 10) || 10));
   const offset = Math.max(0, Number(params.get("offset") ?? 0) || 0);
 
+  // Lightweight badge poll — just the three counts.
+  if (scope === "counts") {
+    const [unreadCount, unreadMessages, openSupportCases] = await Promise.all([
+      prisma.notification.count({ where: { userId, readAt: null } }),
+      countUnreadDirectMessages(userId),
+      prisma.supportCase.count({ where: { userId, status: { in: ["OPEN", "IN_PROGRESS", "WAITING_CUSTOMER"] } } }),
+    ]);
+    return NextResponse.json({ unreadCount, unreadMessages, openSupportCases });
+  }
+
   const [notifications, unreadCount, unreadMessages] = await Promise.all([
     prisma.notification.findMany({
       where: { userId },

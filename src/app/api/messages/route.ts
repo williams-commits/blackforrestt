@@ -27,10 +27,14 @@ export const dynamic = "force-dynamic";
  * their thread for continuity, or the longest-tenured active operator.
  * Operators must use /api/admin/messages; sending from here is rejected.
  */
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await auth();
     const userId = await resolveUserId(session?.user?.id);
+    // ?poll=1 = background refresh: fetch WITHOUT marking the thread read,
+    // so unread badges are only consumed when the customer is actually
+    // viewing the conversation.
+    const isBackgroundPoll = new URL(req.url).searchParams.get("poll") === "1";
     const viewer = await prisma.user.findUnique({
       where: { id: userId },
       select: { isAdmin: true },
@@ -48,7 +52,7 @@ export async function GET() {
       return NextResponse.json({ viewerId: userId, role: "operator", threads });
     }
 
-    const { messages, hasMore } = await getUserMessageThread({ userId });
+    const { messages, hasMore } = await getUserMessageThread({ userId, markRead: !isBackgroundPoll });
     const adminId = await resolveSupportRecipient(userId);
     return NextResponse.json({
       viewerId: userId,

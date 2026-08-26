@@ -44,9 +44,14 @@ export function MessagesTab() {
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options: { background?: boolean } = {}) => {
     try {
-      const response = await fetch("/api/messages", { cache: "no-store" });
+      // Background polls (?poll=1) fetch WITHOUT marking the thread read —
+      // the unread badge is only consumed when the customer is looking at
+      // the conversation (this tab open and the window visible).
+      const viewing = typeof document === "undefined" || !document.hidden;
+      const poll = options.background || !viewing ? "?poll=1" : "";
+      const response = await fetch(`/api/messages${poll}`, { cache: "no-store" });
       const data = await response.json().catch(() => null) as (Inbox & { error?: string }) | null;
       if (!response.ok) throw new Error(data?.error ?? "Unable to load messages.");
       if (!data || (data.role !== "customer" && data.role !== "operator")) {
@@ -63,8 +68,15 @@ export function MessagesTab() {
 
   useEffect(() => {
     void load();
-    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 15_000);
-    return () => window.clearInterval(timer);
+    // Auto-sync: poll while visible, and refresh immediately when the shell's
+    // badge watcher detects new activity (a new message arriving elsewhere).
+    const timer = window.setInterval(() => { if (!document.hidden) void load({ background: true }); }, 15_000);
+    const onCountsChanged = () => void load({ background: true });
+    window.addEventListener("blckforest:counts-changed", onCountsChanged);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("blckforest:counts-changed", onCountsChanged);
+    };
   }, [load]);
 
   const messageCount = inbox?.role === "customer" ? inbox.messages.length : 0;

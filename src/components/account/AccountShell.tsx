@@ -28,6 +28,10 @@ interface Props {
   initialTab?: Tab;
   /** Equity/margin ratio that marks the margin warning (user settings → env default 125). */
   marginWarningPercent?: number;
+  /** Unread badge counts (server-computed; refreshed with the 30s fallback poll). */
+  unreadNotifications?: number;
+  unreadMessages?: number;
+  openSupportCases?: number;
   user: { id: string; name: string; email: string; accountNo: string; createdAt: string; verified: boolean };
   metrics: {
     balance: number;
@@ -107,6 +111,9 @@ const TABS: { key: Tab; label: string }[] = [
 /** Tabbed account dashboard shell. */
 export function AccountShell(props: Props) {
   const marginWarningPercent = props.marginWarningPercent ?? 125;
+  const unreadNotifications = props.unreadNotifications ?? 0;
+  const unreadMessages = props.unreadMessages ?? 0;
+  const openSupportCases = props.openSupportCases ?? 0;
   const [tab, setTab] = useState<Tab>("overview");
   const router = useRouter();
   const realtimeAccount = useForexStore((state) => state.account);
@@ -214,6 +221,17 @@ export function AccountShell(props: Props) {
     }
     if (item.key === "verification" && verificationNeeded) {
       return { ...item, label: <>{item.label}<span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">!</span></> };
+    }
+    // Unread badges — after a toast fires these steer the user to the tab that
+    // holds the history (toasts no longer consume the unread state).
+    if (item.key === "notifications" && unreadNotifications > 0) {
+      return { ...item, label: <>{item.label}<span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span></> };
+    }
+    if (item.key === "messages" && unreadMessages > 0) {
+      return { ...item, label: <>{item.label}<span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">{unreadMessages > 99 ? "99+" : unreadMessages}</span></> };
+    }
+    if (item.key === "support" && openSupportCases > 0) {
+      return { ...item, label: <>{item.label}<span className="ml-1.5 rounded-full bg-panel-3 px-1.5 py-0.5 text-[9px] font-bold text-text-muted">{openSupportCases}</span></> };
     }
     return item;
   });

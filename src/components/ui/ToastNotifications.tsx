@@ -11,6 +11,7 @@ interface NotificationToast {
   title: string;
   body: string;
   readAt: string | null;
+  toastedAt: string | null;
   createdAt: string;
   metadata?: { reason?: string } | null;
 }
@@ -46,8 +47,10 @@ export function ToastNotifications() {
       if (!response.ok) return;
       const payload = await response.json().catch(() => ({ notifications: [] }));
       const notifications = Array.isArray(payload.notifications) ? payload.notifications as NotificationToast[] : [];
-      const unread = notifications.filter((item) => !item.readAt);
-      const fresh = unread.filter((item) => !seen.current.has(item.id));
+      // Toast only what has never been toasted — the unread state (readAt)
+      // is intentionally LEFT ALONE so the Notifications tab badge survives
+      // and steers the user to the history; toasts no longer consume it.
+      const fresh = notifications.filter((item) => !item.readAt && !item.toastedAt && !seen.current.has(item.id));
       // Mark ids as seen ONLY when they are processed. Marking them earlier
       // lets a StrictMode double-mounted effect consume the batch in its
       // aborted first closure (active=false) — the remounted closure then
@@ -63,7 +66,7 @@ export function ToastNotifications() {
       await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ids: fresh.map((item) => item.id) }),
+        body: JSON.stringify({ ids: fresh.map((item) => item.id), toasted: true }),
       }).catch(() => undefined);
     }
 

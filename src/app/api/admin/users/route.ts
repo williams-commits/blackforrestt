@@ -47,8 +47,11 @@ export async function GET(request: Request) {
           mfaEnabledAt: true,
           createdAt: true,
           metrics: { select: { balance: true, equity: true, floatingPl: true, marginLevel: true } },
-          kyc: { select: { status: true } },
+          kyc: { select: { status: true, country: true, city: true } },
           adminRoles: { where: { revokedAt: null }, select: { role: true, assignedAt: true } },
+          // Most recent activity across devices (lastSeenAt is refreshed by
+          // the ws/account bridge while a session is alive).
+          securitySessions: { orderBy: { lastSeenAt: "desc" }, take: 1, select: { lastSeenAt: true } },
           _count: {
             select: {
               // Open positions only — "is this user trading right now".
@@ -68,6 +71,7 @@ export async function GET(request: Request) {
       ...user,
       online: online.has(user.id),
       emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+      lastActiveAt: user.securitySessions[0]?.lastSeenAt?.toISOString() ?? null,
       lockedUntil: user.lockedUntil?.toISOString() ?? null,
       isAdmin: user.isAdmin,
       suspendedAt: user.suspendedAt?.toISOString() ?? null,

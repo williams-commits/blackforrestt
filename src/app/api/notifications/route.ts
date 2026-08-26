@@ -26,7 +26,7 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" },
       take: limit,
       skip: offset,
-      select: { id: true, type: true, title: true, body: true, readAt: true, createdAt: true, metadata: true },
+      select: { id: true, type: true, title: true, body: true, readAt: true, toastedAt: true, createdAt: true, metadata: true },
     }),
     prisma.notification.count({ where: { userId, readAt: null } }),
     countUnreadDirectMessages(userId),
@@ -38,6 +38,7 @@ export async function GET(req: Request) {
       ...item,
       createdAt: item.createdAt.toISOString(),
       readAt: item.readAt?.toISOString() ?? null,
+      toastedAt: item.toastedAt?.toISOString() ?? null,
     })),
     unreadCount,
     unreadMessages,
@@ -45,14 +46,19 @@ export async function GET(req: Request) {
 }
 
 /**
- * PATCH /api/notifications — mark notifications read.
- *   { ids: string[] } : mark the given notifications read.
- *   { all: true }     : mark every unread notification read.
+ * PATCH /api/notifications — acknowledgment modes.
+ *   { ids: string[] }        : mark the given notifications READ (user opened
+ *                              the Notifications tab / clicked an item).
+ *   { all: true }            : mark every unread notification read.
+ *   { ids, toasted: true }   : toast-layer acknowledgment only — records that
+ *                              the toast was DISPLAYED without consuming the
+ *                              unread state (readAt stays null), so the tab
+ *                              badge survives and reloads don't re-toast.
  */
 export async function PATCH(req: Request) {
   const session = await auth();
   const userId = await resolveUserId(session?.user?.id);
-  const body = await req.json().catch(() => ({} as { ids?: unknown; all?: boolean }));
+  const body = await req.json().catch(() => ({} as { ids?: unknown; all?: boolean; toasted?: boolean }));
   const ids = Array.isArray(body.ids)
     ? body.ids.filter((id: unknown): id is string => typeof id === "string" && id.length > 0)
     : [];
@@ -63,6 +69,7 @@ export async function PATCH(req: Request) {
     ? { userId, readAt: null }
     : { userId, readAt: null, id: { in: ids } };
 
-  const result = await prisma.notification.updateMany({ where, data: { readAt: new Date() } });
+  const data = body.toasted === true ? { toastedAt: new Date() } : { readAt: new Date(), toastedAt: new Date() };
+  const result = await prisma.notification.updateMany({ where, data });
   return NextResponse.json({ updated: result.count });
 }

@@ -7,6 +7,7 @@ import { AccountUserMenu } from "@/components/account/AccountUserMenu";
 import type { InstrumentView } from "@/lib/types";
 import { ADDRESS_DOCUMENT_TYPES, IDENTITY_DOCUMENT_TYPES } from "@/lib/kyc";
 import { resolveUserSettings } from "@/server/userSettings";
+import { countUnreadDirectMessages } from "@/server/adminUserManagement";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +115,14 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   // Resolve per-user settings.
   const settings = await resolveUserSettings(userId);
 
+  // Unread/attn badge counts for the account tabs — the toast layer no longer
+  // consumes unread state, so these guide users to the right tab after a toast.
+  const [unreadNotifications, unreadMessages, openSupportCases] = await Promise.all([
+    prisma.notification.count({ where: { userId, readAt: null } }),
+    countUnreadDirectMessages(userId),
+    prisma.supportCase.count({ where: { userId, status: { in: ["OPEN", "IN_PROGRESS", "WAITING_CUSTOMER"] } } }),
+  ]);
+
   return (
     <div className="min-h-screen bg-panel">
       <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-canvas px-3 py-1 sm:flex-nowrap sm:px-4">
@@ -136,6 +145,9 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6">
         <AccountShell
+          unreadNotifications={unreadNotifications}
+          unreadMessages={unreadMessages}
+          openSupportCases={openSupportCases}
           marginWarningPercent={settings.trading.marginWarningPercent}
           initialTab={initialTab as "overview" | "positions" | "transactions" | "payments" | "reports" | "verification" | "support" | "settings" | undefined}
           user={{

@@ -619,6 +619,10 @@ model Notification {
   body      String
   metadata  Json?
   readAt    DateTime?
+  // Toast acknowledgment only — set when the toast layer DISPLAYS the
+  // notification. Keeps unread (readAt=null) for the tab badge until the user
+  // actually opens Notifications, instead of the toast silently consuming it.
+  toastedAt DateTime?
   createdAt DateTime @default(now())
 
   @@index([userId, readAt, createdAt])

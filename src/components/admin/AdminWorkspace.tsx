@@ -315,8 +315,9 @@ interface UserRow {
   isAdmin: boolean; suspendedAt: string | null; blockedAt: string | null; deletedAt: string | null;
   /** Live presence — user has an open WebSocket right now. */
   online: boolean;
+  lastActiveAt: string | null;
+  kyc: { status: string; country: string | null; city: string | null } | null;
   adminRoles: Array<{ role: string }>;
-  kyc: { status: string } | null;
   metrics: { balance: string; equity: string; floatingPl: string; marginLevel: string | null } | null;
   _count: { positions: number; securitySessions: number; reconciliationBlocks: number };
 }
@@ -346,7 +347,9 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat }: { canAdjustBala
       (user.email ?? "").toLowerCase().includes(needle) ||
       (user.name ?? "").toLowerCase().includes(needle) ||
       (user.accountNo ?? "").includes(needle) ||
-      (user.brandDomain ?? "").toLowerCase().includes(needle),
+      (user.brandDomain ?? "").toLowerCase().includes(needle) ||
+      (user.kyc?.country ?? "").toLowerCase().includes(needle) ||
+      (user.kyc?.city ?? "").toLowerCase().includes(needle),
     );
   }, [resource.data, needle]);
   const searchPending = search.trim() !== debouncedSearch;
@@ -453,6 +456,7 @@ function PaginatedUsers({
     u.kyc?.status ?? "", u.mfaEnabledAt ? "MFA on" : "MFA off",
     u.adminRoles.map((r) => r.role).join("; "), Number(u.metrics?.balance ?? 0).toFixed(2),
     Number(u.metrics?.equity ?? 0).toFixed(2), u._count.positions, fmtDateTime(u.createdAt),
+    u.lastActiveAt ? fmtDateTime(u.lastActiveAt) : "", [u.kyc?.city, u.kyc?.country].filter(Boolean).join(", "),
   ]);
 
   return (
@@ -461,7 +465,7 @@ function PaginatedUsers({
         <span className="text-[10px] text-text-faint tnum">{sortedUsers.length} users</span>
         <CsvExportButton
           filename="users"
-          columns={["Name", "Email", "Account", "Status", "KYC", "Security", "Roles", "Balance", "Equity", "Positions", "Created"]}
+          columns={["Name", "Email", "Account", "Status", "KYC", "Security", "Roles", "Balance", "Equity", "Positions", "Created", "Last active", "Location"]}
           rows={csvRows}
           disabled={sortedUsers.length === 0}
         />
@@ -495,7 +499,7 @@ function PaginatedUsers({
                     )}
                   </div>
                 </td>
-                <td className="p-2">{user.kyc?.status ?? "NOT SUBMITTED"}<div className={user.verified ? "text-up" : "text-text-faint"}>{user.verified ? "Verified" : "Unverified"}</div></td>
+                <td className="p-2">{user.kyc?.status ?? "NOT SUBMITTED"}<div className={user.verified ? "text-up" : "text-text-faint"}>{user.verified ? "Verified" : "Unverified"}</div>{(user.kyc?.country || user.kyc?.city) && <div className="text-text-faint">{[user.kyc.city, user.kyc.country].filter(Boolean).join(", ")}</div>}</td>
                 <td className="p-2">MFA {user.mfaEnabledAt ? "enabled" : "off"}<div className={user.lockedUntil ? "text-down" : "text-text-faint"}>{user.lockedUntil ? "Locked" : `${user._count.securitySessions} session(s)`}</div></td>
                 <td className="p-2">{user.adminRoles.length ? user.adminRoles.map((role) => role.role).join(", ") : "Customer"}</td>
                 <td className="p-2 text-right tnum">{formatUsd(user.metrics?.balance ?? "0")}</td>
@@ -505,6 +509,7 @@ function PaginatedUsers({
                     {user._count.positions} open{user.online ? "" : ""}
                   </div>
                   <div className={user._count.reconciliationBlocks ? "text-down" : "text-text-faint"}>{user._count.reconciliationBlocks} blocks</div>
+                  <div className="text-text-faint" title={user.lastActiveAt ?? undefined}>{user.lastActiveAt ? `active ${fmtAgo(user.lastActiveAt)}` : "never seen"}</div>
                 </td>
                 <td className="p-2 text-right">
                   {(canManage || canAdjustBalance) && (

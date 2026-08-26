@@ -20,6 +20,7 @@ type DialogKind =
   | { kind: "status"; action: "SUSPEND" | "UNSUSPEND" | "BLOCK" | "UNBLOCK" | "SOFT_DELETE" | "RESTORE" }
   | { kind: "notify" }
   | { kind: "resetPassword" }
+  | { kind: "forceSignOut" }
   | null;
 
 type ResetMode = "temporary" | "link";
@@ -158,6 +159,22 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
     }
   }
 
+  async function submitForceSignOut() {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}/sessions/revoke`, { method: "POST" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "Sign-out failed.");
+      setDialog(null);
+      onChanged();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Sign-out failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function copyValue(value: string) {
     try {
       await navigator.clipboard.writeText(value);
@@ -219,6 +236,11 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 label="Reset password"
                 hint="Temporary code or emailed link"
               />
+              <MenuItemRow
+                onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "forceSignOut" }); }}
+                label="Sign out everywhere"
+                hint="Revokes all active sessions"
+              />
               <div className="my-1 border-t border-border" />
               <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: statusAction }); }} label={STATUS_LABELS[statusAction].verb} tone={STATUS_LABELS[statusAction].tone} />
               {secondaryAction && (
@@ -245,10 +267,14 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
             ? resetResult
               ? resetResult.mode === "temporary" ? "Temporary password set" : "Reset link ready"
               : "Reset password"
+            : dialog?.kind === "forceSignOut"
+              ? "Sign out everywhere"
             : `${STATUS_LABELS[(dialog as { action: string } | null)?.action ?? ""]?.verb ?? "Confirm"} account`}
         description={dialog?.kind === "notify"
           ? `Delivered instantly to ${user.email ?? "the user"}'s notification history.`
-          : dialog?.kind === "resetPassword"
+          : dialog?.kind === "forceSignOut"
+            ? `Every active session for ${user.email ?? "the user"} is revoked; they can simply sign in again.`
+            : dialog?.kind === "resetPassword"
             ? `Set a generated sign-in code for ${user.email ?? "the user"}, or email them a self-service reset link.`
             : dialog?.action === "SOFT_DELETE"
               ? "Soft-delete blocks sign-in and hides the account; all financial history is preserved and it can be restored."
@@ -321,6 +347,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
             if (!dialog) return;
             if (dialog.kind === "notify") void submitNotify();
             else if (dialog.kind === "resetPassword") void submitPasswordReset();
+            else if (dialog.kind === "forceSignOut") void submitForceSignOut();
             else void submitStatus(dialog.action);
           }}
         >
@@ -335,6 +362,12 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 <textarea id="notify-body" required minLength={3} maxLength={2000} rows={5} value={body} onChange={(e) => setBody(e.target.value)} className="w-full rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand" />
               </div>
             </>
+          ) : dialog?.kind === "forceSignOut" ? (
+            <p className="text-xs text-text-muted">
+              All devices and browsers are signed out immediately — useful when an account may be
+              compromised, or before handing control back to a customer after support. Open
+              WebSockets drop on their next validation. The action is written to the audit trail.
+            </p>
           ) : dialog?.kind === "resetPassword" ? (
             <div className="space-y-3">
               <div className="flex flex-wrap gap-2" role="group" aria-label="Reset method">
@@ -385,7 +418,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           <div className="flex justify-end gap-2">
             <button type="button" disabled={busy} onClick={() => { setDialog(null); setError(null); }} className="rounded border border-border px-3 py-2 text-xs disabled:opacity-50">Cancel</button>
             <button type="submit" disabled={busy} className={`rounded px-3 py-2 text-xs text-white disabled:opacity-50 ${dialog?.kind === "status" ? "bg-down" : "bg-brand"}`}>
-              {busy ? "Working…" : dialog?.kind === "notify" ? "Send notification" : dialog?.kind === "resetPassword" ? (resetMode === "temporary" ? "Generate password" : "Send reset link") : "Confirm"}
+              {busy ? "Working…" : dialog?.kind === "notify" ? "Send notification" : dialog?.kind === "resetPassword" ? (resetMode === "temporary" ? "Generate password" : "Send reset link") : dialog?.kind === "forceSignOut" ? "Sign out everywhere" : "Confirm"}
             </button>
           </div>
         </form>

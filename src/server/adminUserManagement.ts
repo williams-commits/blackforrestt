@@ -253,6 +253,30 @@ export async function adminSetTemporaryPassword(input: {
   return { temporaryPassword };
 }
 
+/** Force sign-out: revoke every ACTIVE security session for a user (audited).
+ *  Existing JWTs stop validating on their next request (the jwt callback
+ *  checks session liveness), and open WebSockets drop on their next
+ *  subscribe/heartbeat validation. The user simply signs in again. */
+export async function adminRevokeSessions(input: { actorId: string; userId: string }): Promise<{ revoked: number }> {
+  const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { id: true } });
+  if (!user) throw new AdminUserManagementError("User not found.", 404);
+  const now = new Date();
+  return prisma.$transaction(async (tx) => {
+    const revoked = await tx.securitySession.updateMany({
+      where: { userId: input.userId, revokedAt: null },
+      data: { revokedAt: now },
+    });
+    await appendAuditEvent(tx, {
+      actorId: input.actorId,
+      action: "SESSIONS_REVOKED",
+      entityType: "User",
+      entityId: input.userId,
+      metadata: { count: revoked.count, reason: "ADMIN_FORCE_SIGN_OUT" },
+    });
+    return { revoked: revoked.count };
+  });
+}
+
 /** Broadcast an in-app notification to every active (non-deleted) user. */
 export async function adminBroadcastNotification(input: {
   actorId: string;

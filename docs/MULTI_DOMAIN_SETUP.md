@@ -140,9 +140,17 @@ No code changes, no Caddyfile edits — the renderer generates site blocks
 request, so login works identically on every trade host with same-origin
 callbacks. Session cookies are host-only — each family is an independent
 session; being logged into both brands in one browser is expected and they
-never interfere. `AUTH_URL` stays pointed at the **primary** trade host as a
-host-header-less fallback. Password changes revoke sessions on all families
+never interfere. Password changes revoke sessions on all families
 (see `MULTI_BRAND_SECURITY.md` #12).
+
+⚠️ **`AUTH_URL` must stay set** (primary trade host) and — because Auth.js
+resolves *relative* redirect targets against it — **all client sign-outs use
+`redirect: false` + `window.location.assign(...)`** (self-navigation) rather
+than a server-resolved `callbackUrl`. Without that, logging out on
+`trade.agilefgs.com` bounces to `trade.blackforrestt.com`. Removing
+`AUTH_URL` entirely is NOT a workaround: with this custom server the
+header-less base resolves to the bind address (`0.0.0.0`) and auth redirects
+break (verified empirically).
 
 ## Gotchas
 

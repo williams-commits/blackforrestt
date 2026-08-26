@@ -70,7 +70,7 @@ export function AccountUserMenu({
             <button
               type="button"
               role="menuitem"
-              onClick={() => void signOut({ callbackUrl: "/login" })}
+              onClick={() => void signOut({ redirect: false }).then(() => { window.location.assign("/login"); })}
               className="w-full flex items-center gap-3 px-4 py-2 text-xs text-down hover:bg-down/10 transition-colors"
             >
               <span className="text-down">

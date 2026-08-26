@@ -224,8 +224,11 @@ export async function trackReferralClick(code: string): Promise<void> {
   }
 }
 
-/** Get referral stats for a user (for the Referrals tab). */
-export async function getReferralStats(userId: string) {
+/** Get referral stats for a user (for the Referrals tab). The optional
+ *  fallbackDomain is the REQUESTING family — used when the user has no stored
+ *  brandDomain (accounts created before per-brand signups), so a legacy
+ *  customer browsing referrals on agilefgs.com still gets an agilefgs link. */
+export async function getReferralStats(userId: string, fallbackDomain?: string | null) {
   const [code, referrer, referrals] = await Promise.all([
     getOrCreateReferralCode(userId),
     prisma.user.findUnique({ where: { id: userId }, select: { brandDomain: true } }),
@@ -254,7 +257,7 @@ export async function getReferralStats(userId: string) {
     code,
     // Referral links stay in the REFERRER'S brand family — an Agile FGS
     // customer's link points at trade.agilefgs.com, never the primary host.
-    link: `${tradeHostForDomain(referrer?.brandDomain)}/register?ref=${code}`,
+    link: `${tradeHostForDomain(referrer?.brandDomain ?? fallbackDomain)}/register?ref=${code}`,
     stats: { total, completed, pending, totalEarned },
     referrals: referrals.map((r) => ({
       id: r.id,

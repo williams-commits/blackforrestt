@@ -12,7 +12,7 @@ export function AdminSignOutButton() {
       disabled={busy}
       onClick={() => {
         setBusy(true);
-        void signOut({ callbackUrl: "/" });
+        void signOut({ redirect: false }).then(() => { window.location.assign("/"); });
       }}
       className="rounded border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-slate-300 transition hover:border-red-400/50 hover:text-red-300 disabled:opacity-50"
     >

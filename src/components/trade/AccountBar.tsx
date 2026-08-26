@@ -259,7 +259,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
           <div className="border-t border-border py-1">
             {session?.user ? (
               <MenuItem
-                onClick={() => { setMenuOpen(false); signOut({ callbackUrl: "/login" }); }}
+                onClick={() => { setMenuOpen(false); void signOut({ redirect: false }).then(() => { window.location.assign("/login"); }); }}
                 icon={<SignOutIcon />}
                 label="Sign out"
                 danger

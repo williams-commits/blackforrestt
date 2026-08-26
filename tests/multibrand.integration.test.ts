@@ -94,6 +94,13 @@ test("referral links stay in the referrer's brand family", async () => {
   const primaryStats = await getReferralStats(primary.id);
   assert.match(primaryStats.link, /^trade\.blackforrestt\.com\/register\?ref=/);
 
+  // Legacy accounts (no stored brandDomain — created before multi-brand
+  // signups) get the REQUESTING family when the API passes it as fallback.
+  const legacy = await prisma.user.create({ data: { email: `mb-legacy-${suffix}@example.invalid`, accountNo: `lg${suffix}` } });
+  assert.match((await getReferralStats(legacy.id, "agilefgs.com")).link, /^trade\.agilefgs\.com\/register\?ref=/);
+  assert.match((await getReferralStats(legacy.id)).link, /^trade\.blackforrestt\.com\/register\?ref=/);
+  await prisma.user.delete({ where: { id: legacy.id } });
+
   await prisma.user.delete({ where: { id: primary.id } });
   await prisma.user.delete({ where: { id: agile.id } });
 });

@@ -31,6 +31,11 @@ blackforrestt.com {
   import app-site
 }
 
+# www → blackforrestt.com
+www.blackforrestt.com {
+  redir https://blackforrestt.com{uri} permanent
+}
+
 # TRADE_DOMAIN
 trade.blackforrestt.com {
   import app-site
@@ -39,6 +44,11 @@ trade.blackforrestt.com {
 # DOMAIN_2
 agilefgs.com {
   import app-site
+}
+
+# www → agilefgs.com
+www.agilefgs.com {
+  redir https://agilefgs.com{uri} permanent
 }
 
 # TRADE_DOMAIN_2

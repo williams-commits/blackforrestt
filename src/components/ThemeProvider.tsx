@@ -24,10 +24,10 @@ export const COOKIE_KEY = "blckforest-theme";
  * `<html>`; the underlying design tokens are redefined under that class in
  * globals.css, so every screen reskins without per-component work.
  *
- * Storage is dual-layered so the choice persists across the two-domain
- * architecture (apex `blackforrestt.com` + trade subdomain `trade.*`):
- *   1. A cross-subdomain cookie (`domain=.blackforrestt.com`) — readable by
- *      both origins, used by the no-FOUC script before paint.
+ * Storage is dual-layered so the choice persists across each brand family
+ * (apex + its trade subdomain):
+ *   1. A cross-subdomain cookie (domain derived from the CURRENT host, so
+ *      each brand family scopes its own) — used by the no-FOUC script.
  *   2. localStorage — per-origin fast read for the client provider.
  *
  * The no-FOUC inline script in layout.tsx reads the cookie (not localStorage)

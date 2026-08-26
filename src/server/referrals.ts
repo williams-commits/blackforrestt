@@ -11,6 +11,7 @@ import { prisma } from "./db";
 import { postClientEconomicEvent } from "./accountingCommands";
 import { appendAuditEvent } from "./ledger";
 import { resolveUserSettings } from "./userSettings";
+import { tradeHostForDomain } from "../lib/branding";
 
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars (0/O, 1/I/L)
 const CODE_LENGTH = 8;
@@ -225,8 +226,9 @@ export async function trackReferralClick(code: string): Promise<void> {
 
 /** Get referral stats for a user (for the Referrals tab). */
 export async function getReferralStats(userId: string) {
-  const [code, referrals] = await Promise.all([
+  const [code, referrer, referrals] = await Promise.all([
     getOrCreateReferralCode(userId),
+    prisma.user.findUnique({ where: { id: userId }, select: { brandDomain: true } }),
     prisma.referral.findMany({
       where: { referrerId: userId },
       select: {
@@ -250,7 +252,9 @@ export async function getReferralStats(userId: string) {
 
   return {
     code,
-    link: `${process.env.TRADE_SUBDOMAIN || "trade"}.${process.env.BRAND_DOMAIN || "blackforrestt.com"}/register?ref=${code}`,
+    // Referral links stay in the REFERRER'S brand family — an Agile FGS
+    // customer's link points at trade.agilefgs.com, never the primary host.
+    link: `${tradeHostForDomain(referrer?.brandDomain)}/register?ref=${code}`,
     stats: { total, completed, pending, totalEarned },
     referrals: referrals.map((r) => ({
       id: r.id,

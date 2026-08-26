@@ -56,10 +56,22 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   // Per-host branding: the mirror domain (e.g. agilefgs.com) titles and
   // describes itself under its own brand. Canonical/SEO URLs stay on the
-  // primary domain so mirror content consolidates search indexing.
+  // primary domain so mirror content consolidates search indexing — but
+  // og:image must be ABSOLUTE, and resolving it against metadataBase (the
+  // primary) would serve Agile's share card from blackforrestt.com. Build it
+  // on the REQUEST origin instead.
   const brand = await currentBrandProfile();
   const name = brand.name;
-  const siteUrl = `https://${brandDomain()}`;
+  const { headers } = await import("next/headers");
+  const headerList = await headers();
+  const requestHost = (headerList.get("x-forwarded-host") ?? headerList.get("host") ?? "").split(",")[0]!.trim();
+  const requestProto = (headerList.get("x-forwarded-proto") ?? "http").split(",")[0]!.trim() || "http";
+  // Self-canonical per host: every brand family is its own indexable site —
+  // canonical URLs, hreflang alternates, and og:url all resolve against the
+  // REQUEST origin (relative canonicals below follow metadataBase), not the
+  // primary domain.
+  const siteUrl = `${requestProto}://${requestHost}`;
+  const ogImageUrl = new URL(brand.ogImage || "/og.png", siteUrl).toString();
   const locale = await getLocale();
   const ogLocale = LOCALE_OG[locale as keyof typeof LOCALE_OG] ?? LOCALE_OG.en;
   const t = await getTranslations({ namespace: "Metadata", locale });
@@ -90,7 +102,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `${name} — ${t("titleDefault")}`,
       description,
       // Per-brand share image (BRAND_OVERRIDES ogImage), primary default.
-      images: [{ url: brand.ogImage || "/og.png", width: 1200, height: 630, alt: `${name} — multi-asset trading platform` }],
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: `${name} — multi-asset trading platform` }],
     },
     twitter: {
       card: "summary_large_image",
@@ -110,6 +122,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const brand = await currentBrandProfile();
+  const { headers } = await import("next/headers");
+  const headerList = await headers();
+  const layoutHost = (headerList.get("x-forwarded-host") ?? headerList.get("host") ?? "").split(",")[0]!.trim();
+  const layoutProto = (headerList.get("x-forwarded-proto") ?? "http").split(",")[0]!.trim() || "http";
+  const siteUrl = `${layoutProto}://${layoutHost}`;
   // Per-domain theme: a brand with an accentColor re-skins every --color-brand
   // utility (buttons, links, badges, focus rings) for its host only. Soft
   // tints and the dim-mode variant are derived with color-mix so one hex
@@ -120,7 +137,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     ? `:root{--color-brand:${brandAccent};--color-brand-soft:color-mix(in srgb, ${brandAccent} 14%, #fff)}`
       + `html.dim{--color-brand:color-mix(in srgb, ${brandAccent} 88%, #fff);--color-brand-soft:color-mix(in srgb, ${brandAccent} 24%, #000)}`
     : null;
-  const siteUrl = `https://${brandDomain()}`;
   const locale = await getLocale();
   const htmlLang = LOCALE_BCP47[locale as keyof typeof LOCALE_BCP47] ?? "en";
   const isRTL = RTL_LOCALES.has(locale);

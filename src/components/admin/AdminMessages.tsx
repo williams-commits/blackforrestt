@@ -12,6 +12,7 @@ interface ThreadRow {
   email: string | null;
   name: string | null;
   accountNo: string | null;
+  brandDomain?: string | null;
   lastMessageAt: string | null;
   lastMessage: string;
   lastFromAdmin: boolean;
@@ -208,7 +209,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
   const visibleThreads = threads.filter((thread) => {
     if (unreadOnly && thread.unread === 0) return false;
     if (!needle) return true;
-    return [thread.name, thread.email, thread.accountNo, thread.lastMessage]
+    return [thread.name, thread.email, thread.accountNo, thread.brandDomain ?? "", thread.lastMessage]
       .some((field) => field?.toLowerCase().includes(needle));
   });
 
@@ -271,7 +272,10 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                   <span className={`truncate text-xs ${threadRow.unread > 0 ? "font-semibold" : "font-medium"}`}>{threadRow.name ?? "Unnamed"}</span>
                   <span className="shrink-0 text-[9px] text-text-faint tnum">{threadRow.lastMessageAt ? fmtDateTime(threadRow.lastMessageAt) : ""}</span>
                 </div>
-                <div className="truncate text-[10px] text-text-faint">{threadRow.email ?? "—"} · #{threadRow.accountNo ?? "—"}</div>
+                <div className="truncate text-[10px] text-text-faint">
+                  {threadRow.email ?? "—"} · #{threadRow.accountNo ?? "—"}
+                  {threadRow.brandDomain && <span className="ml-1 rounded bg-brand-soft px-1 py-px text-[8px] font-semibold text-brand">{threadRow.brandDomain}</span>}
+                </div>
                 <div className="mt-1 flex items-center gap-1.5">
                   <span
                     className={`shrink-0 rounded px-1 py-px text-[8px] font-bold uppercase tracking-wide ${

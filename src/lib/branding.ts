@@ -107,6 +107,13 @@ export interface BrandProfile {
   heroBadge: string;
   /** Landing hero subtitle override (empty = translated default). */
   heroSubtitle: string;
+  /**
+   * Per-brand crypto deposit wallets, env format
+   * ("asset:network:address;…" — same as DEPOSIT_WALLET_ADDRESSES). Empty =
+   * inherit the global list. Layered global → BRAND → group → per-user, so
+   * each brand family's customers pay to that brand's wallets.
+   */
+  depositWallets: string;
 }
 
 /** SVG glyph rendered by the Logo component and the generated favicon. */
@@ -139,6 +146,7 @@ interface BrandOverride {
   glyph?: BrandGlyph | null;
   heroBadge?: string;
   heroSubtitle?: string;
+  depositWallets?: string;
 }
 
 /**
@@ -195,7 +203,44 @@ export function brandProfileForDomain(domain?: string | null): BrandProfile {
     glyph: override.glyph ?? null,
     heroBadge: override.heroBadge ?? "",
     heroSubtitle: override.heroSubtitle ?? "",
+    depositWallets: override.depositWallets ?? "",
   };
+}
+
+/** "tradeEnabled": true for a domain in BRAND_OVERRIDES (invalid JSON = no). */
+function familyTradeEnabled(domain: string): boolean {
+  const raw = (process.env.BRAND_OVERRIDES || "").trim();
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, { tradeEnabled?: boolean }>;
+    return parsed[domain]?.tradeEnabled === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The trade host serving a brand family's authenticated app
+ * (e.g. "trade.agilefgs.com"). Resolution mirrors the middleware: the
+ * DOMAIN_N/TRADE_DOMAIN_N deployment pairs first, then "tradeEnabled" in
+ * BRAND_OVERRIDES, else the canonical trade host. Keep in sync with
+ * familyTradeHost() in src/middleware.ts.
+ */
+export function tradeHostForDomain(domain?: string | null): string {
+  const family = domain?.trim().toLowerCase() || brandDomains()[0];
+  const pairs: Array<[string | undefined, string | undefined]> = [
+    [process.env.DOMAIN, process.env.TRADE_DOMAIN],
+    [process.env.DOMAIN_2, process.env.TRADE_DOMAIN_2],
+    [process.env.DOMAIN_3, process.env.TRADE_DOMAIN_3],
+  ];
+  for (const [apexVar, tradeVar] of pairs) {
+    const apex = (apexVar ?? "").trim().toLowerCase();
+    const trade = (tradeVar ?? "").trim().toLowerCase();
+    if (apex === family && trade) return trade;
+  }
+  const sub = (process.env.TRADE_SUBDOMAIN || "trade").trim();
+  if (familyTradeEnabled(family)) return `${sub}.${family}`;
+  return `${sub}.${brandDomains()[0]}`;
 }
 
 /** Valid 3–8 digit hex color (with #), or null. Guards the CSS injection. */

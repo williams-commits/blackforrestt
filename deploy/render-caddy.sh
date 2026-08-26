@@ -54,6 +54,11 @@ SNIPPET
     value="$(env_value "$var")"
     if [[ -n "$value" ]]; then
       printf '# %s\n%s {\n  import app-site\n}\n\n' "$var" "$value"
+      # www → apex canonical redirect for apex domains (subdomains skip it:
+      # www.trade.* is never advertised). Caddy provisions www TLS itself.
+      if [[ "$value" != *.*.* ]]; then
+        printf '# www → %s\nwww.%s {\n  redir https://%s{uri} permanent\n}\n\n' "$value" "$value" "$value"
+      fi
     fi
   done
 } > "$tmp"

@@ -15,6 +15,7 @@
  */
 
 import { prisma } from "./db";
+import { brandProfileForDomain } from "../lib/branding";
 import { PAYMENT_METHODS, disabledPaymentMethods } from "./paymentMethodDetails";
 import { validateDepositAddress } from "@/lib/paymentNetworks";
 
@@ -273,11 +274,12 @@ export async function resolveUserSettings(userId: string): Promise<ResolvedSetti
   // Periodic sweep to prevent unbounded growth (every 50 lookups).
   if (++sweepCounter >= 50) { sweepCounter = 0; sweepCache(); }
 
-  // Load the user's profile + primary group in one query.
+  // Load the user's profile + primary group + brand family in one query.
   const profile = await prisma.userProfile.findUnique({
     where: { userId },
     include: {
       group: { select: { name: true, color: true, settings: true } },
+      user: { select: { brandDomain: true } },
     },
   });
 
@@ -306,10 +308,23 @@ export async function resolveUserSettings(userId: string): Promise<ResolvedSetti
 
   const profileSettings = (profile?.settings as UserSettingsConfig) ?? null;
 
-  // Merge: global → group → profile
+  // Brand layer — users signed up under a mirror family (User.brandDomain)
+  // get that brand's deposit wallets instead of the global list, so each
+  // storefront's customers pay into that brand's addresses. Group and
+  // per-user admin overrides still win over the brand layer.
+  const brandDomain = profile?.user.brandDomain
+    ?? (await prisma.user.findUnique({ where: { id: userId }, select: { brandDomain: true } }))?.brandDomain
+    ?? null;
+  const brandWallets = brandProfileForDomain(brandDomain).depositWallets;
+  const brandLayer = brandWallets
+    ? ({ deposits: { walletAddresses: parseEnvWalletAddresses(brandWallets) } } as UserSettingsConfig)
+    : null;
+
+  // Merge: global → brand → group → profile
   let resolved = getGlobalDefaults();
   resolved.groupName = groupName;
   resolved.groupColor = groupColor;
+  resolved = applyLayer(resolved, brandLayer);
   resolved = applyLayer(resolved, groupSettings);
   resolved = applyLayer(resolved, profileSettings);
 

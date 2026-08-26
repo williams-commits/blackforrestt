@@ -7,11 +7,11 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const isProduction = process.env.NODE_ENV === "production";
 
-// The app uses a two-domain architecture: the apex (e.g. blackforrestt.com)
-// serves marketing, and the trade subdomain (e.g. trade.blackforrestt.com)
-// hosts the auth API + terminal. Auth.js's client SessionProvider fetches
-// /api/auth/session from the trade subdomain, which is cross-origin relative
-// to the apex. CSP connect-src must allow both origins.
+// CSP connect-src origins: 'self' covers every brand family's own host
+// (each apex/trade host is same-origin with its own pages), and the explicit
+// primary origins below cover historical cross-domain fetch patterns. These
+// are baked at BUILD time from BRAND_DOMAIN — changing domains requires a
+// rebuild (brand UI/emails, by contrast, are runtime-env driven).
 const brandDomain = process.env.BRAND_DOMAIN || "blackforrestt.com";
 const tradeSubdomain = process.env.TRADE_SUBDOMAIN || "trade";
 const tradeOrigin = `https://${tradeSubdomain}.${brandDomain}`;

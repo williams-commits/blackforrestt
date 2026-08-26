@@ -309,6 +309,8 @@ function OverviewPanel() {
 
 interface UserRow {
   id: string; email: string | null; name: string | null; accountNo: string | null; verified: boolean;
+  /** Brand family the user signed up under (null = primary/legacy). */
+  brandDomain: string | null;
   lockedUntil: string | null; mfaEnabledAt: string | null; createdAt: string;
   isAdmin: boolean; suspendedAt: string | null; blockedAt: string | null; deletedAt: string | null;
   /** Live presence — user has an open WebSocket right now. */
@@ -343,7 +345,8 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat }: { canAdjustBala
     return rows.filter((user) =>
       (user.email ?? "").toLowerCase().includes(needle) ||
       (user.name ?? "").toLowerCase().includes(needle) ||
-      (user.accountNo ?? "").includes(needle),
+      (user.accountNo ?? "").includes(needle) ||
+      (user.brandDomain ?? "").toLowerCase().includes(needle),
     );
   }, [resource.data, needle]);
   const searchPending = search.trim() !== debouncedSearch;
@@ -485,7 +488,12 @@ function PaginatedUsers({
                     />
                     <span className="font-medium">{user.name ?? "Unnamed"}</span>
                   </div>
-                  <div className="text-text-faint">{user.email ?? "—"} · #{user.accountNo ?? "—"}</div>
+                  <div className="text-text-faint">
+                    {user.email ?? "—"} · #{user.accountNo ?? "—"}
+                    {user.brandDomain && (
+                      <span className="ml-1.5 rounded bg-brand-soft px-1 py-0.5 text-[9px] font-semibold text-brand">{user.brandDomain}</span>
+                    )}
+                  </div>
                 </td>
                 <td className="p-2">{user.kyc?.status ?? "NOT SUBMITTED"}<div className={user.verified ? "text-up" : "text-text-faint"}>{user.verified ? "Verified" : "Unverified"}</div></td>
                 <td className="p-2">MFA {user.mfaEnabledAt ? "enabled" : "off"}<div className={user.lockedUntil ? "text-down" : "text-text-faint"}>{user.lockedUntil ? "Locked" : `${user._count.securitySessions} session(s)`}</div></td>
@@ -1214,7 +1222,7 @@ function ExecutionPositionCard({
   );
 }
 
-interface SupportCase { id: string; reference: string; userId: string | null; subject: string; category: string; priority: string; status: string; assignedToId: string | null; description: string; createdAt: string }
+interface SupportCase { id: string; reference: string; userId: string | null; subject: string; category: string; priority: string; status: string; assignedToId: string | null; description: string; createdAt: string; brandDomain?: string | null }
 function SupportPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<{ cases: SupportCase[] }>("/api/admin/support?limit=150");
   const [busy, setBusy] = useState<string | null>(null);
@@ -1252,7 +1260,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
     setBusy(id); setError(null);
     try { await requestJson(`/api/admin/support/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status, resolutionNote }) }); await resource.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update case."); } finally { setBusy(null); }
   }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex justify-between"><SectionHeader title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} />{canManage && <Button loading={busy === "create"} onClick={() => void createCase()}>New case</Button>}</div>{error && <p role="alert" className="mb-3 rounded bg-down/10 p-2 text-xs text-down">{error}</p>}<div className="space-y-2">{resource.data.cases.map((item) => <article key={item.id} className="rounded-lg border border-border bg-canvas p-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="text-xs text-text-faint">{item.reference} · {item.priority} · {item.category}</div><h3 className="mt-1 text-sm font-medium">{item.subject}</h3><p className="mt-1 max-w-3xl text-xs text-text-muted">{item.description}</p></div><div className="text-right"><span className="text-xs font-medium">{item.status}</span>{canManage && item.status !== "RESOLVED" && item.status !== "CLOSED" && <div className="mt-2 flex gap-2"><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "IN_PROGRESS")} className="rounded border border-border px-2 py-1 text-xs">Assign to me</button><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "RESOLVED")} className="rounded bg-brand px-2 py-1 text-xs text-white">Resolve</button></div>}</div></div></article>)}{resource.data.cases.length === 0 && <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">No support cases.</div>}</div>{commandDialog}</div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex justify-between"><SectionHeader title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} />{canManage && <Button loading={busy === "create"} onClick={() => void createCase()}>New case</Button>}</div>{error && <p role="alert" className="mb-3 rounded bg-down/10 p-2 text-xs text-down">{error}</p>}<div className="space-y-2">{resource.data.cases.map((item) => <article key={item.id} className="rounded-lg border border-border bg-canvas p-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="text-xs text-text-faint">{item.reference} · {item.priority} · {item.category}{item.brandDomain && <span className="ml-1.5 rounded bg-brand-soft px-1 py-px text-[9px] font-semibold text-brand">{item.brandDomain}</span>}</div><h3 className="mt-1 text-sm font-medium">{item.subject}</h3><p className="mt-1 max-w-3xl text-xs text-text-muted">{item.description}</p></div><div className="text-right"><span className="text-xs font-medium">{item.status}</span>{canManage && item.status !== "RESOLVED" && item.status !== "CLOSED" && <div className="mt-2 flex gap-2"><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "IN_PROGRESS")} className="rounded border border-border px-2 py-1 text-xs">Assign to me</button><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "RESOLVED")} className="rounded bg-brand px-2 py-1 text-xs text-white">Resolve</button></div>}</div></div></article>)}{resource.data.cases.length === 0 && <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">No support cases.</div>}</div>{commandDialog}</div>}</ModuleState>;
 }
 
 interface InstrumentRow extends Record<string, unknown> { symbol: string; name: string; category: string; active: boolean; marginPerLot: string; commissionPerLot: string; swapLongPips: string; swapShortPips: string; feedSymbol: string | null }

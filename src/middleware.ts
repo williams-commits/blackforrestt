@@ -133,6 +133,13 @@ function requestHost(req: Request): string {
   return (req.headers.get("host") ?? "").toLowerCase();
 }
 
+/** Host WITHOUT the port — what domain routing matches against. Kept separate
+ *  from requestHost() because publicOrigin() builds redirect URLs that must
+ *  preserve the port (local dev serves on :3000). */
+function bareHost(req: Request): string {
+  return requestHost(req).replace(/:\d+$/, "");
+}
+
 /**
  * The public origin of the incoming request, from proxy headers.
  *
@@ -170,7 +177,7 @@ function domainRedirect(req: Request): NextResponse | null {
   const tradeHosts = new Set(domains.map((domain) => `${tradeSubdomain}.${domain}`));
   const tradeSub = tradeHosts.values().next().value as string; // canonical trade host
 
-  const host = requestHost(req);
+  const host = bareHost(req);
   // Strip a leading "www." so www.blackforrestt.com is treated as the apex.
   const apex = host.startsWith("www.") ? host.slice(4) : host;
 
@@ -217,7 +224,8 @@ function domainRedirect(req: Request): NextResponse | null {
 
 /** The configured brand domain that owns this host (apex or subdomain of it),
  *  or null for unknown hosts (e.g. localhost or an unconfigured alias). */
-function cookieDomainForHost(host: string): string | null {
+function cookieDomainForHost(hostWithPort: string): string | null {
+  const host = hostWithPort.replace(/:\d+$/, "");
   const stripped = host.startsWith("www.") ? host.slice(4) : host;
   for (const domain of brandDomainList()) {
     if (stripped === domain || stripped.endsWith(`.${domain}`)) return domain;
@@ -339,7 +347,7 @@ export default auth((req) => {
   // has no locale-prefixed URLs — there the cookie alone decides rendering).
   const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
   const tradeSubdomainLabel = (process.env.TRADE_SUBDOMAIN ?? "trade").trim();
-  const onTradeHost = brandDomainList().some((domain) => requestHost(req) === `${tradeSubdomainLabel}.${domain}`);
+  const onTradeHost = brandDomainList().some((domain) => bareHost(req) === `${tradeSubdomainLabel}.${domain}`);
   if (
     cookieLocale &&
     (LOCALES as readonly string[]).includes(cookieLocale) &&

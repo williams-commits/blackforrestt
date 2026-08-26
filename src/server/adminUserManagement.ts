@@ -444,6 +444,8 @@ export interface AdminThreadSummary {
   email: string | null;
   name: string | null;
   accountNo: string | null;
+  /** Brand family the customer signed up under (null = primary). */
+  brandDomain: string | null;
   lastMessageAt: string | null;
   lastMessage: string;
   lastFromAdmin: boolean;
@@ -464,7 +466,7 @@ export async function adminMessageThreads(): Promise<{ threads: AdminThreadSumma
       ],
     },
     select: {
-      id: true, email: true, name: true, accountNo: true,
+      id: true, email: true, name: true, accountNo: true, brandDomain: true,
       // Latest support-thread message on each side — non-admin correspondence
       // (off-band user-to-user messages) never leaks into the shared inbox.
       sentMessages: {
@@ -500,6 +502,7 @@ export async function adminMessageThreads(): Promise<{ threads: AdminThreadSumma
       email: customer.email,
       name: customer.name,
       accountNo: customer.accountNo,
+      brandDomain: customer.brandDomain,
       lastMessageAt: latest?.createdAt.toISOString() ?? null,
       lastMessage: latest?.body?.slice(0, 120) ?? "",
       lastFromAdmin,

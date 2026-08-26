@@ -38,6 +38,7 @@ export async function GET(request: Request) {
           accountNo: true,
           verified: true,
           isAdmin: true,
+          brandDomain: true,
           suspendedAt: true,
           blockedAt: true,
           deletedAt: true,

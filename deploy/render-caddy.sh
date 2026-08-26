@@ -20,6 +20,13 @@ email="$(env_value CADDY_EMAIL)"
 [[ -n "$email" ]] || { echo "CADDY_EMAIL is not set in $ENV_FILE" >&2; exit 1; }
 
 out="$ROOT/deploy/Caddyfile.rendered"
+# Docker bind-mounts turn a missing file into an empty DIRECTORY at this
+# path (raw `compose up` before the first render) — caddy then fails to read
+# it. Remove that trap before writing.
+if [[ -d "$out" ]]; then
+  echo "Removing stale directory at $out (Docker bind-mount artifact)…" >&2
+  rm -rf "$out"
+fi
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
 

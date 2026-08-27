@@ -37,11 +37,13 @@ export async function GET(req: Request) {
     const isBackgroundPoll = new URL(req.url).searchParams.get("poll") === "1";
     const viewer = await prisma.user.findUnique({
       where: { id: userId },
-      select: { isAdmin: true },
+      // Canonical operator check (isAdmin OR active role) — a roles-only
+      // admin previously fell into the CUSTOMER chat view here.
+      select: { isAdmin: true, adminRoles: { where: { revokedAt: null }, select: { role: true } } },
     });
     if (!viewer) return NextResponse.json({ error: "Account not found." }, { status: 404 });
 
-    if (viewer.isAdmin) {
+    if (viewer.isAdmin || viewer.adminRoles.length > 0) {
       let threads: Awaited<ReturnType<typeof adminMessageThreads>> | null = null;
       try {
         await requireAdminContext("SUPPORT_READ");
@@ -80,9 +82,9 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "A message body of 1–4000 characters is required." }, { status: 400 });
     }
-    const sender = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
+    const sender = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true, adminRoles: { where: { revokedAt: null }, select: { role: true } } } });
     if (!sender) return NextResponse.json({ error: "Account not found." }, { status: 404 });
-    if (sender.isAdmin) {
+    if (sender.isAdmin || sender.adminRoles.length > 0) {
       return NextResponse.json(
         { error: "Operators reply to customers from the Operations console." },
         { status: 400 },

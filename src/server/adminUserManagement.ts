@@ -337,8 +337,25 @@ const MESSAGE_SELECT = {
   body: true,
   readAt: true,
   createdAt: true,
-  sender: { select: { name: true, email: true, isAdmin: true } },
+  sender: { select: { name: true, email: true, isAdmin: true, adminRoles: { where: { revokedAt: null }, select: { role: true } } } },
 } as const;
+
+/**
+ * Canonical "operator" definition — MUST match requireAdminContext: the
+ * legacy isAdmin flag OR an active AdminRoleAssignment. A roles-only admin
+ * (isAdmin=false) runs the console but was invisible to every isAdmin-only
+ * chat query, which broke customer messaging on deployments whose admins
+ * were provisioned via roles ("No support operator available").
+ */
+const OPERATOR_OR = [{ isAdmin: true }, { adminRoles: { some: { revokedAt: null } } }];
+/** Any operator, alive or not — for HISTORY queries (old messages stay). */
+const OPERATOR_FILTER = { OR: OPERATOR_OR };
+/** An operator eligible to receive NEW conversations / count as active. */
+const ACTIVE_OPERATOR_FILTER = { OR: OPERATOR_OR, deletedAt: null, suspendedAt: null, blockedAt: null };
+
+function isOperatorRow(user: { isAdmin: boolean; adminRoles: unknown[] }): boolean {
+  return user.isAdmin || user.adminRoles.length > 0;
+}
 
 type MessageRow = Prisma.DirectMessageGetPayload<{ select: typeof MESSAGE_SELECT }>;
 
@@ -347,7 +364,7 @@ function serializeMessage(row: MessageRow): SupportMessageView {
     id: row.id,
     senderId: row.senderId,
     senderName: row.sender.name ?? row.sender.email ?? "Unknown user",
-    senderIsAdmin: row.sender.isAdmin,
+    senderIsAdmin: isOperatorRow(row.sender),
     recipientId: row.recipientId,
     body: row.body,
     readAt: row.readAt?.toISOString() ?? null,
@@ -371,8 +388,8 @@ export async function getUserMessageThread(input: { userId: string; limit?: numb
   const rows = await prisma.directMessage.findMany({
     where: {
       OR: [
-        { senderId: input.userId, recipient: { isAdmin: true } },
-        { sender: { isAdmin: true }, recipientId: input.userId },
+        { senderId: input.userId, recipient: OPERATOR_FILTER },
+        { sender: OPERATOR_FILTER, recipientId: input.userId },
       ],
     },
     orderBy: { createdAt: "desc" },
@@ -381,7 +398,7 @@ export async function getUserMessageThread(input: { userId: string; limit?: numb
   });
   const hasMore = rows.length > limit;
   const messages = (hasMore ? rows.slice(0, limit) : rows).reverse();
-  const unreadIds = messages.filter((m) => m.recipientId === input.userId && m.sender.isAdmin && !m.readAt).map((m) => m.id);
+  const unreadIds = messages.filter((m) => m.recipientId === input.userId && isOperatorRow(m.sender) && !m.readAt).map((m) => m.id);
   let readNow: Date | null = null;
   // Read-marking is EXPLICIT (markRead !== false): background polls fetch the
   // thread without consuming the unread state, so the Messages badge survives
@@ -400,14 +417,16 @@ export async function getUserMessageThread(input: { userId: string; limit?: numb
  *  the admin who last replied in their thread (conversation continuity), or
  *  the longest-tenured active admin for a fresh thread. Two indexed queries. */
 export async function resolveSupportRecipient(userId: string): Promise<string | null> {
+  // An admin qualifies to receive customer chat only while ACTIVE — deleted,
+  // suspended, or blocked operators must not be routed new conversations.
   const lastAdminReply = await prisma.directMessage.findFirst({
-    where: { recipientId: userId, sender: { isAdmin: true } },
+    where: { recipientId: userId, sender: ACTIVE_OPERATOR_FILTER },
     orderBy: { createdAt: "desc" },
     select: { senderId: true },
   });
   if (lastAdminReply) return lastAdminReply.senderId;
   const fallback = await prisma.user.findFirst({
-    where: { isAdmin: true, deletedAt: null },
+    where: ACTIVE_OPERATOR_FILTER,
     orderBy: { createdAt: "asc" },
     select: { id: true },
   });
@@ -427,15 +446,15 @@ export async function sendDirectMessage(input: {
   const created = await prisma.$transaction(async (tx) => {
     const sender = await tx.user.findUnique({
       where: { id: input.senderId },
-      select: { id: true, isAdmin: true, name: true, email: true },
+      select: { id: true, isAdmin: true, name: true, email: true, adminRoles: { where: { revokedAt: null }, select: { role: true } } },
     });
     if (!sender) throw new AdminUserManagementError("Sender not found.", 404);
     const recipient = await tx.user.findUnique({
       where: { id: input.recipientId },
-      select: { id: true, isAdmin: true, name: true, email: true },
+      select: { id: true, isAdmin: true, name: true, email: true, adminRoles: { where: { revokedAt: null }, select: { role: true } } },
     });
     if (!recipient) throw new AdminUserManagementError("Recipient not found.", 404);
-    if (sender.isAdmin && recipient.isAdmin) {
+    if (isOperatorRow(sender) && isOperatorRow(recipient)) {
       throw new AdminUserManagementError("Operator-to-operator messages are not supported.");
     }
     const message = await tx.directMessage.create({
@@ -444,7 +463,7 @@ export async function sendDirectMessage(input: {
     });
     if (input.notify) {
       await tx.notification.create({
-        data: sender.isAdmin
+        data: isOperatorRow(sender)
           ? {
               userId: input.recipientId,
               type: "ADMIN_CHAT",
@@ -488,8 +507,8 @@ export async function adminMessageThreads(): Promise<{ threads: AdminThreadSumma
   const customers = await prisma.user.findMany({
     where: {
       OR: [
-        { sentMessages: { some: { recipient: { isAdmin: true } } } },
-        { receivedMessages: { some: { sender: { isAdmin: true } } } },
+        { sentMessages: { some: { recipient: OPERATOR_FILTER } } },
+        { receivedMessages: { some: { sender: OPERATOR_FILTER } } },
       ],
     },
     select: {
@@ -497,13 +516,13 @@ export async function adminMessageThreads(): Promise<{ threads: AdminThreadSumma
       // Latest support-thread message on each side — non-admin correspondence
       // (off-band user-to-user messages) never leaks into the shared inbox.
       sentMessages: {
-        where: { recipient: { isAdmin: true } },
+        where: { recipient: OPERATOR_FILTER },
         orderBy: { createdAt: "desc" },
         take: 1,
         select: { createdAt: true, body: true, senderId: true },
       },
       receivedMessages: {
-        where: { sender: { isAdmin: true } },
+        where: { sender: OPERATOR_FILTER },
         orderBy: { createdAt: "desc" },
         take: 1,
         select: { createdAt: true, body: true, senderId: true },
@@ -513,11 +532,11 @@ export async function adminMessageThreads(): Promise<{ threads: AdminThreadSumma
   // One grouped query for unread customer→admin messages across all threads.
   const unreadByCustomer = await prisma.directMessage.groupBy({
     by: ["senderId"],
-    where: { readAt: null, sender: { isAdmin: false }, recipient: { isAdmin: true } },
+    where: { readAt: null, sender: { isAdmin: false, adminRoles: { none: { revokedAt: null } } }, recipient: OPERATOR_FILTER },
     _count: { _all: true },
   });
   const unreadMap = new Map(unreadByCustomer.map((row) => [row.senderId, row._count._all]));
-  const adminUsers = await prisma.user.findMany({ where: { isAdmin: true }, select: { id: true } });
+  const adminUsers = await prisma.user.findMany({ where: OPERATOR_FILTER, select: { id: true } });
   const adminIds = new Set(adminUsers.map((admin) => admin.id));
   const threads = customers.map((customer): AdminThreadSummary => {
     const latest = [customer.sentMessages[0], customer.receivedMessages[0]]
@@ -591,13 +610,13 @@ export async function adminGetThread(input: { adminId: string; userId: string; l
  *  moderation action). Writes an audit event recording what was removed —
  *  message bodies are deleted, but the action itself stays accountable. */
 export async function adminDeleteThread(input: { actorId: string; userId: string }): Promise<{ deleted: number }> {
-  const customer = await prisma.user.findUnique({ where: { id: input.userId }, select: { id: true, isAdmin: true } });
+  const customer = await prisma.user.findUnique({ where: { id: input.userId }, select: { id: true, isAdmin: true, adminRoles: { where: { revokedAt: null }, select: { role: true } } } });
   if (!customer) throw new AdminUserManagementError("User not found.", 404);
-  if (customer.isAdmin) throw new AdminUserManagementError("Operator conversations cannot be deleted.", 400);
+  if (isOperatorRow(customer)) throw new AdminUserManagementError("Operator conversations cannot be deleted.", 400);
   const where = {
     OR: [
-      { senderId: input.userId, recipient: { isAdmin: true } },
-      { sender: { isAdmin: true }, recipientId: input.userId },
+      { senderId: input.userId, recipient: OPERATOR_FILTER },
+      { sender: OPERATOR_FILTER, recipientId: input.userId },
     ],
   };
   return prisma.$transaction(async (tx) => {
@@ -615,6 +634,6 @@ export async function adminDeleteThread(input: { actorId: string; userId: string
 
 export async function countUnreadDirectMessages(userId: string): Promise<number> {
   return prisma.directMessage.count({
-    where: { recipientId: userId, sender: { isAdmin: true }, readAt: null },
+    where: { recipientId: userId, sender: OPERATOR_FILTER, readAt: null },
   });
 }

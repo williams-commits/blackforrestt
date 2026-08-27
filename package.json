@@ -20,6 +20,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "node --env-file-if-exists=.env --import tsx prisma/seed.ts",
     "db:studio": "prisma studio",
+    "admin:promote": "node --env-file-if-exists=.env --import tsx scripts/promote-admin.ts",
     "auth:doctor": "node --env-file-if-exists=.env scripts/auth/doctor.mjs",
     "test:engine": "node --import tsx --test tests/positionEngine.test.ts",
     "test:accounting": "node --import tsx --test tests/accounting.integration.test.ts",

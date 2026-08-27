@@ -118,7 +118,14 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
     const timer = window.setInterval(() => {
       if (!document.hidden && activeUser) void loadThread(activeUser.id, limit).catch(() => undefined);
     }, 10_000);
-    return () => window.clearInterval(timer);
+    // Focus refresh keeps read receipts ("✓ Read") live when the operator
+    // returns to the window after the customer reads the thread.
+    const onFocus = () => { if (activeUser) void loadThread(activeUser.id, limit).catch(() => undefined); };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [activeUser, limit, loadThread]);
 
   const messageCount = thread?.messages.length ?? 0;

@@ -68,14 +68,19 @@ export function MessagesTab() {
 
   useEffect(() => {
     void load();
-    // Auto-sync: poll while visible, and refresh immediately when the shell's
-    // badge watcher detects new activity (a new message arriving elsewhere).
-    const timer = window.setInterval(() => { if (!document.hidden) void load({ background: true }); }, 15_000);
+    // Auto-sync: poll while visible (8s keeps read receipts feeling live —
+    // "✓ Sent" flips to "✓ Read" shortly after the other side opens the
+    // chat), refresh on window focus, and reload immediately when the
+    // shell's badge watcher detects new activity.
+    const timer = window.setInterval(() => { if (!document.hidden) void load({ background: true }); }, 8_000);
     const onCountsChanged = () => void load({ background: true });
+    const onFocus = () => void load({ background: true });
     window.addEventListener("blckforest:counts-changed", onCountsChanged);
+    window.addEventListener("focus", onFocus);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("blckforest:counts-changed", onCountsChanged);
+      window.removeEventListener("focus", onFocus);
     };
   }, [load]);
 
@@ -171,14 +176,14 @@ export function MessagesTab() {
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
-            if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && draft.trim() && !sending) {
+            if (event.key === "Enter" && !event.shiftKey && draft.trim() && !sending) {
               event.preventDefault();
               void send(event as unknown as React.FormEvent<HTMLFormElement>);
             }
           }}
           rows={2}
           maxLength={4000}
-          placeholder="Type a message…"
+          placeholder="Type a message… (Enter to send, Shift+Enter for a new line)"
           aria-label="Message body"
           className="flex-1 resize-none rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
         />

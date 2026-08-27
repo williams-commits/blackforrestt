@@ -135,7 +135,12 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
           <li key={item.id}>
           <button
             type="button"
-            onClick={() => setSelected(item)}
+            onClick={() => {
+              // Opening the detail modal marks the notification read — the
+              // user has seen it; no second click required.
+              if (!item.readAt) void markRead(item.id);
+              setSelected(item.readAt ? item : { ...item, readAt: new Date().toISOString() });
+            }}
             className={`w-full rounded-lg border p-3 text-left transition hover:border-brand/50 ${item.readAt ? "border-border bg-canvas" : "border-brand/40 bg-brand-soft/30"}`}
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -181,15 +186,6 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
               {(selected.type === "ADMIN_CHAT" || selected.type === "CUSTOMER_MESSAGE") && onOpenMessages && (
                 <Button type="button" variant="buy" onClick={() => { setSelected(null); onOpenMessages(); }}>
                   Open conversation
-                </Button>
-              )}
-              {!selected.readAt && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => { void markRead(selected.id); setSelected({ ...selected, readAt: new Date().toISOString() }); }}
-                >
-                  Mark as read
                 </Button>
               )}
               <Button type="button" variant="ghost" onClick={() => setSelected(null)}>Close</Button>

@@ -22,7 +22,7 @@ interface SupportCase {
 const STATUS_STYLES: Record<string, string> = {
   OPEN: "bg-brand-soft text-brand",
   IN_PROGRESS: "bg-brand/15 text-brand",
-  WAITING_CUSTOMER: "bg-panel-3 text-text-muted",
+  WAITING_CUSTOMER: "bg-up/10 text-up",
   RESOLVED: "bg-up/15 text-up",
   CLOSED: "bg-panel-2 text-text-faint",
 };
@@ -168,7 +168,13 @@ export function SupportTab() {
           <p className="text-sm text-text-muted">You haven&apos;t opened any support cases yet.</p>
         ) : (
           <ul className="space-y-3">
-            {cases.map((c) => (
+            {[...cases]
+              // Active cases first (most recent), then resolved/closed history.
+              .sort((a, b) => {
+                const rank = (s: string) => (s === "RESOLVED" || s === "CLOSED" ? 1 : 0);
+                return rank(a.status) - rank(b.status) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+              })
+              .map((c) => (
               <li key={c.id} className="rounded-lg border border-border p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
@@ -177,14 +183,17 @@ export function SupportTab() {
                       {STATUS_LABELS[c.status] ?? c.status}
                     </span>
                   </div>
-                  <time className="text-xs text-text-faint">{new Date(c.createdAt).toLocaleDateString()}</time>
+                  <time className="text-xs text-text-faint" dateTime={c.createdAt}>{new Date(c.createdAt).toLocaleDateString()}</time>
                 </div>
                 <p className="mt-2 text-sm font-medium">{c.subject}</p>
                 <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-text-muted">{c.description}</p>
                 {c.resolutionNote && (
-                  <p className="mt-2 rounded bg-panel px-3 py-2 text-xs text-text">
-                    <strong>Resolution:</strong> {c.resolutionNote}
+                  <p className="mt-2 rounded border border-up/25 bg-up/5 px-3 py-2 text-xs text-text">
+                    <strong className="text-up">✓ Resolved:</strong> {c.resolutionNote}
                   </p>
+                )}
+                {c.status === "WAITING_CUSTOMER" && (
+                  <p className="mt-2 text-[11px] font-medium text-up">Awaiting your response — reply via chat or update this case.</p>
                 )}
               </li>
             ))}

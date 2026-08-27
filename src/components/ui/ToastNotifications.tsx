@@ -81,7 +81,10 @@ export function ToastNotifications() {
       const message = (event as CustomEvent<ServerMessage>).detail;
       const isLedgerMovement = message?.type === "account" && message.reason === "ledger";
       const isPositionEvent = message?.type === "position";
-      if (isLedgerMovement || isPositionEvent) void load();
+      // Activity pushes mean a notification/message just landed — show its
+      // toast immediately instead of waiting for the 12s poll.
+      const isActivity = message?.type === "activity";
+      if (isLedgerMovement || isPositionEvent || isActivity) void load();
     };
     window.addEventListener("blckforest:realtime", handleRealtime);
     return () => {

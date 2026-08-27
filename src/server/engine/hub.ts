@@ -41,6 +41,7 @@ import {
 } from "./positionEngine";
 import type {
   AccountMetricsView,
+  ActivityBadgeCounts,
   Candle,
   CandleInterval,
   InstrumentCategory,
@@ -123,7 +124,8 @@ export type HubEmission =
   | { kind: "candle"; symbol: string; interval: CandleInterval; candle: Candle }
   | { kind: "position"; userId: string; position: PositionView }
   | { kind: "account"; userId: string; account: AccountMetricsView; reason?: "ledger" }
-  | { kind: "instruments"; instruments: InstrumentView[] };
+  | { kind: "instruments"; instruments: InstrumentView[] }
+  | { kind: "activity"; userId: string; counts: ActivityBadgeCounts };
 
 interface CloseRequest {
   userId: string;
@@ -1297,6 +1299,22 @@ class Hub {
       select: { accountNo: true },
     });
     return this.metricsFromBase(userId, money(0), money(0), money(0), user?.accountNo ?? null);
+  }
+
+  /** Compute and push live badge counts to one user's connected clients.
+   *  Fired the instant a message/notification is created so badges and toasts
+   *  update spontaneously — polling is only the fallback. */
+  async pushActivityCounts(userId: string): Promise<void> {
+    const operatorFilter = {
+      OR: [{ isAdmin: true }, { adminRoles: { some: { revokedAt: null } } }],
+    };
+    const [notifications, messages, operatorMessages, supportCases] = await Promise.all([
+      prisma.notification.count({ where: { userId, readAt: null } }),
+      prisma.directMessage.count({ where: { recipientId: userId, sender: operatorFilter, readAt: null } }),
+      prisma.directMessage.count({ where: { readAt: null, sender: { isAdmin: false, adminRoles: { none: { revokedAt: null } } }, recipient: operatorFilter } }),
+      prisma.supportCase.count({ where: { userId, status: { in: ["OPEN", "IN_PROGRESS", "WAITING_CUSTOMER"] } } }),
+    ]);
+    this.broadcast({ kind: "activity", userId, counts: { notifications, messages, operatorMessages, supportCases } });
   }
 
   /** Read live account metrics without writing projection rows. */

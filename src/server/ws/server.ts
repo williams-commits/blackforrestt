@@ -11,8 +11,7 @@ import {
   MAX_SUBSCRIPTIONS,
   consumeMessageBudget,
   parseClientMessage,
-  type ClientMessage,
-} from "./protocol";
+  type ClientMessage, type RawClientPayload } from "./protocol";
 import { validateSecuritySession } from "../security/sessions";
 
 interface ClientState {
@@ -126,53 +125,72 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
     }
   });
 
-  wss.on("connection", async (ws, req) => {
-    const userId = await resolveWsUserId(req);
-    if (!userId) {
-      ws.close(4401, "Authentication required");
-      return;
-    }
+  wss.on("connection", (ws, req) => {
+    // Attach listeners and BUFFER frames BEFORE the async auth resolves —
+    // during the await window any incoming message would otherwise be
+    // silently dropped (no listener yet), losing fast client subscribes.
+    const earlyFrames: RawClientPayload[] = [];
+    let authed = false;
+    ws.on("message", (raw) => { if (!authed) earlyFrames.push(raw); });
+    ws.on("pong", () => { /* heartbeat handled post-auth */ });
 
-    const client: ClientState = {
-      ws,
-      userId,
-      subs: new Map(),
-      accountSubscribed: false,
-      isAlive: true,
-      windowStartedAt: Date.now(),
-      messagesInWindow: 0,
-    };
-    clients.add(client);
-    hub.clientConnected(userId);
-
-    send(ws, {
-      type: "instruments",
-      instruments: hub.listInstruments().map((state) => hub.instrumentView(state)),
-    });
-    send(ws, { type: "pong" });
-
-    ws.on("pong", () => {
-      client.isAlive = true;
-    });
-    ws.on("message", (raw) => {
-      if (consumeMessageBudget(client)) {
-        ws.close(4408, "Message rate exceeded");
+    void (async () => {
+      const userId = await resolveWsUserId(req);
+      if (!userId) {
+        ws.close(4401, "Authentication required");
         return;
       }
-      const message = parseClientMessage(raw);
-      if (!message) {
-        ws.close(4400, "Invalid message");
-        return;
-      }
-      void handleMessage(client, message).catch((error: unknown) => {
-        console.error("WebSocket command failed", error);
-        if (client.ws.readyState === WebSocket.OPEN) {
-          client.ws.close(1011, "Command failed");
-        }
+
+      const client: ClientState = {
+        ws,
+        userId,
+        subs: new Map(),
+        accountSubscribed: false,
+        isAlive: true,
+        windowStartedAt: Date.now(),
+        messagesInWindow: 0,
+      };
+      clients.add(client);
+      hub.clientConnected(userId);
+
+      send(ws, {
+        type: "instruments",
+        instruments: hub.listInstruments().map((state) => hub.instrumentView(state)),
       });
+      send(ws, { type: "pong" });
+
+      ws.on("pong", () => {
+        client.isAlive = true;
+      });
+      ws.on("message", (raw) => {
+        if (consumeMessageBudget(client)) {
+          ws.close(4408, "Message rate exceeded");
+          return;
+        }
+        const message = parseClientMessage(raw);
+        if (!message) {
+          ws.close(4400, "Invalid message");
+          return;
+        }
+        void handleMessage(client, message).catch((error: unknown) => {
+          console.error("WebSocket command failed", error);
+          if (client.ws.readyState === WebSocket.OPEN) {
+            client.ws.close(1011, "Command failed");
+          }
+        });
+      });
+      ws.on("close", () => { clients.delete(client); hub.clientDisconnected(userId); });
+      ws.on("error", () => { clients.delete(client); hub.clientDisconnected(userId); });
+
+      // Replay anything that arrived during the auth window.
+      authed = true;
+      for (const raw of earlyFrames.splice(0)) {
+        ws.emit("message", raw);
+      }
+    })().catch((error: unknown) => {
+      console.error("WebSocket connection setup failed", error);
+      ws.close(1011, "Connection setup failed");
     });
-    ws.on("close", () => { clients.delete(client); hub.clientDisconnected(userId); });
-    ws.on("error", () => { clients.delete(client); hub.clientDisconnected(userId); });
   });
 
   const heartbeat = setInterval(() => {
@@ -269,6 +287,11 @@ function deliver(client: ClientState, emission: HubEmission): void {
     case "account":
       if (client.userId === emission.userId && (client.accountSubscribed || client.subs.size > 0)) {
         send(client.ws, { type: "account", account: emission.account, reason: emission.reason });
+      }
+      break;
+    case "activity":
+      if (client.userId === emission.userId && (client.accountSubscribed || client.subs.size > 0)) {
+        send(client.ws, { type: "activity", counts: emission.counts });
       }
       break;
     case "instruments":

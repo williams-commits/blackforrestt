@@ -109,8 +109,21 @@ export type WsServerMessage =
   | { type: "candle"; symbol: string; interval: CandleInterval; candle: Candle }
   | { type: "position"; position: PositionView }
   | { type: "account"; account: AccountMetricsView; reason?: "ledger" }
+  | { type: "activity"; counts: ActivityBadgeCounts }
   | { type: "instruments"; instruments: InstrumentView[] }
   | { type: "pong" };
+
+/** Live badge counts pushed over the WebSocket the instant activity happens
+ *  (message sent, notification created) — clients apply them directly
+ *  instead of waiting for the polling fallback. `messages` is the
+ *  customer-view count (operator→user); `operatorMessages` is the support
+ *  team inbox count (customer→operator, team-wide). */
+export interface ActivityBadgeCounts {
+  notifications: number;
+  messages: number;
+  operatorMessages: number;
+  supportCases: number;
+}
 
 export interface SubscribeSnapshot {
   symbol: string;

@@ -65,6 +65,8 @@ function AccountRealtimeBridge() {
         applyAccount(message.account);
       } else if (message.type === "position") {
         applyPosition(message.position);
+      } else if (message.type === "activity") {
+        // Badge/toast channel — carried counts applied without a fetch.
       } else {
         return;
       }

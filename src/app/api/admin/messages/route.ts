@@ -16,6 +16,11 @@ export async function GET(req: Request) {
     const actorId = await requireAdmin("SUPPORT_READ");
     const params = new URL(req.url).searchParams;
     const userId = params.get("userId");
+    // Lightweight badge poll — counts only, no thread payloads.
+    if (params.get("summary") === "1") {
+      const { totalUnread } = await adminMessageThreads();
+      return NextResponse.json({ totalUnread, threadCount: 0 });
+    }
     if (userId) {
       const limitParam = Number(params.get("limit") ?? 0) || undefined;
       const thread = await adminGetThread({ adminId: actorId, userId, limit: limitParam });

@@ -32,6 +32,8 @@ interface Props {
   unreadNotifications?: number;
   unreadMessages?: number;
   openSupportCases?: number;
+  /** True for operator viewers — the Messages badge shows the team inbox. */
+  operator?: boolean;
   user: { id: string; name: string; email: string; accountNo: string; createdAt: string; verified: boolean };
   metrics: {
     balance: number;
@@ -114,6 +116,7 @@ export function AccountShell(props: Props) {
   // Badge counts start from the server render and stay LIVE: a lightweight
   // counts poll (+ realtime events) updates them without a full page refresh,
   // and pokes the mounted tab to reload its data when something changed.
+  const operator = props.operator ?? false;
   const [unreadNotifications, setUnreadNotifications] = useState(props.unreadNotifications ?? 0);
   const [unreadMessages, setUnreadMessages] = useState(props.unreadMessages ?? 0);
   const [openSupportCases, setOpenSupportCases] = useState(props.openSupportCases ?? 0);
@@ -143,15 +146,31 @@ export function AccountShell(props: Props) {
   }, []);
   useEffect(() => {
     const timer = window.setInterval(() => { if (!document.hidden) void refreshCounts(); }, 15_000);
-    // Realtime pushes (ledger/positions) often accompany notifications —
-    // refresh the counts immediately when one arrives.
-    const onRealtime = () => void refreshCounts();
+    // Activity pushes CARRY the counts — apply them directly for a
+    // spontaneous badge update; other realtime events trigger a re-count.
+    const onRealtime = (event: Event) => {
+      const message = (event as CustomEvent<ServerMessage>).detail;
+      if (message?.type === "activity") {
+        setUnreadNotifications(message.counts.notifications);
+        // Operators badge the team inbox; customers their own thread.
+        setUnreadMessages(operator ? message.counts.operatorMessages : message.counts.messages);
+        setOpenSupportCases(message.counts.supportCases);
+        prevCounts.current = {
+          unreadNotifications: message.counts.notifications,
+          unreadMessages: message.counts.messages,
+          openSupportCases: message.counts.supportCases,
+        };
+        window.dispatchEvent(new CustomEvent("blckforest:counts-changed"));
+      } else {
+        void refreshCounts();
+      }
+    };
     window.addEventListener("blckforest:realtime", onRealtime);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("blckforest:realtime", onRealtime);
     };
-  }, [refreshCounts]);
+  }, [refreshCounts, operator]);
   const [tab, setTab] = useState<Tab>("overview");
   const router = useRouter();
   const realtimeAccount = useForexStore((state) => state.account);

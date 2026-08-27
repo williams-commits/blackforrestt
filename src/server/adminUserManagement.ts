@@ -10,6 +10,7 @@ import {
   securityEmailProviderConfigured,
 } from "./security/tokens";
 import { appendSecurityAudit } from "./security/audit";
+import { hub } from "./engine/hub";
 import { brandApexOrigin } from "../lib/branding";
 
 /**
@@ -105,6 +106,9 @@ export async function setUserAccountStatus(input: {
       });
     }
   });
+  if (input.action !== "RESTORE" && input.action !== "UNSUSPEND" && input.action !== "UNBLOCK") {
+    void hub.pushActivityCounts(input.userId).catch(() => undefined);
+  }
   return { state };
 }
 
@@ -139,6 +143,7 @@ export async function adminNotifyUser(input: {
       metadata: { title: title.slice(0, 240) },
     });
   });
+  void hub.pushActivityCounts(input.userId).catch(() => undefined);
 }
 
 /** Email the user a single-use password-reset link (admin-triggered recovery).
@@ -276,6 +281,8 @@ export async function adminRevokeSessions(input: { actorId: string; userId: stri
     return { revoked: revoked.count };
   });
 }
+
+// (notify push appended below in adminNotifyUser)
 
 /** Broadcast an in-app notification to every active (non-deleted) user. */
 export async function adminBroadcastNotification(input: {
@@ -482,6 +489,10 @@ export async function sendDirectMessage(input: {
     }
     return message;
   });
+  // Spontaneous badge update: the recipient's open tabs/toasts react within
+  // milliseconds instead of waiting for the polling fallback.
+  void hub.pushActivityCounts(input.recipientId).catch(() => undefined);
+  void hub.pushActivityCounts(input.senderId).catch(() => undefined);
   return serializeMessage(created);
 }
 

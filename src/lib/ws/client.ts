@@ -17,6 +17,7 @@ export type ServerMessage =
   | { type: "candle"; symbol: string; interval: CandleInterval; candle: Candle }
   | { type: "position"; position: PositionView }
   | { type: "account"; account: AccountMetricsView; reason?: "ledger" }
+  | { type: "activity"; counts: { notifications: number; messages: number; operatorMessages: number; supportCases: number } }
   | { type: "instruments"; instruments: InstrumentView[] }
   | { type: "pong" };
 

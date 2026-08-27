@@ -171,6 +171,36 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
 
   // Lightweight queue counts for the sidebar badges. Skips polling while hidden.
   const badges = useResource<BadgeStats>("/api/admin/overview", 20_000);
+  // Support-inbox unread count — updated INSTANTLY by activity pushes (a
+  // customer message just landed) with a 20s poll as the fallback.
+  const [messagesUnread, setMessagesUnread] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const response = await fetch("/api/admin/messages?summary=1", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json() as { totalUnread?: number };
+        if (!cancelled) setMessagesUnread(data.totalUnread ?? 0);
+      } catch { /* transient — next poll retries */ }
+    };
+    void load();
+    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 20_000);
+    const onRealtime = (event: Event) => {
+      const message = (event as CustomEvent<{ type?: string; counts?: { operatorMessages?: number } }>).detail;
+      if (message?.type === "activity" && typeof message.counts?.operatorMessages === "number") {
+        setMessagesUnread(message.counts.operatorMessages);
+      } else {
+        void load();
+      }
+    };
+    window.addEventListener("blckforest:realtime", onRealtime);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener("blckforest:realtime", onRealtime);
+    };
+  }, []);
   useEffect(() => {
     const timer = window.setInterval(() => {
       if (!document.hidden) void badges.refresh({ silent: true });
@@ -183,6 +213,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
     if (key === "kyc" && stats.pendingKyc) return stats.pendingKyc;
     if (key === "payments" && stats.pendingPayments) return stats.pendingPayments;
     if (key === "changes" && stats.pendingChanges) return stats.pendingChanges;
+    if (key === "messages" && messagesUnread > 0) return messagesUnread;
     return null;
   };
 

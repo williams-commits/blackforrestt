@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { randomInt } from "node:crypto";
 import { prisma } from "./db";
 import { appendAuditEvent } from "./ledger";
@@ -256,6 +256,56 @@ export async function adminSetTemporaryPassword(input: {
     });
   }, { isolationLevel: "Serializable" });
   return { temporaryPassword };
+}
+
+/** Permanently delete a SOFT-DELETED user and all cascaded records (tokens,
+ *  sessions, wallets, positions, transactions, notifications, chat, KYC).
+ *  Financial history is protected by the database itself — ledger
+ *  transactions hold an onDelete: Restrict FK, so any account that ever
+ *  moved money cannot be purged (the delete throws and we translate).
+ *  Two-step by design: soft delete first, permanent purge second. */
+export async function adminHardDeleteUser(input: {
+  actorId: string;
+  userId: string;
+  reason: string;
+}): Promise<{ deleted: true }> {
+  const reason = input.reason.trim();
+  if (reason.length < 10) throw new AdminUserManagementError("A purge reason of at least 10 characters is required.");
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: { id: true, email: true, isAdmin: true, deletedAt: true, adminRoles: { where: { revokedAt: null }, select: { role: true } } },
+  });
+  if (!user) throw new AdminUserManagementError("User not found.", 404);
+  if (user.isAdmin || user.adminRoles.length > 0) {
+    throw new AdminUserManagementError("Operator accounts cannot be permanently deleted — revoke their roles instead.", 409);
+  }
+  if (!user.deletedAt) {
+    throw new AdminUserManagementError("Soft-delete the account first — permanent deletion is a deliberate second step.", 409);
+  }
+  const email = user.email ?? "";
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Audit BEFORE the cascade deletes the row — the event survives because
+      // audit references are plain IDs, and captures the final reason.
+      await appendAuditEvent(tx, {
+        actorId: input.actorId,
+        action: "USER_PERMANENTLY_DELETED",
+        entityType: "User",
+        entityId: user.id,
+        metadata: { email, reason: reason.slice(0, 500) },
+      });
+      await tx.user.delete({ where: { id: user.id } });
+    }, { isolationLevel: "Serializable" });
+    return { deleted: true };
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === "P2003" || error.code === "P2014")) {
+      throw new AdminUserManagementError(
+        "This account has immutable financial records (ledger history) and cannot be permanently deleted. Ledger transactions are retained by design.",
+        409,
+      );
+    }
+    throw error;
+  }
 }
 
 /** Force sign-out: revoke every ACTIVE security session for a user (audited).

@@ -21,6 +21,7 @@ type DialogKind =
   | { kind: "notify" }
   | { kind: "resetPassword" }
   | { kind: "forceSignOut" }
+  | { kind: "hardDelete" }
   | null;
 
 type ResetMode = "temporary" | "link";
@@ -177,6 +178,27 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
     }
   }
 
+  async function submitHardDelete() {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}/hard-delete`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reason: note }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "Delete failed.");
+      setDialog(null);
+      setNote("");
+      onChanged();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Delete failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function copyValue(value: string) {
     try {
       await navigator.clipboard.writeText(value);
@@ -259,6 +281,12 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 <>
                   <div className="my-1 border-t border-border" />
                   <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: deleteAction }); }} label={STATUS_LABELS[deleteAction].verb} tone="text-down" hint="Soft-delete; restorable" />
+              {state === "deleted" && (
+                <>
+                  <div className="my-1 border-t border-border" />
+                  <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "hardDelete" }); }} label="Delete permanently" tone="text-down" hint="Purges all records; irreversible" />
+                </>
+              )}
                 </>
               )}
             </>
@@ -278,10 +306,14 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
               : "Reset password"
             : dialog?.kind === "forceSignOut"
               ? "Sign out everywhere"
+            : dialog?.kind === "hardDelete"
+              ? "Delete permanently"
             : `${STATUS_LABELS[(dialog as { action: string } | null)?.action ?? ""]?.verb ?? "Confirm"} account`}
         description={dialog?.kind === "notify"
           ? `Delivered instantly to ${user.email ?? "the user"}'s notification history.`
-          : dialog?.kind === "forceSignOut"
+          : dialog?.kind === "hardDelete"
+            ? `Irreversibly removes ${user.email ?? "this account"} and every associated record. Accounts with ledger history are refused.`
+            : dialog?.kind === "forceSignOut"
             ? `Every active session for ${user.email ?? "the user"} is revoked; they can simply sign in again.`
             : dialog?.kind === "resetPassword"
             ? `Set a generated sign-in code for ${user.email ?? "the user"}, or email them a self-service reset link.`
@@ -357,6 +389,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
             if (dialog.kind === "notify") void submitNotify();
             else if (dialog.kind === "resetPassword") void submitPasswordReset();
             else if (dialog.kind === "forceSignOut") void submitForceSignOut();
+            else if (dialog.kind === "hardDelete") void submitHardDelete();
             else void submitStatus(dialog.action);
           }}
         >
@@ -371,6 +404,26 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 <textarea id="notify-body" required minLength={3} maxLength={2000} rows={5} value={body} onChange={(e) => setBody(e.target.value)} className="w-full rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand" />
               </div>
             </>
+          ) : dialog?.kind === "hardDelete" ? (
+            <div>
+              <label className="mb-1 block text-xs font-medium" htmlFor="purge-note">Purge reason (audited, min 10 chars)</label>
+              <textarea
+                id="purge-note"
+                required
+                minLength={10}
+                maxLength={500}
+                rows={4}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="GDPR erasure request, fraud cleanup, or compliance reference…"
+                className="w-full rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand resize-none"
+              />
+              <p className="mt-2 text-[11px] text-down">
+                This cannot be undone. The account, positions, transactions, documents, and chat history are
+                destroyed immediately. The audit entry recording this deletion is permanent. Accounts that ever
+                moved funds are protected by the ledger and will be refused.
+              </p>
+            </div>
           ) : dialog?.kind === "forceSignOut" ? (
             <p className="text-xs text-text-muted">
               All devices and browsers are signed out immediately — useful when an account may be
@@ -427,7 +480,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           <div className="flex justify-end gap-2">
             <button type="button" disabled={busy} onClick={() => { setDialog(null); setError(null); }} className="rounded border border-border px-3 py-2 text-xs disabled:opacity-50">Cancel</button>
             <button type="submit" disabled={busy} className={`rounded px-3 py-2 text-xs text-white disabled:opacity-50 ${dialog?.kind === "status" ? "bg-down" : "bg-brand"}`}>
-              {busy ? "Working…" : dialog?.kind === "notify" ? "Send notification" : dialog?.kind === "resetPassword" ? (resetMode === "temporary" ? "Generate password" : "Send reset link") : dialog?.kind === "forceSignOut" ? "Sign out everywhere" : "Confirm"}
+              {busy ? "Working…" : dialog?.kind === "notify" ? "Send notification" : dialog?.kind === "resetPassword" ? (resetMode === "temporary" ? "Generate password" : "Send reset link") : dialog?.kind === "forceSignOut" ? "Sign out everywhere" : dialog?.kind === "hardDelete" ? "Delete permanently" : "Confirm"}
             </button>
           </div>
         </form>

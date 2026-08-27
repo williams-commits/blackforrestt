@@ -4,9 +4,17 @@
  *
  * Usage (repo root, local dev):
  *   npm run admin:promote -- <email>
- * Production (inside the app container):
+ * Production (inside the app container — after `git pull` + image rebuild):
  *   docker compose -f deploy/docker-compose.prod.yml exec app \
  *     node --import tsx scripts/promote-admin.ts <email>
+ *
+ * BOOTSTRAP FLOW for admin access on a fresh deployment:
+ *   1. Promote the FIRST admin with this script (or raw SQL).
+ *   2. Promote a SECOND admin too — the Approvals flow is maker-checker and
+ *      needs two operators (a maker cannot approve their own request).
+ *   3. From then on create/revoke admins in the console: Users tab → kebab →
+ *      "Grant admin role" → submit in Approvals → the OTHER admin approves.
+ *      Approval creates the role AND sets isAdmin — fully audited.
  */
 import { prisma } from "../src/server/db";
 import { appendAuditEvent } from "../src/server/ledger";

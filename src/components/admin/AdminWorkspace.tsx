@@ -131,6 +131,9 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
   const allowedKeys = useMemo(() => new Set(allowedTabs.map((t) => t.key)), [allowedTabs]);
   const [tab, setTabState] = useState<TabKey>(allowedTabs[0]?.key ?? "overview");
   const [chatWith, setChatWith] = useState<{ userId: string; label: string } | null>(null);
+  // Role change prefill from the Users tab — opens the Approvals composer
+  // with the target already selected (admin creation via UI, maker-checker).
+  const [roleChangeFor, setRoleChangeFor] = useState<{ userId: string; label: string; action: "ASSIGN_ROLE" | "REVOKE_ROLE" } | null>(null);
 
   // Restore tab: ?tab= in the URL wins, then the last-visited tab, then default.
   // Runs once — the permission-gated key set is read from the ref, not deps.
@@ -251,7 +254,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
         <div className="min-w-0 space-y-5">
 
       {tab === "overview" && <OverviewPanel />}
-      {tab === "users" && <UsersPanel canAdjustBalance={can("USER_BALANCE_ADJUST")} canManage={can("USER_ACCESS_MANAGE")} onOpenChat={(user) => { setChatWith({ userId: user.id, label: user.name ?? user.email ?? user.id }); setTab("messages"); }} />}
+      {tab === "users" && <UsersPanel canAdjustBalance={can("USER_BALANCE_ADJUST")} canManage={can("USER_ACCESS_MANAGE")} onOpenChat={(user) => { setChatWith({ userId: user.id, label: user.name ?? user.email ?? user.id }); setTab("messages"); }} onProposeRole={can("USER_ACCESS_MANAGE") ? (user, action) => { setRoleChangeFor({ userId: user.id, label: user.name ?? user.email ?? user.id, action }); setTab("changes"); } : undefined} />}
       {tab === "groups" && <GroupsPanel canManage={can("USER_ACCESS_MANAGE")} />}
       {tab === "kyc" && <KycPanel canDecide={can("KYC_DECIDE")} canAccess={can("KYC_DOCUMENT_ACCESS")} />}
       {tab === "payments" && <PaymentsPanel canPrepare={can("PAYMENT_PREPARE")} canApprove={can("PAYMENT_APPROVE")} simpleApproval={simpleApproval} />}
@@ -266,6 +269,8 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
       {tab === "health" && <HealthPanel />}
       {tab === "changes" && (
         <ChangesPanel
+          prefill={roleChangeFor}
+          onPrefillHandled={() => setRoleChangeFor(null)}
           canProposeAccess={can("USER_ACCESS_MANAGE")}
           canProposeRisk={can("RISK_MANAGE")}
           canProposeInstrument={can("INSTRUMENT_MANAGE")}
@@ -321,7 +326,7 @@ interface UserRow {
   metrics: { balance: string; equity: string; floatingPl: string; marginLevel: string | null } | null;
   _count: { positions: number; securitySessions: number; reconciliationBlocks: number };
 }
-function UsersPanel({ canAdjustBalance, canManage, onOpenChat }: { canAdjustBalance: boolean; canManage: boolean; onOpenChat: (user: UserRow) => void }) {
+function UsersPanel({ canAdjustBalance, canManage, onOpenChat, onProposeRole }: { canAdjustBalance: boolean; canManage: boolean; onOpenChat: (user: UserRow) => void; onProposeRole?: (user: UserRow, action: "ASSIGN_ROLE" | "REVOKE_ROLE") => void }) {
   // Search behaves like the messages inbox: filtering is INSTANT over the
   // loaded rows (same fields as the API matches — email, name, account), so
   // the table responds on every keystroke. The debounced server query then
@@ -378,6 +383,7 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat }: { canAdjustBala
             onManageBalance={setSelectedUser}
             onEditSettings={setSettingsUser}
             onOpenChat={onOpenChat}
+            onProposeRole={onProposeRole}
             onChanged={() => void resource.refresh({ silent: true })}
           />
           <UserBalanceDialog
@@ -405,6 +411,7 @@ function PaginatedUsers({
   onManageBalance,
   onEditSettings,
   onOpenChat,
+  onProposeRole,
   onChanged,
 }: {
   users: UserRow[];
@@ -415,6 +422,7 @@ function PaginatedUsers({
   onManageBalance: (user: UserRow) => void;
   onEditSettings: (user: UserRow) => void;
   onOpenChat: (user: UserRow) => void;
+  onProposeRole?: (user: UserRow, action: "ASSIGN_ROLE" | "REVOKE_ROLE") => void;
   onChanged: () => void;
 }) {
   const pageSize = 25;
@@ -519,6 +527,7 @@ function PaginatedUsers({
                       onOpenChat={(u) => onOpenChat(users.find((candidate) => candidate.id === u.id) ?? user)}
                       onManageBalance={canAdjustBalance ? (u) => onManageBalance(users.find((candidate) => candidate.id === u.id) ?? user) : undefined}
                       onEditSettings={canAdjustBalance ? (u) => onEditSettings(users.find((candidate) => candidate.id === u.id) ?? user) : undefined}
+                      onProposeRole={onProposeRole ? (u, action) => onProposeRole(users.find((candidate) => candidate.id === u.id) ?? user, action) : undefined}
                       canManage={canManage}
                     />
                   )}
@@ -1364,10 +1373,15 @@ interface ChangeRow extends Record<string, unknown> {
 type ChangeAction = "ASSIGN_ROLE" | "REVOKE_ROLE" | "UPDATE_RISK_RULE" | "UPDATE_INSTRUMENT";
 
 function ChangesPanel({
+  prefill,
+  onPrefillHandled,
   canProposeAccess,
   canProposeRisk,
   canProposeInstrument,
 }: {
+  /** Role change preselected from the Users tab (cleared after first submit). */
+  prefill?: { userId: string; label: string; action: "ASSIGN_ROLE" | "REVOKE_ROLE" } | null;
+  onPrefillHandled?: () => void;
   canProposeAccess: boolean;
   canProposeRisk: boolean;
   canProposeInstrument: boolean;
@@ -1410,6 +1424,8 @@ function ChangesPanel({
           />
           {(canProposeAccess || canProposeRisk || canProposeInstrument) && (
             <ChangeRequestComposer
+              prefill={prefill}
+              onPrefillHandled={onPrefillHandled}
               canProposeAccess={canProposeAccess}
               canProposeRisk={canProposeRisk}
               canProposeInstrument={canProposeInstrument}
@@ -1448,11 +1464,15 @@ function ChangesPanel({
 }
 
 function ChangeRequestComposer({
+  prefill,
+  onPrefillHandled,
   canProposeAccess,
   canProposeRisk,
   canProposeInstrument,
   onCreated,
 }: {
+  prefill?: { userId: string; label: string; action: "ASSIGN_ROLE" | "REVOKE_ROLE" } | null;
+  onPrefillHandled?: () => void;
   canProposeAccess: boolean;
   canProposeRisk: boolean;
   canProposeInstrument: boolean;
@@ -1463,7 +1483,11 @@ function ChangeRequestComposer({
     ...(canProposeRisk ? (["UPDATE_RISK_RULE"] as ChangeAction[]) : []),
     ...(canProposeInstrument ? (["UPDATE_INSTRUMENT"] as ChangeAction[]) : []),
   ];
-  const [action, setAction] = useState<ChangeAction>(allowedActions[0] ?? "ASSIGN_ROLE");
+  // Prefill from the Users tab: preselect the action and seed the target's
+  // user ID so the maker only picks the role and submits.
+  const [action, setAction] = useState<ChangeAction>(
+    prefill && allowedActions.includes(prefill.action) ? prefill.action : allowedActions[0] ?? "ASSIGN_ROLE",
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1485,6 +1509,7 @@ function ChangeRequestComposer({
         }),
       });
       event.currentTarget.reset();
+      onPrefillHandled?.();
       await onCreated();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to create change request.");
@@ -1505,7 +1530,7 @@ function ChangeRequestComposer({
           <input name="requestNote" maxLength={1000} className="mt-1 h-9 w-full rounded border border-border bg-canvas px-2" placeholder="Operational reason and ticket reference" />
         </label>
       </div>
-      {(action === "ASSIGN_ROLE" || action === "REVOKE_ROLE") && <RoleChangeFields />}
+      {(action === "ASSIGN_ROLE" || action === "REVOKE_ROLE") && <RoleChangeFields userId={prefill?.userId} label={prefill?.label} />}
       {action === "UPDATE_RISK_RULE" && <RiskChangeFields />}
       {action === "UPDATE_INSTRUMENT" && <InstrumentChangeFields />}
       {error && <p role="alert" className="mt-3 text-xs text-down">{error}</p>}
@@ -1514,10 +1539,10 @@ function ChangeRequestComposer({
   );
 }
 
-function RoleChangeFields() {
+function RoleChangeFields({ userId, label }: { userId?: string; label?: string }) {
   return (
     <div className="mt-3 grid gap-3 md:grid-cols-3">
-      <FieldInput name="userId" label="Target user ID" required />
+      <FieldInput name="userId" label={label ? `Target user (${label})` : "Target user ID"} defaultValue={userId} required />
       <label className="text-xs">Role
         <select name="role" className="mt-1 h-9 w-full rounded border border-border bg-canvas px-2" defaultValue="SUPPORT">
           {["SUPER_ADMIN", "COMPLIANCE", "FINANCE", "DEALER", "RISK", "SUPPORT", "AUDITOR"].map((role) => <option key={role}>{role}</option>)}

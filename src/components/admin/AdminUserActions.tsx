@@ -41,12 +41,14 @@ const STATUS_LABELS: Record<string, { verb: string; tone: string }> = {
 /** Row-level admin actions behind one kebab menu (portal-rendered so the
  *  table's overflow container can't clip it): notify, chat, finance, settings,
  *  and the account-state controls. Destructive actions confirm with a note. */
-export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance, onEditSettings, canManage = false }: {
+export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance, onEditSettings, onProposeRole, canManage = false }: {
   user: ManagedUserRow;
   onChanged: () => void;
   onOpenChat: (user: ManagedUserRow) => void;
   onManageBalance?: (user: ManagedUserRow) => void;
   onEditSettings?: (user: ManagedUserRow) => void;
+  /** Propose a role change through the maker-checker Approvals flow. */
+  onProposeRole?: (user: ManagedUserRow, action: "ASSIGN_ROLE" | "REVOKE_ROLE") => void;
   /** USER_ACCESS_MANAGE holders see the account-state controls. */
   canManage?: boolean;
 }) {
@@ -227,6 +229,13 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           )}
           {onEditSettings && (
             <MenuItemRow onSelect={() => { setMenuOpen(false); onEditSettings(user); }} label="Settings" hint="Per-user overrides" />
+          )}
+          {onProposeRole && (
+            <>
+              <div className="my-1 border-t border-border" />
+              <MenuItemRow onSelect={() => { setMenuOpen(false); onProposeRole(user, "ASSIGN_ROLE"); }} label="Grant admin role" hint="Maker-checker approval" />
+              <MenuItemRow onSelect={() => { setMenuOpen(false); onProposeRole(user, "REVOKE_ROLE"); }} label="Revoke admin role" hint="Maker-checker approval" />
+            </>
           )}
           {canManage && !user.isAdmin && (
             <>

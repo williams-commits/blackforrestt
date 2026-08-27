@@ -43,6 +43,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/package.json /app/package-lock.js
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/src ./src
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/production ./scripts/production
+# Ops scripts runnable inside the container (npm run admin:promote -- <email>).
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/promote-admin.ts ./scripts/promote-admin.ts
 COPY --from=builder --chown=nextjs:nodejs /app/server.ts /app/tsconfig.json ./
 
 USER nextjs

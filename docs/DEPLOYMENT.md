@@ -6,6 +6,8 @@ troubleshooting Black Forest Digital. It supersedes `DOCKER_SETUP.md`,
 (those files have been removed; everything you need is here).
 
 For specialized procedures, this guide cross-references:
+- [`MULTI_DOMAIN_SETUP.md`](MULTI_DOMAIN_SETUP.md) — serving multiple brand families (e.g. agilefgs.com) from one deployment; per-brand theming, wallets, referral links, SEO
+- [`MULTI_BRAND_SECURITY.md`](MULTI_BRAND_SECURITY.md) — the security tradeoffs of the shared architecture (sessions, throttling, revocation)
 - [`EMAIL_SETUP.md`](EMAIL_SETUP.md) — transactional email configuration
 - [`ENVIRONMENT_VARIABLES.md`](ENVIRONMENT_VARIABLES.md) — full variable reference
 - [`PAYMENT_WORKFLOWS.md`](PAYMENT_WORKFLOWS.md) — deposit/withdrawal operations
@@ -75,7 +77,10 @@ Internet → Caddy (80/443, automatic HTTPS) → app:3000 (Next.js + WebSocket)
 
 ## Domain split (marketing + trade subdomain)
 
-The platform supports a two-domain setup:
+The platform serves **brand families** — an apex (marketing) plus a trade
+subdomain (authenticated app) per brand — from one deployment. See
+[`MULTI_DOMAIN_SETUP.md`](MULTI_DOMAIN_SETUP.md) for adding further brands
+(e.g. `agilefgs.com`); this section covers the primary family:
 
 | Domain | Routes | Purpose |
 |--------|--------|---------|
@@ -113,15 +118,22 @@ TRADE_SUBDOMAIN=trade
 # already supports this):
 APP_ORIGIN=https://blackforrestt.com,https://trade.blackforrestt.com
 
-# Auth.js canonical origin = the trade subdomain (where login happens):
+# Auth.js canonical origin = the PRIMARY trade subdomain. Keep it set:
+# per-host login works via AUTH_TRUST_HOST=true, and client sign-outs
+# self-navigate so logout never bounces across brand families.
 AUTH_URL=https://trade.blackforrestt.com
+AUTH_TRUST_HOST=true
 
-# Baked into client bundles at build time so marketing CTAs link to the
-# trade subdomain. Must be set BEFORE building the image:
-NEXT_PUBLIC_TRADE_ORIGIN=https://trade.blackforrestt.com
+# Multi-brand list (canonical first) + the origin gate allowlist:
+BRAND_DOMAINS=blackforrestt.com
+APP_ORIGIN=https://blackforrestt.com,https://trade.blackforrestt.com
 ```
 
-**3. Rebuild + redeploy** (`NEXT_PUBLIC_TRADE_ORIGIN` is a build-time arg, so the image must be rebuilt):
+> `NEXT_PUBLIC_TRADE_ORIGIN` is **no longer used** — marketing CTAs are
+> relative links and the middleware routes each brand family to its own
+> trade host. Do not set it.
+
+**3. Rebuild + redeploy** (Caddy's config is rendered from the env by `deploy/render-caddy.sh`, so a rebuild re-provisions TLS for any new host):
 
 ```bash
 docker compose --env-file .env.production -f deploy/docker-compose.prod.yml build --no-cache app
@@ -130,7 +142,9 @@ bash deploy/deploy.sh
 
 ### Single-domain mode (backward compatible)
 
-If `TRADE_DOMAIN` and `NEXT_PUBLIC_TRADE_ORIGIN` are empty, the platform runs in single-domain mode: all routes are served on the apex domain, marketing links are relative, and no cross-domain redirects occur. This is the default for local development.
+If `TRADE_DOMAIN` is empty, the platform runs in single-domain mode: all
+routes are served on the apex domain and no cross-domain redirects occur.
+This is the default for local development.
 
 ### Session cookies
 
@@ -138,8 +152,13 @@ Auth.js v5 with JWT strategy scopes the session cookie to the host that the logi
 
 ### How the links work
 
-- **Marketing → trade:** landing CTAs ("Open Free Account", "Log in") use `absoluteTradeUrl()` (server components) or `clientTradeUrl()` (client components) from `src/lib/branding.ts`, which read `NEXT_PUBLIC_TRADE_ORIGIN`.
-- **Trade → marketing:** authenticated pages can link to the apex using standard relative links only if the user navigates away from the app — but in practice the trade subdomain is self-contained.
+- **Marketing → trade:** landing CTAs are relative links (`/login`,
+  `/register`); the middleware redirects them to the requesting family's
+  trade host. Never link absolutely to a trade host from marketing — that
+  bypasses family routing.
+- **Trade → marketing:** the logo and footer derive the apex from the
+  current hostname, so each brand family links back to its own marketing
+  site.
 
 ---
 
@@ -297,33 +316,51 @@ sudo ss -ltnp | grep -E ':80|:443'
 curl -sS https://blackforrestt.com/api/health
 ```
 
-### 7. Create the first admin user
+### 7. Bootstrap admin access (first TWO admins)
 
-No admin is seeded. Register your first account at `https://yourdomain.com/register`,
-then grant admin in PostgreSQL:
+No admin is seeded. Register accounts at `https://yourdomain.com/register`
+first, then promote. The **maker-checker** Approvals flow needs two
+operators — a maker cannot approve their own request — so bootstrap the
+first two via the script, then manage every admin afterwards from the UI.
+
+**Preferred: the audited promote script** (idempotent; sets `isAdmin`,
+clears soft-delete/suspend/block, writes an `ADMIN_PROMOTED` audit event):
+
+```bash
+$DC exec app node --import tsx scripts/promote-admin.ts <email>
+# run twice — once for each of your first two admins
+```
+
+**Alternative: raw SQL** (unaudited; remember boolean `true` has no quotes
+and values use single quotes — double quotes are identifiers in PostgreSQL):
 
 ```bash
 $DC exec -T postgres psql -U blackforrestt -d blackforrestt <<'SQL'
--- Find your user ID:
-SELECT id, email, "createdAt" FROM "User" ORDER BY "createdAt" LIMIT 5;
-
--- Grant SUPER_ADMIN (replace <user-id>):
-INSERT INTO "AdminRoleAssignment" ("userId", role, "assignedById", reason)
-VALUES ('<user-id>', 'SUPER_ADMIN', '<user-id>', 'Initial admin');
+UPDATE "User"
+SET "isAdmin" = true, "deletedAt" = NULL, "suspendedAt" = NULL, "blockedAt" = NULL
+WHERE "email" = '<your-admin-email>';
 SQL
 ```
 
-```bash
-$DC exec -T postgres psql -U blackforrestt -d blackforrestt <<'SQL'
--- Grant SUPER_ADMIN (replace <user-id>):
-SELECT * FROM "AdminRoleAssignment";
-SQL
+**From the third admin onwards — no shell access needed:**
 
-$DC exec -T postgres psql -U blackforrestt -d blackforrestt <<'SQL'
-INSERT INTO "AdminRoleAssignment" ("id", "userId", role, "assignedById", "reason")
-VALUES (gen_random_uuid(), 'cmsdpl5uv0007r324qehtle4i', 'SUPER_ADMIN', 'cmsdpl5uv0007r324qehtle4i', 'Initial admin');
-SQL
-```
+1. Admin console → **Users** tab → target user's kebab menu (⋮) →
+   **Grant admin role**
+2. The Approvals composer opens pre-filled with the target; pick the role
+   (SUPER_ADMIN, COMPLIANCE, FINANCE, DEALER, RISK, SUPPORT, AUDITOR) and
+   submit as the maker
+3. A **different** admin approves it in **Approvals** — approval creates the
+   role assignment AND sets `isAdmin = true`, fully audit-chained
+4. Revoke works the same way ("Revoke admin role"); the last active
+   SUPER_ADMIN role cannot be revoked as a safety guard
+
+> An admin is anyone with `isAdmin = true` **or** an active role assignment
+> (`requireAdminContext`). Both signals authorize the console and receive
+> customer support chat — keep that in mind before revoking.
+
+**Common bootstrap failure:** customer chat returns
+`{"error":"No support operator available."}` (503) when the database has no
+active admin. Promote one (see above) and it resolves immediately.
 
 ---
 
@@ -418,6 +455,36 @@ $DC logs --tail=100 app          # last 100 lines
 $DC logs --since 10m app         # last 10 minutes
 ```
 
+### Database access (psql / Prisma Studio)
+
+**Raw SQL** (quickest — double quotes are identifiers, single quotes are
+values, booleans unquoted):
+
+```bash
+$DC exec postgres psql -U blackforrestt -d blackforrestt
+```
+
+**Prisma Studio** (visual browser) — bind to loopback and SSH-tunnel;
+never expose port 5555 to the internet, and remember Studio is read/write
+on live data with no confirmation prompts:
+
+```bash
+# on the server:
+$DC run --rm --no-deps -p 127.0.0.1:5555:5555 app \
+  npx prisma studio --hostname 0.0.0.0 --port 5555
+
+# on your machine:
+ssh -L 5555:localhost:5555 you@your-server   # then open http://localhost:5555
+```
+
+**One-off scripts in the app container** (Prisma + tsx are in the image;
+DATABASE_URL is in the container env):
+
+```bash
+$DC exec app node --import tsx scripts/promote-admin.ts <email>
+$DC run --rm app npx prisma migrate deploy
+```
+
 ### Restart the app only
 
 ```bash
@@ -438,16 +505,10 @@ and Redis. It never prints passwords.
 
 ### Access PostgreSQL
 
-```bash
-# Interactive psql shell:
-$DC exec postgres psql -U blackforrestt -d blackforrestt
-
-# Run a single query:
-$DC exec -T postgres psql -U blackforrestt -d blackforrestt -c \
-  'SELECT COUNT(*) AS instruments FROM "Instrument";'
-```
-
-Useful `psql` commands: `\dt` (list tables), `\d "User"` (describe table), `\q` (quit).
+See [Database access (psql / Prisma Studio)](#database-access-psql--prisma-studio)
+above — interactive shell, single queries, Studio over an SSH tunnel, and
+one-off scripts all covered there. Useful `psql` commands: `\dt` (list
+tables), `\d "User"` (describe table), `\q` (quit).
 
 ### Inspect Redis
 
@@ -551,11 +612,15 @@ sudo ss -ltnp | grep -E ':80|:443' || echo "(nothing on 80/443 — Caddy not sta
 | `env file .env.production not found` | File doesn't exist at repo root | `cp deploy/.env.production.example .env.production` + edit |
 | Ports 80/443 closed, Caddy shows `Created` | App not healthy → Caddy never starts (dependency cascade) | Fix the app health first (rows above); Caddy starts automatically once app is healthy |
 | `trade.blackforrestt.com` won't load (apex works) | Missing DNS A record for `trade` subdomain, or `TRADE_DOMAIN` not set in `.env.production` | Add A record `trade → server IP`; set `TRADE_DOMAIN=trade.blackforrestt.com` in `.env.production`; restart Caddy: `$DC up -d --no-deps caddy` |
-| Marketing CTA still links to `/login` (relative) | `NEXT_PUBLIC_TRADE_ORIGIN` wasn't set at build time | Set it in `.env.production`, then `build --no-cache app` (it's a build-time arg baked into client bundles) |
+| Marketing CTA links relatively and stays on the apex | Expected — the middleware routes each brand family's `/login` to its own trade host at request time | None needed; verify `BRAND_DOMAINS` includes the host |
 | Caddy up but TLS cert fails | DNS A record wrong, or 80/443 blocked by firewall | Verify `dig yourdomain.com` → server IP; check `ufw status`; `$DC logs caddy` for ACME errors |
 | Finnhub `429` reconnect storm in logs | Free-tier Finnhub rate-limiting the server IP | Set `MARKET_DATA_MODE=simulation`, `$DC up -d --no-deps app` |
 | Preflight failure on startup | Placeholder secret, or dev bypass enabled | `$DC run --rm app npm run production:check` — read each failure line |
 | Push Protection blocks `git push` | Real secret in tracked `.example` file | See [Secret safety](#secret-safety--git-push-protection) |
+| Customer chat returns `No support operator available.` (503) | No **active** admin in the database (none with `isAdmin = true` or an active role assignment, or the only one is deleted/suspended/blocked) | `$DC exec app node --import tsx scripts/promote-admin.ts <email>` |
+| `Cannot find module '/app/scripts/promote-admin.ts'` | Image built before the Dockerfile fix that copies ops scripts | `git pull` → rebuild the app image → redeploy |
+| Login/Register pages show the wrong brand | Stale app image (branding is code, resolved per request) | `git pull` → `build app` → `up -d app caddy` |
+| Logout on one brand lands on the other brand | Old build — sign-outs self-navigate in current code | Redeploy the app image |
 
 ### App unhealthy / restart loop
 

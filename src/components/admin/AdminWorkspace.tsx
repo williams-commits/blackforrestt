@@ -174,14 +174,22 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
   // Support-inbox unread count — updated INSTANTLY by activity pushes (a
   // customer message just landed) with a 20s poll as the fallback.
   const [messagesUnread, setMessagesUnread] = useState(0);
+  const [supportOpen, setSupportOpen] = useState(0);
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
-        const response = await fetch("/api/admin/messages?summary=1", { cache: "no-store" });
-        if (!response.ok) return;
-        const data = await response.json() as { totalUnread?: number };
-        if (!cancelled) setMessagesUnread(data.totalUnread ?? 0);
+        const [messages, support] = await Promise.all([
+          fetch("/api/admin/messages?summary=1", { cache: "no-store" }),
+          fetch("/api/admin/support?limit=1", { cache: "no-store" }),
+        ]);
+        if (!messages.ok || !support.ok) return;
+        const messagesData = await messages.json() as { totalUnread?: number };
+        const supportData = await support.json() as { openCount?: number };
+        if (!cancelled) {
+          setMessagesUnread(messagesData.totalUnread ?? 0);
+          setSupportOpen(supportData.openCount ?? 0);
+        }
       } catch { /* transient — next poll retries */ }
     };
     void load();
@@ -214,6 +222,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
     if (key === "payments" && stats.pendingPayments) return stats.pendingPayments;
     if (key === "changes" && stats.pendingChanges) return stats.pendingChanges;
     if (key === "messages" && messagesUnread > 0) return messagesUnread;
+    if (key === "support" && supportOpen > 0) return supportOpen;
     return null;
   };
 

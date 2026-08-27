@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Pagination } from "@/components/ui/Pagination";
 import { Dialog } from "@/components/ui/Dialog";
+import { FilterChip } from "@/components/ui/DataTable";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";
 
 interface NotificationRow {
@@ -17,6 +18,14 @@ interface NotificationRow {
 }
 
 const PAGE_SIZE = 10;
+
+const GROUP_LABELS: Record<string, string> = {
+  all: "All",
+  messages: "Messages",
+  payments: "Payments",
+  trades: "Trades",
+  account: "Account",
+};
 
 const TYPE_TONES: Record<string, string> = {
   ADMIN_MESSAGE: "bg-brand-soft text-brand",
@@ -44,21 +53,24 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<NotificationRow | null>(null);
+  const [group, setGroup] = useState("all");
+  const [groupCounts, setGroupCounts] = useState<Record<string, number>>({ all: 0, messages: 0, payments: 0, trades: 0, account: 0 });
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const response = await fetch(`/api/notifications?scope=all&limit=${PAGE_SIZE}&offset=${(page - 1) * PAGE_SIZE}`, { cache: "no-store" });
-      const data = await response.json().catch(() => null) as { notifications?: NotificationRow[]; unreadCount?: number; error?: string } | null;
+      const response = await fetch(`/api/notifications?scope=all&limit=${PAGE_SIZE}&offset=${(page - 1) * PAGE_SIZE}${group !== "all" ? `&group=${group}` : ""}`, { cache: "no-store" });
+      const data = await response.json().catch(() => null) as { notifications?: NotificationRow[]; unreadCount?: number; groupCounts?: Record<string, number>; error?: string } | null;
       if (!response.ok) throw new Error(data?.error ?? "Unable to load notifications.");
       setItems(data?.notifications ?? []);
       setUnreadCount(data?.unreadCount ?? 0);
+      if (data?.groupCounts) setGroupCounts(data.groupCounts);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to load notifications.");
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, group]);
 
   useEffect(() => {
     void load();
@@ -128,6 +140,14 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
         )}
       </div>
 
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter notifications by category">
+        {Object.entries(GROUP_LABELS).map(([key, label]) => (
+          <FilterChip key={key} active={group === key} onClick={() => { setGroup(key); setPage(1); }}>
+            {label}{groupCounts[key] > 0 ? ` · ${groupCounts[key] > 99 ? "99+" : groupCounts[key]}` : ""}
+          </FilterChip>
+        ))}
+      </div>
+
       {error && <div role="alert" className="rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">{error}</div>}
 
       <ul className="space-y-2">
@@ -159,7 +179,7 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
         ))}
         {items.length === 0 && (
           <li className="rounded border border-dashed border-border bg-canvas px-4 py-10 text-center text-xs text-text-muted">
-            No notifications yet.
+            {group === "all" ? "No notifications yet." : `No ${GROUP_LABELS[group].toLowerCase()} notifications.`}
           </li>
         )}
       </ul>

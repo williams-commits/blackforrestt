@@ -150,7 +150,22 @@ export function SupportTab() {
 
       {/* Case history */}
       <section className="rounded-lg border border-border bg-canvas p-5">
-        <h3 className="mb-4 text-sm font-semibold">Your support cases</h3>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">Your support cases</h3>
+          {cases.length > 0 && (
+            <span className="flex flex-wrap gap-1.5" aria-label="Case status summary">
+              {(["OPEN", "IN_PROGRESS", "WAITING_CUSTOMER"] as const).map((st) => {
+                const n = cases.filter((c) => c.status === st).length;
+                if (!n) return null;
+                return <span key={st} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[st]}`}>{n} {STATUS_LABELS[st]}</span>;
+              })}
+              {(() => {
+                const done = cases.filter((c) => c.status === "RESOLVED" || c.status === "CLOSED").length;
+                return done > 0 ? <span className="rounded-full bg-panel-3 px-2 py-0.5 text-[10px] font-semibold text-text-muted">{done} resolved</span> : null;
+              })()}
+            </span>
+          )}
+        </div>
         {loading ? (
           <div className="space-y-3" role="status" aria-label="Loading support cases">
             {[0, 1].map((i) => (

@@ -33,13 +33,16 @@ export async function GET(request: Request) {
     });
     // Brand attribution (SupportCase stores a plain userId, no relation): one
     // grouped lookup for the customers on this page.
+    // Open-case count for the tab badge (everything not resolved/closed).
+    const openCount = cases.filter((item) => item.status !== "RESOLVED" && item.status !== "CLOSED").length;
+
     const userIds = [...new Set(cases.map((item) => item.userId).filter((id): id is string => Boolean(id)))];
     const brandByUser = new Map(
       userIds.length > 0
         ? (await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, brandDomain: true } })).map((u) => [u.id, u.brandDomain])
         : [],
     );
-    return NextResponse.json({ cases: cases.map((item) => ({ ...item, brandDomain: brandByUser.get(item.userId ?? "") ?? null, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString(), resolvedAt: item.resolvedAt?.toISOString() ?? null, closedAt: item.closedAt?.toISOString() ?? null })) });
+    return NextResponse.json({ openCount, total: cases.length, cases: cases.map((item) => ({ ...item, brandDomain: brandByUser.get(item.userId ?? "") ?? null, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString(), resolvedAt: item.resolvedAt?.toISOString() ?? null, closedAt: item.closedAt?.toISOString() ?? null })) });
   } catch (error) {
     const status = error instanceof AdminError ? error.status : 500;
     return NextResponse.json({ error: status === 500 ? "Unable to load support cases." : (error as Error).message }, { status });

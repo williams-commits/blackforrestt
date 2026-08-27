@@ -6,6 +6,14 @@ import { countUnreadDirectMessages } from "@/server/adminUserManagement";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Notification groups — the tab filters in the Notifications UI. */
+const NOTIFICATION_GROUPS: Record<string, string[]> = {
+  messages: ["ADMIN_CHAT", "ADMIN_MESSAGE", "ADMIN_BROADCAST", "CUSTOMER_MESSAGE"],
+  payments: ["PAYMENT_APPROVED", "PAYMENT_REJECTED", "PAYMENT_PREPARED", "PAYMENT_CANCELLED", "PAYMENT_REVERSED"],
+  trades: ["TRADE_OPENED", "TRADE_CLOSED"],
+  account: ["ACCOUNT_STATUS"],
+};
+
 /**
  * GET /api/notifications — persisted notification history.
  *   Default: latest 10 (toast polling, backwards compatible).
@@ -17,6 +25,8 @@ export async function GET(req: Request) {
   const userId = await resolveUserId(session?.user?.id);
   const params = new URL(req.url).searchParams;
   const scope = params.get("scope") ?? "recent";
+  const group = params.get("group");
+  const groupTypes = group && group in NOTIFICATION_GROUPS ? NOTIFICATION_GROUPS[group] : null;
   const limit = Math.min(100, Math.max(1, Number(params.get("limit") ?? 10) || 10));
   const offset = Math.max(0, Number(params.get("offset") ?? 0) || 0);
 
@@ -30,20 +40,32 @@ export async function GET(req: Request) {
     return NextResponse.json({ unreadCount, unreadMessages, openSupportCases });
   }
 
-  const [notifications, unreadCount, unreadMessages] = await Promise.all([
+  const baseWhere = { userId, ...(groupTypes ? { type: { in: groupTypes } } : {}) };
+  const [notifications, unreadCount, unreadMessages, groupCountRows] = await Promise.all([
     prisma.notification.findMany({
-      where: { userId },
+      where: baseWhere,
       orderBy: { createdAt: "desc" },
       take: limit,
       skip: offset,
       select: { id: true, type: true, title: true, body: true, readAt: true, toastedAt: true, createdAt: true, metadata: true },
     }),
-    prisma.notification.count({ where: { userId, readAt: null } }),
+    prisma.notification.count({ where: { ...baseWhere, readAt: null } }),
     countUnreadDirectMessages(userId),
+    prisma.notification.groupBy({ by: ["type"], where: { userId }, _count: { _all: true } }),
   ]);
+  // Per-group totals for the tab chips (across ALL notifications, not the page).
+  const groupCounts: Record<string, number> = { all: 0, messages: 0, payments: 0, trades: 0, account: 0 };
+  for (const row of groupCountRows) {
+    groupCounts.all += row._count._all;
+    for (const [name, types] of Object.entries(NOTIFICATION_GROUPS)) {
+      if (types.includes(row.type)) groupCounts[name] += row._count._all;
+    }
+  }
 
   return NextResponse.json({
     scope,
+    group: group ?? "all",
+    groupCounts,
     notifications: notifications.map((item) => ({
       ...item,
       createdAt: item.createdAt.toISOString(),

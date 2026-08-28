@@ -38,7 +38,7 @@ export function Pagination({
           type="button"
           disabled={safePage <= 1}
           onClick={() => onPageChange(safePage - 1)}
-          className="rounded border border-border bg-canvas px-2.5 py-1 text-[10px] font-medium text-text-muted hover:border-brand hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded border border-border bg-canvas px-2.5 py-1 text-[10px] font-medium text-text-muted hover:border-brand hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ChevronLeft size={12} strokeWidth={2} aria-hidden /> Previous
         </button>
@@ -49,7 +49,7 @@ export function Pagination({
           type="button"
           disabled={safePage >= totalPages}
           onClick={() => onPageChange(safePage + 1)}
-          className="rounded border border-border bg-canvas px-2.5 py-1 text-[10px] font-medium text-text-muted hover:border-brand hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded border border-border bg-canvas px-2.5 py-1 text-[10px] font-medium text-text-muted hover:border-brand hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
         >
           Next <ChevronRight size={12} strokeWidth={2} aria-hidden />
         </button>

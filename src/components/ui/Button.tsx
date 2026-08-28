@@ -58,7 +58,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
           <span className="sr-only">{loadingLabel}</span>
         </>
       ) : null}
-      <span aria-hidden={loading || undefined}>{children}</span>
+      {/* Flex wrapper: Tailwind preflight forces svg to display:block, which
+          stacks a leading icon above the label inside a plain inline span. */}
+      <span aria-hidden={loading || undefined} className="inline-flex items-center gap-1.5">{children}</span>
     </button>
   );
 });

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { fmtDate } from "@/lib/dates";
+import { Check, Copy } from "lucide-react";
 import type { ServerMessage } from "@/lib/ws/client";
 
 interface ReferralData {
@@ -131,9 +132,9 @@ export function ReferralTab() {
           />
           <button
             onClick={() => void copyLink()}
-            className="shrink-0 rounded-lg bg-brand px-4 py-2.5 text-xs font-semibold text-white hover:brightness-110 transition"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-4 py-2.5 text-xs font-semibold text-white hover:brightness-110 transition"
           >
-            {copied ? "✓ Copied" : "Copy"}
+            {copied ? <><Check size={12} strokeWidth={2.5} aria-hidden /> Copied</> : <><Copy size={12} strokeWidth={2} aria-hidden /> Copy</>}
           </button>
         </div>
         <div className="mt-3 flex items-center gap-3 text-xs">

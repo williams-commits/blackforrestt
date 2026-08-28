@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CreditCard, Landmark, Lock, Shield, ShieldCheck, Umbrella } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Logo } from "@/components/trade/Logo";
 import { currentBrandProfile, brandRegistrationSummary, clientTradeUrl } from "@/lib/branding";
@@ -174,57 +175,25 @@ function AssuranceBadge({ icon, label, note, emphasized = false }: { icon: React
 }
 
 function ShieldCheckIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2l8 3v6c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V5l8-3z" />
-      <path d="M9 12l2 2 4-4" />
-    </svg>
-  );
+  return <ShieldCheck size={15} strokeWidth={2} aria-hidden />;
 }
 
 function ShieldIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2l8 3v6c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V5l8-3z" />
-    </svg>
-  );
+  return <Shield size={15} strokeWidth={2} aria-hidden />;
 }
 
 function BankIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 10l9-7 9 7" />
-      <path d="M5 10v9M9.5 10v9M14.5 10v9M19 10v9" />
-      <path d="M3 21h18" />
-    </svg>
-  );
+  return <Landmark size={15} strokeWidth={2} aria-hidden />;
 }
 
 function UmbrellaIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2a10 10 0 0 1 10 10H2A10 10 0 0 1 12 2z" />
-      <path d="M12 12v6a2 2 0 0 0 4 0" />
-      <path d="M12 2v1" />
-    </svg>
-  );
+  return <Umbrella size={15} strokeWidth={2} aria-hidden />;
 }
 
 function LockIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4" y="10" width="16" height="11" rx="2" />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-    </svg>
-  );
+  return <Lock size={15} strokeWidth={2} aria-hidden />;
 }
 
 function CardIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="5" width="20" height="14" rx="2" />
-      <path d="M2 10h20" />
-      <path d="M6 15h4" />
-    </svg>
-  );
+  return <CreditCard size={15} strokeWidth={2} aria-hidden />;
 }

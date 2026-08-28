@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { WalletModal } from "./WalletModal";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { Button } from "@/components/ui/Button";
+import { ArrowDownToLine, ArrowRight, ArrowUpFromLine, Lock, Plus, Unlock, Wallet } from "lucide-react";
 import { InfoHint } from "@/components/ui/InfoHint";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { fmtDate } from "@/lib/dates";
@@ -76,7 +77,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
                   onClick={onOpenVerification}
                   className="text-[10px] font-semibold text-brand hover:underline"
                 >
-                  {kyc?.status === "REJECTED" ? "Resubmit →" : "Start →"}
+                  <span className="inline-flex items-center gap-1">{kyc?.status === "REJECTED" ? "Resubmit" : "Start"}<ArrowRight size={11} strokeWidth={2} aria-hidden /></span>
                 </button>
               )}
             </dd>
@@ -103,10 +104,10 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
         <p className="mt-1 text-[10px] text-text-faint">Equity = balance + floating P/L on open positions.</p>
 
         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border-soft pt-3">
-          <StatSmall label="Balance" value={money(metrics.balance)} hint="Settled funds: approved deposits/withdrawals and closed-trade P/L. Excludes floating P/L." />
-          <StatSmall label="Credit" value={money(metrics.credit)} hint="Bonus or administrative credit granted to the account." />
-          <StatSmall label="Margin" value={money(metrics.margin)} hint="Collateral currently held against open positions." />
-          <StatSmall label="Free Margin" value={money(metrics.free)} hint="Margin available to open new positions." />
+          <StatSmall icon={<Wallet size={12} strokeWidth={1.75} aria-hidden />} label="Balance" value={money(metrics.balance)} hint="Settled funds: approved deposits/withdrawals and closed-trade P/L. Excludes floating P/L." />
+          <StatSmall icon={<Plus size={12} strokeWidth={1.75} aria-hidden />} label="Credit" value={money(metrics.credit)} hint="Bonus or administrative credit granted to the account." />
+          <StatSmall icon={<Lock size={12} strokeWidth={1.75} aria-hidden />} label="Margin" value={money(metrics.margin)} hint="Collateral currently held against open positions." />
+          <StatSmall icon={<Unlock size={12} strokeWidth={1.75} aria-hidden />} label="Free Margin" value={money(metrics.free)} hint="Margin available to open new positions." />
         </div>
         <div className="mt-3 border-t border-border-soft pt-3">
           <div className="flex items-center justify-between">
@@ -159,11 +160,11 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
         <div className={`grid gap-2 mt-4 ${depositUiEnabled ? "grid-cols-2" : "grid-cols-1"}`}>
           {depositUiEnabled && (
             <Button type="button" size="sm" variant="buy" onClick={() => { setWalletMode("deposit"); setWalletOpen(true); }}>
-              Deposit
+              <ArrowDownToLine size={13} strokeWidth={2} aria-hidden /> Deposit
             </Button>
           )}
           <Button type="button" size="sm" onClick={() => { setWalletMode("withdraw"); setWalletOpen(true); }}>
-            Withdraw
+            <ArrowUpFromLine size={13} strokeWidth={2} aria-hidden /> Withdraw
           </Button>
         </div>
       </div>
@@ -202,10 +203,10 @@ function Row({ label, value, valueClass = "" }: { label: string; value: string; 
   );
 }
 
-function StatSmall({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function StatSmall({ label, value, hint, icon }: { label: string; value: string; hint?: string; icon?: React.ReactNode }) {
   return (
     <div>
-      <div className="flex items-center text-[11px] text-text-faint">{label}{hint && <InfoHint text={hint} />}</div>
+      <div className="flex items-center gap-1 text-[11px] text-text-faint">{icon}{label}{hint && <InfoHint text={hint} />}</div>
       <div className="text-sm tnum">{value}</div>
     </div>
   );

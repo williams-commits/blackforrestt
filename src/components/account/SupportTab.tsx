@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { CircleCheck } from "lucide-react";
 
 const CATEGORIES = ["General enquiry", "Account & verification", "Deposits & withdrawals", "Technical issue", "Partnership"] as const;
 
@@ -108,8 +109,8 @@ export function SupportTab() {
           Our team typically responds within one business day. Your case reference will appear below once submitted.
         </p>
         {successRef && (
-          <div className="mb-4 rounded-lg border border-up/30 bg-up/10 px-4 py-3 text-sm text-up">
-            ✓ Case created — your reference is <strong>{successRef}</strong>. We&apos;ll reply by email.
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-up/30 bg-up/10 px-4 py-3 text-sm text-up"><CircleCheck size={16} strokeWidth={2} aria-hidden className="mt-0.5 shrink-0" />
+            Case created — your reference is <strong>{successRef}</strong>. We&apos;ll reply by email.
           </div>
         )}
         <form onSubmit={submit} className="space-y-4">
@@ -204,7 +205,7 @@ export function SupportTab() {
                 <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-text-muted">{c.description}</p>
                 {c.resolutionNote && (
                   <p className="mt-2 rounded border border-up/25 bg-up/5 px-3 py-2 text-xs text-text">
-                    <strong className="text-up">✓ Resolved:</strong> {c.resolutionNote}
+                    <strong className="text-up">Resolved:</strong> {c.resolutionNote}
                   </p>
                 )}
                 {c.status === "WAITING_CUSTOMER" && (

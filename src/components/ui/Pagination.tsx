@@ -1,5 +1,7 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
 interface PaginationProps {
   page: number;
   pageSize: number;
@@ -38,7 +40,7 @@ export function Pagination({
           onClick={() => onPageChange(safePage - 1)}
           className="rounded border border-border bg-canvas px-2.5 py-1 text-[10px] font-medium text-text-muted hover:border-brand hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Previous
+          <ChevronLeft size={12} strokeWidth={2} aria-hidden /> Previous
         </button>
         <span className="min-w-16 text-center text-[10px] text-text-muted tnum">
           {safePage} / {totalPages}
@@ -49,7 +51,7 @@ export function Pagination({
           onClick={() => onPageChange(safePage + 1)}
           className="rounded border border-border bg-canvas px-2.5 py-1 text-[10px] font-medium text-text-muted hover:border-brand hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Next
+          Next <ChevronRight size={12} strokeWidth={2} aria-hidden />
         </button>
       </div>
     </nav>

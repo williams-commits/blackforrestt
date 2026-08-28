@@ -1,5 +1,7 @@
 "use client";
 
+import { CandlestickChart, ChevronDown, FileText, LogOut, Settings, User } from "lucide-react";
+
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
@@ -101,52 +103,25 @@ function AccountMenuLink({ href, label, onSelect, icon}: { href: string; label: 
 }
 
 function AccountIcon() {
-  return (
-    <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21v-1a8 8 0 0116 0v1" strokeLinecap="round" />
-    </svg>
-  );
+  return <User size={14} strokeWidth={1.75} aria-hidden />;
 }
 function ReportsIcon() {
-  return (
-    <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="4" y="3" width="16" height="18" rx="2" />
-      <path d="M8 8h8M8 12h8M8 16h5" strokeLinecap="round" />
-    </svg>
-  );
+  return <FileText size={14} strokeWidth={1.75} aria-hidden />;
 }
 function SettingsIcon() {
-  return (
-    <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" />
-    </svg>
-  );
+  return <Settings size={14} strokeWidth={1.75} aria-hidden />;
 }
 
-function TradeTerminal(){
-  return (
-    <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className={ic}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
-    </svg> 
-  );
+function TradeTerminal() {
+  return <CandlestickChart size={14} strokeWidth={1.75} aria-hidden className={ic} />;
 }
 
 
 
 function SignOutIcon() {
-  return (
-    <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+  return <LogOut size={14} strokeWidth={1.75} aria-hidden />;
 }
 
 function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`transition-transform ${open ? "rotate-180" : ""}`}>
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
+  return <ChevronDown size={11} strokeWidth={2.5} aria-hidden className={`transition-transform ${open ? "rotate-180" : ""}`} />;
 }

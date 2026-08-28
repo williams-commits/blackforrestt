@@ -1,5 +1,7 @@
 "use client";
 
+import { FileText, LogOut, Minus, Plus, Settings, Shield, Sun, User } from "lucide-react";
+
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -368,62 +370,26 @@ function MenuLink({
 const ic = "w-3.5 h-3.5";
 
 function DepositIcon() {
-  return (
-    <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-    </svg>
-  );
+  return <Plus size={14} strokeWidth={2} aria-hidden className={ic} />;
 }
 function WithdrawIcon() {
-  return (
-    <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M5 12h14" strokeLinecap="round" />
-    </svg>
-  );
+  return <Minus size={14} strokeWidth={2} aria-hidden className={ic} />;
 }
 function AccountIcon() {
-  return (
-    <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21v-1a8 8 0 0116 0v1" strokeLinecap="round" />
-    </svg>
-  );
+  return <User size={14} strokeWidth={2} aria-hidden className={ic} />;
 }
 function ReportsIcon() {
-  return (
-    <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="4" y="3" width="16" height="18" rx="2" />
-      <path d="M8 8h8M8 12h8M8 16h5" strokeLinecap="round" />
-    </svg>
-  );
+  return <FileText size={14} strokeWidth={2} aria-hidden className={ic} />;
 }
 function SettingsIcon() {
-  return (
-    <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" />
-    </svg>
-  );
+  return <Settings size={14} strokeWidth={2} aria-hidden className={ic} />;
 }
 function AdminIcon() {
-  return (
-    <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 2l9 4v6c0 5-3.8 9.3-9 10-5.2-.7-9-5-9-10V6l9-4z" strokeLinejoin="round" />
-    </svg>
-  );
+  return <Shield size={14} strokeWidth={2} aria-hidden className={ic} />;
 }
 function ThemeIcon() {
-  return (
-    <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" strokeLinecap="round" />
-    </svg>
-  );
+  return <Sun size={14} strokeWidth={2} aria-hidden className={ic} />;
 }
 function SignOutIcon() {
-  return (
-    <svg className={ic} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+  return <LogOut size={14} strokeWidth={2} aria-hidden className={ic} />;
 }

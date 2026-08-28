@@ -15,7 +15,8 @@ import { useCommandDialog } from "@/components/ui/useCommandDialog";
 import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Th, TableSearch, FilterChip, type SortDirection } from "@/components/ui/DataTable";
-import { ADMIN_TAB_ICONS, TabIcon } from "@/components/ui/tabIcons";
+import { ADMIN_TAB_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
+import { CandlestickChart, Check, ClipboardCheck, CreditCard, IdCard, RefreshCw, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, Wallet, X } from "lucide-react";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { createDeviceId } from "@/lib/device";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";
@@ -338,13 +339,25 @@ function ModuleState({ loading, error, onRetry, children }: { loading: boolean; 
       </div>
     );
   }
-  if (error) return <div role="alert" className="rounded-lg border border-down/30 bg-down/10 p-4 text-sm text-down">{error}<Button type="button" size="sm" variant="ghost" onClick={onRetry} className="ml-3">Retry</Button></div>;
+  if (error) return <div role="alert" className="flex flex-wrap items-center gap-2 rounded-lg border border-down/30 bg-down/10 p-4 text-sm text-down"><TriangleAlert size={16} strokeWidth={1.75} aria-hidden />{error}<Button type="button" size="sm" variant="ghost" onClick={onRetry} className="ml-auto flex items-center gap-1.5"><RotateCcw size={12} strokeWidth={1.75} aria-hidden />Retry</Button></div>;
   return <>{children}</>;
 }
 
 function SectionHeader({ title, description, onRefresh }: { title: string; description: string; onRefresh?: () => void }) {
-  return <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold">{title}</h2><p className="mt-1 text-xs text-text-muted">{description}</p></div>{onRefresh && <button type="button" onClick={onRefresh} className="rounded border border-border px-3 py-1.5 text-xs hover:bg-panel-2">Refresh</button>}</div>;
+  return <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold">{title}</h2><p className="mt-1 text-xs text-text-muted">{description}</p></div>{onRefresh && <button type="button" onClick={onRefresh} className="flex items-center gap-1.5 rounded border border-border px-3 py-1.5 text-xs hover:bg-panel-2"><RefreshCw size={12} strokeWidth={1.75} aria-hidden />Refresh</button>}</div>;
 }
+
+/** Icons for the overview stat grid — inferred from the stat key. */
+const OVERVIEW_STAT_ICONS: Record<string, LucideIcon> = {
+  users: Users,
+  onlineUsers: Users,
+  openPositions: CandlestickChart,
+  pendingKyc: IdCard,
+  pendingPayments: CreditCard,
+  pendingChanges: ClipboardCheck,
+  totalBalance: Wallet,
+  totalEquity: Scale,
+};
 
 interface OverviewResponse {
   environment: { simulationOnly: boolean; executionProvider: string; marketDataMode: string };
@@ -352,7 +365,10 @@ interface OverviewResponse {
 }
 function OverviewPanel() {
   const resource = useResource<OverviewResponse>("/api/admin/overview", 15_000);
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><div className="rounded-lg border border-brand/30 bg-brand-soft p-3 text-xs text-brand"><strong>Environment.</strong> Execution provider: {resource.data.environment.executionProvider}; market data: {resource.data.environment.marketDataMode}.</div><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{Object.entries(resource.data.stats).map(([key, value]) => <div key={key} className="rounded-lg border border-border bg-canvas p-4"><div className="text-[10px] uppercase text-text-faint">{key.replaceAll(/([A-Z])/g, " $1")}</div><div className="mt-1 text-2xl font-semibold tnum">{value.toLocaleString("en-US")}</div></div>)}</div></div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><div className="rounded-lg border border-brand/30 bg-brand-soft p-3 text-xs text-brand"><strong>Environment.</strong> Execution provider: {resource.data.environment.executionProvider}; market data: {resource.data.environment.marketDataMode}.</div><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{Object.entries(resource.data.stats).map(([key, value]) => {
+              const StatGlyph = OVERVIEW_STAT_ICONS[key];
+              return <div key={key} className="rounded-lg border border-border bg-canvas p-4"><div className="flex items-center gap-1.5 text-[10px] uppercase text-text-faint">{StatGlyph && <StatGlyph size={12} strokeWidth={1.75} aria-hidden />}{key.replaceAll(/([A-Z])/g, " $1")}</div><div className="mt-1 text-2xl font-semibold tnum">{value.toLocaleString("en-US")}</div></div>;
+            })}</div></div>}</ModuleState>;
 }
 
 interface UserRow {
@@ -1336,7 +1352,7 @@ interface AuditEventRow extends Record<string, unknown> { sequence: string; doma
 function AuditPanel({ canVerify, canExport }: { canVerify: boolean; canExport: boolean }) {
   const resource = useResource<{ events: AuditEventRow[]; redacted: boolean }>("/api/admin/audit?limit=150");
   async function verify() { try { const result = await requestJson<{ valid: boolean; checkedEvents: number }>("/api/admin/audit/verify", { method: "POST" }); toast.success(`Chain ${result.valid ? "valid" : "invalid"}`, `Checked ${result.checkedEvents} events.`); await resource.refresh(); } catch (cause) { toast.error("Verification failed", cause instanceof Error ? cause.message : "Verification failed."); } }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex flex-wrap items-start justify-between gap-3"><SectionHeader title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} /><div className="flex gap-2">{canVerify && <button type="button" onClick={() => void verify()} className="rounded bg-brand px-3 py-2 text-xs text-white">Verify chain</button>}{canExport && <a href="/api/admin/audit/export?format=csv&limit=500" className="rounded border border-border px-3 py-2 text-xs">Export CSV</a>}</div></div><SimpleTable columns={["sequence", "domain", "action", "entityType", "entityId", "actorId", "createdAt", "metadata"]} rows={resource.data.events} empty="No audit events." /></div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex flex-wrap items-start justify-between gap-3"><SectionHeader title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} /><div className="flex gap-2">{canVerify && <button type="button" onClick={() => void verify()} className="flex items-center gap-1.5 rounded bg-brand px-3 py-2 text-xs text-white"><ShieldCheck size={12} strokeWidth={2} aria-hidden />Verify chain</button>}{canExport && <a href="/api/admin/audit/export?format=csv&limit=500" className="rounded border border-border px-3 py-2 text-xs">Export CSV</a>}</div></div><SimpleTable columns={["sequence", "domain", "action", "entityType", "entityId", "actorId", "createdAt", "metadata"]} rows={resource.data.events} empty="No audit events." /></div>}</ModuleState>;
 }
 
 interface HealthResponse {
@@ -1490,8 +1506,8 @@ function ChangesPanel({
                   </div>
                   {item.canReview && item.status === "PENDING" && (
                     <div className="flex gap-2">
-                      <button type="button" onClick={() => void review(item.id, "REJECT")} className="rounded border border-border px-2 py-1 text-xs">Reject</button>
-                      <button type="button" onClick={() => void review(item.id, "APPROVE")} className="rounded bg-brand px-2 py-1 text-xs text-white">Approve</button>
+                      <button type="button" onClick={() => void review(item.id, "REJECT")} className="flex items-center gap-1 rounded border border-border px-2 py-1 text-xs"><X size={11} strokeWidth={2} aria-hidden />Reject</button>
+                      <button type="button" onClick={() => void review(item.id, "APPROVE")} className="flex items-center gap-1 rounded bg-brand px-2 py-1 text-xs text-white"><Check size={11} strokeWidth={2} aria-hidden />Approve</button>
                     </div>
                   )}
                 </div>

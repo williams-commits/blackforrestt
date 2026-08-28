@@ -16,6 +16,7 @@ const FOCUSABLE =
 interface DialogProps {
   open: boolean;
   onClose: () => void;
+  icon?: ReactNode;
   title: ReactNode;
   children: ReactNode;
   description?: ReactNode;
@@ -27,6 +28,7 @@ interface DialogProps {
 export function Dialog({
   open,
   onClose,
+  icon,
   title,
   description,
   children,
@@ -113,8 +115,7 @@ export function Dialog({
       >
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-4 py-3 sm:px-5 sm:py-4">
           <div>
-            <h2 id={titleId} className="text-sm font-semibold text-text">
-              {title}
+            <h2 id={titleId} className="text-sm font-semibold text-text">{icon && <span className="mr-2 inline-flex align-[-2px] text-text-muted">{icon}</span>}{title}
             </h2>
             {description ? (
               <div id={descriptionId} className="mt-1 text-xs text-text-muted">

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Pagination } from "@/components/ui/Pagination";
 import { Dialog } from "@/components/ui/Dialog";
+import { CheckCheck } from "lucide-react";
 import { FilterChip } from "@/components/ui/DataTable";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";
 
@@ -135,7 +136,7 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
         {unreadCount > 0 && (
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-white">{unreadCount} unread</span>
-            <Button type="button" size="sm" loading={busy} onClick={() => void markAllRead()}>Mark all read</Button>
+            <Button type="button" size="sm" loading={busy} onClick={() => void markAllRead()}><CheckCheck size={12} strokeWidth={2} aria-hidden /> Mark all read</Button>
           </div>
         )}
       </div>

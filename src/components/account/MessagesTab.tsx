@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { Send } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { fmtDateTime } from "@/lib/dates";
 
@@ -154,7 +155,7 @@ export function MessagesTab() {
                   {message.body}
                   <div className={`mt-1 flex items-center justify-end gap-1.5 text-[9px] ${mine ? "text-white/60" : "text-text-faint"}`}>
                     <span className="tnum">{fmtDateTime(message.createdAt)}</span>
-                    {mine && <span aria-label={message.readAt ? "Read by support" : "Not yet read"}>{message.readAt ? "✓ Read" : "✓ Sent"}</span>}
+                    {mine && <span aria-label={message.readAt ? "Read by support" : "Not yet read"}>{message.readAt ? "✓✓ Read" : "✓ Sent"}</span>}
                   </div>
                 </div>
               </div>
@@ -187,7 +188,7 @@ export function MessagesTab() {
           aria-label="Message body"
           className="flex-1 resize-none rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
         />
-        <Button type="submit" size="sm" variant="brand" loading={sending} disabled={!draft.trim()}>Send</Button>
+        <Button type="submit" size="sm" variant="brand" loading={sending} disabled={!draft.trim()}><Send size={12} strokeWidth={2} aria-hidden /> Send</Button>
       </form>
     </div>
   );

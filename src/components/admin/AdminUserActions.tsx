@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Dialog } from "@/components/ui/Dialog";
+import { Ellipsis } from "lucide-react";
 import { ADMIN_ACTION_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
 import { fmtDateTime } from "@/lib/dates";
 
@@ -241,9 +242,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           onClick={() => (menuOpen ? setMenuOpen(false) : openMenu())}
           className="flex h-6 w-7 items-center justify-center rounded border border-border text-text-muted hover:bg-panel-2 hover:text-text"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />
-          </svg>
+          <TabIcon icon={Ellipsis} size={16} />
         </button>
       </div>
 

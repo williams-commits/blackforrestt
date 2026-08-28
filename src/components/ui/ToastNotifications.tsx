@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useToastStore, type Toast } from "@/lib/toast";
 import type { ServerMessage } from "@/lib/ws/client";
+import { CircleCheck, CircleX, Info } from "lucide-react";
 
 interface NotificationToast {
   id: string;
@@ -115,10 +116,10 @@ export function ToastNotifications() {
   );
 }
 
-const VARIANT_STYLE: Record<Toast["variant"], { border: string; icon: string; iconColor: string }> = {
-  success: { border: "border-up/40", icon: "✓", iconColor: "text-up" },
-  error: { border: "border-down/40", icon: "✕", iconColor: "text-down" },
-  info: { border: "border-brand/40", icon: "ℹ", iconColor: "text-brand" },
+const VARIANT_STYLE: Record<Toast["variant"], { border: string; icon: React.ReactNode; iconColor: string }> = {
+  success: { border: "border-up/40", icon: <CircleCheck size={14} strokeWidth={2} aria-hidden />, iconColor: "text-up" },
+  error: { border: "border-down/40", icon: <CircleX size={14} strokeWidth={2} aria-hidden />, iconColor: "text-down" },
+  info: { border: "border-brand/40", icon: <Info size={14} strokeWidth={2} aria-hidden />, iconColor: "text-brand" },
 };
 
 function ToastCard({ variant, title, body, onDismiss }: { variant: Toast["variant"]; title: string; body?: string; onDismiss: () => void }) {
@@ -127,7 +128,7 @@ function ToastCard({ variant, title, body, onDismiss }: { variant: Toast["varian
     <div className={`rounded border ${style.border} bg-canvas px-3 py-2 shadow-card`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2">
-          <span className={`mt-0.5 text-xs font-bold ${style.iconColor}`} aria-hidden="true">{style.icon}</span>
+          <span className={`mt-0.5 ${style.iconColor}`} aria-hidden="true">{style.icon}</span>
           <div className="min-w-0">
             <div className="truncate text-xs font-semibold">{title}</div>
             {body && <div className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-text-muted">{body}</div>}

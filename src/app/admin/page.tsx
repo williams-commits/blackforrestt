@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Shield } from "lucide-react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AdminError, requireAdminContext } from "@/server/admin";
@@ -43,9 +44,7 @@ export default async function AdminPage() {
             <Logo inverted />
             <span className="hidden h-5 w-px bg-slate-700 sm:block" aria-hidden />
             <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path d="M12 2l9 4v6c0 5-3.8 9.3-9 10-5.2-.7-9-5-9-10V6l9-4z" strokeLinejoin="round" />
-              </svg>
+              <Shield size={14} strokeWidth={2} aria-hidden />
               Operations Console
             </span>
           </div>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { defaultLocale, locales, LOCALE_DISPLAY, LOCALE_COOKIE, type Locale } from "@/i18n/config";
+import { Check, ChevronDown, Globe } from "lucide-react";
 
 /**
  * Working language dropdown. Replaces the decorative EN/FR buttons.
@@ -130,26 +131,13 @@ export function LanguageSwitcher({ className = "" }: { className?: string }) {
 }
 
 function GlobeIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
-    </svg>
-  );
+  return <Globe size={14} strokeWidth={1.75} aria-hidden />;
 }
 
 function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`transition-transform ${open ? "rotate-180" : ""}`}>
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
+  return <ChevronDown size={11} strokeWidth={2.5} aria-hidden className={`transition-transform ${open ? "rotate-180" : ""}`} />;
 }
 
 function CheckIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 12l5 5 9-11" />
-    </svg>
-  );
+  return <Check size={12} strokeWidth={2} aria-hidden />;
 }

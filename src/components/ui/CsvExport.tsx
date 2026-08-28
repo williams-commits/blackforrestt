@@ -1,5 +1,7 @@
 "use client";
 
+import { Download } from "lucide-react";
+
 /**
  * Client-side CSV export — builds a CSV blob from columns + rows and triggers
  * a download. No server round-trip; works on already-fetched table data.
@@ -47,8 +49,9 @@ export function CsvExportButton({
       type="button"
       disabled={disabled}
       onClick={() => downloadCsv(filename, columns, rows)}
-      className="h-8 shrink-0 rounded border border-border bg-canvas px-2.5 text-[11px] font-medium text-text-muted transition hover:border-brand/40 hover:text-brand disabled:opacity-50"
+      className="flex h-8 shrink-0 items-center gap-1.5 rounded border border-border bg-canvas px-2.5 text-[11px] font-medium text-text-muted transition hover:border-brand/40 hover:text-brand disabled:opacity-50"
     >
+      <Download size={12} strokeWidth={1.75} aria-hidden />
       {label}
     </button>
   );

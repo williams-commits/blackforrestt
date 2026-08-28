@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Dialog } from "@/components/ui/Dialog";
+import { ADMIN_ACTION_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
 import { fmtDateTime } from "@/lib/dates";
 
 export interface ManagedUserRow {
@@ -29,6 +30,16 @@ type ResetMode = "temporary" | "link";
 type ResetResult =
   | { mode: "link"; sent: boolean; previewUrl?: string; expiresAt: string }
   | { mode: "temporary"; temporaryPassword: string };
+
+// Icon per account-state action (keys mirror STATUS_LABELS).
+const STATUS_ACTION_ICONS: Record<string, LucideIcon> = {
+  SUSPEND: ADMIN_ACTION_ICONS.suspend,
+  UNSUSPEND: ADMIN_ACTION_ICONS.unsuspend,
+  BLOCK: ADMIN_ACTION_ICONS.block,
+  UNBLOCK: ADMIN_ACTION_ICONS.unblock,
+  SOFT_DELETE: ADMIN_ACTION_ICONS.softDelete,
+  RESTORE: ADMIN_ACTION_ICONS.restore,
+};
 
 const STATUS_LABELS: Record<string, { verb: string; tone: string }> = {
   SUSPEND: { verb: "Suspend", tone: "text-down" },
@@ -244,19 +255,19 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           className="fixed z-9999 w-48 overflow-hidden rounded-lg border border-border bg-canvas py-1 shadow-xl"
           style={{ top: menuPos.top, right: menuPos.right }}
         >
-          <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "notify" }); }} label="Notify" hint="Send an in-app notification" />
-          <MenuItemRow onSelect={() => { setMenuOpen(false); onOpenChat(user); }} label="Chat" hint="Open support conversation" />
+          <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "notify" }); }} label="Notify" hint="Send an in-app notification" icon={<TabIcon icon={ADMIN_ACTION_ICONS.notify} />} />
+          <MenuItemRow onSelect={() => { setMenuOpen(false); onOpenChat(user); }} label="Chat" hint="Open support conversation" icon={<TabIcon icon={ADMIN_ACTION_ICONS.chat} />} />
           {onManageBalance && (
-            <MenuItemRow onSelect={() => { setMenuOpen(false); onManageBalance(user); }} label="Manage balance" hint="Audited finance operation" />
+            <MenuItemRow onSelect={() => { setMenuOpen(false); onManageBalance(user); }} label="Manage balance" hint="Audited finance operation" icon={<TabIcon icon={ADMIN_ACTION_ICONS.manageBalance} />} />
           )}
           {onEditSettings && (
-            <MenuItemRow onSelect={() => { setMenuOpen(false); onEditSettings(user); }} label="Settings" hint="Per-user overrides" />
+            <MenuItemRow onSelect={() => { setMenuOpen(false); onEditSettings(user); }} label="Settings" hint="Per-user overrides" icon={<TabIcon icon={ADMIN_ACTION_ICONS.settings} />} />
           )}
           {onProposeRole && (
             <>
               <div className="my-1 border-t border-border" />
-              <MenuItemRow onSelect={() => { setMenuOpen(false); onProposeRole(user, "ASSIGN_ROLE"); }} label="Grant admin role" hint="Maker-checker approval" />
-              <MenuItemRow onSelect={() => { setMenuOpen(false); onProposeRole(user, "REVOKE_ROLE"); }} label="Revoke admin role" hint="Maker-checker approval" />
+              <MenuItemRow onSelect={() => { setMenuOpen(false); onProposeRole(user, "ASSIGN_ROLE"); }} label="Grant admin role" hint="Maker-checker approval" icon={<TabIcon icon={ADMIN_ACTION_ICONS.grantRole} />} />
+              <MenuItemRow onSelect={() => { setMenuOpen(false); onProposeRole(user, "REVOKE_ROLE"); }} label="Revoke admin role" hint="Maker-checker approval" icon={<TabIcon icon={ADMIN_ACTION_ICONS.revokeRole} />} />
             </>
           )}
           {canManage && !user.isAdmin && (
@@ -266,25 +277,27 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setResetResult(null); setResetMode("temporary"); setDialog({ kind: "resetPassword" }); }}
                 label="Reset password"
                 hint="Temporary code or emailed link"
+                icon={<TabIcon icon={ADMIN_ACTION_ICONS.resetPassword} />}
               />
               <MenuItemRow
                 onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "forceSignOut" }); }}
                 label="Sign out everywhere"
                 hint="Revokes all active sessions"
+                icon={<TabIcon icon={ADMIN_ACTION_ICONS.forceSignOut} />}
               />
               <div className="my-1 border-t border-border" />
-              <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: statusAction }); }} label={STATUS_LABELS[statusAction].verb} tone={STATUS_LABELS[statusAction].tone} />
+              <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: statusAction }); }} label={STATUS_LABELS[statusAction].verb} tone={STATUS_LABELS[statusAction].tone} icon={<TabIcon icon={STATUS_ACTION_ICONS[statusAction]} />} />
               {secondaryAction && (
-                <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: secondaryAction }); }} label={STATUS_LABELS[secondaryAction].verb} tone="text-down" />
+                <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: secondaryAction }); }} label={STATUS_LABELS[secondaryAction].verb} tone="text-down" icon={<TabIcon icon={STATUS_ACTION_ICONS[secondaryAction]} />} />
               )}
               {deleteAction && (
                 <>
                   <div className="my-1 border-t border-border" />
-                  <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: deleteAction }); }} label={STATUS_LABELS[deleteAction].verb} tone="text-down" hint="Soft-delete; restorable" />
+                  <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: deleteAction }); }} label={STATUS_LABELS[deleteAction].verb} tone="text-down" hint="Soft-delete; restorable" icon={<TabIcon icon={STATUS_ACTION_ICONS[deleteAction]} />} />
               {state === "deleted" && (
                 <>
                   <div className="my-1 border-t border-border" />
-                  <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "hardDelete" }); }} label="Delete permanently" tone="text-down" hint="Purges all records; irreversible" />
+                  <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "hardDelete" }); }} label="Delete permanently" tone="text-down" hint="Purges all records; irreversible" icon={<TabIcon icon={ADMIN_ACTION_ICONS.hardDelete} />} />
                 </>
               )}
                 </>
@@ -490,7 +503,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
   );
 }
 
-function MenuItemRow({ onSelect, label, hint, tone = "text-text" }: { onSelect: () => void; label: string; hint?: string; tone?: string }) {
+function MenuItemRow({ onSelect, label, hint, tone = "text-text", icon }: { onSelect: () => void; label: string; hint?: string; tone?: string; icon?: React.ReactNode }) {
   return (
     <button
       type="button"
@@ -498,6 +511,7 @@ function MenuItemRow({ onSelect, label, hint, tone = "text-text" }: { onSelect: 
       onClick={onSelect}
       className="flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs transition-colors hover:bg-panel-2"
     >
+      {icon}
       <span className={`min-w-0 flex-1 ${tone}`}>
         <span className="block font-medium">{label}</span>
         {hint && <span className="block text-[9px] text-text-faint">{hint}</span>}

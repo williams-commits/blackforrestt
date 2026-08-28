@@ -9,6 +9,7 @@ import { toast } from "@/lib/toast";
 import type { WalletAddressEntry } from "@/server/userSettings";
 import { WITHDRAWAL_CRYPTO_NETWORKS } from "@/lib/paymentNetworks";
 import { PAYMENT_PROOF_MAX_BYTES, compressProofImage, isHeicFile } from "@/lib/paymentProofs";
+import { WALLET_ICONS, TabIcon } from "@/components/ui/tabIcons";
 
 /** Widened view of the server-enforced presets for string-indexed lookups. */
 const WITHDRAWAL_NETWORKS: Record<string, readonly string[]> = WITHDRAWAL_CRYPTO_NETWORKS;
@@ -313,11 +314,11 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
         <div className={`mb-5 grid ${depositEnabled ? "grid-cols-2" : "grid-cols-1"} gap-1 rounded-lg border border-border bg-panel-2 p-1 text-xs`} role="tablist" aria-label="Wallet operation">
           {depositEnabled && (
             <button type="button" role="tab" aria-selected={isDeposit} onClick={() => switchMode("deposit")} className={`flex items-center justify-center gap-1.5 rounded-md py-2.5 transition ${isDeposit ? "bg-up font-semibold text-white shadow-sm" : "text-text-muted hover:text-text"}`}>
-              <span aria-hidden>↓</span> Deposit
+              <TabIcon icon={WALLET_ICONS.deposit} size={16} /> Deposit
             </button>
           )}
           <button type="button" role="tab" aria-selected={!isDeposit} onClick={() => switchMode("withdraw")} className={`flex items-center justify-center gap-1.5 rounded-md py-2.5 transition ${!isDeposit ? "bg-down font-semibold text-white shadow-sm" : "text-text-muted hover:text-text"}`}>
-            <span aria-hidden>↑</span> Withdraw
+            <TabIcon icon={WALLET_ICONS.withdraw} size={16} /> Withdraw
           </button>
         </div>
 

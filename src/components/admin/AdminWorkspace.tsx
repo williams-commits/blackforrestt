@@ -15,6 +15,7 @@ import { useCommandDialog } from "@/components/ui/useCommandDialog";
 import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Th, TableSearch, FilterChip, type SortDirection } from "@/components/ui/DataTable";
+import { ADMIN_TAB_ICONS, TabIcon } from "@/components/ui/tabIcons";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { createDeviceId } from "@/lib/device";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";
@@ -231,6 +232,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
   const tabButton = (item: { key: TabKey; label: string }, sidebar: boolean) => {
     const active = tab === item.key;
     const badge = badgeFor(item.key);
+    const tabIcon = ADMIN_TAB_ICONS[item.key];
     return (
       <button
         key={item.key}
@@ -243,6 +245,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
             : `border-b-2 px-3 py-2.5 ${active ? "border-brand text-brand" : "border-transparent text-text-muted hover:text-text"}`
         }`}
       >
+        {tabIcon && <TabIcon icon={tabIcon} />}
         <span>{item.label}</span>
         {badge != null && badge > 0 && (
           <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${active ? "bg-brand text-white" : "bg-brand-soft text-brand"}`}>

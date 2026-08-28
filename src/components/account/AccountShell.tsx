@@ -17,6 +17,7 @@ import type { InstrumentView, PositionView } from "@/lib/types";
 import { useForexStore } from "@/lib/store";
 import type { ServerMessage } from "@/lib/ws/client";
 import { Tabs } from "@/components/ui/Tabs";
+import { ACCOUNT_TAB_ICONS, TabIcon } from "@/components/ui/tabIcons";
 import { ScrollFade } from "@/components/ui/ScrollFade";
 import { AccountReconciliationStatus, type ReconciliationStatus } from "./AccountReconciliationStatus";
 import type { WalletAddressEntry } from "@/server/userSettings";
@@ -272,25 +273,32 @@ export function AccountShell(props: Props) {
     props.reconciliation.paymentMismatchCount > 0 ||
     props.reconciliation.lastRun?.status === "FAILED";
 
+  // Icons first, then the existing unread/attn badges — one pass builds the
+  // final tab labels so the strip stays a single map.
   const tabsWithBadges = TABS.map((item) => {
+    const icon = ACCOUNT_TAB_ICONS[item.key];
+    const iconEl = icon ? <TabIcon key="icon" icon={icon} /> : null;
+    const badgeFor: Record<string, React.ReactNode> = {};
     if (item.key === "positions" && openPositionCount > 0) {
-      return { ...item, label: <>{item.label}<span className="ml-1.5 rounded-full bg-panel-3 px-1.5 py-0.5 text-[9px] font-bold text-text-muted">{openPositionCount}</span></> };
+      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-panel-3 px-1.5 py-0.5 text-[9px] font-bold text-text-muted">{openPositionCount}</span>;
     }
     if (item.key === "verification" && verificationNeeded) {
-      return { ...item, label: <>{item.label}<span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">!</span></> };
+      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">!</span>;
     }
     // Unread badges — after a toast fires these steer the user to the tab that
     // holds the history (toasts no longer consume the unread state).
     if (item.key === "notifications" && unreadNotifications > 0) {
-      return { ...item, label: <>{item.label}<span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span></> };
+      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>;
     }
     if (item.key === "messages" && unreadMessages > 0) {
-      return { ...item, label: <>{item.label}<span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">{unreadMessages > 99 ? "99+" : unreadMessages}</span></> };
+      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">{unreadMessages > 99 ? "99+" : unreadMessages}</span>;
     }
     if (item.key === "support" && openSupportCases > 0) {
-      return { ...item, label: <>{item.label}<span className="ml-1.5 rounded-full bg-panel-3 px-1.5 py-0.5 text-[9px] font-bold text-text-muted">{openSupportCases}</span></> };
+      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-panel-3 px-1.5 py-0.5 text-[9px] font-bold text-text-muted">{openSupportCases}</span>;
     }
-    return item;
+    const badge = badgeFor[item.key];
+    if (!iconEl && !badge) return item;
+    return { ...item, label: <>{iconEl}{item.label}{badge}</> };
   });
   const activeTabLabel = TABS.find((item) => item.key === tab)?.label ?? "Account";
 

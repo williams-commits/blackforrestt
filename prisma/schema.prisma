@@ -254,6 +254,7 @@ model SecuritySession {
   revokedAt     DateTime?
 
   @@index([userId, revokedAt, expiresAt])
+  @@index([revokedAt, expiresAt])
   @@index([userId, deviceId])
 }
 
@@ -334,6 +335,8 @@ model Position {
   requestFingerprint String?
 
   @@index([userId, status])
+  @@index([userId, status, closedAt])
+  @@index([status, closedAt])
   @@index([symbol, status])
   @@unique([userId, idempotencyKey])
 }

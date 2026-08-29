@@ -229,7 +229,7 @@ export async function trackReferralClick(code: string): Promise<void> {
  *  brandDomain (accounts created before per-brand signups), so a legacy
  *  customer browsing referrals on agilefgs.com still gets an agilefgs link. */
 export async function getReferralStats(userId: string, fallbackDomain?: string | null) {
-  const [code, referrer, referrals] = await Promise.all([
+  const [code, referrer, referrals, statusRows] = await Promise.all([
     getOrCreateReferralCode(userId),
     prisma.user.findUnique({ where: { id: userId }, select: { brandDomain: true } }),
     prisma.referral.findMany({
@@ -243,15 +243,24 @@ export async function getReferralStats(userId: string, fallbackDomain?: string |
         referred: { select: { name: true, email: true, accountNo: true, verified: true } },
       },
       orderBy: { createdAt: "desc" },
+      // The rendered list is bounded; aggregate totals below stay exact.
+      take: 200,
+    }),
+    prisma.referral.groupBy({
+      by: ["status"],
+      where: { referrerId: userId },
+      _count: { _all: true },
+      _sum: { referrerReward: true },
     }),
   ]);
 
-  const total = referrals.length;
-  const completed = referrals.filter((r) => r.status === "COMPLETED").length;
-  const pending = referrals.filter((r) => r.status === "PENDING").length;
-  const totalEarned = referrals
-    .filter((r) => r.status === "COMPLETED")
-    .reduce((sum, r) => sum + Number(r.referrerReward), 0);
+  const statusCount = (status: string) => statusRows.find((row) => row.status === status)?._count._all ?? 0;
+  const total = statusRows.reduce((sum, row) => sum + row._count._all, 0);
+  const completed = statusCount("COMPLETED");
+  const pending = statusCount("PENDING");
+  const totalEarned = statusRows
+    .filter((row) => row.status === "COMPLETED")
+    .reduce((sum, row) => sum + Number(row._sum.referrerReward ?? 0), 0);
 
   return {
     code,

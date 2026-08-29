@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../db";
+import { appendAuditEvent } from "../ledger";
 import { developmentEmailPreviewEnabled } from "../security/tokens";
 import { deliverRenderedEmail, emailDeliveryEnabled, emailProviderConfigured } from "./provider";
 import { renderEmail, type EmailTemplateName, type EmailVariables } from "./templates";
@@ -229,6 +230,27 @@ class EmailDispatcher {
             nextAttemptAt: new Date(Date.now() + retryDelayMs(attempts)),
           },
         });
+        // A terminally failed email is silent data loss otherwise — reset and
+        // verification mails die in the DB with no operator signal. Surface it
+        // in the audit trail and the admin service-health panel.
+        if (terminal) {
+          await prisma.$transaction((tx) =>
+            appendAuditEvent(tx, {
+              action: "EMAIL_DELIVERY_FAILED",
+              entityType: "EmailDelivery",
+              entityId: job.id,
+              actorId: job.userId,
+              metadata: {
+                recipient: job.recipient,
+                template: job.template,
+                attempts,
+                lastError: error instanceof Error ? error.message.slice(0, 200) : "Unknown error",
+              },
+            }),
+          ).catch((auditError) =>
+            console.error("Failed to audit terminal email failure", auditError),
+          );
+        }
       }
     }
   }

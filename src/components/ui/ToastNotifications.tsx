@@ -42,6 +42,7 @@ export function ToastNotifications() {
   useEffect(() => {
     if (status !== "authenticated") return;
     let active = true;
+    let lastUnread: number | null = null;
 
     async function load() {
       const response = await fetch("/api/notifications", { cache: "no-store" });
@@ -71,13 +72,29 @@ export function ToastNotifications() {
       }).catch(() => undefined);
     }
 
-    void load();
-    const timer = window.setInterval(() => void load(), 12_000);
+    // Steady-state poll is the cheap 3-count query; the heavier recent-list
+    // payload (with its groupBy over history) is fetched only when the unread
+    // count actually grew.
+    async function poll() {
+      const response = await fetch("/api/notifications?scope=counts", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = await response.json().catch(() => null);
+      const unread = Number(payload?.unreadCount);
+      if (!active || !Number.isFinite(unread)) return;
+      const previous = lastUnread;
+      lastUnread = unread;
+      if (previous === null ? unread > 0 : unread > previous) await load();
+    }
+
+    void poll();
+    const timer = window.setInterval(() => void poll(), 12_000);
     // Trades, payment approvals (and other fund movements) create DB
     // notifications — the 12s poll would show them up to 12s late, which reads
     // as "no feedback". The realtime bridge already pushes position/account
     // events within ~1s of the trade; refresh immediately when one arrives so
-    // the toast appears while the user is still looking at the screen.
+    // the toast appears while the user is still looking at the screen. These
+    // are rare per user, so they go straight to the full list fetch — this
+    // also covers the read-one-arrive-one case the count gate would miss.
     const handleRealtime = (event: Event) => {
       const message = (event as CustomEvent<ServerMessage>).detail;
       const isLedgerMovement = message?.type === "account" && message.reason === "ledger";

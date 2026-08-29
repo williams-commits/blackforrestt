@@ -98,15 +98,45 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
       }
     };
     const close = () => setMenuOpen(false);
+    // Keyboard entry: land focus on the first item so arrow-key navigation
+    // starts where a mouse user's cursor would.
+    const frame = requestAnimationFrame(() => {
+      menuRef.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
+    });
     document.addEventListener("mousedown", onPointerDown);
     window.addEventListener("scroll", close, true);
     window.addEventListener("resize", close);
     return () => {
+      cancelAnimationFrame(frame);
       document.removeEventListener("mousedown", onPointerDown);
       window.removeEventListener("scroll", close, true);
       window.removeEventListener("resize", close);
     };
   }, [menuOpen]);
+
+  /** Roving focus within the open menu (Arrow/Home/End), Escape returns to the trigger. */
+  function handleMenuKeyDown(event: React.KeyboardEvent) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setMenuOpen(false);
+      triggerRef.current?.focus();
+      return;
+    }
+    const items = menuRef.current
+      ? Array.from(menuRef.current.querySelectorAll<HTMLElement>("[role=menuitem]"))
+      : [];
+    if (items.length === 0) return;
+    const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+    let nextIndex = -1;
+    if (event.key === "ArrowDown") nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % items.length;
+    else if (event.key === "ArrowUp") nextIndex = currentIndex < 0 ? items.length - 1 : (currentIndex - 1 + items.length) % items.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = items.length - 1;
+    if (nextIndex >= 0) {
+      event.preventDefault();
+      items[nextIndex].focus();
+    }
+  }
 
   async function submitStatus(action: "SUSPEND" | "UNSUSPEND" | "BLOCK" | "UNBLOCK" | "SOFT_DELETE" | "RESTORE") {
     setBusy(true);
@@ -251,6 +281,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           ref={menuRef}
           role="menu"
           aria-label={`Actions for ${user.name ?? user.email ?? user.id}`}
+          onKeyDown={handleMenuKeyDown}
           className="fixed z-9999 w-48 overflow-hidden rounded-lg border border-border bg-canvas py-1 shadow-xl"
           style={{ top: menuPos.top, right: menuPos.right }}
         >
@@ -507,8 +538,9 @@ function MenuItemRow({ onSelect, label, hint, tone = "text-text", icon }: { onSe
     <button
       type="button"
       role="menuitem"
+      tabIndex={-1}
       onClick={onSelect}
-      className="flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs transition-colors hover:bg-panel-2"
+      className="flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs transition-colors hover:bg-panel-2 focus:bg-panel-2 focus:outline-none"
     >
       {icon}
       <span className={`min-w-0 flex-1 ${tone}`}>

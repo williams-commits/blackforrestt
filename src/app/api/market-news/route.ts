@@ -46,6 +46,15 @@ export async function GET(request: Request) {
 
   const cacheKey = `market-news:${category}`;
   const cached = await cacheGet<NewsItem[]>(cacheKey);
+  // Serve fresh-from-cache first: every visitor otherwise pays the upstream
+  // round-trip (up to 8s on a slow day) and burns the free-tier rate limit —
+  // the cache below was only ever used as a failure fallback.
+  if (cached) {
+    return NextResponse.json(
+      { items: cached, cached: true },
+      { headers: { "cache-control": "public, max-age=30, stale-while-revalidate=30" } },
+    );
+  }
 
   try {
     const res = await fetch(`${FINNHUB_BASE}/news?category=${encodeURIComponent(category)}&token=${apiKey}`, {

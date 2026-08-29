@@ -539,7 +539,7 @@ function PaginatedUsers({
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-275 text-left text-xs">
-          <thead className="bg-panel-2 text-text-muted"><tr>
+          <thead className="sticky top-0 z-10 bg-panel-2 text-text-muted"><tr>
             <Th sortKey="name" sort={sort} onSort={onSort}>Account</Th>
             <Th>Verification</Th><Th>Security</Th><Th>Roles</Th>
             <Th sortKey="balance" sort={sort} onSort={onSort} align="right">Balance</Th>

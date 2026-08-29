@@ -312,9 +312,12 @@ export async function resolveUserSettings(userId: string): Promise<ResolvedSetti
   // get that brand's deposit wallets instead of the global list, so each
   // storefront's customers pay into that brand's addresses. Group and
   // per-user admin overrides still win over the brand layer.
-  const brandDomain = profile?.user.brandDomain
-    ?? (await prisma.user.findUnique({ where: { id: userId }, select: { brandDomain: true } }))?.brandDomain
-    ?? null;
+  // The profile query above already includes brandDomain; only users with no
+  // profile row at all need the separate user lookup (a null brandDomain from
+  // the include must NOT trigger it — that re-queried every 5s per user).
+  const brandDomain = profile
+    ? profile.user.brandDomain
+    : ((await prisma.user.findUnique({ where: { id: userId }, select: { brandDomain: true } }))?.brandDomain ?? null);
   const brandWallets = brandProfileForDomain(brandDomain).depositWallets;
   const brandLayer = brandWallets
     ? ({ deposits: { walletAddresses: parseEnvWalletAddresses(brandWallets) } } as UserSettingsConfig)

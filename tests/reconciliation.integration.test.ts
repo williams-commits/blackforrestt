@@ -7,7 +7,11 @@ import {
   releaseBlock,
   runReconciliation,
 } from "../src/server/reconciliation.js";
-import { money } from "../src/server/ledger.js";
+import {
+  ensureUserLedgerAccount,
+  money,
+  refreshLedgerProjections,
+} from "../src/server/ledger.js";
 
 const prisma = new PrismaClient();
 
@@ -20,6 +24,13 @@ test("reconciliation is replay-safe and critical payment mismatches block withdr
       emailVerifiedAt: new Date(),
       verified: true,
     },
+  });
+  // Signup-shaped projections so the ONLY critical case for this customer is
+  // the deliberately mismatched payment below (bare users are flagged as
+  // "projection missing", which would add unrelated blocks to the asserts).
+  await prisma.$transaction(async (tx) => {
+    await ensureUserLedgerAccount(tx, customer.id, "AVAILABLE");
+    await refreshLedgerProjections(tx, customer.id);
   });
   const operator = await prisma.user.create({
     data: {

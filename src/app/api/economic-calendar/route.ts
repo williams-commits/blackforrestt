@@ -152,6 +152,15 @@ export async function GET(request: Request) {
 
   const cacheKey = `economic-calendar:${source}:${scopeToday ? "today" : "week"}:${impactParam ?? "all"}:${currenciesParam ?? "all"}`;
   const cached = await cacheGet<CalendarItem[]>(cacheKey);
+  // Serve fresh-from-cache first (30-min TTL; events change slowly): without
+  // this every visitor paid the Forex Factory/Finnhub round-trip and the
+  // upstream rate limit burned down for zero personalization.
+  if (cached && cached.length > 0) {
+    return NextResponse.json(
+      { items: cached, source, cached: true },
+      { headers: { "cache-control": "public, max-age=300, stale-while-revalidate=300" } },
+    );
+  }
 
   try {
     const all = source === "finnhub" ? await fetchFinnhub() : await fetchForexFactory();

@@ -22,12 +22,20 @@ import {
 } from "@/server/security/tokens";
 import { currentBrandProfile, brandApexOrigin } from "@/lib/branding";
 import { appendSecurityAudit } from "@/server/security/audit";
+import { consumeRateLimit, RateLimitedError } from "@/server/security/rateLimit";
+import { requestNetworkAddress } from "@/server/security/loginThrottle";
 import { sendImmediateEmail } from "@/server/email/service";
 import { createReferral } from "@/server/referrals";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/passwordPolicy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// Unauthenticated intake: bcrypt-12 hashing makes each request CPU-expensive,
+// so cap creation attempts per source IP (registration is low-frequency for
+// humans). Tests bypass this — they import server modules directly, not HTTP.
+const REGISTER_IP_LIMIT = 5;
+const REGISTER_WINDOW_SECONDS = 15 * 60;
 
 const RegisterSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -47,6 +55,23 @@ const ACCOUNT_NUMBER_ATTEMPTS = 10;
 
 /** POST /api/register — create a uniquely numbered simulation account. */
 export async function POST(req: Request) {
+  try {
+    await consumeRateLimit({
+      scope: "register:ip",
+      identifier: requestNetworkAddress(req),
+      limit: REGISTER_IP_LIMIT,
+      windowSeconds: REGISTER_WINDOW_SECONDS,
+    });
+  } catch (error) {
+    if (error instanceof RateLimitedError) {
+      return NextResponse.json(
+        { error: "Too many registration attempts. Please try again later." },
+        { status: 429, headers: { "retry-after": String(error.retryAfterSeconds) } },
+      );
+    }
+    throw error;
+  }
+
   let body: unknown;
   try {
     body = await req.json();

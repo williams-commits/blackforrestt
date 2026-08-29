@@ -69,7 +69,7 @@ export function Th({
     <>
       {children}
       {indicator && (
-        <span className={`ml-1 text-[8px] ${active ? "text-brand" : "text-text-faint/50"}`}>{indicator}</span>
+        <span className={`ml-1 text-[8px] ${active ? "text-brand" : "text-text-faint"}`}>{indicator}</span>
       )}
     </>
   );

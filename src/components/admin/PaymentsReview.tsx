@@ -154,7 +154,7 @@ export function PaymentsReview({
       </div>
       <div className="overflow-x-auto rounded-lg border border-border bg-canvas">
         <table className="w-full min-w-225 text-left text-xs">
-          <thead className="bg-panel-2 text-text-muted">
+          <thead className="sticky top-0 z-10 bg-panel-2 text-text-muted">
             <tr>
               <th className="w-8 px-2 py-2 font-medium" aria-label="Expand details" />
               <th className="px-3 py-2 font-medium">Created</th><th className="px-3 py-2 font-medium">Client</th>

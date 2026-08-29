@@ -21,14 +21,17 @@ async function check<T>(fn: () => Promise<T>) {
 export async function GET() {
   try {
     await requireAdmin("SERVICE_HEALTH_READ");
-    const [database, redis, latestReconciliation, activeBlocks] = await Promise.all([
+    const [database, redis, latestReconciliation, activeBlocks, emailStatusCounts, lastFailedEmail] = await Promise.all([
       check(() => prisma.$queryRaw`SELECT 1`),
       check(async () => { const client = await getRedis(); await client.ping(); }),
       prisma.reconciliationRun.findFirst({ orderBy: { startedAt: "desc" }, select: { status: true, startedAt: true, completedAt: true, errorMessage: true } }),
       prisma.reconciliationBlock.count({ where: { releasedAt: null } }),
+      prisma.emailDelivery.groupBy({ by: ["status"], _count: { _all: true } }),
+      prisma.emailDelivery.findFirst({ where: { status: "FAILED" }, orderBy: { updatedAt: "desc" }, select: { recipient: true, template: true, lastError: true, updatedAt: true } }),
     ]);
     const engine = { status: hub.isReady() ? "UP" : "STARTING", instrumentsLoaded: hub.listInstruments().length };
     const healthy = database.status === "UP" && redis.status === "UP" && engine.status === "UP";
+    const emailCounts = Object.fromEntries(emailStatusCounts.map((row) => [row.status, row._count._all]));
     return NextResponse.json({
       status: healthy ? "HEALTHY" : "DEGRADED",
       checkedAt: new Date().toISOString(),
@@ -36,6 +39,13 @@ export async function GET() {
       executionProvider: "NOT_CONFIGURED",
       marketDataMode: getMarketDataMode(),
       services: { database, redis, engine },
+      emailDelivery: {
+        counts: emailCounts,
+        failed: emailCounts.FAILED ?? 0,
+        lastFailed: lastFailedEmail
+          ? { ...lastFailedEmail, updatedAt: lastFailedEmail.updatedAt.toISOString() }
+          : null,
+      },
       reconciliation: latestReconciliation ? { ...latestReconciliation, startedAt: latestReconciliation.startedAt.toISOString(), completedAt: latestReconciliation.completedAt?.toISOString() ?? null, activeBlocks } : { status: "NEVER_RUN", activeBlocks },
     });
   } catch (error) {

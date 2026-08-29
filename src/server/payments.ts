@@ -269,36 +269,37 @@ export async function withdrawalRiskHold(
 
   const dayStart = new Date(now);
   dayStart.setUTCHours(0, 0, 0, 0);
-  const today = await tx.paymentRequest.findMany({
+  const todayAggregate = await tx.paymentRequest.aggregate({
     where: {
       userId: input.userId,
       type: "WITHDRAWAL",
       createdAt: { gte: dayStart },
       status: { in: ["PENDING", "AWAITING_APPROVAL", "APPROVED"] },
     },
-    select: { amount: true },
+    _sum: { amount: true },
+    _count: { _all: true },
   });
-  const total = today.reduce((sum, request) => sum.add(request.amount), money(0));
+  const total = todayAggregate._sum.amount ?? money(0);
   // A per-user/group daily limit OVERRIDES the env velocity cap; unset (null)
   // inherits the env preset.
   const effectiveDailyLimit = settings.withdrawals.dailyLimit ?? dailyWithdrawalLimit();
-  if (today.length >= dailyWithdrawalCountLimit() || total.add(input.amount).greaterThan(effectiveDailyLimit)) {
+  if (todayAggregate._count._all >= dailyWithdrawalCountLimit() || total.add(input.amount).greaterThan(effectiveDailyLimit)) {
     throw new PaymentError("Withdrawal velocity limit reached. Contact support if this is urgent.", 429, "WITHDRAWAL_VELOCITY_LIMIT");
   }
   // Optional per-user/group monthly cap (no env counterpart — null = no limit).
   const monthlyLimit = settings.withdrawals.monthlyLimit;
   if (monthlyLimit != null) {
     const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    const month = await tx.paymentRequest.findMany({
+    const monthAggregate = await tx.paymentRequest.aggregate({
       where: {
         userId: input.userId,
         type: "WITHDRAWAL",
         createdAt: { gte: monthStart },
         status: { in: ["PENDING", "AWAITING_APPROVAL", "APPROVED"] },
       },
-      select: { amount: true },
+      _sum: { amount: true },
     });
-    const monthTotal = month.reduce((sum, request) => sum.add(request.amount), money(0));
+    const monthTotal = monthAggregate._sum.amount ?? money(0);
     if (monthTotal.add(input.amount).greaterThan(monthlyLimit)) {
       throw new PaymentError("Monthly withdrawal limit reached. Contact support if this is urgent.", 429, "WITHDRAWAL_MONTHLY_LIMIT");
     }

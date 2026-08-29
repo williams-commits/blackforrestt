@@ -260,9 +260,12 @@ export async function adminSetTemporaryPassword(input: {
 
 /** Permanently delete a SOFT-DELETED user and all cascaded records (tokens,
  *  sessions, wallets, positions, transactions, notifications, chat, KYC).
- *  Financial history is protected by the database itself — ledger
- *  transactions hold an onDelete: Restrict FK, so any account that ever
- *  moved money cannot be purged (the delete throws and we translate).
+ *  Financial history is protected: any account that ever posted a ledger
+ *  transaction is refused with a friendly 409 (checked up front, and again by
+ *  the Restrict FKs at delete time). Zero-activity accounts are fully purged —
+ *  signup creates Wallet/AccountMetrics/LedgerAccount rows that are normally
+ *  trigger-protected as ledger projections, so the purge runs inside the same
+ *  projection-write flag the ledger's own refresh path uses.
  *  Two-step by design: soft delete first, permanent purge second. */
 export async function adminHardDeleteUser(input: {
   actorId: string;
@@ -283,6 +286,14 @@ export async function adminHardDeleteUser(input: {
     throw new AdminUserManagementError("Soft-delete the account first — permanent deletion is a deliberate second step.", 409);
   }
   const email = user.email ?? "";
+  const FINANCIAL_RECORDS_MESSAGE =
+    "This account has immutable financial records (ledger history) and cannot be permanently deleted. Ledger transactions are retained by design.";
+  // Deterministic pre-flight instead of a planner-dependent FK/trigger error:
+  // a posted ledger transaction is an absolute bar to erasure.
+  const ledgerTransactions = await prisma.ledgerTransaction.count({ where: { userId: user.id } });
+  if (ledgerTransactions > 0) {
+    throw new AdminUserManagementError(FINANCIAL_RECORDS_MESSAGE, 409);
+  }
   try {
     await prisma.$transaction(async (tx) => {
       // Audit BEFORE the cascade deletes the row — the event survives because
@@ -294,15 +305,21 @@ export async function adminHardDeleteUser(input: {
         entityId: user.id,
         metadata: { email, reason: reason.slice(0, 500) },
       });
+      // Allow projection-table writes for this transaction only. The guard
+      // trigger on Wallet/AccountMetrics exists to stop ad-hoc balance edits;
+      // this purge removes zero-activity rows in the same door the ledger's
+      // own refreshLedgerProjections uses.
+      await tx.$executeRawUnsafe("SET LOCAL app.ledger_projection_write = '1'");
+      // LedgerAccount rows are Restrict-FK'd to the user and have no entries
+      // at this point (the pre-flight proved it), so drop them explicitly
+      // before the user cascade reaches them.
+      await tx.ledgerAccount.deleteMany({ where: { userId: user.id } });
       await tx.user.delete({ where: { id: user.id } });
     }, { isolationLevel: "Serializable" });
     return { deleted: true };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === "P2003" || error.code === "P2014")) {
-      throw new AdminUserManagementError(
-        "This account has immutable financial records (ledger history) and cannot be permanently deleted. Ledger transactions are retained by design.",
-        409,
-      );
+      throw new AdminUserManagementError(FINANCIAL_RECORDS_MESSAGE, 409);
     }
     throw error;
   }
@@ -572,6 +589,11 @@ export async function adminMessageThreads(): Promise<{ threads: AdminThreadSumma
         { receivedMessages: { some: { sender: OPERATOR_FILTER } } },
       ],
     },
+    // Bounded overview: 200 most recent customers covers the shared inbox's
+    // working set; the previous unbounded scan loaded every customer who ever
+    // messaged, with two correlated take-1 subqueries each.
+    orderBy: { createdAt: "desc" },
+    take: 200,
     select: {
       id: true, email: true, name: true, accountNo: true, brandDomain: true,
       // Latest support-thread message on each side — non-admin correspondence

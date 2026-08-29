@@ -837,6 +837,17 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
 
       <div className="relative min-h-112 flex-1 lg:min-h-0">
         <div ref={containerRef} data-testid="professional-chart-canvas" className="h-full w-full touch-none" />
+        {/* Empty-canvas state: while the subscription/history loads (or the
+            feed is down — the status banner names that cause) the panel would
+            otherwise render blank toolbars over nothing. */}
+        {candles.length === 0 && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center" role="status" aria-live="polite">
+            <div className="flex items-center gap-2 rounded border border-border bg-canvas/90 px-3 py-2 text-xs text-text-muted shadow-card">
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+              Loading price history…
+            </div>
+          </div>
+        )}
         {legendChips.length > 0 && (
           <div className="pointer-events-none absolute left-2 top-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
             {legendChips.map((chip) => (

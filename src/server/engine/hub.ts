@@ -141,6 +141,7 @@ class Hub {
   private tickTimer: NodeJS.Timeout | null = null;
   private tickRunning = false;
   private tickCount = 0;
+  private stopOutTickCount = 0;
   private initPromise: Promise<void> | null = null;
   private feedClient: FeedClient | null = null;
   private avFeed: AlphaVantageFeed | null = null;
@@ -515,7 +516,29 @@ class Hub {
   }
 
   private async stopOutPass(changedUsers: Set<string>): Promise<void> {
+    this.stopOutTickCount += 1;
+    // Safety net for the in-memory gate below: it assumes balance ≥ locked
+    // margin (enforced by free-funds checks on withdrawals). A periodic
+    // forced full pass catches any drift from that invariant.
+    const forceFull = this.stopOutTickCount % 10 === 0;
     for (const userId of Array.from(this.openPositions.keys())) {
+      if (!forceFull) {
+        // Pre-filter on in-memory marks: margin level = (balance + floating) /
+        // margin ≥ 1 + floating/margin whenever balance ≥ margin, so the level
+        // can only sit under STOP_OUT_LEVEL when floating is deeply negative
+        // relative to locked margin. Skipping the safe majority removes two
+        // DB round-trips per user per tick for every account nowhere near a
+        // stop-out.
+        const positions = this.openPositions.get(userId) ?? [];
+        let floating = money(0);
+        let marginTotal = money(0);
+        for (const position of positions) {
+          floating = floating.add(position.netProfit);
+          const state = this.instruments.get(position.symbol);
+          if (state) marginTotal = marginTotal.add(marginFor(position.volume, this.cfg(state).marginPerLot));
+        }
+        if (!marginTotal.isZero() && floating.gte(marginTotal.mul(-STOP_OUT_LEVEL / 100))) continue;
+      }
       await userMutationMutex.runExclusive(userId, async () => {
         let guard = 0;
         while (guard < MAX_STOP_OUT_CLOSES_PER_PASS) {

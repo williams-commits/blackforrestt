@@ -13,6 +13,7 @@
     "clean:node-modules:package-lock": "npm run clean:node-modules && npm run clean:package-lock",
     "stop:server": "lsof -i :3000 | awk 'NR!=1 {print $2}' | xargs kill -9",
     "start": "NODE_ENV=production node --env-file-if-exists=.env scripts/production/preflight.mjs && NODE_ENV=production node --env-file-if-exists=.env --import tsx server.ts",
+    "postinstall": "prisma generate",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",

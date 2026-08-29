@@ -10,9 +10,17 @@ import {
 } from "../src/server/adminChanges.js";
 import {
   AdminUserManagementError,
+  adminHardDeleteUser,
   adminSendPasswordReset,
   adminSetTemporaryPassword,
 } from "../src/server/adminUserManagement.js";
+import {
+  ensureSystemAccount,
+  ensureUserLedgerAccount,
+  money,
+  postLedgerTransaction,
+  refreshLedgerProjections,
+} from "../src/server/ledger.js";
 import { consumeSecurityToken } from "../src/server/security/tokens.js";
 import { verifyAuditChain } from "../src/server/audit.js";
 
@@ -218,4 +226,57 @@ test("admin-generated temporary password becomes the sign-in password and unlock
 
 test.after(async () => {
   await prisma.$disconnect();
+});
+
+test("hard delete purges zero-activity accounts and refuses financial history", async () => {
+  const suffix = randomUUID();
+  const actor = await prisma.user.create({
+    data: { email: `admin-purge-actor-${suffix}@example.invalid`, accountNo: `p${suffix.replaceAll("-", "").slice(0, 11)}`, isAdmin: true },
+  });
+
+  // Signup-shaped dormant user: registration creates LedgerAccount + Wallet +
+  // AccountMetrics even with zero activity. Historically these rows made the
+  // purge fail with a planner-dependent trigger/FK 500; it must now succeed.
+  const dormant = await prisma.user.create({
+    data: { email: `purge-dormant-${suffix}@example.invalid`, accountNo: `q${suffix.replaceAll("-", "").slice(0, 11)}`, deletedAt: new Date() },
+  });
+  await prisma.$transaction(async (tx) => {
+    await ensureUserLedgerAccount(tx, dormant.id, "AVAILABLE");
+    await refreshLedgerProjections(tx, dormant.id);
+  });
+  assert.notEqual(await prisma.wallet.findFirst({ where: { userId: dormant.id } }), null, "fixture should have projection rows");
+
+  await adminHardDeleteUser({ actorId: actor.id, userId: dormant.id, reason: "GDPR erasure — dormant account, no activity." });
+  assert.equal(await prisma.user.findUnique({ where: { id: dormant.id } }), null, "dormant account should be purged");
+  assert.equal(await prisma.ledgerAccount.count({ where: { userId: dormant.id } }), 0, "ledger accounts should be purged");
+
+  // A user with one posted ledger transaction is refused with a friendly 409.
+  const active = await prisma.user.create({
+    data: { email: `purge-active-${suffix}@example.invalid`, accountNo: `v${suffix.replaceAll("-", "").slice(0, 11)}`, deletedAt: new Date() },
+  });
+  const [available, funding] = await prisma.$transaction(async (tx) => {
+    const account = await ensureUserLedgerAccount(tx, active.id, "AVAILABLE");
+    const system = await ensureSystemAccount(tx, "DEMO_FUNDING_EXPENSE");
+    return [account, system];
+  });
+  await prisma.$transaction((tx) =>
+    postLedgerTransaction(tx, {
+    reference: `PURGE_TEST:${suffix}`,
+    kind: "DEMO_FUNDING",
+    description: "Integration-test funding that must block erasure",
+    userId: active.id,
+    sourceType: "User",
+    sourceId: active.id,
+    lines: [
+      { accountId: funding.id, direction: "DEBIT", amount: money("10.00"), asset: "USD" },
+      { accountId: available.id, direction: "CREDIT", amount: money("10.00"), asset: "USD" },
+    ],
+    }),
+  );
+
+  await assert.rejects(
+    adminHardDeleteUser({ actorId: actor.id, userId: active.id, reason: "GDPR erasure attempt on active account." }),
+    (error: unknown) => error instanceof AdminUserManagementError && error.status === 409,
+  );
+  assert.notEqual(await prisma.user.findUnique({ where: { id: active.id } }), null, "active account must survive");
 });

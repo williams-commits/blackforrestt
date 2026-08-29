@@ -25,8 +25,49 @@ interface ClientState {
 }
 
 const clients = new Set<ClientState>();
+/** userId → connected clients — O(subscribers) routing for position/account/activity emissions. */
+const clientsByUser = new Map<string, Set<ClientState>>();
+/** symbol → subscribed clients — quotes and candles skip every other connection. */
+const clientsBySymbol = new Map<string, Set<ClientState>>();
 const HEARTBEAT_MS = 30_000;
 const DEFAULT_MAX_BUFFERED_BYTES = 1_048_576;
+
+function registerClient(client: ClientState): void {
+  clients.add(client);
+  let userSet = clientsByUser.get(client.userId);
+  if (!userSet) {
+    userSet = new Set();
+    clientsByUser.set(client.userId, userSet);
+  }
+  userSet.add(client);
+}
+
+function unregisterClient(client: ClientState): void {
+  clients.delete(client);
+  const userSet = clientsByUser.get(client.userId);
+  userSet?.delete(client);
+  if (userSet?.size === 0) clientsByUser.delete(client.userId);
+  for (const symbol of client.subs.keys()) {
+    const symbolSet = clientsBySymbol.get(symbol);
+    symbolSet?.delete(client);
+    if (symbolSet?.size === 0) clientsBySymbol.delete(symbol);
+  }
+}
+
+function subscribeClient(client: ClientState, symbol: string): void {
+  let symbolSet = clientsBySymbol.get(symbol);
+  if (!symbolSet) {
+    symbolSet = new Set();
+    clientsBySymbol.set(symbol, symbolSet);
+  }
+  symbolSet.add(client);
+}
+
+function unsubscribeClient(client: ClientState, symbol: string): void {
+  const symbolSet = clientsBySymbol.get(symbol);
+  symbolSet?.delete(client);
+  if (symbolSet?.size === 0) clientsBySymbol.delete(symbol);
+}
 
 function maxBufferedBytes(): number {
   const configured = Number(process.env.WS_MAX_BUFFERED_BYTES ?? DEFAULT_MAX_BUFFERED_BYTES);
@@ -119,9 +160,61 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
   });
 
   hub.setBroadcaster((emission: HubEmission) => {
-    for (const client of clients) {
-      if (client.ws.readyState !== WebSocket.OPEN) continue;
-      deliver(client, emission);
+    // Route through per-symbol / per-user indexes instead of scanning every
+    // connection for every emission, and serialize each broadcast payload
+    // ONCE — the instruments emission alone is re-encoded per client today.
+    switch (emission.kind) {
+      case "instruments": {
+        const payload = JSON.stringify({ type: "instruments", instruments: emission.instruments });
+        for (const client of clients) sendRaw(client.ws, payload);
+        break;
+      }
+      case "quote": {
+        const payload = JSON.stringify({ type: "quote", quote: emission.quote });
+        for (const client of clientsBySymbol.get(emission.quote.symbol) ?? []) {
+          sendRaw(client.ws, payload);
+        }
+        break;
+      }
+      case "candle": {
+        const payload = JSON.stringify({
+          type: "candle",
+          symbol: emission.symbol,
+          interval: emission.interval,
+          candle: emission.candle,
+        });
+        for (const client of clientsBySymbol.get(emission.symbol) ?? []) {
+          if (client.subs.get(emission.symbol) === emission.interval) {
+            sendRaw(client.ws, payload);
+          }
+        }
+        break;
+      }
+      case "position": {
+        const payload = JSON.stringify({ type: "position", position: emission.position });
+        for (const client of clientsByUser.get(emission.userId) ?? []) {
+          if (client.accountSubscribed || client.subs.size > 0) sendRaw(client.ws, payload);
+        }
+        break;
+      }
+      case "account": {
+        const payload = JSON.stringify({
+          type: "account",
+          account: emission.account,
+          reason: emission.reason,
+        });
+        for (const client of clientsByUser.get(emission.userId) ?? []) {
+          if (client.accountSubscribed || client.subs.size > 0) sendRaw(client.ws, payload);
+        }
+        break;
+      }
+      case "activity": {
+        const payload = JSON.stringify({ type: "activity", counts: emission.counts });
+        for (const client of clientsByUser.get(emission.userId) ?? []) {
+          if (client.accountSubscribed || client.subs.size > 0) sendRaw(client.ws, payload);
+        }
+        break;
+      }
     }
   });
 
@@ -150,7 +243,7 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
         windowStartedAt: Date.now(),
         messagesInWindow: 0,
       };
-      clients.add(client);
+      registerClient(client);
       hub.clientConnected(userId);
 
       send(ws, {
@@ -179,8 +272,8 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
           }
         });
       });
-      ws.on("close", () => { clients.delete(client); hub.clientDisconnected(userId); });
-      ws.on("error", () => { clients.delete(client); hub.clientDisconnected(userId); });
+      ws.on("close", () => { unregisterClient(client); hub.clientDisconnected(userId); });
+      ws.on("error", () => { unregisterClient(client); hub.clientDisconnected(userId); });
 
       // Replay anything that arrived during the auth window.
       authed = true;
@@ -197,7 +290,7 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
     for (const client of clients) {
       if (!client.isAlive) {
         client.ws.terminate();
-        clients.delete(client);
+        unregisterClient(client);
         hub.clientDisconnected(client.userId);
         continue;
       }
@@ -211,6 +304,8 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
     clearInterval(heartbeat);
     for (const client of clients) hub.clientDisconnected(client.userId);
     clients.clear();
+    clientsByUser.clear();
+    clientsBySymbol.clear();
   });
 
   console.log("🔌 WebSocket server attached at /ws");
@@ -240,6 +335,7 @@ async function handleMessage(
 
   if (message.type === "unsubscribe") {
     client.subs.delete(message.symbol);
+    unsubscribeClient(client, message.symbol);
     return;
   }
 
@@ -253,6 +349,7 @@ async function handleMessage(
   }
 
   client.subs.set(message.symbol, message.interval);
+  subscribeClient(client, message.symbol);
   send(client.ws, {
     type: "snapshot",
     snapshot: hub.snapshot(message.symbol, message.interval, client.userId),
@@ -262,48 +359,15 @@ async function handleMessage(
   send(client.ws, { type: "account", account: await hub.readAccountMetrics(client.userId) });
 }
 
-function deliver(client: ClientState, emission: HubEmission): void {
-  switch (emission.kind) {
-    case "quote":
-      if (client.subs.has(emission.quote.symbol)) {
-        send(client.ws, { type: "quote", quote: emission.quote });
-      }
-      break;
-    case "candle":
-      if (client.subs.get(emission.symbol) === emission.interval) {
-        send(client.ws, {
-          type: "candle",
-          symbol: emission.symbol,
-          interval: emission.interval,
-          candle: emission.candle,
-        });
-      }
-      break;
-    case "position":
-      if (client.userId === emission.userId && (client.accountSubscribed || client.subs.size > 0)) {
-        send(client.ws, { type: "position", position: emission.position });
-      }
-      break;
-    case "account":
-      if (client.userId === emission.userId && (client.accountSubscribed || client.subs.size > 0)) {
-        send(client.ws, { type: "account", account: emission.account, reason: emission.reason });
-      }
-      break;
-    case "activity":
-      if (client.userId === emission.userId && (client.accountSubscribed || client.subs.size > 0)) {
-        send(client.ws, { type: "activity", counts: emission.counts });
-      }
-      break;
-    case "instruments":
-      send(client.ws, { type: "instruments", instruments: emission.instruments });
-      break;
-  }
+function send(ws: WebSocket, message: WsServerMessage): void {
+  sendRaw(ws, JSON.stringify(message));
 }
 
-function send(ws: WebSocket, message: WsServerMessage): void {
+/** Sends an already-serialized payload with the slow-client backpressure guard.
+ *  Broadcast paths serialize once and reuse the string across recipients. */
+function sendRaw(ws: WebSocket, payload: string): void {
   if (ws.readyState !== WebSocket.OPEN) return;
   try {
-    const payload = JSON.stringify(message);
     const projectedBuffer = ws.bufferedAmount + Buffer.byteLength(payload);
     if (projectedBuffer > maxBufferedBytes()) {
       // A slow or suspended browser must not make the process retain an

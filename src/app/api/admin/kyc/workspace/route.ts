@@ -13,7 +13,7 @@ export async function GET() {
   try {
     await requireAdmin("KYC_READ");
     const [pending, reviewed, total, reviewedTotal] = await Promise.all([
-      prisma.kycSubmission.findMany({ where: { status: "PENDING" }, orderBy: { submittedAt: "asc" }, include: { user: { select: { email: true, name: true, accountNo: true } } } }),
+      prisma.kycSubmission.findMany({ where: { status: "PENDING" }, orderBy: { submittedAt: "asc" }, take: 200, include: { user: { select: { email: true, name: true, accountNo: true } } } }),
       prisma.kycSubmission.findMany({ where: { status: { in: ["APPROVED", "REJECTED"] } }, orderBy: { reviewedAt: "desc" }, take: 50, include: { user: { select: { email: true, name: true, accountNo: true } } } }),
       prisma.kycSubmission.count(),
       prisma.kycSubmission.count({ where: { status: { in: ["APPROVED", "REJECTED"] } } }),

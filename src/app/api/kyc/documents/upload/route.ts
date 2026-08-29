@@ -6,9 +6,15 @@ import {
   ensureOwnSubmission,
   receiveUpload,
 } from "@/server/security/kycDocuments";
+import { consumeRateLimit, RateLimitedError } from "@/server/security/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// Authenticated per-user cap: uploads route through the malware scanner and
+// object storage, so a looping client must not fan out unbounded work.
+const UPLOAD_LIMIT = 30;
+const UPLOAD_WINDOW_SECONDS = 60 * 60;
 
 /**
  * POST /api/kyc/documents/upload
@@ -23,6 +29,23 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const session = await auth();
   const userId = await resolveUserId(session?.user?.id);
+
+  try {
+    await consumeRateLimit({
+      scope: "kyc-upload:user",
+      identifier: userId,
+      limit: UPLOAD_LIMIT,
+      windowSeconds: UPLOAD_WINDOW_SECONDS,
+    });
+  } catch (error) {
+    if (error instanceof RateLimitedError) {
+      return NextResponse.json(
+        { error: "Too many document uploads. Please try again later." },
+        { status: 429, headers: { "retry-after": String(error.retryAfterSeconds) } },
+      );
+    }
+    throw error;
+  }
 
   const form = await req.formData().catch(() => null);
   if (!form) {

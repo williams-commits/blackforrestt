@@ -562,10 +562,20 @@ function scopesForCase(feedKind: PendingCase["feedKind"]): BlockScope[] {
   return ["TRADE", "WITHDRAW"];
 }
 
-/** Persist cases and open one block per discrepancy/scope, idempotently. */
+/** Persist cases and open one block per discrepancy/scope, idempotently.
+ *
+ *  Transaction boundaries are deliberately SHORT: case creation commits first,
+ *  then blocks open in chunked transactions. One giant transaction held a
+ *  per-user loop (2 blocks + audit appends per user, every user on a
+ *  system-wide critical case) and blew past the interactive-transaction
+ *  timeout once the user table grew — a failure mode that would hit
+ *  production at scale, not just tests. openBlockIdempotent keeps every
+ *  chunk safely re-runnable. */
 async function persistRunResults(runId: string, cases: PendingCase[]): Promise<void> {
-  await withSerializableRetry(async (tx) => {
-    const created = await Promise.all(
+  // Per-case create (not createMany): the returned row ids link the
+  // reconciliation blocks opened below to their parent case.
+  const created = await withSerializableRetry(async (tx) =>
+    Promise.all(
       cases.map((pending) =>
         tx.reconciliationCase.create({
           data: {
@@ -580,41 +590,50 @@ async function persistRunResults(runId: string, cases: PendingCase[]): Promise<v
           },
         }),
       ),
-    );
+    ),
+  );
 
-    const systemWideCritical = cases.some(
-      (pending) =>
-        pending.severity === "CRITICAL" &&
-        !pending.userId &&
-        pending.feedKind === "LEDGER_TRIAL_BALANCE",
-    );
-    for (let index = 0; index < cases.length; index += 1) {
-      const pending = cases[index];
-      const caseRow = created[index];
-      if (pending.severity !== "CRITICAL") continue;
+  const systemWideCritical = cases.some(
+    (pending) =>
+      pending.severity === "CRITICAL" &&
+      !pending.userId &&
+      pending.feedKind === "LEDGER_TRIAL_BALANCE",
+  );
 
-      if (pending.userId) {
+  for (let index = 0; index < cases.length; index += 1) {
+    const pending = cases[index];
+    const caseRow = created[index];
+    if (pending.severity !== "CRITICAL") continue;
+
+    if (pending.userId) {
+      await withSerializableRetry(async (tx) => {
         for (const scope of scopesForCase(pending.feedKind)) {
           await openBlockIdempotent(tx, {
-            userId: pending.userId,
+            userId: pending.userId!,
             scope,
             reason: pending.message.slice(0, 240),
             caseId: caseRow.id,
           });
         }
-        continue;
-      }
+      });
+      continue;
+    }
 
-      if (!systemWideCritical || pending.feedKind !== "LEDGER_TRIAL_BALANCE") continue;
-      let userCursor: string | undefined;
-      for (;;) {
-        const users = await tx.user.findMany({
-          where: { isDev: false },
-          select: { id: true },
-          orderBy: { id: "asc" },
-          take: 250,
-          ...(userCursor ? { cursor: { id: userCursor }, skip: 1 } : {}),
-        });
+    if (!systemWideCritical || pending.feedKind !== "LEDGER_TRIAL_BALANCE") continue;
+    // Page users with the root client and commit blocks in bounded chunks so
+    // no single transaction lives longer than a chunk of audit appends.
+    const CHUNK = 25;
+    let userCursor: string | undefined;
+    for (;;) {
+      const users = await prisma.user.findMany({
+        where: { isDev: false },
+        select: { id: true },
+        orderBy: { id: "asc" },
+        take: CHUNK,
+        ...(userCursor ? { cursor: { id: userCursor }, skip: 1 } : {}),
+      });
+      if (users.length === 0) break;
+      await withSerializableRetry(async (tx) => {
         for (const user of users) {
           for (const scope of scopesForCase(pending.feedKind)) {
             await openBlockIdempotent(tx, {
@@ -625,11 +644,11 @@ async function persistRunResults(runId: string, cases: PendingCase[]): Promise<v
             });
           }
         }
-        if (users.length < 250) break;
-        userCursor = users.at(-1)?.id;
-      }
+      });
+      if (users.length < CHUNK) break;
+      userCursor = users.at(-1)?.id;
     }
-  });
+  }
 }
 
 async function openBlockIdempotent(

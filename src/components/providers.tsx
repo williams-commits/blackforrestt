@@ -35,6 +35,7 @@ export const PRIMARY_BRAND_FALLBACK: BrandProfile = {
   heroBadge: "",
   heroSubtitle: "",
   depositWallets: "",
+  landingTemplate: "default",
 };
 
 const BrandContext = createContext<BrandProfile>(PRIMARY_BRAND_FALLBACK);

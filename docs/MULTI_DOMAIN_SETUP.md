@@ -86,6 +86,7 @@ directives). Use `BRAND_DOMAINS` for the list.
 | Theme (buttons/links/badges) | `accentColor` injected per host in the root layout. |
 | Logo / favicon / QR mark | `wordmark` + `glyph` via the brand context and `/brand/icon.svg`. |
 | Landing hero | `heroBadge` / `heroSubtitle` override the translated defaults. |
+| Landing design | `landingTemplate`: `"default"` (Black Forest editorial layout) or `"agile"` (green fintech hero + ticker tape + bento grid). Unknown values fall back to `default`. |
 | PWA manifest | `/manifest.webmanifest` resolves per host. |
 | Emails | Rendered under the **user's stored family** (header brand, support address, button color, sender via `emailFrom`). |
 | Referral links | Built on the **referrer's** family trade host. |

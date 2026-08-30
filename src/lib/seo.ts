@@ -21,14 +21,16 @@ export function localePath(path: string, locale: string): string {
 }
 
 /** hreflang alternates for a page across all supported locales. */
+import { currentBrandProfile } from "./branding";
+
 export function languageAlternates(path: string): Record<string, string> {
   return Object.fromEntries(locales.map((locale) => [locale, localePath(path, locale)]));
 }
 
 /** Default-language descriptions for public marketing pages. */
 const PAGE_DESCRIPTIONS: Record<string, string> = {
-  "/about": "Learn about Black Forest Digital — our mission, values, and the team behind a fast, transparent multi-asset trading platform.",
-  "/contact": "Contact the Black Forest Digital support team. Get help with your account, deposits, withdrawals, and trading questions.",
+  "/about": "Learn about {brand} — our mission, values, and the team behind a fast, transparent multi-asset trading platform.",
+  "/contact": "Contact the {brand} support team. Get help with your account, deposits, withdrawals, and trading questions.",
   "/analytics/news": "Latest financial market news and macroeconomic headlines moving forex, commodities, indices, and crypto markets.",
   "/analytics/technical": "Technical analysis across forex, commodities, indices, and crypto — levels, trends, and momentum for every major market.",
   "/analytics/fundamental": "Fundamental analysis: interest rates, inflation, employment data, and the economic drivers behind market moves.",
@@ -42,10 +44,10 @@ const PAGE_DESCRIPTIONS: Record<string, string> = {
   "/education/beginners-vods": "Beginner trading video courses — watch step-by-step lessons on trading forex, CFDs, and crypto.",
   "/education/advanced-vods": "Advanced trading video courses on strategy, risk management, and market analysis.",
   "/education/crypto-vods": "Cryptocurrency trading video courses — blockchain basics, crypto markets, and digital asset strategy.",
-  "/legal/terms": "Terms and conditions governing the use of the Black Forest Digital trading platform and services.",
-  "/legal/privacy": "Privacy policy: how Black Forest Digital collects, uses, and protects your personal data.",
-  "/legal/kyc": "Know Your Customer (KYC) policy: identity verification requirements for opening and operating a trading account.",
-  "/legal/aml": "Anti-Money Laundering (AML) policy and compliance framework for trading account operations.",
+  "/legal/terms": "Terms and conditions governing the use of the {brand} trading platform and services.",
+  "/legal/privacy": "Privacy policy: how {brand} collects, uses, and protects your personal data.",
+  "/legal/kyc": "Know Your Customer (KYC) policy: identity verification requirements for opening and operating a {brand} trading account.",
+  "/legal/aml": "Anti-Money Laundering (AML) policy and compliance framework for {brand} trading accounts.",
 };
 
 /**
@@ -53,10 +55,14 @@ const PAGE_DESCRIPTIONS: Record<string, string> = {
  * hreflang alternates for every supported locale, and an English description
  * (see the note above).
  */
-export function contentMetadata(path: string, title: string): Metadata {
+export async function contentMetadata(path: string, title: string): Promise<Metadata> {
+  // {brand} placeholders resolve against the REQUESTING brand family, so
+  // agilefgs.com never ships meta copy that names Black Forest.
+  const brand = await currentBrandProfile();
+  const rawDescription = PAGE_DESCRIPTIONS[path];
   return {
     title,
-    ...(PAGE_DESCRIPTIONS[path] ? { description: PAGE_DESCRIPTIONS[path] } : {}),
+    ...(rawDescription ? { description: rawDescription.replaceAll("{brand}", brand.name) } : {}),
     alternates: { canonical: path, languages: languageAlternates(path) },
   };
 }

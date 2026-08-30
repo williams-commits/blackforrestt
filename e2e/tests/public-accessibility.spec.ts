@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 import { expectNoCriticalAccessibilityViolations } from "./helpers";
 
 const publicPages = [
-  ["/", /Navigate the Future/i],
+  // Default template hero (localhost resolves the primary brand).
+  ["/", /Trade every market/i],
   ["/login", /Welcome back/i],
   ["/register", /Create/i],
   ["/forgot-password", /password/i],

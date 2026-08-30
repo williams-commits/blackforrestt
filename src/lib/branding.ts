@@ -114,6 +114,12 @@ export interface BrandProfile {
    * each brand family's customers pay to that brand's wallets.
    */
   depositWallets: string;
+  /**
+   * Landing-page template key ("default" | "agile" | …). Selects which
+   * composition in src/components/landing/templates/ renders the apex `/`
+   * for this brand family. Unknown keys fall back to "default".
+   */
+  landingTemplate: string;
 }
 
 /** SVG glyph rendered by the Logo component and the generated favicon. */
@@ -147,6 +153,7 @@ interface BrandOverride {
   heroBadge?: string;
   heroSubtitle?: string;
   depositWallets?: string;
+  landingTemplate?: string;
 }
 
 /**
@@ -204,6 +211,7 @@ export function brandProfileForDomain(domain?: string | null): BrandProfile {
     heroBadge: override.heroBadge ?? "",
     heroSubtitle: override.heroSubtitle ?? "",
     depositWallets: override.depositWallets ?? "",
+    landingTemplate: override.landingTemplate ?? "default",
   };
 }
 

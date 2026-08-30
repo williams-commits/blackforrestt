@@ -108,7 +108,8 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: `${name} — ${t("titleDefault")}`,
       description: t("twitterDescription"),
-      images: ["/og.png"],
+      // Per-brand card image — mirrors the og:image resolution above.
+      images: [ogImageUrl],
     },
     manifest: "/manifest.webmanifest",
     icons: [

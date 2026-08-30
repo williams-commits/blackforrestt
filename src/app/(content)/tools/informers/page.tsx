@@ -1,7 +1,7 @@
 import { InformersWidget } from "@/components/landing/InformersWidget";
 import { getTranslations } from "next-intl/server";
 import { contentMetadata } from "@/lib/seo";
-import { brandDomain } from "@/lib/branding";
+import { currentBrandProfile } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,10 @@ export async function generateMetadata() {
   return contentMetadata("/tools/informers", t("metaTitle"));
 }
 
-/** Server component: reads the brand domain once and passes it to the client widget. */
-export default function InformersPage() {
-  return <InformersWidget domain={brandDomain()} />;
+/** Server component: the embed snippets must point at the REQUESTING brand
+ *  family (agilefgs.com visitors get agilefgs.com embeds), not the canonical
+ *  primary domain. */
+export default async function InformersPage() {
+  const brand = await currentBrandProfile();
+  return <InformersWidget domain={brand.domain} />;
 }

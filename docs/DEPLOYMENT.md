@@ -549,6 +549,22 @@ Creates `backups/<UTC-timestamp>/` containing:
 **Copy each backup to encrypted off-server storage.** A backup on the same
 host is not a recovery mechanism if the host fails.
 
+#### Schedule it (cron)
+
+Backups are only a control if they run without a human remembering. On the
+host, install a nightly 04:00 UTC run plus an off-server copy:
+
+```cron
+0 4 * * *  cd /opt/blackforrestt && ./deploy/backup.sh >> backups/cron.log 2>&1 && rsync -a --remove-source-files backups/ backup-user@offsite:/srv/blackforrestt-backups/
+```
+
+- The script is idempotent and safe to overlap (timestamped directories).
+- Verify the cron actually fires after installing it (`backups/cron.log`).
+- **Rehearse a restore quarterly** on a staging host: `CONFIRM_RESTORE=YES
+  ./deploy/restore.sh <dir>` — an untested backup is a hope, not a control.
+- Off-site copies must be encrypted at rest (encrypted volume or `age`/
+  `gpg`-encrypted archive).
+
 ### Restore (destructive — requires confirmation)
 
 ```bash

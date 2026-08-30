@@ -1,6 +1,7 @@
 import {
   S3Client,
   HeadObjectCommand,
+  HeadBucketCommand,
   PutObjectCommand,
   GetObjectCommand,
   CopyObjectCommand,
@@ -90,6 +91,12 @@ function isNoSuchBucketError(error: unknown): boolean {
   return name === "NoSuchBucket";
 }
 
+/** Cheap liveness probe for the admin health panel: head one required bucket. */
+export async function storageHealthCheck(): Promise<void> {
+  const s3 = getStorage();
+  await s3.send(new HeadBucketCommand({ Bucket: sealedBucket() }));
+}
+
 /** Run a put, and if the target bucket is missing (fresh prefix, init container
  *  never ran for it), create the buckets once and retry — uploads then succeed
  *  instead of returning "temporarily unavailable" forever. */
@@ -103,8 +110,7 @@ async function putWithBucketEnsure(put: () => Promise<void>): Promise<void> {
   }
 }
 
-export function getStorage(): S3ClientT {
-  if (client) return client;
+export function getStorage(): S3ClientT {  if (client) return client;
   const endpoint = process.env.S3_ENDPOINT?.trim();
   if (!endpoint) {
     throw new Error("S3_ENDPOINT is required for private document storage.");

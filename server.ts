@@ -7,6 +7,7 @@ import { attachWebSocketServer } from "./src/server/ws/server.js";
 import { prisma } from "./src/server/db.js";
 import { closeRedis } from "./src/server/redis.js";
 import { reconciliationScheduler } from "./src/server/reconciliationScheduler.js";
+import { maintenanceScheduler } from "./src/server/maintenance.js";
 import { emailDispatcher } from "./src/server/email/service.js";
 import { closeStorage, ensureStorageBuckets } from "./src/server/storage.js";
 
@@ -28,6 +29,7 @@ async function main(): Promise<void> {
   try {
     await hub.init();
     emailDispatcher.start();
+    maintenanceScheduler.start();
     if (reconciliationEnabled) reconciliationScheduler.start();
     else console.log("🧾 Reconciliation scheduler disabled for this environment.");
   } catch (error) {
@@ -84,6 +86,7 @@ async function main(): Promise<void> {
     await new Promise<void>((resolve) => wss.close(() => resolve()));
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await reconciliationScheduler.stop();
+    await maintenanceScheduler.stop();
     await emailDispatcher.stop();
     await hub.shutdown();
     await closeStorage();
@@ -100,6 +103,7 @@ async function main(): Promise<void> {
 void main().catch(async (error) => {
   console.error("Fatal error during server boot:", error);
   await reconciliationScheduler.stop().catch(() => undefined);
+  await maintenanceScheduler.stop().catch(() => undefined);
   await emailDispatcher.stop().catch(() => undefined);
   await hub.shutdown().catch(() => undefined);
   await closeStorage().catch(() => undefined);

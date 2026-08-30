@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { mutationOriginAllowed } from "@/server/security/origin";
 
@@ -277,7 +279,7 @@ function setLocaleCookies(response: NextResponse, locale: string, req: Request) 
  */
 const LOCALE_PREFIX_RE = new RegExp(`^/(${LOCALES.join("|")})(?=/|$)`);
 
-export default auth((req) => {
+const authHandler = auth((req) => {
   // Locale-prefix extraction runs before everything: later checks (domain
   // routing, auth) operate on the stripped path so prefixed URLs behave
   // exactly like their unprefixed counterparts.
@@ -396,6 +398,31 @@ export default auth((req) => {
   url.searchParams.set("callbackUrl", `${pathname}${req.nextUrl.search}`);
   return NextResponse.redirect(url, 307);
 });
+
+/**
+ * Correlation wrapper: every request gets an `x-request-id` (honoring a
+ * trusted reverse-proxy value, capped in length). The id is echoed on the
+ * response, injected into the request headers route handlers see (for audit
+ * + log correlation via `appendAuditEvent({ requestId })` and the structured
+ * logger), and survives every branch of the auth handler above.
+ */
+export default async function middleware(req: NextRequest) {
+  const incoming = req.headers.get("x-request-id");
+  const requestId = incoming && incoming.length >= 8 && incoming.length <= 128 ? incoming : randomUUID();
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-request-id", requestId);
+
+  // The auth() wrapper's second parameter (route context) is unused by the
+  // handler body; satisfy its type without depending on Next's event shape.
+  const response = await authHandler(req, { params: Promise.resolve({}) });
+  if (response) {
+    response.headers.set("x-request-id", requestId);
+    return response;
+  }
+  const next = NextResponse.next({ request: { headers: requestHeaders } });
+  next.headers.set("x-request-id", requestId);
+  return next;
+}
 
 export const config = {
   // Auth imports Prisma and bcrypt, so run middleware on the stable Node.js

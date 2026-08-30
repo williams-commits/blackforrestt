@@ -55,7 +55,7 @@ health: ## Hit the public health endpoint
 # ── Database & admin operations ──────────────────────────────────────────────
 
 psql: ## Interactive PostgreSQL shell in the postgres container
-	$(DC) exec postgres psql -U blackforrestt -d blackforrestt
+	$(DC) exec postgres psql -U $${POSTGRES_USER:-blckforest} -d $${POSTGRES_DB:-blckforest}
 
 studio: ## Prisma Studio on 127.0.0.1:5555 (SSH-tunnel: ssh -L 5555:localhost:5555 host)
 	$(DC) run --rm --no-deps -p 127.0.0.1:5555:5555 app npx prisma studio --hostname 0.0.0.0 --port 5555

@@ -4,6 +4,8 @@ import { prisma } from "@/server/db";
 import { hub } from "@/server/engine/hub";
 import { getMarketDataMode } from "@/server/engine/marketDataMode";
 import { getRedis } from "@/server/redis";
+import { storageHealthCheck } from "@/server/storage";
+import { emailProviderConfigured } from "@/server/email/provider";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,8 +31,16 @@ export async function GET() {
       prisma.emailDelivery.groupBy({ by: ["status"], _count: { _all: true } }),
       prisma.emailDelivery.findFirst({ where: { status: "FAILED" }, orderBy: { updatedAt: "desc" }, select: { recipient: true, template: true, lastError: true, updatedAt: true } }),
     ]);
+    // Single points of failure for KYC/comms: object storage (head-bucket),
+    // the email provider (configuration presence — delivery failures are
+    // already counted in emailDelivery below), and the malware scanner
+    // (stub-policy state; network pings are deliberately avoided so the
+    // health check cannot DDoS a slow scanner).
+    const storage = await check(() => storageHealthCheck());
+    const scannerConfigured = Boolean(process.env.MALWARE_SCANNER_URL?.trim());
+    const scannerAllowsStub = (process.env.ALLOW_LOCAL_STUB_SCANNER ?? "false").toLowerCase() === "true";
     const engine = { status: hub.isReady() ? "UP" : "STARTING", instrumentsLoaded: hub.listInstruments().length };
-    const healthy = database.status === "UP" && redis.status === "UP" && engine.status === "UP";
+    const healthy = database.status === "UP" && redis.status === "UP" && engine.status === "UP" && storage.status === "UP";
     const emailCounts = Object.fromEntries(emailStatusCounts.map((row) => [row.status, row._count._all]));
     return NextResponse.json({
       status: healthy ? "HEALTHY" : "DEGRADED",
@@ -38,7 +48,9 @@ export async function GET() {
       simulationOnly: true,
       executionProvider: "NOT_CONFIGURED",
       marketDataMode: getMarketDataMode(),
-      services: { database, redis, engine },
+      services: { database, redis, engine, storage },
+      emailProvider: { configured: emailProviderConfigured() },
+      malwareScanner: { configured: scannerConfigured, stubAllowed: scannerAllowsStub, status: scannerConfigured ? "CONFIGURED" : scannerAllowsStub ? "STUB" : "DISABLED" },
       emailDelivery: {
         counts: emailCounts,
         failed: emailCounts.FAILED ?? 0,

@@ -451,7 +451,16 @@
     "valuesIcon": "speed",
     "complianceTitle": "Regulation & compliance",
     "complianceP1": "{company} operates in full compliance with applicable Anti-Money Laundering (AML) and Know Your Customer (KYC) regulations. Client funds are held in segregated accounts, separate from company operational funds, and never used for any purpose other than your trading activity.",
-    "complianceP2": "We do not provide services to citizens or residents of the United States, Syria, Sudan, Iran, or North Korea. Trading is only available to persons aged 18 and over."
+    "complianceP2": "We do not provide services to citizens or residents of the United States, Syria, Sudan, Iran, or North Korea. Trading is only available to persons aged 18 and over.",
+    "factsTitle": "Company facts",
+    "facts": {
+      "legalEntity": "Legal entity",
+      "registration": "Registration number",
+      "jurisdiction": "Jurisdiction",
+      "regulator": "Regulator",
+      "protection": "Investor protection",
+      "office": "Registered office"
+    }
   },
   "beginners": {
     "metaTitle": "Beginners Trading Guide",
@@ -1016,5 +1025,218 @@
     "aumReports": "Trade reports",
     "aumAdmin": "Admin console",
     "aumSignOut": "Sign out"
+  },
+  "agile": {
+    "heroTitleA": "Trade sharper.",
+    "heroTitleB": "Move faster.",
+    "statInstruments": "Instruments",
+    "statSupport": "Markets & support",
+    "statExecution": "Order routing",
+    "statLanguages": "Languages",
+    "markets": {
+      "eyebrow": "Live markets",
+      "title": "Popular markets, moving right now.",
+      "subtitle": "Real prices straight from the terminal. Open any instrument to chart it and trade in one click.",
+      "cta": "Explore all markets"
+    },
+    "pillars": {
+      "eyebrow": "Why Agile FGS",
+      "title": "Everything you need. Nothing you don't.",
+      "subtitle": "A platform built for traders who make decisions — and expect their broker to keep up.",
+      "all": {
+        "title": "One account, every market",
+        "desc": "Forex, indices, commodities and crypto side by side — one wallet, one login, one terminal."
+      },
+      "pricing": {
+        "title": "Straightforward pricing",
+        "desc": "Transparent spreads and commissions. No hidden fees — the price you see is the price you trade."
+      },
+      "speed": {
+        "title": "Built for speed",
+        "desc": "Millisecond order routing and a terminal that stays live even on a slow connection."
+      },
+      "security": {
+        "title": "Security by default",
+        "desc": "KYC-verified accounts, encrypted document storage and segregated client funds."
+      }
+    },
+    "features": {
+      "eyebrow": "The platform",
+      "title": "Designed for decisive trading.",
+      "subtitle": "Four things we refuse to compromise on.",
+      "f1": {
+        "title": "Fast execution",
+        "desc": "Orders route to the market the moment you click — with price-improvement handling on fills."
+      },
+      "f2": {
+        "title": "Mobile-first terminal",
+        "desc": "The full trading workspace on your phone: charts, positions and account in one hand."
+      },
+      "f3": {
+        "title": "A dashboard that adds up",
+        "desc": "Balance, equity, margin and floating P/L reconciled in real time. Your numbers always agree."
+      },
+      "f4": {
+        "title": "Risk you control",
+        "desc": "Stop-loss, take-profit and margin guards on every position. You set the boundaries."
+      }
+    },
+    "testimonials": {
+      "eyebrow": "Real feedback",
+      "title": "Trusted by individuals, teams, and trading communities across the globe.",
+      "items": [
+        {
+          "quote": "I onboarded our small team in a day. It’s a scalable solution that feels personal.",
+          "name": "Anton K.",
+          "role": "Manager, Czech Republic"
+        },
+        {
+          "quote": "The platform just makes sense. Everything I need is right there — fast, clean, intuitive.",
+          "name": "Sophie L.",
+          "role": "Trader, Germany"
+        },
+        {
+          "quote": "I’ve tested dozens of platforms. Agile FGS strikes the perfect balance between simplicity and power.",
+          "name": "Carlos R.",
+          "role": "Analyst, Spain"
+        },
+        {
+          "quote": "Execution speed is outstanding. Even during volatile markets, I feel fully in control.",
+          "name": "Jamal A.",
+          "role": "Equity Trader, UAE"
+        },
+        {
+          "quote": "I started with zero experience. The tutorials and tools gave me real confidence to begin.",
+          "name": "Eliza M.",
+          "role": "Trader, Poland"
+        }
+      ]
+    },
+    "steps": {
+      "eyebrow": "Get started",
+      "title": "Trading in three steps.",
+      "subtitle": "An account takes minutes — there is no paperwork queue.",
+      "s1": {
+        "title": "Create your account",
+        "desc": "Register with your email and set a strong password. You are in immediately."
+      },
+      "s2": {
+        "title": "Verify once",
+        "desc": "Upload your ID documents — encrypted storage, reviewed quickly, done a single time."
+      },
+      "s3": {
+        "title": "Fund and trade",
+        "desc": "Deposit with the method that suits you and open your first position."
+      }
+    },
+    "trust": {
+      "eyebrow": "Trust & safety",
+      "title": "Registered. Transparent. Accountable.",
+      "subtitle": "The facts about who holds your money — in writing, not marketing.",
+      "company": {
+        "title": "Registered company",
+        "fallback": "A registered legal entity operating under the laws of its jurisdiction."
+      },
+      "segregated": {
+        "title": "Segregated client funds",
+        "desc": "Client funds are held separately from company operating funds and reconciled continuously."
+      },
+      "protection": {
+        "title": "Investor protection",
+        "fallback": "Clients may be covered by an investor compensation scheme where applicable."
+      }
+    },
+    "edu": {
+      "eyebrow": "Learn the craft",
+      "title": "Free education, built in.",
+      "subtitle": "Structured courses, daily analysis and trading tools — included with every account.",
+      "cta": "Start learning",
+      "b1": "Beginner to advanced courses",
+      "b2": "Daily market analysis & signals",
+      "b3": "Calculators and an economic calendar"
+    },
+    "ctaTitle": "Ready when you are.",
+    "ctaSubtitle": "An account takes minutes. The markets are already moving.",
+    "benefits": {
+      "b1": {
+        "t": "Fast execution",
+        "d": "Orders routed in under a second."
+      },
+      "b2": {
+        "t": "Global markets",
+        "d": "Forex, indices, commodities and crypto."
+      },
+      "b3": {
+        "t": "Pro analytics",
+        "d": "Technical, fundamental and trend analysis included."
+      },
+      "b4": {
+        "t": "Verified accounts",
+        "d": "KYC-gated platform, encrypted document storage."
+      },
+      "b5": {
+        "t": "Segregated funds",
+        "d": "Client money held apart from company funds."
+      }
+    },
+    "value": {
+      "title": "No hidden complexity. Just cleaner trading.",
+      "subtitle": "The numbers that matter, up front.",
+      "c1": {
+        "v": "45+",
+        "l": "Instruments",
+        "d": "Five asset classes on one account, one wallet, one terminal."
+      },
+      "c2": {
+        "v": "<1s",
+        "l": "Order routing",
+        "d": "Millisecond routing with live quotes streamed to every device."
+      },
+      "c3": {
+        "v": "24/7",
+        "l": "Markets & support",
+        "d": "Round-the-clock markets with a support desk that answers."
+      }
+    },
+    "movers": {
+      "eyebrow": "Market leaders",
+      "title": "The movers worth watching.",
+      "subtitle": "Live performance from the terminal — real prices, real moves, refreshed continuously.",
+      "metric": "24h change",
+      "cta": "Open the terminal"
+    },
+    "intelligence": {
+      "eyebrow": "Intelligence",
+      "title": "Powered by analysis.",
+      "subtitle": "Decision support built into the platform — signals, calendars and analysis refreshed daily.",
+      "b1": "Daily trading signals with entry and exit levels",
+      "b2": "Economic calendar with forecasts and previous releases",
+      "b3": "Technical, fundamental and trend analysis on every major market",
+      "b4": "Position size, margin and pip calculators",
+      "cta": "Explore analytics"
+    },
+    "showcase": {
+      "label": "The terminal",
+      "title": "Your markets. One screen.",
+      "subtitle": "A professional workspace: live charts, one-click orders, positions and account — on desktop and mobile.",
+      "b1": "Six timeframes of live candlestick charting",
+      "b2": "Built-in stop-loss, take-profit and margin guards",
+      "b3": "Positions, equity and margin reconciled in real time",
+      "cta": "Launch the terminal",
+      "bid": "Bid",
+      "ask": "Ask",
+      "spread": "Spread"
+    },
+    "nav": {
+      "markets": "Markets",
+      "platform": "Platform",
+      "pricing": "Pricing",
+      "analytics": "Analytics",
+      "education": "Education",
+      "company": "Company",
+      "login": "Log in",
+      "cta": "Start trading",
+      "menu": "Menu"
+    }
   }
 }

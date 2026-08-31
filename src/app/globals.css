@@ -278,9 +278,13 @@ html {
   overflow-x: hidden;
 }
 
+/* NOTE: overflow-x must live on `html` only. Setting it on `body` as well
+   turns the body into a nested scroll container — the viewport then never
+   scrolls, window.scrollY stays 0, and every window-scroll listener dies
+   (navbar background on scroll, StickyCta, TOC scroll-spy). `html`'s rule
+   propagates to the viewport and already clips horizontal overflow. */
 body {
   min-width: 320px;
-  overflow-x: hidden;
 }
 
 @media (max-width: 639px) {

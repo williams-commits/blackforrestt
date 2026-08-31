@@ -16,7 +16,7 @@ const DEFAULT_GLYPH_PATHS = [
  */
 export async function GET() {
   const brand = await currentBrandProfile();
-  const accent = brand.accentColor || "#fd7e14";
+  const accent = brand.markColor || brand.accentColor || "#fd7e14";
   const viewBox = brand.glyph?.viewBox ?? "0 0 24 24";
   const paths = brand.glyph?.paths ?? DEFAULT_GLYPH_PATHS.map((d) => ({ d, fill: "accent" as const }));
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">${paths

@@ -31,6 +31,7 @@ export const PRIMARY_BRAND_FALLBACK: BrandProfile = {
   emailLogoUrl: "",
   ogImage: "",
   accentColor: "",
+  markColor: "",
   glyph: null,
   heroBadge: "",
   heroSubtitle: "",

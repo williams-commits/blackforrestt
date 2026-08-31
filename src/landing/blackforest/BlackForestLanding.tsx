@@ -11,9 +11,8 @@ import { StickyCta } from "@/components/landing/StickyCta";
 import { Footer } from "@/components/landing/Footer";
 import { getLandingInstruments } from "@/lib/landingData";
 
-// Dynamic so branding values (support email, domain, brand name in the Footer
-// and Hero card) are read from env at request time, not baked at build time.
-export const dynamic = "force-dynamic";
+// Dynamic rendering is forced by src/app/page.tsx (the host dispatcher) —
+// branding values are read from env at request time, not build time.
 
 /** Section manifest — single source of truth for TOC + progress checklist.
  *  The hero is intentionally omitted: it's always visible at the top, so it
@@ -29,12 +28,13 @@ const SECTIONS: TocItem[] = [
 ];
 
 /**
- * Default landing template — the original Black Forest editorial design:
- * serif hero, sticky TOC rail, progress checklist, playground + markets,
- * confidence section. Selected whenever BrandProfile.landingTemplate is
- * "default" or unknown.
+ * Black Forest Digital landing — the primary brand's editorial design: serif
+ * hero, sticky TOC rail, progress checklist, playground + markets, confidence
+ * section. Composed entirely from the shared landing library
+ * (@/components/landing/*); this folder owns composition only. Selected
+ * whenever BrandProfile.landingTemplate is "default" or unknown.
  */
-export async function DefaultLanding() {
+export async function BlackForestLanding() {
   const instruments = getLandingInstruments();
   const tPlay = await getTranslations("playground");
 

@@ -83,6 +83,37 @@ export default async function AboutPage() {
         </p>
       </Section>
 
+      {/* Verifiable registry facts — only the fields actually configured for
+          the requesting brand render (nothing invented). */}
+      {[
+        { label: t("facts.legalEntity"), value: brandProfile.legalName },
+        { label: t("facts.registration"), value: brandProfile.companyRegistrationNumber },
+        { label: t("facts.jurisdiction"), value: brandProfile.companyJurisdiction },
+        { label: t("facts.regulator"), value: brandProfile.companyRegulator },
+        { label: t("facts.protection"), value: brandProfile.investorCompensationScheme },
+        { label: t("facts.office"), value: brandProfile.address },
+      ].some((fact) => Boolean(fact.value)) && (
+        <Section title={t("factsTitle")}>
+          <div className="grid sm:grid-cols-2 gap-3 not-prose">
+            {[
+              { label: t("facts.legalEntity"), value: brandProfile.legalName },
+              { label: t("facts.registration"), value: brandProfile.companyRegistrationNumber },
+              { label: t("facts.jurisdiction"), value: brandProfile.companyJurisdiction },
+              { label: t("facts.regulator"), value: brandProfile.companyRegulator },
+              { label: t("facts.protection"), value: brandProfile.investorCompensationScheme },
+              { label: t("facts.office"), value: brandProfile.address },
+            ]
+              .filter((fact) => Boolean(fact.value))
+              .map((fact) => (
+                <div key={fact.label} className="bg-panel border border-border rounded-xl p-4">
+                  <div className="text-[10px] uppercase tracking-widest text-text-muted">{fact.label}</div>
+                  <div className="mt-1 text-sm font-medium text-text">{fact.value}</div>
+                </div>
+              ))}
+          </div>
+        </Section>
+      )}
+
       <Section title={t("missionTitle")}>
         <p>{t("missionBody")}</p>
       </Section>

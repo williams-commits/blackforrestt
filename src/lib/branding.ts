@@ -101,6 +101,12 @@ export interface BrandProfile {
   ogImage: string;
   /** Brand accent color for the generated favicon glyph. */
   accentColor: string;
+  /**
+   * Dedicated color for brand marks (favicon glyph). Empty = accentColor.
+   * Lets a brand's identity mark differ from its UI accent — e.g. Agile's
+   * bright green mark (#63e891) over its darker UI accent (#00644e).
+   */
+  markColor: string;
   /** Custom logo glyph (SVG path data) replacing the default tree mark. */
   glyph: BrandGlyph | null;
   /** Landing hero badge text override (empty = translated default). */
@@ -116,8 +122,9 @@ export interface BrandProfile {
   depositWallets: string;
   /**
    * Landing-page template key ("default" | "agile" | …). Selects which
-   * composition in src/components/landing/templates/ renders the apex `/`
-   * for this brand family. Unknown keys fall back to "default".
+   * brand-owned tree under src/landing/ renders the apex `/` for this brand
+   * family ("default" → src/landing/blackforest/). Unknown keys fall back
+   * to "default".
    */
   landingTemplate: string;
 }
@@ -149,6 +156,7 @@ interface BrandOverride {
   emailLogoUrl?: string;
   ogImage?: string;
   accentColor?: string;
+  markColor?: string;
   glyph?: BrandGlyph | null;
   heroBadge?: string;
   heroSubtitle?: string;
@@ -207,6 +215,7 @@ export function brandProfileForDomain(domain?: string | null): BrandProfile {
     emailLogoUrl: override.emailLogoUrl ?? "",
     ogImage: override.ogImage ?? "",
     accentColor: override.accentColor ?? "",
+    markColor: override.markColor ?? "",
     glyph: override.glyph ?? null,
     heroBadge: override.heroBadge ?? "",
     heroSubtitle: override.heroSubtitle ?? "",

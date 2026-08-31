@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Reveal } from "../Reveal";
+import { Reveal } from "@/components/landing/Reveal";
 import { TestimonialCarousel, type Testimonial } from "../TestimonialCarousel";
 
 /**
@@ -20,7 +20,7 @@ export async function TestimonialsSection() {
   }));
 
   return (
-    <section id="reviews" className="relative scroll-mt-24 overflow-hidden bg-[#0d100f] pb-24 pt-6">
+    <section id="reviews" className="relative scroll-mt-24 overflow-hidden bg-[#0d100f] py-24">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"

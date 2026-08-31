@@ -82,6 +82,28 @@ html.dim {
 }
 
 /*
+  Scroll-reveal motion primitive (toggled by components/landing/Reveal).
+  Content fades up once as it enters the viewport; disabled entirely for
+  reduced-motion users so the primitive is safe to use anywhere.
+*/
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 450ms ease, transform 450ms ease;
+}
+.reveal.reveal-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/*
   Editorial prose container used by content pages (ArticleLayout). Serif body for
   readability, with measured spacing and themed links / lists / quotes. Replaces
   the previously-undefined `prose-content` class so all education / legal /

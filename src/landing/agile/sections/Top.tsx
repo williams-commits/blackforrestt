@@ -9,7 +9,7 @@ import {
   TrendingUp,
   type LucideIcon,
 } from "lucide-react";
-import { Reveal } from "../Reveal";
+import { Reveal } from "@/components/landing/Reveal";
 import { SectionBackdrop } from "../SectionBackdrop";
 import { LivePricePanel } from "../LivePricePanel";
 import { getLandingInstruments } from "@/lib/landingData";

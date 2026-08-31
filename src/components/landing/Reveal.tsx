@@ -3,9 +3,11 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
 /**
- * Scroll-reveal wrapper: fades content up once as it enters the viewport.
- * The motion itself is disabled under prefers-reduced-motion via the
- * .ag-reveal rules in AgileStyles — this component only toggles the class.
+ * Shared scroll-reveal wrapper: fades content up once as it enters the
+ * viewport. Brand-agnostic motion infrastructure — the visual rules live in
+ * globals.css as the `.reveal` / `.reveal-in` utilities, which disable
+ * themselves entirely under prefers-reduced-motion. This component only
+ * observes and toggles the class.
  */
 export function Reveal({
   children,
@@ -23,14 +25,14 @@ export function Reveal({
     const node = ref.current;
     if (!node) return;
     if (typeof IntersectionObserver === "undefined") {
-      node.classList.add("ag-reveal-in");
+      node.classList.add("reveal-in");
       return;
     }
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            node.classList.add("ag-reveal-in");
+            node.classList.add("reveal-in");
             observer.disconnect();
           }
         }
@@ -42,7 +44,7 @@ export function Reveal({
   }, []);
 
   return (
-    <div ref={ref} className={`ag-reveal ${className}`} style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
+    <div ref={ref} className={`reveal ${className}`} style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
       {children}
     </div>
   );

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { clientTradeUrl } from "@/lib/branding";
+import { useInstruments } from "@/components/landing/useInstruments";
 import type { InstrumentView } from "@/lib/types";
 import { formatPrice, formatChange } from "@/lib/landingUi";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
@@ -14,34 +14,14 @@ interface LivePriceProps {
 
 /**
  * Refreshes a single instrument's bid/ask/mid/change by polling the public
- * /api/instruments endpoint. Mirrors the InformersWidget polling pattern (every
- * few seconds). Only this card's numbers update — the rest of the page is
- * static server HTML.
+ * /api/instruments endpoint via the shared landing hook (every few seconds).
+ * Only this card's numbers update — the rest of the page is static server HTML.
  */
 export function LivePrice({ initial }: LivePriceProps) {
-  const [inst, setInst] = useState<InstrumentView>(initial);
+  const instruments = useInstruments([initial], 3000);
   const t = useTranslations("hero.featured");
-
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const res = await fetch("/api/instruments", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = (await res.json()) as { instruments: InstrumentView[] };
-        if (!active) return;
-        const found = data.instruments.find((i) => i.symbol === initial.symbol);
-        if (found) setInst(found);
-      } catch {
-        /* offline — keep last known values */
-      }
-    };
-    const id = setInterval(load, 3000);
-    return () => {
-      active = false;
-      clearInterval(id);
-    };
-  }, [initial.symbol]);
+  // Keep the last known row when a fresh feed doesn't include the symbol.
+  const inst = instruments.find((i) => i.symbol === initial.symbol) ?? initial;
 
   const up = inst.changePct >= 0;
   const href = clientTradeUrl(`/trade/${inst.symbol}`);

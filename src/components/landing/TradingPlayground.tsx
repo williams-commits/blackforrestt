@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { clientTradeUrl } from "@/lib/branding";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
+import { useInstruments } from "@/components/landing/useInstruments";
 import type { InstrumentCategory, InstrumentView } from "@/lib/types";
 import { CATEGORY_LABEL, formatPrice, formatChange } from "@/lib/landingUi";
 
@@ -30,29 +31,9 @@ const PRESET_QUERIES = [
  */
 export function TradingPlayground({ initial }: TradingPlaygroundProps) {
   const t = useTranslations("playground");
-  const [instruments, setInstruments] = useState<InstrumentView[]>(initial);
+  const instruments = useInstruments(initial, 3000);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Keep prices fresh without re-rendering the whole page.
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const res = await fetch("/api/instruments", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = (await res.json()) as { instruments: InstrumentView[] };
-        if (active && data.instruments.length > 0) setInstruments(data.instruments);
-      } catch {
-        /* offline — keep last known values */
-      }
-    };
-    const id = setInterval(load, 3000);
-    return () => {
-      active = false;
-      clearInterval(id);
-    };
-  }, []);
 
   const grouped = useMemo(() => {
     const q = query.trim().toLowerCase();

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { SectionBackdrop } from "../SectionBackdrop";
 import { MarketIcon } from "@/components/landing/MarketIcons";
+import { useInstruments } from "@/components/landing/useInstruments";
 import type { InstrumentView } from "@/lib/types";
 
 /**
@@ -26,29 +27,8 @@ export function MarketsSection({
     trade: string;
   };
 }) {
-  const [instruments, setInstruments] = useState<InstrumentView[]>(initial);
+  const instruments = useInstruments(initial, 3_000);
   const [category, setCategory] = useState<string>("ALL");
-
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const response = await fetch("/api/instruments", { cache: "no-store" });
-        if (!response.ok || !active) return;
-        const payload = (await response.json()) as { instruments?: InstrumentView[] };
-        if (Array.isArray(payload.instruments) && payload.instruments.length > 0 && active) {
-          setInstruments(payload.instruments);
-        }
-      } catch {
-        /* transient — keep the last snapshot */
-      }
-    };
-    const timer = window.setInterval(() => void load(), 3_000);
-    return () => {
-      active = false;
-      window.clearInterval(timer);
-    };
-  }, []);
 
   const available = useMemo(
     () => Array.from(new Set(instruments.map((instrument) => instrument.category))),

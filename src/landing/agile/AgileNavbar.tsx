@@ -5,14 +5,19 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Menu, X } from "lucide-react";
 import { AgileMark } from "./AgileMark";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { clientTradeUrl } from "@/lib/branding";
 
 /**
  * Slim dark navigation for the Agile template: logo, anchor links into the
  * landing sections, language switch, and the two-tier auth actions
  * (outlined pill + green pill). Collapses to a hamburger sheet on mobile.
+ *
+ * `anchorPrefix` adapts the section anchors for context: empty on the landing
+ * itself ("#markets") and "/" on interior content pages ("/#markets") so the
+ * same navigation works everywhere.
  */
-export function AgileNavbar() {
+export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
   const t = useTranslations("agile.nav");
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -35,9 +40,9 @@ export function AgileNavbar() {
   }, [open]);
 
   const links = [
-    { href: "#markets", label: t("markets") },
-    { href: "#platform", label: t("platform") },
-    { href: "#value", label: t("pricing") },
+    { href: `${anchorPrefix}#markets`, label: t("markets") },
+    { href: `${anchorPrefix}#platform`, label: t("platform") },
+    { href: `${anchorPrefix}#value`, label: t("pricing") },
     { href: "/analytics/technical", label: t("analytics") },
     { href: "/education/beginners", label: t("education") },
     { href: "/about", label: t("company") },
@@ -70,6 +75,7 @@ export function AgileNavbar() {
         </ul>
 
         <div className="hidden items-center gap-3 lg:flex">
+          <LanguageSwitcher />
           <Link href={clientTradeUrl("/login")} className="ag-btn ag-btn-ghost min-h-0! px-4 py-2.5 text-[13.5px]">
             {t("login")}
           </Link>
@@ -103,13 +109,18 @@ export function AgileNavbar() {
                 </Link>
               </li>
             ))}
-            <li className="mt-3 flex gap-3 pb-2">
-              <Link href={clientTradeUrl("/login")} onClick={() => setOpen(false)} className="ag-btn ag-btn-ghost flex-1">
-                {t("login")}
-              </Link>
-              <Link href={clientTradeUrl("/register")} onClick={() => setOpen(false)} className="ag-btn ag-btn-primary flex-1 rounded-full!">
-                {t("cta")}
-              </Link>
+            <li className="mt-3 pb-2">
+              <div className="mb-3 flex justify-center">
+                <LanguageSwitcher />
+              </div>
+              <div className="flex gap-3">
+                <Link href={clientTradeUrl("/login")} onClick={() => setOpen(false)} className="ag-btn ag-btn-ghost flex-1">
+                  {t("login")}
+                </Link>
+                <Link href={clientTradeUrl("/register")} onClick={() => setOpen(false)} className="ag-btn ag-btn-primary flex-1 rounded-full!">
+                  {t("cta")}
+                </Link>
+              </div>
             </li>
           </ul>
         </div>

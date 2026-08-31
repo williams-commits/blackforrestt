@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 import { useTheme } from "@/components/ThemeProvider";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
+import { useInstruments } from "@/components/landing/useInstruments";
 
 interface Instrument {
   symbol: string;
@@ -31,24 +31,9 @@ interface InformersWidgetProps {
  */
 export function InformersWidget({ domain }: InformersWidgetProps) {
   const t = useTranslations("informers");
-  const [instruments, setInstruments] = useState<Instrument[]>([]);
+  const instruments: Instrument[] = useInstruments([], 2000);
   const { theme } = useTheme();
   const themeWord = theme === "dim" ? t("themeHintDim") : t("themeHintLight");
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch("/api/instruments");
-        const data = await res.json();
-        setInstruments(data.instruments ?? []);
-      } catch {
-        /* offline */
-      }
-    }
-    load();
-    const t = setInterval(load, 2000);
-    return () => clearInterval(t);
-  }, []);
 
   return (
     <ArticleLayout

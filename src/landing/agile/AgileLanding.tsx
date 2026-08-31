@@ -44,7 +44,7 @@ export async function AgileLanding() {
   const tMovers = await getTranslations("agile.movers");
 
   return (
-    <div className={`ag-shell ${inter.className}`}>
+    <div className={`ag-shell ag-scope ${inter.className}`}>
       <AgileStyles />
       <AgileNavbar />
       <main id="main-content" tabIndex={-1}>
@@ -86,11 +86,6 @@ export async function AgileLanding() {
         {/* Color bridge: the charcoal steps/testimonials bands melt into the
             deep-green final CTA through a stepped midpoint — pure background,
             no content, so every band keeps its structure. */}
-        <div
-          aria-hidden="true"
-          className="h-28 lg:h-40"
-          style={{ background: "linear-gradient(180deg, #0d100f 0%, #1c2a24 45%, #2d463b 100%)" }}
-        />
         <FinalCta />
       </main>
       <AgileFooter />

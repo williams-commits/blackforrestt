@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useInstruments } from "@/components/landing/useInstruments";
 import type { InstrumentView } from "@/lib/types";
 
 /**
@@ -17,29 +18,8 @@ export function LivePricePanel({
   initial: InstrumentView[];
   labels: { bid: string; ask: string; spread: string; trade: string };
 }) {
-  const [instruments, setInstruments] = useState<InstrumentView[]>(initial);
+  const instruments = useInstruments(initial, 2_000);
   const [selected, setSelected] = useState<string>("XAUUSD");
-
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const response = await fetch("/api/instruments", { cache: "no-store" });
-        if (!response.ok || !active) return;
-        const payload = (await response.json()) as { instruments?: InstrumentView[] };
-        if (Array.isArray(payload.instruments) && payload.instruments.length > 0 && active) {
-          setInstruments(payload.instruments);
-        }
-      } catch {
-        /* transient — keep the last snapshot */
-      }
-    };
-    const timer = window.setInterval(() => void load(), 2_000);
-    return () => {
-      active = false;
-      window.clearInterval(timer);
-    };
-  }, []);
 
   const preferred = ["XAUUSD", "EURUSD", "BTCUSD", "US30"];
   const bySymbol = new Map(instruments.map((instrument) => [instrument.symbol, instrument]));

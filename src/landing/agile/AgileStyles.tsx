@@ -111,11 +111,48 @@ export function AgileStyles() {
       .ag-up { color: var(--ag-accent); }
       .ag-down { color: var(--ag-negative); }
 
-      /* Scroll reveal — disabled entirely for reduced-motion users. */
-      .ag-reveal { opacity: 0; transform: translateY(14px); transition: opacity 450ms ease, transform 450ms ease; }
-      .ag-reveal.ag-reveal-in { opacity: 1; transform: none; }
+      /*
+        Content-page scope — Agile's dark-institutional reskin of the SHARED
+        design tokens. Shared content components (ArticleLayout, ContactForm,
+        tables, …) are built exclusively on the global --color-*/--font-*
+        tokens; remapping those variables inside this scope re-skins every
+        content page for the Agile brand with zero product conditionals and
+        zero duplicated components. Blackforrest keeps the root (light) token
+        values — the two identities never touch.
+      */
+      .ag-scope {
+        --color-canvas: #0d100f;
+        --color-panel: #151a17;
+        --color-panel-2: #181c1a;
+        --color-panel-3: #1f2421;
+        --color-border: rgba(255, 255, 255, 0.12);
+        --color-border-soft: rgba(255, 255, 255, 0.07);
+        --color-brand: #63e891;
+        --color-brand-soft: rgba(99, 232, 145, 0.12);
+        --color-text: #f1f3ef;
+        --color-text-muted: #a7ada8;
+        --color-text-faint: #747a75;
+        --color-up: #63e891;
+        --color-down: #ff6b6b;
+        --color-surface-dark: #15181a;
+        --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.5);
+        --shadow-card: 0 18px 44px rgba(0, 0, 0, 0.55);
+        /* Agile's typographic voice: geometric sans everywhere — the serif
+           editorial voice belongs to the primary brand. */
+        --font-sans: var(--font-agile-inter), Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
+        --font-serif: var(--font-agile-inter), Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      /* Filled accent/status surfaces get dark ink — white text fails
+         contrast on Agile's bright green/red fills. */
+      .ag-scope .bg-brand,
+      .ag-scope .bg-up,
+      .ag-scope .bg-down {
+        color: #0d100f;
+      }
+
+      /* Reduced motion — hovers/transitions only; scroll reveals are handled
+         globally by the .reveal utilities in globals.css. */
       @media (prefers-reduced-motion: reduce) {
-        .ag-reveal { opacity: 1; transform: none; transition: none; }
         .ag-card-hover:hover { transform: none; }
         .ag-btn-primary:hover { transform: none; }
       }

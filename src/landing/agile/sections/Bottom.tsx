@@ -11,7 +11,7 @@ import {
   Gauge,
   type LucideIcon,
 } from "lucide-react";
-import { Reveal } from "../Reveal";
+import { Reveal } from "@/components/landing/Reveal";
 import { SectionBackdrop } from "../SectionBackdrop";
 import { currentBrandProfile } from "@/lib/branding";
 
@@ -224,7 +224,7 @@ export async function StepsBand() {
     { n: 3, title: t("s3.title"), desc: t("s3.desc"), icon: CandlestickChart },
   ];
   return (
-    <section id="get-started" className="relative scroll-mt-24 overflow-hidden bg-[#0d100f] py-30">
+    <section id="get-started" className="relative scroll-mt-24 overflow-hidden bg-[#0d100f] py-24">
       {/* Ambient green glows give the glass cards depth to frost over. */}
       <div
         aria-hidden="true"

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ArrowRight, Activity } from "lucide-react";
 import { MarketIcon } from "@/components/landing/MarketIcons";
+import { useInstruments } from "@/components/landing/useInstruments";
 import type { InstrumentView } from "@/lib/types";
 
 /**
@@ -19,28 +20,7 @@ export function MoversSection({
   initial: InstrumentView[];
   labels: { eyebrow: string; title: string; subtitle: string; metric: string; cta: string };
 }) {
-  const [instruments, setInstruments] = useState<InstrumentView[]>(initial);
-
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const response = await fetch("/api/instruments", { cache: "no-store" });
-        if (!response.ok || !active) return;
-        const payload = (await response.json()) as { instruments?: InstrumentView[] };
-        if (Array.isArray(payload.instruments) && payload.instruments.length > 0 && active) {
-          setInstruments(payload.instruments);
-        }
-      } catch {
-        /* transient — keep the last snapshot */
-      }
-    };
-    const timer = window.setInterval(() => void load(), 4_000);
-    return () => {
-      active = false;
-      window.clearInterval(timer);
-    };
-  }, []);
+  const instruments = useInstruments(initial, 4_000);
 
   const movers = useMemo(
     () =>

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { clientTradeUrl } from "@/lib/branding";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
+import { useInstruments } from "@/components/landing/useInstruments";
 import type { InstrumentCategory, InstrumentView } from "@/lib/types";
 import { CATEGORY_LABEL, formatPrice, formatChange } from "@/lib/landingUi";
 
@@ -20,30 +20,14 @@ interface SectionTickerProps {
  * on the trade subdomain.
  */
 export function SectionTicker({ category, initial }: SectionTickerProps) {
-  const [rows, setRows] = useState<InstrumentView[]>(initial);
+  const all = useInstruments(initial, 3000);
+  // The initial snapshot is already category-filtered (server-side); once the
+  // full feed arrives, keep only this section's rows.
+  const rows = all.every((i) => i.category === category)
+    ? all
+    : all.filter((i) => i.category === category);
   const t = useTranslations("markets.table");
   const catLabel = CATEGORY_LABEL[category];
-
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const res = await fetch("/api/instruments", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = (await res.json()) as { instruments: InstrumentView[] };
-        if (!active) return;
-        const next = data.instruments.filter((i) => i.category === category);
-        if (next.length > 0) setRows(next);
-      } catch {
-        /* offline — keep last known values */
-      }
-    };
-    const id = setInterval(load, 3000);
-    return () => {
-      active = false;
-      clearInterval(id);
-    };
-  }, [category]);
 
   if (rows.length === 0) {
     return <p className="text-sm text-text-muted">{t("loading")}</p>;

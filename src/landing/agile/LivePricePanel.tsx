@@ -60,12 +60,12 @@ export function LivePricePanel({
         </nav>
       </div>
 
-      <div className="mt-6 flex items-end justify-between gap-4">
+      <div className="mt-7 flex items-end justify-between gap-4">
         <div>
-          <div className="font-mono text-4xl font-bold tracking-tight tnum text-[#f1f3ef]">
+          <div className="font-mono text-[2.6rem] font-bold leading-none tracking-[-0.02em] tnum text-[#f1f3ef]">
             {activeInstrument.mid.toFixed(activeInstrument.digits)}
           </div>
-          <div className={`mt-2 text-sm font-semibold tnum ${up ? "ag-up" : "ag-down"}`}>
+          <div className={`mt-3 text-sm font-semibold tnum ${up ? "ag-up" : "ag-down"}`}>
             {up ? "▲" : "▼"} {Math.abs(activeInstrument.changePct).toFixed(2)}%
           </div>
         </div>

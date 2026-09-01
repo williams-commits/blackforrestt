@@ -29,16 +29,16 @@ export function AgileStyles() {
       .ag-container { margin-inline: auto; width: 100%; max-width: 1280px; padding-inline: 1.25rem; }
       @media (min-width: 1024px) { .ag-container { padding-inline: 2.5rem; } }
 
-      .ag-section { padding-block: 5rem; }
-      @media (min-width: 1024px) { .ag-section { padding-block: 7rem; } }
+      .ag-section { padding-block: 6rem; }
+      @media (min-width: 1024px) { .ag-section { padding-block: 8.5rem; } }
 
       .ag-card {
-        background: var(--ag-card);
-        border: 1px solid var(--ag-border);
-        border-radius: 10px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0) 42%), var(--ag-card);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
       }
-      .ag-card-hover { transition: border-color 200ms ease, transform 200ms ease, background-color 200ms ease; }
-      .ag-card-hover:hover { border-color: rgba(99, 232, 145, 0.45); transform: translateY(-2px); }
+      .ag-card-hover { transition: border-color 220ms ease, transform 220ms ease, background-color 220ms ease; }
+      .ag-card-hover:hover { border-color: rgba(99, 232, 145, 0.38); transform: translateY(-2px); }
 
       /* Frosted glass over the photo bands: used for panels/tiles that float
          on SectionBackdrop plates. Solid fallback where backdrop-filter is
@@ -101,12 +101,20 @@ export function AgileStyles() {
       .ag-btn-ghost:hover { background: rgba(255, 255, 255, 0.06); }
 
       .ag-eyebrow {
-        font-size: 12px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+        font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
         color: var(--ag-accent);
       }
-      .ag-h2 { font-size: 1.875rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; color: var(--ag-text); }
-      @media (min-width: 1024px) { .ag-h2 { font-size: 2.75rem; } }
-      .ag-sub { color: var(--ag-text-2); font-size: 1.075rem; line-height: 1.65; }
+      /* Hero display scale — the one place the type gets genuinely large. */
+      .ag-display {
+        font-size: clamp(2.75rem, 5.6vw, 4.75rem);
+        font-weight: 800; letter-spacing: -0.032em; line-height: 1.03;
+        color: var(--ag-text);
+      }
+      .ag-h2 {
+        font-size: clamp(2rem, 3.3vw, 2.9rem);
+        font-weight: 700; letter-spacing: -0.024em; line-height: 1.08; color: var(--ag-text);
+      }
+      .ag-sub { color: var(--ag-text-2); font-size: 1.125rem; line-height: 1.65; }
 
       .ag-up { color: var(--ag-accent); }
       .ag-down { color: var(--ag-negative); }
@@ -119,6 +127,12 @@ export function AgileStyles() {
         content page for the Agile brand with zero product conditionals and
         zero duplicated components. Blackforrest keeps the root (light) token
         values — the two identities never touch.
+
+        The variable remap below is paired with direct scoped rules for the
+        token utilities: the utilities then resolve to the Agile palette even
+        in browsers/embedded views where custom-property inheritance from a
+        mid-tree scope misbehaves. Belt and braces — the palette may never
+        leak light-theme values onto the dark canvas.
       */
       .ag-scope {
         --color-canvas: #0d100f;
@@ -141,7 +155,25 @@ export function AgileStyles() {
            editorial voice belongs to the primary brand. */
         --font-sans: var(--font-agile-inter), Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
         --font-serif: var(--font-agile-inter), Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-family: var(--font-agile-inter), Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
       }
+      /* Direct scoped utility rules — the guaranteed palette layer. */
+      .ag-scope .bg-canvas { background-color: #0d100f; }
+      .ag-scope .bg-panel { background-color: #151a17; }
+      .ag-scope .bg-panel-2 { background-color: #181c1a; }
+      .ag-scope .border-border { border-color: rgba(255, 255, 255, 0.12); }
+      .ag-scope .border-border-soft { border-color: rgba(255, 255, 255, 0.07); }
+      .ag-scope .text-text { color: #f1f3ef; }
+      .ag-scope .text-text-muted { color: #a7ada8; }
+      .ag-scope .text-text-faint { color: #747a75; }
+      .ag-scope .text-brand { color: #63e891; }
+      .ag-scope .text-up { color: #63e891; }
+      .ag-scope .text-down { color: #ff6b6b; }
+      .ag-scope .bg-brand-soft { background-color: rgba(99, 232, 145, 0.12); }
+      .ag-scope .border-brand { border-color: rgba(99, 232, 145, 0.5); }
+      .ag-scope .border-up\/30 { border-color: rgba(99, 232, 145, 0.3); }
+      .ag-scope .bg-up\/10 { background-color: rgba(99, 232, 145, 0.08); }
+
       /* Filled accent/status surfaces get dark ink — white text fails
          contrast on Agile's bright green/red fills. */
       .ag-scope .bg-brand,
@@ -149,6 +181,42 @@ export function AgileStyles() {
       .ag-scope .bg-down {
         color: #0d100f;
       }
+      /* Shared token-card patterns (stats bands, fact grids, form cards —
+         anything built as "rounded-xl border bg-panel/bg-canvas") take the
+         landing's card surface: 12px radius + the soft top-light gradient.
+         Applies only inside the Agile scope; the primary brand is untouched. */
+      .ag-scope .rounded-xl {
+        border-radius: 12px;
+        border-color: rgba(255, 255, 255, 0.08);
+        background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0) 42%);
+      }
+      .ag-scope .rounded-lg { border-color: rgba(255, 255, 255, 0.1); }
+
+      /* Long-form prose in the Agile voice: Inter at a comfortable measure,
+         softer body tone than headings for dark-canvas readability. */
+      .ag-scope .prose-content {
+        font-family: var(--font-agile-inter), Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-size: 15.5px;
+        line-height: 1.75;
+        color: #c3c9c4;
+      }
+      .ag-scope .prose-content a { color: #63e891; }
+      .ag-scope .prose-content strong,
+      .ag-scope .prose-content b { color: #f1f3ef; }
+      .ag-scope .marker\:text-brand::marker { color: #63e891; }
+
+      /* Metric numerals (the About stat band) render in the landing's
+         ValueCards grammar: large, tight, mint. Only this scale class is
+         used for stat numerals inside the content scope. */
+      .ag-scope .text-2xl {
+        font-size: 2.25rem;
+        letter-spacing: -0.02em;
+      }
+
+      /* Interior page furniture — header band + closing CTA (see
+         AgileArticleLayout / AgileContentShell). */
+      .ag-page-band { position: relative; overflow: hidden; }
+      .ag-page-cta { border-top: 1px solid rgba(255, 255, 255, 0.1); }
 
       /* Reduced motion — hovers/transitions only; scroll reveals are handled
          globally by the .reveal utilities in globals.css. */

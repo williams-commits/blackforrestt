@@ -36,8 +36,8 @@ export function MoversSection({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-2xl">
             <span className="ag-eyebrow">{labels.eyebrow}</span>
-            <h2 className="ag-h2 mt-3">{labels.title}</h2>
-            <p className="ag-sub mt-3">{labels.subtitle}</p>
+            <h2 className="ag-h2 mt-4">{labels.title}</h2>
+            <p className="ag-sub mt-4">{labels.subtitle}</p>
           </div>
           <Link href="/tools/informers" className="ag-btn ag-btn-ghost">
             {labels.cta} <ArrowRight size={15} strokeWidth={2} aria-hidden />

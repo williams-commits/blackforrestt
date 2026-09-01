@@ -75,7 +75,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   const ogLocale = LOCALE_OG[locale as keyof typeof LOCALE_OG] ?? LOCALE_OG.en;
   const t = await getTranslations({ namespace: "Metadata", locale });
-  const description = t("description");
+  // Per-brand voice: a brand may override the default meta description via
+  // BRAND_OVERRIDES metaDescription so each family's SEO copy is its own.
+  const description = brand.metaDescription || t("description");
   return {
     metadataBase: new URL(siteUrl),
     // Template: a page setting `title: "About Us"` renders as

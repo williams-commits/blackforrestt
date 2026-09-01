@@ -35,6 +35,7 @@ export const PRIMARY_BRAND_FALLBACK: BrandProfile = {
   glyph: null,
   heroBadge: "",
   heroSubtitle: "",
+  metaDescription: "",
   depositWallets: "",
   landingTemplate: "default",
 };

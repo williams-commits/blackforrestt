@@ -113,6 +113,8 @@ export interface BrandProfile {
   heroBadge: string;
   /** Landing hero subtitle override (empty = translated default). */
   heroSubtitle: string;
+  /** Meta description override for SEO/social (empty = translated default). */
+  metaDescription: string;
   /**
    * Per-brand crypto deposit wallets, env format
    * ("asset:network:address;…" — same as DEPOSIT_WALLET_ADDRESSES). Empty =
@@ -160,6 +162,7 @@ interface BrandOverride {
   glyph?: BrandGlyph | null;
   heroBadge?: string;
   heroSubtitle?: string;
+  metaDescription?: string;
   depositWallets?: string;
   landingTemplate?: string;
 }
@@ -219,6 +222,7 @@ export function brandProfileForDomain(domain?: string | null): BrandProfile {
     glyph: override.glyph ?? null,
     heroBadge: override.heroBadge ?? "",
     heroSubtitle: override.heroSubtitle ?? "",
+    metaDescription: override.metaDescription ?? "",
     depositWallets: override.depositWallets ?? "",
     landingTemplate: override.landingTemplate ?? "default",
   };

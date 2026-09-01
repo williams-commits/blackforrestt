@@ -1,4 +1,4 @@
-import { ArticleLayout } from "@/components/landing/ArticleLayout";
+import { ArticleLayout } from "@/landing/composition";
 import { ContactForm } from "@/components/landing/ContactForm";
 import { getTranslations } from "next-intl/server";
 import { contentMetadata } from "@/lib/seo";

@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
 import { useTheme } from "@/components/ThemeProvider";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { useInstruments } from "@/components/landing/useInstruments";
@@ -24,10 +23,12 @@ interface InformersWidgetProps {
 /**
  * Embeddable live-rate widgets (ticker + rate table + embed code).
  *
- * Uses the site-wide light/dim theme via useTheme() rather than a local toggle,
- * and renders entirely with design tokens (bg-canvas / bg-panel / text-text /
- * border-border / text-up / text-down) so the preview reskins automatically in
- * dim mode — no hardcoded hex colors.
+ * Frameless by design: the page supplies the brand-owned article layout
+ * (@/landing/composition) so this widget renders identically inside either
+ * brand's page architecture. Uses the site-wide light/dim theme via
+ * useTheme() and renders entirely with design tokens (bg-canvas / bg-panel /
+ * text-text / border-border / text-up / text-down) so it reskins under any
+ * token scope — no hardcoded hex colors.
  */
 export function InformersWidget({ domain }: InformersWidgetProps) {
   const t = useTranslations("informers");
@@ -36,21 +37,18 @@ export function InformersWidget({ domain }: InformersWidgetProps) {
   const themeWord = theme === "dim" ? t("themeHintDim") : t("themeHintLight");
 
   return (
-    <ArticleLayout
-      eyebrow={t("eyebrow")}
-      title={t("title")}
-      description={t("description")}
-    >
+    <div className="space-y-8">
       {/* Theme hint — the preview follows the site theme (toggle in the navbar). */}
-      <Section>
+      <section>
         <div className="inline-flex items-center gap-2 text-xs text-text-muted">
           <span className="h-1.5 w-1.5 rounded-full bg-up animate-pulse" />
           {t("themeHint", { theme: themeWord })}
         </div>
-      </Section>
+      </section>
 
       {/* Ticker widget preview */}
-      <Section title={t("ticker")}>
+      <section>
+        <h2 className="mb-4 font-sans text-xl font-bold tracking-tight">{t("ticker")}</h2>
         <div className="rounded-xl p-4 overflow-x-auto bg-canvas border border-border">
           <div className="flex items-center gap-6 whitespace-nowrap">
             {instruments.map((i) => {
@@ -71,10 +69,11 @@ export function InformersWidget({ domain }: InformersWidgetProps) {
             )}
           </div>
         </div>
-      </Section>
+      </section>
 
       {/* Rate table widget preview */}
-      <Section title={t("rateTable")}>
+      <section>
+        <h2 className="mb-4 font-sans text-xl font-bold tracking-tight">{t("rateTable")}</h2>
         <div className="rounded-xl overflow-hidden border border-border">
           <table className="w-full">
             <thead className="bg-panel-2 text-text-faint">
@@ -111,10 +110,11 @@ export function InformersWidget({ domain }: InformersWidgetProps) {
             <div className="px-4 py-6 text-sm text-text-faint text-center">{t("loading")}</div>
           )}
         </div>
-      </Section>
+      </section>
 
       {/* Embed code */}
-      <Section title={t("embedCode")}>
+      <section>
+        <h2 className="mb-4 font-sans text-xl font-bold tracking-tight">{t("embedCode")}</h2>
         <p className="mb-3">{t("embedIntro")}</p>
         <pre className="rounded-lg p-4 text-xs overflow-x-auto bg-panel text-text-muted border border-border font-mono">
 {`<iframe
@@ -123,7 +123,7 @@ export function InformersWidget({ domain }: InformersWidgetProps) {
   title="${t("liveRates")}">
 </iframe>`}
         </pre>
-      </Section>
-    </ArticleLayout>
+      </section>
+    </div>
   );
 }

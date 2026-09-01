@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
+import { ArticleLayout, Section } from "@/landing/composition";
 
 interface Signal {
   symbol: string;

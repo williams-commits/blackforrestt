@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
-import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
+import { ArticleLayout, Section } from "@/landing/composition";
 
 type Impact = "high" | "medium" | "low";
 

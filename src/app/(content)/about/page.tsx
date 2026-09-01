@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArticleLayout, Section } from "@/components/landing/ArticleLayout";
+import { ArticleLayout, Section } from "@/landing/composition";
 import { getTranslations } from "next-intl/server";
 import { contentMetadata } from "@/lib/seo";
 import { currentBrandProfile } from "@/lib/branding";

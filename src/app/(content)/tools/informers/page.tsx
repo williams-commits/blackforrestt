@@ -1,4 +1,5 @@
 import { InformersWidget } from "@/components/landing/InformersWidget";
+import { ArticleLayout } from "@/landing/composition";
 import { getTranslations } from "next-intl/server";
 import { contentMetadata } from "@/lib/seo";
 import { currentBrandProfile } from "@/lib/branding";
@@ -12,8 +13,14 @@ export async function generateMetadata() {
 
 /** Server component: the embed snippets must point at the REQUESTING brand
  *  family (agilefgs.com visitors get agilefgs.com embeds), not the canonical
- *  primary domain. */
+ *  primary domain. The page frame comes from the brand dispatcher so each
+ *  family renders in its own page architecture. */
 export default async function InformersPage() {
   const brand = await currentBrandProfile();
-  return <InformersWidget domain={brand.domain} />;
+  const t = await getTranslations("informers");
+  return (
+    <ArticleLayout eyebrow={t("eyebrow")} title={t("title")} description={t("description")}>
+      <InformersWidget domain={brand.domain} />
+    </ArticleLayout>
+  );
 }

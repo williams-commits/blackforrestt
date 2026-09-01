@@ -32,7 +32,7 @@ export async function TestimonialsSection() {
       <div className="ag-container relative">
         <Reveal className="mx-auto max-w-2xl text-center">
           <span className="ag-eyebrow">{t("eyebrow")}</span>
-          <h2 className="ag-h2 mt-3">{t("title")}</h2>
+          <h2 className="ag-h2 mt-4">{t("title")}</h2>
         </Reveal>
       </div>
       <div className="relative mt-12">

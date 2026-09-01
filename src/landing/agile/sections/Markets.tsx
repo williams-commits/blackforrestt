@@ -61,7 +61,7 @@ export function MarketsSection({
           {/* Left: pitch + tabs + CTA */}
           <div>
             <span className="ag-eyebrow">{labels.eyebrow}</span>
-            <h2 className="ag-h2 mt-3">{labels.title}</h2>
+            <h2 className="ag-h2 mt-4">{labels.title}</h2>
             <p className="ag-sub mt-4">{labels.subtitle}</p>
             <div className="mt-7 flex flex-wrap gap-2" role="tablist" aria-label="Asset class">
               {tabs.map((tab) => (

@@ -35,7 +35,7 @@ export async function IntelligenceSection() {
       <div className="ag-container relative grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
         <Reveal>
           <span className="ag-eyebrow text-[#63e891]!">{t("eyebrow")}</span>
-          <h2 className="ag-h2 mt-3">{t("title")}</h2>
+          <h2 className="ag-h2 mt-4">{t("title")}</h2>
           <p className="ag-sub mt-4">{t("subtitle")}</p>
           <Link href="/analytics/technical" className="ag-btn ag-btn-primary mt-8 rounded-full!">
             {t("cta")} <ArrowRight size={15} strokeWidth={2} aria-hidden />
@@ -70,7 +70,7 @@ export async function ShowcaseSection() {
             <div className="grid gap-10 p-8 lg:grid-cols-[1fr_1.1fr] lg:p-12">
               <div>
                 <span className="ag-eyebrow">{t("label")}</span>
-                <h2 className="ag-h2 mt-3">{t("title")}</h2>
+                <h2 className="ag-h2 mt-4">{t("title")}</h2>
                 <p className="ag-sub mt-4">{t("subtitle")}</p>
                 <ul className="mt-6 space-y-3">
                   {bullets.map((bullet) => (
@@ -90,11 +90,13 @@ export async function ShowcaseSection() {
                 </div>
               </div>
 
-              {/* Abstract terminal mock — pure CSS, no imagery, no fake data:
-                  the structural grammar of the real terminal (toolbar, chart
-                  grid, order rows) rendered as an architectural diagram. */}
-              <div className="rounded-lg border border-white/10 bg-[#111513] p-4" aria-hidden="true">
-                <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+              {/* Abstract terminal mock — pure CSS/SVG, no imagery and no
+                  fabricated data: the structural grammar of the real terminal
+                  (toolbar, chart grid, order ticket) rendered as an
+                  architectural diagram. Price tags are deliberately blank. */}
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-[#111513]" aria-hidden="true">
+                {/* Toolbar */}
+                <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
                   <span className="h-2.5 w-2.5 rounded-full bg-[#ff6b6b]/70" />
                   <span className="h-2.5 w-2.5 rounded-full bg-[#63e891]/50" />
                   <span className="h-2.5 w-2.5 rounded-full bg-[#63e891]" />
@@ -110,21 +112,38 @@ export async function ShowcaseSection() {
                     ))}
                   </span>
                 </div>
-                <div className="relative mt-4 h-44 rounded-md border border-white/10 bg-[#0d100f] p-3">
-                  <svg viewBox="0 0 400 140" className="h-full w-full" preserveAspectRatio="none">
+
+                {/* Chart pane — candles over a soft area wash, dotted
+                    current-price hairline with a blank price tag. */}
+                <div className="relative m-4 h-52 rounded-lg border border-white/10 bg-[#0d100f] p-3">
+                  <svg viewBox="0 0 400 150" className="h-full w-full" preserveAspectRatio="none">
                     <defs>
-                      <pattern id="ag-grid" width="40" height="28" patternUnits="userSpaceOnUse">
-                        <path d="M 40 0 L 0 0 0 28" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                      <pattern id="ag-grid" width="40" height="30" patternUnits="userSpaceOnUse">
+                        <path d="M 40 0 L 0 0 0 30" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
                       </pattern>
+                      <linearGradient id="ag-area" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="rgba(99,232,145,0.22)" />
+                        <stop offset="100%" stopColor="rgba(99,232,145,0)" />
+                      </linearGradient>
                     </defs>
-                    <rect width="400" height="140" fill="url(#ag-grid)" />
+                    <rect width="400" height="150" fill="url(#ag-grid)" />
+                    <path
+                      d="M0 118 L18 108 L36 112 L54 92 L72 98 L90 74 L108 82 L126 56 L144 64 L162 38 L180 46 L198 24 L216 32 L234 16 L252 24 L270 14 L288 22 L306 12 L324 18 L342 10 L360 16 L400 8 L400 150 L0 150 Z"
+                      fill="url(#ag-area)"
+                    />
+                    <path
+                      d="M0 118 L18 108 L36 112 L54 92 L72 98 L90 74 L108 82 L126 56 L144 64 L162 38 L180 46 L198 24 L216 32 L234 16 L252 24 L270 14 L288 22 L306 12 L324 18 L342 10 L360 16 L400 8"
+                      fill="none"
+                      stroke="rgba(99,232,145,0.75)"
+                      strokeWidth="1.5"
+                    />
                     {[
-                      [10, 95, 8, 60], [26, 62, 8, 48], [42, 70, 8, 38], [58, 45, 8, 30],
-                      [74, 55, 8, 40], [90, 38, 8, 26], [106, 48, 8, 34], [122, 28, 8, 22],
-                      [138, 40, 8, 30], [154, 22, 8, 18], [170, 34, 8, 26], [186, 16, 8, 14],
-                      [202, 28, 8, 22], [218, 12, 8, 10], [234, 26, 8, 20], [250, 18, 8, 16],
-                      [266, 32, 8, 24], [282, 24, 8, 18], [298, 14, 8, 12], [314, 22, 8, 16],
-                      [330, 10, 8, 8], [346, 18, 8, 14], [362, 26, 8, 20], [378, 14, 8, 10],
+                      [12, 96, 7, 58], [30, 63, 7, 46], [48, 72, 7, 36], [66, 47, 7, 28],
+                      [84, 57, 7, 38], [102, 40, 7, 24], [120, 50, 7, 32], [138, 30, 7, 20],
+                      [156, 42, 7, 28], [174, 24, 7, 16], [192, 36, 7, 24], [210, 18, 7, 12],
+                      [228, 30, 7, 20], [246, 20, 7, 16], [264, 34, 7, 22], [282, 26, 7, 16],
+                      [300, 16, 7, 10], [318, 24, 7, 16], [336, 12, 7, 8], [354, 20, 7, 14],
+                      [372, 28, 7, 20], [388, 16, 7, 10],
                     ].map(([x, y, w, h], index) => (
                       <rect
                         key={index}
@@ -133,22 +152,32 @@ export async function ShowcaseSection() {
                         width={w}
                         height={h}
                         rx="1"
-                        fill={index % 3 === 2 ? "#63e891" : "rgba(99,232,145,0.55)"}
-                        opacity={index % 3 === 2 ? 0.9 : 0.45}
+                        fill={index % 3 === 2 ? "#63e891" : "rgba(99,232,145,0.5)"}
+                        opacity={index % 3 === 2 ? 0.9 : 0.4}
                       />
                     ))}
                   </svg>
-                  <span className="absolute right-3 top-3 rounded bg-[#63e891]/15 px-2 py-1 font-mono text-[10px] font-semibold text-[#63e891]">
-                    +2.41%
-                  </span>
+                  {/* Current-price hairline + blank tag — interface grammar,
+                      no invented quote. */}
+                  <div className="pointer-events-none absolute inset-x-10 top-[26%] border-t border-dashed border-[#63e891]/50" />
+                  <span className="absolute right-3 top-[22%] h-4 w-12 rounded-sm bg-[#63e891]/20" />
                 </div>
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  {["BUY", "SELL", "POSITIONS"].map((label, index) => (
-                    <div key={label} className="rounded-md border border-white/10 bg-[#0d100f] px-3 py-2.5">
-                      <div className="font-mono text-[9px] tracking-widest text-[#747a75]">{label}</div>
-                      <div className={`mt-1 h-1.5 w-10 rounded-full ${index === 0 ? "bg-[#63e891]" : index === 1 ? "bg-[#ff6b6b]" : "bg-white/15"}`} />
-                    </div>
-                  ))}
+
+                {/* Order ticket pane — side toggle, abstract price/size rows. */}
+                <div className="mx-4 mb-4 rounded-lg border border-white/10 bg-[#0d100f] p-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <span className="rounded-md bg-[#63e891]/15 py-1.5 text-center font-mono text-[9px] font-bold tracking-widest text-[#63e891]">BUY</span>
+                    <span className="rounded-md bg-[#ff6b6b]/15 py-1.5 text-center font-mono text-[9px] font-bold tracking-widest text-[#ff6b6b]">SELL</span>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {["PRICE", "AMOUNT", "TOTAL"].map((row, index) => (
+                      <div key={row} className="flex items-center justify-between rounded-md border border-white/8 bg-white/[0.02] px-3 py-2">
+                        <span className="font-mono text-[9px] tracking-widest text-[#747a75]">{row}</span>
+                        <span className={`h-1.5 rounded-full bg-white/15 ${index === 0 ? "w-14" : index === 1 ? "w-9" : "w-11"}`} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 h-7 rounded-md bg-[#63e891] opacity-90" />
                 </div>
               </div>
             </div>
@@ -191,18 +220,18 @@ export async function TrustSection() {
       <div className="ag-container">
         <Reveal>
           <span className="ag-eyebrow">{t("eyebrow")}</span>
-          <h2 className="ag-h2 mt-3 max-w-2xl">{t("title")}</h2>
-          <p className="ag-sub mt-3">{t("subtitle")}</p>
+          <h2 className="ag-h2 mt-4 max-w-2xl">{t("title")}</h2>
+          <p className="ag-sub mt-4">{t("subtitle")}</p>
         </Reveal>
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
+        <div className="mt-14 grid gap-5 md:grid-cols-3">
           {cards.map(({ icon: Icon, title, desc, meta }, index) => (
             <Reveal key={title} delay={index * 90}>
-              <article className="ag-card ag-card-hover h-full p-7">
+              <article className="ag-card ag-card-hover h-full p-8">
                 <Icon size={20} strokeWidth={1.75} className="text-[#63e891]" aria-hidden />
-                <h3 className="mt-5 text-base font-bold text-[#f1f3ef]">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[#a7ada8]">{desc}</p>
+                <h3 className="mt-6 text-base font-bold text-[#f1f3ef]">{title}</h3>
+                <p className="mt-2.5 text-sm leading-relaxed text-[#a7ada8]">{desc}</p>
                 {meta && (
-                  <p className="mt-4 border-t border-white/10 pt-3 text-[11px] font-medium uppercase tracking-widest text-[#747a75]">
+                  <p className="mt-5 border-t border-white/10 pt-4 text-[11px] font-medium uppercase tracking-widest text-[#747a75]">
                     {meta}
                   </p>
                 )}
@@ -238,7 +267,7 @@ export async function StepsBand() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <span className="ag-eyebrow">{t("eyebrow")}</span>
-            <h2 className="ag-h2 mt-3">{t("title")}</h2>
+            <h2 className="ag-h2 mt-4">{t("title")}</h2>
           </div>
           <p className="ag-sub max-w-sm text-sm!">{t("subtitle")}</p>
         </div>

@@ -1157,6 +1157,7 @@
     },
     "ctaTitle": "Ready when you are.",
     "ctaSubtitle": "An account takes minutes. The markets are already moving.",
+    "heroTrustLine": "Free account · KYC-verified platform · Segregated client funds",
     "benefits": {
       "b1": {
         "t": "Fast execution",
@@ -1196,7 +1197,10 @@
         "v": "24/7",
         "l": "Markets & support",
         "d": "Round-the-clock markets with a support desk that answers."
-      }
+      },
+      "pricingEyebrow": "Straightforward pricing",
+      "pricingTitle": "The price you see is the price you trade.",
+      "pricingBody": "Transparent spreads and commissions. No hidden fees — the number on your screen before the click is the number on your statement."
     },
     "movers": {
       "eyebrow": "Market leaders",
@@ -1235,7 +1239,7 @@
       "education": "Education",
       "company": "Company",
       "login": "Log in",
-      "cta": "Start trading",
+      "cta": "Open Free Account",
       "menu": "Menu"
     }
   }

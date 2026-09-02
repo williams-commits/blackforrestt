@@ -19,6 +19,7 @@ import type { ServerMessage } from "@/lib/ws/client";
 import { Tabs } from "@/components/ui/Tabs";
 import { ACCOUNT_TAB_ICONS, TabIcon } from "@/components/ui/tabIcons";
 import { ScrollFade } from "@/components/ui/ScrollFade";
+import { useBrand } from "@/components/providers";
 import { AccountReconciliationStatus, type ReconciliationStatus } from "./AccountReconciliationStatus";
 import type { WalletAddressEntry } from "@/server/userSettings";
 
@@ -301,6 +302,15 @@ export function AccountShell(props: Props) {
     return { ...item, label: <>{iconEl}{item.label}{badge}</> };
   });
   const activeTabLabel = TABS.find((item) => item.key === tab)?.label ?? "Account";
+
+  // Keep the browser title in sync with the active tab (clicks, Back/Forward,
+  // localStorage restore). Mirrors the server's generateMetadata format:
+  // "<Tab> — Account — <brand>", with overview keeping the plain account title.
+  const brand = useBrand();
+  useEffect(() => {
+    const label = tab !== "overview" ? TABS.find((item) => item.key === tab)?.label : null;
+    document.title = label ? `${label} — Account — ${brand.name}` : `Account — ${brand.name}`;
+  }, [tab, brand.name]);
 
   return (
     <div>

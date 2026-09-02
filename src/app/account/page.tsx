@@ -14,14 +14,34 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Account",
-  description: "Manage your account, positions, transactions, payments and verification.",
-  robots: { index: false, follow: false },
-}
-
-
 const VALID_TABS = ["overview", "positions", "transactions", "payments", "reports", "verification", "notifications", "messages", "support", "referrals", "settings"] as const;
+const TAB_LABELS: Record<(typeof VALID_TABS)[number], string> = {
+  overview: "Overview",
+  positions: "Positions",
+  transactions: "Transactions",
+  payments: "Payments",
+  reports: "Reports",
+  verification: "Verification",
+  notifications: "Notifications",
+  messages: "Messages",
+  support: "Support",
+  referrals: "Referrals",
+  settings: "Settings",
+};
+
+/** Browser title tracks the tab, so deep links (?tab=), refresh and shares
+ *  land on the right title — client-side switches sync it in AccountShell. */
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ tab?: string }> }): Promise<Metadata> {
+  const { tab } = await searchParams;
+  const label = tab && (VALID_TABS as readonly string[]).includes(tab) && tab !== "overview"
+    ? TAB_LABELS[tab as (typeof VALID_TABS)[number]]
+    : null;
+  return {
+    title: label ? `${label} — Account` : "Account",
+    description: "Manage your account, positions, transactions, payments and verification.",
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;

@@ -8,6 +8,7 @@ import type { InstrumentView } from "@/lib/types";
 import { ADDRESS_DOCUMENT_TYPES, IDENTITY_DOCUMENT_TYPES } from "@/lib/kyc";
 import { resolveUserSettings } from "@/server/userSettings";
 import { adminMessageThreads, countUnreadDirectMessages } from "@/server/adminUserManagement";
+import { CandlestickChart } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -241,10 +242,12 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   );
 }
 
-function TradeTerminal(){
+const ic = "w-3.5 h-3.5";
+
+function TradeTerminal() {
   return (
-    <span className="flex items-center border border-border rounded-md p-1 gap-1 text-[10px] font-semibold text-text-muted hover:text-text transition-colors">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="inline h-3 w-3 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg> 
+    <span className="flex items-center bg-border rounded-md p-1 gap-1 text-[10px] font-semibold text-text-muted hover:text-text transition-colors">
+      <CandlestickChart size={14} strokeWidth={1.75} aria-hidden className={ic} />
     </span>
   );
 }

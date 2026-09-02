@@ -16,7 +16,6 @@ export function AgileStyles() {
         --ag-green: #263b33;
         --ag-green-2: #2d463b;
         --ag-accent: #63e891;
-        --ag-accent-2: #4fd17a;
         --ag-text: #f1f3ef;
         --ag-text-2: #a7ada8;
         --ag-muted: #747a75;
@@ -169,10 +168,18 @@ export function AgileStyles() {
       .ag-scope .text-brand { color: #63e891; }
       .ag-scope .text-up { color: #63e891; }
       .ag-scope .text-down { color: #ff6b6b; }
-      .ag-scope .bg-brand-soft { background-color: rgba(99, 232, 145, 0.12); }
+      .ag-scope .bg-brand-soft { background-color: rgb(99, 232, 145); }
       .ag-scope .border-brand { border-color: rgba(99, 232, 145, 0.5); }
       .ag-scope .border-up\/30 { border-color: rgba(99, 232, 145, 0.3); }
       .ag-scope .bg-up\/10 { background-color: rgba(99, 232, 145, 0.08); }
+      /* Variant forms (hover/focus) of the same utilities — the palette must
+         hold through interaction states, not just resting states. */
+      .ag-scope .hover\:bg-panel:hover,
+      .ag-scope .hover\:bg-panel-2:hover { background-color: #1b211d; }
+      .ag-scope .hover\:text-text:hover { color: #f1f3ef; }
+      .ag-scope .hover\:text-brand:hover { color: #63e891; }
+      .ag-scope .focus\:border-brand:focus,
+      .ag-scope .focus-visible\:border-brand:focus-visible { border-color: #63e891; }
 
       /* Filled accent/status surfaces get dark ink — white text fails
          contrast on Agile's bright green/red fills. */
@@ -205,9 +212,9 @@ export function AgileStyles() {
       .ag-scope .prose-content b { color: #f1f3ef; }
       .ag-scope .marker\:text-brand::marker { color: #63e891; }
 
-      /* Metric numerals (the About stat band) render in the landing's
-         ValueCards grammar: large, tight, mint. Only this scale class is
-         used for stat numerals inside the content scope. */
+      /* Metric numerals (stat bands, hero numbers) render in the landing's
+         ledger grammar: large, tight, mint. Only this scale class is used
+         for stat numerals inside the content scope. */
       .ag-scope .text-2xl {
         font-size: 2.25rem;
         letter-spacing: -0.02em;
@@ -217,6 +224,200 @@ export function AgileStyles() {
          AgileArticleLayout / AgileContentShell). */
       .ag-page-band { position: relative; overflow: hidden; }
       .ag-page-cta { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+
+      /* ─── Trading-desk surface system ──────────────────────────────────── */
+
+      /* Mesh gradient — layered radial washes used as section ambience (the
+         premium-fintech depth device; replaces flat bands). */
+      .ag-mesh {
+        background:
+          radial-gradient(42% 56% at 12% 8%, rgba(38, 59, 51, 0.55), transparent 68%),
+          radial-gradient(36% 48% at 88% 22%, rgba(99, 232, 145, 0.06), transparent 66%),
+          radial-gradient(40% 52% at 70% 96%, rgba(38, 59, 51, 0.42), transparent 70%);
+      }
+
+      /* Chart gridlines — the terminal's graph-paper texture as section
+         ambience; pair with a radial mask so the grid dissolves at the edges. */
+      .ag-gridlines {
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        background-size: 44px 44px;
+      }
+
+      /* Hairline frame with mint catchlights — the terminal-panel device. */
+      .ag-frame {
+        position: relative;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 46%),
+          #101412;
+        box-shadow: 0 30px 80px -32px rgba(0, 0, 0, 0.9);
+      }
+      .ag-frame::before,
+      .ag-frame::after {
+        content: "";
+        position: absolute;
+        left: 6%;
+        right: 6%;
+        height: 1px;
+        pointer-events: none;
+        background: linear-gradient(90deg, transparent, rgba(99, 232, 145, 0.5) 26%, rgba(255, 255, 255, 0.28) 52%, rgba(99, 232, 145, 0.5) 78%, transparent);
+      }
+      .ag-frame::before { top: 0; }
+      .ag-frame::after { bottom: 0; }
+
+      /* Bento grid — asymmetric platform cards. */
+      .ag-bento {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      @media (min-width: 1024px) {
+        .ag-bento {
+          gap: 1.25rem;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          grid-template-areas:
+            "terminal terminal execution security"
+            "assets   assets   global    global";
+        }
+        .ag-bento-terminal { grid-area: terminal; }
+        .ag-bento-execution { grid-area: execution; }
+        .ag-bento-security { grid-area: security; }
+        .ag-bento-assets { grid-area: assets; }
+        .ag-bento-global { grid-area: global; }
+      }
+      .ag-bento-cell {
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0) 44%),
+          #121614;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        transition: border-color 220ms ease, transform 220ms ease;
+      }
+      .ag-bento-cell:hover { border-color: rgba(99, 232, 145, 0.35); transform: translateY(-2px); }
+
+      /* Live ticker marquee — infinite horizontal scroll. */
+      .ag-ticker {
+        position: relative;
+        overflow: hidden;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: #0a0d0b;
+      }
+      .ag-ticker::before,
+      .ag-ticker::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 72px;
+        z-index: 1;
+        pointer-events: none;
+      }
+      .ag-ticker::before { left: 0; background: linear-gradient(90deg, #0a0d0b, transparent); }
+      .ag-ticker::after { right: 0; background: linear-gradient(270deg, #0a0d0b, transparent); }
+      .ag-ticker-track {
+        display: flex;
+        width: max-content;
+        animation: ag-marquee 46s linear infinite;
+      }
+      .ag-ticker:hover .ag-ticker-track { animation-play-state: paused; }
+      .ag-ticker-row {
+        display: flex;
+        align-items: center;
+        padding-block: 0.8rem;
+      }
+      .ag-ticker-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding-inline: 1.4rem;
+        font-family: var(--font-agile-inter), Inter, sans-serif;
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+        color: #f1f3ef;
+        border-right: 1px solid rgba(255, 255, 255, 0.07);
+        transition: color 150ms ease;
+      }
+      .ag-ticker-item:hover { color: #63e891; }
+      .ag-ticker-item .tnum { color: #a7ada8; }
+      @keyframes ag-marquee {
+        from { transform: translateX(0); }
+        to { transform: translateX(-50%); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .ag-ticker-track { animation: none; }
+      }
+
+      /* Numbered editorial steps — 01 / 02 / 03. */
+      .ag-stepnum {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        color: #63e891;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* Carousel track — snap scrolling with the scrollbar fully suppressed
+         on every engine (the affordance lives in the arrows and dots). */
+      .ag-carousel {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .ag-carousel::-webkit-scrollbar {
+        display: none;
+        height: 0;
+        width: 0;
+      }
+
+      /* Featured bento cell — the deep-green accent surface used to vary
+         carousel/bento rhythm against the standard charcoal cells. */
+      .ag-cell-accent {
+        background:
+          radial-gradient(120% 130% at 85% -10%, rgb(23, 27, 25), transparent 55%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0) 46%),
+          #1a2a23;
+        border-color: rgba(99, 232, 145, 0.22);
+      }
+
+      /* Globe animation — data flows along the arcs while the trading-centre
+         nodes pulse on staggered beats. Fully disabled for reduced motion. */
+      .ag-globe-arc {
+        stroke-dasharray: 46 260;
+        animation: ag-arcflow 3.4s linear infinite;
+      }
+      @keyframes ag-arcflow {
+        from { stroke-dashoffset: 306; }
+        to { stroke-dashoffset: 0; }
+      }
+      .ag-globe-node {
+        animation: ag-nodepulse 2.6s ease-in-out infinite;
+        transform-origin: center;
+        transform-box: fill-box;
+      }
+      @keyframes ag-nodepulse {
+        0%, 100% { opacity: 0.75; transform: scale(1); }
+        45% { opacity: 1; transform: scale(1.28); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .ag-globe-arc,
+        .ag-globe-node { animation: none; }
+        .ag-globe-arc { stroke-dasharray: none; }
+      }
+
+      /* Interior numbered sections — CSS counters give every content page's
+         sections a 01 / 02 / 03 index with zero API changes. */
+      .ag-scope .prose-content { counter-reset: agsec; }
+      .ag-scope .prose-content > section { counter-increment: agsec; }
+      .ag-scope .prose-content > section > h2::before {
+        content: counter(agsec, decimal-leading-zero);
+        margin-right: 0.75rem;
+        color: #63e891;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
 
       /* Reduced motion — hovers/transitions only; scroll reveals are handled
          globally by the .reveal utilities in globals.css. */

@@ -36,6 +36,8 @@ export const PRIMARY_BRAND_FALLBACK: BrandProfile = {
   heroBadge: "",
   heroSubtitle: "",
   metaDescription: "",
+  logoLockup: "wordmark",
+  logoWord: "",
   depositWallets: "",
   landingTemplate: "default",
 };

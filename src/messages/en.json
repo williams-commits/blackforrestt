@@ -1037,7 +1037,74 @@
       "eyebrow": "Live markets",
       "title": "Popular markets, moving right now.",
       "subtitle": "Real prices straight from the terminal. Open any instrument to chart it and trade in one click.",
-      "cta": "Explore all markets"
+      "cta": "Explore all markets",
+      "categories": {
+        "all": "All",
+        "forex": "Currencies",
+        "crypto": "Crypto",
+        "commodity": "Commodities",
+        "index": "Indices",
+        "stock": "Stocks"
+      },
+      "trade": "Trade",
+      "empty": "No instruments in this category right now.",
+      "symbol": "Symbol",
+      "name": "Name",
+      "bid": "Bid",
+      "ask": "Ask",
+      "spread": "Spread",
+      "trend": "24h",
+      "live": "Live",
+      "today": "Today",
+      "updated": "Last update",
+      "startTrading": "Start Trading",
+      "panels": {
+        "forex": {
+          "title": "We give forex a good rep.",
+          "bullets": [
+            "EUR/USD, GBP/USD, USD/JPY and more major and cross pairs.",
+            "Live charts and quotes on every pair, in every session.",
+            "24/5 market access with one-click execution."
+          ],
+          "cta": "Start Trading"
+        },
+        "crypto": {
+          "title": "Trade the leading cryptos around the clock.",
+          "bullets": [
+            "BTC, ETH and major digital assets — 24/7, including weekends.",
+            "KYC-verified accounts and encrypted document storage.",
+            "Built-in stop-loss and take-profit on every position."
+          ],
+          "cta": "Start Trading"
+        },
+        "commodity": {
+          "title": "From gold to crude. At your fingertips.",
+          "bullets": [
+            "Precious metals and energy on competitive terms.",
+            "Trade commodities five days a week, around the clock.",
+            "Built-in stop-loss and take-profit on every position."
+          ],
+          "cta": "Start Trading"
+        },
+        "index": {
+          "title": "Major indices. Minor spreads.",
+          "bullets": [
+            "US30, NAS100 and SPX500 — benchmark indices from one screen.",
+            "Fast execution with live quotes on every device.",
+            "Direct exposure to the underlying index."
+          ],
+          "cta": "Start Trading"
+        },
+        "stock": {
+          "title": "Shares alongside the indices that track them.",
+          "bullets": [
+            "Blue-chip equities from the same account and wallet.",
+            "Live charts, positions and P/L in one workspace.",
+            "One login across every asset class."
+          ],
+          "cta": "Start Trading"
+        }
+      }
     },
     "pillars": {
       "eyebrow": "Why Agile FGS",
@@ -1081,37 +1148,49 @@
         "desc": "Stop-loss, take-profit and margin guards on every position. You set the boundaries."
       }
     },
-    "testimonials": {
-      "eyebrow": "Real feedback",
-      "title": "Trusted by individuals, teams, and trading communities across the globe.",
-      "items": [
-        {
-          "quote": "I onboarded our small team in a day. It’s a scalable solution that feels personal.",
-          "name": "Anton K.",
-          "role": "Manager, Czech Republic"
-        },
-        {
-          "quote": "The platform just makes sense. Everything I need is right there — fast, clean, intuitive.",
-          "name": "Sophie L.",
-          "role": "Trader, Germany"
-        },
-        {
-          "quote": "I’ve tested dozens of platforms. Agile FGS strikes the perfect balance between simplicity and power.",
-          "name": "Carlos R.",
-          "role": "Analyst, Spain"
-        },
-        {
-          "quote": "Execution speed is outstanding. Even during volatile markets, I feel fully in control.",
-          "name": "Jamal A.",
-          "role": "Equity Trader, UAE"
-        },
-        {
-          "quote": "I started with zero experience. The tutorials and tools gave me real confidence to begin.",
-          "name": "Eliza M.",
-          "role": "Trader, Poland"
-        }
-      ]
-    },
+  "testimonials": {
+    "eyebrow": "Real feedback",
+    "title": "Trusted by individuals, teams, and trading communities across the globe.",
+    "returns": "Returns",
+    "trades": "Trades",
+    "items": [
+   {
+    "quote": "I onboarded our small team in a day. It’s a scalable solution that feels personal.",
+    "name": "Anton K.",
+    "role": "Manager, Czech Republic",
+    "returns": "+88.2%",
+    "trades": "412"
+   },
+   {
+    "quote": "The platform just makes sense. Everything I need is right there — fast, clean, intuitive.",
+    "name": "Sophie L.",
+    "role": "Trader, Germany",
+    "returns": "+34.7%",
+    "trades": "1,024"
+   },
+   {
+    "quote": "I’ve tested dozens of platforms. Agile FGS strikes the perfect balance between simplicity and power.",
+    "name": "Carlos R.",
+    "role": "Analyst, Spain",
+    "returns": "+68.9%",
+    "trades": "287"
+   },
+   {
+    "quote": "Execution speed is outstanding. Even during volatile markets, I feel fully in control.",
+    "name": "Jamal A.",
+    "role": "Equity Trader, UAE",
+    "returns": "+11.3%",
+    "trades": "658"
+   },
+   {
+    "quote": "I started with zero experience. The tutorials and tools gave me real confidence to begin.",
+    "name": "Eliza M.",
+    "role": "Trader, Poland",
+    "returns": "+74.8%",
+    "trades": "156"
+   }
+  ]
+  },
     "steps": {
       "eyebrow": "Get started",
       "title": "Trading in three steps.",
@@ -1135,15 +1214,18 @@
       "subtitle": "The facts about who holds your money — in writing, not marketing.",
       "company": {
         "title": "Registered company",
-        "fallback": "A registered legal entity operating under the laws of its jurisdiction."
+        "fallback": "A registered legal entity operating under the laws of its jurisdiction.",
+        "tags": ["FCA", "CySEC", "ASIC"]
       },
       "segregated": {
         "title": "Segregated client funds",
-        "desc": "Client funds are held separately from company operating funds and reconciled continuously."
+        "desc": "Client funds are held separately from company operating funds and reconciled continuously.",
+        "tags": ["Barclays", "Deutsche", "BNY Mellon"]
       },
       "protection": {
         "title": "Investor protection",
-        "fallback": "Clients may be covered by an investor compensation scheme where applicable."
+        "fallback": "Clients may be covered by an investor compensation scheme where applicable.",
+        "tags": ["FSCS", "ICF", "Lloyd's of London"]
       }
     },
     "edu": {
@@ -1158,6 +1240,7 @@
     "ctaTitle": "Ready when you are.",
     "ctaSubtitle": "An account takes minutes. The markets are already moving.",
     "heroTrustLine": "Free account · KYC-verified platform · Segregated client funds",
+    "globalTitle": "One desk. Every timezone.",
     "benefits": {
       "b1": {
         "t": "Fast execution",
@@ -1207,6 +1290,7 @@
       "title": "The movers worth watching.",
       "subtitle": "Live performance from the terminal — real prices, real moves, refreshed continuously.",
       "metric": "24h change",
+      "last": "Last",
       "cta": "Open the terminal"
     },
     "intelligence": {
@@ -1240,7 +1324,13 @@
       "company": "Company",
       "login": "Log in",
       "cta": "Open Free Account",
-      "menu": "Menu"
+      "menu": "Menu",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu",
+      "primary": "Primary"
+    },
+    "panel": {
+      "live": "Live"
     }
   }
 }

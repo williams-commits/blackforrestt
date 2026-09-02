@@ -33,25 +33,46 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
 
   return (
     <div>
-      {/* Header band */}
+      {/* Header band — split composition: narrative left, desk mark right. */}
       <header className="ag-page-band border-b border-white/10 bg-[#111513]">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(52% 70% at 14% -6%, rgba(38,59,51,0.55), transparent 70%), radial-gradient(34% 50% at 92% 108%, rgba(38,59,51,0.4), transparent 70%)",
-          }}
-        />
+        <div className="pointer-events-none absolute inset-0 ag-mesh" aria-hidden="true" />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 h-px"
           style={{ background: "linear-gradient(90deg, transparent, rgba(99,232,145,0.35) 30%, rgba(255,255,255,0.12) 55%, transparent)" }}
         />
-        <div className="ag-container relative py-16 lg:py-24">
-          <span className="ag-eyebrow">{eyebrow}</span>
-          <h1 className="ag-h2 mt-4 max-w-3xl">{title}</h1>
-          {description && <p className="ag-sub mt-5 max-w-2xl">{description}</p>}
+        <div className="ag-container relative grid items-center gap-10 py-16 lg:grid-cols-[1.25fr_0.75fr] lg:py-20">
+          <div>
+            <span className="ag-eyebrow">{eyebrow}</span>
+            <h1 className="ag-h2 mt-4 max-w-2xl text-balance">{title}</h1>
+            {description && <p className="ag-sub mt-5 max-w-xl">{description}</p>}
+          </div>
+          {/* Desk mark — the brand's chart motif, framed. Decorative. */}
+          <div className="ag-frame hidden p-5 lg:block" aria-hidden="true">
+            <svg viewBox="0 0 220 80" className="w-full" focusable="false">
+              <defs>
+                <linearGradient id="ag-page-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="rgba(99,232,145,0.22)" />
+                  <stop offset="100%" stopColor="rgba(99,232,145,0)" />
+                </linearGradient>
+              </defs>
+              {[16, 32, 48, 64].map((y) => (
+                <line key={y} x1="0" y1={y} x2="220" y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+              ))}
+              <path
+                d="M0 64 L20 56 L40 60 L60 44 L80 50 L100 34 L120 40 L140 26 L160 32 L180 18 L200 24 L220 12 L220 80 L0 80 Z"
+                fill="url(#ag-page-fill)"
+              />
+              <path
+                d="M0 64 L20 56 L40 60 L60 44 L80 50 L100 34 L120 40 L140 26 L160 32 L180 18 L200 24 L220 12"
+                fill="none"
+                stroke="#63e891"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+              <circle cx="220" cy="12" r="2.6" fill="#63e891" />
+            </svg>
+          </div>
         </div>
       </header>
 

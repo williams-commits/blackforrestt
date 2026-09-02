@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { Logo } from "@/components/trade/Logo";
 
 export default function ForgotPasswordPage() {
   const t = useTranslations("auth");
@@ -40,7 +41,11 @@ export default function ForgotPasswordPage() {
 
   return (
     <main id="main-content" tabIndex={-1} className="min-h-screen bg-panel flex items-center justify-center p-4">
-      <form onSubmit={submit} className="w-full max-w-sm bg-canvas border border-border rounded-lg p-6">
+      <div className="w-full max-w-sm flex flex-col items-center">
+        <div className="mb-6">
+          <Logo className="text-lg" />
+        </div>
+        <form onSubmit={submit} className="w-full bg-canvas border border-border rounded-lg p-6">
         <h1 className="text-lg font-semibold">{t("resetH1")}</h1>
         <p className="text-xs text-text-muted mt-1 mb-5">{t("resetSub")}</p>
         <label className="text-xs text-text-muted" htmlFor="reset-email">{t("email")}</label>
@@ -54,7 +59,8 @@ export default function ForgotPasswordPage() {
         <Link href="/login" className="block text-xs text-brand text-center mt-4">
           {t("backSignIn")}
         </Link>
-      </form>
+        </form>
+      </div>
     </main>
   );
 }

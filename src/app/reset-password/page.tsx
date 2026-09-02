@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { PasswordStrength } from "@/components/ui/PasswordStrength";
 import { PASSWORD_MIN_LENGTH } from "@/lib/passwordPolicy";
+import { Logo } from "@/components/trade/Logo";
 
 function ResetForm() {
   const t = useTranslations("auth");
@@ -63,5 +64,14 @@ function ResetForm() {
 
 export default function ResetPasswordPage() {
   const t = useTranslations("auth");
-  return <main id="main-content" tabIndex={-1} className="min-h-screen bg-panel flex items-center justify-center p-4"><Suspense fallback={<p>{t("loading")}</p>}><ResetForm /></Suspense></main>;
+  return (
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-panel flex items-center justify-center p-4">
+      <div className="w-full max-w-sm flex flex-col items-center">
+        <div className="mb-6">
+          <Logo className="text-lg" />
+        </div>
+        <Suspense fallback={<p>{t("loading")}</p>}><ResetForm /></Suspense>
+      </div>
+    </main>
+  );
 }

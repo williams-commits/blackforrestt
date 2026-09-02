@@ -41,7 +41,41 @@ export function Logo({
 
   const cls = `flex items-center gap-2 select-none ${className}`;
   const glyph = brand.glyph;
-  const inner = (
+  // Bracket lockup (logoLockup: "brackets"): the glyph's two bracket paths
+  // flank a lowercase word — the config-driven agile app mark. The brackets
+  // crop to their own bounding boxes (path.box) so they sit tight against
+  // the word; color follows the same ink/accent rule as the glyph.
+  const lockupPaths = glyph?.paths ?? [];
+  const isLockup =
+    brand.logoLockup === "brackets" && brand.logoWord && lockupPaths.length >= 2 && lockupPaths[0].box && lockupPaths[1].box;
+  const inner = isLockup ? (
+    <>
+      <svg
+        width="10"
+        height="16"
+        viewBox={lockupPaths[0].box}
+        aria-hidden="true"
+        style={brand.accentColor ? { color: brand.accentColor } : undefined}
+      >
+        <path d={lockupPaths[0].d} fill={lockupPaths[0].fill === "ink" ? "currentColor" : "var(--color-brand)"} />
+      </svg>
+      <span
+        className={`text-[22px] font-bold leading-none tracking-widest ${inverted ? "text-white" : ""}`}
+        style={brand.accentColor && !inverted ? { color: brand.accentColor } : undefined}
+      >
+        {brand.logoWord}
+      </span>
+      <svg
+        width="10"
+        height="16"
+        viewBox={lockupPaths[1].box}
+        aria-hidden="true"
+        style={brand.accentColor ? { color: brand.accentColor } : undefined}
+      >
+        <path d={lockupPaths[1].d} fill={lockupPaths[1].fill === "ink" ? "currentColor" : "var(--color-brand)"} />
+      </svg>
+    </>
+  ) : (
     <>
       <svg
         width="22"

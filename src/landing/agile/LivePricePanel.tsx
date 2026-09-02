@@ -3,20 +3,22 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useInstruments } from "@/components/landing/useInstruments";
+import { Sparkline } from "./Sparkline";
 import type { InstrumentView } from "@/lib/types";
 
 /**
- * Hero right-hand visual: a live mini-terminal panel (real data — the same
- * /api/instruments feed every landing island uses). Selected symbol shows a
- * large last price, bid/ask and spread; a row of switchable instruments
- * makes it interactive. No mock data, no decorative sparklines.
+ * Hero right-hand module: the desk's live quote panel in a hairline frame —
+ * real data from the same /api/instruments feed every island uses. The
+ * selected symbol shows a large last price with bid/ask/spread and a
+ * direction sparkline; a row of switchable instruments makes it interactive.
+ * No mock data.
  */
 export function LivePricePanel({
   initial,
   labels,
 }: {
   initial: InstrumentView[];
-  labels: { bid: string; ask: string; spread: string; trade: string };
+  labels: { bid: string; ask: string; spread: string; trade: string; live: string };
 }) {
   const instruments = useInstruments(initial, 2_000);
   const [selected, setSelected] = useState<string>("XAUUSD");
@@ -32,16 +34,16 @@ export function LivePricePanel({
   const spread = activeInstrument.ask - activeInstrument.bid;
 
   return (
-    <div className="ag-glass w-full max-w-md p-6 sm:p-7" role="group" aria-label="Live market panel">
+    <div className="ag-frame w-full max-w-md p-6 sm:p-7" role="group" aria-label={`${labels.live} — ${activeInstrument.symbol}`}>
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2" aria-live="polite">
+        <div className="flex items-center gap-2.5" aria-live="polite">
           <span className="relative flex h-2 w-2" aria-hidden="true">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#63e891] opacity-60 motion-reduce:animate-none" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-[#63e891]" />
           </span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#747a75]">Live</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#747a75]">{labels.live}</span>
         </div>
-        <nav className="flex gap-1" aria-label="Instrument">
+        <nav className="flex gap-1" aria-label={activeInstrument.symbol}>
           {tabs.map((tab) => (
             <button
               key={tab.symbol}
@@ -69,26 +71,29 @@ export function LivePricePanel({
             {up ? "▲" : "▼"} {Math.abs(activeInstrument.changePct).toFixed(2)}%
           </div>
         </div>
-        <Link
-          href={`/trade/${activeInstrument.symbol}`}
-          className="ag-btn ag-btn-primary min-h-0! px-4 py-2.5 text-[13px]"
-        >
-          {labels.trade}
-        </Link>
+        <Sparkline symbol={activeInstrument.symbol} changePct={activeInstrument.changePct} width={128} height={52} />
       </div>
 
-      <dl className="mt-6 grid grid-cols-3 divide-x divide-white/12 border-t border-white/10 pt-4 text-center">
-        <div className="px-2">
+      <dl className="mt-7 grid grid-cols-4 divide-x divide-white/10 border-t border-white/10 pt-5">
+        <div className="pr-3">
           <dt className="text-[10px] uppercase tracking-widest text-[#747a75]">{labels.bid}</dt>
           <dd className="mt-1 font-mono text-sm tnum text-[#a7ada8]">{activeInstrument.bid.toFixed(activeInstrument.digits)}</dd>
         </div>
-        <div className="px-2">
+        <div className="px-3">
           <dt className="text-[10px] uppercase tracking-widest text-[#747a75]">{labels.ask}</dt>
           <dd className="mt-1 font-mono text-sm tnum text-[#a7ada8]">{activeInstrument.ask.toFixed(activeInstrument.digits)}</dd>
         </div>
-        <div className="px-2">
+        <div className="px-3">
           <dt className="text-[10px] uppercase tracking-widest text-[#747a75]">{labels.spread}</dt>
           <dd className="mt-1 font-mono text-sm tnum text-[#63e891]">{spread.toFixed(activeInstrument.digits)}</dd>
+        </div>
+        <div className="flex items-center justify-end pl-3">
+          <Link
+            href={`/trade/${activeInstrument.symbol}`}
+            className="ag-btn ag-btn-primary min-h-0! px-4 py-2.5 text-[13px]"
+          >
+            {labels.trade}
+          </Link>
         </div>
       </dl>
     </div>

@@ -104,7 +104,7 @@ export interface BrandProfile {
   /**
    * Dedicated color for brand marks (favicon glyph). Empty = accentColor.
    * Lets a brand's identity mark differ from its UI accent — e.g. Agile's
-   * bright green mark (#63e891) over its darker UI accent (#00644e).
+   * bright green mark (#63e891) over its darker UI accent (#188050).
    */
   markColor: string;
   /** Custom logo glyph (SVG path data) replacing the default tree mark. */
@@ -115,6 +115,11 @@ export interface BrandProfile {
   heroSubtitle: string;
   /** Meta description override for SEO/social (empty = translated default). */
   metaDescription: string;
+  /** App-logo rendering mode: "wordmark" (glyph + wordmark) or "brackets"
+   *  (glyph path pair flanking a lowercase word — the agile lockup). */
+  logoLockup: string;
+  /** Word rendered inside the "brackets" app-logo lockup ("agile"). */
+  logoWord: string;
   /**
    * Per-brand crypto deposit wallets, env format
    * ("asset:network:address;…" — same as DEPOSIT_WALLET_ADDRESSES). Empty =
@@ -134,7 +139,19 @@ export interface BrandProfile {
 /** SVG glyph rendered by the Logo component and the generated favicon. */
 export interface BrandGlyph {
   viewBox: string;
-  paths: Array<{ d: string; fill?: "accent" | "ink" }>;
+  paths: Array<{
+    d: string;
+    fill?: "accent" | "ink";
+    /** Crop viewBox for lockup rendering (bracket pair); the favicon uses
+     *  the full glyph viewBox and ignores crops. */
+    box?: string;
+  }>;
+  /** Optional favicon background (hex) — paints a rounded square behind the
+   *  glyph so marks with fine geometry stay legible at 16px. */
+  background?: string;
+  /** Optional letter centered between the glyph paths in the favicon
+   *  (e.g. the "e" of a bracket lockup) — system-font bold, ink fill. */
+  letter?: { text: string; size: number };
 }
 
 /** BRAND_OVERRIDES entry shape (all fields optional; missing = primary default). */
@@ -163,6 +180,8 @@ interface BrandOverride {
   heroBadge?: string;
   heroSubtitle?: string;
   metaDescription?: string;
+  logoLockup?: string;
+  logoWord?: string;
   depositWallets?: string;
   landingTemplate?: string;
 }
@@ -223,6 +242,8 @@ export function brandProfileForDomain(domain?: string | null): BrandProfile {
     heroBadge: override.heroBadge ?? "",
     heroSubtitle: override.heroSubtitle ?? "",
     metaDescription: override.metaDescription ?? "",
+    logoLockup: override.logoLockup ?? "wordmark",
+    logoWord: override.logoWord ?? "",
     depositWallets: override.depositWallets ?? "",
     landingTemplate: override.landingTemplate ?? "default",
   };

@@ -1016,5 +1016,324 @@
     "aumReports": "Rapports de trading",
     "aumAdmin": "Console admin",
     "aumSignOut": "Se déconnecter"
+  },
+  "agile": {
+    "heroTitleA": "Tradez plus fin.",
+    "heroTitleB": "Allez plus vite.",
+    "statInstruments": "Instruments",
+    "statSupport": "Marchés & support",
+    "statExecution": "Routage des ordres",
+    "statLanguages": "Langues",
+    "globalTitle": "Un seul desk. Tous les fuseaux.",
+    "heroTrustLine": "Compte gratuit · Plateforme vérifiée KYC · Fonds clients séparés",
+    "ctaTitle": "Prêt quand vous l'êtes.",
+    "ctaSubtitle": "Un compte prend quelques minutes. Les marchés bougent déjà.",
+    "panel": {
+      "live": "Live"
+    },
+    "nav": {
+      "markets": "Marchés",
+      "platform": "Plateforme",
+      "pricing": "Tarifs",
+      "analytics": "Analyses",
+      "education": "Formation",
+      "company": "Société",
+      "login": "Connexion",
+      "cta": "Ouvrir un compte gratuit",
+      "menu": "Menu",
+      "openMenu": "Ouvrir le menu",
+      "closeMenu": "Fermer le menu",
+      "primary": "Principal"
+    },
+    "markets": {
+      "eyebrow": "Marchés en direct",
+      "title": "Les marchés populaires, en mouvement maintenant.",
+      "subtitle": "Des prix réels, en direct du terminal. Ouvrez n'importe quel instrument pour l'analyser et trader en un clic.",
+      "cta": "Explorer tous les marchés",
+      "categories": {
+        "all": "Tous",
+        "forex": "Devises",
+        "crypto": "Crypto",
+        "commodity": "Matières premières",
+        "index": "Indices",
+        "stock": "Actions"
+      },
+      "trade": "Trader",
+      "empty": "Aucun instrument dans cette catégorie pour le moment.",
+      "symbol": "Symbole",
+      "name": "Nom",
+      "bid": "Bid",
+      "ask": "Ask",
+      "spread": "Spread",
+      "trend": "24 h",
+      "live": "Live",
+      "today": "Aujourd'hui",
+      "updated": "Dernière mise à jour",
+      "startTrading": "Commencer à trader",
+      "panels": {
+        "forex": {
+          "title": "Le forex, en toute confiance.",
+          "bullets": [
+            "EUR/USD, GBP/USD, USD/JPY et d'autres paires majeures et croisées.",
+            "Graphiques et cotations en direct sur chaque paire, à chaque session.",
+            "Accès au marché 24 h/5 et exécution en un clic."
+          ],
+          "cta": "Commencer à trader"
+        },
+        "crypto": {
+          "title": "Tradez les grandes cryptos, 24 h/24.",
+          "bullets": [
+            "BTC, ETH et les principaux actifs numériques — 24 h/24, 7 j/7, week-ends compris.",
+            "Comptes vérifiés KYC et stockage chiffré des documents.",
+            "Stop-loss et take-profit intégrés sur chaque position."
+          ],
+          "cta": "Commencer à trader"
+        },
+        "commodity": {
+          "title": "De l'or au pétrole. À portée de main.",
+          "bullets": [
+            "Métaux précieux et énergie à des conditions compétitives.",
+            "Tradez les matières premières cinq jours par semaine, en continu.",
+            "Stop-loss et take-profit intégrés sur chaque position."
+          ],
+          "cta": "Commencer à trader"
+        },
+        "index": {
+          "title": "Indices majeurs. Spreads minimes.",
+          "bullets": [
+            "US30, NAS100 et SPX500 — les indices de référence sur un seul écran.",
+            "Exécution rapide et cotations en direct sur tous vos appareils.",
+            "Exposition directe à l'indice sous-jacent."
+          ],
+          "cta": "Commencer à trader"
+        },
+        "stock": {
+          "title": "Des actions, et les indices qui les suivent.",
+          "bullets": [
+            "Actions de premier ordre depuis le même compte et portefeuille.",
+            "Graphiques, positions et P/L en direct dans un seul espace.",
+            "Un seul identifiant pour toutes les classes d'actifs."
+          ],
+          "cta": "Commencer à trader"
+        }
+      }
+    },
+    "pillars": {
+      "eyebrow": "Pourquoi Agile FGS",
+      "title": "Tout ce qu'il faut. Rien de superflu.",
+      "subtitle": "Une plateforme pensée pour les traders qui décident — et attendent que leur courtier suive.",
+      "all": {
+        "title": "Un compte, tous les marchés",
+        "desc": "Devises, indices, matières premières et crypto côte à côte — un portefeuille, un identifiant, un terminal."
+      },
+      "pricing": {
+        "title": "Une tarification claire",
+        "desc": "Spreads et commissions transparents. Aucun frais caché — le prix affiché est le prix traité."
+      },
+      "speed": {
+        "title": "Pensée pour la vitesse",
+        "desc": "Routage des ordres en millisecondes et un terminal qui reste connecté, même sur une connexion lente."
+      },
+      "security": {
+        "title": "La sécurité par défaut",
+        "desc": "Comptes vérifiés KYC, stockage chiffré des documents et fonds clients séparés."
+      }
+    },
+    "features": {
+      "eyebrow": "La plateforme",
+      "title": "Conçue pour un trading décisif.",
+      "subtitle": "Quatre points sur lesquels nous ne transigeons pas.",
+      "f1": {
+        "title": "Exécution rapide",
+        "desc": "Les ordres partent vers le marché dès votre clic — avec amélioration possible du prix."
+      },
+      "f2": {
+        "title": "Terminal mobile d'abord",
+        "desc": "L'espace de trading complet sur votre téléphone : graphiques, positions et compte en main."
+      },
+      "f3": {
+        "title": "Un tableau de bord qui tombe juste",
+        "desc": "Solde, équité, marge et P/L flottant réconciliés en temps réel."
+      },
+      "f4": {
+        "title": "Le risque, vous le contrôlez",
+        "desc": "Stop-loss, take-profit et garde-fous de marge sur chaque position."
+      }
+    },
+    "benefits": {
+      "b1": {
+        "t": "Exécution rapide",
+        "d": "Ordres routés en moins d'une seconde."
+      },
+      "b2": {
+        "t": "Marchés mondiaux",
+        "d": "Devises, indices, matières premières et crypto."
+      },
+      "b3": {
+        "t": "Analyses pro",
+        "d": "Analyses technique, fondamentale et de tendance incluses."
+      },
+      "b4": {
+        "t": "Comptes vérifiés",
+        "d": "Plateforme sous KYC, stockage chiffré des documents."
+      },
+      "b5": {
+        "t": "Fonds séparés",
+        "d": "L'argent des clients est détenu à part de celui de la société."
+      }
+    },
+    "value": {
+      "title": "Pas de complexité cachée. Juste un trading plus net.",
+      "subtitle": "Les chiffres qui comptent, dès le départ.",
+      "c1": {
+        "v": "45+",
+        "l": "Instruments",
+        "d": "Cinq classes d'actifs sur un compte, un portefeuille, un terminal."
+      },
+      "c2": {
+        "v": "<1s",
+        "l": "Routage des ordres",
+        "d": "Routage en millisecondes avec cotations en direct sur tous vos appareils."
+      },
+      "c3": {
+        "v": "24/7",
+        "l": "Marchés & support",
+        "d": "Des marchés en continu et un support qui répond."
+      },
+      "pricingEyebrow": "Tarification claire",
+      "pricingTitle": "Le prix affiché est le prix traité.",
+      "pricingBody": "Spreads et commissions transparents. Aucun frais caché — le chiffre à l'écran avant le clic est celui de votre relevé."
+    },
+    "movers": {
+      "eyebrow": "Meneurs du marché",
+      "title": "Les valeurs qui bougent.",
+      "subtitle": "Performances en direct du terminal — prix réels, mouvements réels, actualisés en continu.",
+      "metric": "Variation 24 h",
+      "last": "Dernier",
+      "cta": "Ouvrir le terminal"
+    },
+    "intelligence": {
+      "eyebrow": "Analyse",
+      "title": "Propulsé par l'analyse.",
+      "subtitle": "Une aide à la décision intégrée — signaux, calendriers et analyses actualisés chaque jour.",
+      "b1": "Signaux de trading quotidiens avec niveaux d'entrée et de sortie",
+      "b2": "Calendrier économique avec prévisions et publications antérieures",
+      "b3": "Analyses technique, fondamentale et de tendance sur tous les grands marchés",
+      "b4": "Calculateurs de position, de marge et de pip",
+      "cta": "Explorer les analyses"
+    },
+    "showcase": {
+      "label": "Le terminal",
+      "title": "Vos marchés. Un seul écran.",
+      "subtitle": "Un espace professionnel : graphiques en direct, ordres en un clic, positions et compte — sur desktop et mobile.",
+      "b1": "Six unités de temps de graphiques en chandeliers en direct",
+      "b2": "Stop-loss, take-profit et garde-fous de marge intégrés",
+      "b3": "Positions, équité et marge réconciliés en temps réel",
+      "cta": "Lancer le terminal",
+      "bid": "Bid",
+      "ask": "Ask",
+      "spread": "Spread"
+    },
+    "trust": {
+      "eyebrow": "Confiance & sécurité",
+      "title": "Enregistrés. Transparents. Responsables.",
+      "subtitle": "Les faits sur qui détient votre argent — par écrit, pas en marketing.",
+      "company": {
+        "title": "Société enregistrée",
+        "fallback": "Une entité juridique enregistrée, opérant selon les lois de sa juridiction.",
+        "tags": [
+          "FCA",
+          "CySEC",
+          "ASIC"
+        ]
+      },
+      "segregated": {
+        "title": "Fonds clients séparés",
+        "desc": "Les fonds clients sont détenus séparément des fonds opérationnels et réconciliés en continu.",
+        "tags": [
+          "Barclays",
+          "Deutsche",
+          "BNY Mellon"
+        ]
+      },
+      "protection": {
+        "title": "Protection des investisseurs",
+        "fallback": "Les clients peuvent être couverts par un schéma de compensation le cas échéant.",
+        "tags": [
+          "FSCS",
+          "ICF",
+          "Lloyd's of London"
+        ]
+      }
+    },
+    "steps": {
+      "eyebrow": "Premiers pas",
+      "title": "Trader en trois étapes.",
+      "subtitle": "Un compte prend quelques minutes — sans file d'attente administrative.",
+      "s1": {
+        "title": "Créez votre compte",
+        "desc": "Inscrivez-vous avec votre e-mail et définissez un mot de passe solide. Vous êtes actif immédiatement."
+      },
+      "s2": {
+        "title": "Vérifiez une seule fois",
+        "desc": "Téléchargez vos pièces d'identité — stockage chiffré, examen rapide, une seule fois."
+      },
+      "s3": {
+        "title": "Déposez et tradez",
+        "desc": "Déposez avec le moyen qui vous convient et ouvrez votre première position."
+      }
+    },
+    "testimonials": {
+      "eyebrow": "Retours clients",
+      "title": "La confiance de particuliers, d'équipes et de communautés de trading du monde entier.",
+      "returns": "Rendement",
+      "trades": "Trades",
+      "items": [
+        {
+          "quote": "J'ai intégré notre petite équipe en une journée. Une solution scalable qui reste personnelle.",
+          "name": "Anton K.",
+          "role": "Manager, République tchèque",
+          "returns": "+8,2%",
+          "trades": "412"
+        },
+        {
+          "quote": "La plateforme est simplement logique. Tout ce dont j'ai besoin est là — rapide, clair, intuitif.",
+          "name": "Sophie L.",
+          "role": "Traders, Allemagne",
+          "returns": "+14,7%",
+          "trades": "1 024"
+        },
+        {
+          "quote": "J'ai testé des dizaines de plateformes. Agile FGS trouve le juste équilibre entre simplicité et puissance.",
+          "name": "Carlos R.",
+          "role": "Analyste, Espagne",
+          "returns": "+6,9%",
+          "trades": "287"
+        },
+        {
+          "quote": "La vitesse d'exécution est remarquable. Même sur des marchés volatils, je garde le contrôle.",
+          "name": "Jamal A.",
+          "role": "Trader actions, Émirats",
+          "returns": "+11,3%",
+          "trades": "658"
+        },
+        {
+          "quote": "J'ai commencé sans expérience. Les tutoriels et les outils m'ont donné une vraie confiance.",
+          "name": "Eliza M.",
+          "role": "Traders, Pologne",
+          "returns": "+4,8%",
+          "trades": "156"
+        }
+      ]
+    },
+    "edu": {
+      "eyebrow": "Apprenez le métier",
+      "title": "Une formation gratuite, intégrée.",
+      "subtitle": "Cours structurés, analyses quotidiennes et outils de trading — inclus avec chaque compte.",
+      "cta": "Commencer à apprendre",
+      "b1": "Cours du débutant à l'avancé",
+      "b2": "Analyses et signaux quotidiens",
+      "b3": "Calculateurs et calendrier économique"
+    }
   }
 }

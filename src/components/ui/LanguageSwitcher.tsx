@@ -88,7 +88,7 @@ export function LanguageSwitcher({ className = "" }: { className?: string }) {
         aria-label={t("switch")}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="inline-flex items-center gap-1.5 h-9 px-2 rounded-md border border-border bg-canvas text-text-muted hover:text-text hover:bg-panel transition text-xs"
+        className="inline-flex items-center gap-1.5 h-9 px-2 rounded-md border border-border bg-canvas text-text-muted transition text-xs hover:bg-[rgba(127,127,127,0.18)]"
       >
         <GlobeIcon />
         <span className="font-semibold uppercase">{activeLocale}</span>
@@ -112,7 +112,7 @@ export function LanguageSwitcher({ className = "" }: { className?: string }) {
                 aria-selected={isActive}
                 onClick={() => select(loc)}
                 className={`flex w-full items-center gap-2.5 px-3 py-2 text-sm transition ${
-                  isActive ? "text-brand bg-brand-soft" : "text-text hover:bg-panel"
+                  isActive ? "text-brand bg-brand-soft" : "text-text hover:bg-[rgba(127,127,127,0.18)]"
                 }`}
               >
                 <span className="text-base leading-none" aria-hidden="true">{info.flag}</span>

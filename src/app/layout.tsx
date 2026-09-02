@@ -181,7 +181,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {brandThemeCss && <style id="brand-accent" dangerouslySetInnerHTML={{ __html: brandThemeCss }} />}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       </head>
-      <body className="bg-canvas text-text antialiased">
+      <body className={`bg-canvas text-text antialiased ${brand.landingTemplate === "agile" ? "agile-app" : ""}`}>
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <TopProgressBar />
         <ThemeProvider>

@@ -8,7 +8,7 @@ import type { InstrumentView } from "@/lib/types";
 import { ADDRESS_DOCUMENT_TYPES, IDENTITY_DOCUMENT_TYPES } from "@/lib/kyc";
 import { resolveUserSettings } from "@/server/userSettings";
 import { adminMessageThreads, countUnreadDirectMessages } from "@/server/adminUserManagement";
-import { CandlestickChart } from "lucide-react";
+import { CandlestickChart, User,  FileText} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -138,8 +138,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <nav className="order-3 hidden lg:flex w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 sm:w-auto">
           <Link href="/trade/AUDCAD" className="flex items-center gap-1 text-text-muted hover:text-text shadow-lg transition-colors">
           {TradeTerminal()} Trade Terminal</Link>
-          <span className="whitespace-nowrap text-text font-medium">Account</span>
-          <Link href="/reports" className="whitespace-nowrap text-text-muted hover:text-text">Reports</Link>
+          <Link href="/account" className="flex items-center gap-1 whitespace-nowrap text-text-muted hover:text-text font-bold">{AccountIcon()} Account</Link>
+          <Link href="/reports" className="flex items-center gap-1 whitespace-nowrap text-text-muted hover:text-text">{ReportsIcon()} Reports</Link>
         </nav>
         <AccountUserMenu
           displayName={user.name ?? user.email ?? "Trader"}
@@ -248,6 +248,21 @@ function TradeTerminal() {
   return (
     <span className="flex items-center bg-border rounded-md p-1 gap-1 text-[10px] font-semibold text-text-muted hover:text-text transition-colors">
       <CandlestickChart size={14} strokeWidth={1.75} aria-hidden className={ic} />
+    </span>
+  );
+}
+
+function AccountIcon() {
+  return ( 
+    <span className="flex items-center bg-border rounded-md p-1 gap-1 text-[10px] font-semibold text-text-muted hover:text-text transition-colors">
+      <User size={14} strokeWidth={1.75} aria-hidden />
+    </span>
+  );
+}
+function ReportsIcon() {
+  return ( 
+    <span className="flex items-center bg-border rounded-md p-1 gap-1 text-[10px] font-semibold text-text-muted hover:text-text transition-colors">
+      <FileText size={14} strokeWidth={1.75} aria-hidden />
     </span>
   );
 }

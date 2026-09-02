@@ -10,7 +10,7 @@ import {
   type ReportRow,
   type ReportSummary,
 } from "@/components/account/ReportsView";
-import { CandlestickChart } from "lucide-react";
+import { CandlestickChart, User, FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -184,11 +184,11 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         <nav className="order-3 w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 hidden lg:flex">
           <Link href="/trade/AUDCAD" className="flex items-center gap-1 text-text-muted hover:text-text shadow-lg transition-colors">
           {TradeTerminal()} Trade Terminal</Link>
-          <Link href="/account" className="text-text-muted hover:text-text">Account</Link>
-          <span className="font-medium text-text">Reports</span>
+          <Link href="/account" className="flex items-center gap-1 whitespace-nowrap text-text-muted hover:text-text">{AccountIcon()} Account</Link>
+          <Link href="/reports" className="flex items-center gap-1 whitespace-nowrap text-text-muted hover:text-text font-bold">{ReportsIcon()} Reports</Link>
         </nav>
         <AccountUserMenu
-          displayName={user.name ?? user.email ?? "Trader"}
+          displayName={user.name ?? user.email ?? "Trader"} 
           email={user.email ?? ""}
           accountNo={user.accountNo}
           isAdmin={session?.user?.role === "admin"}
@@ -219,6 +219,21 @@ function TradeTerminal() {
   return (
     <span className="flex items-center bg-border rounded-md p-1 gap-1 text-[10px] font-semibold text-text-muted hover:text-text transition-colors">
       <CandlestickChart size={14} strokeWidth={1.75} aria-hidden className={ic} />
+    </span>
+  );
+}
+
+function AccountIcon() {
+  return ( 
+    <span className="flex items-center bg-border rounded-md p-1 gap-1 text-[10px] font-semibold text-text-muted hover:text-text transition-colors">
+      <User size={14} strokeWidth={1.75} aria-hidden />
+    </span>
+  );
+}
+function ReportsIcon() {
+  return ( 
+    <span className="flex items-center bg-border rounded-md p-1 gap-1 text-[10px] font-semibold text-text-muted hover:text-text transition-colors">
+      <FileText size={14} strokeWidth={1.75} aria-hidden />
     </span>
   );
 }

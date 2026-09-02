@@ -3,7 +3,7 @@ DC := docker compose --env-file $(ROOT)/.env.production -f $(ROOT)/deploy/docker
 
 # .PHONY is required: e.g. the deploy/ directory would otherwise make Make
 # consider the "deploy" target already up to date and silently skip its recipe.
-.PHONY: help build build-no-cache deploy update restart-app only-env dev dev:agile dev:open-agile stop \
+.PHONY: help build build-no-cache deploy update restart-app only-env dev dev-agile dev-open-agile stop \
         ps logs log-app log-caddy health \
         psql studio migrate seed promote-admin \
         backup restore test test-fast lint typecheck \
@@ -40,10 +40,10 @@ down: ## Stop the whole production stack
 dev: ## Run the Next.js dev server (primary brand at http://localhost:3000)
 	npm run dev
 
-dev:agile: ## Dev server + open the AgileFGS brand (http://agilefgs.localhost:3000)
+dev-agile: ## Dev server + open the AgileFGS brand (http://agilefgs.localhost:3000)
 	npm run dev
 
-dev:open-agile: ## Open the AgileFGS local site in your browser (server must be running)
+dev-open-agile: ## Open the AgileFGS local site in your browser (server must be running)
 	@echo "AgileFGS  → http://agilefgs.localhost:3000"
 	@echo "BlackForest → http://localhost:3000"
 	@if command -v open >/dev/null 2>&1; then open http://agilefgs.localhost:3000; fi

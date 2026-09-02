@@ -3,12 +3,16 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
-import { MarketIcon } from "@/components/landing/MarketIcons";
+import { InstrumentLogo } from "../InstrumentLogo";
 import { useInstruments } from "@/components/landing/useInstruments";
 import type { InstrumentCategory, InstrumentView } from "@/lib/types";
 
 /** Instruments shown per category tab (and for the default view). */
 const VISIBLE = 3;
+
+/** Fixed category order for the pills — Stocks first, then the natural
+ *  discovery flow. Categories absent from the feed drop out automatically. */
+const TAB_ORDER: InstrumentCategory[] = ["STOCK", "CRYPTO", "FOREX", "COMMODITY", "INDEX"];
 
 interface MarketPanel {
   title: string;
@@ -45,12 +49,13 @@ export function MarketsSection({
   const [selected, setSelected] = useState<InstrumentCategory | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
-  const available = useMemo(
-    () => Array.from(new Set(instruments.map((instrument) => instrument.category))),
-    [instruments],
-  );
+  const available = useMemo(() => {
+    const present = new Set(instruments.map((instrument) => instrument.category));
+    return TAB_ORDER.filter((category) => present.has(category));
+  }, [instruments]);
   // No "All" tab: the section header carries the general pitch; the first
-  // available category is the default selection until the visitor chooses.
+  // category in the fixed order is the default selection until the visitor
+  // chooses.
   const active = selected && available.includes(selected) ? selected : (available[0] ?? "");
   const filtered = useMemo(
     () => instruments.filter((i) => i.category === active).slice(0, VISIBLE),
@@ -146,9 +151,13 @@ export function MarketsSection({
                   href={`/trade/${instrument.symbol}`}
                   className="ag-bento-cell group flex items-center gap-4 rounded-2xl px-5 py-4"
                 >
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[#63e891] transition-colors group-hover:border-[#63e891]/40">
-                    <MarketIcon category={instrument.category} className="h-5.5 w-5.5" />
-                  </span>
+                  <InstrumentLogo
+                    symbol={instrument.symbol}
+                    base={instrument.base}
+                    quote={instrument.quote}
+                    category={instrument.category}
+                    className="h-12 shrink-0"
+                  />
                   <span className="min-w-0">
                     <span className="block font-mono text-[15px] font-bold text-[#f1f3ef]">
                       {instrument.symbol}

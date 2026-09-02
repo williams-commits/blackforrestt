@@ -164,8 +164,10 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
         </div>
 
         <div className="ml-auto flex items-center gap-3">
-          <span className="hidden lg:inline-flex items-center gap-3">
+          <span className="hidden lg:inline-flex">
             <LanguageSwitcher />
+          </span>
+          <div className="hidden lg:inline-flex items-center gap-3">
             <Link
               href={clientTradeUrl("/login")}
               className="ag-btn ag-btn-ghost hidden min-h-0! px-4 py-2.5 text-[13px] lg:inline-flex"
@@ -178,7 +180,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
             >
               {tA("cta")}
             </Link>
-          </span>
+          </div>
           {/* Mobile actions are icon-only (below lg); the text pills are a
               desktop-only treatment, matching the language switcher. */}
           <Link

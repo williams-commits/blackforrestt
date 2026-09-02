@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" role="img" aria-label="Silver">
+  <defs>
+    <radialGradient id="s" cx="38%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#ffffff"/><stop offset="50%" stop-color="#c9d2d9"/><stop offset="100%" stop-color="#7d878f"/>
+    </radialGradient>
+    <linearGradient id="sr" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f7fafc"/><stop offset="100%" stop-color="#97a1a9"/>
+    </linearGradient>
+  </defs>
+  <circle cx="20" cy="20" r="19" fill="url(#s)" stroke="#5f6a72" stroke-width="1.4"/>
+  <circle cx="20" cy="20" r="14.5" fill="none" stroke="url(#sr)" stroke-width="1.6"/>
+  <text x="20" y="25.6" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="12.5" fill="#4a545b" letter-spacing="0.5">AG</text>
+</svg>

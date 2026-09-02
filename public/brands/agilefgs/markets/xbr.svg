@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" role="img" aria-label="Brent crude">
+  <defs><radialGradient id="b" cx="38%" cy="30%" r="80%"><stop offset="0%" stop-color="#4a5568"/><stop offset="60%" stop-color="#2b3440"/><stop offset="100%" stop-color="#161c24"/></radialGradient></defs>
+  <circle cx="20" cy="20" r="19" fill="url(#b)" stroke="#10151b" stroke-width="1.4"/>
+  <path d="M20 10.5c3.6 5 6 8.3 6 11.6a6 6 0 1 1-12 0c0-3.3 2.4-6.6 6-11.6Z" fill="#7dd3fc"/>
+  <circle cx="17.8" cy="23.4" r="1.8" fill="#bae6fd" opacity="0.8"/>
+</svg>

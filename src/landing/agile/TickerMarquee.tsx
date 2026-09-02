@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useInstruments } from "@/components/landing/useInstruments";
-import { MarketIcon } from "@/components/landing/MarketIcons";
+import { InstrumentLogo } from "./InstrumentLogo";
 import type { InstrumentView } from "@/lib/types";
 
 /**
@@ -34,9 +34,13 @@ export function TickerMarquee({
               return (
                 <li key={instrument.symbol}>
                   <Link href={`/trade/${instrument.symbol}`} className="ag-ticker-item">
-                    <span className="text-[#747a75]">
-                      <MarketIcon category={instrument.category} className="h-3.5 w-3.5" />
-                    </span>
+                    <InstrumentLogo
+                      symbol={instrument.symbol}
+                      base={instrument.base}
+                      quote={instrument.quote}
+                      category={instrument.category}
+                      className="h-5 shrink-0"
+                    />
                     <span className="font-semibold">{instrument.symbol}</span>
                     <span className="tnum">{instrument.mid.toFixed(instrument.digits)}</span>
                     <span className={`tnum font-semibold ${up ? "ag-up" : "ag-down"}`}>

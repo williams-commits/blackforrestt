@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { ArrowRight } from "lucide-react";
-import { MarketIcon } from "@/components/landing/MarketIcons";
+import { InstrumentLogo } from "../InstrumentLogo";
 import { Sparkline } from "../Sparkline";
 import { useInstruments } from "@/components/landing/useInstruments";
 import type { InstrumentView } from "@/lib/types";
@@ -56,9 +56,13 @@ export function MoversSection({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[#63e891]">
-                      <MarketIcon category={instrument.category} className="h-5 w-5" />
-                    </span>
+                    <InstrumentLogo
+                      symbol={instrument.symbol}
+                      base={instrument.base}
+                      quote={instrument.quote}
+                      category={instrument.category}
+                      className="h-10 shrink-0"
+                    />
                     <div>
                       <div className="font-mono text-sm font-bold text-[#f1f3ef]">{instrument.symbol}</div>
                       <div className="text-[11px] text-[#747a75]">{instrument.name}</div>

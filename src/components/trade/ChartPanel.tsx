@@ -229,11 +229,20 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
     });
 
     let priceSeries: ISeriesApi<"Candlestick"> | ISeriesApi<"Line">;
+    // Instrument-correct precision: without an explicit priceFormat the chart
+    // defaults to 2 decimals, which collapses the right-hand price scale of
+    // high-precision instruments (5-digit FX pairs) into identical labels.
+    const priceFormat = {
+      type: "price" as const,
+      precision: instrument.digits,
+      minMove: Math.pow(10, -instrument.digits),
+    };
     if (chartType === "candles") {
       const series = chart.addSeries(CandlestickSeries, {
         ...candleColors(dim),
         priceLineVisible: true,
         lastValueVisible: true,
+        priceFormat,
       });
       seriesRef.current = series;
       lineSeriesRef.current = null;
@@ -244,6 +253,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
         lineWidth: 2,
         priceLineVisible: true,
         lastValueVisible: true,
+        priceFormat,
       });
       lineSeriesRef.current = series;
       seriesRef.current = null;
@@ -318,6 +328,19 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
       })),
     );
   }, [isDim]);
+
+  // ── Instrument precision: the price series persists across symbol swaps,
+  // so the scale's priceFormat must follow the active instrument's digits
+  // (see the creation site for why the default 2 decimals break 5-digit FX).
+  useEffect(() => {
+    const priceFormat = {
+      type: "price" as const,
+      precision: instrument.digits,
+      minMove: Math.pow(10, -instrument.digits),
+    };
+    seriesRef.current?.applyOptions({ priceFormat });
+    lineSeriesRef.current?.applyOptions({ priceFormat });
+  }, [instrument.digits]);
 
   // ── TradingView-style watermark: faded symbol behind the price action ────
   useEffect(() => {

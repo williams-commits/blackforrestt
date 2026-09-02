@@ -35,7 +35,7 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
     <div>
       {/* Header band — split composition: narrative left, desk mark right. */}
       <header className="ag-page-band border-b border-white/10 bg-[#111513]">
-        <div className="pointer-events-none absolute inset-0 ag-mesh" aria-hidden="true" />
+        {/* <div className="pointer-events-none absolute inset-0 ag-mesh" aria-hidden="true" /> */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 h-px"

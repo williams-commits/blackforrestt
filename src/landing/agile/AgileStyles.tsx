@@ -168,7 +168,7 @@ export function AgileStyles() {
       .ag-scope .text-brand { color: #63e891; }
       .ag-scope .text-up { color: #63e891; }
       .ag-scope .text-down { color: #ff6b6b; }
-      .ag-scope .bg-brand-soft { background-color: rgb(99, 232, 145); }
+      .ag-scope .bg-brand-soft { background-color: rgba(99, 232, 145, 0.12); }
       .ag-scope .border-brand { border-color: rgba(99, 232, 145, 0.5); }
       .ag-scope .border-up\/30 { border-color: rgba(99, 232, 145, 0.3); }
       .ag-scope .bg-up\/10 { background-color: rgba(99, 232, 145, 0.08); }

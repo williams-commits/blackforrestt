@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Dialog } from "@/components/ui/Dialog";
 import { Ellipsis } from "lucide-react";
@@ -76,6 +76,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
   const [copiedValue, setCopiedValue] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, right: 8 });
+  const [menuMaxHeight, setMenuMaxHeight] = useState<number | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -86,8 +87,38 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
       const rect = triggerRef.current.getBoundingClientRect();
       setMenuPos({ top: rect.bottom + 4, right: Math.max(8, window.innerWidth - rect.right) });
     }
+    setMenuMaxHeight(null);
     setMenuOpen(true);
   }
+
+  // Keep the kebab menu inside the viewport: once rendered, measure it
+  // against the space under the trigger and flip it ABOVE the kebab when it
+  // would run past the bottom edge (rows near the page bottom); clamp with
+  // internal scrolling as the last resort on very short viewports.
+  useLayoutEffect(() => {
+    if (!menuOpen) return;
+    const menu = menuRef.current;
+    const trigger = triggerRef.current;
+    if (!menu || !trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const height = menu.offsetHeight;
+    const gap = 4;
+    const margin = 8;
+    const spaceBelow = window.innerHeight - rect.bottom - gap - margin;
+    if (height <= spaceBelow) {
+      setMenuMaxHeight(null);
+      return;
+    }
+    const spaceAbove = rect.top - gap - margin;
+    if (height <= spaceAbove) {
+      setMenuPos((pos) => ({ ...pos, top: rect.top - gap - height }));
+      setMenuMaxHeight(null);
+    } else {
+      const top = Math.max(margin, window.innerHeight - height - margin);
+      setMenuPos((pos) => ({ ...pos, top }));
+      setMenuMaxHeight(window.innerHeight - top - margin);
+    }
+  }, [menuOpen]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -282,8 +313,8 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           role="menu"
           aria-label={`Actions for ${user.name ?? user.email ?? user.id}`}
           onKeyDown={handleMenuKeyDown}
-          className="fixed z-9999 w-48 overflow-hidden rounded-lg border border-border bg-canvas py-1 shadow-xl"
-          style={{ top: menuPos.top, right: menuPos.right }}
+          className="fixed z-9999 w-48 overflow-hidden overflow-y-auto rounded-lg border border-border bg-canvas py-1 shadow-xl"
+          style={{ top: menuPos.top, right: menuPos.right, maxHeight: menuMaxHeight ?? undefined }}
         >
           <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "notify" }); }} label="Notify" hint="Send an in-app notification" icon={<TabIcon icon={ADMIN_ACTION_ICONS.notify} />} />
           <MenuItemRow onSelect={() => { setMenuOpen(false); onOpenChat(user); }} label="Chat" hint="Open support conversation" icon={<TabIcon icon={ADMIN_ACTION_ICONS.chat} />} />

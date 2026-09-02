@@ -2,7 +2,7 @@
 
 import { FileText, LogOut, Minus, Plus, Settings, Shield, Sun, User } from "lucide-react";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -43,6 +43,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
   const [walletMode, setWalletMode] = useState<"deposit" | "withdraw">("deposit");
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, right: 10 });
+  const [menuMaxHeight, setMenuMaxHeight] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -62,8 +63,38 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
       const rect = triggerRef.current.getBoundingClientRect();
       setMenuPos({ top: rect.bottom, right: window.innerWidth - rect.right });
     }
+    setMenuMaxHeight(null);
     setMenuOpen(true);
   }
+
+  // Keep the dropdown inside the viewport: once rendered, measure it against
+  // the space under the trigger and flip it above the trigger when it would
+  // run past the bottom edge; clamp + internal scroll as the last resort.
+  useLayoutEffect(() => {
+    if (!menuOpen) return;
+    const menu = menuRef.current;
+    const trigger = triggerRef.current;
+    if (!menu || !trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const height = menu.offsetHeight;
+    const margin = 8;
+    const spaceBelow = window.innerHeight - rect.bottom - margin;
+    if (height <= spaceBelow) {
+      setMenuMaxHeight(null);
+      return;
+    }
+    const spaceAbove = rect.top - margin;
+    if (height <= spaceAbove) {
+      // Fits entirely above the trigger — open upwards.
+      setMenuPos((pos) => ({ ...pos, top: rect.top - height }));
+      setMenuMaxHeight(null);
+    } else {
+      // Nowhere near enough room: pin to the viewport edge and scroll inside.
+      const top = Math.max(margin, window.innerHeight - height - margin);
+      setMenuPos((pos) => ({ ...pos, top }));
+      setMenuMaxHeight(window.innerHeight - top - margin);
+    }
+  }, [menuOpen]);
 
   // Close dropdown on outside click.
   useEffect(() => {
@@ -202,8 +233,8 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
       {menuOpen && typeof document !== "undefined" && createPortal(
         <div
           ref={menuRef}
-          className="fixed w-64 bg-canvas border border-border rounded-b-lg shadow-xl z-9999 overflow-hidden animate-[fadeIn_0.12s_ease-out]"
-          style={{ top: menuPos.top, right: menuPos.right }}
+          className="fixed w-64 bg-canvas border border-border rounded-b-lg shadow-xl z-9999 overflow-hidden overflow-y-auto animate-[fadeIn_0.12s_ease-out]"
+          style={{ top: menuPos.top, right: menuPos.right, maxHeight: menuMaxHeight ?? undefined }}
         >
           {/* User header */}
           <div className="px-4 py-3 border-b border-border bg-panel-2/50">

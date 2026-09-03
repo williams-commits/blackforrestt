@@ -4,13 +4,16 @@ Standalone sales & relationship-management module. Runs as its own Next.js
 application on its own subdomain with its own database — fully isolated from
 the trading platform. Design and roadmap: [`DESIGN.md`](./DESIGN.md).
 
-**Status: Phase 5 (opportunities) implemented — MVP boundary reached.**
-Foundation, core records, activities/notifications, dedup/conversion/merge,
-and now opportunities: configurable multi-pipeline stages (DB-driven, admin
-managed), a kanban board with drag-drop stage moves plus list view, money
-aggregates (open/weighted/won/win-rate), stage-driven won/lost automation,
-and conversion can now create the opening opportunity. A sales team can
-work leads end-to-end through won/lost. Imports arrive in Phase 6.
+**Status: Phase 6 (CSV import) implemented.** Foundation, core records,
+activities/notifications, dedup/conversion/merge, opportunities — and now a
+job-based CSV import wizard for leads, contacts, accounts, and customers:
+upload → auto-mapped columns (saved mappings supported) → server-side
+validation (required fields, email/phone format, statuses by name) →
+scope-filtered duplicate detection → strategy (create / update / upsert) →
+background run with live progress → results with a downloadable per-row
+error report. Every imported row is normalized, owned by the importer,
+activity-logged, and audit-trailed; completion lands in notifications.
+Google Sheets import arrives in Phase 9.
 
 ## Stack
 
@@ -57,6 +60,12 @@ npm run build
 ```
 
 ## Troubleshooting
+
+**Pages render unstyled / stylesheet 404** — `npm run build` was run while
+`npm run dev` was still serving. The production build overwrites `.next`,
+and the dev server then references CSS chunks that no longer exist. Fix:
+stop the dev server, `rm -rf .next`, and restart `npm run dev`. Rule of
+thumb: never build while the dev server is running — stop it first.
 
 **`[auth][cause]: Error: no matching decryption secret`** — the browser holds
 a session cookie encrypted under a previous `AUTH_SECRET` (the secret in

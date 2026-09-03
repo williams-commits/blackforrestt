@@ -643,6 +643,8 @@ model ImportJob {
   strategy       ImportStrategy  @default(CREATE)
   mapping        Json?
   matchRules     Json?
+  /** The uploaded, parsed rows (bounded by MAX_ROWS) — the worker's input. */
+  payload        Json?
   totalRows      Int             @default(0)
   processedRows  Int             @default(0)
   createdCount   Int             @default(0)

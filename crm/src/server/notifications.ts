@@ -11,7 +11,9 @@ import { prisma } from "@/server/db";
 export type NotifiableType =
   | "RECORD_ASSIGNED"
   | "TASK_CREATED"
-  | "APPOINTMENT_SCHEDULED";
+  | "APPOINTMENT_SCHEDULED"
+  | "IMPORT_COMPLETED"
+  | "IMPORT_FAILED";
 
 interface NotifyInput {
   recipientUserId: string;

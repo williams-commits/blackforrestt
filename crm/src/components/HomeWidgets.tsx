@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 interface NotificationRow {
@@ -29,20 +29,33 @@ export function HomeWidgets() {
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [unread, setUnread] = useState(0);
 
-  useEffect(() => {
-    void (async () => {
-      const tasks = await fetch("/api/tasks?mine=1").then((r) => (r.ok ? r.json() : null));
-      if (tasks) {
-        setOpenCount(tasks.meta.openCount);
-        setOverdueCount(tasks.meta.overdueCount);
-      }
-      const notes = await fetch("/api/notifications").then((r) => (r.ok ? r.json() : null));
-      if (notes) {
-        setNotifications(notes.data);
-        setUnread(notes.meta.unread);
-      }
-    })();
+  const refresh = useCallback(async () => {
+    const tasks = await fetch("/api/tasks?mine=1").then((r) => (r.ok ? r.json() : null));
+    if (tasks) {
+      setOpenCount(tasks.meta.openCount);
+      setOverdueCount(tasks.meta.overdueCount);
+    }
+    const notes = await fetch("/api/notifications").then((r) => (r.ok ? r.json() : null));
+    if (notes) {
+      setNotifications(notes.data);
+      setUnread(notes.meta.unread);
+    }
   }, []);
+
+  useEffect(() => {
+    void refresh();
+    // Re-read on tab focus so counters/notifications reflect changes made
+    // elsewhere while the dashboard sat in a background tab.
+    const onFocus = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [refresh]);
 
   async function markAllRead() {
     await fetch("/api/notifications", { method: "PATCH" });

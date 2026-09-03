@@ -20,6 +20,12 @@ interface RecordFormProps {
   /** Existing row for edit mode; null for create. */
   initial?: Record<string, unknown> | null;
   onClose: () => void;
+  /**
+   * Called after a successful save. router.refresh() alone only re-renders
+   * server components — client-side data holders (e.g. RecordListPage's
+   * rows) need this hook to refetch.
+   */
+  onSaved?: () => void;
   /** Create-time duplicate detection (leads): a 409 shows matches and a
    *  "create anyway" path that re-submits with allowDuplicates. */
   duplicateCheck?: boolean;
@@ -41,7 +47,7 @@ export interface DuplicateHit {
   matchOn: string[];
 }
 
-export function RecordForm({ object, fields, options, initial, onClose, duplicateCheck }: RecordFormProps) {
+export function RecordForm({ object, fields, options, initial, onClose, onSaved, duplicateCheck }: RecordFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +100,7 @@ export function RecordForm({ object, fields, options, initial, onClose, duplicat
         return false;
       }
       router.refresh();
+      onSaved?.();
       onClose();
       return true;
     } catch {

@@ -14,6 +14,18 @@ const EMPTY: OptionSource = {
   contacts: [],
 };
 
+/** Fresh buckets per fetch — spreading EMPTY would share (and mutate) its arrays. */
+function freshOptions(): OptionSource {
+  return {
+    leadStatuses: [],
+    contactStatuses: [],
+    customerStatuses: [],
+    users: [],
+    accounts: [],
+    contacts: [],
+  };
+}
+
 /** Resolve dynamic select options (statuses, users, linked records). */
 export function useOptionSources(object: ObjectKey): OptionSource {
   const [options, setOptions] = useState<OptionSource>(EMPTY);
@@ -25,7 +37,7 @@ export function useOptionSources(object: ObjectKey): OptionSource {
           fetch("/api/record-statuses").then((r) => (r.ok ? r.json() : { data: [] })),
           fetch("/api/users").then((r) => (r.ok ? r.json() : { data: [] })),
         ]);
-        const next: OptionSource = { ...EMPTY };
+        const next: OptionSource = freshOptions();
         for (const status of statuses.data as Array<{ id: string; name: string; appliesTo: string }>) {
           const key =
             status.appliesTo === "LEAD"
@@ -127,6 +139,7 @@ export function RecordDetailActions({
           fields={RECORD_UI[object].fields}
           options={options}
           initial={row}
+          onSaved={() => router.refresh()}
           onClose={() => setEditing(false)}
         />
       ) : null}

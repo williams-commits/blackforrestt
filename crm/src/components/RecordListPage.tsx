@@ -25,6 +25,23 @@ const EMPTY_OPTIONS: OptionSource = {
   contacts: [],
 };
 
+/**
+ * Fresh option buckets per fetch. NEVER spread EMPTY_OPTIONS here: a shallow
+ * copy would share its arrays and pushing statuses would mutate the
+ * module-level state — React StrictMode's double-mounted effects then
+ * accumulate duplicates (duplicate <option> keys) on every remount.
+ */
+function freshOptions(): OptionSource {
+  return {
+    leadStatuses: [],
+    contactStatuses: [],
+    customerStatuses: [],
+    users: [],
+    accounts: [],
+    contacts: [],
+  };
+}
+
 /** Resolve a column key ("a.b" or "firstName lastName") against a row. */
 function cellValue(row: Record<string, unknown>, key: string): string {
   if (key.includes(" ")) {
@@ -93,7 +110,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         fetch("/api/record-statuses").then((r) => (r.ok ? r.json() : { data: [] })),
         fetch("/api/users").then((r) => (r.ok ? r.json() : { data: [] })),
       ]);
-      const next: OptionSource = { ...EMPTY_OPTIONS };
+      const next: OptionSource = freshOptions();
       for (const status of statuses.data as Array<{ id: string; name: string; appliesTo: string }>) {
         const key =
           status.appliesTo === "LEAD"
@@ -582,6 +599,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           options={options}
           initial={editRow}
           duplicateCheck={object === "leads"}
+          onSaved={() => void fetchRows()}
           onClose={() => setFormMode("closed")}
         />
       ) : null}

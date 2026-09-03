@@ -20,6 +20,9 @@ interface RecordFormProps {
   /** Existing row for edit mode; null for create. */
   initial?: Record<string, unknown> | null;
   onClose: () => void;
+  /** Create-time duplicate detection (leads): a 409 shows matches and a
+   *  "create anyway" path that re-submits with allowDuplicates. */
+  duplicateCheck?: boolean;
 }
 
 /** Coerce a row value into a form-input value (dates → datetime-local). */
@@ -30,10 +33,20 @@ function toInputValue(field: FieldConfig, raw: unknown): string {
   return String(raw);
 }
 
-export function RecordForm({ object, fields, options, initial, onClose }: RecordFormProps) {
+export interface DuplicateHit {
+  objectType: string;
+  id: string;
+  label: string;
+  email: string | null;
+  matchOn: string[];
+}
+
+export function RecordForm({ object, fields, options, initial, onClose, duplicateCheck }: RecordFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dupMatches, setDupMatches] = useState<DuplicateHit[] | null>(null);
+  const [lastPayload, setLastPayload] = useState<Record<string, unknown> | null>(null);
   const editing = Boolean(initial?.id);
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial_: Record<string, string> = {};
@@ -49,24 +62,10 @@ export function RecordForm({ object, fields, options, initial, onClose }: Record
   const inputClass =
     "w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20";
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  async function submitPayload(payload: Record<string, unknown>): Promise<boolean> {
     setError(null);
     setSubmitting(true);
     try {
-      const payload: Record<string, unknown> = {};
-      for (const field of fields) {
-        const value = values[field.name];
-        if (value === "") {
-          // Create: omit optionals entirely; required stays (browser checks).
-          if (!field.required && !editing) continue;
-          payload[field.name] = null;
-        } else if (field.type === "number") {
-          payload[field.name] = Number(value);
-        } else {
-          payload[field.name] = value;
-        }
-      }
       const response = await fetch(
         editing ? `/api/${object}/${initial!.id}` : `/api/${object}`,
         {
@@ -76,17 +75,58 @@ export function RecordForm({ object, fields, options, initial, onClose }: Record
         },
       );
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        const body = (await response.json().catch(() => null)) as {
+          error?: string;
+          details?: { matches?: { leads?: DuplicateHit[]; contacts?: DuplicateHit[]; customers?: DuplicateHit[] } };
+        } | null;
+        const matches = body?.details?.matches;
+        const flat = [
+          ...(matches?.leads ?? []),
+          ...(matches?.contacts ?? []),
+          ...(matches?.customers ?? []),
+        ];
+        if (response.status === 409 && flat.length > 0 && duplicateCheck && !editing) {
+          setDupMatches(flat);
+          setLastPayload(payload);
+          return false;
+        }
         setError(body?.error ?? "Save failed.");
-        return;
+        return false;
       }
       router.refresh();
       onClose();
+      return true;
     } catch {
       setError("Network error — try again.");
+      return false;
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    const payload: Record<string, unknown> = {};
+    for (const field of fields) {
+      const value = values[field.name];
+      if (value === "") {
+        // Create: omit optionals entirely; required stays (browser checks).
+        if (!field.required && !editing) continue;
+        payload[field.name] = null;
+      } else if (field.type === "number") {
+        payload[field.name] = Number(value);
+      } else {
+        payload[field.name] = value;
+      }
+    }
+    setDupMatches(null);
+    await submitPayload(payload);
+  }
+
+  async function createAnyway() {
+    if (!lastPayload) return;
+    setDupMatches(null);
+    await submitPayload({ ...lastPayload, allowDuplicates: true });
   }
 
   return (
@@ -108,6 +148,40 @@ export function RecordForm({ object, fields, options, initial, onClose }: Record
           <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
           </p>
+        ) : null}
+
+        {dupMatches ? (
+          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm">
+            <p className="font-medium text-amber-800">
+              Possible duplicates found ({dupMatches.length})
+            </p>
+            <ul className="mt-2 space-y-1">
+              {dupMatches.map((match) => (
+                <li key={`${match.objectType}-${match.id}`} className="flex items-center justify-between gap-2">
+                  <a
+                    href={`/${match.objectType.toLowerCase()}s/${match.id}`}
+                    className="font-medium text-amber-900 underline decoration-amber-400"
+                  >
+                    {match.label}
+                  </a>
+                  <span className="text-xs text-amber-700">
+                    {match.objectType.toLowerCase()} · matches on {match.matchOn.join(", ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void createAnyway()}
+                disabled={submitting}
+                className="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+              >
+                Create anyway
+              </button>
+              <span className="text-xs text-amber-700">or cancel and link the existing record instead.</span>
+            </div>
+          </div>
         ) : null}
 
         <div className="grid max-h-[60vh] grid-cols-1 gap-4 overflow-y-auto sm:grid-cols-2">

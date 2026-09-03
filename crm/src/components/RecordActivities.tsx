@@ -19,7 +19,7 @@ export interface SubjectAppointment {
   locationOrLink: string | null;
 }
 
-type SubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER";
+type SubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
 
 /**
  * Record-scoped activity panel: add a note, create a follow-up task, or

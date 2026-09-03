@@ -2,11 +2,13 @@ import { auth } from "@/auth";
 import { prisma } from "@/server/db";
 import type { Permission } from "@/server/permissions";
 
-/** Authorization error carrying an HTTP-compatible status. */
+/** Authorization/domain error carrying an HTTP-compatible status and,
+ *  optionally, structured details (e.g. duplicate matches for 409s). */
 export class CrmError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly details?: unknown,
   ) {
     super(message);
     this.name = "CrmError";

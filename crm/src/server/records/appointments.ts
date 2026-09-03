@@ -74,7 +74,7 @@ export async function createAppointment(ctx: ScopedContext, input: z.infer<typeo
 }
 
 export function listAppointmentsBySubject(
-  subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER",
+  subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
   subjectId: string,
   take = 10,
 ) {
@@ -122,7 +122,7 @@ export async function updateAppointment(
     });
     if (existing && existing.subjectType && existing.subjectId && input.status && input.status !== existing.status) {
       await appendActivity(tx, {
-        subjectType: existing.subjectType as "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER",
+        subjectType: existing.subjectType as "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
         subjectId: existing.subjectId,
         kind:
           input.status === "COMPLETED"

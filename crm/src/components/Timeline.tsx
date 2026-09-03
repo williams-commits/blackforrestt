@@ -6,6 +6,7 @@ const KIND_LABELS: Record<string, string> = {
   created: "Created",
   updated: "Updated",
   status_changed: "Status changed",
+  stage_changed: "Stage changed",
   assigned: "Assigned",
   deleted: "Deleted",
   restored: "Restored",
@@ -19,6 +20,8 @@ const KIND_LABELS: Record<string, string> = {
   appointment_scheduled: "Appointment scheduled",
   appointment_completed: "Appointment completed",
   appointment_cancelled: "Appointment cancelled",
+  converted: "Converted",
+  merged: "Merged into this record",
   imported: "Imported",
 };
 

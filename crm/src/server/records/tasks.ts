@@ -20,7 +20,7 @@ export const CreateTask = z.object({
   dueAt: z.coerce.date().optional().nullable(),
   priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).default("NORMAL"),
   ownerUserId: z.string().trim().min(5).optional(),
-  subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER"]).optional(),
+  subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"]).optional(),
   subjectId: z.string().trim().min(5).optional(),
 });
 
@@ -49,7 +49,7 @@ export const TaskFilters = z.object({
   status: z.enum(["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
   due: z.enum(["overdue", "today", "week", "upcoming", "all"]).default("all"),
   mine: z.enum(["0", "1"]).default("1"),
-  subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER"]).optional(),
+  subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"]).optional(),
   subjectId: z.string().trim().min(5).optional(),
 });
 

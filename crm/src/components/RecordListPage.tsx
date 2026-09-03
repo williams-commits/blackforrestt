@@ -71,6 +71,10 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   const [options, setOptions] = useState<OptionSource>(EMPTY_OPTIONS);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const [mergePrimary, setMergePrimary] = useState<string>("");
+  const [mergeBusy, setMergeBusy] = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
 
   const can = useMemo(() => {
     const permissions = me?.permissions ?? [];
@@ -202,6 +206,33 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     void fetchRows();
   }
 
+  const mergeCandidates = rows.filter((row) => selected.has(row.id));
+
+  async function runMerge() {
+    if (!mergePrimary) return;
+    setMergeBusy(true);
+    setMergeError(null);
+    try {
+      const mergedId = mergeCandidates.find((row) => row.id !== mergePrimary)?.id;
+      if (!mergedId) return;
+      const response = await fetch("/api/leads/merge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ primaryId: mergePrimary, mergedId }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Merge failed.");
+      }
+      setMergeOpen(false);
+      await fetchRows();
+    } catch (error) {
+      setMergeError(error instanceof Error ? error.message : "Merge failed.");
+    } finally {
+      setMergeBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -317,7 +348,68 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               Delete
             </button>
           ) : null}
+          {can.delete && selected.size === 2 ? (
+            <button
+              type="button"
+              onClick={() => {
+                setMergePrimary(mergeCandidates[0]?.id ?? "");
+                setMergeOpen(true);
+              }}
+              className="rounded-md border border-stone-300 bg-white px-2 py-1.5 font-medium"
+            >
+              Merge selected…
+            </button>
+          ) : null}
           {bulkError ? <span className="text-red-700">{bulkError}</span> : null}
+        </div>
+      ) : null}
+
+      {mergeOpen && mergeCandidates.length === 2 ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md space-y-4 rounded-lg border border-stone-200 bg-white p-6 shadow-xl">
+            <h2 className="text-base font-semibold">Merge leads</h2>
+            <p className="text-sm text-stone-600">
+              Choose the surviving record. The other lead is deleted; its timeline, notes, and
+              open tasks move to the survivor.
+            </p>
+            {mergeError ? (
+              <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+                {mergeError}
+              </p>
+            ) : null}
+            <div className="space-y-2">
+              {mergeCandidates.map((row) => (
+                <label key={row.id} className="flex items-center gap-2 rounded-md border border-stone-200 p-3 text-sm">
+                  <input
+                    type="radio"
+                    name="merge-primary"
+                    checked={mergePrimary === row.id}
+                    onChange={() => setMergePrimary(row.id)}
+                  />
+                  Keep <strong>{cellValue(row, "firstName lastName")}</strong>
+                  {cellValue(row, "email") ? ` (${cellValue(row, "email")})` : ""}
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setMergeOpen(false)}
+                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium hover:bg-stone-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void runMerge()}
+                disabled={mergeBusy || !mergePrimary}
+                className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+                style={{ background: "var(--brand)" }}
+              >
+                {mergeBusy ? "Merging…" : "Merge"}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -489,6 +581,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           fields={config.fields}
           options={options}
           initial={editRow}
+          duplicateCheck={object === "leads"}
           onClose={() => setFormMode("closed")}
         />
       ) : null}

@@ -322,13 +322,14 @@ async function seedDemoData(users: Record<string, string>, teamIds: { sales: str
         name: opportunity.name,
         accountId: accounts[opportunity.account]?.id ?? null,
         ownerUserId: users.REP,
+        teamId: teamIds.sales,
         pipelineId: pipeline.id,
         stageId: stage.id,
         value: BigInt(opportunity.value),
         probability: opportunity.probability,
         status: stage.type === "OPEN" ? "OPEN" : stage.type === "WON" ? "WON" : "LOST",
       },
-      update: {},
+      update: { teamId: teamIds.sales },
     });
   }
 

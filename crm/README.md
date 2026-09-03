@@ -4,12 +4,13 @@ Standalone sales & relationship-management module. Runs as its own Next.js
 application on its own subdomain with its own database — fully isolated from
 the trading platform. Design and roadmap: [`DESIGN.md`](./DESIGN.md).
 
-**Status: Phase 3 (activities) implemented** — auth, RBAC, teams, audit,
-health, full record management for leads, contacts, accounts, and
-customers, plus tasks (with overdue/today filters), immutable notes,
-appointments on every record, and in-app notifications (task assigned /
-record assigned). Duplicate matching and lead conversion arrive in
-Phase 4.
+**Status: Phase 5 (opportunities) implemented — MVP boundary reached.**
+Foundation, core records, activities/notifications, dedup/conversion/merge,
+and now opportunities: configurable multi-pipeline stages (DB-driven, admin
+managed), a kanban board with drag-drop stage moves plus list view, money
+aggregates (open/weighted/won/win-rate), stage-driven won/lost automation,
+and conversion can now create the opening opportunity. A sales team can
+work leads end-to-end through won/lost. Imports arrive in Phase 6.
 
 ## Stack
 

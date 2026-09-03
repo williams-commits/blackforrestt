@@ -13,6 +13,7 @@ export interface ActivityEntry {
     | "created"
     | "updated"
     | "status_changed"
+    | "stage_changed"
     | "assigned"
     | "deleted"
     | "restored"
@@ -26,6 +27,8 @@ export interface ActivityEntry {
     | "appointment_scheduled"
     | "appointment_completed"
     | "appointment_cancelled"
+    | "converted"
+    | "merged"
     | "imported";
   actorUserId?: string | null;
   payload?: Prisma.InputJsonValue;

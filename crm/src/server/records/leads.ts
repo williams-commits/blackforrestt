@@ -10,6 +10,7 @@ import {
 } from "@/server/scope";
 import { orderByFor, searchWhere } from "@/server/listQuery";
 import { notify } from "@/server/notifications";
+import { findMatches } from "@/server/records/duplicates";
 import { z } from "zod";
 
 /**
@@ -39,6 +40,9 @@ export const CreateLead = z.object(BaseFields).extend({
   campaignId: z.string().trim().min(5).optional().nullable(),
   assignedUserId: z.string().trim().min(5).optional().nullable(),
   assignedTeamId: z.string().trim().min(5).optional().nullable(),
+  // Duplicate guard: when false/absent, a normalized-key match against an
+  // existing lead rejects the create with 409 + matches for confirmation.
+  allowDuplicates: z.boolean().optional(),
 });
 
 // PATCH accepts partial payloads — only provided fields change.
@@ -170,6 +174,21 @@ function normalizedLeadData(input: Partial<z.infer<typeof CreateLead>>) {
 }
 
 export async function createLead(ctx: ScopedContext, input: z.infer<typeof CreateLead>) {
+  // Create-time duplicate guard: matching keys against existing LEADS.
+  // (Contact/customer matching runs at conversion time, where it matters.)
+  if (!input.allowDuplicates && (input.email || input.phone || input.externalId)) {
+    const matches = await findMatches(ctx, {
+      email: input.email,
+      phone: input.phone,
+      externalId: input.externalId,
+    });
+    if (matches.leads.length > 0) {
+      throw new CrmError("Possible duplicate leads found — review them or confirm to create anyway.", 409, {
+        matches,
+      });
+    }
+  }
+
   const defaultStatus = await prisma.recordStatus.findFirst({
     where: { appliesTo: "LEAD", isDefault: true },
   });

@@ -214,6 +214,7 @@ model Team {
   contacts       Contact[]     @relation("ContactTeam")
   ownedAccounts  Account[]     @relation("AccountTeam")
   ownedCustomers Customer[]    @relation("CustomerTeam")
+  ownedOpps      Opportunity[] @relation("OpportunityTeam")
 }
 
 model TeamMembership {
@@ -449,6 +450,8 @@ model Opportunity {
   customer         Customer?         @relation(fields: [customerId], references: [id])
   ownerUserId      String
   owner            User              @relation("OpportunityOwner", fields: [ownerUserId], references: [id])
+  teamId           String?
+  team             Team?             @relation("OpportunityTeam", fields: [teamId], references: [id])
   pipelineId       String
   pipeline         Pipeline          @relation(fields: [pipelineId], references: [id])
   stageId          String

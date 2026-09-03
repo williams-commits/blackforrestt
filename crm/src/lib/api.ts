@@ -17,7 +17,7 @@ export function jsonError(message: string, status: number, details?: unknown): N
  */
 export function handleRouteError(error: unknown, fallbackMessage: string): NextResponse {
   if (error instanceof CrmError) {
-    return jsonError(error.message, error.status);
+    return jsonError(error.message, error.status, error.details);
   }
   console.error("[crm/api]", error);
   return jsonError(fallbackMessage, 500);

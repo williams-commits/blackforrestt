@@ -13,7 +13,7 @@ import type { ScopedContext } from "@/server/records/leads";
 
 export const CreateNote = z.object({
   body: z.string().trim().min(1).max(5000),
-  subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER"]),
+  subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"]),
   subjectId: z.string().trim().min(5),
 });
 
@@ -47,7 +47,7 @@ export async function createNote(ctx: ScopedContext, input: z.infer<typeof Creat
 }
 
 export function listNotesBySubject(
-  subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER",
+  subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
   subjectId: string,
   take = 25,
 ) {

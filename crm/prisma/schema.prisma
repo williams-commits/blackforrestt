@@ -1,0 +1,732 @@
+// Black Forest CRM — standalone module schema.
+// Lives in its own database (blckforest_crm); shares NO tables with the
+// trading platform. Design reference: crm/DESIGN.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Shared enums ───────────────────────────
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+// Row-visibility scope ladder, resolved from the user's role.
+enum DataScope {
+  OWN
+  TEAM
+  HIERARCHY
+  ORG
+}
+
+// Which CRM object a polymorphic reference points at.
+enum SubjectType {
+  LEAD
+  CONTACT
+  CUSTOMER
+  ACCOUNT
+  OPPORTUNITY
+  CAMPAIGN
+  TASK
+}
+
+// Categories drive pipeline behavior: OPEN records count as working set,
+// CONVERTED/LOST/INVALID leave the funnel.
+enum RecordStatusCategory {
+  OPEN
+  CONVERTED
+  LOST
+  INVALID
+}
+
+enum StageType {
+  OPEN
+  WON
+  LOST
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum OpportunityStatus {
+  OPEN
+  WON
+  LOST
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  CURRENCY
+  BOOLEAN
+  DATE
+  DATETIME
+  SELECT
+  MULTI_SELECT
+  PHONE
+  EMAIL
+  URL
+}
+
+enum ImportSource {
+  CSV
+  GOOGLE_SHEETS
+}
+
+enum ImportObjectType {
+  LEAD
+  CONTACT
+  ACCOUNT
+  CUSTOMER
+}
+
+enum ImportStatus {
+  DRAFT
+  MAPPING
+  VALIDATING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ImportStrategy {
+  CREATE
+  UPDATE
+  UPSERT
+}
+
+enum NotificationType {
+  RECORD_ASSIGNED
+  TASK_CREATED
+  TASK_DUE
+  TASK_OVERDUE
+  APPOINTMENT_SCHEDULED
+  IMPORT_COMPLETED
+  IMPORT_FAILED
+  SYSTEM
+}
+
+// ──────────────────────── Identity & structure ────────────────────────
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  status       UserStatus @default(ACTIVE)
+  roleId       String
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  role            Role             @relation(fields: [roleId], references: [id])
+  memberships     TeamMembership[]
+  ledTeams        Team[]           @relation("TeamLeader")
+  assignedLeads   Lead[]           @relation("LeadAssignee")
+  ownedAccounts   Account[]        @relation("AccountOwner")
+  ownedContacts   Contact[]        @relation("ContactOwner")
+  ownedCustomers  Customer[]       @relation("CustomerOwner")
+  ownedOpps       Opportunity[]    @relation("OpportunityOwner")
+  ownedCampaigns  Campaign[]       @relation("CampaignOwner")
+  ownedTasks      Task[]           @relation("TaskOwner")
+  authoredNotes   Note[]           @relation("NoteAuthor")
+  ownedAppts      Appointment[]    @relation("AppointmentOwner")
+  activityBy      ActivityEvent[]  @relation("ActivityActor")
+  notifications   Notification[]
+  importsCreated  ImportJob[]      @relation("ImportCreator")
+  filesUploaded   Attachment[]     @relation("FileUploader")
+  mergesBy        MergeRecord[]    @relation("MergeActor")
+  settingsUpdated SystemSetting[]  @relation("SettingUpdater")
+  views           SavedView[]
+  auditLogs       AuditLog[]
+
+  @@index([status])
+}
+
+model Role {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  name        String
+  description String?
+  isSystem    Boolean   @default(false)
+  scope       DataScope
+  permissions RolePermission[]
+  users       User[]
+}
+
+model RolePermission {
+  id         String @id @default(cuid())
+  roleId     String
+  role       Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission String
+
+  @@unique([roleId, permission])
+  @@index([permission])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  parentId  String?
+  parent    Team?    @relation("TeamHierarchy", fields: [parentId], references: [id])
+  children  Team[]   @relation("TeamHierarchy")
+  leaderId  String?
+  leader    User?    @relation("TeamLeader", fields: [leaderId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships    TeamMembership[]
+  assignedLeads  Lead[]        @relation("LeadTeam")
+  contacts       Contact[]     @relation("ContactTeam")
+  ownedAccounts  Account[]     @relation("AccountTeam")
+  ownedCustomers Customer[]    @relation("CustomerTeam")
+}
+
+model TeamMembership {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, teamId])
+  @@index([teamId])
+}
+
+// Append-only audit trail (mirrors the platform's AuditEvent pattern).
+// No update or delete path may ever exist for this model.
+model AuditLog {
+  id           String   @id @default(cuid())
+  actorUserId  String?
+  actor        User?    @relation(fields: [actorUserId], references: [id])
+  action       String
+  objectType   String
+  objectId     String?
+  before       Json?
+  after        Json?
+  ip           String?
+  createdAt    DateTime @default(now())
+
+  @@index([actorUserId, createdAt])
+  @@index([objectType, objectId, createdAt])
+}
+
+// Key/value operational settings (e.g. default currency, org name).
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  updatedById String?
+  updatedBy   User?    @relation("SettingUpdater", fields: [updatedById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ──────────────────────────── Core records ────────────────────────────
+
+// Configurable record statuses for leads and contacts (never hard-coded).
+model RecordStatus {
+  id        String             @id @default(cuid())
+  name      String
+  sortOrder Int                @default(0)
+  category  RecordStatusCategory
+  appliesTo SubjectType
+  isDefault Boolean            @default(false)
+
+  leads       Lead[]
+  contacts    Contact[]
+  customers   Customer[]
+
+  @@unique([name, appliesTo])
+  @@index([appliesTo, sortOrder])
+}
+
+model Lead {
+  id               String    @id @default(cuid())
+  firstName        String
+  lastName         String
+  company          String?
+  email            String?
+  phone            String?
+  secondaryPhone   String?
+  country          String?
+  region           String?
+  source           String?
+  campaignId       String?
+  campaign         Campaign? @relation("LeadCampaign", fields: [campaignId], references: [id])
+  statusId         String
+  status           RecordStatus @relation(fields: [statusId], references: [id])
+  score            Int       @default(0)
+  priority         Priority  @default(NORMAL)
+  assignedUserId   String?
+  assignedUser     User?     @relation("LeadAssignee", fields: [assignedUserId], references: [id])
+  assignedTeamId   String?
+  assignedTeam     Team?     @relation("LeadTeam", fields: [assignedTeamId], references: [id])
+  lastContactAt    DateTime?
+  nextFollowUpAt   DateTime?
+  externalId       String?   @unique
+  customFields     Json?
+  convertedContactId    String?
+  convertedCustomerId   String?
+  convertedOpportunityId String?
+  convertedAt      DateTime?
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([email])
+  @@index([phone])
+  @@index([statusId])
+  @@index([assignedUserId])
+  @@index([assignedTeamId])
+  @@index([campaignId])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([nextFollowUpAt])
+}
+
+model Account {
+  id           String    @id @default(cuid())
+  name         String
+  industry     String?
+  companySize  String?
+  revenue      BigInt?
+  website      String?
+  addressLine  String?
+  city         String?
+  country      String?
+  ownerUserId  String
+  owner        User      @relation("AccountOwner", fields: [ownerUserId], references: [id])
+  teamId       String?
+  team         Team?     @relation("AccountTeam", fields: [teamId], references: [id])
+  externalId   String?   @unique
+  customFields Json?
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  contacts       Contact[]
+  opportunities  Opportunity[]
+
+  @@index([name])
+  @@index([ownerUserId])
+}
+
+model Contact {
+  id           String    @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String?
+  phone        String?
+  jobTitle     String?
+  accountId    String?
+  account      Account?  @relation(fields: [accountId], references: [id])
+  ownerUserId  String
+  owner        User      @relation("ContactOwner", fields: [ownerUserId], references: [id])
+  teamId       String?
+  team         Team?     @relation("ContactTeam", fields: [teamId], references: [id])
+  leadSource   String?
+  campaignId   String?
+  campaign     Campaign? @relation("ContactCampaign", fields: [campaignId], references: [id])
+  statusId     String?
+  status       RecordStatus? @relation(fields: [statusId], references: [id])
+  externalId   String?   @unique
+  customFields Json?
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  customer       Customer?
+  opportunities  Opportunity[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([accountId])
+  @@index([ownerUserId])
+  @@index([lastName])
+}
+
+// An active client. Optionally linked to a Contact (1:1) and, once matching
+// is confirmed by an operator, to a registered trading-platform user.
+model Customer {
+  id             String    @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String?
+  phone          String?
+  contactId      String?   @unique
+  contact        Contact?  @relation(fields: [contactId], references: [id])
+  platformUserId String?   @unique
+  ownerUserId    String
+  owner          User      @relation("CustomerOwner", fields: [ownerUserId], references: [id])
+  teamId         String?
+  team           Team?     @relation("CustomerTeam", fields: [teamId], references: [id])
+  statusId       String?
+  status         RecordStatus? @relation(fields: [statusId], references: [id])
+  source         String?
+  campaignId     String?
+  campaign       Campaign? @relation("CustomerCampaign", fields: [campaignId], references: [id])
+  customFields   Json?
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  opportunities  Opportunity[]
+
+  @@index([email])
+  @@index([ownerUserId])
+}
+
+model Pipeline {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stages        PipelineStage[]
+  opportunities Opportunity[]
+}
+
+model PipelineStage {
+  id          String    @id @default(cuid())
+  pipelineId  String
+  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  name        String
+  sortOrder   Int       @default(0)
+  probability Int       @default(0)
+  type        StageType @default(OPEN)
+
+  opportunities Opportunity[]
+
+  @@unique([pipelineId, name])
+  @@index([pipelineId, sortOrder])
+}
+
+model Opportunity {
+  id               String            @id @default(cuid())
+  name             String
+  accountId        String?
+  account          Account?          @relation(fields: [accountId], references: [id])
+  contactId        String?
+  contact          Contact?          @relation(fields: [contactId], references: [id])
+  customerId       String?
+  customer         Customer?         @relation(fields: [customerId], references: [id])
+  ownerUserId      String
+  owner            User              @relation("OpportunityOwner", fields: [ownerUserId], references: [id])
+  pipelineId       String
+  pipeline         Pipeline          @relation(fields: [pipelineId], references: [id])
+  stageId          String
+  stage            PipelineStage     @relation(fields: [stageId], references: [id])
+  value            BigInt?
+  currency         String            @default("USD")
+  probability      Int               @default(0)
+  expectedCloseAt  DateTime?
+  source           String?
+  status           OpportunityStatus @default(OPEN)
+  closedAt         DateTime?
+  customFields     Json?
+  deletedAt        DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([pipelineId, stageId])
+  @@index([ownerUserId])
+  @@index([status])
+  @@index([accountId])
+}
+
+// ─────────────────────── Campaigns, tags, fields ───────────────────────
+
+model Campaign {
+  id          String         @id @default(cuid())
+  name        String         @unique
+  description String?
+  source      String?
+  status      CampaignStatus @default(DRAFT)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  ownerUserId String
+  owner       User           @relation("CampaignOwner", fields: [ownerUserId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  leads     Lead[]          @relation("LeadCampaign")
+  contacts  Contact[]       @relation("ContactCampaign")
+  customers Customer[]      @relation("CustomerCampaign")
+  members   CampaignMember[]
+
+  @@index([status])
+}
+
+model CampaignMember {
+  id          String      @id @default(cuid())
+  campaignId  String
+  campaign    Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  subjectType SubjectType
+  subjectId   String
+  status      String      @default("MEMBER")
+  respondedAt DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@unique([campaignId, subjectType, subjectId])
+  @@index([subjectType, subjectId])
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  name  String @unique
+  color String?
+
+  links TagLink[]
+}
+
+model TagLink {
+  id          String      @id @default(cuid())
+  tagId       String
+  tag         Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  subjectType SubjectType
+  subjectId   String
+
+  @@unique([tagId, subjectType, subjectId])
+  @@index([subjectType, subjectId])
+}
+
+// Registry of administrator-defined custom fields. Values live in the
+// owning record's customFields JSONB column, validated against this
+// registry on every write.
+model CustomFieldDef {
+  id         String    @id @default(cuid())
+  objectType SubjectType
+  key        String
+  label      String
+  fieldType  FieldType
+  options    Json?
+  required   Boolean   @default(false)
+  sortOrder  Int       @default(0)
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([objectType, key])
+  @@index([objectType, active])
+}
+
+// ────────────────────── Activities & timeline ──────────────────────
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  ownerUserId String
+  owner       User       @relation("TaskOwner", fields: [ownerUserId], references: [id])
+  dueAt       DateTime?
+  priority    Priority   @default(NORMAL)
+  status      TaskStatus @default(OPEN)
+  completedAt DateTime?
+  subjectType SubjectType?
+  subjectId   String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([ownerUserId, dueAt, status])
+  @@index([subjectType, subjectId])
+}
+
+model Note {
+  id          String   @id @default(cuid())
+  body        String
+  authorUserId String
+  author      User     @relation("NoteAuthor", fields: [authorUserId], references: [id])
+  subjectType SubjectType
+  subjectId   String
+  createdAt   DateTime @default(now())
+
+  @@index([subjectType, subjectId, createdAt])
+  @@index([authorUserId])
+}
+
+model Appointment {
+  id             String            @id @default(cuid())
+  title          String
+  startAt        DateTime
+  endAt          DateTime?
+  locationOrLink String?
+  status         AppointmentStatus @default(SCHEDULED)
+  ownerUserId    String
+  owner          User              @relation("AppointmentOwner", fields: [ownerUserId], references: [id])
+  subjectType    SubjectType?
+  subjectId      String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([ownerUserId, startAt])
+  @@index([subjectType, subjectId])
+}
+
+// Denormalized timeline rows written by the service layer on every
+// meaningful mutation. Record pages render the timeline from here; the
+// typed tables above remain the source of truth for filtering.
+// Append-only: no update or delete path may ever exist.
+model ActivityEvent {
+  id          String      @id @default(cuid())
+  subjectType SubjectType
+  subjectId   String
+  kind        String
+  actorUserId String?
+  actor       User?       @relation("ActivityActor", fields: [actorUserId], references: [id])
+  payload     Json?
+  createdAt   DateTime    @default(now())
+
+  @@index([subjectType, subjectId, createdAt])
+}
+
+model SavedView {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  objectType SubjectType
+  name       String
+  config     Json
+  shared     Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([userId, objectType, name])
+}
+
+// ──────────────────────────── Import system ────────────────────────────
+
+model ImportJob {
+  id             String          @id @default(cuid())
+  source         ImportSource
+  objectType     ImportObjectType
+  status         ImportStatus    @default(DRAFT)
+  strategy       ImportStrategy  @default(CREATE)
+  mapping        Json?
+  matchRules     Json?
+  totalRows      Int             @default(0)
+  processedRows  Int             @default(0)
+  createdCount   Int             @default(0)
+  updatedCount   Int             @default(0)
+  skippedCount   Int             @default(0)
+  duplicateCount Int             @default(0)
+  errorCount     Int             @default(0)
+  fileKey        String?
+  errorReportKey String?
+  createdById    String
+  createdBy      User            @relation("ImportCreator", fields: [createdById], references: [id])
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  errors ImportError[]
+
+  @@index([status, createdAt])
+  @@index([createdById])
+}
+
+// One row per rejected/flagged spreadsheet row — nothing is silently
+// discarded; operators download this as CSV.
+model ImportError {
+  id        String    @id @default(cuid())
+  jobId     String
+  job       ImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  rowNumber Int
+  data      Json
+  message   String
+
+  @@index([jobId, rowNumber])
+}
+
+model ImportMapping {
+  id         String       @id @default(cuid())
+  name       String
+  source     ImportSource
+  objectType ImportObjectType
+  mapping    Json
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([name, source, objectType])
+}
+
+// ─────────────────────── Platform, files, misc ───────────────────────
+
+model Notification {
+  id              String           @id @default(cuid())
+  recipientUserId String
+  recipient       User             @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+  type            NotificationType
+  payload         Json
+  readAt          DateTime?
+  createdAt       DateTime         @default(now())
+
+  @@index([recipientUserId, readAt, createdAt])
+}
+
+model Attachment {
+  id              String      @id @default(cuid())
+  filename        String
+  mimeType        String
+  size            BigInt
+  storageKey      String
+  uploaderUserId  String
+  uploader        User        @relation("FileUploader", fields: [uploaderUserId], references: [id])
+  subjectType     SubjectType
+  subjectId       String
+  createdAt       DateTime    @default(now())
+
+  @@index([subjectType, subjectId, createdAt])
+}
+
+// Audit trail of merge operations; snapshot keeps the pre-merge payload so
+// merges are reversible by an administrator even though merged rows go away.
+model MergeRecord {
+  id          String      @id @default(cuid())
+  objectType  SubjectType
+  primaryId   String
+  mergedId    String
+  snapshot    Json
+  actorUserId String
+  actor       User        @relation("MergeActor", fields: [actorUserId], references: [id])
+  createdAt   DateTime    @default(now())
+
+  @@index([objectType, primaryId])
+}

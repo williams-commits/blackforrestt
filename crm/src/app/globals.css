@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/*
+ * Black Forest CRM — light, dense enterprise theme. Deliberately distinct
+ * from the trading platform's dark ops console: this is a productivity
+ * workspace, not a market terminal.
+ */
+:root {
+  --brand: #1f6f43;
+  --brand-dark: #174f31;
+  --surface: #f6f7f6;
+}
+
+body {
+  background: var(--surface);
+  color: #1a1f1c;
+}

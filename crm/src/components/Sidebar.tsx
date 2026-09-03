@@ -12,7 +12,7 @@ const NAV_ITEMS: Array<{ href: string; label: string; phase?: number }> = [
   { href: "/tasks", label: "Tasks" },
   { href: "/imports", label: "Import" },
   { href: "/campaigns", label: "Campaigns" },
-  { href: "/reports", label: "Reports", phase: 9 },
+  { href: "/reports", label: "Reports" },
   { href: "/admin", label: "Administration" },
 ];
 

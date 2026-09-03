@@ -312,9 +312,13 @@ async function seedDemoData(users: Record<string, string>, teamIds: { sales: str
     { name: "Rossi Importi — starter package", account: 3, stage: "Negotiation", value: 2_200_00, probability: 85 },
     { name: "Sharma Analytics — pilot", account: 4, stage: "Won", value: 900_00, probability: 100 },
   ];
+  const monthsAgo = (n: number) => new Date(Date.now() - n * 30 * 24 * 60 * 60 * 1000);
   for (const [index, opportunity] of opportunities.entries()) {
     const stage = stageByName.get(opportunity.stage)!;
     const seedId = `demoopp${index + 1}seed`;
+    // Spread creation across recent months so time-bucket reports show a
+    // trend; closed deals close shortly after creation.
+    const createdAt = monthsAgo(4 - index);
     await prisma.opportunity.upsert({
       where: { id: seedId },
       create: {
@@ -328,6 +332,8 @@ async function seedDemoData(users: Record<string, string>, teamIds: { sales: str
         value: BigInt(opportunity.value),
         probability: opportunity.probability,
         status: stage.type === "OPEN" ? "OPEN" : stage.type === "WON" ? "WON" : "LOST",
+        closedAt: stage.type === "OPEN" ? null : new Date(createdAt.getTime() + 5 * 24 * 60 * 60 * 1000),
+        createdAt,
       },
       update: { teamId: teamIds.sales },
     });

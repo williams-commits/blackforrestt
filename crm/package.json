@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start -p 3100",
     "lint": "eslint . --max-warnings=0",
+    "stop:server": "lsof -ti:3100 | xargs kill -9", 
+    "stop:clean": "lsof -ti :3100 | xargs kill -9; rm -rf .next && npm run dev",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

@@ -56,6 +56,24 @@ trap 'rm -f "$tmp"' EXIT
   }
 }
 
+(crm-site) {
+  encode zstd gzip
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    -Server
+  }
+  reverse_proxy crm:3000 {
+    health_uri /api/health
+    health_interval 15s
+    health_timeout 5s
+  }
+  log {
+    output stdout
+    format json
+  }
+}
 SNIPPET
   for var in DOMAIN TRADE_DOMAIN DOMAIN_2 TRADE_DOMAIN_2 DOMAIN_3 TRADE_DOMAIN_3; do
     value="$(env_value "$var")"
@@ -68,6 +86,11 @@ SNIPPET
       fi
     fi
   done
+  # CRM module subdomain (crm.<domain>) — proxied to the crm container.
+  crm_domain="$(env_value "CRM_DOMAIN")"
+  if [[ -n "$crm_domain" ]]; then
+    printf '# CRM_DOMAIN\n%s {\n  import crm-site\n}\n\n' "$crm_domain"
+  fi
 } > "$tmp"
 mv "$tmp" "$out"
 

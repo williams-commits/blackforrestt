@@ -10,6 +10,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/server/db";
+import { clearLoginFailures, loginIsLocked, recordLoginFailure } from "@/server/security/rateLimit";
 
 // A missing secret must never degrade into per-boot ephemeral keys: any
 // session cookie issued before a restart would become undecryptable and
@@ -66,6 +67,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null;
         const email = parsed.data.email.toLowerCase();
 
+        // Login lockout: repeated password failures for one account pause
+        // further attempts (in-memory; see rateLimit.ts for the model).
+        if (loginIsLocked(email)) return null;
+
         const user = await prisma.user.findUnique({
           where: { email },
           select: { id: true, email: true, name: true, passwordHash: true, status: true, role: { select: { key: true } } },
@@ -74,7 +79,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // responses don't reveal which part failed.
         if (!user || user.status !== "ACTIVE") return null;
         const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
-        if (!ok) return null;
+        if (!ok) {
+          recordLoginFailure(email);
+          return null;
+        }
+        clearLoginFailures(email);
 
         await prisma.user.update({
           where: { id: user.id },
@@ -95,6 +104,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id;
         token.roleKey = user.roleKey;
+        return token;
+      }
+      // Re-validate the subject on every request: a validly-signed JWT whose
+      // user no longer exists (e.g. the database was reset and IDs were
+      // regenerated) must decode to NO session everywhere at once. Without
+      // this, middleware would accept the cookie while page layouts reject
+      // the unknown user — an ERR_TOO_MANY_REDIRECTS loop between / and
+      // /login that only clearing cookies could break.
+      if (typeof token.id === "string") {
+        const subject = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { id: true, status: true },
+        });
+        if (!subject || subject.status !== "ACTIVE") {
+          return {};
+        }
       }
       return token;
     },

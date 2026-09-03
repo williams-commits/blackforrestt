@@ -13,6 +13,7 @@ const eslintConfig = [
       "dist/**",
       "artifacts/**",
       "e2e/node_modules/**",
+      "crm/**",
     ],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),

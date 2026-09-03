@@ -5,6 +5,8 @@ import type { NextConfig } from "next";
 // back to the trading platform — the two apps share nothing at runtime.
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Standalone server bundle for the slim production Docker image.
+  output: "standalone",
   // `npm run lint` runs the flat-config ESLint suite explicitly; the
   // build-integrated linter uses legacy options that don't apply to it.
   eslint: { ignoreDuringBuilds: true },

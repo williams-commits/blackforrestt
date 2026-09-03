@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
+import { consumeApiMutation } from "@/server/security/rateLimit";
 
 // The auth() wrapper decodes the session JWT (jose, no DB hit) so decisions
 // are made on a VERIFIED session — never on mere cookie presence. This
@@ -19,6 +20,40 @@ const PUBLIC_PREFIXES = ["/login", "/api/auth", "/api/health"];
 // list as an in-code bypass; the matcher below stays regex-free.
 const ASSET_PREFIXES = ["/_next/", "/favicon.ico", "/icon.svg", "/manifest.webmanifest", "/robots.txt"];
 
+/** Baseline security headers on every response (edge Caddy adds HSTS). */
+function withSecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  return response;
+}
+
+/** Client IP for rate limiting (behind Caddy in production). */
+function clientIp(request: NextRequest): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0]!.trim();
+  return request.headers.get("x-real-ip") ?? "unknown";
+}
+
+/**
+ * Same-origin gate for mutating API calls (defense-in-depth on top of
+ * Auth.js CSRF): when a browser sends an Origin header it must match the
+ * request host. Server-to-server callers (the platform bridge) send no
+ * Origin and pass.
+ */
+function mutationOriginAllowed(request: NextRequest): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+  try {
+    const originHost = new URL(origin).host;
+    const requestHost = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "";
+    return originHost === requestHost;
+  } catch {
+    return false;
+  }
+}
+
 const authHandler = auth((req) => {
   const { pathname } = req.nextUrl;
   const isPublic = PUBLIC_PREFIXES.some(
@@ -30,9 +65,23 @@ const authHandler = auth((req) => {
     // A genuinely signed-in user has no business on the login page; a stale
     // cookie decodes to no session and falls through to the form.
     if (pathname === "/login" && hasSession) {
-      return NextResponse.redirect(new URL("/", req.url));
+      return withSecurityHeaders(NextResponse.redirect(new URL("/", req.url)));
     }
-    return NextResponse.next();
+    return withSecurityHeaders(NextResponse.next());
+  }
+
+  // Mutating API calls: same-origin check + per-IP throttle.
+  if (pathname.startsWith("/api/") && !["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    if (!mutationOriginAllowed(req)) {
+      return NextResponse.json({ error: "Cross-origin request rejected." }, { status: 403 });
+    }
+    const limit = consumeApiMutation(clientIp(req));
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests — slow down." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(limit.retryAfterMs / 1000)) } },
+      );
+    }
   }
 
   if (!hasSession) {
@@ -41,22 +90,21 @@ const authHandler = auth((req) => {
     }
     const url = new URL("/login", req.url);
     url.searchParams.set("callbackUrl", `${pathname}${req.nextUrl.search}`);
-    return NextResponse.redirect(url, 307);
+    return withSecurityHeaders(NextResponse.redirect(url, 307));
   }
-  return NextResponse.next();
+  return withSecurityHeaders(NextResponse.next());
 });
 
 export default async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-
   // Never run the auth() wrapper over Auth.js's own endpoints: the wrapper
   // and the route handler each initialize the CSRF cookie independently,
   // emitting two different values in one response — the browser keeps the
   // second while the returned token matches the first, so every login
   // submit fails with MissingCSRF. Auth.js routes carry their own
   // CSRF/state protection.
+  const { pathname } = req.nextUrl;
   if (pathname === "/api/auth" || pathname.startsWith("/api/auth/")) {
-    return NextResponse.next();
+    return withSecurityHeaders(NextResponse.next());
   }
 
   // Static assets pass through untouched (see ASSET_PREFIXES note above).

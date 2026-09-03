@@ -1,17 +1,24 @@
+import { DashboardCards } from "@/components/DashboardCards";
 import { HomeWidgets } from "@/components/HomeWidgets";
 
 const ROADMAP: Array<{ title: string; phase: number; detail: string; done?: boolean }> = [
   { title: "Foundation — auth, RBAC, teams, audit", phase: 1, detail: "Shipped", done: true },
-  { title: "Leads, contacts, accounts & customers", phase: 2, detail: "Shipped — list views, filters, bulk actions, timelines", done: true },
-  { title: "Tasks, notes, appointments & notifications", phase: 3, detail: "Shipped — follow-ups, record activities, in-app notifications", done: true },
-  { title: "Duplicate matching & lead conversion", phase: 4, detail: "Merge tools with history preservation" },
-  { title: "Opportunities & pipelines", phase: 5, detail: "Configurable stages, list + kanban" },
-  { title: "CSV import wizard", phase: 6, detail: "Preview → map → validate → dedupe → run" },
+  { title: "Core records & activities", phase: 2, detail: "Shipped — leads, contacts, accounts, customers", done: true },
+  { title: "Tasks, notes, appointments, notifications", phase: 3, detail: "Shipped", done: true },
+  { title: "Dedup, conversion & merge", phase: 4, detail: "Shipped", done: true },
+  { title: "Opportunities & pipelines", phase: 5, detail: "Shipped — kanban, stage automation", done: true },
+  { title: "CSV import wizard", phase: 6, detail: "Shipped — async jobs, error reports", done: true },
+  { title: "Campaigns & configuration", phase: 7, detail: "Shipped — tags, custom fields, admin console", done: true },
+  { title: "Global search & saved views", phase: 8, detail: "Shipped — trigram-indexed, scope-safe", done: true },
+  { title: "Dashboards & reporting", phase: 9, detail: "Shipped — report engine, exports, KPI cards", done: true },
+  { title: "Platform bridge", phase: 10, detail: "Customer ↔ trading-platform user linking" },
+  { title: "Hardening & QA", phase: 11, detail: "Security review, load checks, runbook" },
 ];
 
 export default function HomePage() {
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <div className="mx-auto max-w-6xl space-y-8">
+      <DashboardCards />
       <HomeWidgets />
 
       <section>

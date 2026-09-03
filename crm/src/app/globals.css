@@ -15,3 +15,7 @@ body {
   background: var(--surface);
   color: #1a1f1c;
 }
+
+button {
+  cursor: pointer;
+}

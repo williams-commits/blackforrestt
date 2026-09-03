@@ -94,6 +94,16 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   const [mergePrimary, setMergePrimary] = useState<string>("");
   const [mergeBusy, setMergeBusy] = useState(false);
   const [mergeError, setMergeError] = useState<string | null>(null);
+  const [views, setViews] = useState<
+    Array<{
+      id: string;
+      name: string;
+      shared: boolean;
+      config: { q?: string; filters?: Record<string, string> };
+      user?: { name: string };
+    }>
+  >([]);
+  const [viewName, setViewName] = useState("");
 
   const can = useMemo(() => {
     const permissions = me?.permissions ?? [];
@@ -184,7 +194,11 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       .then((body) => setMe(body?.data ?? null))
       .catch(() => setMe(null));
     void fetchOptions();
-  }, [fetchOptions]);
+    void fetch(`/api/views?objectType=${object.toUpperCase().slice(0, -1)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => setViews(body?.data ?? []))
+      .catch(() => setViews([]));
+  }, [fetchOptions, object]);
 
   useEffect(() => {
     void fetchRows();
@@ -322,6 +336,63 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             );
           })}
         </form>
+        <div className="flex items-center gap-2 border-l border-stone-200 pl-2">
+          {views.length > 0 ? (
+            <select
+              aria-label="Saved views"
+              defaultValue=""
+              onChange={(event) => {
+                const view = views.find((entry) => entry.id === event.target.value);
+                if (!view) return;
+                setSearch(view.config.q ?? "");
+                setFilters(view.config.filters ?? {});
+                setPage(1);
+              }}
+              className="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
+            >
+              <option value="">Saved views…</option>
+              {views.map((view) => (
+                <option key={view.id} value={view.id}>
+                  {view.name}
+                  {view.shared ? " (shared)" : ""}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          <input
+            aria-label="View name"
+            placeholder="Name this view"
+            value={viewName}
+            onChange={(event) => setViewName(event.target.value)}
+            className="w-32 rounded-md border border-stone-300 px-2 py-1.5 text-sm"
+          />
+          <button
+            type="button"
+            disabled={!viewName}
+            onClick={async () => {
+              const response = await fetch("/api/views", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  objectType: object.toUpperCase().slice(0, -1),
+                  name: viewName,
+                  config: { q: search, filters },
+                  shared: false,
+                }),
+              });
+              if (response.ok) {
+                setViewName("");
+                const refreshed = await fetch(
+                  `/api/views?objectType=${object.toUpperCase().slice(0, -1)}`,
+                ).then((r) => (r.ok ? r.json() : { data: [] }));
+                setViews(refreshed.data);
+              }
+            }}
+            className="rounded-md border border-stone-300 px-2 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:opacity-50"
+          >
+            Save view
+          </button>
+        </div>
       </div>
 
       {selected.size > 0 && can.bulk ? (

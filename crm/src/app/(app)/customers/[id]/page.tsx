@@ -11,8 +11,10 @@ import { TagEditor } from "@/components/TagEditor";
 import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
 import { listTagsForSubject } from "@/server/records/tags";
 import { listCustomFields } from "@/server/records/customFields";
+import { client360 } from "@/server/platformBridge";
 import { RecordActivities } from "@/components/RecordActivities";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
+import { PlatformLinkPanel, PlatformUnlinkButton } from "@/components/PlatformLinkPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
   let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
   let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
+  let platform: Awaited<ReturnType<typeof client360>> = null;
   let canEdit = false;
   let canDelete = false;
   try {
@@ -45,6 +48,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "CUSTOMER");
     notes = await listNotesBySubject("CUSTOMER", id);
     appointments = await listAppointmentsBySubject("CUSTOMER", id);
+    platform = customer.platformUserId ? await client360(customer.platformUserId) : null;
     canEdit = ctx.permissions.includes("CUSTOMERS_EDIT");
     canDelete = ctx.permissions.includes("CUSTOMERS_DELETE");
   } catch (error) {
@@ -103,6 +107,90 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           <Field label="Created" value={customer.createdAt.toLocaleDateString()} />
                   <CustomFieldsPanel defs={cfDefs} values={customer.customFields} />
         </dl>
+      </section>
+
+      <section className="rounded-lg border border-stone-200 bg-white p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-500">
+            Platform (read-only bridge)
+          </h2>
+          {customer.platformUserId && canEdit ? (
+            <PlatformUnlinkButton customerId={customer.id} />
+          ) : null}
+        </div>
+        {customer.platformUserId ? (
+          platform ? (
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="rounded-md border border-stone-100 bg-stone-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">Account</p>
+                <p className="mt-1 text-sm font-medium">{platform.user.name ?? platform.user.email ?? "—"}</p>
+                <p className="text-xs text-stone-500">{platform.user.email}</p>
+                <p className="mt-1 text-xs">
+                  State:{" "}
+                  <span className={platform.user.state === "ACTIVE" ? "text-green-700" : "text-red-600"}>
+                    {platform.user.state.toLowerCase()}
+                  </span>{" "}
+                  · registered {new Date(platform.user.registeredAt).toLocaleDateString()}
+                </p>
+              </div>
+              <div className="rounded-md border border-stone-100 bg-stone-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">KYC</p>
+                <p className="mt-1 text-sm font-medium">
+                  {platform.kyc?.status.replaceAll("_", " ").toLowerCase() ?? "not submitted"}
+                </p>
+                {platform.kyc?.submittedAt ? (
+                  <p className="text-xs text-stone-500">
+                    submitted {new Date(platform.kyc.submittedAt).toLocaleDateString()}
+                  </p>
+                ) : null}
+                <p className="mt-1 text-xs text-stone-500">{platform.openPositions} open position(s)</p>
+              </div>
+              <div className="rounded-md border border-stone-100 bg-stone-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">Wallets</p>
+                {platform.wallets.length === 0 ? (
+                  <p className="mt-1 text-sm text-stone-400">No wallets.</p>
+                ) : (
+                  <ul className="mt-1 space-y-0.5 text-sm">
+                    {platform.wallets.map((wallet) => (
+                      <li key={wallet.asset} className="flex justify-between">
+                        <span>{wallet.asset}</span>
+                        <span>
+                          {Number(wallet.free).toLocaleString()} free
+                          {Number(wallet.locked) > 0 ? ` · ${Number(wallet.locked).toLocaleString()} locked` : ""}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="lg:col-span-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">Recent payments</p>
+                {platform.payments.length === 0 ? (
+                  <p className="mt-1 text-sm text-stone-400">No payment requests.</p>
+                ) : (
+                  <table className="mt-1 w-full text-sm">
+                    <tbody>
+                      {platform.payments.map((payment) => (
+                        <tr key={payment.id} className="border-b border-stone-100">
+                          <td className="py-1">{new Date(payment.createdAt).toLocaleDateString()}</td>
+                          <td className="py-1">{payment.type.toLowerCase()}</td>
+                          <td className="py-1">{Number(payment.amount).toLocaleString()} {payment.asset}</td>
+                          <td className="py-1 text-stone-500">{payment.status.toLowerCase()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-amber-700">
+              Linked, but the platform bridge is unavailable right now — refresh later.
+            </p>
+          )
+        ) : (
+          <PlatformLinkPanel customerId={customer.id} customerEmail={customer.email} canEdit={canEdit} />
+        )}
       </section>
 
       <section className="rounded-lg border border-stone-200 bg-white p-6">

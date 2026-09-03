@@ -4,13 +4,16 @@ Standalone sales & relationship-management module. Runs as its own Next.js
 application on its own subdomain with its own database — fully isolated from
 the trading platform. Design and roadmap: [`DESIGN.md`](./DESIGN.md).
 
-**Status: Phase 7 (campaigns & configuration) implemented.** Foundation,
-core records, activities/notifications, dedup/conversion/merge,
-opportunities, CSV import — plus campaigns with scope-checked membership
-and stats, tags (attach/detach on any record), admin-defined custom fields
-(JSONB values validated server-side on every write), a full administration
-console (statuses, tags, custom fields, teams/users, audit log), and
-campaign attribution on record forms. Search and reporting arrive next.
+**Status: Phase 11 (hardening) complete — all phases shipped.** The full
+roadmap is implemented: foundation & RBAC, core records, activities &
+notifications, dedup/conversion/merge, opportunities & pipelines, the CSV
+import wizard, campaigns & configuration admin, trigram global search with
+saved views, the report engine & dashboards, the read-only platform
+bridge, and hardening: login lockout, per-IP API mutation throttling,
+same-origin mutation gate, baseline security headers, a standalone Docker
+image, subdomain deployment wiring (compose + Caddy + env), and a load
+check at 3k rows (50–80 ms warm on lists/search/reports). Operations:
+[DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ## Stack
 
@@ -57,6 +60,13 @@ npm run build
 ```
 
 ## Troubleshooting
+
+**`ERR_TOO_MANY_REDIRECTS` between / and /login** — the browser holds a
+session cookie for a user that no longer exists (typically after
+`prisma migrate reset` regenerated all IDs). The JWT callback now
+re-validates the subject on every request, so a dead session decodes as no
+session everywhere at once and the login page simply renders — no manual
+cookie clearing needed. Just reload.
 
 **Pages render unstyled / stylesheet 404** — `npm run build` was run while
 `npm run dev` was still serving. The production build overwrites `.next`,

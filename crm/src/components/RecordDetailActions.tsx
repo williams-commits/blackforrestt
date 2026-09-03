@@ -12,6 +12,7 @@ const EMPTY: OptionSource = {
   users: [],
   accounts: [],
   contacts: [],
+  campaigns: [],
 };
 
 /** Fresh buckets per fetch — spreading EMPTY would share (and mutate) its arrays. */
@@ -23,6 +24,7 @@ function freshOptions(): OptionSource {
     users: [],
     accounts: [],
     contacts: [],
+    campaigns: [],
   };
 }
 
@@ -56,6 +58,12 @@ export function useOptionSources(object: ObjectKey): OptionSource {
           );
           for (const account of accounts.data as Array<{ id: string; name: string }>) {
             next.accounts.push({ value: account.id, label: account.name });
+          }
+        }
+        if (object === "leads" || object === "contacts" || object === "customers") {
+          const campaigns = await fetch("/api/campaigns").then((r) => (r.ok ? r.json() : { data: [] }));
+          for (const campaign of campaigns.data as Array<{ id: string; name: string }>) {
+            next.campaigns.push({ value: campaign.id, label: campaign.name });
           }
         }
         if (object === "customers") {

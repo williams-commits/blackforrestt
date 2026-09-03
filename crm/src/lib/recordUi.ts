@@ -29,7 +29,8 @@ export interface FieldConfig {
     | "customerStatuses"
     | "users"
     | "accounts"
-    | "contacts";
+    | "contacts"
+    | "campaigns";
   placeholder?: string;
 }
 
@@ -104,6 +105,7 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
       { name: "nextFollowUpAt", label: "Next follow-up", type: "datetime-local" },
       { name: "externalId", label: "External ID", type: "text" },
       { name: "assignedUserId", label: "Assignee", type: "select", optionsFrom: "users" },
+      { name: "campaignId", label: "Campaign", type: "select", optionsFrom: "campaigns" },
     ],
     searchPlaceholder: "Search name, email, phone, company…",
   },
@@ -134,6 +136,7 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
       { name: "statusId", label: "Status", type: "select", optionsFrom: "contactStatuses" },
       { name: "externalId", label: "External ID", type: "text" },
       { name: "ownerUserId", label: "Owner", type: "select", optionsFrom: "users" },
+      { name: "campaignId", label: "Campaign", type: "select", optionsFrom: "campaigns" },
     ],
     searchPlaceholder: "Search name, email, phone, title…",
   },
@@ -191,6 +194,7 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
       { name: "statusId", label: "Status", type: "select", optionsFrom: "customerStatuses" },
       { name: "contactId", label: "Linked contact", type: "select", optionsFrom: "contacts" },
       { name: "ownerUserId", label: "Owner", type: "select", optionsFrom: "users" },
+      { name: "campaignId", label: "Campaign", type: "select", optionsFrom: "campaigns" },
     ],
     searchPlaceholder: "Search name, email, phone…",
   },

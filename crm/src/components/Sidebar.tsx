@@ -11,9 +11,9 @@ const NAV_ITEMS: Array<{ href: string; label: string; phase?: number }> = [
   { href: "/opportunities", label: "Opportunities" },
   { href: "/tasks", label: "Tasks" },
   { href: "/imports", label: "Import" },
-  { href: "/campaigns", label: "Campaigns", phase: 7 },
+  { href: "/campaigns", label: "Campaigns" },
   { href: "/reports", label: "Reports", phase: 9 },
-  { href: "/admin", label: "Administration", phase: 7 },
+  { href: "/admin", label: "Administration" },
 ];
 
 export function Sidebar() {

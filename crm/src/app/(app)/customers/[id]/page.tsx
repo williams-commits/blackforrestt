@@ -7,6 +7,10 @@ import { listTimeline } from "@/server/activity";
 import { listNotesBySubject } from "@/server/records/notes";
 import { listAppointmentsBySubject } from "@/server/records/appointments";
 import { Timeline } from "@/components/Timeline";
+import { TagEditor } from "@/components/TagEditor";
+import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
+import { listTagsForSubject } from "@/server/records/tags";
+import { listCustomFields } from "@/server/records/customFields";
 import { RecordActivities } from "@/components/RecordActivities";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
 
@@ -27,6 +31,8 @@ export default async function CustomerDetailPage({ params }: PageProps) {
   const { id } = await params;
   let customer;
   let events: Awaited<ReturnType<typeof listTimeline>> = [];
+  let tags: Awaited<ReturnType<typeof listTagsForSubject>> = [];
+  let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
   let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
   let canEdit = false;
@@ -35,6 +41,8 @@ export default async function CustomerDetailPage({ params }: PageProps) {
     const ctx = await scopedContext("CUSTOMERS_READ");
     customer = await getCustomer(ctx, id);
     events = await listTimeline("CUSTOMER", id);
+    tags = await listTagsForSubject("CUSTOMER", id);
+    cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "CUSTOMER");
     notes = await listNotesBySubject("CUSTOMER", id);
     appointments = await listAppointmentsBySubject("CUSTOMER", id);
     canEdit = ctx.permissions.includes("CUSTOMERS_EDIT");
@@ -67,6 +75,15 @@ export default async function CustomerDetailPage({ params }: PageProps) {
 
       <section className="rounded-lg border border-stone-200 bg-white p-6">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500">Overview</h2>
+        <div className="mb-4">
+          <p className="mb-1 text-xs uppercase tracking-wide text-stone-400">Tags</p>
+          <TagEditor
+            subjectType="CUSTOMER"
+            subjectId={id}
+            attached={tags.map((link) => ({ tagId: link.tagId, name: link.tag.name, color: link.tag.color }))}
+            canEdit={canEdit}
+          />
+        </div>
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Field label="Email" value={customer.email} />
           <Field label="Phone" value={customer.phone} />
@@ -84,6 +101,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           <Field label="Platform user" value={customer.platformUserId ? "linked" : "not linked"} />
           <Field label="Team" value={customer.team?.name} />
           <Field label="Created" value={customer.createdAt.toLocaleDateString()} />
+                  <CustomFieldsPanel defs={cfDefs} values={customer.customFields} />
         </dl>
       </section>
 

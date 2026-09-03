@@ -7,6 +7,10 @@ import { listTimeline } from "@/server/activity";
 import { listNotesBySubject } from "@/server/records/notes";
 import { listAppointmentsBySubject } from "@/server/records/appointments";
 import { Timeline } from "@/components/Timeline";
+import { TagEditor } from "@/components/TagEditor";
+import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
+import { listTagsForSubject } from "@/server/records/tags";
+import { listCustomFields } from "@/server/records/customFields";
 import { RecordActivities } from "@/components/RecordActivities";
 import { OpportunityDetailActions } from "@/components/OpportunityDetailActions";
 
@@ -27,6 +31,8 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
   const { id } = await params;
   let opportunity;
   let events: Awaited<ReturnType<typeof listTimeline>> = [];
+  let tags: Awaited<ReturnType<typeof listTagsForSubject>> = [];
+  let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
   let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
   let canEdit = false;
@@ -35,6 +41,8 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
     const ctx = await scopedContext("OPPORTUNITIES_READ");
     opportunity = await getOpportunity(ctx, id);
     events = await listTimeline("OPPORTUNITY", id);
+    tags = await listTagsForSubject("OPPORTUNITY", id);
+    cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "OPPORTUNITY");
     notes = await listNotesBySubject("OPPORTUNITY", id);
     appointments = await listAppointmentsBySubject("OPPORTUNITY", id);
     canEdit = ctx.permissions.includes("OPPORTUNITIES_EDIT");
@@ -71,6 +79,15 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
 
       <section className="rounded-lg border border-stone-200 bg-white p-6">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500">Overview</h2>
+        <div className="mb-4">
+          <p className="mb-1 text-xs uppercase tracking-wide text-stone-400">Tags</p>
+          <TagEditor
+            subjectType="OPPORTUNITY"
+            subjectId={id}
+            attached={tags.map((link) => ({ tagId: link.tagId, name: link.tag.name, color: link.tag.color }))}
+            canEdit={canEdit}
+          />
+        </div>
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Field
             label="Account"
@@ -97,6 +114,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
           <Field label="Expected close" value={opportunity.expectedCloseAt?.toLocaleDateString() ?? null} />
           <Field label="Closed" value={opportunity.closedAt?.toLocaleDateString() ?? null} />
           <Field label="Created" value={opportunity.createdAt.toLocaleDateString()} />
+                  <CustomFieldsPanel defs={cfDefs} values={opportunity.customFields} />
         </dl>
       </section>
 

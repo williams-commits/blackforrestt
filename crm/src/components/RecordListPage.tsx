@@ -23,6 +23,7 @@ const EMPTY_OPTIONS: OptionSource = {
   users: [],
   accounts: [],
   contacts: [],
+  campaigns: [],
 };
 
 /**
@@ -39,6 +40,7 @@ function freshOptions(): OptionSource {
     users: [],
     accounts: [],
     contacts: [],
+    campaigns: [],
   };
 }
 
@@ -129,6 +131,12 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         );
         for (const account of accounts.data as Array<{ id: string; name: string }>) {
           next.accounts.push({ value: account.id, label: account.name });
+        }
+      }
+      if (object === "leads" || object === "contacts" || object === "customers") {
+        const campaigns = await fetch("/api/campaigns").then((r) => (r.ok ? r.json() : { data: [] }));
+        for (const campaign of campaigns.data as Array<{ id: string; name: string }>) {
+          next.campaigns.push({ value: campaign.id, label: campaign.name });
         }
       }
       if (object === "customers") {

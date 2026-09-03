@@ -7,6 +7,7 @@ import { appendActivity } from "@/server/activity";
 import { normalizeText } from "@/server/normalize";
 import { ownerScopeWhere } from "@/server/scope";
 import { orderByFor, searchWhere } from "@/server/listQuery";
+import { sanitizeCustomFields } from "@/server/records/customFields";
 import type { ScopedContext } from "@/server/records/leads";
 
 /** Account (company) service. Revenue is stored in integer minor units. */
@@ -23,6 +24,7 @@ export const CreateAccount = z.object({
   externalId: z.string().trim().min(2).max(120).optional().nullable(),
   ownerUserId: z.string().trim().min(5).optional().nullable(),
   teamId: z.string().trim().min(5).optional().nullable(),
+  customFields: z.record(z.unknown()).optional().nullable(),
 });
 
 export const UpdateAccount = CreateAccount.partial();
@@ -109,7 +111,8 @@ export async function createAccount(ctx: ScopedContext, input: z.infer<typeof Cr
         ...dataFrom(input, false),
         ownerUserId: input.ownerUserId ?? ctx.userId,
         teamId: input.teamId ?? null,
-      } as Prisma.AccountUncheckedCreateInput,
+        customFields: (await sanitizeCustomFields("ACCOUNT", input.customFields, "create")) as never,
+      } as unknown as Prisma.AccountUncheckedCreateInput,
     });
     await appendActivity(tx, {
       subjectType: "ACCOUNT",
@@ -140,6 +143,9 @@ export async function updateAccount(ctx: ScopedContext, id: string, input: z.inf
         ...dataFrom(input, true),
         ...(input.ownerUserId !== undefined ? { ownerUserId: input.ownerUserId } : {}),
         ...(input.teamId !== undefined ? { teamId: input.teamId } : {}),
+        ...(input.customFields !== undefined
+          ? { customFields: (await sanitizeCustomFields("ACCOUNT", input.customFields, "update")) as never }
+          : {}),
       } as Prisma.AccountUncheckedUpdateInput,
     });
     await appendActivity(tx, { subjectType: "ACCOUNT", subjectId: id, kind: "updated", actorUserId: ctx.userId });

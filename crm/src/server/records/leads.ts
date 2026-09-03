@@ -11,6 +11,7 @@ import {
 import { orderByFor, searchWhere } from "@/server/listQuery";
 import { notify } from "@/server/notifications";
 import { findMatches } from "@/server/records/duplicates";
+import { sanitizeCustomFields } from "@/server/records/customFields";
 import { z } from "zod";
 
 /**
@@ -216,8 +217,8 @@ export async function createLead(ctx: ScopedContext, input: z.infer<typeof Creat
         campaignId: input.campaignId ?? null,
         assignedUserId,
         assignedTeamId,
-        customFields: (input.customFields as Prisma.InputJsonValue) ?? undefined,
-      } as Prisma.LeadUncheckedCreateInput,
+        customFields: (await sanitizeCustomFields("LEAD", input.customFields, "create")) as never,
+      } as unknown as Prisma.LeadUncheckedCreateInput,
     });
     await appendActivity(tx, {
       subjectType: "LEAD",
@@ -267,7 +268,7 @@ export async function updateLead(ctx: ScopedContext, id: string, input: z.infer<
         ...(input.assignedTeamId !== undefined ? { assignedTeamId: input.assignedTeamId } : {}),
         ...(input.lastContactAt !== undefined ? { lastContactAt: input.lastContactAt } : {}),
         ...(input.customFields !== undefined
-          ? { customFields: input.customFields as Prisma.InputJsonValue }
+          ? { customFields: (await sanitizeCustomFields("LEAD", input.customFields, "update")) as never }
           : {}),
       },
     });

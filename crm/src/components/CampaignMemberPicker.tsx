@@ -1,0 +1,179 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+interface MemberRow {
+  id: string;
+  subjectType: string;
+  subjectId: string;
+  label: string;
+  status: string;
+}
+
+/** Add/remove campaign members: pick a type, search, click to add. */
+export function CampaignMemberPicker({
+  campaignId,
+  canEdit,
+  members,
+}: {
+  campaignId: string;
+  canEdit: boolean;
+  members: MemberRow[];
+}) {
+  const router = useRouter();
+  const [type, setType] = useState<"LEAD" | "CONTACT" | "CUSTOMER">("LEAD");
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Array<{ id: string; label: string }>>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const existing = new Set(members.map((member) => `${member.subjectType}:${member.subjectId}`));
+
+  async function search() {
+    if (!query.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const endpoint = type === "LEAD" ? "leads" : type === "CONTACT" ? "contacts" : "customers";
+      const response = await fetch(`/api/${endpoint}?q=${encodeURIComponent(query)}&pageSize=10`);
+      if (!response.ok) {
+        setError("Search failed.");
+        return;
+      }
+      const body = (await response.json()) as {
+        data: Array<{ id: string; firstName?: string; lastName?: string; name?: string }>;
+      };
+      setResults(
+        body.data.map((row) => ({
+          id: row.id,
+          label: row.name ?? `${row.firstName ?? ""} ${row.lastName ?? ""}`.trim(),
+        })),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function add(subjectId: string) {
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/campaigns/${campaignId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subjectType: type, subjectId }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Could not add member.");
+        return;
+      }
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(memberId: string) {
+    setBusy(true);
+    try {
+      await fetch(`/api/campaigns/${campaignId}/members`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId }),
+      });
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {canEdit ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-stone-200 p-3">
+          <select
+            aria-label="Member type"
+            value={type}
+            onChange={(event) => setType(event.target.value as typeof type)}
+            className="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
+          >
+            <option value="LEAD">Leads</option>
+            <option value="CONTACT">Contacts</option>
+            <option value="CUSTOMER">Customers</option>
+          </select>
+          <input
+            aria-label="Search records"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void search();
+              }
+            }}
+            placeholder="Search by name or email…"
+            className="min-w-52 flex-1 rounded-md border border-stone-300 px-3 py-1.5 text-sm"
+          />
+          <button
+            type="button"
+            onClick={() => void search()}
+            disabled={busy}
+            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:opacity-50"
+          >
+            Search
+          </button>
+          {error ? <span className="text-sm text-red-700">{error}</span> : null}
+          {results.length > 0 ? (
+            <ul className="w-full space-y-1">
+              {results.map((result) => (
+                <li key={result.id} className="flex items-center justify-between rounded border border-stone-100 px-2 py-1 text-sm">
+                  <span>{result.label}</span>
+                  {existing.has(`${type}:${result.id}`) ? (
+                    <span className="text-xs text-stone-400">already a member</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void add(result.id)}
+                      disabled={busy}
+                      className="text-xs font-medium text-[var(--brand)] hover:underline"
+                    >
+                      Add
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
+      <ul className="space-y-1">
+        {members.length === 0 ? (
+          <li className="text-sm text-stone-400">No members yet.</li>
+        ) : (
+          members.map((member) => (
+            <li key={member.id} className="flex items-center justify-between rounded border border-stone-100 px-2 py-1 text-sm">
+              <span>
+                <a href={`/${member.subjectType.toLowerCase()}s/${member.subjectId}`} className="text-[var(--brand)] hover:underline">
+                  {member.label}
+                </a>
+                <span className="ml-2 text-xs text-stone-400">{member.subjectType.toLowerCase()}</span>
+              </span>
+              {canEdit ? (
+                <button
+                  type="button"
+                  onClick={() => void remove(member.id)}
+                  disabled={busy}
+                  className="text-xs text-red-600 hover:underline"
+                >
+                  Remove
+                </button>
+              ) : null}
+            </li>
+          ))
+        )}
+      </ul>
+    </div>
+  );
+}

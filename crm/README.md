@@ -4,16 +4,13 @@ Standalone sales & relationship-management module. Runs as its own Next.js
 application on its own subdomain with its own database — fully isolated from
 the trading platform. Design and roadmap: [`DESIGN.md`](./DESIGN.md).
 
-**Status: Phase 6 (CSV import) implemented.** Foundation, core records,
-activities/notifications, dedup/conversion/merge, opportunities — and now a
-job-based CSV import wizard for leads, contacts, accounts, and customers:
-upload → auto-mapped columns (saved mappings supported) → server-side
-validation (required fields, email/phone format, statuses by name) →
-scope-filtered duplicate detection → strategy (create / update / upsert) →
-background run with live progress → results with a downloadable per-row
-error report. Every imported row is normalized, owned by the importer,
-activity-logged, and audit-trailed; completion lands in notifications.
-Google Sheets import arrives in Phase 9.
+**Status: Phase 7 (campaigns & configuration) implemented.** Foundation,
+core records, activities/notifications, dedup/conversion/merge,
+opportunities, CSV import — plus campaigns with scope-checked membership
+and stats, tags (attach/detach on any record), admin-defined custom fields
+(JSONB values validated server-side on every write), a full administration
+console (statuses, tags, custom fields, teams/users, audit log), and
+campaign attribution on record forms. Search and reporting arrive next.
 
 ## Stack
 

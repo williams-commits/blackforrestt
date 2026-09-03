@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FieldConfig, ObjectKey } from "@/lib/recordUi";
 
@@ -11,6 +11,7 @@ export interface OptionSource {
   users: Array<{ value: string; label: string }>;
   accounts: Array<{ value: string; label: string }>;
   contacts: Array<{ value: string; label: string }>;
+  campaigns: Array<{ value: string; label: string }>;
 }
 
 interface RecordFormProps {
@@ -47,12 +48,58 @@ export interface DuplicateHit {
   matchOn: string[];
 }
 
+interface CustomFieldDefLite {
+  key: string;
+  label: string;
+  fieldType: string;
+  required: boolean;
+  options: string[] | null;
+}
+
 export function RecordForm({ object, fields, options, initial, onClose, onSaved, duplicateCheck }: RecordFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dupMatches, setDupMatches] = useState<DuplicateHit[] | null>(null);
   const [lastPayload, setLastPayload] = useState<Record<string, unknown> | null>(null);
+  const [customDefs, setCustomDefs] = useState<CustomFieldDefLite[]>([]);
+  const [customValues, setCustomValues] = useState<Record<string, string | boolean | string[]>>(() => {
+    const initialValues = initial?.customFields as Record<string, unknown> | null | undefined;
+    const result: Record<string, string | boolean | string[]> = {};
+    if (initialValues && typeof initialValues === "object") {
+      for (const [key, value] of Object.entries(initialValues)) {
+        if (Array.isArray(value)) result[key] = value.map(String);
+        else result[key] = typeof value === "boolean" ? value : value === null || value === undefined ? "" : String(value);
+      }
+    }
+    return result;
+  });
+
+  // Admin-defined custom fields for this object drive extra form inputs.
+  const objectSubject: Record<ObjectKey, string> = {
+    leads: "LEAD",
+    contacts: "CONTACT",
+    accounts: "ACCOUNT",
+    customers: "CUSTOMER",
+  };
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/custom-fields?activeOnly=1")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => {
+        if (cancelled || !body?.data) return;
+        setCustomDefs(
+          (body.data as Array<CustomFieldDefLite & { objectType: string }>)
+            .filter((def) => def.objectType === objectSubject[object])
+            .map((def) => ({ ...def, options: Array.isArray(def.options) ? (def.options as string[]) : null })),
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [object]);
   const editing = Boolean(initial?.id);
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial_: Record<string, string> = {};
@@ -125,6 +172,18 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
       } else {
         payload[field.name] = value;
       }
+    }
+    if (customDefs.length > 0) {
+      const customPayload: Record<string, unknown> = {};
+      for (const def of customDefs) {
+        const value = customValues[def.key];
+        if (Array.isArray(value)) customPayload[def.key] = value;
+        else if (def.fieldType === "BOOLEAN") customPayload[def.key] = value === true;
+        else if (value !== undefined && value !== "") customPayload[def.key] = value;
+        else if (editing) customPayload[def.key] = null;
+        else if (def.required) customPayload[def.key] = "";
+      }
+      payload.customFields = customPayload;
     }
     setDupMatches(null);
     await submitPayload(payload);
@@ -230,6 +289,87 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
               </div>
             );
           })}
+          {customDefs.length > 0
+            ? customDefs.map((def) => {
+                const inputType =
+                  def.fieldType === "NUMBER" || def.fieldType === "CURRENCY"
+                    ? "number"
+                    : def.fieldType === "DATE"
+                      ? "date"
+                      : def.fieldType === "DATETIME"
+                        ? "datetime-local"
+                        : def.fieldType === "EMAIL"
+                          ? "email"
+                          : def.fieldType === "URL"
+                            ? "url"
+                            : "text";
+                return (
+                  <div key={`cf-${def.key}`}>
+                    <label htmlFor={`cf-${def.key}`} className="mb-1 block text-sm font-medium">
+                      {def.label}
+                      {def.required ? <span aria-hidden> *</span> : null}
+                      <span className="ml-1 text-[10px] font-normal text-stone-400">custom</span>
+                    </label>
+                    {def.fieldType === "BOOLEAN" ? (
+                      <input
+                        id={`cf-${def.key}`}
+                        type="checkbox"
+                        checked={customValues[def.key] === true}
+                        onChange={(event) =>
+                          setCustomValues((v) => ({ ...v, [def.key]: event.target.checked }))
+                        }
+                        className="mt-2"
+                      />
+                    ) : def.fieldType === "SELECT" ? (
+                      <select
+                        id={`cf-${def.key}`}
+                        value={typeof customValues[def.key] === "string" ? (customValues[def.key] as string) : ""}
+                        onChange={(event) =>
+                          setCustomValues((v) => ({ ...v, [def.key]: event.target.value }))
+                        }
+                        className={inputClass}
+                      >
+                        <option value="">— none —</option>
+                        {(def.options ?? []).map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    ) : def.fieldType === "MULTI_SELECT" ? (
+                      <select
+                        id={`cf-${def.key}`}
+                        multiple
+                        value={Array.isArray(customValues[def.key]) ? (customValues[def.key] as string[]) : []}
+                        onChange={(event) =>
+                          setCustomValues((v) => ({
+                            ...v,
+                            [def.key]: Array.from(event.target.selectedOptions).map((option) => option.value),
+                          }))
+                        }
+                        className={`${inputClass} h-20`}
+                      >
+                        {(def.options ?? []).map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        id={`cf-${def.key}`}
+                        type={inputType}
+                        value={typeof customValues[def.key] === "string" ? (customValues[def.key] as string) : ""}
+                        onChange={(event) =>
+                          setCustomValues((v) => ({ ...v, [def.key]: event.target.value }))
+                        }
+                        className={inputClass}
+                      />
+                    )}
+                  </div>
+                );
+              })
+            : null}
         </div>
 
         <div className="flex justify-end gap-2 border-t border-stone-100 pt-4">

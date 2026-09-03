@@ -5,6 +5,10 @@ import { listTimeline } from "@/server/activity";
 import { listNotesBySubject } from "@/server/records/notes";
 import { listAppointmentsBySubject } from "@/server/records/appointments";
 import { Timeline } from "@/components/Timeline";
+import { TagEditor } from "@/components/TagEditor";
+import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
+import { listTagsForSubject } from "@/server/records/tags";
+import { listCustomFields } from "@/server/records/customFields";
 import { RecordActivities } from "@/components/RecordActivities";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
 import { LeadConvertControls } from "@/components/LeadConvertControls";
@@ -26,6 +30,8 @@ export default async function LeadDetailPage({ params }: PageProps) {
   const { id } = await params;
   let lead;
   let events: Awaited<ReturnType<typeof listTimeline>> = [];
+  let tags: Awaited<ReturnType<typeof listTagsForSubject>> = [];
+  let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
   let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
   let canEdit = false;
@@ -34,6 +40,8 @@ export default async function LeadDetailPage({ params }: PageProps) {
     const ctx = await scopedContext("LEADS_READ");
     lead = await getLead(ctx, id);
     events = await listTimeline("LEAD", id);
+    tags = await listTagsForSubject("LEAD", id);
+    cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "LEAD");
     notes = await listNotesBySubject("LEAD", id);
     appointments = await listAppointmentsBySubject("LEAD", id);
     canEdit = ctx.permissions.includes("LEADS_EDIT");
@@ -75,6 +83,15 @@ export default async function LeadDetailPage({ params }: PageProps) {
 
       <section className="rounded-lg border border-stone-200 bg-white p-6">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500">Overview</h2>
+        <div className="mb-4">
+          <p className="mb-1 text-xs uppercase tracking-wide text-stone-400">Tags</p>
+          <TagEditor
+            subjectType="LEAD"
+            subjectId={id}
+            attached={tags.map((link) => ({ tagId: link.tagId, name: link.tag.name, color: link.tag.color }))}
+            canEdit={canEdit}
+          />
+        </div>
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Field label="Email" value={lead.email} />
           <Field label="Phone" value={lead.phone} />
@@ -91,6 +108,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
             value={lead.nextFollowUpAt?.toLocaleString() ?? null}
           />
           <Field label="Created" value={lead.createdAt.toLocaleDateString()} />
+                  <CustomFieldsPanel defs={cfDefs} values={lead.customFields} />
         </dl>
       </section>
 

@@ -1,29 +1,27 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/server/db";
 import { requirePermission } from "@/server/guard";
-import { handleRouteError } from "@/lib/api";
-import { z } from "zod";
+import { CreateStatus, createStatus, listStatuses } from "@/server/records/statuses";
+import { handleRouteError, parseJsonBody } from "@/lib/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const Query = z.object({
-  appliesTo: z.enum(["LEAD", "CONTACT", "CUSTOMER"]).optional(),
-});
-
-/** Configurable record statuses for filter dropdowns and forms. */
-export async function GET(request: Request) {
+export async function GET() {
   try {
     await requirePermission("LEADS_READ");
-    const params = new URL(request.url).searchParams;
-    const parsed = Query.parse({ appliesTo: params.get("appliesTo") ?? undefined });
-    const statuses = await prisma.recordStatus.findMany({
-      where: parsed.appliesTo ? { appliesTo: parsed.appliesTo } : undefined,
-      orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, category: true, appliesTo: true, isDefault: true },
-    });
-    return NextResponse.json({ data: statuses });
+    return NextResponse.json({ data: await listStatuses() });
   } catch (error) {
     return handleRouteError(error, "Unable to load statuses.");
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const ctx = await requirePermission("SETTINGS_MANAGE");
+    const parsed = await parseJsonBody(request, CreateStatus);
+    if (!parsed.ok) return parsed.response;
+    return NextResponse.json({ data: await createStatus(ctx, parsed.data) }, { status: 201 });
+  } catch (error) {
+    return handleRouteError(error, "Unable to create status.");
   }
 }

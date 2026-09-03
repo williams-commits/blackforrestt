@@ -7,6 +7,7 @@ import { appendActivity } from "@/server/activity";
 import { normalizeEmail, normalizePhone, normalizeText } from "@/server/normalize";
 import { ownerScopeWhere } from "@/server/scope";
 import { orderByFor, searchWhere } from "@/server/listQuery";
+import { sanitizeCustomFields } from "@/server/records/customFields";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
@@ -25,6 +26,7 @@ export const CreateCustomer = z.object({
   statusId: z.string().trim().min(5).optional(),
   ownerUserId: z.string().trim().min(5).optional().nullable(),
   teamId: z.string().trim().min(5).optional().nullable(),
+  customFields: z.record(z.unknown()).optional().nullable(),
 });
 
 export const UpdateCustomer = CreateCustomer.partial();
@@ -102,6 +104,7 @@ export async function createCustomer(ctx: ScopedContext, input: z.infer<typeof C
         statusId: status?.id,
         ownerUserId: input.ownerUserId ?? ctx.userId,
         teamId: input.teamId ?? null,
+        customFields: (await sanitizeCustomFields("CUSTOMER", input.customFields, "create")) as never,
       } as Prisma.CustomerUncheckedCreateInput,
     });
     await appendActivity(tx, {
@@ -145,6 +148,9 @@ export async function updateCustomer(ctx: ScopedContext, id: string, input: z.in
         ...(status ? { statusId: status.id } : {}),
         ...(input.ownerUserId !== undefined ? { ownerUserId: input.ownerUserId } : {}),
         ...(input.teamId !== undefined ? { teamId: input.teamId } : {}),
+        ...(input.customFields !== undefined
+          ? { customFields: (await sanitizeCustomFields("CUSTOMER", input.customFields, "update")) as never }
+          : {}),
       } as Prisma.CustomerUncheckedUpdateInput,
     });
     if (status && status.id !== existing.statusId) {

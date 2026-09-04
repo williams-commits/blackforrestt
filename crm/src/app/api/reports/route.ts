@@ -27,17 +27,51 @@ export async function GET() {
   }
 }
 
-const Run = z.object({
-  reportId: z.string().trim().min(2),
-  dateFrom: z.string().trim().optional(),
-  dateTo: z.string().trim().optional(),
+const Definition = z.object({
+  object: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY", "TASK"]),
+  dateField: z.string().trim().min(2).max(40),
+  groupBy: z.object({
+    key: z.string().trim().min(2).max(40),
+    timeUnit: z.enum(["day", "week", "month"]).optional(),
+  }),
+  sums: z.array(z.string().trim().min(2).max(40)).max(3).optional(),
 });
+
+const Run = z.union([
+  z.object({
+    reportId: z.string().trim().min(2),
+    dateFrom: z.string().trim().optional(),
+    dateTo: z.string().trim().optional(),
+  }),
+  z.object({
+    definition: Definition,
+    dateFrom: z.string().trim().optional(),
+    dateTo: z.string().trim().optional(),
+  }),
+]);
 
 export async function POST(request: Request) {
   try {
     const ctx = await scopedContext("REPORTS_VIEW");
     const parsed = await parseJsonBody(request, Run);
     if (!parsed.ok) return parsed.response;
+    if ("definition" in parsed.data) {
+      // Builder path: the definition is validated against the ENGINE's
+      // whitelists — unknown tables/columns/keys throw before any SQL runs.
+      const def = {
+        id: `custom:${parsed.data.definition.groupBy.key}`,
+        name: `${parsed.data.definition.object.toLowerCase()} by ${parsed.data.definition.groupBy.key}`,
+        description: "Custom report",
+        ...parsed.data.definition,
+      };
+      const rows = await runReport(ctx, def, {
+        dateFrom: parsed.data.dateFrom,
+        dateTo: parsed.data.dateTo,
+      });
+      return NextResponse.json({
+        data: { report: { id: def.id, name: def.name, sums: def.sums ?? [] }, rows },
+      });
+    }
     const def = findReport(parsed.data.reportId);
     if (!def) return NextResponse.json({ error: "Unknown report." }, { status: 404 });
     const rows = await runReport(ctx, def, {

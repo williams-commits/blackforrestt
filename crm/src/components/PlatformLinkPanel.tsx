@@ -99,11 +99,11 @@ export function PlatformLinkPanel({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-stone-600">
+      <p className="text-sm text-[var(--text-secondary)]">
         Not linked. Matching is by email and confirmed by you — nothing is linked automatically.
       </p>
       {error ? (
-        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
           {error}
         </p>
       ) : null}
@@ -112,18 +112,18 @@ export function PlatformLinkPanel({
           type="button"
           onClick={() => void runLookup()}
           disabled={busy}
-          className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:opacity-50"
+          className="btn btn-secondary"
         >
           {busy ? "Checking…" : `Look up platform user by ${customerEmail ?? "email"}`}
         </button>
       ) : null}
       {lookup.status === "missing" ? (
-        <p className="text-sm text-amber-700">{lookup.reason}</p>
+        <p className="text-sm text-[var(--warning)]">{lookup.reason}</p>
       ) : null}
       {lookup.status === "found" ? (
-        <div className="space-y-2 rounded-md border border-[var(--brand)]/30 bg-[var(--brand)]/5 p-3 text-sm">
+        <div className="space-y-2 rounded-lg border border-[var(--brand-200)] bg-[var(--brand-50)] p-3 text-sm">
           <p className="font-medium">Platform user found</p>
-          <ul className="space-y-0.5 text-stone-600">
+          <ul className="space-y-0.5 text-[var(--text-secondary)]">
             <li>Name: {lookup.user.name ?? "—"}</li>
             <li>Email: {lookup.user.email}</li>
             <li>Registered: {new Date(lookup.user.registeredAt).toLocaleDateString()}</li>
@@ -133,7 +133,7 @@ export function PlatformLinkPanel({
             type="button"
             onClick={() => void link()}
             disabled={busy}
-            className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="btn btn-primary"
             style={{ background: "var(--brand)" }}
           >
             Link this platform user
@@ -162,7 +162,7 @@ export function PlatformUnlinkButton({ customerId }: { customerId: string }) {
           setBusy(false);
         }
       }}
-      className="text-xs text-red-600 hover:underline disabled:opacity-50"
+      className="text-xs text-[var(--error)] hover:underline disabled:opacity-50"
     >
       Unlink
     </button>

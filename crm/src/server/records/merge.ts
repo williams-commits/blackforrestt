@@ -4,7 +4,7 @@ import { prisma } from "@/server/db";
 import { CrmError } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
-import { assignedScopeWhere } from "@/server/scope";
+import { assignedScopeWhere, ownerScopeWhere } from "@/server/scope";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
@@ -34,6 +34,8 @@ export async function mergeLeads(ctx: ScopedContext, input: z.infer<typeof Merge
     prisma.lead.findFirst({ where: { id: input.mergedId, deletedAt: null, ...scope } }),
   ]);
   if (!primary || !merged) throw new CrmError("Both leads must exist and be in your scope.", 404);
+  // Guard: never merge into a converted lead.
+  if (primary.convertedAt) throw new CrmError("Surviving lead is already converted.", 400);
 
   const [events, taskCount, noteCount] = await Promise.all([
     prisma.activityEvent.findMany({
@@ -107,6 +109,7 @@ export async function mergeLeads(ctx: ScopedContext, input: z.infer<typeof Merge
 
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "LEAD_MERGED",
       objectType: "Lead",
       objectId: primary.id,
@@ -121,4 +124,130 @@ export async function mergeLeads(ctx: ScopedContext, input: z.infer<typeof Merge
     movedTasks: taskCount,
     movedNotes: noteCount,
   };
+}
+
+
+// ────────────── Generic merge: contacts, accounts, customers ──────────────
+
+export const MergeRecords = z.object({
+  objectType: z.enum(["CONTACT", "ACCOUNT", "CUSTOMER"]),
+  primaryId: z.string().min(5),
+  mergedId: z.string().min(5),
+});
+
+const OWNER_DELETE_PERMISSION = {
+  CONTACT: "CONTACTS_DELETE",
+  ACCOUNT: "ACCOUNTS_DELETE",
+  CUSTOMER: "CUSTOMERS_DELETE",
+} as const;
+
+/**
+ * Merge two owner-scoped records of the same type: notes/tasks/appointments
+ * re-point to the survivor, timeline events are copied (append-only kept),
+ * child references move where uniqueness allows, and the merged record is
+ * soft-deleted with a full snapshot for administrative reversal.
+ */
+export async function mergeRecords(ctx: ScopedContext, input: z.infer<typeof MergeRecords>) {
+  const permission = OWNER_DELETE_PERMISSION[input.objectType];
+  if (!ctx.permissions.includes(permission)) {
+    throw new CrmError(`Forbidden — ${permission} permission required to merge`, 403);
+  }
+  if (input.primaryId === input.mergedId) {
+    throw new CrmError("Cannot merge a record into itself.", 400);
+  }
+  const scope = ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds);
+  const fetch = async (id: string) => {
+    if (input.objectType === "CONTACT") {
+      return prisma.contact.findFirst({ where: { id, deletedAt: null, ...scope } });
+    }
+    if (input.objectType === "ACCOUNT") {
+      return prisma.account.findFirst({ where: { id, deletedAt: null, ...scope } });
+    }
+    return prisma.customer.findFirst({ where: { id, deletedAt: null, ...scope } });
+  };
+  const [primary, merged] = await Promise.all([fetch(input.primaryId), fetch(input.mergedId)]);
+  if (!primary || !merged) throw new CrmError("Both records must exist and be in your scope.", 404);
+
+  const events = await prisma.activityEvent.findMany({
+    where: { subjectType: input.objectType, subjectId: merged.id },
+    orderBy: { createdAt: "asc" },
+  });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.mergeRecord.create({
+      data: {
+        objectType: input.objectType,
+        primaryId: primary.id,
+        mergedId: merged.id,
+        snapshot: { record: JSON.parse(JSON.stringify(merged)), eventCount: events.length },
+        actorUserId: ctx.userId,
+      },
+    });
+
+    // Live work and notes follow the survivor.
+    await tx.task.updateMany({
+      where: { subjectType: input.objectType, subjectId: merged.id, status: { in: ["OPEN", "IN_PROGRESS"] } },
+      data: { subjectType: input.objectType, subjectId: primary.id },
+    });
+    await tx.note.updateMany({
+      where: { subjectType: input.objectType, subjectId: merged.id },
+      data: { subjectType: input.objectType, subjectId: primary.id },
+    });
+
+    // Child references move where uniqueness allows.
+    if (input.objectType === "ACCOUNT") {
+      await tx.contact.updateMany({ where: { accountId: merged.id }, data: { accountId: primary.id } });
+      await tx.opportunity.updateMany({ where: { accountId: merged.id }, data: { accountId: primary.id } });
+    } else if (input.objectType === "CONTACT") {
+      // Customer↔Contact is 1:1: move only when the survivor has none.
+      const blocker = await tx.customer.findFirst({ where: { contactId: primary.id } });
+      if (!blocker) {
+        await tx.customer.updateMany({ where: { contactId: merged.id }, data: { contactId: primary.id } });
+      }
+      await tx.opportunity.updateMany({ where: { contactId: merged.id }, data: { contactId: primary.id } });
+    } else {
+      await tx.opportunity.updateMany({ where: { customerId: merged.id }, data: { customerId: primary.id } });
+    }
+
+    // Copy timeline events onto the survivor (original timestamps kept).
+    for (const event of events) {
+      await tx.activityEvent.create({
+        data: {
+          subjectType: input.objectType,
+          subjectId: primary.id,
+          kind: event.kind,
+          actorUserId: event.actorUserId,
+          payload: (event.payload ?? undefined) as Prisma.InputJsonValue | undefined,
+          createdAt: event.createdAt,
+        },
+      });
+    }
+    await appendActivity(tx, {
+      subjectType: input.objectType,
+      subjectId: primary.id,
+      kind: "merged",
+      actorUserId: ctx.userId,
+      payload: { mergedId: merged.id },
+    });
+
+    if (input.objectType === "CONTACT") {
+      await tx.contact.update({ where: { id: merged.id }, data: { deletedAt: new Date() } });
+    } else if (input.objectType === "ACCOUNT") {
+      await tx.account.update({ where: { id: merged.id }, data: { deletedAt: new Date() } });
+    } else {
+      await tx.customer.update({ where: { id: merged.id }, data: { deletedAt: new Date() } });
+    }
+
+    await appendAudit(tx, {
+      actorId: ctx.userId,
+      ip: ctx.ip,
+      action: `${input.objectType}_MERGED`,
+      objectType: input.objectType === "CONTACT" ? "Contact" : input.objectType === "ACCOUNT" ? "Account" : "Customer",
+      objectId: primary.id,
+      before: { mergedId: merged.id },
+      after: { copiedEvents: events.length },
+    });
+  });
+
+  return { primaryId: primary.id, copiedEvents: events.length };
 }

@@ -82,6 +82,8 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("");
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -94,6 +96,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   const [mergePrimary, setMergePrimary] = useState<string>("");
   const [mergeBusy, setMergeBusy] = useState(false);
   const [mergeError, setMergeError] = useState<string | null>(null);
+  const [allTags, setAllTags] = useState<Array<{ id: string; name: string }>>([]);
   const [views, setViews] = useState<
     Array<{
       id: string;
@@ -107,12 +110,14 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
 
   const can = useMemo(() => {
     const permissions = me?.permissions ?? [];
+    const objectUpper = object.toUpperCase().slice(0, -1);
     return {
       create: permissions.includes(config.can.create),
       edit: permissions.includes(config.can.edit),
       delete: permissions.includes(config.can.delete),
       assign: config.can.assign ? permissions.includes(config.can.assign) : false,
       bulk: object === "leads",
+      export: permissions.includes(`${objectUpper}S_EXPORT`),
     };
   }, [me, config, object]);
 
@@ -169,6 +174,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: "25" });
       if (search) params.set("q", search);
+      if (sort) params.set("sort", sort);
       for (const [key, value] of Object.entries(filters)) {
         if (value) params.set(key, value);
       }
@@ -186,7 +192,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     } finally {
       setLoading(false);
     }
-  }, [object, page, search, filters]);
+  }, [object, page, search, filters, sort]);
 
   useEffect(() => {
     void fetch("/api/me")
@@ -194,6 +200,12 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       .then((body) => setMe(body?.data ?? null))
       .catch(() => setMe(null));
     void fetchOptions();
+    if (object === "leads") {
+      void fetch("/api/tags")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((body) => setAllTags(body?.data ?? []))
+        .catch(() => setAllTags([]));
+    }
     void fetch(`/api/views?objectType=${object.toUpperCase().slice(0, -1)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((body) => setViews(body?.data ?? []))
@@ -274,29 +286,43 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="page-header">
         <div>
-          <h1 className="text-lg font-semibold">{config.title}</h1>
-          <p className="text-sm text-stone-500">
-            {meta.total} record{meta.total === 1 ? "" : "s"}
+          <h1 className="page-title">{config.title}</h1>
+          <p className="page-subtitle">
+            <span className="badge badge-neutral" style={{ marginRight: "6px" }}>{meta.total}</span>
+            record{meta.total === 1 ? "" : "s"}
+            {selected.size > 0 ? <span className="badge badge-brand" style={{ marginLeft: "6px" }}>{selected.size} selected</span> : null}
           </p>
         </div>
-        {can.create ? (
-          <button
-            type="button"
-            onClick={() => {
-              setEditRow(null);
-              setFormMode("create");
-            }}
-            className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
-            style={{ background: "var(--brand)" }}
-          >
-            New {config.singular}
-          </button>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {can.export ? (
+            <a
+              href={`/api/export?object=${object}${search ? `&q=${encodeURIComponent(search)}` : ""}${
+                filters.statusId ? `&statusId=${filters.statusId}` : ""
+              }`}
+              className="btn btn-secondary"
+            >
+              Export CSV
+            </a>
+          ) : null}
+          {can.create ? (
+            <button
+              type="button"
+              onClick={() => {
+                setEditRow(null);
+                setFormMode("create");
+              }}
+              className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
+              style={{ background: "var(--brand)" }}
+            >
+              New {config.singular}
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-stone-200 bg-white p-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
         <form
           className="flex flex-1 flex-wrap items-center gap-2"
           onSubmit={(event) => {
@@ -311,7 +337,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             onChange={(event) => setSearch(event.target.value)}
             placeholder={config.searchPlaceholder}
             aria-label="Search"
-            className="min-w-52 flex-1 rounded-md border border-stone-300 px-3 py-1.5 text-sm"
+            className="input" style={{ height: "32px" }}
           />
           {config.filters.map((filter) => {
             const filterOptions = filter.optionsFrom ? options[filter.optionsFrom] : (filter.options ?? []);
@@ -324,7 +350,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                   setFilters((previous) => ({ ...previous, [filter.name]: event.target.value }));
                   setPage(1);
                 }}
-                className="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
+                className="input" style={{ height: "32px", width: "auto", display: "inline-block" }}
               >
                 <option value="">{filter.label}: all</option>
                 {filterOptions.map((option) => (
@@ -336,7 +362,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             );
           })}
         </form>
-        <div className="flex items-center gap-2 border-l border-stone-200 pl-2">
+        <div className="flex items-center gap-2 border-l border-[var(--border-default)] pl-2">
           {views.length > 0 ? (
             <select
               aria-label="Saved views"
@@ -348,7 +374,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 setFilters(view.config.filters ?? {});
                 setPage(1);
               }}
-              className="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
+              className="input" style={{ height: "32px", width: "auto", display: "inline-block" }}
             >
               <option value="">Saved views…</option>
               {views.map((view) => (
@@ -359,12 +385,33 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               ))}
             </select>
           ) : null}
+          <select
+            aria-label="Columns"
+            multiple
+            value={config.columns.filter((c) => !hiddenColumns.includes(c.key)).map((c) => c.key)}
+            onChange={(event) =>
+              setHiddenColumns(
+                config.columns
+                  .map((c) => c.key)
+                  .filter((key) => !Array.from(event.target.selectedOptions).some((o) => o.value === key)),
+              )
+            }
+            className="hidden rounded-md border border-[var(--border-strong)] px-2 py-1.5 text-xs sm:block"
+            size={2}
+            title="Hold Cmd/Ctrl to change visible columns"
+          >
+            {config.columns.map((column) => (
+              <option key={column.key} value={column.key}>
+                {column.label}
+              </option>
+            ))}
+          </select>
           <input
             aria-label="View name"
             placeholder="Name this view"
             value={viewName}
             onChange={(event) => setViewName(event.target.value)}
-            className="w-32 rounded-md border border-stone-300 px-2 py-1.5 text-sm"
+            className="w-32 rounded-md border border-[var(--border-strong)] px-2 py-1.5 text-sm"
           />
           <button
             type="button"
@@ -388,7 +435,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 setViews(refreshed.data);
               }
             }}
-            className="rounded-md border border-stone-300 px-2 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:opacity-50"
+            className="rounded-md border border-[var(--border-strong)] px-2 py-1.5 text-sm font-medium hover:bg-[var(--bg-hover)] disabled:opacity-50"
           >
             Save view
           </button>
@@ -396,7 +443,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       </div>
 
       {selected.size > 0 && can.bulk ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--brand)]/30 bg-[var(--brand)]/5 p-3 text-sm">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border p-3" style={{ borderColor: "var(--brand-200)", background: "var(--brand-50)", fontSize: "var(--text-sm)" }}>
           <span className="font-medium">{selected.size} selected</span>
           {can.assign ? (
             <select
@@ -406,7 +453,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               onChange={(event) => {
                 if (event.target.value) void runBulk("assign", { assignedUserId: event.target.value });
               }}
-              className="rounded-md border border-stone-300 bg-white px-2 py-1.5"
+              className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface)] px-2 py-1.5"
             >
               <option value="">Assign to…</option>
               {options.users.map((option) => (
@@ -423,7 +470,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             onChange={(event) => {
               if (event.target.value) void runBulk("status", { statusId: event.target.value });
             }}
-            className="rounded-md border border-stone-300 bg-white px-2 py-1.5"
+            className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface)] px-2 py-1.5"
           >
             <option value="">Change status…</option>
             {options.leadStatuses.map((option) => (
@@ -439,9 +486,40 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               onClick={() => {
                 if (window.confirm(`Delete ${selected.size} record(s)?`)) void runBulk("delete", {});
               }}
-              className="rounded-md border border-red-300 px-2 py-1.5 font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+              className="btn btn-destructive" style={{ height: "28px", fontSize: "12px" }}
             >
               Delete
+            </button>
+          ) : null}
+          {can.assign ? (
+            <select
+              aria-label="Bulk tag"
+              defaultValue=""
+              disabled={bulkBusy}
+              onChange={(event) => {
+                if (event.target.value) void runBulk("tag", { tagId: event.target.value });
+              }}
+              className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface)] px-2 py-1.5"
+            >
+              <option value="">Add tag…</option>
+              {allTags.map((tag) => (
+                <option key={tag.id} value={tag.id}>
+                  {tag.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {can.edit ? (
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => {
+                const title = window.prompt(`Create a follow-up task for ${selected.size} lead(s) — task title:`);
+                if (title && title.trim().length >= 2) void runBulk("task", { title: title.trim() });
+              }}
+              className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface)] px-2 py-1.5 font-medium"
+            >
+              Create task…
             </button>
           ) : null}
           {can.delete && selected.size === 2 ? (
@@ -451,31 +529,31 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 setMergePrimary(mergeCandidates[0]?.id ?? "");
                 setMergeOpen(true);
               }}
-              className="rounded-md border border-stone-300 bg-white px-2 py-1.5 font-medium"
+              className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface)] px-2 py-1.5 font-medium"
             >
               Merge selected…
             </button>
           ) : null}
-          {bulkError ? <span className="text-red-700">{bulkError}</span> : null}
+          {bulkError ? <span className="text-[var(--error)]">{bulkError}</span> : null}
         </div>
       ) : null}
 
       {mergeOpen && mergeCandidates.length === 2 ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md space-y-4 rounded-lg border border-stone-200 bg-white p-6 shadow-xl">
+          <div className="w-full max-w-md space-y-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-6 shadow-xl">
             <h2 className="text-base font-semibold">Merge leads</h2>
-            <p className="text-sm text-stone-600">
+            <p className="text-sm text-[var(--text-secondary)]">
               Choose the surviving record. The other lead is deleted; its timeline, notes, and
               open tasks move to the survivor.
             </p>
             {mergeError ? (
-              <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
                 {mergeError}
               </p>
             ) : null}
             <div className="space-y-2">
               {mergeCandidates.map((row) => (
-                <label key={row.id} className="flex items-center gap-2 rounded-md border border-stone-200 p-3 text-sm">
+                <label key={row.id} className="flex items-center gap-2 rounded-md border border-[var(--border-default)] p-3 text-sm">
                   <input
                     type="radio"
                     name="merge-primary"
@@ -491,7 +569,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               <button
                 type="button"
                 onClick={() => setMergeOpen(false)}
-                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium hover:bg-stone-50"
+                className="btn btn-secondary"
               >
                 Cancel
               </button>
@@ -509,10 +587,42 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
-        <table className="w-full text-sm">
+      
+      {Object.entries(filters).filter(([, value]) => value).length > 0 || search ? (
+        <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: "var(--space-2)" }}>
+          {search ? (
+            <span className="chip">
+              Search: {search}
+              <span className="chip-close" onClick={() => { setSearch(""); setPage(1); }}>×</span>
+            </span>
+          ) : null}
+          {Object.entries(filters).filter(([, value]) => value).map(([key, value]) => {
+            const filterConfig = config.filters.find((f) => f.name === key);
+            const label = filterConfig?.label ?? key;
+            const optionList = filterConfig?.optionsFrom ? options[filterConfig.optionsFrom] : (filterConfig?.options ?? []);
+            const optionLabel = optionList.find((o) => o.value === value)?.label ?? value;
+            return (
+              <span key={key} className="chip">
+                {label}: {optionLabel}
+                <span className="chip-close" onClick={() => { setFilters((prev) => ({ ...prev, [key]: "" })); setPage(1); }}>×</span>
+              </span>
+            );
+          })}
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={{ height: "24px", fontSize: "11px" }}
+            onClick={() => { setSearch(""); setFilters({}); setPage(1); }}
+          >
+            Clear all
+          </button>
+        </div>
+      ) : null}
+
+<div className="card overflow-hidden">
+        <table className="table">
           <thead>
-            <tr className="border-b border-stone-200 bg-stone-50 text-left text-xs uppercase tracking-wide text-stone-500">
+            <tr className="border-b border-[var(--border-default)] bg-[var(--bg-hover)] text-left text-xs uppercase tracking-wide text-[var(--text-secondary)]">
               {can.bulk ? (
                 <th className="w-8 px-3 py-2">
                   <input
@@ -527,7 +637,20 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               ) : null}
               {config.columns.map((column) => (
                 <th key={column.key} className="px-3 py-2 font-medium">
-                  {column.label}
+                  {hiddenColumns.includes(column.key) ? null : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const key = column.key === "firstName lastName" ? "name" : column.key.split(".")[0];
+                        setSort(sort === key ? "" : key);
+                        setPage(1);
+                      }}
+                      className="text-left hover:underline"
+                    >
+                      {column.label}
+                      {sort === (column.key === "firstName lastName" ? "name" : column.key.split(".")[0]) ? " ▾" : ""}
+                    </button>
+                  )}
                 </th>
               ))}
               <th className="px-3 py-2 text-right font-medium">Actions</th>
@@ -535,21 +658,40 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={config.columns.length + 2} className="px-3 py-8 text-center text-stone-400">
-                  Loading…
-                </td>
-              </tr>
+              [...Array(6)].map((_, index) => (
+                <tr key={`skeleton-${index}`}>
+                  <td colSpan={config.columns.length + 2} style={{ padding: "10px 12px" }}>
+                    <div className="skeleton" style={{ height: "16px", width: `${70 - index * 8}%` }} />
+                  </td>
+                </tr>
+              ))
             ) : loadError ? (
               <tr>
-                <td colSpan={config.columns.length + 2} className="px-3 py-8 text-center text-red-600">
-                  {loadError}
+                <td colSpan={config.columns.length + 2}>
+                  <div className="empty-state" style={{ padding: "var(--space-8)" }}>
+                    <p className="empty-state-title" style={{ color: "var(--error)" }}>{loadError}</p>
+                  </div>
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={config.columns.length + 2} className="px-3 py-8 text-center text-stone-400">
-                  No {config.title.toLowerCase()} yet.
+                <td colSpan={config.columns.length + 2}>
+                  <div className="empty-state">
+                    <svg className="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M21 15V6a2 2 0 00-2-2H5a2 2 0 00-2 2v9m18 0a2 2 0 01-2 2H5a2 2 0 01-2-2m18 0v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                    </svg>
+                    <p className="empty-state-title">No {config.title.toLowerCase()} found</p>
+                    <p className="empty-state-description">
+                      {search || Object.values(filters).some(Boolean)
+                        ? "Try adjusting your search or filters."
+                        : `Get started by creating your first ${config.singular.toLowerCase()}.`}
+                    </p>
+                    {can.create && !search && !Object.values(filters).some(Boolean) ? (
+                      <button type="button" className="btn btn-primary" onClick={() => { setEditRow(null); setFormMode("create"); }}>
+                        New {config.singular}
+                      </button>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -568,9 +710,10 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                       </td>
                     ) : null}
                     {config.columns.map((column, index) => {
+                      if (hiddenColumns.includes(column.key)) return null;
                       const raw = cellValue(row, column.key);
                       const content = (() => {
-                        if (!raw) return <span className="text-stone-300">—</span>;
+                        if (!raw) return <span className="text-[var(--text-tertiary)]">—</span>;
                         if (column.type === "record" && index === 0) {
                           return (
                             <Link
@@ -594,7 +737,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                         }
                         if (column.type === "badge") {
                           return (
-                            <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium">
+                            <span className="badge badge-neutral">
                               {raw}
                             </span>
                           );
@@ -633,7 +776,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                         <button
                           type="button"
                           onClick={() => void deleteRow(row)}
-                          className="text-red-600 hover:underline"
+                          className="text-[var(--error)] hover:underline"
                         >
                           Delete
                         </button>
@@ -647,26 +790,29 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         </table>
       </div>
 
-      <div className="flex items-center justify-between text-sm text-stone-500">
+      <div className="flex items-center justify-between" style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)" }}>
         <span>
-          Page {meta.page} of {totalPages}
+          Page <strong style={{ color: "var(--text-primary)" }}>{meta.page}</strong> of {totalPages}
+          {meta.total > 0 ? <span style={{ marginLeft: "8px" }}>({meta.total} total)</span> : null}
         </span>
         <div className="flex gap-2">
           <button
             type="button"
             disabled={meta.page <= 1 || loading}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="rounded-md border border-stone-300 px-3 py-1.5 disabled:opacity-40"
+            className="btn btn-secondary"
+            style={{ height: "28px" }}
           >
-            Previous
+            ← Prev
           </button>
           <button
             type="button"
             disabled={meta.page >= totalPages || loading}
             onClick={() => setPage((p) => p + 1)}
-            className="rounded-md border border-stone-300 px-3 py-1.5 disabled:opacity-40"
+            className="btn btn-secondary"
+            style={{ height: "28px" }}
           >
-            Next
+            Next →
           </button>
         </div>
       </div>

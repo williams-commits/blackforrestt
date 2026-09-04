@@ -126,14 +126,14 @@ export function TasksPage() {
   }
 
   const inputClass =
-    "w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
+    "w-full rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold">Tasks</h1>
-          <p className="text-sm text-stone-500">
+          <h1 className="page-title">Tasks</h1>
+          <p className="text-sm text-[var(--text-secondary)]">
             {meta.openCount} open · {meta.overdueCount} overdue
             {subjectLabel ? ` · for ${subjectLabel}` : ""}
           </p>
@@ -141,7 +141,7 @@ export function TasksPage() {
         <button
           type="button"
           onClick={() => setShowForm((previous) => !previous)}
-          className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
+          className="btn btn-primary"
           style={{ background: "var(--brand)" }}
         >
           New task
@@ -152,10 +152,10 @@ export function TasksPage() {
         <form
           method="post"
           onSubmit={createTask}
-          className="grid gap-3 rounded-lg border border-stone-200 bg-white p-4 sm:grid-cols-4"
+          className="grid gap-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-4 sm:grid-cols-4"
         >
           {formError ? (
-            <p role="alert" className="sm:col-span-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p role="alert" className="sm:col-span-4 rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
               {formError}
             </p>
           ) : null}
@@ -203,7 +203,7 @@ export function TasksPage() {
           <div className="sm:col-span-4">
             <button
               type="submit"
-              className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
+              className="btn btn-primary"
               style={{ background: "var(--brand)" }}
             >
               Create
@@ -212,12 +212,12 @@ export function TasksPage() {
         </form>
       ) : null}
 
-      <div className="flex flex-wrap gap-2 rounded-lg border border-stone-200 bg-white p-3">
+      <div className="flex flex-wrap gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
         <select
           aria-label="Status filter"
           value={status}
           onChange={(event) => setStatus(event.target.value)}
-          className="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
+          className="input"
         >
           {STATUS_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -229,7 +229,7 @@ export function TasksPage() {
           aria-label="Due filter"
           value={due}
           onChange={(event) => setDue(event.target.value)}
-          className="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
+          className="input"
         >
           {DUE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -241,17 +241,17 @@ export function TasksPage() {
           aria-label="Ownership filter"
           value={mine}
           onChange={(event) => setMine(event.target.value)}
-          className="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
+          className="input"
         >
           <option value="1">My tasks</option>
           <option value="0">Everyone (in my scope)</option>
         </select>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
-        <table className="w-full text-sm">
+      <div className="card overflow-hidden">
+        <table className="table">
           <thead>
-            <tr className="border-b border-stone-200 bg-stone-50 text-left text-xs uppercase tracking-wide text-stone-500">
+            <tr className="border-b border-[var(--border-default)] bg-[var(--bg-hover)] text-left text-xs uppercase tracking-wide text-[var(--text-secondary)]">
               <th className="px-3 py-2 font-medium">Task</th>
               <th className="px-3 py-2 font-medium">Due</th>
               <th className="px-3 py-2 font-medium">Priority</th>
@@ -263,13 +263,13 @@ export function TasksPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-stone-400">
+                <td colSpan={6} className="px-3 py-8 text-center text-[var(--text-tertiary)]">
                   Loading…
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-stone-400">
+                <td colSpan={6} className="px-3 py-8 text-center text-[var(--text-tertiary)]">
                   No tasks match these filters.
                 </td>
               </tr>
@@ -279,7 +279,7 @@ export function TasksPage() {
                   <td className="px-3 py-2">
                     <p className="font-medium">{task.title}</p>
                     {task.subjectType && task.subjectId ? (
-                      <p className="text-xs text-stone-400">
+                      <p className="text-xs text-[var(--text-tertiary)]">
                         linked to {task.subjectType.toLowerCase()} …{task.subjectId.slice(-6)}
                       </p>
                     ) : null}
@@ -288,7 +288,7 @@ export function TasksPage() {
                   <td className="px-3 py-2">{task.priority.toLowerCase()}</td>
                   <td className="px-3 py-2">{task.owner?.name ?? "—"}</td>
                   <td className="px-3 py-2">
-                    <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium">
+                    <span className="badge badge-neutral">
                       {task.status.replaceAll("_", " ").toLowerCase()}
                     </span>
                   </td>
@@ -305,7 +305,7 @@ export function TasksPage() {
                         <button
                           type="button"
                           onClick={() => void setTaskStatus(task.id, "CANCELLED")}
-                          className="text-red-600 hover:underline"
+                          className="text-[var(--error)] hover:underline"
                         >
                           Cancel
                         </button>
@@ -314,7 +314,7 @@ export function TasksPage() {
                       <button
                         type="button"
                         onClick={() => void setTaskStatus(task.id, "OPEN")}
-                        className="text-stone-500 hover:underline"
+                        className="text-[var(--text-secondary)] hover:underline"
                       >
                         Reopen
                       </button>

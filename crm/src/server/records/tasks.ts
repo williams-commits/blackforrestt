@@ -131,6 +131,7 @@ export async function createTask(ctx: ScopedContext, input: z.infer<typeof Creat
     }
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "TASK_CREATED",
       objectType: "Task",
       objectId: created.id,
@@ -179,6 +180,11 @@ export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<
       },
     });
     if (
+      existing.subjectType === "LEAD" && existing.subjectId && input.status === "COMPLETED"
+    ) {
+      await tx.lead.update({ where: { id: existing.subjectId }, data: { lastContactAt: new Date() } });
+    }
+    if (
       existing.subjectType && existing.subjectId &&
       input.status && input.status !== existing.status
     ) {
@@ -192,6 +198,7 @@ export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<
     }
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "TASK_UPDATED",
       objectType: "Task",
       objectId: id,

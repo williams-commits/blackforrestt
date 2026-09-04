@@ -29,6 +29,8 @@ export async function GET() {
       wonThisMonth,
       openTasks,
       activity7d,
+      totalCustomers,
+      totalUsers,
     ] = await Promise.all([
       prisma.lead.count({ where: { deletedAt: null, convertedAt: null, ...leadScope } }),
       prisma.lead.count({
@@ -58,6 +60,8 @@ export async function GET() {
       prisma.activityEvent.count({
         where: { createdAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
       }),
+      prisma.customer.count({ where: { deletedAt: null, ...ownerScope } }),
+      prisma.user.count({ where: { status: "ACTIVE" } }),
     ]);
 
     return NextResponse.json({
@@ -71,6 +75,8 @@ export async function GET() {
         wonThisMonthCount: wonThisMonth._count._all,
         wonThisMonthValue: wonThisMonth._sum.value?.toString() ?? "0",
         myOpenTasks: openTasks,
+        totalCustomers,
+        totalUsers,
         activity7d,
       },
     });

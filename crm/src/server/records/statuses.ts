@@ -61,6 +61,7 @@ export async function createStatus(ctx: CrmContext, input: z.infer<typeof Create
     const created = await tx.recordStatus.create({ data: input });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "RECORD_STATUS_CREATED",
       objectType: "RecordStatus",
       objectId: created.id,
@@ -94,6 +95,7 @@ export async function updateStatus(ctx: CrmContext, id: string, input: z.infer<t
     }
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "RECORD_STATUS_UPDATED",
       objectType: "RecordStatus",
       objectId: id,
@@ -119,6 +121,7 @@ export async function deleteStatus(ctx: CrmContext, id: string) {
     await ensureDefault(existing.appliesTo, tx as never, id);
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "RECORD_STATUS_DELETED",
       objectType: "RecordStatus",
       objectId: id,

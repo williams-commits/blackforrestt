@@ -61,6 +61,7 @@ export async function createCustomField(ctx: CrmContext, input: z.infer<typeof C
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "CUSTOM_FIELD_CREATED",
       objectType: "CustomFieldDef",
       objectId: created.id,
@@ -91,6 +92,7 @@ export async function updateCustomField(ctx: CrmContext, id: string, input: z.in
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "CUSTOM_FIELD_UPDATED",
       objectType: "CustomFieldDef",
       objectId: id,
@@ -107,6 +109,7 @@ export async function deleteCustomField(ctx: CrmContext, id: string) {
     await tx.customFieldDef.delete({ where: { id } });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "CUSTOM_FIELD_DELETED",
       objectType: "CustomFieldDef",
       objectId: id,

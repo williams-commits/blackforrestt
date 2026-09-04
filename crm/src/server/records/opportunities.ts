@@ -221,6 +221,7 @@ export async function createOpportunity(ctx: ScopedContext, input: z.infer<typeo
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "OPPORTUNITY_CREATED",
       objectType: "Opportunity",
       objectId: created.id,
@@ -311,6 +312,7 @@ export async function updateOpportunity(
     }
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "OPPORTUNITY_UPDATED",
       objectType: "Opportunity",
       objectId: id,
@@ -336,6 +338,7 @@ export async function softDeleteOpportunity(ctx: ScopedContext, id: string) {
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "OPPORTUNITY_DELETED",
       objectType: "Opportunity",
       objectId: id,

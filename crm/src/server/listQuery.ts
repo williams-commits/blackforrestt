@@ -45,3 +45,26 @@ export function orderByFor(
 ): Record<string, "asc" | "desc"> {
   return (requested && allowed[requested]) || allowed[fallbackKey]!;
 }
+
+/** Extract `cf_<key>=<value>` params for JSONB custom-field filtering. */
+export function customFieldFilters(params: URLSearchParams): Array<{ key: string; value: string }> {
+  const filters: Array<{ key: string; value: string }> = [];
+  for (const [name, value] of params.entries()) {
+    if (name.startsWith("cf_") && value) {
+      filters.push({ key: name.slice(3), value });
+    }
+  }
+  return filters;
+}
+
+/** Prisma JSONB path-equals fragments, AND-combined. */
+export function customFieldWhere(
+  filters: Array<{ key: string; value: string }>,
+): Record<string, unknown> | undefined {
+  if (filters.length === 0) return undefined;
+  return {
+    AND: filters.map((filter) => ({
+      customFields: { path: [filter.key], equals: filter.value },
+    })),
+  };
+}

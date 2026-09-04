@@ -23,7 +23,7 @@ export function LeadConvertControls({
     return (
       <div className="rounded-md border border-[var(--brand)]/30 bg-[var(--brand)]/5 px-3 py-2 text-sm">
         <p className="font-medium">Converted</p>
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-[var(--text-secondary)]">
           {new Date(convertedAt).toLocaleDateString()} →{" "}
           {convertedContactId ? (
             <a href={`/contacts/${convertedContactId}`} className="text-[var(--brand)] underline">
@@ -50,7 +50,7 @@ export function LeadConvertControls({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
+        className="btn btn-primary"
         style={{ background: "var(--brand)" }}
       >
         Convert

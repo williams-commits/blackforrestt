@@ -7,7 +7,7 @@ export const metadata = { title: "Tasks" };
 
 export default function TasksRoutePage() {
   return (
-    <Suspense fallback={<p className="text-sm text-stone-400">Loading tasks…</p>}>
+    <Suspense fallback={<p className="text-sm text-[var(--text-tertiary)]">Loading tasks…</p>}>
       <TasksPage />
     </Suspense>
   );

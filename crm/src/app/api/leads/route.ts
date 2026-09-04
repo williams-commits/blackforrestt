@@ -6,7 +6,7 @@ import {
   listLeads,
   scopedContext,
 } from "@/server/records/leads";
-import { parseListQuery } from "@/server/listQuery";
+import { customFieldFilters, parseListQuery } from "@/server/listQuery";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       priority: params.get("priority") ?? undefined,
       assignment: params.get("assignment") ?? "all",
     });
-    const { total, rows } = await listLeads(ctx, query, filters);
+    const { total, rows } = await listLeads(ctx, query, filters, customFieldFilters(params));
     return NextResponse.json({
       data: rows,
       meta: { page: query.page, pageSize: query.pageSize, total },

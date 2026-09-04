@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { CreateContact, createContact, listContacts } from "@/server/records/contacts";
 import { scopedContext } from "@/server/records/leads";
-import { parseListQuery } from "@/server/listQuery";
+import { customFieldFilters, parseListQuery } from "@/server/listQuery";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     const { total, rows } = await listContacts(ctx, query, {
       accountId: params.get("accountId") ?? undefined,
       statusId: params.get("statusId") ?? undefined,
-    });
+    }, customFieldFilters(params));
     return NextResponse.json({ data: rows, meta: { page: query.page, pageSize: query.pageSize, total } });
   } catch (error) {
     return handleRouteError(error, "Unable to load contacts.");

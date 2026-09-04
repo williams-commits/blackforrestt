@@ -4,9 +4,9 @@ import { prisma } from "@/server/db";
 import { CrmError } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
-import { normalizeText } from "@/server/normalize";
+import { normalizeCountry, normalizeText } from "@/server/normalize";
 import { ownerScopeWhere } from "@/server/scope";
-import { orderByFor, searchWhere } from "@/server/listQuery";
+import { customFieldWhere, orderByFor, searchWhere } from "@/server/listQuery";
 import { sanitizeCustomFields } from "@/server/records/customFields";
 import type { ScopedContext } from "@/server/records/leads";
 
@@ -48,11 +48,13 @@ function serialize(row: Prisma.AccountGetPayload<{ include: typeof include }>) {
 export async function listAccounts(
   ctx: ScopedContext,
   query: { page: number; pageSize: number; sort?: string; q?: string },
+  cfFilters?: Array<{ key: string; value: string }>,
 ) {
   const where: Prisma.AccountWhereInput = {
     deletedAt: null,
     ...ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds),
     ...searchWhere(SEARCH_FIELDS, query.q ?? ""),
+    ...customFieldWhere(cfFilters ?? []),
   };
   const [total, rows] = await Promise.all([
     prisma.account.count({ where }),
@@ -99,7 +101,7 @@ function dataFrom(input: z.infer<typeof CreateAccount> | z.infer<typeof UpdateAc
   assign("website", normalizeText(input.website));
   assign("addressLine", normalizeText(input.addressLine));
   assign("city", normalizeText(input.city));
-  assign("country", normalizeText(input.country));
+  assign("country", normalizeCountry(input.country));
   assign("externalId", normalizeText(input.externalId));
   return data;
 }
@@ -122,6 +124,7 @@ export async function createAccount(ctx: ScopedContext, input: z.infer<typeof Cr
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "ACCOUNT_CREATED",
       objectType: "Account",
       objectId: created.id,
@@ -151,6 +154,7 @@ export async function updateAccount(ctx: ScopedContext, id: string, input: z.inf
     await appendActivity(tx, { subjectType: "ACCOUNT", subjectId: id, kind: "updated", actorUserId: ctx.userId });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "ACCOUNT_UPDATED",
       objectType: "Account",
       objectId: id,
@@ -169,6 +173,7 @@ export async function softDeleteAccount(ctx: ScopedContext, id: string) {
     await appendActivity(tx, { subjectType: "ACCOUNT", subjectId: id, kind: "deleted", actorUserId: ctx.userId });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "ACCOUNT_DELETED",
       objectType: "Account",
       objectId: id,

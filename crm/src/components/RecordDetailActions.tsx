@@ -126,7 +126,7 @@ export function RecordDetailActions({
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium hover:bg-stone-50"
+          className="btn btn-secondary"
         >
           Edit
         </button>
@@ -136,7 +136,7 @@ export function RecordDetailActions({
           type="button"
           onClick={() => void handleDelete()}
           disabled={busy}
-          className="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+          className="btn btn-destructive"
         >
           Delete
         </button>

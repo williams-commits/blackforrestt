@@ -22,7 +22,7 @@ export default function HomePage() {
       <HomeWidgets />
 
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-500">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
           Rollout plan
         </h2>
         <ul className="space-y-2">
@@ -30,12 +30,12 @@ export default function HomePage() {
             <li
               key={item.phase}
               className={`flex items-start gap-3 rounded-lg border p-4 ${
-                item.done ? "border-[var(--brand)]/30 bg-[var(--brand)]/5" : "border-stone-200 bg-white"
+                item.done ? "border-[var(--brand)]/30 bg-[var(--brand)]/5" : "border-[var(--border-default)] bg-[var(--bg-surface)]"
               }`}
             >
               <span
                 className={`mt-0.5 rounded px-1.5 py-0.5 text-xs font-semibold ${
-                  item.done ? "text-white" : "bg-stone-200 text-stone-600"
+                  item.done ? "text-white" : "bg-[var(--gray-200)] text-[var(--text-secondary)]"
                 }`}
                 style={item.done ? { background: "var(--brand)" } : undefined}
               >
@@ -43,7 +43,7 @@ export default function HomePage() {
               </span>
               <div>
                 <p className="text-sm font-medium">{item.title}</p>
-                <p className="text-xs text-stone-500">{item.detail}</p>
+                <p className="text-xs text-[var(--text-secondary)]">{item.detail}</p>
               </div>
             </li>
           ))}

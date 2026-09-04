@@ -40,6 +40,7 @@ export async function createTag(ctx: ScopedContext, input: z.infer<typeof Create
     const created = await tx.tag.create({ data: input });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "TAG_CREATED",
       objectType: "Tag",
       objectId: created.id,
@@ -57,6 +58,7 @@ export async function deleteTag(ctx: ScopedContext, id: string) {
     await tx.tag.delete({ where: { id } }); // links cascade
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "TAG_DELETED",
       objectType: "Tag",
       objectId: id,

@@ -11,6 +11,8 @@ interface MemberRow {
   status: string;
 }
 
+const MEMBER_STATUSES = ["MEMBER", "RESPONDED", "QUALIFIED", "CONVERTED"] as const;
+
 /** Add/remove campaign members: pick a type, search, click to add. */
 export function CampaignMemberPicker({
   campaignId,
@@ -74,6 +76,20 @@ export function CampaignMemberPicker({
     }
   }
 
+  async function setStatus(memberId: string, status: string) {
+    setBusy(true);
+    try {
+      await fetch(`/api/campaigns/${campaignId}/members`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId, status }),
+      });
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function remove(memberId: string) {
     setBusy(true);
     try {
@@ -91,12 +107,12 @@ export function CampaignMemberPicker({
   return (
     <div className="space-y-4">
       {canEdit ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-stone-200 p-3">
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-[var(--border-default)] p-3">
           <select
             aria-label="Member type"
             value={type}
             onChange={(event) => setType(event.target.value as typeof type)}
-            className="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
+            className="input"
           >
             <option value="LEAD">Leads</option>
             <option value="CONTACT">Contacts</option>
@@ -113,24 +129,24 @@ export function CampaignMemberPicker({
               }
             }}
             placeholder="Search by name or email…"
-            className="min-w-52 flex-1 rounded-md border border-stone-300 px-3 py-1.5 text-sm"
+            className="min-w-52 flex-1 rounded-md border border-[var(--border-strong)] px-3 py-1.5 text-sm"
           />
           <button
             type="button"
             onClick={() => void search()}
             disabled={busy}
-            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:opacity-50"
+            className="btn btn-secondary"
           >
             Search
           </button>
-          {error ? <span className="text-sm text-red-700">{error}</span> : null}
+          {error ? <span className="text-sm text-[var(--error)]">{error}</span> : null}
           {results.length > 0 ? (
             <ul className="w-full space-y-1">
               {results.map((result) => (
-                <li key={result.id} className="flex items-center justify-between rounded border border-stone-100 px-2 py-1 text-sm">
+                <li key={result.id} className="flex items-center justify-between rounded border border-[var(--border-default)] px-2 py-1 text-sm">
                   <span>{result.label}</span>
                   {existing.has(`${type}:${result.id}`) ? (
-                    <span className="text-xs text-stone-400">already a member</span>
+                    <span className="text-xs text-[var(--text-tertiary)]">already a member</span>
                   ) : (
                     <button
                       type="button"
@@ -150,26 +166,45 @@ export function CampaignMemberPicker({
 
       <ul className="space-y-1">
         {members.length === 0 ? (
-          <li className="text-sm text-stone-400">No members yet.</li>
+          <li className="text-sm text-[var(--text-tertiary)]">No members yet.</li>
         ) : (
           members.map((member) => (
-            <li key={member.id} className="flex items-center justify-between rounded border border-stone-100 px-2 py-1 text-sm">
+            <li key={member.id} className="flex items-center justify-between rounded border border-[var(--border-default)] px-2 py-1 text-sm">
               <span>
                 <a href={`/${member.subjectType.toLowerCase()}s/${member.subjectId}`} className="text-[var(--brand)] hover:underline">
                   {member.label}
                 </a>
-                <span className="ml-2 text-xs text-stone-400">{member.subjectType.toLowerCase()}</span>
+                <span className="ml-2 text-xs text-[var(--text-tertiary)]">{member.subjectType.toLowerCase()}</span>
               </span>
-              {canEdit ? (
-                <button
-                  type="button"
-                  onClick={() => void remove(member.id)}
-                  disabled={busy}
-                  className="text-xs text-red-600 hover:underline"
-                >
-                  Remove
-                </button>
-              ) : null}
+              <span className="flex items-center gap-2">
+                {canEdit ? (
+                  <select
+                    aria-label={`Status for ${member.label}`}
+                    value={member.status}
+                    disabled={busy}
+                    onChange={(event) => void setStatus(member.id, event.target.value)}
+                    className="rounded border border-[var(--border-default)] px-1 py-0.5 text-xs"
+                  >
+                    {MEMBER_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {status.toLowerCase()}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-xs text-[var(--text-tertiary)]">{member.status.toLowerCase()}</span>
+                )}
+                {canEdit ? (
+                  <button
+                    type="button"
+                    onClick={() => void remove(member.id)}
+                    disabled={busy}
+                    className="text-xs text-[var(--error)] hover:underline"
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </span>
             </li>
           ))
         )}

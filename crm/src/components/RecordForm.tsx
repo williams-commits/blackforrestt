@@ -113,7 +113,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
   });
 
   const inputClass =
-    "w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20";
+    "w-full rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20";
 
   async function submitPayload(payload: Record<string, unknown>): Promise<boolean> {
     setError(null);
@@ -204,21 +204,21 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
       <form
         method="post"
         onSubmit={handleSubmit}
-        className="w-full max-w-lg space-y-4 rounded-lg border border-stone-200 bg-white p-6 shadow-xl"
+        className="w-full max-w-lg space-y-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-6 shadow-xl"
       >
         <h2 className="text-base font-semibold">
           {editing ? `Edit ${object.replace(/s$/, "")}` : `New ${object.replace(/s$/, "")}`}
         </h2>
 
         {error ? (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
             {error}
           </p>
         ) : null}
 
         {dupMatches ? (
-          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm">
-            <p className="font-medium text-amber-800">
+          <div className="rounded-md border border-amber-300 bg-[var(--warning-bg)] p-3 text-sm">
+            <p className="font-medium text-[var(--warning)]">
               Possible duplicates found ({dupMatches.length})
             </p>
             <ul className="mt-2 space-y-1">
@@ -230,7 +230,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
                   >
                     {match.label}
                   </a>
-                  <span className="text-xs text-amber-700">
+                  <span className="text-xs text-[var(--warning)]">
                     {match.objectType.toLowerCase()} · matches on {match.matchOn.join(", ")}
                   </span>
                 </li>
@@ -245,7 +245,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
               >
                 Create anyway
               </button>
-              <span className="text-xs text-amber-700">or cancel and link the existing record instead.</span>
+              <span className="text-xs text-[var(--warning)]">or cancel and link the existing record instead.</span>
             </div>
           </div>
         ) : null}
@@ -308,7 +308,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
                     <label htmlFor={`cf-${def.key}`} className="mb-1 block text-sm font-medium">
                       {def.label}
                       {def.required ? <span aria-hidden> *</span> : null}
-                      <span className="ml-1 text-[10px] font-normal text-stone-400">custom</span>
+                      <span className="ml-1 text-[10px] font-normal text-[var(--text-tertiary)]">custom</span>
                     </label>
                     {def.fieldType === "BOOLEAN" ? (
                       <input
@@ -372,18 +372,18 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
             : null}
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-stone-100 pt-4">
+        <div className="flex justify-end gap-2 border-t border-[var(--border-default)] pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium hover:bg-stone-50"
+            className="btn btn-secondary"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="btn btn-primary"
             style={{ background: "var(--brand)" }}
           >
             {submitting ? "Saving…" : "Save"}

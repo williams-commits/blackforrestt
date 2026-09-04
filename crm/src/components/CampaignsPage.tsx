@@ -66,20 +66,20 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
   }
 
   const inputClass =
-    "w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
+    "w-full rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold">Campaigns</h1>
-          <p className="text-sm text-stone-500">{rows.length} campaign(s)</p>
+          <h1 className="page-title">Campaigns</h1>
+          <p className="text-sm text-[var(--text-secondary)]">{rows.length} campaign(s)</p>
         </div>
         {canCreate ? (
           <button
             type="button"
             onClick={() => setShowForm((previous) => !previous)}
-            className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
+            className="btn btn-primary"
             style={{ background: "var(--brand)" }}
           >
             New campaign
@@ -88,9 +88,9 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
       </div>
 
       {showForm ? (
-        <form method="post" onSubmit={createCampaign} className="grid gap-3 rounded-lg border border-stone-200 bg-white p-4 sm:grid-cols-4">
+        <form method="post" onSubmit={createCampaign} className="grid gap-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-4 sm:grid-cols-4">
           {error ? (
-            <p role="alert" className="sm:col-span-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p role="alert" className="sm:col-span-4 rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
               {error}
             </p>
           ) : null}
@@ -116,17 +116,17 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
             <input id="c-desc" value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
           </div>
           <div className="sm:col-span-4">
-            <button type="submit" className="rounded-md px-3 py-1.5 text-sm font-semibold text-white" style={{ background: "var(--brand)" }}>
+            <button type="submit" className="btn btn-primary" style={{ background: "var(--brand)" }}>
               Create
             </button>
           </div>
         </form>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
-        <table className="w-full text-sm">
+      <div className="card overflow-hidden">
+        <table className="table">
           <thead>
-            <tr className="border-b border-stone-200 bg-stone-50 text-left text-xs uppercase tracking-wide text-stone-500">
+            <tr className="border-b border-[var(--border-default)] bg-[var(--bg-hover)] text-left text-xs uppercase tracking-wide text-[var(--text-secondary)]">
               <th className="px-3 py-2 font-medium">Campaign</th>
               <th className="px-3 py-2 font-medium">Status</th>
               <th className="px-3 py-2 font-medium">Source</th>
@@ -137,9 +137,9 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-stone-400">Loading…</td></tr>
+              <tr><td colSpan={6} className="px-3 py-8 text-center text-[var(--text-tertiary)]">Loading…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-stone-400">No campaigns yet.</td></tr>
+              <tr><td colSpan={6} className="px-3 py-8 text-center text-[var(--text-tertiary)]">No campaigns yet.</td></tr>
             ) : (
               rows.map((row) => (
                 <tr key={row.id}>
@@ -147,15 +147,15 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
                     <Link href={`/campaigns/${row.id}`} className="font-medium text-[var(--brand)] hover:underline">
                       {row.name}
                     </Link>
-                    {row.description ? <p className="text-xs text-stone-400">{row.description}</p> : null}
+                    {row.description ? <p className="text-xs text-[var(--text-tertiary)]">{row.description}</p> : null}
                   </td>
                   <td className="px-3 py-2">
-                    <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium">{row.status.toLowerCase()}</span>
+                    <span className="badge badge-neutral">{row.status.toLowerCase()}</span>
                   </td>
                   <td className="px-3 py-2">{row.source ?? "—"}</td>
                   <td className="px-3 py-2">{row.memberCount}</td>
                   <td className="px-3 py-2">{row.owner?.name ?? "—"}</td>
-                  <td className="px-3 py-2 text-xs text-stone-500">
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">
                     {row.startsAt ? new Date(row.startsAt).toLocaleDateString() : "—"}
                     {row.endsAt ? ` → ${new Date(row.endsAt).toLocaleDateString()}` : ""}
                   </td>

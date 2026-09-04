@@ -8,7 +8,7 @@ import type { ScopedContext } from "@/server/records/leads";
  * internals.
  */
 
-export type SearchObject = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY" | "TASK";
+export type SearchObject = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY" | "TASK" | "NOTE";
 
 export interface SearchHit {
   objectType: SearchObject;

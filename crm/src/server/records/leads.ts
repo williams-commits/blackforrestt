@@ -3,12 +3,12 @@ import { prisma } from "@/server/db";
 import { CrmError, requirePermission, type CrmContext } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
-import { normalizeEmail, normalizePhone, normalizeText } from "@/server/normalize";
+import { normalizeCountry, normalizeEmail, normalizePhone, normalizeText } from "@/server/normalize";
 import {
   assignedScopeWhere,
   visibleTeamIds,
 } from "@/server/scope";
-import { orderByFor, searchWhere } from "@/server/listQuery";
+import { customFieldWhere, orderByFor, searchWhere } from "@/server/listQuery";
 import { notify } from "@/server/notifications";
 import { findMatches } from "@/server/records/duplicates";
 import { sanitizeCustomFields } from "@/server/records/customFields";
@@ -49,6 +49,7 @@ export const CreateLead = z.object(BaseFields).extend({
 // PATCH accepts partial payloads — only provided fields change.
 export const UpdateLead = CreateLead.partial().extend({
   lastContactAt: z.coerce.date().optional().nullable(),
+  allowDuplicates: z.boolean().optional(),
 });
 
 export const BulkLeadAction = z.discriminatedUnion("action", [
@@ -66,6 +67,17 @@ export const BulkLeadAction = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("delete"),
     ids: z.array(z.string().min(5)).min(1).max(500),
+  }),
+  z.object({
+    action: z.literal("tag"),
+    ids: z.array(z.string().min(5)).min(1).max(500),
+    tagId: z.string().min(5),
+  }),
+  z.object({
+    action: z.literal("task"),
+    ids: z.array(z.string().min(5)).min(1).max(500),
+    title: z.string().trim().min(2).max(200),
+    dueAt: z.coerce.date().optional().nullable(),
   }),
 ]);
 
@@ -108,6 +120,7 @@ export async function listLeads(
   ctx: ScopedContext,
   query: { page: number; pageSize: number; sort?: string; order: "asc" | "desc"; q?: string },
   filters: z.infer<typeof LeadFilters>,
+  cfFilters?: Array<{ key: string; value: string }>,
 ) {
   const where: Prisma.LeadWhereInput = {
     deletedAt: null,
@@ -117,6 +130,7 @@ export async function listLeads(
     ...(filters.assignment === "mine" ? { assignedUserId: ctx.userId } : {}),
     ...(filters.assignment === "unassigned" ? { assignedUserId: null } : {}),
     ...searchWhere(SEARCH_FIELDS, query.q ?? ""),
+    ...customFieldWhere(cfFilters ?? []),
   };
   const [total, rows] = await Promise.all([
     prisma.lead.count({ where }),
@@ -166,7 +180,7 @@ function normalizedLeadData(input: Partial<z.infer<typeof CreateLead>>) {
   set("email", normalizeEmail(input.email));
   set("phone", normalizePhone(input.phone));
   set("secondaryPhone", normalizePhone(input.secondaryPhone));
-  set("country", normalizeText(input.country));
+  set("country", normalizeCountry(input.country));
   set("region", normalizeText(input.region));
   set("source", normalizeText(input.source));
   set("externalId", normalizeText(input.externalId));
@@ -229,6 +243,7 @@ export async function createLead(ctx: ScopedContext, input: z.infer<typeof Creat
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "LEAD_CREATED",
       objectType: "Lead",
       objectId: created.id,
@@ -242,6 +257,27 @@ export async function createLead(ctx: ScopedContext, input: z.infer<typeof Creat
 export async function updateLead(ctx: ScopedContext, id: string, input: z.infer<typeof UpdateLead>) {
   const existing = await prisma.lead.findFirst({ where: { id, deletedAt: null, ...scopeWhere(ctx) } });
   if (!existing) throw new CrmError("Lead not found.", 404);
+
+  // Dedup keys changed? Re-check against other leads unless explicitly forced.
+  if (!input.allowDuplicates) {
+    const changedDedupKeys =
+      (input.email !== undefined && normalizeEmail(input.email) !== existing.email) ||
+      (input.phone !== undefined && normalizePhone(input.phone) !== existing.phone) ||
+      (input.externalId !== undefined && input.externalId !== existing.externalId);
+    if (changedDedupKeys) {
+      const matches = await findMatches(ctx, {
+        email: input.email ?? existing.email,
+        phone: input.phone ?? existing.phone,
+        externalId: input.externalId ?? existing.externalId,
+        excludeLeadId: id,
+      });
+      if (matches.leads.length > 0) {
+        throw new CrmError("This change would duplicate another lead — review or confirm anyway.", 409, {
+          matches,
+        });
+      }
+    }
+  }
 
   const status = input.statusId ? await assertStatusFor("LEAD", input.statusId) : undefined;
   if (input.statusId && !status) throw new CrmError("Invalid lead status.", 400);
@@ -298,6 +334,7 @@ export async function updateLead(ctx: ScopedContext, id: string, input: z.infer<
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "LEAD_UPDATED",
       objectType: "Lead",
       objectId: id,
@@ -329,6 +366,7 @@ export async function softDeleteLead(ctx: ScopedContext, id: string) {
     await appendActivity(tx, { subjectType: "LEAD", subjectId: id, kind: "deleted", actorUserId: ctx.userId });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "LEAD_DELETED",
       objectType: "Lead",
       objectId: id,
@@ -357,6 +395,28 @@ export async function bulkLeads(ctx: ScopedContext, input: z.infer<typeof BulkLe
       const status = await assertStatusFor("LEAD", input.statusId);
       if (!status) throw new CrmError("Invalid lead status.", 400);
       await tx.lead.updateMany({ where: { id: { in: ids } }, data: { statusId: status.id } });
+    } else if (input.action === "tag") {
+      const tag = await tx.tag.findUnique({ where: { id: input.tagId } });
+      if (!tag) throw new CrmError("Tag not found.", 400);
+      for (const id of ids) {
+        await tx.tagLink.upsert({
+          where: { tagId_subjectType_subjectId: { tagId: tag.id, subjectType: "LEAD", subjectId: id } },
+          create: { tagId: tag.id, subjectType: "LEAD", subjectId: id },
+          update: {},
+        });
+      }
+    } else if (input.action === "task") {
+      for (const id of ids) {
+        await tx.task.create({
+          data: {
+            title: input.title,
+            dueAt: input.dueAt ?? null,
+            ownerUserId: ctx.userId,
+            subjectType: "LEAD",
+            subjectId: id,
+          },
+        });
+      }
     } else {
       await tx.lead.updateMany({
         where: { id: { in: ids } },
@@ -370,13 +430,23 @@ export async function bulkLeads(ctx: ScopedContext, input: z.infer<typeof BulkLe
       await appendActivity(tx, {
         subjectType: "LEAD",
         subjectId: id,
-        kind: input.action === "delete" ? "bulk_deleted" : input.action === "status" ? "bulk_status_changed" : "bulk_assigned",
+        kind:
+          input.action === "delete"
+            ? "bulk_deleted"
+            : input.action === "status"
+              ? "bulk_status_changed"
+              : input.action === "tag"
+                ? "updated"
+                : input.action === "task"
+                  ? "task_created"
+                  : "bulk_assigned",
         actorUserId: ctx.userId,
         payload: { count: ids.length },
       });
     }
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: `LEAD_BULK_${input.action.toUpperCase()}`,
       objectType: "Lead",
       after: { ids, count: ids.length },

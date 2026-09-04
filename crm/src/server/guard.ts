@@ -1,5 +1,7 @@
+import { headers } from "next/headers";
 import { auth } from "@/auth";
 import { prisma } from "@/server/db";
+import { logger } from "@/server/observability";
 import type { Permission } from "@/server/permissions";
 
 /** Authorization/domain error carrying an HTTP-compatible status and,
@@ -21,6 +23,8 @@ export interface CrmContext {
   roleKey: string;
   scope: "OWN" | "TEAM" | "HIERARCHY" | "ORG";
   permissions: Permission[];
+  /** Client IP stamped by middleware — flows into audit entries. */
+  ip: string | null;
 }
 
 /**
@@ -41,15 +45,19 @@ export async function requirePermission(permission: Permission): Promise<CrmCont
     },
   });
   if (!user || user.status !== "ACTIVE") {
+    logger.warn("authz_inactive_or_unknown_user", { userId, ip: (await headers()).get("x-client-ip") });
     throw new CrmError("Forbidden — an active CRM account is required", 403);
   }
 
   const permissions = user.role.permissions.map((entry) => entry.permission) as Permission[];
+  const ip = (await headers()).get("x-client-ip");
   if (!permissions.includes(permission)) {
+    // Authorization failures are security signals — always logged.
+    logger.warn("authz_denied", { userId, permission, ip });
     throw new CrmError(`Forbidden — ${permission} permission required`, 403);
   }
 
-  return { userId, name: user.name, roleKey: user.role.key, scope: user.role.scope, permissions };
+  return { userId, name: user.name, roleKey: user.role.key, scope: user.role.scope, permissions, ip };
 }
 
 /** Enforce several permissions at once (all must be held). */

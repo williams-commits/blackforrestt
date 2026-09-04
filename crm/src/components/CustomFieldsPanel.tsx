@@ -30,7 +30,7 @@ export function CustomFieldsPanel({
             : String(value);
         return (
           <div key={def.key}>
-            <dt className="text-xs uppercase tracking-wide text-stone-400">{def.label}</dt>
+            <dt className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">{def.label}</dt>
             <dd className="text-sm">{display}</dd>
           </div>
         );

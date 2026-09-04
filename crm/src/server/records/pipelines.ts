@@ -61,6 +61,7 @@ export async function createPipeline(ctx: CrmContext, input: z.infer<typeof Crea
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "PIPELINE_CREATED",
       objectType: "Pipeline",
       objectId: pipeline.id,
@@ -86,6 +87,7 @@ export async function updatePipeline(ctx: CrmContext, id: string, input: z.infer
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "PIPELINE_UPDATED",
       objectType: "Pipeline",
       objectId: id,
@@ -108,6 +110,7 @@ export async function deletePipeline(ctx: CrmContext, id: string) {
     await tx.pipeline.delete({ where: { id } }); // stages cascade
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "PIPELINE_DELETED",
       objectType: "Pipeline",
       objectId: id,
@@ -150,6 +153,7 @@ export async function createStage(ctx: CrmContext, pipelineId: string, input: z.
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "PIPELINE_STAGE_CREATED",
       objectType: "PipelineStage",
       objectId: stage.id,
@@ -179,6 +183,7 @@ export async function updateStage(
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "PIPELINE_STAGE_UPDATED",
       objectType: "PipelineStage",
       objectId: stageId,
@@ -204,6 +209,7 @@ export async function deleteStage(ctx: CrmContext, pipelineId: string, stageId: 
     await tx.pipelineStage.delete({ where: { id: stageId } });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "PIPELINE_STAGE_DELETED",
       objectType: "PipelineStage",
       objectId: stageId,

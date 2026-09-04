@@ -6,7 +6,7 @@ import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { normalizeEmail, normalizePhone, normalizeText } from "@/server/normalize";
 import { ownerScopeWhere } from "@/server/scope";
-import { orderByFor, searchWhere } from "@/server/listQuery";
+import { customFieldWhere, orderByFor, searchWhere } from "@/server/listQuery";
 import { sanitizeCustomFields } from "@/server/records/customFields";
 import type { ScopedContext } from "@/server/records/leads";
 
@@ -47,12 +47,14 @@ export async function listCustomers(
   ctx: ScopedContext,
   query: { page: number; pageSize: number; sort?: string; q?: string },
   filters: { statusId?: string },
+  cfFilters?: Array<{ key: string; value: string }>,
 ) {
   const where: Prisma.CustomerWhereInput = {
     deletedAt: null,
     ...ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds),
     ...(filters.statusId ? { statusId: filters.statusId } : {}),
     ...searchWhere(SEARCH_FIELDS, query.q ?? ""),
+    ...customFieldWhere(cfFilters ?? []),
   };
   const [total, rows] = await Promise.all([
     prisma.customer.count({ where }),
@@ -115,6 +117,7 @@ export async function createCustomer(ctx: ScopedContext, input: z.infer<typeof C
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "CUSTOMER_CREATED",
       objectType: "Customer",
       objectId: created.id,
@@ -165,6 +168,7 @@ export async function updateCustomer(ctx: ScopedContext, id: string, input: z.in
     await appendActivity(tx, { subjectType: "CUSTOMER", subjectId: id, kind: "updated", actorUserId: ctx.userId });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "CUSTOMER_UPDATED",
       objectType: "Customer",
       objectId: id,
@@ -183,6 +187,7 @@ export async function softDeleteCustomer(ctx: ScopedContext, id: string) {
     await appendActivity(tx, { subjectType: "CUSTOMER", subjectId: id, kind: "deleted", actorUserId: ctx.userId });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "CUSTOMER_DELETED",
       objectType: "Customer",
       objectId: id,

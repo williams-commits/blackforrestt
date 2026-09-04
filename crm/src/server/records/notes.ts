@@ -28,6 +28,9 @@ export async function createNote(ctx: ScopedContext, input: z.infer<typeof Creat
         subjectId: subject.id,
       },
     });
+    if (subject.type === "LEAD") {
+      await tx.lead.update({ where: { id: subject.id }, data: { lastContactAt: new Date() } });
+    }
     await appendActivity(tx, {
       subjectType: subject.type,
       subjectId: subject.id,
@@ -37,6 +40,7 @@ export async function createNote(ctx: ScopedContext, input: z.infer<typeof Creat
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "NOTE_ADDED",
       objectType: "Note",
       objectId: note.id,

@@ -69,7 +69,7 @@ export function TagEditor({
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1">
         {attached.length === 0 ? (
-          <span className="text-sm text-stone-400">No tags.</span>
+          <span className="text-sm text-[var(--text-tertiary)]">No tags.</span>
         ) : (
           attached.map((tag) => (
             <span
@@ -101,7 +101,7 @@ export function TagEditor({
           onChange={(event) => {
             if (event.target.value) void link(event.target.value);
           }}
-          className="rounded-md border border-stone-300 px-2 py-1 text-xs"
+          className="rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs"
         >
           <option value="">Add tag…</option>
           {available.map((tag) => (

@@ -54,7 +54,7 @@ export function RecordActivities({
   const [apptLocation, setApptLocation] = useState("");
 
   const inputClass =
-    "w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
+    "w-full rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
 
   async function addNote(event: React.FormEvent) {
     event.preventDefault();
@@ -124,7 +124,7 @@ export function RecordActivities({
   return (
     <div className="space-y-4">
       {error ? (
-        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
           {error}
         </p>
       ) : null}
@@ -146,7 +146,7 @@ export function RecordActivities({
               <button
                 type="submit"
                 disabled={busy}
-                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:opacity-50"
+                className="btn btn-secondary"
               >
                 {busy ? "Adding…" : "Add note"}
               </button>
@@ -160,7 +160,7 @@ export function RecordActivities({
                 setShowTask((previous) => !previous);
                 setShowAppointment(false);
               }}
-              className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium hover:bg-stone-50"
+              className="btn btn-secondary"
             >
               Create follow-up task
             </button>
@@ -170,14 +170,14 @@ export function RecordActivities({
                 setShowAppointment((previous) => !previous);
                 setShowTask(false);
               }}
-              className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium hover:bg-stone-50"
+              className="btn btn-secondary"
             >
               Schedule appointment
             </button>
           </div>
 
           {showTask ? (
-            <form method="post" onSubmit={createTask} className="grid gap-2 rounded-md border border-stone-200 p-3 sm:grid-cols-3">
+            <form method="post" onSubmit={createTask} className="grid gap-2 rounded-md border border-[var(--border-default)] p-3 sm:grid-cols-3">
               <input
                 aria-label="Task title"
                 value={taskTitle}
@@ -195,7 +195,7 @@ export function RecordActivities({
               />
               <button
                 type="submit"
-                className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
+                className="btn btn-primary"
                 style={{ background: "var(--brand)" }}
               >
                 Create
@@ -204,7 +204,7 @@ export function RecordActivities({
           ) : null}
 
           {showAppointment ? (
-            <form method="post" onSubmit={scheduleAppointment} className="grid gap-2 rounded-md border border-stone-200 p-3 sm:grid-cols-4">
+            <form method="post" onSubmit={scheduleAppointment} className="grid gap-2 rounded-md border border-[var(--border-default)] p-3 sm:grid-cols-4">
               <input
                 aria-label="Appointment title"
                 value={apptTitle}
@@ -230,7 +230,7 @@ export function RecordActivities({
               />
               <button
                 type="submit"
-                className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
+                className="btn btn-primary"
                 style={{ background: "var(--brand)" }}
               >
                 Schedule
@@ -242,14 +242,14 @@ export function RecordActivities({
 
       {appointments.length > 0 ? (
         <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
             Appointments
           </h3>
           <ul className="space-y-1">
             {appointments.map((appointment) => (
               <li key={appointment.id} className="flex items-center justify-between text-sm">
                 <span className="font-medium">{appointment.title}</span>
-                <span className="text-stone-500">
+                <span className="text-[var(--text-secondary)]">
                   {new Date(appointment.startAt).toLocaleString(undefined, {
                     dateStyle: "medium",
                     timeStyle: "short",
@@ -263,17 +263,17 @@ export function RecordActivities({
       ) : null}
 
       <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
           Notes ({notes.length})
         </h3>
         {notes.length === 0 ? (
-          <p className="text-sm text-stone-400">No notes yet.</p>
+          <p className="text-sm text-[var(--text-tertiary)]">No notes yet.</p>
         ) : (
           <ul className="space-y-2">
             {notes.map((note) => (
-              <li key={note.id} className="rounded-md border border-stone-100 bg-stone-50 p-3 text-sm">
+              <li key={note.id} className="rounded-md border border-[var(--border-default)] bg-[var(--bg-hover)] p-3 text-sm">
                 <p className="whitespace-pre-wrap">{note.body}</p>
-                <p className="mt-1 text-xs text-stone-400">
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
                   {note.author.name} ·{" "}
                   {new Date(note.createdAt).toLocaleString(undefined, {
                     dateStyle: "medium",

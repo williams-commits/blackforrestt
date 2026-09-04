@@ -4,16 +4,18 @@ Standalone sales & relationship-management module. Runs as its own Next.js
 application on its own subdomain with its own database — fully isolated from
 the trading platform. Design and roadmap: [`DESIGN.md`](./DESIGN.md).
 
-**Status: Phase 11 (hardening) complete — all phases shipped.** The full
-roadmap is implemented: foundation & RBAC, core records, activities &
-notifications, dedup/conversion/merge, opportunities & pipelines, the CSV
-import wizard, campaigns & configuration admin, trigram global search with
-saved views, the report engine & dashboards, the read-only platform
-bridge, and hardening: login lockout, per-IP API mutation throttling,
-same-origin mutation gate, baseline security headers, a standalone Docker
-image, subdomain deployment wiring (compose + Caddy + env), and a load
-check at 3k rows (50–80 ms warm on lists/search/reports). Operations:
-[DEPLOYMENT.md](./DEPLOYMENT.md).
+**Status: spec-complete (minus call center).** All phases shipped and
+hardened: foundation & RBAC, core records, activities & notifications,
+dedup/conversion/merge (leads, contacts, accounts, customers),
+opportunities & pipelines, CSV + Google Sheets import with retry,
+campaigns with member tracking, configuration admin (statuses, tags,
+custom fields, users, teams, roles, settings), trigram search including
+notes with saved views, a report engine with builder UI + scope-safe CSV
+export, dashboards, attachments behind a storage abstraction, the
+read-only platform bridge, and the full hardening pass. Automated test
+suites cover RBAC, scope, conversion, import, merge, export, search, and
+normalization. The call-center scope was explicitly removed by the
+product owner. Operations: [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ## Stack
 

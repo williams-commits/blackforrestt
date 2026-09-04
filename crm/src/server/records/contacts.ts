@@ -6,7 +6,7 @@ import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { normalizeEmail, normalizePhone, normalizeText } from "@/server/normalize";
 import { ownerScopeWhere } from "@/server/scope";
-import { orderByFor, searchWhere } from "@/server/listQuery";
+import { customFieldWhere, orderByFor, searchWhere } from "@/server/listQuery";
 import { sanitizeCustomFields } from "@/server/records/customFields";
 import type { ScopedContext } from "@/server/records/leads";
 
@@ -47,6 +47,7 @@ export async function listContacts(
   ctx: ScopedContext,
   query: { page: number; pageSize: number; sort?: string; q?: string },
   filters: { accountId?: string; statusId?: string },
+  cfFilters?: Array<{ key: string; value: string }>,
 ) {
   const where: Prisma.ContactWhereInput = {
     deletedAt: null,
@@ -54,6 +55,7 @@ export async function listContacts(
     ...(filters.accountId ? { accountId: filters.accountId } : {}),
     ...(filters.statusId ? { statusId: filters.statusId } : {}),
     ...searchWhere(SEARCH_FIELDS, query.q ?? ""),
+    ...customFieldWhere(cfFilters ?? []),
   };
   const [total, rows] = await Promise.all([
     prisma.contact.count({ where }),
@@ -120,6 +122,7 @@ export async function createContact(ctx: ScopedContext, input: z.infer<typeof Cr
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "CONTACT_CREATED",
       objectType: "Contact",
       objectId: created.id,
@@ -172,6 +175,7 @@ export async function updateContact(ctx: ScopedContext, id: string, input: z.inf
     await appendActivity(tx, { subjectType: "CONTACT", subjectId: id, kind: "updated", actorUserId: ctx.userId });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "CONTACT_UPDATED",
       objectType: "Contact",
       objectId: id,
@@ -190,6 +194,7 @@ export async function softDeleteContact(ctx: ScopedContext, id: string) {
     await appendActivity(tx, { subjectType: "CONTACT", subjectId: id, kind: "deleted", actorUserId: ctx.userId });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "CONTACT_DELETED",
       objectType: "Contact",
       objectId: id,

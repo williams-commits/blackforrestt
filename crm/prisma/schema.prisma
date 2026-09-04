@@ -173,6 +173,7 @@ model User {
   settingsUpdated SystemSetting[]  @relation("SettingUpdater")
   views           SavedView[]
   auditLogs       AuditLog[]
+  customRecords   CustomObjectRecord[] @relation("CustomRecordOwner")
 
   @@index([status])
 }
@@ -562,6 +563,7 @@ model Task {
   priority    Priority   @default(NORMAL)
   status      TaskStatus @default(OPEN)
   completedAt DateTime?
+  overdueNotifiedAt DateTime?
   subjectType SubjectType?
   subjectId   String?
   createdAt   DateTime   @default(now())
@@ -734,4 +736,45 @@ model MergeRecord {
   createdAt   DateTime    @default(now())
 
   @@index([objectType, primaryId])
+}
+
+
+// ─────────────────── Admin-defined custom objects ───────────────────
+
+// Definition of a custom object type (e.g. "Properties", "Deals", "Vendors").
+// Field schemas live here as JSON — no dynamic DDL, records are JSONB docs.
+model CustomObject {
+  id          String   @id @default(cuid())
+  key         String   @unique // URL slug, e.g. "properties"
+  name        String           // singular, e.g. "Property"
+  pluralName  String           // e.g. "Properties"
+  description String?
+  icon        String?  // lucide icon name
+  fields      Json?    // [{key,label,type,required,options,sortOrder}]
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  records CustomObjectRecord[]
+}
+
+// A record of a custom object — values live in JSONB keyed by the definition.
+model CustomObjectRecord {
+  id              String       @id @default(cuid())
+  customObjectId  String
+  customObject    CustomObject @relation(fields: [customObjectId], references: [id], onDelete: Cascade)
+  name            String // denormalized display name (first required text field)
+  data            Json // field values, validated against the definition
+  ownerUserId     String
+  owner           User         @relation("CustomRecordOwner", fields: [ownerUserId], references: [id])
+  assignedTeamId  String?
+  externalId      String?      @unique
+  deletedAt       DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([customObjectId, deletedAt])
+  @@index([ownerUserId])
+  @@index([externalId])
 }

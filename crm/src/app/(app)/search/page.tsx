@@ -24,30 +24,30 @@ export default async function SearchPage({ searchParams }: PageProps) {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h1 className="text-lg font-semibold">Search</h1>
-        <p className="text-sm text-stone-500">
+        <h1 className="page-title">Search</h1>
+        <p className="text-sm text-[var(--text-secondary)]">
           {query.length < 2
             ? "Type at least two characters in the header search."
             : `${hits.length} result(s) for “${query}” (within your scope)`}
         </p>
       </div>
       {hits.length === 0 && query.length >= 2 ? (
-        <p className="rounded-lg border border-stone-200 bg-white p-8 text-center text-sm text-stone-400">
+        <p className="card empty-state">
           Nothing matched.
         </p>
       ) : (
         [...grouped.entries()].map(([type, list]) => (
-          <section key={type} className="rounded-lg border border-stone-200 bg-white p-4">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
+          <section key={type} className="card">
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
               {type.toLowerCase()}s ({list.length})
             </h2>
-            <ul className="divide-y divide-stone-100">
+            <ul className="divide-y divide-[var(--border-default)]">
               {list.map((hit) => (
                 <li key={hit.id} className="flex items-center justify-between py-2 text-sm">
-                  <Link href={hit.url} className="font-medium text-[var(--brand)] hover:underline">
+                  <Link href={hit.url} className="font-medium text-[--brand] hover:underline">
                     {hit.label}
                   </Link>
-                  <span className="text-xs text-stone-400">{hit.subtitle}</span>
+                  <span className="text-xs text-[var(--text-tertiary)]">{hit.subtitle}</span>
                 </li>
               ))}
             </ul>

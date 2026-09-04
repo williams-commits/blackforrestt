@@ -7,13 +7,19 @@
     "build": "next build",
     "start": "next start -p 3100",
     "lint": "eslint . --max-warnings=0",
-    "stop:server": "lsof -ti:3100 | xargs kill -9", 
+    "stop:server": "lsof -ti:3100 | xargs kill -9",
     "stop:clean": "lsof -ti :3100 | xargs kill -9; rm -rf .next && npm run dev",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "node --env-file-if-exists=.env --import tsx prisma/seed.ts"
+    "db:seed": "node --env-file-if-exists=.env --import tsx prisma/seed.ts",
+    "test:rbac": "node --env-file-if-exists=.env --import tsx --test tests/rbac.test.ts",
+    "test:conversion": "node --env-file-if-exists=.env --import tsx --test tests/conversion.test.ts",
+    "test:import": "node --env-file-if-exists=.env --import tsx --test tests/import.test.ts",
+    "test:platform": "node --env-file-if-exists=.env --import tsx --test tests/platform.test.ts",
+    "test:all": "npm run test:rbac && npm run test:conversion && npm run test:import && npm run test:platform && npm run test:workflow",
+    "test:workflow": "node --env-file-if-exists=.env --import tsx --test tests/workflow.test.ts"
   },
   "prisma": {
     "seed": "node --env-file-if-exists=.env --import tsx prisma/seed.ts"
@@ -23,6 +29,7 @@
     "bcryptjs": "^3.0.3",
     "next": "^15.1.4",
     "next-auth": "^5.0.0-beta.32",
+    "nodemailer": "^8.0.11",
     "papaparse": "^5.7.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -32,6 +39,7 @@
     "@eslint/eslintrc": "^3.2.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.10.5",
+    "@types/nodemailer": "^8.0.1",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19.0.4",
     "@types/react-dom": "^19.0.2",

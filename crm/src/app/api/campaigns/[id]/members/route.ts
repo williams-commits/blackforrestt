@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { AddMember, addMember, removeMember } from "@/server/records/campaigns";
+import { AddMember, UpdateMember, addMember, removeMember, updateMemberStatus } from "@/server/records/campaigns";
 import { scopedContext } from "@/server/records/leads";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
 import { z } from "zod";
@@ -33,5 +33,17 @@ export async function DELETE(request: Request, context: RouteContext) {
     return NextResponse.json({ data: { ok: true } });
   } catch (error) {
     return handleRouteError(error, "Unable to remove member.");
+  }
+}
+
+export async function PATCH(request: Request, context: RouteContext) {
+  try {
+    const ctx = await scopedContext("CAMPAIGNS_EDIT");
+    const { id } = await context.params;
+    const parsed = await parseJsonBody(request, UpdateMember);
+    if (!parsed.ok) return parsed.response;
+    return NextResponse.json({ data: await updateMemberStatus(ctx, id, parsed.data) });
+  } catch (error) {
+    return handleRouteError(error, "Unable to update member.");
   }
 }

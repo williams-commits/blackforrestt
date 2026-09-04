@@ -152,15 +152,15 @@ export function OpportunitiesPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold">Opportunities</h1>
+          <h1 className="page-title">Opportunities</h1>
           {board?.aggregates ? (
-            <p className="text-sm text-stone-500">
+            <p className="text-sm text-[var(--text-secondary)]">
               {board.aggregates.openCount} open · {money(board.aggregates.openValue)} · weighted{" "}
               {money(board.aggregates.weightedValue)}
               {board.aggregates.winRate !== null ? ` · win rate ${board.aggregates.winRate}%` : ""}
             </p>
           ) : (
-            <p className="text-sm text-stone-500">Pipeline management</p>
+            <p className="text-sm text-[var(--text-secondary)]">Pipeline management</p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -168,7 +168,7 @@ export function OpportunitiesPage() {
             aria-label="Pipeline"
             value={pipelineId}
             onChange={(event) => setPipelineId(event.target.value)}
-            className="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
+            className="input"
           >
             {pipelines.map((pipeline) => (
               <option key={pipeline.id} value={pipeline.id}>
@@ -177,24 +177,24 @@ export function OpportunitiesPage() {
               </option>
             ))}
           </select>
-          <div className="flex overflow-hidden rounded-md border border-stone-300 text-sm">
+          <div className="flex overflow-hidden rounded-md border border-[var(--border-strong)] text-sm">
             <button
               type="button"
               onClick={() => setView("board")}
-              className={`px-3 py-1.5 ${view === "board" ? "bg-[var(--brand)] text-white" : "bg-white"}`}
+              className={`px-3 py-1.5 ${view === "board" ? "bg-[var(--brand)] text-white" : "bg-[var(--bg-surface)]"}`}
             >
               Board
             </button>
             <button
               type="button"
               onClick={() => setView("list")}
-              className={`px-3 py-1.5 ${view === "list" ? "bg-[var(--brand)] text-white" : "bg-white"}`}
+              className={`px-3 py-1.5 ${view === "list" ? "bg-[var(--brand)] text-white" : "bg-[var(--bg-surface)]"}`}
             >
               List
             </button>
           </div>
           {view === "board" ? (
-            <label className="flex items-center gap-1 text-sm text-stone-600">
+            <label className="flex items-center gap-1 text-sm text-[var(--text-secondary)]">
               <input
                 type="checkbox"
                 checked={includeClosed}
@@ -207,7 +207,7 @@ export function OpportunitiesPage() {
             <button
               type="button"
               onClick={() => setShowAdmin(true)}
-              className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium hover:bg-stone-50"
+              className="btn btn-secondary"
             >
               Manage pipelines
             </button>
@@ -219,7 +219,7 @@ export function OpportunitiesPage() {
                 setEditRow(null);
                 setShowForm(true);
               }}
-              className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
+              className="btn btn-primary"
               style={{ background: "var(--brand)" }}
             >
               New opportunity
@@ -229,19 +229,19 @@ export function OpportunitiesPage() {
       </div>
 
       {error ? (
-        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
           {error}
         </p>
       ) : null}
 
       {pipelines.length === 0 && !loading ? (
-        <p className="rounded-lg border border-stone-200 bg-white p-8 text-center text-sm text-stone-400">
+        <p className="card empty-state">
           No pipelines configured yet{can.settings ? " — create one under “Manage pipelines”" : ""}.
         </p>
       ) : null}
 
       {loading ? (
-        <p className="p-8 text-center text-sm text-stone-400">Loading…</p>
+        <p className="p-8 text-center text-sm text-[var(--text-tertiary)]">Loading…</p>
       ) : view === "board" && stages.length > 0 ? (
         <div className="flex gap-3 overflow-x-auto pb-2">
           {stages.map((stage) => {
@@ -262,7 +262,7 @@ export function OpportunitiesPage() {
                   if (id && can.edit) void moveStage(id, stage.id);
                 }}
                 className={`w-64 shrink-0 rounded-lg border p-2 ${
-                  dragOver === stage.id ? "border-[var(--brand)] bg-[var(--brand)]/5" : "border-stone-200 bg-stone-100"
+                  dragOver === stage.id ? "border-[var(--brand)] bg-[var(--brand)]/5" : "border-[var(--border-default)] bg-[var(--bg-subtle)]"
                 }`}
               >
                 <div className="mb-2 flex items-baseline justify-between px-1">
@@ -270,7 +270,7 @@ export function OpportunitiesPage() {
                     {stage.name}
                     {stage.type !== "OPEN" ? ` (${stage.type.toLowerCase()})` : ""}
                   </p>
-                  <p className="text-xs text-stone-500">
+                  <p className="text-xs text-[var(--text-secondary)]">
                     {agg?.count ?? 0} · {money(agg?.value ?? 0)}
                   </p>
                 </div>
@@ -280,7 +280,7 @@ export function OpportunitiesPage() {
                       key={card.id}
                       draggable={can.edit}
                       onDragStart={(event) => event.dataTransfer.setData("text/opportunity-id", card.id)}
-                      className="rounded-md border border-stone-200 bg-white p-2 shadow-sm"
+                      className="rounded-md border border-[var(--border-default)] bg-[var(--bg-surface)] p-2 shadow-sm"
                     >
                       <Link
                         href={`/opportunities/${card.id}`}
@@ -288,10 +288,10 @@ export function OpportunitiesPage() {
                       >
                         {card.name}
                       </Link>
-                      <p className="mt-0.5 text-xs text-stone-500">
+                      <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
                         {card.value ? money(Number(card.value)) : "—"} · {card.probability}%
                       </p>
-                      <p className="text-xs text-stone-400">
+                      <p className="text-xs text-[var(--text-tertiary)]">
                         {card.account?.name ?? card.contact?.lastName ?? "—"}
                         {card.expectedCloseAt
                           ? ` · closes ${new Date(card.expectedCloseAt).toLocaleDateString()}`
@@ -302,7 +302,7 @@ export function OpportunitiesPage() {
                           aria-label={`Stage for ${card.name}`}
                           value={card.stageId}
                           onChange={(event) => void moveStage(card.id, event.target.value)}
-                          className="mt-1 w-full rounded border border-stone-200 px-1 py-0.5 text-xs"
+                          className="mt-1 w-full rounded border border-[var(--border-default)] px-1 py-0.5 text-xs"
                         >
                           {stages.map((option) => (
                             <option key={option.id} value={option.id}>
@@ -314,7 +314,7 @@ export function OpportunitiesPage() {
                     </div>
                   ))}
                   {cards.length === 0 ? (
-                    <p className="px-1 py-2 text-xs text-stone-400">Empty</p>
+                    <p className="px-1 py-2 text-xs text-[var(--text-tertiary)]">Empty</p>
                   ) : null}
                 </div>
               </div>
@@ -322,10 +322,10 @@ export function OpportunitiesPage() {
           })}
         </div>
       ) : view === "list" ? (
-        <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
-          <table className="w-full text-sm">
+        <div className="card overflow-hidden">
+          <table className="table">
             <thead>
-              <tr className="border-b border-stone-200 bg-stone-50 text-left text-xs uppercase tracking-wide text-stone-500">
+              <tr className="border-b border-[var(--border-default)] bg-[var(--bg-hover)] text-left text-xs uppercase tracking-wide text-[var(--text-secondary)]">
                 <th className="px-3 py-2 font-medium">Opportunity</th>
                 <th className="px-3 py-2 font-medium">Account</th>
                 <th className="px-3 py-2 font-medium">Stage</th>
@@ -338,7 +338,7 @@ export function OpportunitiesPage() {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-stone-400">
+                  <td colSpan={7} className="px-3 py-8 text-center text-[var(--text-tertiary)]">
                     No opportunities in this pipeline.
                   </td>
                 </tr>
@@ -352,7 +352,7 @@ export function OpportunitiesPage() {
                     </td>
                     <td className="px-3 py-2">{row.account?.name ?? "—"}</td>
                     <td className="px-3 py-2">
-                      <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium">
+                      <span className="badge badge-neutral">
                         {row.stage.name}
                       </span>
                     </td>
@@ -411,6 +411,15 @@ export function OpportunityForm({
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [stageId, setStageId] = useState(initial?.stageId ?? "");
+  const [accountId, setAccountId] = useState("");
+  const [contactId, setContactId] = useState("");
+  const [accountOptions, setAccountOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [contactOptions, setContactOptions] = useState<Array<{ id: string; firstName: string; lastName: string }>>([]);
+
+  useEffect(() => {
+    void fetch("/api/accounts?pageSize=100").then((r) => (r.ok ? r.json() : null)).then((b) => setAccountOptions(b?.data ?? []));
+    void fetch("/api/contacts?pageSize=100").then((r) => (r.ok ? r.json() : null)).then((b) => setContactOptions(b?.data ?? []));
+  }, []);
   const [value, setValue] = useState(initial?.value ? String(Number(initial.value) / 100) : "");
   const [probability, setProbability] = useState(initial ? String(initial.probability) : "");
   const [expectedCloseAt, setExpectedCloseAt] = useState(
@@ -420,7 +429,7 @@ export function OpportunityForm({
   const [busy, setBusy] = useState(false);
 
   const inputClass =
-    "w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
+    "w-full rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -431,6 +440,8 @@ export function OpportunityForm({
         name,
         pipelineId: pipeline.id,
         ...(stageId ? { stageId } : {}),
+        ...(accountId ? { accountId } : {}),
+        ...(contactId ? { contactId } : {}),
         ...(value ? { value: Math.round(parseFloat(value) * 100) } : {}),
         ...(probability ? { probability: parseInt(probability, 10) } : {}),
         ...(expectedCloseAt ? { expectedCloseAt } : {}),
@@ -456,12 +467,12 @@ export function OpportunityForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8" role="dialog" aria-modal="true">
-      <form method="post" onSubmit={submit} className="w-full max-w-md space-y-4 rounded-lg border border-stone-200 bg-white p-6 shadow-xl">
+      <form method="post" onSubmit={submit} className="w-full max-w-md space-y-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-6 shadow-xl">
         <h2 className="text-base font-semibold">
           {initial ? "Edit opportunity" : `New opportunity — ${pipeline.name}`}
         </h2>
         {error ? (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
             {error}
           </p>
         ) : null}
@@ -482,6 +493,26 @@ export function OpportunityForm({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
+            <label htmlFor="o-account" className="mb-1 block text-sm font-medium">Account</label>
+            <select id="o-account" value={accountId} onChange={(e) => setAccountId(e.target.value)} className={inputClass}>
+              <option value="">— none —</option>
+              {accountOptions.map((account) => (
+                <option key={account.id} value={account.id}>{account.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="o-contact" className="mb-1 block text-sm font-medium">Contact</label>
+            <select id="o-contact" value={contactId} onChange={(e) => setContactId(e.target.value)} className={inputClass}>
+              <option value="">— none —</option>
+              {contactOptions.map((contact) => (
+                <option key={contact.id} value={contact.id}>{contact.firstName} {contact.lastName}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
             <label htmlFor="o-value" className="mb-1 block text-sm font-medium">Value (USD)</label>
             <input id="o-value" type="number" step="0.01" min="0" value={value} onChange={(e) => setValue(e.target.value)} className={inputClass} />
           </div>
@@ -494,11 +525,11 @@ export function OpportunityForm({
           <label htmlFor="o-close" className="mb-1 block text-sm font-medium">Expected close</label>
           <input id="o-close" type="date" value={expectedCloseAt} onChange={(e) => setExpectedCloseAt(e.target.value)} className={inputClass} />
         </div>
-        <div className="flex justify-end gap-2 border-t border-stone-100 pt-4">
-          <button type="button" onClick={onClose} className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium hover:bg-stone-50">
+        <div className="flex justify-end gap-2 border-t border-[var(--border-default)] pt-4">
+          <button type="button" onClick={onClose} className="btn btn-secondary">
             Cancel
           </button>
-          <button type="submit" disabled={busy} className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60" style={{ background: "var(--brand)" }}>
+          <button type="submit" disabled={busy} className="btn btn-primary" style={{ background: "var(--brand)" }}>
             {busy ? "Saving…" : "Save"}
           </button>
         </div>
@@ -532,20 +563,20 @@ function PipelineAdmin({
     return true;
   }
 
-  const inputClass = "rounded-md border border-stone-300 px-2 py-1 text-sm";
+  const inputClass = "rounded-md border border-[var(--border-strong)] px-2 py-1 text-sm";
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8" role="dialog" aria-modal="true">
-      <div className="w-full max-w-2xl space-y-4 rounded-lg border border-stone-200 bg-white p-6 shadow-xl">
+      <div className="w-full max-w-2xl space-y-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-6 shadow-xl">
         <h2 className="text-base font-semibold">Manage pipelines</h2>
         {error ? (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
             {error}
           </p>
         ) : null}
 
         {pipelines.map((pipeline) => (
-          <div key={pipeline.id} className="rounded-md border border-stone-200 p-3">
+          <div key={pipeline.id} className="card" style={{ padding: "var(--space-3)" }}>
             <div className="mb-2 flex items-center justify-between">
               <p className="text-sm font-semibold">
                 {pipeline.name}
@@ -572,7 +603,7 @@ function PipelineAdmin({
                       void call(`/api/pipelines/${pipeline.id}`, { method: "DELETE" });
                     }
                   }}
-                  className="text-red-600 hover:underline"
+                  className="text-[var(--error)] hover:underline"
                 >
                   Delete
                 </button>
@@ -583,7 +614,7 @@ function PipelineAdmin({
                 <li key={stage.id} className="flex items-center justify-between text-sm">
                   <span>
                     {stage.name}{" "}
-                    <span className="text-xs text-stone-400">
+                    <span className="text-xs text-[var(--text-tertiary)]">
                       {stage.probability}% · {stage.type.toLowerCase()}
                     </span>
                   </span>
@@ -594,7 +625,7 @@ function PipelineAdmin({
                         void call(`/api/pipelines/${pipeline.id}/stages/${stage.id}`, { method: "DELETE" });
                       }
                     }}
-                    className="text-xs text-red-600 hover:underline"
+                    className="text-xs text-[var(--error)] hover:underline"
                   >
                     remove
                   </button>
@@ -642,7 +673,7 @@ function PipelineAdmin({
                 <option value="WON">Won</option>
                 <option value="LOST">Lost</option>
               </select>
-              <button type="submit" className="rounded-md border border-stone-300 px-2 py-1 text-xs font-medium hover:bg-stone-50">
+              <button type="submit" className="rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs font-medium hover:bg-[var(--bg-hover)]">
                 Add stage
               </button>
             </form>
@@ -650,7 +681,7 @@ function PipelineAdmin({
         ))}
 
         <form
-          className="flex items-center gap-2 border-t border-stone-100 pt-4"
+          className="flex items-center gap-2 border-t border-[var(--border-default)] pt-4"
           onSubmit={async (event) => {
             event.preventDefault();
             if (!pipelineName) return;
@@ -669,13 +700,13 @@ function PipelineAdmin({
             onChange={(event) => setPipelineName(event.target.value)}
             className={`${inputClass} flex-1`}
           />
-          <button type="submit" className="rounded-md px-3 py-1.5 text-sm font-semibold text-white" style={{ background: "var(--brand)" }}>
+          <button type="submit" className="btn btn-primary" style={{ background: "var(--brand)" }}>
             Add pipeline
           </button>
         </form>
 
-        <div className="flex justify-end border-t border-stone-100 pt-4">
-          <button type="button" onClick={onClose} className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium hover:bg-stone-50">
+        <div className="flex justify-end border-t border-[var(--border-default)] pt-4">
+          <button type="button" onClick={onClose} className="btn btn-secondary">
             Close
           </button>
         </div>

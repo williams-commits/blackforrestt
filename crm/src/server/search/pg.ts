@@ -157,6 +157,61 @@ export const pgSearch: SearchProvider = {
         url: `/tasks`,
       });
     }
+
+    // Notes search — a note is visible when its SUBJECT is visible; resolve
+    // scoped subject ids per type (bounded), then match note bodies.
+    const noteHits: SearchHit[] = [];
+    const pushNotes = async (
+      entryType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER",
+      ids: string[],
+    ) => {
+      if (ids.length === 0) return;
+      const notes = await prisma.note.findMany({
+        where: { subjectType: entryType, subjectId: { in: ids }, body: contains(q) },
+        orderBy: { createdAt: "desc" },
+        take: perType,
+      });
+      for (const note of notes) {
+        noteHits.push({
+          objectType: "NOTE",
+          id: note.id,
+          label: note.body.length > 60 ? `${note.body.slice(0, 60)}…` : note.body,
+          subtitle: `note on ${entryType.toLowerCase()}`,
+          url: `/${entryType.toLowerCase()}s/${note.subjectId}`,
+        });
+      }
+    };
+    const leadIds = await prisma.lead.findMany({
+      where: { deletedAt: null, ...leadScope },
+      select: { id: true },
+      take: 500,
+    });
+    await pushNotes("LEAD", leadIds.map((row) => row.id));
+    if (noteHits.length < perType) {
+      const contactIds = await prisma.contact.findMany({
+        where: { deletedAt: null, ...ownerScope },
+        select: { id: true },
+        take: 500,
+      });
+      await pushNotes("CONTACT", contactIds.map((row) => row.id));
+    }
+    if (noteHits.length < perType) {
+      const accountIds = await prisma.account.findMany({
+        where: { deletedAt: null, ...ownerScope },
+        select: { id: true },
+        take: 500,
+      });
+      await pushNotes("ACCOUNT", accountIds.map((row) => row.id));
+    }
+    if (noteHits.length < perType) {
+      const customerIds = await prisma.customer.findMany({
+        where: { deletedAt: null, ...ownerScope },
+        select: { id: true },
+        take: 500,
+      });
+      await pushNotes("CUSTOMER", customerIds.map((row) => row.id));
+    }
+    hits.push(...noteHits);
     return hits;
   },
 };

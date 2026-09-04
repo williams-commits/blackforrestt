@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { CreateAccount, createAccount, listAccounts } from "@/server/records/accounts";
 import { scopedContext } from "@/server/records/leads";
-import { parseListQuery } from "@/server/listQuery";
+import { customFieldFilters, parseListQuery } from "@/server/listQuery";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const ctx = await scopedContext("ACCOUNTS_READ");
     const params = new URL(request.url).searchParams;
     const query = parseListQuery(params);
-    const { total, rows } = await listAccounts(ctx, query);
+    const { total, rows } = await listAccounts(ctx, query, customFieldFilters(params));
     return NextResponse.json({ data: rows, meta: { page: query.page, pageSize: query.pageSize, total } });
   } catch (error) {
     return handleRouteError(error, "Unable to load accounts.");

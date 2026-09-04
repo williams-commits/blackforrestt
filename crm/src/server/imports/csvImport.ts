@@ -447,6 +447,7 @@ async function processImportJob(jobId: string): Promise<void> {
     roleKey: user.role.key,
     scope: user.role.scope,
     permissions: user.role.permissions.map((entry) => entry.permission) as never,
+    ip: null,
     teamIds: await visibleTeamIds(user.id, user.role.scope),
   };
 

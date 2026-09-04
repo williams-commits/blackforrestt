@@ -46,6 +46,9 @@ export async function createAppointment(ctx: ScopedContext, input: z.infer<typeo
         subjectId: subject.id,
       },
     });
+    if (subject.type === "LEAD") {
+      await tx.lead.update({ where: { id: subject.id }, data: { lastContactAt: new Date() } });
+    }
     await appendActivity(tx, {
       subjectType: subject.type,
       subjectId: subject.id,
@@ -55,6 +58,7 @@ export async function createAppointment(ctx: ScopedContext, input: z.infer<typeo
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "APPOINTMENT_CREATED",
       objectType: "Appointment",
       objectId: created.id,
@@ -136,6 +140,7 @@ export async function updateAppointment(
     }
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "APPOINTMENT_UPDATED",
       objectType: "Appointment",
       objectId: id,

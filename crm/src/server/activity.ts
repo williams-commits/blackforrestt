@@ -29,6 +29,7 @@ export interface ActivityEntry {
     | "appointment_cancelled"
     | "converted"
     | "merged"
+    | "email_sent"
     | "imported";
   actorUserId?: string | null;
   payload?: Prisma.InputJsonValue;

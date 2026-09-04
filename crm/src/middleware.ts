@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { consumeApiMutation } from "@/server/security/rateLimit";
+import { logger } from "@/server/observability";
 
 // The auth() wrapper decodes the session JWT (jose, no DB hit) so decisions
 // are made on a VERIFIED session — never on mere cookie presence. This
@@ -96,25 +97,32 @@ const authHandler = auth((req) => {
 });
 
 export default async function middleware(req: NextRequest) {
-  // Never run the auth() wrapper over Auth.js's own endpoints: the wrapper
-  // and the route handler each initialize the CSRF cookie independently,
-  // emitting two different values in one response — the browser keeps the
-  // second while the returned token matches the first, so every login
-  // submit fails with MissingCSRF. Auth.js routes carry their own
-  // CSRF/state protection.
+  const start = Date.now();
+
+  // Stamp correlation + client-IP headers route handlers (and the audit
+  // layer) can trust — derived here once, before any handler runs.
+  const stampHeaders = new Headers(req.headers);
+  stampHeaders.set("x-client-ip", clientIp(req));
+
   const { pathname } = req.nextUrl;
+  let response: NextResponse;
   if (pathname === "/api/auth" || pathname.startsWith("/api/auth/")) {
-    return withSecurityHeaders(NextResponse.next());
+    response = withSecurityHeaders(NextResponse.next());
+  } else if (ASSET_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix))) {
+    response = NextResponse.next();
+  } else {
+    response = (await authHandler(req, { params: Promise.resolve({}) })) as NextResponse;
   }
-
-  // Static assets pass through untouched (see ASSET_PREFIXES note above).
-  if (ASSET_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix))) {
-    return NextResponse.next();
-  }
-
-  // auth()'s second parameter (route context) is unused here; satisfy its
-  // type without depending on Next's event shape.
-  return authHandler(req, { params: Promise.resolve({}) });
+  response.headers.set("x-response-time-ms", String(Date.now() - start));
+  // Structured request log — every non-asset request, one JSON line.
+  logger.info("http_request", {
+    method: req.method,
+    path: pathname,
+    status: response.status,
+    ms: Date.now() - start,
+    ip: clientIp(req),
+  });
+  return response;
 }
 
 export const config = {

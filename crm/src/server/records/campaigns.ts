@@ -95,6 +95,13 @@ export async function getCampaign(ctx: ScopedContext, id: string) {
     stats: {
       total: members.length,
       responded: members.filter((member) => member.respondedAt !== null).length,
+      byStatus: {
+        MEMBER: members.filter((member) => member.status === "MEMBER").length,
+        RESPONDED: members.filter((member) => member.status === "RESPONDED").length,
+        QUALIFIED: members.filter((member) => member.status === "QUALIFIED").length,
+        CONVERTED: members.filter((member) => member.status === "CONVERTED").length,
+      },
+      revenueMinorUnits: await campaignRevenue(id),
       byType: {
         LEAD: members.filter((member) => member.subjectType === "LEAD").length,
         CONTACT: members.filter((member) => member.subjectType === "CONTACT").length,
@@ -111,6 +118,7 @@ export async function createCampaign(ctx: ScopedContext, input: z.infer<typeof C
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "CAMPAIGN_CREATED",
       objectType: "Campaign",
       objectId: created.id,
@@ -145,6 +153,7 @@ export async function updateCampaign(
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "CAMPAIGN_UPDATED",
       objectType: "Campaign",
       objectId: id,
@@ -176,6 +185,7 @@ export async function deleteCampaign(ctx: ScopedContext, id: string) {
     await tx.campaign.delete({ where: { id } }); // members cascade
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "CAMPAIGN_DELETED",
       objectType: "Campaign",
       objectId: id,
@@ -208,7 +218,97 @@ export async function addMember(ctx: ScopedContext, campaignId: string, input: z
   });
 }
 
+/** Sum of won-opportunity value from this campaign's members' records. */
+async function campaignRevenue(campaignId: string): Promise<string> {
+  // Members → their records' opportunities → WON values. We query via the
+  // polymorphic member list then aggregate the linked opportunities.
+  const members = await prisma.campaignMember.findMany({
+    where: { campaignId },
+    select: { subjectType: true, subjectId: true },
+  });
+  const leadIds = members.filter((m) => m.subjectType === "LEAD").map((m) => m.subjectId);
+  const contactIds = members.filter((m) => m.subjectType === "CONTACT").map((m) => m.subjectId);
+  const customerIds = members.filter((m) => m.subjectType === "CUSTOMER").map((m) => m.subjectId);
+
+  // Opportunities linked directly to campaign members OR to their converted records.
+  const [fromCampaign, fromLeads, fromContacts, fromCustomers] = await Promise.all([
+    // Leads attributed to this campaign
+    prisma.lead.findMany({
+      where: { campaignId, convertedOpportunityId: { not: null }, deletedAt: null },
+      select: { convertedOpportunityId: true },
+    }),
+    contactIds.length > 0
+      ? prisma.opportunity.findMany({
+          where: { contactId: { in: contactIds }, status: "WON", deletedAt: null },
+          select: { value: true },
+        })
+      : Promise.resolve([]),
+    customerIds.length > 0
+      ? prisma.opportunity.findMany({
+          where: { customerId: { in: customerIds }, status: "WON", deletedAt: null },
+          select: { value: true },
+        })
+      : Promise.resolve([]),
+    leadIds.length > 0
+      ? prisma.opportunity.findMany({
+          where: { id: { in: (await prisma.lead.findMany({ where: { id: { in: leadIds }, deletedAt: null }, select: { convertedOpportunityId: true } })).map((lead) => lead.convertedOpportunityId).filter((id): id is string => Boolean(id)) }, status: "WON", deletedAt: null },
+          select: { value: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const oppIds = fromCampaign.map((lead) => lead.convertedOpportunityId).filter((id): id is string => Boolean(id));
+  const directOpps = oppIds.length > 0
+    ? await prisma.opportunity.findMany({ where: { id: { in: oppIds }, status: "WON", deletedAt: null }, select: { value: true } })
+    : [];
+
+  const allValues = [...directOpps, ...fromLeads, ...fromCustomers, ...fromContacts ?? []];
+  const total = allValues.reduce((sum, opp) => sum + Number(opp.value ?? 0n), 0);
+  return String(total);
+}
+
 export async function removeMember(ctx: ScopedContext, campaignId: string, memberId: string) {
   const campaign = await getCampaign(ctx, campaignId);
   await prisma.campaignMember.deleteMany({ where: { id: memberId, campaignId: campaign.id } });
+}
+
+export const MEMBER_STATUSES = ["MEMBER", "RESPONDED", "QUALIFIED", "CONVERTED"] as const;
+
+export const UpdateMember = z.object({
+  memberId: z.string().min(5),
+  status: z.enum(MEMBER_STATUSES),
+});
+
+/** Track member progression through the campaign (contacted → converted). */
+export async function updateMemberStatus(
+  ctx: ScopedContext,
+  campaignId: string,
+  input: z.infer<typeof UpdateMember>,
+) {
+  const campaign = await getCampaign(ctx, campaignId);
+  const member = await prisma.campaignMember.findFirst({
+    where: { id: input.memberId, campaignId: campaign.id },
+  });
+  if (!member) throw new CrmError("Member not found.", 404);
+  const updated = await prisma.$transaction(async (tx) => {
+    const saved = await tx.campaignMember.update({
+      where: { id: member.id },
+      data: {
+        status: input.status,
+        // Any progression past MEMBER records a response timestamp.
+        respondedAt: input.status === "MEMBER" ? member.respondedAt : (member.respondedAt ?? new Date()),
+      },
+    });
+    await appendAudit(tx, {
+      actorId: ctx.userId,
+      ip: ctx.ip,
+      action: "CAMPAIGN_MEMBER_UPDATED",
+      objectType: "CampaignMember",
+      objectId: member.id,
+      before: { status: member.status },
+      after: { status: saved.status },
+    });
+    return saved;
+  });
+  return updated;
 }

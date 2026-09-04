@@ -3,6 +3,7 @@ import { prisma } from "@/server/db";
 import { CrmError } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
+import { ownerScopeWhere } from "@/server/scope";
 import { getLead, type ScopedContext } from "@/server/records/leads";
 import { getContact } from "@/server/records/contacts";
 import { getAccount } from "@/server/records/accounts";
@@ -63,6 +64,19 @@ export async function conversionPreview(ctx: ScopedContext, leadId: string) {
     externalId: lead.externalId,
     excludeLeadId: lead.id,
   });
+  // Company-name matching against existing accounts (the spec's third
+  // duplicate key for conversion).
+  const accountMatches = lead.company
+    ? await prisma.account.findMany({
+        where: {
+          deletedAt: null,
+          name: { equals: lead.company, mode: "insensitive" },
+          ...ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds),
+        },
+        select: { id: true, name: true },
+        take: 5,
+      })
+    : [];
   return {
     lead: {
       id: lead.id,
@@ -72,7 +86,7 @@ export async function conversionPreview(ctx: ScopedContext, leadId: string) {
       email: lead.email,
       phone: lead.phone,
     },
-    matches: { contacts: matches.contacts, customers: matches.customers },
+    matches: { contacts: matches.contacts, customers: matches.customers, accounts: accountMatches },
   };
 }
 
@@ -274,6 +288,7 @@ export async function convertLead(ctx: ScopedContext, leadId: string, input: Con
     });
     await appendAudit(tx, {
       actorId: ctx.userId,
+      ip: ctx.ip,
       action: "LEAD_CONVERTED",
       objectType: "Lead",
       objectId: lead.id,

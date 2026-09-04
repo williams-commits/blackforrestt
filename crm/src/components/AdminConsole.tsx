@@ -63,7 +63,7 @@ export function AdminConsole({
 
 const inputClass = "input";
 
-function StatusesTab({ canManage }: { canManage: boolean }) {
+export function StatusesTab({ canManage }: { canManage: boolean }) {
   const [rows, setRows] = useState<Array<{ id: string; name: string; appliesTo: string; category: string; sortOrder: number; isDefault: boolean; _count: { leads: number; contacts: number; customers: number } }>>([]);
   const [name, setName] = useState("");
   const [appliesTo, setAppliesTo] = useState("LEAD");
@@ -187,7 +187,7 @@ function StatusesTab({ canManage }: { canManage: boolean }) {
   );
 }
 
-function TagsTab({ canManage }: { canManage: boolean }) {
+export function TagsTab({ canManage }: { canManage: boolean }) {
   const [rows, setRows] = useState<Array<{ id: string; name: string; color: string | null; _count: { links: number } }>>([]);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#1f6f43");
@@ -262,7 +262,7 @@ function TagsTab({ canManage }: { canManage: boolean }) {
   );
 }
 
-function FieldsTab({ canManage }: { canManage: boolean }) {
+export function FieldsTab({ canManage }: { canManage: boolean }) {
   const [rows, setRows] = useState<Array<{ id: string; objectType: string; key: string; label: string; fieldType: string; required: boolean; active: boolean; options: string[] | null }>>([]);
   const [objectType, setObjectType] = useState("LEAD");
   const [key, setKey] = useState("");
@@ -395,7 +395,7 @@ function FieldsTab({ canManage }: { canManage: boolean }) {
   );
 }
 
-function PeopleTab({ canManage }: { canManage: boolean }) {
+export function PeopleTab({ canManage }: { canManage: boolean }) {
   const [users, setUsers] = useState<Array<{
     id: string; email: string; name: string; status: string; lastLoginAt: string | null;
     role: { key: string; name: string };
@@ -614,7 +614,7 @@ function PeopleTab({ canManage }: { canManage: boolean }) {
   );
 }
 
-function RolesTab() {
+export function RolesTab() {
   const [roles, setRoles] = useState<Array<{
     id: string; key: string; name: string; description: string | null; isSystem: boolean;
     scope: string;
@@ -694,7 +694,7 @@ function RolesTab() {
   );
 }
 
-function SettingsTab() {
+export function SettingsTab() {
   const [settings, setSettings] = useState<Array<{ id: string; key: string; value: unknown }>>([]);
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
@@ -757,7 +757,7 @@ function SettingsTab() {
   );
 }
 
-function AuditTab() {
+export function AuditTab() {
   const [entries, setEntries] = useState<Array<{ id: string; action: string; objectType: string; objectId: string | null; actor: { name: string } | null; createdAt: string; after: unknown }>>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -819,7 +819,7 @@ function AuditTab() {
 }
 
 
-function IntegrationsTab() {
+export function IntegrationsTab() {
   const [status, setStatus] = useState<{
     platformBridge: { enabled: boolean; url: string | null };
     email: { enabled: boolean; from: string | null };
@@ -882,7 +882,7 @@ function IntegrationsTab() {
 }
 
 
-function ObjectsTab() {
+export function ObjectsTab() {
   const [objects, setObjects] = useState<Array<{
     id: string; key: string; name: string; pluralName: string;
     description: string | null; icon: string | null; active: boolean;

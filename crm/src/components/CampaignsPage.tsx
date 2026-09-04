@@ -137,9 +137,9 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-[--text-tertiary]">Loading…</td></tr>
+              <tr><td colSpan={6} style={{ padding: "10px 12px" }}><div className="skeleton" style={{ height: "16px", width: "70%" }} /></td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-[--text-tertiary]">No campaigns yet.</td></tr>
+              <tr><td colSpan={6} style={{ padding: "10px 12px" }}><div className="skeleton" style={{ height: "16px", width: "70%" }} /></td></tr>
             ) : (
               rows.map((row) => (
                 <tr key={row.id}>
@@ -147,7 +147,7 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
                     <Link href={`/campaigns/${row.id}`} className="font-medium text-[--brand] hover:underline">
                       {row.name}
                     </Link>
-                    {row.description ? <p className="text-xs text-[--text-tertiary]">{row.description}</p> : null}
+                    {row.description ? <p className="text-xs text-[var(--text-tertiary)]">{row.description}</p> : null}
                   </td>
                   <td className="px-3 py-2">
                     <span className="badge badge-neutral">{row.status.toLowerCase()}</span>

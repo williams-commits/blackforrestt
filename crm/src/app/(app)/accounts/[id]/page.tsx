@@ -8,7 +8,9 @@ import { listTimeline } from "@/server/activity";
 import { listNotesBySubject } from "@/server/records/notes";
 import { listAppointmentsBySubject } from "@/server/records/appointments";
 import { Timeline } from "@/components/Timeline";
+import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
+import { RecordPageTabs } from "@/components/RecordPageTabs";
 import { TagEditor } from "@/components/TagEditor";
 import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
 import { listTagsForSubject } from "@/server/records/tags";
@@ -92,7 +94,16 @@ export default async function AccountDetailPage({ params }: PageProps) {
       </HighlightsPanel>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-        <div className="min-w-0 space-y-4">
+        <div className="min-w-0">
+          <RecordPageTabs
+                        tabs={[
+              { key: "overview", label: "Overview" },
+              { key: "contacts", label: "Contacts", count: account.contacts.length },
+              { key: "opportunities", label: "Opportunities", count: relatedOpportunities.length },
+              { key: "activity", label: "Activity", count: notes.length + appointments.length },
+              { key: "files", label: "Files" },
+            ]}
+          >
           {/* Overview */}
           <section className="card">
             <div className="card-header"><h2 className="card-title">Details</h2></div>
@@ -133,7 +144,12 @@ export default async function AccountDetailPage({ params }: PageProps) {
           <section className="card">
             <div className="card-header">
               <h2 className="card-title">Contacts</h2>
-              <span className="badge badge-neutral">{account.contacts.length}</span>
+              <div className="flex items-center gap-2">
+                <span className="badge badge-neutral">{account.contacts.length}</span>
+                <Link href="/contacts" className="text-[12px] font-medium hover:underline" style={{ color: "var(--brand-700)" }}>
+                  View All →
+                </Link>
+              </div>
             </div>
             <div className="card-body">
               {account.contacts.length === 0 ? (
@@ -161,7 +177,12 @@ export default async function AccountDetailPage({ params }: PageProps) {
           <section className="card">
             <div className="card-header">
               <h2 className="card-title">Opportunities</h2>
-              <span className="badge badge-neutral">{relatedOpportunities.length}</span>
+              <div className="flex items-center gap-2">
+                <span className="badge badge-neutral">{relatedOpportunities.length}</span>
+                <Link href="/opportunities" className="text-[12px] font-medium hover:underline" style={{ color: "var(--brand-700)" }}>
+                  View All →
+                </Link>
+              </div>
             </div>
             <div className="card-body">
               {relatedOpportunities.length === 0 ? (
@@ -210,6 +231,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
               <AttachmentsPanel subjectType="ACCOUNT" subjectId={id} canUpload={canUpload} canDelete={canDeleteFiles} />
             </div>
           </section>
+          </RecordPageTabs>
         </div>
 
         {/* Timeline sidebar */}
@@ -218,6 +240,9 @@ export default async function AccountDetailPage({ params }: PageProps) {
             <div className="card-header">
               <h2 className="card-title">Timeline</h2>
               <span className="badge badge-neutral">{events.length}</span>
+            </div>
+            <div style={{ marginBottom: "var(--space-3)" }}>
+              <ActivityComposer subjectType="ACCOUNT" subjectId={id} subjectLabel={account.name} canEdit={canEdit} />
             </div>
             <div className="card-body max-h-[600px] overflow-y-auto">
               <Timeline events={events} />

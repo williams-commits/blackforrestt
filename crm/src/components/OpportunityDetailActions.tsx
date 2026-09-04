@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { OpportunityForm, type Pipeline } from "@/components/OpportunitiesPage";
+import { OpportunityForm } from "@/components/OpportunityFormDialog";
+import type { Pipeline } from "@/components/OpportunitiesPage";
 
 /** Edit + delete controls for the opportunity detail page. */
 export function OpportunityDetailActions({

@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { RECORD_UI, type ObjectKey } from "@/lib/recordUi";
 import { RecordForm, type OptionSource } from "@/components/RecordForm";
+import { ViewTabs, type ViewOption } from "@/components/ViewTabs";
+import { RowActions } from "@/components/RowActions";
+import { InlineEdit } from "@/components/InlineEdit";
 
 interface MeContext {
   userId: string;
@@ -107,6 +110,8 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     }>
   >([]);
   const [viewName, setViewName] = useState("");
+  const [activeView, setActiveView] = useState("all");
+  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
 
   const can = useMemo(() => {
     const permissions = me?.permissions ?? [];
@@ -120,6 +125,41 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       export: permissions.includes(`${objectUpper}S_EXPORT`),
     };
   }, [me, config, object]);
+
+  const presetViews: ViewOption[] = [
+    { key: "all", label: `All ${config.title}` },
+    { key: "mine", label: `My ${config.title}` },
+    { key: "recent", label: "Recently Added" },
+    ...(object === "leads" ? [{ key: "unassigned", label: "Unassigned" }] : []),
+    ...views.map((v) => ({ key: `saved:${v.id}`, label: v.name, isSaved: true })),
+  ];
+
+  function handleViewChange(key: string) {
+    setActiveView(key);
+    setPage(1);
+    setSelected(new Set());
+    if (key === "all") {
+      setFilters({});
+      setSearch("");
+      setSort("");
+    } else if (key === "mine") {
+      setFilters(object === "leads" ? { assignment: "mine" } : {});
+      setSearch("");
+    } else if (key === "recent") {
+      setFilters({});
+      setSearch("");
+      setSort("createdAt");
+    } else if (key === "unassigned") {
+      setFilters(object === "leads" ? { assignment: "unassigned" } : {});
+      setSearch("");
+    } else if (key.startsWith("saved:")) {
+      const view = views.find((v) => `saved:${v.id}` === key);
+      if (view) {
+        setSearch(view.config.q ?? "");
+        setFilters(view.config.filters ?? {});
+      }
+    }
+  }
 
   const fetchOptions = useCallback(async () => {
     try {
@@ -286,41 +326,18 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
 
   return (
     <div className="space-y-4">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">{config.title}</h1>
-          <p className="page-subtitle">
-            <span className="badge badge-neutral" style={{ marginRight: "6px" }}>{meta.total}</span>
-            record{meta.total === 1 ? "" : "s"}
-            {selected.size > 0 ? <span className="badge badge-brand" style={{ marginLeft: "6px" }}>{selected.size} selected</span> : null}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {can.export ? (
-            <a
-              href={`/api/export?object=${object}${search ? `&q=${encodeURIComponent(search)}` : ""}${
-                filters.statusId ? `&statusId=${filters.statusId}` : ""
-              }`}
-              className="btn btn-secondary"
-            >
-              Export CSV
-            </a>
-          ) : null}
-          {can.create ? (
-            <button
-              type="button"
-              onClick={() => {
-                setEditRow(null);
-                setFormMode("create");
-              }}
-              className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
-              style={{ background: "var(--brand)" }}
-            >
-              New {config.singular}
-            </button>
-          ) : null}
-        </div>
-      </div>
+      <ViewTabs
+        views={presetViews}
+        activeView={activeView}
+        onViewChange={handleViewChange}
+        onNewClick={can.create ? () => { setEditRow(null); setFormMode("create"); } : undefined}
+        onExportClick={can.export ? () => {
+          window.location.href = `/api/export?object=${object}${search ? `&q=${encodeURIComponent(search)}` : ""}${filters.statusId ? `&statusId=${filters.statusId}` : ""}`;
+        } : undefined}
+        canCreate={can.create}
+        canExport={can.export}
+        totalCount={meta.total}
+      />
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
         <form
@@ -331,6 +348,21 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             void fetchRows();
           }}
         >
+          <button
+            type="button"
+            onClick={() => setDensity(density === "comfortable" ? "compact" : "comfortable")}
+            className="btn btn-ghost"
+            style={{ height: "32px", padding: "0 6px" }}
+            title={density === "comfortable" ? "Compact rows" : "Comfortable rows"}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              {density === "comfortable" ? (
+                <><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></>
+              ) : (
+                <><line x1="3" y1="8" x2="21" y2="8" /><line x1="3" y1="16" x2="21" y2="16" /></>
+              )}
+            </svg>
+          </button>
           <input
             type="search"
             value={search}
@@ -619,8 +651,8 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         </div>
       ) : null}
 
-<div className="card overflow-hidden">
-        <table className="table">
+<div className="card table-responsive overflow-hidden">
+        <table className={`table ${density === "compact" ? "table-compact" : ""}`}>
           <thead>
             <tr className="border-b border-[var(--border-default)] bg-[var(--bg-hover)] text-left text-xs uppercase tracking-wide text-[var(--text-secondary)]">
               {can.bulk ? (
@@ -698,7 +730,18 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               rows.map((row) => {
                 const isSelected = selected.has(row.id);
                 return (
-                  <tr key={row.id} className={isSelected ? "bg-[var(--brand)]/5" : ""}>
+                  <tr
+                  key={row.id}
+                  className={isSelected ? "bg-[var(--brand)]/5" : ""}
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      const firstLink = event.currentTarget.querySelector("a[href]");
+                      if (firstLink) (firstLink as HTMLElement).click();
+                    }
+                  }}
+                  style={{ cursor: "pointer" }}
+                >
                     {can.bulk ? (
                       <td className="px-3 py-2">
                         <input
@@ -736,6 +779,30 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                           );
                         }
                         if (column.type === "badge") {
+                          // Inline-editable status for leads (most common use case)
+                          const isStatusCol = column.key.includes("status");
+                          if (isStatusCol && can.edit && object === "leads") {
+                            const currentStatusId = row.statusId as string;
+                            return (
+                              <InlineEdit
+                                value={currentStatusId ?? ""}
+                                options={options.leadStatuses}
+                                onSave={async (newStatusId) => {
+                                  await fetch(`/api/leads/${row.id}`, {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ statusId: newStatusId }),
+                                  });
+                                  void fetchRows();
+                                }}
+                                render={(val, onClick) => (
+                                  <span className="badge badge-neutral" onClick={onClick}>
+                                    {raw}
+                                  </span>
+                                )}
+                              />
+                            );
+                          }
                           return (
                             <span className="badge badge-neutral">
                               {raw}
@@ -760,27 +827,38 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                       );
                     })}
                     <td className="px-3 py-2 text-right whitespace-nowrap">
-                      {can.edit ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditRow(row);
-                            setFormMode("edit");
-                          }}
-                          className="mr-2 text-[var(--brand)] hover:underline"
-                        >
-                          Edit
-                        </button>
-                      ) : null}
-                      {can.delete ? (
-                        <button
-                          type="button"
-                          onClick={() => void deleteRow(row)}
-                          className="text-[var(--error)] hover:underline"
-                        >
-                          Delete
-                        </button>
-                      ) : null}
+                      <RowActions
+                        actions={[
+                          ...(can.edit
+                            ? [{
+                                label: "Edit",
+                                icon: "edit",
+                                onClick: () => {
+                                  setEditRow(row);
+                                  setFormMode("edit");
+                                },
+                              }]
+                            : []),
+                          ...(object === "leads" && can.edit
+                            ? [{
+                                label: "Add task",
+                                icon: "check",
+                                onClick: () => {
+                                  const title = window.prompt(`Task title for this ${config.singular.toLowerCase()}:`);
+                                  if (title) void runBulk("task", { ids: [row.id], title });
+                                },
+                              }]
+                            : []),
+                          ...(can.delete
+                            ? [{
+                                label: "Delete",
+                                icon: "trash",
+                                destructive: true,
+                                onClick: () => void deleteRow(row),
+                              }]
+                            : []),
+                        ]}
+                      />
                     </td>
                   </tr>
                 );

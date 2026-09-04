@@ -10,7 +10,10 @@ const MATCH = { email: true, phone: false, externalId: true };
 
 test("validation flags bad emails, missing required fields, and duplicates", async () => {
   const rep = await repContext();
-  const existing = await prisma.lead.findFirstOrThrow({ where: { deletedAt: null } });
+  // Find a lead in the REP's scope so duplicate matching can see it
+  const existing = await prisma.lead.findFirstOrThrow({
+    where: { deletedAt: null, assignedUserId: rep.userId },
+  });
   const result = await validateImport(rep, {
     objectType: "LEAD",
     mapping: MAPPING,

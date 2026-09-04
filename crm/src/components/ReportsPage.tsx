@@ -157,7 +157,9 @@ export function ReportsPage() {
       <div className={`grid gap-4 ${builderOpen ? "" : "lg:grid-cols-[16rem_1fr]"}`}>
         <nav className={`card space-y-1 ${builderOpen ? "hidden" : ""}`} aria-label="Report library">
           {library.length === 0 ? (
-            <p className="px-2 py-4 text-sm text-[var(--text-tertiary)]">Loading…</p>
+            <div style={{ padding: "var(--space-3)" }}>
+              {[...Array(5)].map((_, i) => (<div key={i} className="skeleton" style={{ height: "14px", width: `${80 - i * 10}%`, marginBottom: "10px" }} />))}
+            </div>
           ) : (
             library.map((report) => (
               <button
@@ -231,7 +233,7 @@ export function ReportsPage() {
 
           <div className="card">
             {!result ? (
-              <p className="p-6 text-center text-sm text-[var(--text-tertiary)]">Pick a report to run.</p>
+              <div className="empty-state"><p className="empty-state-title">Pick a report to run</p><p className="empty-state-description">Select a report from the library or build a custom one.</p></div>
             ) : result.rows.length === 0 ? (
               <p className="p-6 text-center text-sm text-[var(--text-tertiary)]">No rows in range (within your scope).</p>
             ) : (

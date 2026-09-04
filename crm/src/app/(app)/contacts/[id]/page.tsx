@@ -8,7 +8,9 @@ import { listTimeline } from "@/server/activity";
 import { listNotesBySubject } from "@/server/records/notes";
 import { listAppointmentsBySubject } from "@/server/records/appointments";
 import { Timeline } from "@/components/Timeline";
+import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
+import { RecordPageTabs } from "@/components/RecordPageTabs";
 import { TagEditor } from "@/components/TagEditor";
 import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
 import { listTagsForSubject } from "@/server/records/tags";
@@ -94,7 +96,15 @@ export default async function ContactDetailPage({ params }: PageProps) {
       </HighlightsPanel>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-        <div className="min-w-0 space-y-4">
+        <div className="min-w-0">
+          <RecordPageTabs
+                        tabs={[
+              { key: "overview", label: "Overview" },
+              { key: "opportunities", label: "Opportunities", count: relatedOpportunities.length },
+              { key: "activity", label: "Activity", count: notes.length + appointments.length },
+              { key: "files", label: "Files" },
+            ]}
+          >
           <section className="card">
             <div className="card-header"><h2 className="card-title">Details</h2></div>
             <div className="card-body space-y-4">
@@ -156,6 +166,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
               <AttachmentsPanel subjectType="CONTACT" subjectId={id} canUpload={canUpload} canDelete={canDeleteFiles} />
             </div>
           </section>
+          </RecordPageTabs>
         </div>
 
         <aside className="no-print">
@@ -163,6 +174,9 @@ export default async function ContactDetailPage({ params }: PageProps) {
             <div className="card-header">
               <h2 className="card-title">Timeline</h2>
               <span className="badge badge-neutral">{events.length}</span>
+            </div>
+            <div style={{ marginBottom: "var(--space-3)" }}>
+              <ActivityComposer subjectType="CONTACT" subjectId={id} subjectLabel={`${contact.firstName} ${contact.lastName}`} canEdit={canEdit} />
             </div>
             <div className="card-body max-h-[600px] overflow-y-auto">
               <Timeline events={events} />

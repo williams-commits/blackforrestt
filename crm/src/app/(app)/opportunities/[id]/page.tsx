@@ -7,7 +7,9 @@ import { listTimeline } from "@/server/activity";
 import { listNotesBySubject } from "@/server/records/notes";
 import { listAppointmentsBySubject } from "@/server/records/appointments";
 import { Timeline } from "@/components/Timeline";
+import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
+import { RecordPageTabs } from "@/components/RecordPageTabs";
 import { TagEditor } from "@/components/TagEditor";
 import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
 import { listTagsForSubject } from "@/server/records/tags";
@@ -79,7 +81,14 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
       </HighlightsPanel>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-        <div className="min-w-0 space-y-4">
+        <div className="min-w-0">
+          <RecordPageTabs
+            tabs={[
+              { key: "overview", label: "Overview" },
+              { key: "activity", label: "Activity", count: notes.length + appointments.length },
+              { key: "files", label: "Files" },
+            ]}
+          >
           {/* Details */}
           <section className="card">
             <div className="card-header"><h2 className="card-title">Details</h2></div>
@@ -146,6 +155,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
               <AttachmentsPanel subjectType="OPPORTUNITY" subjectId={id} canUpload={canEdit} canDelete={canDelete} />
             </div>
           </section>
+          </RecordPageTabs>
         </div>
 
         {/* Timeline sidebar */}
@@ -154,6 +164,9 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
             <div className="card-header">
               <h2 className="card-title">Timeline</h2>
               <span className="badge badge-neutral">{events.length}</span>
+            </div>
+            <div style={{ marginBottom: "var(--space-3)" }}>
+              <ActivityComposer subjectType="OPPORTUNITY" subjectId={id} subjectLabel={opportunity.name} canEdit={canEdit} />
             </div>
             <div className="card-body max-h-[600px] overflow-y-auto">
               <Timeline events={events} />

@@ -262,15 +262,16 @@ export function TasksPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-[var(--text-tertiary)]">
-                  Loading…
-                </td>
-              </tr>
+              [...Array(5)].map((_, i) => (
+                <tr key={`sk-${i}`}><td colSpan={6} style={{ padding: "10px 12px" }}><div className="skeleton" style={{ height: "16px", width: `${75 - i * 10}%` }} /></td></tr>
+              ))
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-[var(--text-tertiary)]">
-                  No tasks match these filters.
+                <td colSpan={6}>
+                  <div className="empty-state">
+                    <p className="empty-state-title">No tasks found</p>
+                    <p className="empty-state-description">Try adjusting your filters or create a new task.</p>
+                  </div>
                 </td>
               </tr>
             ) : (

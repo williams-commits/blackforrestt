@@ -5,6 +5,7 @@ import {
   CreateUser,
   UpdateUser,
   createUser,
+  deleteUser,
   listUsers,
   updateUser,
 } from "@/server/records/adminManage";
@@ -49,5 +50,18 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ data: await updateUser(ctx, parsedId.data.id, parsed.data) });
   } catch (error) {
     return handleRouteError(error, "Unable to update user.");
+  }
+}
+
+/** Permanently delete a user (reassigns owned records to the deleting admin). */
+export async function DELETE(request: Request) {
+  try {
+    const ctx = await requirePermission("USERS_MANAGE");
+    const id = new URL(request.url).searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "Missing id." }, { status: 400 });
+    await deleteUser(ctx, id);
+    return NextResponse.json({ data: { id } });
+  } catch (error) {
+    return handleRouteError(error, "Unable to delete user.");
   }
 }

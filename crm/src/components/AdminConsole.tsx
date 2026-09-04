@@ -544,13 +544,31 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                 <td className="px-3 py-2 text-xs">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "never"}</td>
                 <td className="px-3 py-2">{user.status.toLowerCase()}</td>
                 {canManage ? (
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right whitespace-nowrap">
                     <button
                       type="button"
                       onClick={() => void patchUser(user.id, { status: user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" })}
-                      className="text-xs text-[--brand] hover:underline"
+                      className="mr-3 text-xs text-[var(--brand-700)] hover:underline"
                     >
                       {user.status === "ACTIVE" ? "suspend" : "activate"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!window.confirm(
+                          `Permanently delete "${user.name}" (${user.email})?\n\nAll owned records will be reassigned to you. This action cannot be undone.`
+                        )) return;
+                        const response = await fetch(`/api/admin/users?id=${user.id}`, { method: "DELETE" });
+                        if (!response.ok) {
+                          const body = (await response.json().catch(() => null)) as { error?: string } | null;
+                          setError(body?.error ?? "Delete failed.");
+                          return;
+                        }
+                        void load();
+                      }}
+                      className="text-xs text-[var(--error)] hover:underline"
+                    >
+                      delete
                     </button>
                   </td>
                 ) : null}

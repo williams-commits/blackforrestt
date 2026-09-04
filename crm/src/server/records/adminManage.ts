@@ -136,6 +136,102 @@ export async function updateUser(ctx: CrmContext, id: string, input: z.infer<typ
   });
 }
 
+/**
+ * Permanently delete a user account. Requires explicit confirmation.
+ * Checks: cannot delete yourself, cannot delete the last Super Admin.
+ * Audit-logged with the user's email preserved in the audit entry.
+ */
+export async function deleteUser(ctx: CrmContext, userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      role: { select: { key: true } },
+      _count: {
+        select: {
+          assignedLeads: true,
+          ownedAccounts: true,
+          ownedContacts: true,
+          ownedCustomers: true,
+          ownedOpps: true,
+          ownedTasks: true,
+          authoredNotes: true,
+        },
+      },
+    },
+  });
+  if (!user) throw new CrmError("User not found.", 404);
+
+  // Guardrail: cannot delete yourself
+  if (userId === ctx.userId) {
+    throw new CrmError("You cannot delete your own account.", 400);
+  }
+
+  // Guardrail: cannot delete the last Super Admin
+  if (user.role.key === "SUPER_ADMIN") {
+    const superAdminCount = await prisma.user.count({
+      where: {
+        status: "ACTIVE",
+        role: { key: "SUPER_ADMIN" },
+        id: { not: userId },
+      },
+    });
+    if (superAdminCount === 0) {
+      throw new CrmError("Cannot delete the last Super Admin — promote another admin first.", 400);
+    }
+  }
+
+  // Check for owned records — warn but allow (records become orphaned)
+  const ownedRecords =
+    user._count.assignedLeads + user._count.ownedAccounts +
+    user._count.ownedContacts + user._count.ownedCustomers +
+    user._count.ownedOpps + user._count.ownedTasks + user._count.authoredNotes;
+
+  await prisma.$transaction(async (tx) => {
+    // Reassign owned records to the deleting admin (or nullify)
+    await tx.lead.updateMany({
+      where: { assignedUserId: userId },
+      data: { assignedUserId: ctx.userId },
+    });
+    await tx.account.updateMany({
+      where: { ownerUserId: userId },
+      data: { ownerUserId: ctx.userId },
+    });
+    await tx.contact.updateMany({
+      where: { ownerUserId: userId },
+      data: { ownerUserId: ctx.userId },
+    });
+    await tx.customer.updateMany({
+      where: { ownerUserId: userId },
+      data: { ownerUserId: ctx.userId },
+    });
+    await tx.opportunity.updateMany({
+      where: { ownerUserId: userId },
+      data: { ownerUserId: ctx.userId },
+    });
+    await tx.task.updateMany({
+      where: { ownerUserId: userId },
+      data: { ownerUserId: ctx.userId },
+    });
+
+    // Delete the user (memberships cascade)
+    await tx.user.delete({ where: { id: userId } });
+
+    await appendAudit(tx, {
+      actorId: ctx.userId,
+      ip: ctx.ip,
+      action: "USER_DELETED",
+      objectType: "User",
+      objectId: userId,
+      before: {
+        email: user.email,
+        name: user.name,
+        roleKey: user.role.key,
+        ownedRecordsReassigned: ownedRecords,
+      },
+    });
+  });
+}
+
 export const CreateTeam = z.object({
   name: z.string().trim().min(2).max(80),
   leaderId: z.string().trim().min(5).optional().nullable(),

@@ -8,10 +8,10 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const ctx = await scopedContext("LEADS_EDIT");
+    const ctx = await scopedContext("CUSTOMERS_EDIT");
     const parsed = await parseJsonBody(request, BulkRecordAction);
     if (!parsed.ok) return parsed.response;
-    const result = await bulkRecords(ctx, "leads", parsed.data);
+    const result = await bulkRecords(ctx, "customers", parsed.data);
     return NextResponse.json({ data: result });
   } catch (error) {
     return handleRouteError(error, "Unable to perform bulk action.");

@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ImageAttachment } from "@/components/ImageAttachment";
 
 interface AttachmentRow {
   id: string;
   filename: string;
+  mimeType: string;
   size: number;
   uploader: string;
   createdAt: string;
@@ -84,9 +86,11 @@ export function AttachmentsPanel({
         <ul className="space-y-1">
           {rows.map((row) => (
             <li key={row.id} className="flex items-center justify-between text-sm">
-              <a href={`/api/attachments/${row.id}`} className="text-[--brand] hover:underline">
-                {row.filename}
-              </a>
+              <ImageAttachment
+                filename={row.filename}
+                mimeType={row.mimeType}
+                attachmentId={row.id}
+              />
               <span className="flex items-center gap-2 text-xs text-[--text-tertiary]">
                 {(row.size / 1024).toFixed(0)} KB · {row.uploader} · {new Date(row.createdAt).toLocaleDateString()}
                 {canDelete ? (

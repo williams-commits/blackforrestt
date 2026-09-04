@@ -167,8 +167,8 @@ export function BulkActionBar({
           type="button"
           disabled={busy}
           onClick={() => {
-            const title = window.prompt(`Create a follow-up task for ${selectedCount} lead(s) — task title:`);
-            if (title && title.trim().length >= 2) onCreateTask(title.trim());
+            const taskTitle = window.prompt(`Create a follow-up task for ${selectedCount} lead(s) — task title:`);
+            if (taskTitle && taskTitle.trim().length >= 2) onCreateTask(taskTitle.trim());
           }}
           className="btn btn-secondary"
           style={{ height: "28px", fontSize: "12px" }}

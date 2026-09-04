@@ -112,19 +112,36 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   const [viewName, setViewName] = useState("");
   const [activeView, setActiveView] = useState("all");
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const can = useMemo(() => {
     const permissions = me?.permissions ?? [];
     const objectUpper = object.toUpperCase().slice(0, -1);
+    const edit = permissions.includes(config.can.edit);
     return {
       create: permissions.includes(config.can.create),
-      edit: permissions.includes(config.can.edit),
+      edit,
       delete: permissions.includes(config.can.delete),
-      assign: config.can.assign ? permissions.includes(config.can.assign) : false,
-      bulk: object === "leads",
+      // Leads gate reassignment on a dedicated ASSIGN permission; the
+      // owner-keyed objects reassign the owner, which is an EDIT.
+      assign: config.can.assign ? permissions.includes(config.can.assign) : edit,
+      bulk: true,
       export: permissions.includes(`${objectUpper}S_EXPORT`),
     };
   }, [me, config, object]);
+
+  const bulkStatusOptions =
+    object === "leads"
+      ? options.leadStatuses
+      : object === "contacts"
+        ? options.contactStatuses
+        : object === "customers"
+          ? options.customerStatuses
+          : [];
 
   const presetViews: ViewOption[] = [
     { key: "all", label: `All ${config.title}` },
@@ -240,12 +257,10 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       .then((body) => setMe(body?.data ?? null))
       .catch(() => setMe(null));
     void fetchOptions();
-    if (object === "leads") {
-      void fetch("/api/tags")
-        .then((r) => (r.ok ? r.json() : null))
-        .then((body) => setAllTags(body?.data ?? []))
-        .catch(() => setAllTags([]));
-    }
+    void fetch("/api/tags")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => setAllTags(body?.data ?? []))
+      .catch(() => setAllTags([]));
     void fetch(`/api/views?objectType=${object.toUpperCase().slice(0, -1)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((body) => setViews(body?.data ?? []))
@@ -326,18 +341,27 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
 
   return (
     <div className="space-y-4">
-      <ViewTabs
-        views={presetViews}
-        activeView={activeView}
-        onViewChange={handleViewChange}
-        onNewClick={can.create ? () => { setEditRow(null); setFormMode("create"); } : undefined}
-        onExportClick={can.export ? () => {
-          window.location.href = `/api/export?object=${object}${search ? `&q=${encodeURIComponent(search)}` : ""}${filters.statusId ? `&statusId=${filters.statusId}` : ""}`;
-        } : undefined}
-        canCreate={can.create}
-        canExport={can.export}
-        totalCount={meta.total}
-      />
+      {mounted ? (
+        <ViewTabs
+          views={presetViews}
+          activeView={activeView}
+          onViewChange={handleViewChange}
+          onNewClick={can.create ? () => { setEditRow(null); setFormMode("create"); } : undefined}
+          onExportClick={can.export ? () => {
+            window.location.href = `/api/export?object=${object}${search ? `&q=${encodeURIComponent(search)}` : ""}${filters.statusId ? `&statusId=${filters.statusId}` : ""}`;
+          } : undefined}
+          canCreate={can.create}
+          canExport={can.export}
+          totalCount={meta.total}
+        />
+      ) : (
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">{config.title}</h1>
+            <p className="page-subtitle">{meta.total} record{meta.total === 1 ? "" : "s"}</p>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
         <form
@@ -495,22 +519,24 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               ))}
             </select>
           ) : null}
-          <select
-            aria-label="Change status"
-            defaultValue=""
-            disabled={bulkBusy}
-            onChange={(event) => {
-              if (event.target.value) void runBulk("status", { statusId: event.target.value });
-            }}
-            className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface)] px-2 py-1.5"
-          >
-            <option value="">Change status…</option>
-            {options.leadStatuses.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          {bulkStatusOptions.length > 0 ? (
+            <select
+              aria-label="Change status"
+              defaultValue=""
+              disabled={bulkBusy}
+              onChange={(event) => {
+                if (event.target.value) void runBulk("status", { statusId: event.target.value });
+              }}
+              className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface)] px-2 py-1.5"
+            >
+              <option value="">Change status…</option>
+              {bulkStatusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
           {can.delete ? (
             <button
               type="button"
@@ -546,7 +572,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               type="button"
               disabled={bulkBusy}
               onClick={() => {
-                const title = window.prompt(`Create a follow-up task for ${selected.size} lead(s) — task title:`);
+                const title = window.prompt(`Create a follow-up task for ${selected.size} ${config.singular.toLowerCase()}(s) — task title:`);
                 if (title && title.trim().length >= 2) void runBulk("task", { title: title.trim() });
               }}
               className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface)] px-2 py-1.5 font-medium"

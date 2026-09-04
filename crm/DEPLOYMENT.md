@@ -74,3 +74,8 @@ instance; verify the dump includes `blckforest_crm`.
 
 See the [README troubleshooting section](./README.md#troubleshooting) — it
 covers the redirect-loop, unstyled-pages, and auth-secret failure modes.
+
+```bash
+npx prisma migrate reset  # drops and recreates all tables
+```
+# then create your real admin directly in the DB or via a script

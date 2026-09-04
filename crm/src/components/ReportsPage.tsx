@@ -114,7 +114,7 @@ export function ReportsPage() {
       </div>
 
       {builderOpen ? (
-        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-4">
+        <div className="card" style={{ padding: "var(--space-4)" }}>
           <div>
             <label htmlFor="b-object" className="mb-1 block text-xs font-medium">Object</label>
             <select id="b-object" value={bObject} onChange={(e) => { setBObject(e.target.value); setBDateField(DATE_FIELDS[e.target.value][0]); setBGroup(GROUP_KEYS[e.target.value][0]); }} className="input">
@@ -155,7 +155,7 @@ export function ReportsPage() {
       ) : null}
 
       <div className={`grid gap-4 ${builderOpen ? "" : "lg:grid-cols-[16rem_1fr]"}`}>
-        <nav className={`space-y-1 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-2 ${builderOpen ? "hidden" : ""}`} aria-label="Report library">
+        <nav className={`card space-y-1 ${builderOpen ? "hidden" : ""}`} aria-label="Report library">
           {library.length === 0 ? (
             <p className="px-2 py-4 text-sm text-[var(--text-tertiary)]">Loading…</p>
           ) : (
@@ -177,7 +177,7 @@ export function ReportsPage() {
 
         <div className="space-y-4">
           {meta ? (
-            <div className="flex flex-wrap items-end gap-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-4">
+            <div className="card" style={{ padding: "var(--space-4)" }}>
               <div className="flex-1">
                 <p className="font-medium">{meta.name}</p>
                 <p className="text-sm text-[var(--text-secondary)]">{meta.description}</p>

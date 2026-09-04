@@ -235,12 +235,12 @@ export default async function CustomerDetailPage({ params }: PageProps) {
 
         {/* Timeline sidebar */}
         <aside className="no-print">
-          <div className="card sticky top-[68px]">
+          <div className="card sticky top-17">
             <div className="card-header">
               <h2 className="card-title">Timeline</h2>
               <span className="badge badge-neutral">{events.length}</span>
             </div>
-            <div className="card-body max-h-[600px] overflow-y-auto">
+            <div className="card-body max-h-150 overflow-y-auto">
               <Timeline events={events} />
             </div>
           </div>

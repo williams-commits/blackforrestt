@@ -273,7 +273,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
 
   if (!hasPermission) {
     return (
-      <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-8 text-center text-sm text-[var(--text-secondary)]">
+      <div className="card empty-state">
         You do not have permission to import data (LEADS_IMPORT required).
       </div>
     );
@@ -288,7 +288,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Import</h1>
-          <p className="text-sm text-[var(--text-secondary)]">
+          <p className="text-sm text-[--text-secondary]">
             Step {step} of 4 —{" "}
             {["Upload CSV", "Map columns", "Validate", "Run & results"][step - 1]}
             {fileName ? ` · ${fileName}` : ""}
@@ -308,7 +308,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
       ) : null}
 
       {step === 1 ? (
-        <div className="space-y-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-6">
+        <div className="card" style={{ padding: "var(--space-6)" }}>
           <div>
             <label htmlFor="import-object" className="mb-1 block text-sm font-medium">
               Import destination
@@ -348,7 +348,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                   value={sheetUrl}
                   onChange={(event) => setSheetUrl(event.target.value)}
                   placeholder="https://docs.google.com/spreadsheets/d/…"
-                  className="flex-1 rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm"
+                  className="input flex-1"
                 />
                 <button
                   type="button"
@@ -427,7 +427,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                     onChange={(event) =>
                       setMapping((previous) => ({ ...previous, [column]: event.target.value }))
                     }
-                    className="flex-1 rounded-md border border-[var(--border-strong)] px-2 py-1.5 text-sm"
+                    className="input flex-1" style={{ height: "32px" }}
                   >
                     <option value="">— skip —</option>
                     {fields.map((field) => (
@@ -442,7 +442,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             </div>
           </div>
 
-          <div className="grid gap-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-4 sm:grid-cols-2">
+          <div className="card grid gap-4 sm:grid-cols-2" style={{ padding: "var(--space-4)" }}>
             <div>
               <p className="mb-2 text-sm font-medium">Duplicate matching</p>
               {(["email", "phone", "externalId"] as const).map((rule) => (
@@ -478,7 +478,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-4">
+          <div className="card" style={{ padding: "var(--space-4)" }}>
             <select
               aria-label="Saved mappings"
               defaultValue=""
@@ -559,7 +559,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           ) : null}
 
           {validation.duplicates.length > 0 ? (
-            <div className="rounded-lg border border-amber-300 bg-[var(--warning-bg)] p-4">
+            <div className="card" style={{ padding: "var(--space-4)", borderColor: "var(--warning-border)", background: "var(--warning-bg)" }}>
               <p className="mb-2 text-sm font-medium text-[var(--warning)]">Possible duplicates</p>
               <ul className="max-h-40 space-y-1 overflow-y-auto text-sm text-amber-900">
                 {validation.duplicates.slice(0, 100).map((duplicate, index) => (
@@ -629,7 +629,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             {job.errorCount > 0 ? (
               <a
                 href={`/api/imports/${job.id}/errors`}
-                className="mt-4 inline-block rounded-md border border-[var(--border-strong)] px-3 py-1.5 text-sm font-medium hover:bg-[var(--bg-hover)]"
+                className="btn btn-secondary" style={{ marginTop: "var(--space-4)" }}
               >
                 Download error report (CSV)
               </a>

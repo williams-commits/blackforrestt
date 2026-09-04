@@ -107,7 +107,7 @@ export function GlobalSearch() {
 
       {open && query.trim().length >= 2 ? (
         <div
-          className="absolute left-0 right-0 top-full z-40 mt-1 max-h-[380px] overflow-y-auto rounded-lg border"
+          className="absolute left-0 right-0 top-full z-40 mt-1 max-h-95 overflow-y-auto rounded-lg border"
           style={{
             background: "var(--bg-surface)",
             borderColor: "var(--border-default)",
@@ -132,7 +132,7 @@ export function GlobalSearch() {
                     key={`${hit.objectType}-${hit.id}`}
                     href={hit.url}
                     onClick={() => setOpen(false)}
-                    className="flex items-center justify-between gap-2 px-3 py-2 text-[13px] transition-colors hover:bg-[var(--bg-hover)]"
+                    className="flex items-center justify-between gap-2 px-3 py-2 text-[13px] transition-colors hover:bg-[--bg-hover]"
                     style={{ textDecoration: "none", color: "var(--text-primary)" }}
                   >
                     <span className="truncate font-medium">{hit.label}</span>
@@ -147,7 +147,7 @@ export function GlobalSearch() {
           <a
             href={`/search?q=${encodeURIComponent(query.trim())}`}
             onClick={() => setOpen(false)}
-            className="block border-t px-3 py-2 text-center text-[12px] font-medium transition-colors hover:bg-[var(--bg-hover)]"
+            className="block border-t px-3 py-2 text-center text-[12px] font-medium transition-colors hover:bg-[--bg-hover]"
             style={{ borderColor: "var(--border-default)", color: "var(--brand-700)" }}
           >
             See all results →

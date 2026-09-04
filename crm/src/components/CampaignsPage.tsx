@@ -66,14 +66,14 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
   }
 
   const inputClass =
-    "w-full rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
+    "w-full rounded-md border border-[--border-strong] px-3 py-2 text-sm focus:border-[--brand] focus:outline-none";
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Campaigns</h1>
-          <p className="text-sm text-[var(--text-secondary)]">{rows.length} campaign(s)</p>
+          <p className="text-sm text-[--text-secondary]">{rows.length} campaign(s)</p>
         </div>
         {canCreate ? (
           <button
@@ -88,9 +88,9 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
       </div>
 
       {showForm ? (
-        <form method="post" onSubmit={createCampaign} className="grid gap-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-4 sm:grid-cols-4">
+        <form method="post" onSubmit={createCampaign} className="grid gap-3 rounded-lg border border-[--border-default] bg-[--bg-surface] p-4 sm:grid-cols-4">
           {error ? (
-            <p role="alert" className="sm:col-span-4 rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
+            <p role="alert" className="sm:col-span-4 rounded-md bg-[--error-bg] px-3 py-2 text-sm text-[--error]">
               {error}
             </p>
           ) : null}
@@ -126,7 +126,7 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
       <div className="card overflow-hidden">
         <table className="table">
           <thead>
-            <tr className="border-b border-[var(--border-default)] bg-[var(--bg-hover)] text-left text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+            <tr className="border-b border-[--border-default] bg-[--bg-hover] text-left text-xs uppercase tracking-wide text-[--text-secondary]">
               <th className="px-3 py-2 font-medium">Campaign</th>
               <th className="px-3 py-2 font-medium">Status</th>
               <th className="px-3 py-2 font-medium">Source</th>
@@ -137,17 +137,17 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-[var(--text-tertiary)]">Loading…</td></tr>
+              <tr><td colSpan={6} className="px-3 py-8 text-center text-[--text-tertiary]">Loading…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-[var(--text-tertiary)]">No campaigns yet.</td></tr>
+              <tr><td colSpan={6} className="px-3 py-8 text-center text-[--text-tertiary]">No campaigns yet.</td></tr>
             ) : (
               rows.map((row) => (
                 <tr key={row.id}>
                   <td className="px-3 py-2">
-                    <Link href={`/campaigns/${row.id}`} className="font-medium text-[var(--brand)] hover:underline">
+                    <Link href={`/campaigns/${row.id}`} className="font-medium text-[--brand] hover:underline">
                       {row.name}
                     </Link>
-                    {row.description ? <p className="text-xs text-[var(--text-tertiary)]">{row.description}</p> : null}
+                    {row.description ? <p className="text-xs text-[--text-tertiary]">{row.description}</p> : null}
                   </td>
                   <td className="px-3 py-2">
                     <span className="badge badge-neutral">{row.status.toLowerCase()}</span>
@@ -155,7 +155,7 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
                   <td className="px-3 py-2">{row.source ?? "—"}</td>
                   <td className="px-3 py-2">{row.memberCount}</td>
                   <td className="px-3 py-2">{row.owner?.name ?? "—"}</td>
-                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">
+                  <td className="px-3 py-2 text-xs text-[--text-secondary]">
                     {row.startsAt ? new Date(row.startsAt).toLocaleDateString() : "—"}
                     {row.endsAt ? ` → ${new Date(row.endsAt).toLocaleDateString()}` : ""}
                   </td>

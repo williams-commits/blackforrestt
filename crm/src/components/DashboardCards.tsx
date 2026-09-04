@@ -39,7 +39,7 @@ export function DashboardCards() {
     return (
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[0, 1, 2, 3].map((index) => (
-          <div key={index} className="h-20 animate-pulse rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)]" />
+          <div key={index} className="h-20 animate-pulse rounded-lg border border-[--border-default] bg-[--bg-surface]" />
         ))}
       </div>
     );
@@ -71,11 +71,11 @@ export function DashboardCards() {
         <Link
           key={card.label}
           href={card.href}
-          className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-4 transition hover:border-[var(--brand)]"
+          className="rounded-lg border border-[--border-default] bg-[--bg-surface] p-4 transition hover:border-[--brand] hover:bg-[--bg-surface-hover]"
         >
           <p className="text-xl font-semibold">{card.value}</p>
-          <p className="text-xs text-[var(--text-secondary)]">{card.label}</p>
-          {card.sub ? <p className="text-[10px] text-[var(--text-tertiary)]">{card.sub}</p> : null}
+          <p className="text-xs text-[--text-secondary]">{card.label}</p>
+          {card.sub ? <p className="text-[10px] text-[--text-tertiary]">{card.sub}</p> : null}
         </Link>
       ))}
     </div>

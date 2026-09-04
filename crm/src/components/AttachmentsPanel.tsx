@@ -76,10 +76,10 @@ export function AttachmentsPanel({
   return (
     <div className="space-y-2">
       {error ? (
-        <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">{error}</p>
+        <p role="alert" className="rounded-md bg-[--error-bg] px-3 py-2 text-sm text-[--error]">{error}</p>
       ) : null}
       {rows.length === 0 ? (
-        <p className="text-sm text-[var(--text-tertiary)]">No attachments.</p>
+        <p className="text-sm text-[--text-tertiary)]">No attachments.</p>
       ) : (
         <ul className="space-y-1">
           {rows.map((row) => (
@@ -87,10 +87,10 @@ export function AttachmentsPanel({
               <a href={`/api/attachments/${row.id}`} className="text-[--brand] hover:underline">
                 {row.filename}
               </a>
-              <span className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
+              <span className="flex items-center gap-2 text-xs text-[--text-tertiary]">
                 {(row.size / 1024).toFixed(0)} KB · {row.uploader} · {new Date(row.createdAt).toLocaleDateString()}
                 {canDelete ? (
-                  <button type="button" onClick={() => void remove(row.id)} className="text-[var(--error)] hover:underline">
+                  <button type="button" onClick={() => void remove(row.id)} className="text-[--error] hover:underline">
                     delete
                   </button>
                 ) : null}
@@ -101,7 +101,7 @@ export function AttachmentsPanel({
       )}
       {canUpload ? (
         <label
-          className={`inline-block cursor-pointer rounded-md border border-[var(--border-strong)] px-3 py-1.5 text-sm font-medium hover:bg-[var(--bg-hover)] ${busy ? "opacity-50" : ""}`}
+          className={`inline-block cursor-pointer rounded-md border border-[--border-strong] px-3 py-1.5 text-sm font-medium hover:bg-[--bg-hover] ${busy ? "opacity-50" : ""}`}
         >
           {busy ? "Uploading…" : "Attach file…"}
           <input

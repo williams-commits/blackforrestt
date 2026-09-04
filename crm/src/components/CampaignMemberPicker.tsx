@@ -107,7 +107,7 @@ export function CampaignMemberPicker({
   return (
     <div className="space-y-4">
       {canEdit ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-[var(--border-default)] p-3">
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-[--border-default] p-3">
           <select
             aria-label="Member type"
             value={type}
@@ -129,7 +129,7 @@ export function CampaignMemberPicker({
               }
             }}
             placeholder="Search by name or email…"
-            className="min-w-52 flex-1 rounded-md border border-[var(--border-strong)] px-3 py-1.5 text-sm"
+            className="min-w-52 flex-1 rounded-md border border-[--border-strong] px-3 py-1.5 text-sm"
           />
           <button
             type="button"
@@ -139,20 +139,20 @@ export function CampaignMemberPicker({
           >
             Search
           </button>
-          {error ? <span className="text-sm text-[var(--error)]">{error}</span> : null}
+          {error ? <span className="text-sm text-[--error]">{error}</span> : null}
           {results.length > 0 ? (
             <ul className="w-full space-y-1">
               {results.map((result) => (
-                <li key={result.id} className="flex items-center justify-between rounded border border-[var(--border-default)] px-2 py-1 text-sm">
+                <li key={result.id} className="flex items-center justify-between rounded border border-[--border-default] px-2 py-1 text-sm">
                   <span>{result.label}</span>
                   {existing.has(`${type}:${result.id}`) ? (
-                    <span className="text-xs text-[var(--text-tertiary)]">already a member</span>
+                    <span className="text-xs text-[--text-tertiary]">already a member</span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => void add(result.id)}
                       disabled={busy}
-                      className="text-xs font-medium text-[var(--brand)] hover:underline"
+                      className="text-xs font-medium text-[--brand] hover:underline"
                     >
                       Add
                     </button>
@@ -166,15 +166,15 @@ export function CampaignMemberPicker({
 
       <ul className="space-y-1">
         {members.length === 0 ? (
-          <li className="text-sm text-[var(--text-tertiary)]">No members yet.</li>
+          <li className="text-sm text-[--text-tertiary]">No members yet.</li>
         ) : (
           members.map((member) => (
-            <li key={member.id} className="flex items-center justify-between rounded border border-[var(--border-default)] px-2 py-1 text-sm">
+            <li key={member.id} className="flex items-center justify-between rounded border border-[--border-default] px-2 py-1 text-sm">
               <span>
-                <a href={`/${member.subjectType.toLowerCase()}s/${member.subjectId}`} className="text-[var(--brand)] hover:underline">
+                <a href={`/${member.subjectType.toLowerCase()}s/${member.subjectId}`} className="text-[--brand] hover:underline">
                   {member.label}
                 </a>
-                <span className="ml-2 text-xs text-[var(--text-tertiary)]">{member.subjectType.toLowerCase()}</span>
+                <span className="ml-2 text-xs text-[--text-tertiary]">{member.subjectType.toLowerCase()}</span>
               </span>
               <span className="flex items-center gap-2">
                 {canEdit ? (
@@ -183,7 +183,7 @@ export function CampaignMemberPicker({
                     value={member.status}
                     disabled={busy}
                     onChange={(event) => void setStatus(member.id, event.target.value)}
-                    className="rounded border border-[var(--border-default)] px-1 py-0.5 text-xs"
+                    className="rounded border border-[--border-default] px-1 py-0.5 text-xs"
                   >
                     {MEMBER_STATUSES.map((status) => (
                       <option key={status} value={status}>
@@ -192,14 +192,14 @@ export function CampaignMemberPicker({
                     ))}
                   </select>
                 ) : (
-                  <span className="text-xs text-[var(--text-tertiary)]">{member.status.toLowerCase()}</span>
+                  <span className="text-xs text-[--text-tertiary]">{member.status.toLowerCase()}</span>
                 )}
                 {canEdit ? (
                   <button
                     type="button"
                     onClick={() => void remove(member.id)}
                     disabled={busy}
-                    className="text-xs text-[var(--error)] hover:underline"
+                    className="text-xs text-[--error] hover:underline"
                   >
                     Remove
                   </button>

@@ -94,32 +94,32 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
   }
 
   const radio = "mr-1";
-  const card = "rounded-md border border-[var(--border-default)] p-3";
+  const card = "rounded-md border border-[--border-default] p-3";
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8" role="dialog" aria-modal="true">
-      <div className="w-full max-w-xl space-y-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-6 shadow-xl">
+      <div className="w-full max-w-xl space-y-4 rounded-lg border border-[--border-default] bg-[--bg-surface] p-6 shadow-xl">
         <h2 className="text-base font-semibold">Convert lead</h2>
 
         {error ? (
-          <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
+          <p role="alert" className="rounded-md bg-[--error-bg] px-3 py-2 text-sm text-[--error]">
             {error}
           </p>
         ) : null}
 
         {!preview ? (
-          <p className="text-sm text-[var(--text-tertiary)]">{error ? "" : "Checking for duplicates…"}</p>
+          <p className="text-sm text-[--text-tertiary]">{error ? "" : "Checking for duplicates…"}</p>
         ) : (
           <>
-            <p className="text-sm text-[var(--text-secondary)]">
+            <p className="text-sm text-[--text-secondary]">
               Convert <strong>{preview.lead.firstName} {preview.lead.lastName}</strong>
               {preview.lead.company ? ` (${preview.lead.company})` : ""} into working records.
               Open tasks and notes follow the new contact automatically.
             </p>
 
             {preview.matches.contacts.length + preview.matches.customers.length > 0 ? (
-              <div className="rounded-md border border-amber-300 bg-[var(--warning-bg)] p-3 text-sm">
-                <p className="font-medium text-[var(--warning)]">Possible existing records</p>
+              <div className="rounded-md border border-amber-300 bg-[--warning-bg] p-3 text-sm">
+                <p className="font-medium text-[--warning]">Possible existing records</p>
                 <ul className="mt-1 space-y-1 text-amber-900">
                   {preview.matches.contacts.map((match) => (
                     <li key={match.id}>Contact: {match.label} (matches {match.matchOn.join(", ")})</li>
@@ -245,7 +245,7 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
             </div>
 
             {preview.matches.contacts.length > 0 || preview.matches.customers.length > 0 ? (
-              <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+              <label className="flex items-center gap-2 text-sm text-[--text-secondary]">
                 <input
                   type="checkbox"
                   checked={force}
@@ -255,7 +255,7 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
               </label>
             ) : null}
 
-            <div className="flex justify-end gap-2 border-t border-[var(--border-default)] pt-4">
+            <div className="flex justify-end gap-2 border-t border-[--border-default] pt-4">
               <button
                 type="button"
                 onClick={onClose}

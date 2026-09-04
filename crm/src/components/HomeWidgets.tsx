@@ -66,59 +66,59 @@ export function HomeWidgets() {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <section className="card" style={{ padding: "var(--space-6)" }}>
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[--text-secondary]">
           My work
         </h2>
         <div className="grid grid-cols-2 gap-4">
           <Link
             href="/tasks?mine=1"
-            className="rounded-lg border border-[var(--border-default)] p-4 transition hover:border-[var(--brand)]"
+            className="rounded-lg border border-[--border-default] p-4 transition hover:border-[--brand]"
           >
             <p className="text-2xl font-semibold">{openCount ?? "–"}</p>
-            <p className="text-sm text-[var(--text-secondary)]">open tasks</p>
+            <p className="text-sm text-[--text-secondary]">open tasks</p>
           </Link>
           <Link
             href="/tasks?due=overdue&mine=1"
-            className="rounded-lg border p-4 transition hover:border-[var(--error-border)]"
+            className="rounded-lg border p-4 transition hover:border-[--error-border]"
             style={{ borderColor: (overdueCount ?? 0) > 0 ? "#fca5a5" : undefined }}
           >
             <p className="text-2xl font-semibold">{overdueCount ?? "–"}</p>
-            <p className="text-sm text-[var(--text-secondary)]">overdue</p>
+            <p className="text-sm text-[--text-secondary]">overdue</p>
           </Link>
         </div>
       </section>
 
       <section className="card" style={{ padding: "var(--space-6)" }}>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[--text-secondary]">
             Notifications {unread > 0 ? `(${unread} unread)` : ""}
           </h2>
           {unread > 0 ? (
             <button
               type="button"
               onClick={() => void markAllRead()}
-              className="text-xs font-medium text-[var(--brand)] hover:underline"
+              className="text-xs font-medium text-[--brand] hover:underline"
             >
               Mark all read
             </button>
           ) : null}
         </div>
         {notifications.length === 0 ? (
-          <p className="text-sm text-[var(--text-tertiary)]">Nothing yet — assignments and shared tasks land here.</p>
+          <p className="text-sm text-[--text-tertiary]">Nothing yet — assignments and shared tasks land here.</p>
         ) : (
           <ul className="max-h-56 space-y-2 overflow-y-auto">
             {notifications.map((notification) => (
               <li
                 key={notification.id}
                 className={`rounded-md border p-2 text-sm ${
-                  notification.readAt ? "border-[var(--border-default)] text-[var(--text-secondary)]" : "border-[var(--brand)]/30 bg-[var(--brand)]/5"
+                  notification.readAt ? "border-[--border-default] text-[--text-secondary]" : "border-[--brand]/30 bg-[--brand]/5"
                 }`}
               >
                 <p className="font-medium">
                   {TYPE_LABELS[notification.type] ?? notification.type}
                   {typeof notification.payload.title === "string" ? `: ${notification.payload.title}` : ""}
                 </p>
-                <p className="text-xs text-[var(--text-tertiary)]">
+                <p className="text-xs text-[--text-tertiary]">
                   {new Date(notification.createdAt).toLocaleString(undefined, {
                     dateStyle: "medium",
                     timeStyle: "short",

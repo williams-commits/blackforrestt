@@ -159,7 +159,7 @@ export function ActivityComposer({
             required
             maxLength={5000}
             className="input"
-            style={{ resize: "vertical" }}
+            style={{ resize: "vertical", width: "100%" }}
             autoFocus
           />
           <div className="mt-2 flex justify-end gap-2">
@@ -172,7 +172,7 @@ export function ActivityComposer({
       ) : null}
 
       {activeAction === "task" ? (
-        <form method="post" onSubmit={submitTask} className="grid gap-2 p-3 sm:grid-cols-[1fr_180px_auto]">
+        <form method="post" onSubmit={submitTask} className="flex flex-col gap-2 p-3">
           <input
             value={taskTitle}
             onChange={(event) => setTaskTitle(event.target.value)}
@@ -180,6 +180,7 @@ export function ActivityComposer({
             required
             minLength={2}
             className="input"
+            style={{ width: "100%" }}
             autoFocus
           />
           <input
@@ -187,6 +188,7 @@ export function ActivityComposer({
             value={taskDue}
             onChange={(event) => setTaskDue(event.target.value)}
             className="input"
+            style={{ width: "100%" }}
           />
           <button type="submit" className="btn btn-primary" disabled={busy || !taskTitle.trim()}>
             {busy ? "…" : "Add task"}
@@ -195,7 +197,7 @@ export function ActivityComposer({
       ) : null}
 
       {activeAction === "appointment" ? (
-        <form method="post" onSubmit={submitAppointment} className="grid gap-2 p-3 sm:grid-cols-[1fr_180px_auto]">
+        <form method="post" onSubmit={submitAppointment} className="flex flex-col gap-2 p-3">
           <input
             value={apptTitle}
             onChange={(event) => setApptTitle(event.target.value)}
@@ -203,6 +205,7 @@ export function ActivityComposer({
             required
             minLength={2}
             className="input"
+            style={{ width: "100%" }}
             autoFocus
           />
           <input
@@ -211,6 +214,7 @@ export function ActivityComposer({
             onChange={(event) => setApptStart(event.target.value)}
             required
             className="input"
+            style={{ width: "100%" }}
           />
           <button type="submit" className="btn btn-primary" disabled={busy || !apptTitle.trim()}>
             {busy ? "…" : "Schedule"}

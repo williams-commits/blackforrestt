@@ -251,7 +251,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
               <h2 className="card-title">Timeline</h2>
               <span className="badge badge-neutral">{events.length}</span>
             </div>
-            <div style={{ marginBottom: "var(--space-3)" }}>
+            <div className="mx-3 mt-3">
               <ActivityComposer subjectType="CUSTOMER" subjectId={id} subjectLabel={`${customer.firstName} ${customer.lastName}`} canEdit={canEdit} />
             </div>
             <div className="card-body max-h-150 overflow-y-auto">

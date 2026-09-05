@@ -50,10 +50,10 @@ export function LoginForm() {
             className="flex h-12 w-12 items-center justify-center rounded-xl text-lg font-bold"
             style={{ background: "rgba(255,255,255,0.15)" }}
           >
-            BF
+            P
           </span>
           <div>
-            <h1 className="text-2xl font-bold">Black Forest CRM</h1>
+            <h1 className="text-2xl font-bold">Patheo CRM</h1>
             <p className="text-sm opacity-75">Sales & relationship management</p>
           </div>
         </div>
@@ -91,10 +91,10 @@ export function LoginForm() {
               className="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold"
               style={{ background: "var(--brand)", color: "var(--text-inverse)" }}
             >
-              BF
+              P
             </span>
             <div>
-              <p className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Black Forest CRM</p>
+              <p className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Patheo CRM</p>
               <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>Staff sign-in</p>
             </div>
           </div>
@@ -135,6 +135,7 @@ export function LoginForm() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 className="input"
+                style={{ width: "100%" }}
                 placeholder="you@company.com"
               />
             </div>
@@ -150,6 +151,7 @@ export function LoginForm() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 className="input"
+                style={{ width: "100%" }}
               />
             </div>
 

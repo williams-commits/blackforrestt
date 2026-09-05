@@ -102,7 +102,7 @@ export function ReportsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Reports</h1>
-          <p className="text-sm text-[var(--text-secondary)]">Results always reflect your data scope.</p>
+          <p className="text-sm text-(--text-secondary)">Results always reflect your data scope.</p>
         </div>
         <button
           type="button"
@@ -114,7 +114,7 @@ export function ReportsPage() {
       </div>
 
       {builderOpen ? (
-        <div className="card" style={{ padding: "var(--space-4)" }}>
+        <div className="card space-y-4" style={{ padding: "var(--space-4)" }}>
           <div>
             <label htmlFor="b-object" className="mb-1 block text-xs font-medium">Object</label>
             <select id="b-object" value={bObject} onChange={(e) => { setBObject(e.target.value); setBDateField(DATE_FIELDS[e.target.value][0]); setBGroup(GROUP_KEYS[e.target.value][0]); }} className="input">
@@ -155,7 +155,7 @@ export function ReportsPage() {
       ) : null}
 
       <div className={`grid gap-4 ${builderOpen ? "" : "lg:grid-cols-[16rem_1fr]"}`}>
-        <nav className={`card space-y-1 ${builderOpen ? "hidden" : ""}`} aria-label="Report library">
+        <nav className={`card space-y-1 p-2 ${builderOpen ? "hidden" : ""}`} aria-label="Report library">
           {library.length === 0 ? (
             <div style={{ padding: "var(--space-3)" }}>
               {[...Array(5)].map((_, i) => (<div key={i} className="skeleton" style={{ height: "14px", width: `${80 - i * 10}%`, marginBottom: "10px" }} />))}
@@ -167,11 +167,11 @@ export function ReportsPage() {
                 type="button"
                 onClick={() => setSelected(report.id)}
                 className={`block w-full rounded-md px-3 py-2 text-left text-sm ${
-                  selected === report.id ? "bg-[var(--brand)]/10 font-medium text-[var(--brand)]" : "hover:bg-[var(--bg-hover)]"
+                  selected === report.id ? "bg-(--brand)/10 font-medium text-(--brand)" : "hover:bg-(--bg-hover)"
                 }`}
               >
                 {report.name}
-                <span className="block text-xs font-normal text-[var(--text-tertiary)]">{report.object.toLowerCase()}</span>
+                <span className="block text-xs font-normal text-(--text-tertiary)">{report.object.toLowerCase()}</span>
               </button>
             ))
           )}
@@ -182,74 +182,76 @@ export function ReportsPage() {
             <div className="card" style={{ padding: "var(--space-4)" }}>
               <div className="flex-1">
                 <p className="font-medium">{meta.name}</p>
-                <p className="text-sm text-[var(--text-secondary)]">{meta.description}</p>
+                <p className="text-sm text-(--text-secondary)">{meta.description}</p>
               </div>
-              <div>
-                <label htmlFor="r-from" className="mb-1 block text-xs font-medium">From</label>
-                <input
-                  id="r-from"
-                  type="date"
-                  value={from}
-                  onChange={(event) => setFrom(event.target.value)}
-                  className="input"
-                />
+              <div className="flex items-center justify-between gap-4 mt-3">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="r-from" className="mb-1 block text-xs font-medium">From</label>
+                  <input
+                    id="r-from"
+                    type="date"
+                    value={from}
+                    onChange={(event) => setFrom(event.target.value)}
+                    className="input"
+                  />
+                  <label htmlFor="r-to" className="mb-1 block text-xs font-medium">To</label>
+                  <input
+                    id="r-to"
+                    type="date"
+                    value={to}
+                    onChange={(event) => setTo(event.target.value)}
+                    className="input"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void run()}
+                    disabled={running}
+                    className="btn btn-primary"
+                    style={{ background: "var(--brand)" }}
+                  >
+                    {running ? "Running…" : "Run"}
+                  </button>
+                  <a
+                    href={`/api/reports/${selected}/export?${new URLSearchParams({
+                      ...(from ? { from } : {}),
+                      ...(to ? { to } : {}),
+                    }).toString()}`}
+                    className="btn btn-secondary"
+                  >
+                    Export CSV
+                  </a>
+                </div>
               </div>
-              <div>
-                <label htmlFor="r-to" className="mb-1 block text-xs font-medium">To</label>
-                <input
-                  id="r-to"
-                  type="date"
-                  value={to}
-                  onChange={(event) => setTo(event.target.value)}
-                  className="input"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => void run()}
-                disabled={running}
-                className="btn btn-primary"
-                style={{ background: "var(--brand)" }}
-              >
-                {running ? "Running…" : "Run"}
-              </button>
-              <a
-                href={`/api/reports/${selected}/export?${new URLSearchParams({
-                  ...(from ? { from } : {}),
-                  ...(to ? { to } : {}),
-                }).toString()}`}
-                className="btn btn-secondary"
-              >
-                Export CSV
-              </a>
             </div>
           ) : null}
 
           {error ? (
-            <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
+            <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
               {error}
             </p>
           ) : null}
 
-          <div className="card">
+          <div className="card" style={{ padding: "var(--space-4)" }}>
             {!result ? (
               <div className="empty-state"><p className="empty-state-title">Pick a report to run</p><p className="empty-state-description">Select a report from the library or build a custom one.</p></div>
             ) : result.rows.length === 0 ? (
-              <p className="p-6 text-center text-sm text-[var(--text-tertiary)]">No rows in range (within your scope).</p>
+              <p className="text-center text-sm text-(--text-tertiary)">No rows in range (within your scope).</p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="space-y-4">
                 {result.rows.map((row, index) => (
                   <li key={`${row.key ?? "none"}-${index}`} className="text-sm">
                     <div className="mb-0.5 flex items-baseline justify-between gap-2">
                       <span className="truncate font-medium">{row.key ?? "(none)"}</span>
-                      <span className="whitespace-nowrap text-[var(--text-secondary)]">
+                      <span className="whitespace-nowrap text-(--text-secondary)">
                         {row.count}
                         {result.report.sums.includes("value")
                           ? ` · ${money(row.sums.value ?? 0)}`
                           : result.report.sums.map((field) => ` · ${field}: ${row.sums[field] ?? 0}`).join("")}
                       </span>
                     </div>
-                    <div className="h-1.5 overflow-hidden rounded bg-[var(--bg-subtle)]">
+                    <div className="h-1.5 overflow-hidden rounded bg-(--bg-subtle)">
                       <div
                         className="h-full"
                         style={{

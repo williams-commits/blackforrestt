@@ -58,13 +58,13 @@ export function QuickActions() {
         type="button"
         onClick={() => setOpen((previous) => !previous)}
         aria-label="Quick actions (Alt+N)"
-        className="rounded-md border border-[var(--border-strong)] px-2.5 py-1.5 text-sm font-semibold hover:bg-[var(--bg-hover)]"
+        className="rounded-md border border-(--border-strong) px-2.5 py-1.5 text-sm font-semibold hover:bg-(--bg-hover)"
       >
         +
       </button>
       {open ? (
-        <div className="absolute right-0 top-full z-40 mt-1 w-56 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] shadow-lg">
-          <p className="border-b border-[var(--border-default)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+        <div className="absolute right-0 top-full z-40 mt-1 w-56 rounded-lg border border-(--border-default) bg-(--bg-surface) shadow-lg">
+          <p className="border-b border-(--border-default) px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-(--text-tertiary)">
             Quick actions
           </p>
           {ACTIONS.map((action) => (
@@ -75,10 +75,10 @@ export function QuickActions() {
                 setOpen(false);
                 router.push(action.href);
               }}
-              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-[var(--bg-hover)]"
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-(--bg-hover)"
             >
               {action.label}
-              <kbd className="rounded border border-[var(--border-default)] px-1 text-[10px] text-[var(--text-tertiary)]">{action.hint}</kbd>
+              <kbd className="rounded border border-(--border-default) px-1 text-[10px] text-(--text-tertiary)]">{action.hint}</kbd>
             </button>
           ))}
         </div>

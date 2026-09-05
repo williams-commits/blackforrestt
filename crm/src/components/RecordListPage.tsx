@@ -7,6 +7,7 @@ import { RecordForm, type OptionSource } from "@/components/RecordForm";
 import { ViewTabs, type ViewOption } from "@/components/ViewTabs";
 import { RowActions } from "@/components/RowActions";
 import { InlineEdit } from "@/components/InlineEdit";
+import { useConfirmDialog, usePromptDialog } from "@/components/Dialogs";
 
 interface MeContext {
   userId: string;
@@ -113,6 +114,8 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   const [activeView, setActiveView] = useState("all");
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
   const [mounted, setMounted] = useState(false);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { prompt, dialog: promptDialog } = usePromptDialog();
 
   useEffect(() => {
     setMounted(true);
@@ -305,9 +308,13 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   }
 
   async function deleteRow(row: Record<string, unknown>) {
-    if (!window.confirm(`Delete this ${config.singular.toLowerCase()}? This can be undone only by an administrator.`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: `Delete ${config.singular.toLowerCase()}?`,
+      message: `This ${config.singular.toLowerCase()} will be soft-deleted. This can be undone only by an administrator.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     await fetch(`/api/${object}/${row.id}`, { method: "DELETE" });
     void fetchRows();
   }
@@ -363,9 +370,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-(--border-default) bg-(--bg-surface) p-3">
         <form
-          className="flex flex-1 flex-wrap items-center gap-2"
+          className="flex flex-1 items-center gap-2"
           onSubmit={(event) => {
             event.preventDefault();
             setPage(1);
@@ -418,7 +425,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             );
           })}
         </form>
-        <div className="flex items-center gap-2 border-l border-[var(--border-default)] pl-2">
+        <div className="flex items-center gap-2 border-l border-(--border-default) pl-2">
           {views.length > 0 ? (
             <select
               aria-label="Saved views"
@@ -443,7 +450,6 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           ) : null}
           <select
             aria-label="Columns"
-            multiple
             value={config.columns.filter((c) => !hiddenColumns.includes(c.key)).map((c) => c.key)}
             onChange={(event) =>
               setHiddenColumns(
@@ -452,8 +458,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                   .filter((key) => !Array.from(event.target.selectedOptions).some((o) => o.value === key)),
               )
             }
-            className="hidden rounded-md border border-[var(--border-strong)] px-2 py-1.5 text-xs sm:block"
-            size={2}
+            className="hidden rounded-md border border-(--border-strong) p-2 text-xs sm:block"
             title="Hold Cmd/Ctrl to change visible columns"
           >
             {config.columns.map((column) => (
@@ -467,7 +472,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             placeholder="Name this view"
             value={viewName}
             onChange={(event) => setViewName(event.target.value)}
-            className="w-32 rounded-md border border-[var(--border-strong)] px-2 py-1.5 text-sm"
+            className="w-32 rounded-md border border-(--border-strong) px-2 py-1.5 text-sm"
           />
           <button
             type="button"
@@ -491,7 +496,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 setViews(refreshed.data);
               }
             }}
-            className="rounded-md border border-[var(--border-strong)] px-2 py-1.5 text-sm font-medium hover:bg-[var(--bg-hover)] disabled:opacity-50"
+            className="rounded-md border border-(--border-strong) px-2 py-1.5 text-sm font-medium hover:bg-(--bg-hover) disabled:opacity-50"
           >
             Save view
           </button>
@@ -509,7 +514,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               onChange={(event) => {
                 if (event.target.value) void runBulk("assign", { assignedUserId: event.target.value });
               }}
-              className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface)] px-2 py-1.5"
+              className="rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 py-1.5"
             >
               <option value="">Assign to…</option>
               {options.users.map((option) => (
@@ -527,7 +532,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               onChange={(event) => {
                 if (event.target.value) void runBulk("status", { statusId: event.target.value });
               }}
-              className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface)] px-2 py-1.5"
+              className="rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 py-1.5"
             >
               <option value="">Change status…</option>
               {bulkStatusOptions.map((option) => (
@@ -541,8 +546,14 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             <button
               type="button"
               disabled={bulkBusy}
-              onClick={() => {
-                if (window.confirm(`Delete ${selected.size} record(s)?`)) void runBulk("delete", {});
+              onClick={async () => {
+                const ok = await confirm({
+                  title: `Delete ${selected.size} record(s)?`,
+                  message: `The selected ${config.singular.toLowerCase()}(s) will be soft-deleted. This can be undone only by an administrator.`,
+                  confirmLabel: "Delete",
+                  destructive: true,
+                });
+                if (ok) void runBulk("delete", {});
               }}
               className="btn btn-destructive" style={{ height: "28px", fontSize: "12px" }}
             >
@@ -557,7 +568,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               onChange={(event) => {
                 if (event.target.value) void runBulk("tag", { tagId: event.target.value });
               }}
-              className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface)] px-2 py-1.5"
+              className="rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 py-1.5"
             >
               <option value="">Add tag…</option>
               {allTags.map((tag) => (
@@ -571,11 +582,16 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             <button
               type="button"
               disabled={bulkBusy}
-              onClick={() => {
-                const title = window.prompt(`Create a follow-up task for ${selected.size} ${config.singular.toLowerCase()}(s) — task title:`);
+              onClick={async () => {
+                const title = await prompt({
+                  title: "Create follow-up tasks",
+                  message: `A task will be created for each of the ${selected.size} selected ${config.singular.toLowerCase()}(s).`,
+                  placeholder: "Task title",
+                  confirmLabel: "Create tasks",
+                });
                 if (title && title.trim().length >= 2) void runBulk("task", { title: title.trim() });
               }}
-              className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface)] px-2 py-1.5 font-medium"
+              className="rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 py-1.5 font-medium"
             >
               Create task…
             </button>
@@ -587,31 +603,31 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 setMergePrimary(mergeCandidates[0]?.id ?? "");
                 setMergeOpen(true);
               }}
-              className="rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface)] px-2 py-1.5 font-medium"
+              className="rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 py-1.5 font-medium"
             >
               Merge selected…
             </button>
           ) : null}
-          {bulkError ? <span className="text-[var(--error)]">{bulkError}</span> : null}
+          {bulkError ? <span className="text-(--error)">{bulkError}</span> : null}
         </div>
       ) : null}
 
       {mergeOpen && mergeCandidates.length === 2 ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md space-y-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-6 shadow-xl">
+          <div className="w-full max-w-md space-y-4 rounded-lg border border-(--border-default) bg-(--bg-surface) text-(--text-primary) p-6 shadow-xl">
             <h2 className="text-base font-semibold">Merge leads</h2>
-            <p className="text-sm text-[var(--text-secondary)]">
+            <p className="text-sm text-(--text-secondary)">
               Choose the surviving record. The other lead is deleted; its timeline, notes, and
               open tasks move to the survivor.
             </p>
             {mergeError ? (
-              <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
+              <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
                 {mergeError}
               </p>
             ) : null}
             <div className="space-y-2">
               {mergeCandidates.map((row) => (
-                <label key={row.id} className="flex items-center gap-2 rounded-md border border-[var(--border-default)] p-3 text-sm">
+                <label key={row.id} className="flex items-center gap-2 rounded-md border border-(--border-default) p-3 text-sm">
                   <input
                     type="radio"
                     name="merge-primary"
@@ -677,10 +693,10 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         </div>
       ) : null}
 
-<div className="card table-responsive overflow-hidden">
+      <div className="card table-responsive overflow-hidden">
         <table className={`table ${density === "compact" ? "table-compact" : ""}`}>
           <thead>
-            <tr className="border-b border-[var(--border-default)] bg-[var(--bg-hover)] text-left text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+            <tr className="border-b border-(--border-default) bg-(--bg-hover) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
               {can.bulk ? (
                 <th className="w-8 px-3 py-2">
                   <input
@@ -758,7 +774,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 return (
                   <tr
                   key={row.id}
-                  className={isSelected ? "bg-[var(--brand)]/5" : ""}
+                  className={isSelected ? "bg-(--brand)/5" : ""}
                   tabIndex={0}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
@@ -782,12 +798,12 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                       if (hiddenColumns.includes(column.key)) return null;
                       const raw = cellValue(row, column.key);
                       const content = (() => {
-                        if (!raw) return <span className="text-[var(--text-tertiary)]">—</span>;
+                        if (!raw) return <span className="text-(--text-tertiary)">—</span>;
                         if (column.type === "record" && index === 0) {
                           return (
                             <Link
                               href={`/${column.object}/${row.id}`}
-                              className="font-medium text-[var(--brand)] hover:underline"
+                              className="font-medium text-(--brand) hover:underline"
                             >
                               {raw}
                             </Link>
@@ -869,9 +885,16 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                             ? [{
                                 label: "Add task",
                                 icon: "check",
-                                onClick: () => {
-                                  const title = window.prompt(`Task title for this ${config.singular.toLowerCase()}:`);
-                                  if (title) void runBulk("task", { ids: [row.id], title });
+                                onClick: async () => {
+                                  const title = await prompt({
+                                    title: "Add task",
+                                    message: `Create a task for this ${config.singular.toLowerCase()}.`,
+                                    placeholder: "Task title",
+                                    confirmLabel: "Add task",
+                                  });
+                                  if (title && title.trim().length >= 2) {
+                                    void runBulk("task", { ids: [row.id], title: title.trim() });
+                                  }
                                 },
                               }]
                             : []),
@@ -932,6 +955,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           onClose={() => setFormMode("closed")}
         />
       ) : null}
+
+      {confirmDialog}
+      {promptDialog}
     </div>
   );
 }

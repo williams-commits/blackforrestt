@@ -126,14 +126,14 @@ export function TasksPage() {
   }
 
   const inputClass =
-    "w-full rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
+    "w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none";
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="page-title">Tasks</h1>
-          <p className="text-sm text-[var(--text-secondary)]">
+          <p className="text-sm text-(--text-secondary)">
             {meta.openCount} open · {meta.overdueCount} overdue
             {subjectLabel ? ` · for ${subjectLabel}` : ""}
           </p>
@@ -152,10 +152,10 @@ export function TasksPage() {
         <form
           method="post"
           onSubmit={createTask}
-          className="grid gap-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-4 sm:grid-cols-4"
+          className="grid gap-3 rounded-lg border border-(--border-default) bg-(--bg-surface) p-4 sm:grid-cols-4"
         >
           {formError ? (
-            <p role="alert" className="sm:col-span-4 rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
+            <p role="alert" className="sm:col-span-4 rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
               {formError}
             </p>
           ) : null}
@@ -212,7 +212,7 @@ export function TasksPage() {
         </form>
       ) : null}
 
-      <div className="flex flex-wrap gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-3">
+      <div className="flex justify-between gap-2 rounded-lg border border-(--border-default) bg-(--bg-surface) p-3">
         <select
           aria-label="Status filter"
           value={status}
@@ -251,7 +251,7 @@ export function TasksPage() {
       <div className="card overflow-hidden">
         <table className="table">
           <thead>
-            <tr className="border-b border-[var(--border-default)] bg-[var(--bg-hover)] text-left text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+            <tr className="border-b border-(--border-default) bg-(--bg-hover) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
               <th className="px-3 py-2 font-medium">Task</th>
               <th className="px-3 py-2 font-medium">Due</th>
               <th className="px-3 py-2 font-medium">Priority</th>
@@ -280,7 +280,7 @@ export function TasksPage() {
                   <td className="px-3 py-2">
                     <p className="font-medium">{task.title}</p>
                     {task.subjectType && task.subjectId ? (
-                      <p className="text-xs text-[var(--text-tertiary)]">
+                      <p className="text-xs text-(--text-tertiary)">
                         linked to {task.subjectType.toLowerCase()} …{task.subjectId.slice(-6)}
                       </p>
                     ) : null}
@@ -299,14 +299,14 @@ export function TasksPage() {
                         <button
                           type="button"
                           onClick={() => void setTaskStatus(task.id, "COMPLETED")}
-                          className="mr-2 text-[var(--brand)] hover:underline"
+                          className="mr-2 text-(--brand) hover:underline"
                         >
                           Complete
                         </button>
                         <button
                           type="button"
                           onClick={() => void setTaskStatus(task.id, "CANCELLED")}
-                          className="text-[var(--error)] hover:underline"
+                          className="text-(--error) hover:underline"
                         >
                           Cancel
                         </button>
@@ -315,7 +315,7 @@ export function TasksPage() {
                       <button
                         type="button"
                         onClick={() => void setTaskStatus(task.id, "OPEN")}
-                        className="text-[var(--text-secondary)] hover:underline"
+                        className="text-(--text-secondary) hover:underline"
                       >
                         Reopen
                       </button>

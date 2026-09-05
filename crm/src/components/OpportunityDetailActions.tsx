@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { OpportunityForm } from "@/components/OpportunityFormDialog";
+import { useConfirmDialog } from "@/components/Dialogs";
 import type { Pipeline } from "@/components/OpportunitiesPage";
 
 /** Edit + delete controls for the opportunity detail page. */
@@ -19,6 +20,7 @@ export function OpportunityDetailActions({
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const pipelineId = (row.pipeline as { id?: string } | null)?.id;
   useEffect(() => {
@@ -35,7 +37,13 @@ export function OpportunityDetailActions({
   if (!canEdit && !canDelete) return null;
 
   async function handleDelete() {
-    if (!window.confirm("Delete this opportunity?")) return;
+    const ok = await confirm({
+      title: "Delete this opportunity?",
+      message: "The opportunity will be soft-deleted and removed from the pipeline board.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const response = await fetch(`/api/opportunities/${(row as { id: string }).id}`, {
@@ -53,7 +61,7 @@ export function OpportunityDetailActions({
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="btn btn-secondary"
+          className="rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-(--brand) focus:ring-offset-2 cursor-pointer"
         >
           Edit
         </button>
@@ -63,7 +71,7 @@ export function OpportunityDetailActions({
           type="button"
           onClick={() => void handleDelete()}
           disabled={busy}
-          className="btn btn-destructive"
+          className="rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-(--brand) focus:ring-offset-2 cursor-pointer"
         >
           Delete
         </button>
@@ -80,6 +88,8 @@ export function OpportunityDetailActions({
           }}
         />
       ) : null}
+
+      {confirmDialog}
     </div>
   );
 }

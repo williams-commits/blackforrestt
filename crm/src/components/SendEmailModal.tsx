@@ -75,37 +75,37 @@ export function SendEmailModal({
   }
 
   const inputClass =
-    "w-full rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20";
+    "w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none focus:ring-2 focus:ring-(--brand)/20";
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8" role="dialog" aria-modal="true">
       <form
         method="post"
         onSubmit={send}
-        className="w-full max-w-2xl space-y-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-6 shadow-xl"
+        className="w-full max-w-2xl space-y-4 rounded-lg border border-(--border-default) bg-(--bg-surface) text-(--text-primary) p-6 shadow-xl"
       >
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold">Send email</h2>
-          <button type="button" onClick={onClose} className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]" aria-label="Close">
+          <button type="button" onClick={onClose} className="text-(--text-tertiary) hover:text-(--text-secondary)" aria-label="Close">
             ×
           </button>
         </div>
 
         {!emailEnabled ? (
-          <div className="rounded-md border border-amber-300 bg-[var(--warning-bg)] p-3 text-sm text-[var(--warning)]">
+          <div className="rounded-md border border-amber-300 bg-(--warning-bg) p-3 text-sm text-(--warning)">
             Email sending is not configured. Set <code className="rounded bg-amber-100 px-1">SMTP_URL</code> in the
             environment to enable this feature.
           </div>
         ) : null}
 
         {success ? (
-          <div className="rounded-md border border-green-300 bg-[var(--success-bg)] p-3 text-sm text-green-800">
+          <div className="rounded-md border border-green-300 bg-(--success-bg) p-3 text-sm text-(--success)">
             ✓ Email sent successfully{createFollowUp ? ` — follow-up task created for ${followUpInDays} day(s)` : ""}.
           </div>
         ) : null}
 
         {error ? (
-          <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
+          <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
             {error}
           </p>
         ) : null}
@@ -172,7 +172,7 @@ export function SendEmailModal({
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 rounded-md border border-[var(--border-default)] bg-[var(--bg-hover)] p-3">
+        <div className="flex flex-wrap items-center gap-4 rounded-md border border-(--border-default) bg-(--bg-hover) p-3">
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -197,7 +197,7 @@ export function SendEmailModal({
           </select>
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-[var(--border-default)] pt-4">
+        <div className="flex justify-end gap-2 border-t border-(--border-default) pt-4">
           <button
             type="button"
             onClick={onClose}

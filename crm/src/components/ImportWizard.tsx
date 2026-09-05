@@ -288,7 +288,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Import</h1>
-          <p className="text-sm text-[--text-secondary]">
+          <p className="text-sm text-(--text-secondary)">
             Step {step} of 4 —{" "}
             {["Upload CSV", "Map columns", "Validate", "Run & results"][step - 1]}
             {fileName ? ` · ${fileName}` : ""}
@@ -302,13 +302,13 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
       </div>
 
       {error ? (
-        <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
+        <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
           {error}
         </p>
       ) : null}
 
       {step === 1 ? (
-        <div className="card" style={{ padding: "var(--space-6)" }}>
+        <div className="card space-y-4" style={{ padding: "var(--space-6)" }}>
           <div>
             <label htmlFor="import-object" className="mb-1 block text-sm font-medium">
               Import destination
@@ -328,7 +328,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           </div>
           <div>
             <p className="mb-1 text-sm font-medium">Source</p>
-            <div className="flex gap-4">
+            <div className="flex items-center gap-4">
               <label className="text-sm">
                 <input type="radio" name="import-source" checked={source === "csv"} onChange={() => setSource("csv")} /> CSV file
               </label>
@@ -342,7 +342,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               <label htmlFor="sheet-url" className="mb-1 block text-sm font-medium">
                 Published sheet CSV link (File → Share → Publish to web → CSV)
               </label>
-              <div className="flex gap-2">
+              <div className="flex items-center justify-between gap-2">
                 <input
                   id="sheet-url"
                   value={sheetUrl}
@@ -377,7 +377,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             />
           </div>
           )}
-          <p className="text-xs text-[var(--text-tertiary)]">
+          <p className="text-xs text-(--text-tertiary)">
             Nothing is written at upload — mapping, validation, and duplicate checks come first.
           </p>
         </div>
@@ -385,12 +385,12 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
 
       {step === 2 ? (
         <div className="space-y-4">
-          <div className="card">
+          <div className="card" style={{ padding: "var(--space-4)" }}>
             <p className="mb-2 text-sm font-medium">Preview (first 3 rows)</p>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-left text-[var(--text-secondary)]">
+                  <tr className="text-left text-(--text-secondary) uppercase tracking-wide">
                     {columns.map((column) => (
                       <th key={column} className="px-2 py-1 font-medium">{column}</th>
                     ))}
@@ -398,7 +398,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 </thead>
                 <tbody>
                   {rows.slice(0, 3).map((row, index) => (
-                    <tr key={index} className="border-t border-[var(--border-default)]">
+                    <tr key={index} className="border-t border-(--border-default)">
                       {columns.map((column) => (
                         <td key={column} className="px-2 py-1">{row[column]}</td>
                       ))}
@@ -409,18 +409,18 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             </div>
           </div>
 
-          <div className="card">
+          <div className="card" style={{ padding: "var(--space-4)" }}>
             <p className="mb-2 text-sm font-medium">Map columns to {objectType.toLowerCase()} fields</p>
             {missingRequired.length > 0 ? (
-              <p className="mb-2 rounded-md bg-[var(--warning-bg)] px-3 py-2 text-sm text-[var(--warning)]">
+              <p className="mb-2 rounded-md bg-(--warning-bg) px-3 py-2 text-sm text-(--warning)">
                 Required fields not mapped: {missingRequired.map((field) => field.label).join(", ")}
               </p>
             ) : null}
             <div className="grid gap-2 sm:grid-cols-2">
               {columns.map((column) => (
                 <div key={column} className="flex items-center gap-2">
-                  <span className="w-40 truncate text-sm text-[var(--text-secondary)]" title={column}>{column}</span>
-                  <span aria-hidden className="text-[var(--text-tertiary)]">→</span>
+                  <span className="w-40 truncate text-sm text-(--text-secondary)" title={column}>{column}</span>
+                  <span aria-hidden className="text-(--text-tertiary)">→</span>
                   <select
                     aria-label={`Map ${column}`}
                     value={mapping[column] ?? ""}
@@ -478,7 +478,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             </div>
           </div>
 
-          <div className="card" style={{ padding: "var(--space-4)" }}>
+          <div className="card flex items-center justify-between gap-4" style={{ padding: "var(--space-4)" }}>
             <select
               aria-label="Saved mappings"
               defaultValue=""
@@ -535,32 +535,32 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               ["Row errors", validation.summary.errorRows],
               ["Duplicates", validation.summary.duplicateRows],
             ].map(([label, value]) => (
-              <div key={String(label)} className="card">
+              <div key={String(label)} className="card" style={{ padding: "var(--space-4)" }}>
                 <p className="text-2xl font-semibold">{value as number}</p>
-                <p className="text-sm text-[var(--text-secondary)]">{label as string}</p>
+                <p className="text-sm text-(--text-secondary)">{label as string}</p>
               </div>
             ))}
           </div>
 
           {validation.issues.length > 0 ? (
-            <div className="card">
+            <div className="card" style={{ padding: "var(--space-4)" }}>
               <p className="mb-2 text-sm font-medium">Issues</p>
               <ul className="max-h-40 space-y-1 overflow-y-auto text-sm">
                 {validation.issues.slice(0, 100).map((issue, index) => (
-                  <li key={index} className={issue.level === "error" ? "text-[var(--error)]" : "text-[var(--warning)]"}>
+                  <li key={index} className={issue.level === "error" ? "text-(--error)" : "text-(--warning)"}>
                     Row {issue.row}: {issue.message}
                   </li>
                 ))}
               </ul>
               {validation.issues.length > 100 ? (
-                <p className="text-xs text-[var(--text-tertiary)]">…and {validation.issues.length - 100} more.</p>
+                <p className="text-xs text-(--text-tertiary)">…and {validation.issues.length - 100} more.</p>
               ) : null}
             </div>
           ) : null}
 
           {validation.duplicates.length > 0 ? (
             <div className="card" style={{ padding: "var(--space-4)", borderColor: "var(--warning-border)", background: "var(--warning-bg)" }}>
-              <p className="mb-2 text-sm font-medium text-[var(--warning)]">Possible duplicates</p>
+              <p className="mb-2 text-sm font-medium text-(--warning)">Possible duplicates</p>
               <ul className="max-h-40 space-y-1 overflow-y-auto text-sm text-amber-900">
                 {validation.duplicates.slice(0, 100).map((duplicate, index) => (
                   <li key={index}>
@@ -568,7 +568,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-[var(--warning)]">
+              <p className="mt-2 text-xs text-(--warning)">
                 With strategy <strong>{strategy}</strong>
                 {strategy === "CREATE" ? " these rows will be skipped." : " these rows will update the matched record."}
               </p>
@@ -602,7 +602,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                   : `Import ${job.status.toLowerCase()}`}
             </p>
             {job.status === "RUNNING" ? (
-              <div className="mt-2 h-2 overflow-hidden rounded bg-[var(--bg-subtle)]">
+              <div className="mt-2 h-2 overflow-hidden rounded bg-(--bg-subtle)">
                 <div
                   className="h-full"
                   style={{
@@ -622,7 +622,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               ].map(([label, value]) => (
                 <div key={String(label)} className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
                   <p className="text-xl font-semibold">{value as number}</p>
-                  <p className="text-xs text-[var(--text-secondary)]">{label as string}</p>
+                  <p className="text-xs text-(--text-secondary)">{label as string}</p>
                 </div>
               ))}
             </div>
@@ -640,17 +640,17 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           </button>
         </div>
       ) : step === 4 ? (
-        <p className="p-6 text-center text-sm text-[var(--text-tertiary)]">Starting import…</p>
+        <p className="p-6 text-center text-sm text-(--text-tertiary)">Starting import…</p>
       ) : null}
 
-      <div className="card">
-        <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Recent imports</p>
+      <div className="card table-responsive overflow-hidden">
+        {/* <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">Recent imports</p> */}
         {jobs.length === 0 ? (
-          <p className="text-sm text-[var(--text-tertiary)]">No imports yet.</p>
+          <p className="text-sm text-(--text-tertiary) p-3">No imports yet.</p>
         ) : (
           <table className="table">
             <thead>
-              <tr className="border-b border-[var(--border-default)] text-left text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+              <tr className="border-b border-(--border-default) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
                 <th className="px-2 py-1 font-medium">File</th>
                 <th className="px-2 py-1 font-medium">Object</th>
                 <th className="px-2 py-1 font-medium">Strategy</th>
@@ -663,7 +663,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             </thead>
             <tbody>
               {jobs.map((entry) => (
-                <tr key={entry.id} className="border-b border-[var(--border-default)]">
+                <tr key={entry.id} className="border-b border-(--border-default)">
                   <td className="px-2 py-1">{entry.fileKey ?? "—"}</td>
                   <td className="px-2 py-1">{entry.objectType.toLowerCase()}</td>
                   <td className="px-2 py-1">{entry.strategy.toLowerCase()}</td>
@@ -676,7 +676,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                   <td className="px-2 py-1">
                     <button
                       type="button"
-                      className="text-xs text-[var(--brand)] hover:underline"
+                      className="text-xs text-(--brand) hover:underline"
                       onClick={async () => {
                         const response = await fetch(`/api/imports/${entry.id}/retry`, { method: "POST" });
                         if (response.ok) void refreshJobs();

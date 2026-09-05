@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ImageAttachment } from "@/components/ImageAttachment";
+import { useConfirmDialog } from "@/components/Dialogs";
 
 interface AttachmentRow {
   id: string;
@@ -31,6 +32,7 @@ export function AttachmentsPanel({
   const [rows, setRows] = useState<AttachmentRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
     const response = await fetch(
@@ -65,7 +67,13 @@ export function AttachmentsPanel({
   }
 
   async function remove(id: string) {
-    if (!window.confirm("Delete this attachment?")) return;
+    const ok = await confirm({
+      title: "Delete attachment?",
+      message: "The file will be permanently removed from this record.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await fetch(`/api/attachments?id=${id}`, { method: "DELETE" });
@@ -78,10 +86,10 @@ export function AttachmentsPanel({
   return (
     <div className="space-y-2">
       {error ? (
-        <p role="alert" className="rounded-md bg-[--error-bg] px-3 py-2 text-sm text-[--error]">{error}</p>
+        <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p>
       ) : null}
       {rows.length === 0 ? (
-        <p className="text-sm text-[--text-tertiary)]">No attachments.</p>
+        <p className="text-sm text-(--text-tertiary)">No attachments.</p>
       ) : (
         <ul className="space-y-1">
           {rows.map((row) => (
@@ -91,10 +99,10 @@ export function AttachmentsPanel({
                 mimeType={row.mimeType}
                 attachmentId={row.id}
               />
-              <span className="flex items-center gap-2 text-xs text-[--text-tertiary]">
+              <span className="flex items-center gap-2 text-xs text-(--text-tertiary)">
                 {(row.size / 1024).toFixed(0)} KB · {row.uploader} · {new Date(row.createdAt).toLocaleDateString()}
                 {canDelete ? (
-                  <button type="button" onClick={() => void remove(row.id)} className="text-[--error] hover:underline">
+                  <button type="button" onClick={() => void remove(row.id)} className="text-(--error) hover:underline">
                     delete
                   </button>
                 ) : null}
@@ -105,7 +113,7 @@ export function AttachmentsPanel({
       )}
       {canUpload ? (
         <label
-          className={`inline-block cursor-pointer rounded-md border border-[--border-strong] px-3 py-1.5 text-sm font-medium hover:bg-[--bg-hover] ${busy ? "opacity-50" : ""}`}
+          className={`inline-block cursor-pointer rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) ${busy ? "opacity-50" : ""}`}
         >
           {busy ? "Uploading…" : "Attach file…"}
           <input
@@ -120,6 +128,8 @@ export function AttachmentsPanel({
           />
         </label>
       ) : null}
+
+      {confirmDialog}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useConfirmDialog } from "@/components/Dialogs";
 
 /** Administration console: statuses, tags, custom fields, teams, users, audit. */
 export function AdminConsole({
@@ -28,20 +29,20 @@ export function AdminConsole({
     <div className="space-y-4">
       <div>
         <h1 className="page-title">Administration</h1>
-        <p className="text-sm text-[--text-secondary]">
+        <p className="text-sm text-(--text-secondary)">
           {canManage
             ? "Business configuration — changes are audit-logged."
             : "Read-only view — SETTINGS_MANAGE required for changes."}
         </p>
       </div>
-      <div className="flex flex-wrap gap-2 border-b border-[var(--border-default)] pb-2">
+      <div className="flex flex-wrap gap-2 border-b border-(--border-default) pb-2">
         {tabs.map((entry) => (
           <button
             key={entry.key}
             type="button"
             onClick={() => setTab(entry.key)}
             className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-              tab === entry.key ? "bg-[--brand] text-white" : "border border-[var(--border-strong)] bg-[var(--bg-surface)] hover:bg-[--bg-hover]"
+              tab === entry.key ? "bg-(--brand) text-white" : "border border-(--border-strong) bg-(--bg-surface) hover:bg-(--bg-hover)"
             }`}
           >
             {entry.label}
@@ -61,7 +62,7 @@ export function AdminConsole({
   );
 }
 
-const inputClass = "input";
+const inputClass = "w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none focus:ring-2 focus:ring-(--brand)/20";
 
 export function StatusesTab({ canManage }: { canManage: boolean }) {
   const [rows, setRows] = useState<Array<{ id: string; name: string; appliesTo: string; category: string; sortOrder: number; isDefault: boolean; _count: { leads: number; contacts: number; customers: number } }>>([]);
@@ -69,6 +70,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
   const [appliesTo, setAppliesTo] = useState("LEAD");
   const [category, setCategory] = useState("OPEN");
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
     const response = await fetch("/api/record-statuses");
@@ -96,7 +98,13 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
   }
 
   async function remove(id: string) {
-    if (!window.confirm("Delete this status?")) return;
+    const ok = await confirm({
+      title: "Delete this status?",
+      message: "Records currently using this status will need to be updated.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     const response = await fetch(`/api/record-statuses/${id}`, { method: "DELETE" });
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -117,12 +125,12 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
 
   return (
     <div className="space-y-4">
-      {error ? <p role="alert" className="rounded-md bg-[--error-bg] px-3 py-2 text-sm text-[--error]">{error}</p> : null}
+      {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
       {canManage ? (
-        <form method="post" onSubmit={create} className="card" style={{ padding: "var(--space-4)" }}>
+        <form method="post" onSubmit={create} className="card flex items-baseline-last gap-4" style={{ padding: "var(--space-4)" }}>
           <div>
             <label htmlFor="s-name" className="mb-1 block text-xs font-medium">Name</label>
-            <input id="s-name" value={name} onChange={(e) => setName(e.target.value)} required className={inputClass} />
+            <input id="s-name" value={name} onChange={(e) => setName(e.target.value)} required className={inputClass}/>
           </div>
           <div>
             <label htmlFor="s-applies" className="mb-1 block text-xs font-medium">Applies to</label>
@@ -149,7 +157,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
       <div className="card overflow-hidden">
         <table className="table">
           <thead>
-            <tr className="border-b border-[var(--border-default)] bg-[--bg-hover] text-left text-xs uppercase tracking-wide text-[--text-secondary]">
+            <tr className="border-b border-(--border-default) bg-(--bg-hover) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
               <th className="px-3 py-2 font-medium">Name</th>
               <th className="px-3 py-2 font-medium">Object</th>
               <th className="px-3 py-2 font-medium">Category</th>
@@ -169,11 +177,11 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
                 {canManage ? (
                   <td className="px-3 py-2 text-right whitespace-nowrap">
                     {!row.isDefault ? (
-                      <button type="button" onClick={() => void makeDefault(row.id)} className="mr-2 text-xs text-[--brand] hover:underline">
+                      <button type="button" onClick={() => void makeDefault(row.id)} className="mr-2 text-xs text-(--brand) hover:underline">
                         make default
                       </button>
                     ) : null}
-                    <button type="button" onClick={() => void remove(row.id)} className="text-xs text-[--error] hover:underline">
+                    <button type="button" onClick={() => void remove(row.id)} className="text-xs text-(--error) hover:underline">
                       delete
                     </button>
                   </td>
@@ -183,6 +191,8 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
           </tbody>
         </table>
       </div>
+
+      {confirmDialog}
     </div>
   );
 }
@@ -192,6 +202,7 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("#1f6f43");
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
     const response = await fetch("/api/tags");
@@ -219,32 +230,46 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
   }
 
   async function remove(id: string) {
-    if (!window.confirm("Delete this tag? It will be removed from all records.")) return;
+    const ok = await confirm({
+      title: "Delete this tag?",
+      message: "The tag will be removed from all records that use it.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     await fetch(`/api/tags?id=${id}`, { method: "DELETE" });
     void load();
   }
 
   return (
     <div className="space-y-4">
-      {error ? <p role="alert" className="rounded-md bg-[--error-bg] px-3 py-2 text-sm text-[--error]">{error}</p> : null}
+      {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
       {canManage ? (
-        <form method="post" onSubmit={create} className="card" style={{ padding: "var(--space-4)" }}>
+        <form method="post" onSubmit={create} className="card flex items-baseline-last gap-4" style={{ padding: "var(--space-4)" }}>
           <div>
             <label htmlFor="t-name" className="mb-1 block text-xs font-medium">Name</label>
-            <input id="t-name" value={name} onChange={(e) => setName(e.target.value)} required className={inputClass} />
+            <input id="t-name" value={name} onChange={(e) => setName(e.target.value)} required className={inputClass}/>
           </div>
           <div>
             <label htmlFor="t-color" className="mb-1 block text-xs font-medium">Color</label>
-            <input id="t-color" type="color" value={color} onChange={(e) => setColor(e.target.value)} className="input" style={{ height: "36px", padding: "2px" }} />
+            <input
+              id="t-color"
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className={`${inputClass} h-9 w-14 cursor-pointer p-0.5`}
+              aria-label="Tag color"
+              title="Choose a tag color"
+            />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ background: "--brand" }}>
-            Add
+          <button type="submit" className="btn btn-primary" style={{ background: "var(--brand)" }}>
+            Add Tag
           </button>
         </form>
       ) : null}
-      <div className="card" style={{ padding: "var(--space-4)" }}>
+      <div className="card flex items-center gap-3" style={{ padding: "var(--space-4)" }}>
         {rows.length === 0 ? (
-          <p className="text-sm text-[--text-tertiary]">No tags.</p>
+          <p className="text-sm text-(--text-tertiary)">No tags.</p>
         ) : (
           rows.map((row) => (
             <span key={row.id} className="flex items-center gap-2 rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ background: row.color ?? "#78716c" }}>
@@ -258,6 +283,8 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
           ))
         )}
       </div>
+
+      {confirmDialog}
     </div>
   );
 }
@@ -270,6 +297,7 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
   const [fieldType, setFieldType] = useState("TEXT");
   const [options, setOptions] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
     const response = await fetch("/api/custom-fields");
@@ -307,56 +335,72 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
   }
 
   async function remove(id: string) {
-    if (!window.confirm("Delete this custom field? Existing values remain in records but are no longer validated.")) return;
+    const ok = await confirm({
+      title: "Delete this custom field?",
+      message: "Existing values remain in records but are no longer validated.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     await fetch(`/api/custom-fields/${id}`, { method: "DELETE" });
     void load();
   }
 
   return (
     <div className="space-y-4">
-      {error ? <p role="alert" className="rounded-md bg-[--error-bg] px-3 py-2 text-sm text-[--error]">{error}</p> : null}
+      {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
       {canManage ? (
-        <form method="post" onSubmit={create} className="card" style={{ padding: "var(--space-4)" }}>
+        <form method="post" onSubmit={create} className="card space-y-4" style={{ padding: "var(--space-4)" }}>
           <div>
-            <label htmlFor="cf-object" className="mb-1 block text-xs font-medium">Object</label>
-            <select id="cf-object" value={objectType} onChange={(e) => setObjectType(e.target.value)} className={inputClass}>
+            <h3 className="text-sm font-semibold">Add custom field</h3>
+            <p className="mt-1 text-xs text-(--text-secondary)">Define a field that can be used on records of the selected object.</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label htmlFor="cf-object" className="mb-1 block text-xs font-medium">Object</label>
+              <select id="cf-object" value={objectType} onChange={(e) => setObjectType(e.target.value)} className={inputClass} style={{ width: "100%" }}>
               <option value="LEAD">Lead</option>
               <option value="CONTACT">Contact</option>
               <option value="ACCOUNT">Account</option>
               <option value="CUSTOMER">Customer</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="cf-key" className="mb-1 block text-xs font-medium">Key (camelCase)</label>
-            <input id="cf-key" value={key} onChange={(e) => setKey(e.target.value)} required pattern="[a-z][a-zA-Z0-9_]*" className={inputClass} />
-          </div>
-          <div>
-            <label htmlFor="cf-label" className="mb-1 block text-xs font-medium">Label</label>
-            <input id="cf-label" value={label} onChange={(e) => setLabel(e.target.value)} required className={inputClass} />
-          </div>
-          <div>
-            <label htmlFor="cf-type" className="mb-1 block text-xs font-medium">Type</label>
-            <select id="cf-type" value={fieldType} onChange={(e) => setFieldType(e.target.value)} className={inputClass}>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="cf-label" className="mb-1 block text-xs font-medium">Label</label>
+              <input id="cf-label" value={label} onChange={(e) => setLabel(e.target.value)} required placeholder="e.g. Customer tier" className={inputClass} style={{ width: "100%" }} />
+            </div>
+            <div>
+              <label htmlFor="cf-key" className="mb-1 block text-xs font-medium">Key</label>
+              <input id="cf-key" value={key} onChange={(e) => setKey(e.target.value)} required pattern="[a-z][a-zA-Z0-9_]*" title="Start with a lowercase letter; use letters, numbers, or underscores." placeholder="e.g. customerTier" className={inputClass} style={{ width: "100%" }} />
+              <p className="mt-1 text-xs text-(--text-tertiary)">Lowercase camelCase, letters, numbers, and underscores.</p>
+            </div>
+            <div>
+              <label htmlFor="cf-type" className="mb-1 block text-xs font-medium">Type</label>
+              <select id="cf-type" value={fieldType} onChange={(e) => setFieldType(e.target.value)} className={inputClass} style={{ width: "100%" }}>
               {["TEXT", "NUMBER", "CURRENCY", "BOOLEAN", "DATE", "DATETIME", "SELECT", "MULTI_SELECT", "PHONE", "EMAIL", "URL"].map((type) => (
                 <option key={type} value={type}>{type.replaceAll("_", " ").toLowerCase()}</option>
               ))}
-            </select>
+              </select>
+            </div>
           </div>
           {fieldType === "SELECT" || fieldType === "MULTI_SELECT" ? (
             <div>
-              <label htmlFor="cf-options" className="mb-1 block text-xs font-medium">Options (comma-sep)</label>
-              <input id="cf-options" value={options} onChange={(e) => setOptions(e.target.value)} className={inputClass} />
+              <label htmlFor="cf-options" className="mb-1 block text-xs font-medium">Options</label>
+              <input id="cf-options" value={options} onChange={(e) => setOptions(e.target.value)} required placeholder="e.g. New, Active, Archived" className={inputClass} style={{ width: "100%" }} />
+              <p className="mt-1 text-xs text-(--text-tertiary)">Separate each option with a comma.</p>
             </div>
           ) : null}
-          <button type="submit" className="btn btn-primary" style={{ background: "--brand" }}>
-            Add
-          </button>
+          <div className="flex justify-end">
+            <button type="submit" className="btn btn-primary" style={{ background: "var(--brand)" }}>
+              Add field
+            </button>
+          </div>
         </form>
       ) : null}
       <div className="card overflow-hidden">
         <table className="table">
           <thead>
-            <tr className="border-b border-[var(--border-default)] bg-[--bg-hover] text-left text-xs uppercase tracking-wide text-[--text-secondary]">
+            <tr className="border-b border-(--border-default) bg-(--bg-hover) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
               <th className="px-3 py-2 font-medium">Object</th>
               <th className="px-3 py-2 font-medium">Label</th>
               <th className="px-3 py-2 font-medium">Key</th>
@@ -368,7 +412,7 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={7} className="px-3 py-6 text-center text-[--text-tertiary]">No custom fields defined.</td></tr>
+              <tr><td colSpan={7} className="px-3 py-6 text-center text-(--text-tertiary)">No custom fields defined.</td></tr>
             ) : (
               rows.map((row) => (
                 <tr key={row.id}>
@@ -380,7 +424,7 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
                   <td className="px-3 py-2">{row.active ? "active" : "hidden"}</td>
                   {canManage ? (
                     <td className="px-3 py-2 text-right">
-                      <button type="button" onClick={() => void remove(row.id)} className="text-xs text-[--error] hover:underline">
+                      <button type="button" onClick={() => void remove(row.id)} className="text-xs text-(--error) hover:underline">
                         delete
                       </button>
                     </td>
@@ -391,6 +435,8 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
           </tbody>
         </table>
       </div>
+
+      {confirmDialog}
     </div>
   );
 }
@@ -410,6 +456,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
   const [showUserForm, setShowUserForm] = useState(false);
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [uEmail, setUEmail] = useState("");
   const [uName, setUName] = useState("");
   const [uPassword, setUPassword] = useState("");
@@ -483,11 +530,11 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
 
   return (
     <div className="space-y-4">
-      {error ? <p role="alert" className="rounded-md bg-[--error-bg] px-3 py-2 text-sm text-[--error]">{error}</p> : null}
+      {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold uppercase tracking-wide text-[--text-secondary]">Users ({users.length})</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">Users ({users.length})</p>
         {canManage ? (
-          <button type="button" onClick={() => setShowUserForm((p) => !p)} className="btn btn-primary" style={{ background: "--brand" }}>
+          <button type="button" onClick={() => setShowUserForm((p) => !p)} className="btn btn-primary" style={{ background: "var(--brand)" }}>
             New user
           </button>
         ) : null}
@@ -513,14 +560,14 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
             </select>
           </div>
           <div className="flex items-end">
-            <button type="submit" className="btn btn-primary" style={{ background: "--brand" }}>Create</button>
+            <button type="submit" className="btn btn-primary" style={{ background: "var(--brand)" }}>Create</button>
           </div>
         </form>
       ) : null}
       <div className="card overflow-hidden">
         <table className="table">
           <thead>
-            <tr className="border-b border-[var(--border-default)] bg-[--bg-hover] text-left text-xs uppercase tracking-wide text-[--text-secondary]">
+            <tr className="border-b border-(--border-default) bg-(--bg-hover) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
               <th className="px-3 py-2 font-medium">User</th>
               <th className="px-3 py-2 font-medium">Role</th>
               <th className="px-3 py-2 font-medium">Teams</th>
@@ -532,7 +579,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
           <tbody>
             {users.map((user) => (
               <tr key={user.id}>
-                <td className="px-3 py-2"><p className="font-medium">{user.name}</p><p className="text-xs text-[--text-tertiary]">{user.email}</p></td>
+                <td className="px-3 py-2"><p className="font-medium">{user.name}</p><p className="text-xs text-(--text-tertiary)">{user.email}</p></td>
                 <td className="px-3 py-2">
                   {canManage ? (
                     <select aria-label={`Role for ${user.name}`} value={user.role.key} onChange={(e) => void patchUser(user.id, { roleKey: e.target.value })} className={inputClass}>
@@ -548,16 +595,20 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                     <button
                       type="button"
                       onClick={() => void patchUser(user.id, { status: user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" })}
-                      className="mr-3 text-xs text-[var(--brand-700)] hover:underline"
+                      className="mr-3 text-xs text-(--brand-700) hover:underline"
                     >
                       {user.status === "ACTIVE" ? "suspend" : "activate"}
                     </button>
                     <button
                       type="button"
                       onClick={async () => {
-                        if (!window.confirm(
-                          `Permanently delete "${user.name}" (${user.email})?\n\nAll owned records will be reassigned to you. This action cannot be undone.`
-                        )) return;
+                        const ok = await confirm({
+                          title: `Permanently delete "${user.name}"?`,
+                          message: `${user.email} — all owned records will be reassigned to you. This action cannot be undone.`,
+                          confirmLabel: "Delete user",
+                          destructive: true,
+                        });
+                        if (!ok) return;
                         const response = await fetch(`/api/admin/users?id=${user.id}`, { method: "DELETE" });
                         if (!response.ok) {
                           const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -566,7 +617,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                         }
                         void load();
                       }}
-                      className="text-xs text-[var(--error)] hover:underline"
+                      className="text-xs text-(--error) hover:underline"
                     >
                       delete
                     </button>
@@ -579,7 +630,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
       </div>
 
       <div className="flex items-center justify-between pt-2">
-        <p className="text-sm font-semibold uppercase tracking-wide text-[--text-secondary]">Teams ({teams.length})</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">Teams ({teams.length})</p>
         {canManage ? (
           <button type="button" onClick={() => setShowTeamForm((p) => !p)} className="btn btn-secondary">
             New team
@@ -604,14 +655,20 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
       ) : null}
       <div className="card grid gap-2 sm:grid-cols-2" style={{ padding: "var(--space-4)" }}>
         {teams.map((team) => (
-          <div key={team.id} className="rounded border border-[var(--border-default)] p-2 text-sm">
-            <p className="font-medium">{team.name}{team.parent ? <span className="text-xs text-[--text-tertiary]"> · under {team.parent.name}</span> : null}</p>
-            <p className="text-xs text-[--text-secondary]">lead {team.leader?.name ?? "—"} · {team.memberships.length} member(s): {team.memberships.map((m) => m.user.name).join(", ") || "none"}</p>
+          <div key={team.id} className="rounded border border-(--border-default) p-2 text-sm">
+            <p className="font-medium">{team.name}{team.parent ? <span className="text-xs text-(--text-tertiary)"> · under {team.parent.name}</span> : null}</p>
+            <p className="text-xs text-(--text-secondary)">lead {team.leader?.name ?? "—"} · {team.memberships.length} member(s): {team.memberships.map((m) => m.user.name).join(", ") || "none"}</p>
             {canManage ? (
               <button
                 type="button"
                 onClick={async () => {
-                  if (!window.confirm(`Delete team “${team.name}”?`)) return;
+                  const okTeam = await confirm({
+                    title: `Delete team “${team.name}”?`,
+                    message: "Members of this team will no longer see each other's records through team scope.",
+                    confirmLabel: "Delete team",
+                    destructive: true,
+                  });
+                  if (!okTeam) return;
                   const response = await fetch(`/api/admin/teams?id=${team.id}`, { method: "DELETE" });
                   if (!response.ok) {
                     const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -620,7 +677,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                   }
                   void load();
                 }}
-                className="mt-1 text-xs text-[--error] hover:underline"
+                className="mt-1 text-xs text-(--error) hover:underline"
               >
                 delete
               </button>
@@ -628,6 +685,8 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
           </div>
         ))}
       </div>
+
+      {confirmDialog}
     </div>
   );
 }
@@ -678,23 +737,23 @@ export function RolesTab() {
 
   return (
     <div className="space-y-3">
-      {error ? <p role="alert" className="rounded-md bg-[--error-bg] px-3 py-2 text-sm text-[--error]">{error}</p> : null}
+      {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
       {roles.map((role) => (
-        <div key={role.id} className="card">
+        <div key={role.id} className="card" style={{ padding: "var(--space-4)" }}>
           <div className="mb-2 flex items-baseline justify-between">
             <p className="font-medium">
               {role.name}
-              <span className="ml-2 text-xs text-[--text-tertiary]">scope {role.scope.toLowerCase()} · {role._count.users} user(s)</span>
+              <span className="ml-2 text-xs text-(--text-tertiary)">scope {role.scope.toLowerCase()} · {role._count.users} user(s)</span>
             </p>
-            {role.key === "SUPER_ADMIN" ? <span className="text-xs text-[--text-tertiary]">permissions fixed</span> : null}
+            {role.key === "SUPER_ADMIN" ? <span className="text-xs text-(--text-tertiary)">permissions fixed</span> : null}
           </div>
-          {role.description ? <p className="mb-2 text-xs text-[--text-secondary]">{role.description}</p> : null}
+          {role.description ? <p className="mb-2 text-xs text-(--text-secondary)">{role.description}</p> : null}
           <div className="flex flex-wrap gap-1">
             {allPermissions.map((permission) => {
               const enabled = role.permissions.some((entry) => entry.permission === permission);
               const locked = role.key === "SUPER_ADMIN";
               return (
-                <label key={permission} className={`flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] ${enabled ? "border-[--brand]/40 bg-[--brand]/5" : "border-[var(--border-default)] text-[--text-tertiary]"}`}>
+                <label key={permission} className={`flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] ${enabled ? "border-(--brand)/40 bg-[var(--brand)/5" : "border-(--border-default) text-(--text-tertiary)"} ${locked ? "opacity-50" : "hover:bg-(--bg-hover) hover:text-(--text-default)"}}`}>
                   <input
                     type="checkbox"
                     checked={enabled}
@@ -745,8 +804,8 @@ export function SettingsTab() {
 
   return (
     <div className="space-y-4">
-      {error ? <p role="alert" className="rounded-md bg-[--error-bg] px-3 py-2 text-sm text-[--error]">{error}</p> : null}
-      <form method="post" onSubmit={save} className="card" style={{ padding: "var(--space-4)" }}>
+      {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
+      <form method="post" onSubmit={save} className="card flex items-baseline-last" style={{ padding: "var(--space-4)" }}>
         <div>
           <label htmlFor="set-key" className="mb-1 block text-xs font-medium">Key (e.g. org.currency)</label>
           <input id="set-key" value={key} onChange={(e) => setKey(e.target.value)} required pattern="[a-z][a-z0-9_.]*" className={inputClass} />
@@ -755,11 +814,11 @@ export function SettingsTab() {
           <label htmlFor="set-value" className="mb-1 block text-xs font-medium">Value</label>
           <input id="set-value" value={value} onChange={(e) => setValue(e.target.value)} required className={inputClass} />
         </div>
-        <button type="submit" className="btn btn-primary" style={{ background: "--brand" }}>Save</button>
+        <button type="submit" className="btn btn-primary" style={{ background: "var(--brand)" }}>Save</button>
       </form>
-      <div className="card">
+      <div className="card" style={{ padding: "var(--space-4)" }}>
         {settings.length === 0 ? (
-          <p className="text-sm text-[--text-tertiary]">No settings yet.</p>
+          <p className="text-sm text-(--text-tertiary)">No settings yet.</p>
         ) : (
           <ul className="space-y-1 text-sm">
             {settings.map((setting) => (
@@ -797,7 +856,7 @@ export function AuditTab() {
       <div className="card overflow-hidden">
         <table className="table">
           <thead>
-            <tr className="border-b border-[var(--border-default)] bg-[--bg-hover] text-left text-xs uppercase tracking-wide text-[--text-secondary]">
+            <tr className="border-b border-(--border-default) bg-(--bg-hover) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
               <th className="px-3 py-2 font-medium">When</th>
               <th className="px-3 py-2 font-medium">Actor</th>
               <th className="px-3 py-2 font-medium">Action</th>
@@ -812,7 +871,7 @@ export function AuditTab() {
                 </td>
                 <td className="px-3 py-2">{entry.actor?.name ?? "system"}</td>
                 <td className="px-3 py-2 font-medium">{entry.action}</td>
-                <td className="px-3 py-2 text-xs text-[--text-secondary]">
+                <td className="px-3 py-2 text-xs text-(--text-secondary)">
                   {entry.objectType}
                   {entry.objectId ? ` · …${entry.objectId.slice(-6)}` : ""}
                 </td>
@@ -821,7 +880,7 @@ export function AuditTab() {
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between text-sm text-[--text-secondary]">
+      <div className="flex items-center justify-between text-sm text-(--text-secondary)">
         <span>Page {page} · {total} entries</span>
         <div className="flex gap-2">
           <button type="button" disabled={page <= 1} onClick={() => void load(page - 1)} className="btn btn-secondary" style={{ height: "28px" }}>
@@ -850,49 +909,49 @@ export function IntegrationsTab() {
       .catch(() => setStatus(null));
   }, []);
 
-  if (!status) return <p className="text-sm text-[--text-tertiary]">Loading…</p>;
+  if (!status) return <p className="text-sm text-(--text-tertiary)">Loading…</p>;
 
   return (
     <div className="space-y-4">
-      <div className="card">
+      <div className="card" style={{ padding: "var(--space-4)" }}>
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium">Trading-platform bridge</p>
-            <p className="text-sm text-[--text-secondary]">
+            <p className="text-sm text-(--text-secondary)">
               Read-only client-360: KYC, wallets, payments for linked customers.
             </p>
           </div>
           <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${status.platformBridge.enabled ? "bg-green-100 text-green-800" : "bg-[--bg-subtle] text-[--text-secondary]"}`}
+            className={`rounded-full px-2 py-0.5 text-xs font-medium ${status.platformBridge.enabled ? "bg-green-100 text-green-800" : "bg-(--bg-subtle) text-(--text-secondary)"}`}
           >
             {status.platformBridge.enabled ? "configured" : "not configured"}
           </span>
         </div>
         {status.platformBridge.url ? (
-          <p className="mt-2 font-mono text-xs text-[--text-tertiary]">{status.platformBridge.url}</p>
+          <p className="mt-2 font-mono text-xs text-(--text-tertiary)">{status.platformBridge.url}</p>
         ) : (
-          <p className="mt-2 text-xs text-[--text-tertiary]">Set PLATFORM_BRIDGE_URL + PLATFORM_BRIDGE_TOKEN in the environment.</p>
+          <p className="mt-2 text-xs text-(--text-tertiary)">Set PLATFORM_BRIDGE_URL + PLATFORM_BRIDGE_TOKEN in the environment.</p>
         )}
       </div>
 
-      <div className="card">
+      <div className="card" style={{ padding: "var(--space-4)" }}>
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium">Email notifications</p>
-            <p className="text-sm text-[--text-secondary]">
+            <p className="text-sm text-(--text-secondary)">
               Assignment, task, overdue, and import notifications also go to email.
             </p>
           </div>
           <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${status.email.enabled ? "bg-green-100 text-green-800" : "bg-[--bg-subtle] text-[--text-secondary]"}`}
+            className={`rounded-full px-2 py-0.5 text-xs font-medium ${status.email.enabled ? "bg-green-100 text-green-800" : "bg-(--bg-subtle) text-(--text-secondary)"}`}
           >
             {status.email.enabled ? "configured" : "not configured"}
           </span>
         </div>
         {status.email.from ? (
-          <p className="mt-2 font-mono text-xs text-[--text-tertiary]">from: {status.email.from}</p>
+          <p className="mt-2 font-mono text-xs text-(--text-tertiary)">from: {status.email.from}</p>
         ) : (
-          <p className="mt-2 text-xs text-[--text-tertiary]">Set SMTP_URL + SMTP_FROM in the environment.</p>
+          <p className="mt-2 text-xs text-(--text-tertiary)">Set SMTP_URL + SMTP_FROM in the environment.</p>
         )}
       </div>
     </div>
@@ -914,6 +973,7 @@ export function ObjectsTab() {
   const [description, setDescription] = useState("");
   const [fieldsJson, setFieldsJson] = useState('[{"key":"title","label":"Title","type":"TEXT","required":true,"sortOrder":1}]');
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
     const response = await fetch("/api/admin/objects");
@@ -959,12 +1019,12 @@ export function ObjectsTab() {
 
   return (
     <div className="space-y-4">
-      {error ? <p role="alert" className="rounded-md bg-[--error-bg] px-3 py-2 text-sm text-[--error]">{error}</p> : null}
+      {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-[--text-secondary]">
+        <p className="text-sm text-(--text-secondary)">
           Admin-defined record types (e.g. Properties, Vendors, Deals) — records are JSONB documents validated against each object&#39;s field schema.
         </p>
-        <button type="button" onClick={() => setShowForm((p) => !p)} className="btn btn-primary" style={{ background: "--brand" }}>
+        <button type="button" onClick={() => setShowForm((p) => !p)} className="btn btn-primary" style={{ background: "var(--brand)" }}>
           New object type
         </button>
       </div>
@@ -1001,11 +1061,11 @@ export function ObjectsTab() {
               className={`${inputClass} font-mono text-xs`}
               placeholder={'[{"key":"title","label":"Title","type":"TEXT","required":true,"sortOrder":1},{"key":"price","label":"Price","type":"NUMBER","sortOrder":2}]'}
             />
-            <p className="mt-1 text-[10px] text-[--text-tertiary]">
+            <p className="mt-1 text-[10px] text-(--text-tertiary)">
               Types: TEXT, NUMBER, CURRENCY, BOOLEAN, DATE, DATETIME, SELECT, MULTI_SELECT, PHONE, EMAIL, URL
             </p>
           </div>
-          <button type="submit" className="btn btn-primary" style={{ background: "--brand" }}>Create</button>
+          <button type="submit" className="btn btn-primary" style={{ background: "var(--brand)" }}>Create</button>
         </form>
       ) : null}
 
@@ -1016,24 +1076,30 @@ export function ObjectsTab() {
               <div>
                 <p className="font-medium">
                   {object.pluralName}
-                  <span className="ml-2 font-mono text-xs text-[--text-tertiary]">/{object.key}</span>
-                  {!object.active ? <span className="ml-2 rounded bg-[--bg-subtle] px-1.5 py-0.5 text-[10px] text-[--text-secondary]">inactive</span> : null}
+                  <span className="ml-2 font-mono text-xs text-(--text-tertiary)">/{object.key}</span>
+                  {!object.active ? <span className="ml-2 rounded bg-(--bg-subtle) px-1.5 py-0.5 text-[10px] text-(--text-secondary)">inactive</span> : null}
                 </p>
-                {object.description ? <p className="text-xs text-[--text-secondary]">{object.description}</p> : null}
-                <p className="mt-1 text-xs text-[--text-tertiary]">
+                {object.description ? <p className="text-xs text-(--text-secondary)">{object.description}</p> : null}
+                <p className="mt-1 text-xs text-(--text-tertiary)">
                   {object._count.records} record(s) · {object.fields?.length ?? 0} field(s):{" "}
                   {object.fields?.map((field) => field.label).join(", ") || "—"}
                 </p>
               </div>
               <div className="flex gap-2 text-xs">
-                <button type="button" onClick={() => void toggleActive(object.id, !object.active)} className="text-[--brand] hover:underline">
+                <button type="button" onClick={() => void toggleActive(object.id, !object.active)} className="text-(--brand) hover:underline">
                   {object.active ? "deactivate" : "activate"}
                 </button>
                 {object._count.records === 0 ? (
                   <button
                     type="button"
                     onClick={async () => {
-                      if (!window.confirm(`Delete "${object.pluralName}"?`)) return;
+                      const ok = await confirm({
+                        title: `Delete "${object.pluralName}"?`,
+                        message: "The object definition and its record layout will be removed.",
+                        confirmLabel: "Delete",
+                        destructive: true,
+                      });
+                      if (!ok) return;
                       const response = await fetch(`/api/admin/objects/${object.id}`, { method: "DELETE" });
                       if (!response.ok) {
                         const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -1042,7 +1108,7 @@ export function ObjectsTab() {
                       }
                       void load();
                     }}
-                    className="text-[--error] hover:underline"
+                    className="text-(--error) hover:underline"
                   >
                     delete
                   </button>
@@ -1057,6 +1123,8 @@ export function ObjectsTab() {
           </p>
         ) : null}
       </div>
+
+      {confirmDialog}
     </div>
   );
 }

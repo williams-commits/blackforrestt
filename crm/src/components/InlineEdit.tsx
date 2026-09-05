@@ -37,7 +37,7 @@ export function InlineEdit({
     return (
       <span
         onClick={() => setEditing(true)}
-        className="cursor-pointer rounded px-1 transition-colors hover:bg-[var(--bg-hover)]"
+        className="cursor-pointer rounded px-1 transition-colors hover:bg-(--bg-hover)"
         title="Click to edit"
         role="button"
         tabIndex={0}
@@ -80,7 +80,7 @@ export function InlineEdit({
       {saving ? (
         <span className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>…</span>
       ) : (
-        <Icon name="check" size={12} className="text-[var(--success)]" />
+        <Icon name="check" size={12} className="text-(--success)" />
       )}
     </span>
   );

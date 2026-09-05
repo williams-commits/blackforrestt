@@ -25,7 +25,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <h1 className="page-title">Search</h1>
-        <p className="text-sm text-[var(--text-secondary)]">
+        <p className="text-sm text-(--text-secondary)">
           {query.length < 2
             ? "Type at least two characters in the header search."
             : `${hits.length} result(s) for “${query}” (within your scope)`}
@@ -37,17 +37,17 @@ export default async function SearchPage({ searchParams }: PageProps) {
         </p>
       ) : (
         [...grouped.entries()].map(([type, list]) => (
-          <section key={type} className="card">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+          <section key={type} className="card" style={{ padding: "var(--space-4)" }}>
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-(--text-tertiary)">
               {type.toLowerCase()}s ({list.length})
             </h2>
-            <ul className="divide-y divide-[var(--border-default)]">
+            <ul className="divide-y divide-(--border-default)">
               {list.map((hit) => (
                 <li key={hit.id} className="flex items-center justify-between py-2 text-sm">
-                  <Link href={hit.url} className="font-medium text-[--brand] hover:underline">
+                  <Link href={hit.url} className="font-medium text-(--brand) hover:underline">
                     {hit.label}
                   </Link>
-                  <span className="text-xs text-[var(--text-tertiary)]">{hit.subtitle}</span>
+                  <span className="text-xs text-(--text-tertiary)"> {hit.subtitle}</span>
                 </li>
               ))}
             </ul>

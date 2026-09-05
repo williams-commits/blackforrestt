@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirmDialog } from "@/components/Dialogs";
 
 interface PlatformUser {
   platformUserId: string;
@@ -99,11 +100,11 @@ export function PlatformLinkPanel({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-[var(--text-secondary)]">
+      <p className="text-sm text-(--text-secondary)">
         Not linked. Matching is by email and confirmed by you — nothing is linked automatically.
       </p>
       {error ? (
-        <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
+        <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
           {error}
         </p>
       ) : null}
@@ -118,12 +119,12 @@ export function PlatformLinkPanel({
         </button>
       ) : null}
       {lookup.status === "missing" ? (
-        <p className="text-sm text-[var(--warning)]">{lookup.reason}</p>
+        <p className="text-sm text-(--warning)"> {lookup.reason}</p>
       ) : null}
       {lookup.status === "found" ? (
-        <div className="space-y-2 rounded-lg border border-[var(--brand-200)] bg-[var(--brand-50)] p-3 text-sm">
+        <div className="space-y-2 rounded-lg border border-(--brand-200) bg-(--brand-50) p-3 text-sm">
           <p className="font-medium">Platform user found</p>
-          <ul className="space-y-0.5 text-[var(--text-secondary)]">
+          <ul className="space-y-0.5 text-(--text-secondary)">
             <li>Name: {lookup.user.name ?? "—"}</li>
             <li>Email: {lookup.user.email}</li>
             <li>Registered: {new Date(lookup.user.registeredAt).toLocaleDateString()}</li>
@@ -148,23 +149,33 @@ export function PlatformLinkPanel({
 export function PlatformUnlinkButton({ customerId }: { customerId: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   return (
-    <button
-      type="button"
-      disabled={busy}
-      onClick={async () => {
-        if (!window.confirm("Unlink this customer from the platform user?")) return;
-        setBusy(true);
-        try {
-          await fetch(`/api/customers/${customerId}/link`, { method: "DELETE" });
-          router.refresh();
-        } finally {
-          setBusy(false);
-        }
-      }}
-      className="text-xs text-[var(--error)] hover:underline disabled:opacity-50"
-    >
-      Unlink
-    </button>
+    <>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={async () => {
+          const ok = await confirm({
+            title: "Unlink from platform?",
+            message: "This customer will no longer be linked to the trading-platform user. The platform account itself is not affected.",
+            confirmLabel: "Unlink",
+            destructive: true,
+          });
+          if (!ok) return;
+          setBusy(true);
+          try {
+            await fetch(`/api/customers/${customerId}/link`, { method: "DELETE" });
+            router.refresh();
+          } finally {
+            setBusy(false);
+          }
+        }}
+        className="text-xs text-(--error) hover:underline disabled:opacity-50"
+      >
+        Unlink
+      </button>
+      {confirmDialog}
+    </>
   );
 }

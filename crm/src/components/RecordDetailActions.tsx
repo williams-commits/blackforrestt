@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RECORD_UI, type ObjectKey } from "@/lib/recordUi";
 import { RecordForm, type OptionSource } from "@/components/RecordForm";
+import { useConfirmDialog } from "@/components/Dialogs";
 
 const EMPTY: OptionSource = {
   leadStatuses: [],
@@ -105,12 +106,20 @@ export function RecordDetailActions({
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const options = useOptionSources(object);
 
   if (!canEdit && !canDelete) return null;
 
   async function handleDelete() {
-    if (!window.confirm("Delete this record?")) return;
+    const singular = RECORD_UI[object].singular.toLowerCase();
+    const ok = await confirm({
+      title: `Delete this ${singular}?`,
+      message: `This ${singular} will be soft-deleted. This can be undone only by an administrator.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const response = await fetch(`/api/${object}/${(row as { id: string }).id}`, { method: "DELETE" });
@@ -126,7 +135,7 @@ export function RecordDetailActions({
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="btn btn-secondary"
+          className="rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-(--brand) focus:ring-offset-2 cursor-pointer"
         >
           Edit
         </button>
@@ -136,7 +145,7 @@ export function RecordDetailActions({
           type="button"
           onClick={() => void handleDelete()}
           disabled={busy}
-          className="btn btn-destructive"
+          className="rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-(--brand) focus:ring-offset-2 cursor-pointer"
         >
           Delete
         </button>
@@ -151,6 +160,8 @@ export function RecordDetailActions({
           onClose={() => setEditing(false)}
         />
       ) : null}
+
+      {confirmDialog}
     </div>
   );
 }

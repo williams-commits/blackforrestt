@@ -66,7 +66,7 @@ export function ImageAttachment({
         >
           <div
             className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-xl"
-            style={{ background: "var(--bg-surface)", boxShadow: "var(--shadow-modal)" }}
+            style={{ background: "var(--bg-surface)", color: "var(--text-primary)", boxShadow: "var(--shadow-modal)" }}
             onClick={(event) => event.stopPropagation()}
           >
             {/* Header bar */}
@@ -80,7 +80,7 @@ export function ImageAttachment({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--bg-hover)]"
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-(--bg-hover)"
                 style={{ color: "var(--text-tertiary)" }}
                 aria-label="Close preview"
               >

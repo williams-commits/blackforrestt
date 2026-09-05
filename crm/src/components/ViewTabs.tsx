@@ -130,7 +130,7 @@ export function ViewTabs({
                       onViewChange(view.key);
                       setShowSaved(false);
                     }}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] hover:bg-[var(--bg-hover)]"
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] hover:bg-(--bg-hover)"
                     style={{
                       color: view.key === activeView ? "var(--brand-700)" : "var(--text-primary)",
                     }}

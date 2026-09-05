@@ -181,15 +181,15 @@ export default async function LeadDetailPage({ params }: PageProps) {
 
         {/* Timeline sidebar (always visible) */}
         <aside className="no-print">
-          <div className="card sticky top-[68px]">
+          <div className="card sticky top-17">
             <div className="card-header">
               <h2 className="card-title">Timeline</h2>
               <span className="badge badge-neutral">{events.length}</span>
             </div>
-            <div style={{ marginBottom: "var(--space-3)" }}>
+            <div className="mx-3 mt-3">
               <ActivityComposer subjectType="LEAD" subjectId={id} subjectLabel={`${lead.firstName} ${lead.lastName}`} canEdit={canEdit} />
             </div>
-            <div className="card-body max-h-[600px] overflow-y-auto">
+            <div className="card-body max-h-150 overflow-y-auto">
               <Timeline events={events} />
             </div>
           </div>

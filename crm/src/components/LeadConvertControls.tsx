@@ -21,19 +21,19 @@ export function LeadConvertControls({
 
   if (convertedAt) {
     return (
-      <div className="rounded-md border border-[var(--brand)]/30 bg-[var(--brand)]/5 px-3 py-2 text-sm">
+      <div className="rounded-md border border-(--brand)/30 bg-(--brand)/5 px-3 py-2 text-sm">
         <p className="font-medium">Converted</p>
-        <p className="text-xs text-[var(--text-secondary)]">
+        <p className="text-xs text-(--text-secondary)">
           {new Date(convertedAt).toLocaleDateString()} →{" "}
           {convertedContactId ? (
-            <a href={`/contacts/${convertedContactId}`} className="text-[var(--brand)] underline">
+            <a href={`/contacts/${convertedContactId}`} className="text-(--brand) underline">
               contact
             </a>
           ) : null}
           {convertedCustomerId ? (
             <>
               {" · "}
-              <a href={`/customers/${convertedCustomerId}`} className="text-[var(--brand)] underline">
+              <a href={`/customers/${convertedCustomerId}`} className="text-(--brand) underline">
                 customer
               </a>
             </>

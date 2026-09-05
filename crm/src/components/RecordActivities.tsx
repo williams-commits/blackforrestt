@@ -124,7 +124,7 @@ export function RecordActivities({
   return (
     <div className="space-y-4">
       {error ? (
-        <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
+        <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
           {error}
         </p>
       ) : null}
@@ -177,7 +177,7 @@ export function RecordActivities({
           </div>
 
           {showTask ? (
-            <form method="post" onSubmit={createTask} className="grid gap-2 rounded-md border border-[var(--border-default)] p-3 sm:grid-cols-3">
+            <form method="post" onSubmit={createTask} className="grid gap-2 rounded-md border border-(--border-default) p-3 sm:grid-cols-3">
               <input
                 aria-label="Task title"
                 value={taskTitle}
@@ -204,7 +204,7 @@ export function RecordActivities({
           ) : null}
 
           {showAppointment ? (
-            <form method="post" onSubmit={scheduleAppointment} className="grid gap-2 rounded-md border border-[var(--border-default)] p-3 sm:grid-cols-4">
+            <form method="post" onSubmit={scheduleAppointment} className="grid gap-2 rounded-md border border-(--border-default) p-3 sm:grid-cols-4">
               <input
                 aria-label="Appointment title"
                 value={apptTitle}
@@ -242,14 +242,14 @@ export function RecordActivities({
 
       {appointments.length > 0 ? (
         <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-(--text-tertiary)">
             Appointments
           </h3>
           <ul className="space-y-1">
             {appointments.map((appointment) => (
               <li key={appointment.id} className="flex items-center justify-between text-sm">
                 <span className="font-medium">{appointment.title}</span>
-                <span className="text-[var(--text-secondary)]">
+                <span className="text-(--text-secondary)">
                   {new Date(appointment.startAt).toLocaleString(undefined, {
                     dateStyle: "medium",
                     timeStyle: "short",
@@ -263,17 +263,17 @@ export function RecordActivities({
       ) : null}
 
       <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-(--text-tertiary)">
           Notes ({notes.length})
         </h3>
         {notes.length === 0 ? (
-          <p className="text-sm text-[var(--text-tertiary)]">No notes yet.</p>
+          <p className="text-sm text-(--text-tertiary)">No notes yet.</p>
         ) : (
           <ul className="space-y-2">
             {notes.map((note) => (
-              <li key={note.id} className="rounded-md border border-[var(--border-default)] bg-[var(--bg-hover)] p-3 text-sm">
+              <li key={note.id} className="rounded-md border border-(--border-default) bg-(--bg-hover) p-3 text-sm">
                 <p className="whitespace-pre-wrap">{note.body}</p>
-                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                <p className="mt-1 text-xs text-(--text-tertiary)]">
                   {note.author.name} ·{" "}
                   {new Date(note.createdAt).toLocaleString(undefined, {
                     dateStyle: "medium",

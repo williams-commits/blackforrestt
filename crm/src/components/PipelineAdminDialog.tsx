@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Pipeline } from "@/components/OpportunitiesPage";
+import { useConfirmDialog } from "@/components/Dialogs";
 
 export function PipelineAdmin({
   pipelines,
@@ -15,6 +16,7 @@ export function PipelineAdmin({
   const [pipelineName, setPipelineName] = useState("");
   const [stageDraft, setStageDraft] = useState<Record<string, { name: string; type: string }>>({});
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   async function call(input: RequestInfo, init: RequestInit) {
     const response = await fetch(input, init);
@@ -28,14 +30,14 @@ export function PipelineAdmin({
     return true;
   }
 
-  const inputClass = "rounded-md border border-[var(--border-strong)] px-2 py-1 text-sm";
+  const inputClass = "rounded-md border border-(--border-strong) px-2 py-1 text-sm";
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8" role="dialog" aria-modal="true">
-      <div className="w-full max-w-2xl space-y-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-6 shadow-xl">
+      <div className="w-full max-w-2xl space-y-4 rounded-lg border border-(--border-default) bg-(--bg-surface) text-(--text-primary) p-6 shadow-xl">
         <h2 className="text-base font-semibold">Manage pipelines</h2>
         {error ? (
-          <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
+          <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
             {error}
           </p>
         ) : null}
@@ -56,19 +58,25 @@ export function PipelineAdmin({
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ isDefault: true }),
                     })}
-                    className="text-[var(--brand)] hover:underline"
+                    className="text-(--brand) hover:underline"
                   >
                     Make default
                   </button>
                 ) : null}
                 <button
                   type="button"
-                  onClick={() => {
-                    if (window.confirm(`Delete pipeline “${pipeline.name}” and its stages?`)) {
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: `Delete pipeline “${pipeline.name}”?`,
+                      message: "The pipeline and all of its stages will be removed. Opportunities referencing its stages may become invalid.",
+                      confirmLabel: "Delete pipeline",
+                      destructive: true,
+                    });
+                    if (ok) {
                       void call(`/api/pipelines/${pipeline.id}`, { method: "DELETE" });
                     }
                   }}
-                  className="text-[var(--error)] hover:underline"
+                  className="text-(--error) hover:underline"
                 >
                   Delete
                 </button>
@@ -79,18 +87,24 @@ export function PipelineAdmin({
                 <li key={stage.id} className="flex items-center justify-between text-sm">
                   <span>
                     {stage.name}{" "}
-                    <span className="text-xs text-[var(--text-tertiary)]">
+                    <span className="text-xs text-(--text-tertiary)">
                       {stage.probability}% · {stage.type.toLowerCase()}
                     </span>
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm(`Delete stage “${stage.name}”?`)) {
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: `Delete stage “${stage.name}”?`,
+                        message: "The stage will be removed from this pipeline.",
+                        confirmLabel: "Delete stage",
+                        destructive: true,
+                      });
+                      if (ok) {
                         void call(`/api/pipelines/${pipeline.id}/stages/${stage.id}`, { method: "DELETE" });
                       }
                     }}
-                    className="text-xs text-[var(--error)] hover:underline"
+                    className="text-xs text-(--error) hover:underline"
                   >
                     remove
                   </button>
@@ -138,7 +152,7 @@ export function PipelineAdmin({
                 <option value="WON">Won</option>
                 <option value="LOST">Lost</option>
               </select>
-              <button type="submit" className="rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs font-medium hover:bg-[var(--bg-hover)]">
+              <button type="submit" className="rounded-md border border-(--border-strong) px-2 py-1 text-xs font-medium hover:bg-(--bg-hover)">
                 Add stage
               </button>
             </form>
@@ -146,7 +160,7 @@ export function PipelineAdmin({
         ))}
 
         <form
-          className="flex items-center gap-2 border-t border-[var(--border-default)] pt-4"
+          className="flex items-center gap-2 border-t border-(--border-default) pt-4"
           onSubmit={async (event) => {
             event.preventDefault();
             if (!pipelineName) return;
@@ -170,12 +184,14 @@ export function PipelineAdmin({
           </button>
         </form>
 
-        <div className="flex justify-end border-t border-[var(--border-default)] pt-4">
+        <div className="flex justify-end border-t border-(--border-default) pt-4">
           <button type="button" onClick={onClose} className="btn btn-secondary">
             Close
           </button>
         </div>
       </div>
+
+      {confirmDialog}
     </div>
   );
 }

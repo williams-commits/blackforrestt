@@ -156,13 +156,13 @@ export function OpportunitiesPage() {
         <div>
           <h1 className="page-title">Opportunities</h1>
           {board?.aggregates ? (
-            <p className="text-sm text-[var(--text-secondary)]">
+            <p className="text-sm text-(--text-secondary)">
               {board.aggregates.openCount} open · {money(board.aggregates.openValue)} · weighted{" "}
               {money(board.aggregates.weightedValue)}
               {board.aggregates.winRate !== null ? ` · win rate ${board.aggregates.winRate}%` : ""}
             </p>
           ) : (
-            <p className="text-sm text-[var(--text-secondary)]">Pipeline management</p>
+            <p className="text-sm text-(--text-secondary)">Pipeline management</p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -179,24 +179,24 @@ export function OpportunitiesPage() {
               </option>
             ))}
           </select>
-          <div className="flex overflow-hidden rounded-md border border-[var(--border-strong)] text-sm">
+          <div className="flex overflow-hidden rounded-md border border-(--border-strong) text-sm">
             <button
               type="button"
               onClick={() => setView("board")}
-              className={`px-3 py-1.5 ${view === "board" ? "bg-[var(--brand)] text-white" : "bg-[var(--bg-surface)]"}`}
+              className={`px-3 py-1.5 ${view === "board" ? "bg-(--brand) text-white" : "bg-(--bg-surface)"}`}
             >
               Board
             </button>
             <button
               type="button"
               onClick={() => setView("list")}
-              className={`px-3 py-1.5 ${view === "list" ? "bg-[var(--brand)] text-white" : "bg-[var(--bg-surface)]"}`}
+              className={`px-3 py-1.5 ${view === "list" ? "bg-(--brand) text-white" : "bg-(--bg-surface)"}`}
             >
               List
             </button>
           </div>
           {view === "board" ? (
-            <label className="flex items-center gap-1 text-sm text-[var(--text-secondary)]">
+            <label className="flex items-center gap-1 text-sm text-(--text-secondary)">
               <input
                 type="checkbox"
                 checked={includeClosed}
@@ -231,7 +231,7 @@ export function OpportunitiesPage() {
       </div>
 
       {error ? (
-        <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
+        <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
           {error}
         </p>
       ) : null}
@@ -243,7 +243,7 @@ export function OpportunitiesPage() {
       ) : null}
 
       {loading ? (
-        <p className="p-8 text-center text-sm text-[var(--text-tertiary)]">Loading…</p>
+        <p className="p-8 text-center text-sm text-(--text-tertiary)">Loading…</p>
       ) : view === "board" && stages.length > 0 ? (
         <div className="flex gap-3 overflow-x-auto pb-2">
           {stages.map((stage) => {
@@ -264,7 +264,7 @@ export function OpportunitiesPage() {
                   if (id && can.edit) void moveStage(id, stage.id);
                 }}
                 className={`w-64 shrink-0 rounded-lg border p-2 ${
-                  dragOver === stage.id ? "border-[var(--brand)] bg-[var(--brand)]/5" : "border-[var(--border-default)] bg-[var(--bg-subtle)]"
+                  dragOver === stage.id ? "border-(--brand) bg-(--brand)/5" : "border-(--border-default) bg-(--bg-subtle)"
                 }`}
               >
                 <div className="mb-2 flex items-baseline justify-between px-1">
@@ -272,7 +272,7 @@ export function OpportunitiesPage() {
                     {stage.name}
                     {stage.type !== "OPEN" ? ` (${stage.type.toLowerCase()})` : ""}
                   </p>
-                  <p className="text-xs text-[var(--text-secondary)]">
+                  <p className="text-xs text-(--text-secondary)">
                     {agg?.count ?? 0} · {money(agg?.value ?? 0)}
                   </p>
                 </div>
@@ -282,7 +282,7 @@ export function OpportunitiesPage() {
                       key={card.id}
                       draggable={can.edit}
                       onDragStart={(event) => event.dataTransfer.setData("text/opportunity-id", card.id)}
-                      className="rounded-md border border-[var(--border-default)] bg-[var(--bg-surface)] p-2 shadow-sm"
+                      className="rounded-md border border-(--border-default) bg-(--bg-surface) p-2 shadow-sm"
                     >
                       <Link
                         href={`/opportunities/${card.id}`}
@@ -290,10 +290,10 @@ export function OpportunitiesPage() {
                       >
                         {card.name}
                       </Link>
-                      <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                      <p className="mt-0.5 text-xs text-(--text-secondary)">
                         {card.value ? money(Number(card.value)) : "—"} · {card.probability}%
                       </p>
-                      <p className="text-xs text-[var(--text-tertiary)]">
+                      <p className="text-xs text-(--text-tertiary)">
                         {card.account?.name ?? card.contact?.lastName ?? "—"}
                         {card.expectedCloseAt
                           ? ` · closes ${new Date(card.expectedCloseAt).toLocaleDateString()}`
@@ -304,7 +304,7 @@ export function OpportunitiesPage() {
                           aria-label={`Stage for ${card.name}`}
                           value={card.stageId}
                           onChange={(event) => void moveStage(card.id, event.target.value)}
-                          className="mt-1 w-full rounded border border-[var(--border-default)] px-1 py-0.5 text-xs"
+                          className="mt-1 w-full rounded border border-(--border-default) px-1 py-0.5 text-xs"
                         >
                           {stages.map((option) => (
                             <option key={option.id} value={option.id}>
@@ -316,7 +316,7 @@ export function OpportunitiesPage() {
                     </div>
                   ))}
                   {cards.length === 0 ? (
-                    <p className="px-1 py-2 text-xs text-[var(--text-tertiary)]">Empty</p>
+                    <p className="px-1 py-2 text-xs text-(--text-tertiary)">Empty</p>
                   ) : null}
                 </div>
               </div>
@@ -327,7 +327,7 @@ export function OpportunitiesPage() {
         <div className="card overflow-hidden">
           <table className="table">
             <thead>
-              <tr className="border-b border-[var(--border-default)] bg-[var(--bg-hover)] text-left text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+              <tr className="border-b border-(--border-default) bg-(--bg-hover) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
                 <th className="px-3 py-2 font-medium">Opportunity</th>
                 <th className="px-3 py-2 font-medium">Account</th>
                 <th className="px-3 py-2 font-medium">Stage</th>
@@ -340,7 +340,7 @@ export function OpportunitiesPage() {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-[var(--text-tertiary)]">
+                  <td colSpan={7} className="px-3 py-8 text-center text-(--text-tertiary)">
                     No opportunities in this pipeline.
                   </td>
                 </tr>
@@ -348,7 +348,7 @@ export function OpportunitiesPage() {
                 rows.map((row) => (
                   <tr key={row.id}>
                     <td className="px-3 py-2">
-                      <Link href={`/opportunities/${row.id}`} className="font-medium text-[var(--brand)] hover:underline">
+                      <Link href={`/opportunities/${row.id}`} className="font-medium text-(--brand) hover:underline">
                         {row.name}
                       </Link>
                     </td>

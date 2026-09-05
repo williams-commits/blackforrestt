@@ -3,8 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Black Forest CRM",
-    template: "%s · Black Forest CRM",
+    default: "Patheo CRM",
+    template: "%s · Patheo CRM",
   },
   description: "Sales and relationship management platform.",
 };

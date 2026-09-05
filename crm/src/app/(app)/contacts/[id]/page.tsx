@@ -133,10 +133,10 @@ export default async function ContactDetailPage({ params }: PageProps) {
                 <ul className="space-y-2">
                   {relatedOpportunities.map((opportunity) => (
                     <li key={opportunity.id} className="flex items-center justify-between text-[13px]">
-                      <Link href={`/opportunities/${opportunity.id}`} className="font-medium text-[var(--brand-700)] hover:underline">
+                      <Link href={`/opportunities/${opportunity.id}`} className="font-medium text-(--brand-700] hover:underline">
                         {opportunity.name}
                       </Link>
-                      <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+                      <span className="text-[11px] text-(--text-tertiary)">
                         {opportunity.stage.name} · {opportunity.status.toLowerCase()}
                       </span>
                     </li>
@@ -170,15 +170,15 @@ export default async function ContactDetailPage({ params }: PageProps) {
         </div>
 
         <aside className="no-print">
-          <div className="card sticky top-[68px]">
+          <div className="card sticky top-17">
             <div className="card-header">
               <h2 className="card-title">Timeline</h2>
               <span className="badge badge-neutral">{events.length}</span>
             </div>
-            <div style={{ marginBottom: "var(--space-3)" }}>
+            <div className="mx-3 mt-3">
               <ActivityComposer subjectType="CONTACT" subjectId={id} subjectLabel={`${contact.firstName} ${contact.lastName}`} canEdit={canEdit} />
             </div>
-            <div className="card-body max-h-[600px] overflow-y-auto">
+            <div className="card-body max-h-150 overflow-y-auto">
               <Timeline events={events} />
             </div>
           </div>

@@ -106,7 +106,7 @@ export function PromptDialog({
             maxLength={config.maxLength ?? 200}
             required={config.required !== false}
             autoFocus
-            className="input"
+            className="w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none focus:ring-2 focus:ring-(--brand)/20"
           />
         </div>
         <div className="modal-footer">

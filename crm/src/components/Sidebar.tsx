@@ -173,7 +173,7 @@ export function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col border-r transition-transform duration-200 ease-out lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r transition-transform duration-200 ease-out lg:static lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{
@@ -183,7 +183,7 @@ export function Sidebar() {
       >
         {/* Brand header */}
         <div
-          className="flex h-[52px] items-center justify-between border-b px-4"
+          className="flex h-13 items-center justify-between border-b px-4"
           style={{ borderColor: "var(--border-default)" }}
         >
           <div className="flex items-center gap-2.5">
@@ -191,11 +191,11 @@ export function Sidebar() {
               className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold"
               style={{ background: "var(--brand)", color: "var(--text-inverse)" }}
             >
-              BF
+              P
             </span>
             <div>
               <p className="text-[14px] font-bold leading-tight" style={{ color: "var(--text-primary)" }}>
-                Black Forest
+                Patheo CRM
               </p>
               <p className="text-[10px] font-medium leading-tight" style={{ color: "var(--text-tertiary)" }}>
                 CRM
@@ -206,8 +206,7 @@ export function Sidebar() {
             type="button"
             aria-label="Close navigation"
             onClick={() => setOpen(false)}
-            className="text-lg lg:hidden"
-            style={{ color: "var(--text-tertiary)" }}
+            className="text-lg lg:hidden text-(--text-tertiary)"
           >
             ×
           </button>
@@ -220,8 +219,8 @@ export function Sidebar() {
           className="border-t px-4 py-3"
           style={{ borderColor: "var(--border-default)" }}
         >
-          <p className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>
-            Black Forest CRM v0.1
+          <p className="text-[10px] text-(--text-tertiary)">
+            Patheo CRM v0.1
           </p>
         </div>
       </aside>

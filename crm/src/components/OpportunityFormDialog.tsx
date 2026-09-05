@@ -35,7 +35,7 @@ export function OpportunityForm({
   const [busy, setBusy] = useState(false);
 
   const inputClass =
-    "w-full rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
+    "w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none";
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -73,12 +73,12 @@ export function OpportunityForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8" role="dialog" aria-modal="true">
-      <form method="post" onSubmit={submit} className="w-full max-w-md space-y-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-6 shadow-xl">
+      <form method="post" onSubmit={submit} className="w-full max-w-md space-y-4 rounded-lg border border-(--border-default) bg-(--bg-surface) text-(--text-primary) p-6 shadow-xl">
         <h2 className="text-base font-semibold">
           {initial ? "Edit opportunity" : `New opportunity — ${pipeline.name}`}
         </h2>
         {error ? (
-          <p role="alert" className="rounded-md bg-[var(--error-bg)] px-3 py-2 text-sm text-[var(--error)]">
+          <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
             {error}
           </p>
         ) : null}
@@ -131,7 +131,7 @@ export function OpportunityForm({
           <label htmlFor="o-close" className="mb-1 block text-sm font-medium">Expected close</label>
           <input id="o-close" type="date" value={expectedCloseAt} onChange={(e) => setExpectedCloseAt(e.target.value)} className={inputClass} />
         </div>
-        <div className="flex justify-end gap-2 border-t border-[var(--border-default)] pt-4">
+        <div className="flex justify-end gap-2 border-t border-(--border-default) pt-4">
           <button type="button" onClick={onClose} className="btn btn-secondary">
             Cancel
           </button>

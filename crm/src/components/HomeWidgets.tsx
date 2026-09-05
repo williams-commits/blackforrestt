@@ -66,20 +66,24 @@ export function HomeWidgets() {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <section className="card" style={{ padding: "var(--space-6)" }}>
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">
-          My work
-        </h2>
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-(--text-tertiary)">Focus</p>
+            <h2 className="mt-1 text-lg font-semibold tracking-tight">My work</h2>
+          </div>
+          <Link href="/tasks?mine=1" className="text-xs font-semibold text-(--text-brand) hover:underline">View tasks</Link>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <Link
             href="/tasks?mine=1"
-            className="rounded-lg border border-(--border-default) p-4 transition hover:border-(--brand)"
+            className="card-interactive rounded-lg border border-(--border-default) bg-(--bg-subtle) p-4"
           >
             <p className="text-2xl font-semibold">{openCount ?? "–"}</p>
             <p className="text-sm text-(--text-secondary)">open tasks</p>
           </Link>
           <Link
             href="/tasks?due=overdue&mine=1"
-            className="rounded-lg border border-(--border-default) p-4 transition hover:border-(--error-border)"
+            className="card-interactive rounded-lg border border-(--border-default) bg-(--bg-subtle) p-4"
             style={{ borderColor: (overdueCount ?? 0) > 0 ? "#fca5a5" : undefined }}
           >
             <p className="text-2xl font-semibold">{overdueCount ?? "–"}</p>
@@ -90,9 +94,10 @@ export function HomeWidgets() {
 
       <section className="card" style={{ padding: "var(--space-6)" }}>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">
-            Notifications {unread > 0 ? `(${unread} unread)` : ""}
-          </h2>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-(--text-tertiary)">Inbox</p>
+            <h2 className="mt-1 text-lg font-semibold tracking-tight">Notifications {unread > 0 ? <span className="text-sm font-medium text-(--brand)">· {unread} unread</span> : ""}</h2>
+          </div>
           {unread > 0 ? (
             <button
               type="button"

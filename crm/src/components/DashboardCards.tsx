@@ -46,23 +46,25 @@ export function DashboardCards() {
   }
 
   const cards = [
-    { label: "Open leads", value: String(data.openLeads), href: "/leads" },
-    { label: "New leads · 30d", value: String(data.newLeads30d), href: "/leads" },
-    { label: "Converted · 30d", value: String(data.convertedLeads30d), href: "/leads" },
+    { label: "Open leads", value: String(data.openLeads), href: "/leads", tone: "brand" },
+    { label: "New leads · 30d", value: String(data.newLeads30d), href: "/leads", tone: "blue" },
+    { label: "Converted · 30d", value: String(data.convertedLeads30d), href: "/leads", tone: "amber" },
     {
       label: `Open pipeline (${data.scope === "OWN" ? "mine" : "scope"})`,
       value: money(data.openPipelineValue),
       sub: `${data.openOpportunityCount} deal(s)`,
       href: "/opportunities",
+      tone: "brand",
     },
     {
       label: "Won this month",
       value: money(data.wonThisMonthValue),
       sub: `${data.wonThisMonthCount} deal(s)`,
       href: "/opportunities",
+      tone: "success",
     },
-    { label: "My open tasks", value: String(data.myOpenTasks), href: "/tasks" },
-    { label: "Activity · 7d", value: String(data.activity7d), href: "/" },
+    { label: "My open tasks", value: String(data.myOpenTasks), href: "/tasks", tone: "blue" },
+    { label: "Activity · 7d", value: String(data.activity7d), href: "/", tone: "slate" },
   ];
 
   return (
@@ -71,11 +73,15 @@ export function DashboardCards() {
         <Link
           key={card.label}
           href={card.href}
-          className="rounded-lg border border-(--border-default) bg-(--bg-surface) p-4 transition hover:border-(--brand) hover:bg-(--bg-surface-hover)"
+          className="card card-interactive group min-w-0 p-4"
         >
-          <p className="text-xl font-semibold">{card.value}</p>
-          <p className="text-xs text-(--text-secondary)">{card.label}</p>
-          {card.sub ? <p className="text-[10px] text-(--text-tertiary)">{card.sub}</p> : null}
+          <div className="mb-4 flex items-center justify-between">
+            <span className={`h-2 w-2 rounded-full ${card.tone === "brand" ? "bg-(--brand-500)" : card.tone === "blue" ? "bg-blue-500" : card.tone === "amber" ? "bg-amber-500" : card.tone === "success" ? "bg-emerald-500" : "bg-slate-400"}`} />
+            <span className="text-(--text-tertiary) transition-transform group-hover:translate-x-0.5">↗</span>
+          </div>
+          <p className="truncate text-xl font-semibold tracking-tight">{card.value}</p>
+          <p className="mt-1 truncate text-xs text-(--text-secondary)">{card.label}</p>
+          {card.sub ? <p className="mt-0.5 truncate text-[10px] text-(--text-tertiary)">{card.sub}</p> : null}
         </Link>
       ))}
     </div>

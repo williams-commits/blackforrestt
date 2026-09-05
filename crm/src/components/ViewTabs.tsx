@@ -16,6 +16,7 @@ export interface ViewOption {
 }
 
 export function ViewTabs({
+  title,
   views,
   activeView,
   onViewChange,
@@ -26,6 +27,7 @@ export function ViewTabs({
   canExport,
   totalCount,
 }: {
+  title: string;
   views: ViewOption[];
   activeView: string;
   onViewChange: (key: string, filter?: Record<string, string>) => void;
@@ -44,14 +46,22 @@ export function ViewTabs({
     <div className="no-print space-y-0">
       {/* ── Action bar ── */}
       <div
-        className="flex items-center justify-between border-b pb-3"
+        className="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between"
         style={{ borderColor: "var(--border-default)" }}
       >
-        <div className="flex items-center gap-2">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>
+            {title}
+          </h1>
+          <p className="mt-0.5 text-xs" style={{ color: "var(--text-tertiary)" }}>
+            {totalCount ?? 0} record{totalCount === 1 ? "" : "s"} in your view
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           {canCreate && onNewClick ? (
             <button type="button" className="btn btn-primary" onClick={onNewClick}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              New
+              New {title.endsWith("s") ? title.slice(0, -1) : title}
             </button>
           ) : null}
           {onImportClick ? (
@@ -65,15 +75,10 @@ export function ViewTabs({
             </button>
           ) : null}
         </div>
-        {totalCount !== undefined ? (
-          <p className="text-[12px]" style={{ color: "var(--text-tertiary)" }}>
-            {totalCount} record{totalCount === 1 ? "" : "s"}
-          </p>
-        ) : null}
       </div>
 
       {/* ── View tabs ── */}
-      <div className="flex items-center gap-0 pt-1" role="tablist" aria-label="List views">
+      <div className="flex items-center gap-0 overflow-x-auto pt-1" role="tablist" aria-label="List views">
         {presetViews.map((view) => {
           const active = view.key === activeView;
           return (

@@ -350,6 +350,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     <div className="space-y-4">
       {mounted ? (
         <ViewTabs
+          title={config.title}
           views={presetViews}
           activeView={activeView}
           onViewChange={handleViewChange}
@@ -450,6 +451,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           ) : null}
           <select
             aria-label="Columns"
+            multiple
             value={config.columns.filter((c) => !hiddenColumns.includes(c.key)).map((c) => c.key)}
             onChange={(event) =>
               setHiddenColumns(
@@ -458,7 +460,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                   .filter((key) => !Array.from(event.target.selectedOptions).some((o) => o.value === key)),
               )
             }
-            className="hidden rounded-md border border-(--border-strong) p-2 text-xs sm:block"
+            className="hidden h-8 rounded-md border border-(--border-strong) px-2 text-xs sm:block"
             title="Hold Cmd/Ctrl to change visible columns"
           >
             {config.columns.map((column) => (

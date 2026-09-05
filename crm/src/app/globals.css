@@ -64,7 +64,7 @@
   --text-brand: var(--brand-700);
 
   /* ── Typography ── */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Avenir Next", Avenir, "Segoe UI", sans-serif;
   --font-mono: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
   --text-2xs: 10px;
   --text-xs: 11px;
@@ -161,6 +161,11 @@ body {
   background: var(--bg-app);
 }
 
+::selection {
+  color: var(--text-inverse);
+  background: var(--brand-700);
+}
+
 /* ── Scrollbars (thin, enterprise) ── */
 ::-webkit-scrollbar {
   width: 8px;
@@ -187,6 +192,15 @@ body {
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
+}
+
+.card-interactive {
+  transition: transform var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+}
+.card-interactive:hover {
+  border-color: var(--brand-300);
+  box-shadow: 0 8px 24px rgba(20, 83, 45, 0.09);
+  transform: translateY(-1px);
 }
 
 .card-header {
@@ -287,7 +301,7 @@ button {
 
 /* ── Form inputs ── */
 .input {
-  width: 55%;
+  width: 100%;
   height: 36px;
   padding: 0 var(--space-3);
   font-size: var(--text-base);
@@ -396,6 +410,10 @@ select.input {
 }
 .table tbody tr:hover {
   background: var(--bg-hover);
+}
+.table tbody tr:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: -2px;
 }
 .table tbody tr.selected {
   background: var(--bg-selected);

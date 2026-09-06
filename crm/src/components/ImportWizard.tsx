@@ -88,6 +88,12 @@ const FIELDS: Record<string, FieldDef[]> = {
 };
 
 const MAX_ROWS = 5000;
+const IMPORT_STEPS = [
+  { label: "Upload", help: "Choose destination and source" },
+  { label: "Map", help: "Connect columns to CRM fields" },
+  { label: "Validate", help: "Review errors and duplicates" },
+  { label: "Run", help: "Import and track progress" },
+];
 
 export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -333,18 +339,50 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
   const fields = FIELDS[objectType] ?? [];
   const mappedFields = new Set(Object.values(mapping));
   const missingRequired = fields.filter((field) => field.required && !mappedFields.has(field.key));
+  const selectedObjectLabel = OBJECT_TYPES.find((entry) => entry.value === objectType)?.label ?? objectType;
+  const mappedColumnCount = Object.values(mapping).filter(Boolean).length;
 
   return (
     <div className="space-y-6">
       <WorkspaceHeader
         eyebrow="Data operations"
         title="Import center"
-        subtitle={fileName ? `${fileName} · Step ${step} of 4` : "Bring clean, trusted data into your workspace."}
+        subtitle={fileName ? `${fileName} · ${IMPORT_STEPS[step - 1].help}` : "Bring clean, trusted data into your workspace with preview, mapping, duplicate checks, and safe execution."}
         actions={step > 1 ? <button type="button" onClick={reset} className="btn btn-secondary">Start over</button> : undefined}
-        metrics={[{ label: "Step", value: `${step}/4`, tone: "brand" }, { label: "Recent jobs", value: jobs.length, tone: "info" }, { label: "Destination", value: OBJECT_TYPES.find((entry) => entry.value === objectType)?.label ?? objectType, tone: "success" }]}
+        metrics={[
+          { label: "Step", value: `${step}/4`, tone: "brand" },
+          { label: "Recent jobs", value: jobs.length, tone: "info" },
+          { label: "Destination", value: selectedObjectLabel, tone: "success" },
+        ]}
       />
-      <div className="grid grid-cols-4 gap-1 rounded-lg border border-(--border-default) bg-(--bg-surface) p-1">
-        {["Upload", "Map", "Validate", "Run"].map((label, index) => <div key={label} className={`rounded-md px-2 py-2 text-center text-xs font-semibold ${step === index + 1 ? "bg-(--bg-selected) text-(--text-brand)" : step > index + 1 ? "text-(--success)" : "text-(--text-tertiary)"}`}><span className="mr-1">{step > index + 1 ? "✓" : index + 1}</span>{label}</div>)}
+      <div className="grid gap-2 rounded-2xl border border-(--border-default) bg-(--bg-surface) p-2 md:grid-cols-4">
+        {IMPORT_STEPS.map((entry, index) => {
+          const stepNumber = index + 1;
+          const active = step === stepNumber;
+          const complete = step > stepNumber;
+          return (
+            <div
+              key={entry.label}
+              className={`rounded-xl border p-3 transition ${
+                active
+                  ? "border-(--brand) bg-(--bg-selected)"
+                  : complete
+                    ? "border-(--success) bg-(--success-bg)"
+                    : "border-transparent bg-(--bg-subtle)"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
+                  active ? "bg-(--brand) text-white" : complete ? "bg-(--success) text-white" : "bg-(--bg-surface) text-(--text-tertiary)"
+                }`}>
+                  {complete ? "✓" : stepNumber}
+                </span>
+                <p className={`text-sm font-semibold ${active ? "text-(--text-brand)" : "text-(--text-primary)"}`}>{entry.label}</p>
+              </div>
+              <p className="mt-2 text-xs text-(--text-secondary)">{entry.help}</p>
+            </div>
+          );
+        })}
       </div>
 
       {error ? (
@@ -354,85 +392,137 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
       ) : null}
 
       {step === 1 ? (
-        <div className="card space-y-4" style={{ padding: "var(--space-6)" }}>
-          <div>
-            <label htmlFor="import-object" className="mb-1 block text-sm font-medium">
-              Import destination
-            </label>
-            <select
-              id="import-object"
-              value={objectType}
-              onChange={(event) => setObjectType(event.target.value as typeof objectType)}
-              className="input"
-            >
-              {OBJECT_TYPES.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <p className="mb-1 text-sm font-medium">Source</p>
-            <div className="flex items-center gap-4">
-              <label className="text-sm">
-                <input type="radio" name="import-source" checked={source === "csv"} onChange={() => setSource("csv")} /> CSV file
-              </label>
-              <label className="text-sm">
-                <input type="radio" name="import-source" checked={source === "sheets"} onChange={() => setSource("sheets")} /> Google Sheet
-              </label>
-            </div>
-          </div>
-          {source === "sheets" ? (
+        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="card space-y-5" style={{ padding: "var(--space-6)" }}>
             <div>
-              <label htmlFor="sheet-url" className="mb-1 block text-sm font-medium">
-                Published sheet CSV link (File → Share → Publish to web → CSV)
+              <p className="text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">Start import</p>
+              <h2 className="mt-1 text-xl font-semibold text-(--text-primary)">Choose where this data belongs</h2>
+              <p className="mt-1 text-sm text-(--text-secondary)">
+                Select the CRM object first so the wizard can suggest the right fields and validation rules.
+              </p>
+            </div>
+            <div>
+              <label htmlFor="import-object" className="mb-1 block text-sm font-medium">
+                Import destination
               </label>
-              <div className="flex items-center justify-between gap-2">
-                <input
-                  id="sheet-url"
-                  value={sheetUrl}
-                  onChange={(event) => setSheetUrl(event.target.value)}
-                  placeholder="https://docs.google.com/spreadsheets/d/…"
-                  className="input flex-1"
-                />
-                <button
-                  type="button"
-                  onClick={() => void loadSheet()}
-                  className="btn btn-primary"
-                  style={{ background: "var(--brand)" }}
-                >
-                  Load sheet
-                </button>
+              <select
+                id="import-object"
+                value={objectType}
+                onChange={(event) => setObjectType(event.target.value as typeof objectType)}
+                className="input"
+              >
+                {OBJECT_TYPES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium">Source</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  ["csv", "CSV file", "Upload a spreadsheet export from your computer."],
+                  ["sheets", "Google Sheet", "Paste a published Sheet CSV link."],
+                ].map(([value, title, description]) => {
+                  const active = source === value;
+                  return (
+                    <label
+                      key={value}
+                      className={`cursor-pointer rounded-xl border p-4 transition ${
+                        active ? "border-(--brand) bg-(--bg-selected)" : "border-(--border-default) bg-(--bg-surface) hover:bg-(--bg-hover)"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="import-source"
+                        checked={active}
+                        onChange={() => setSource(value as "csv" | "sheets")}
+                        className="sr-only"
+                      />
+                      <span className="text-sm font-semibold text-(--text-primary)">{title}</span>
+                      <span className="mt-1 block text-sm text-(--text-secondary)">{description}</span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
-          ) : (
-          <div>
-            <label htmlFor="import-file" className="mb-1 block text-sm font-medium">
-              CSV file (max {MAX_ROWS.toLocaleString()} rows, header row required)
-            </label>
-            <input
-              id="import-file"
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) handleFile(file);
-              }}
-              className="input"
-            />
+            {source === "sheets" ? (
+              <div>
+                <label htmlFor="sheet-url" className="mb-1 block text-sm font-medium">
+                  Published sheet CSV link
+                </label>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <input
+                    id="sheet-url"
+                    value={sheetUrl}
+                    onChange={(event) => setSheetUrl(event.target.value)}
+                    placeholder="https://docs.google.com/spreadsheets/d/…"
+                    className="input flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void loadSheet()}
+                    className="btn btn-primary"
+                    style={{ background: "var(--brand)" }}
+                  >
+                    {validating ? "Loading…" : "Load sheet"}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-(--text-tertiary)">In Google Sheets, publish to web as CSV first.</p>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-(--border-strong) bg-(--bg-subtle) p-6 text-center">
+                <label htmlFor="import-file" className="block cursor-pointer">
+                  <span className="text-base font-semibold text-(--text-primary)">Drop in a CSV export</span>
+                  <span className="mt-1 block text-sm text-(--text-secondary)">
+                    Max {MAX_ROWS.toLocaleString()} rows. Header row required.
+                  </span>
+                  <input
+                    id="import-file"
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) handleFile(file);
+                    }}
+                    className="input mx-auto mt-4 max-w-md"
+                  />
+                </label>
+              </div>
+            )}
           </div>
-          )}
-          <p className="text-xs text-(--text-tertiary)">
-            Nothing is written at upload — mapping, validation, and duplicate checks come first.
-          </p>
+
+          <aside className="card p-5">
+            <p className="text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">Safety checks</p>
+            <div className="mt-4 space-y-3">
+              {[
+                ["Preview first", "You see sample rows before mapping."],
+                ["Required fields", "The wizard blocks import until required fields are mapped."],
+                ["Duplicate matching", "Email, phone, and external ID can protect existing records."],
+                ["No silent writes", "Nothing is created until you validate and confirm."],
+              ].map(([title, description]) => (
+                <div key={title} className="rounded-xl bg-(--bg-subtle) p-3">
+                  <p className="text-sm font-medium text-(--text-primary)">{title}</p>
+                  <p className="text-xs text-(--text-secondary)">{description}</p>
+                </div>
+              ))}
+            </div>
+            <Link href="/docs#imports" className="btn btn-secondary mt-5 w-full justify-center">
+              Import guide
+            </Link>
+          </aside>
         </div>
       ) : null}
 
       {step === 2 ? (
         <div className="space-y-4">
-          <div className="card" style={{ padding: "var(--space-4)" }}>
-            <p className="mb-2 text-sm font-medium">Preview (first 3 rows)</p>
+          <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="card overflow-hidden">
+            <div className="border-b border-(--border-default) bg-(--bg-hover) px-4 py-3">
+              <p className="text-sm font-semibold text-(--text-primary)">Preview</p>
+              <p className="text-xs text-(--text-secondary)">First 3 rows from {fileName || "your source"}</p>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
@@ -456,7 +546,15 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           </div>
 
           <div className="card" style={{ padding: "var(--space-4)" }}>
-            <p className="mb-2 text-sm font-medium">Map columns to {objectType.toLowerCase()} fields</p>
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-(--text-primary)">Map columns to {objectType.toLowerCase()} fields</p>
+                <p className="text-xs text-(--text-secondary)">{mappedColumnCount} of {columns.length} columns mapped</p>
+              </div>
+              <span className={`badge ${missingRequired.length > 0 ? "badge-warning" : "badge-success"}`}>
+                {missingRequired.length > 0 ? `${missingRequired.length} required missing` : "Required fields ready"}
+              </span>
+            </div>
             {missingRequired.length > 0 ? (
               <p className="mb-2 rounded-md bg-(--warning-bg) px-3 py-2 text-sm text-(--warning)">
                 Required fields not mapped: {missingRequired.map((field) => field.label).join(", ")}
@@ -487,23 +585,25 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               ))}
             </div>
           </div>
+          </div>
 
-          <div className="card grid gap-4 sm:grid-cols-2" style={{ padding: "var(--space-4)" }}>
-            <div>
-              <p className="mb-2 text-sm font-medium">Duplicate matching</p>
+          <div className="card grid gap-5 sm:grid-cols-2" style={{ padding: "var(--space-4)" }}>
+            <div className="rounded-xl bg-(--bg-subtle) p-4">
+              <p className="mb-2 text-sm font-semibold text-(--text-primary)">Duplicate matching</p>
               {(["email", "phone", "externalId"] as const).map((rule) => (
-                <label key={rule} className="mr-4 text-sm">
+                <label key={rule} className="mr-4 inline-flex items-center gap-2 text-sm text-(--text-secondary)">
                   <input
                     type="checkbox"
                     checked={matchRules[rule]}
                     onChange={(event) => setMatchRules((prev) => ({ ...prev, [rule]: event.target.checked }))}
-                  />{" "}
+                  />
                   {rule === "externalId" ? "External ID" : rule}
                 </label>
               ))}
+              <p className="mt-2 text-xs text-(--text-tertiary)">Matched duplicates can be skipped, updated, or upserted based on your strategy.</p>
             </div>
-            <div>
-              <p className="mb-2 text-sm font-medium">Strategy</p>
+            <div className="rounded-xl bg-(--bg-subtle) p-4">
+              <p className="mb-2 text-sm font-semibold text-(--text-primary)">Strategy</p>
               {(
                 [
                   ["CREATE", "Create new (duplicates skipped)"],
@@ -511,7 +611,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                   ["UPSERT", "Create or update"],
                 ] as const
               ).map(([value, label]) => (
-                <label key={value} className="mr-4 text-sm">
+                <label key={value} className="mb-2 block rounded-lg bg-(--bg-surface) p-2 text-sm text-(--text-secondary)">
                   <input
                     type="radio"
                     name="strategy"
@@ -524,7 +624,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             </div>
           </div>
 
-          <div className="card flex items-center justify-between gap-4" style={{ padding: "var(--space-4)" }}>
+          <div className="card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" style={{ padding: "var(--space-4)" }}>
             <select
               aria-label="Saved mappings"
               defaultValue=""
@@ -560,15 +660,17 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => void runValidation()}
-            disabled={validating || missingRequired.length > 0}
-            className="btn btn-primary"
-            style={{ background: "var(--brand)" }}
-          >
-            {validating ? "Validating…" : "Validate"}
-          </button>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => void runValidation()}
+              disabled={validating || missingRequired.length > 0}
+              className="btn btn-primary"
+              style={{ background: "var(--brand)" }}
+            >
+              {validating ? "Validating…" : "Validate rows"}
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -576,21 +678,39 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              ["Total rows", validation.summary.total],
-              ["Ready to import", validation.summary.valid],
-              ["Row errors", validation.summary.errorRows],
-              ["Duplicates", validation.summary.duplicateRows],
-            ].map(([label, value]) => (
+              ["Total rows", validation.summary.total, "brand"],
+              ["Ready to import", validation.summary.valid, "success"],
+              ["Row errors", validation.summary.errorRows, "warning"],
+              ["Duplicates", validation.summary.duplicateRows, "info"],
+            ].map(([label, value, tone]) => (
               <div key={String(label)} className="card" style={{ padding: "var(--space-4)" }}>
-                <p className="text-2xl font-semibold">{value as number}</p>
+                <p className={`text-2xl font-semibold ${tone === "success" ? "text-(--success)" : tone === "warning" ? "text-(--warning)" : tone === "info" ? "text-(--text-brand)" : "text-(--text-primary)"}`}>{value as number}</p>
                 <p className="text-sm text-(--text-secondary)">{label as string}</p>
               </div>
             ))}
           </div>
 
+          <div className="card border-(--border-default)" style={{ padding: "var(--space-5)" }}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-lg font-semibold text-(--text-primary)">Validation review</p>
+                <p className="text-sm text-(--text-secondary)">
+                  Review the summary before writing anything into {selectedObjectLabel.toLowerCase()}.
+                </p>
+              </div>
+              <span className={`badge ${validation.summary.errorRows > 0 ? "badge-warning" : "badge-success"}`}>
+                {validation.summary.errorRows > 0 ? "Needs attention" : "Ready to import"}
+              </span>
+            </div>
+          </div>
+
           {validation.issues.length > 0 ? (
-            <div className="card" style={{ padding: "var(--space-4)" }}>
-              <p className="mb-2 text-sm font-medium">Issues</p>
+            <div className="card overflow-hidden">
+              <div className="border-b border-(--border-default) bg-(--warning-bg) px-4 py-3">
+                <p className="text-sm font-semibold text-(--warning)">Issues</p>
+                <p className="text-xs text-(--warning)">Fix these rows or they may be skipped.</p>
+              </div>
+              <div className="p-4">
               <ul className="max-h-40 space-y-1 overflow-y-auto text-sm">
                 {validation.issues.slice(0, 100).map((issue, index) => (
                   <li key={index} className={issue.level === "error" ? "text-(--error)" : "text-(--warning)"}>
@@ -601,12 +721,17 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               {validation.issues.length > 100 ? (
                 <p className="text-xs text-(--text-tertiary)">…and {validation.issues.length - 100} more.</p>
               ) : null}
+              </div>
             </div>
           ) : null}
 
           {validation.duplicates.length > 0 ? (
-            <div className="card" style={{ padding: "var(--space-4)", borderColor: "var(--warning-border)", background: "var(--warning-bg)" }}>
-              <p className="mb-2 text-sm font-medium text-(--warning)">Possible duplicates</p>
+            <div className="card overflow-hidden" style={{ borderColor: "var(--warning-border)" }}>
+              <div className="border-b px-4 py-3" style={{ borderColor: "var(--warning-border)", background: "var(--warning-bg)" }}>
+                <p className="text-sm font-semibold text-(--warning)">Possible duplicates</p>
+                <p className="text-xs text-(--warning)">Strategy: {strategy.toLowerCase()}</p>
+              </div>
+              <div className="p-4">
               <ul className="max-h-40 space-y-1 overflow-y-auto text-sm text-amber-900">
                 {validation.duplicates.slice(0, 100).map((duplicate, index) => (
                   <li key={index}>
@@ -618,10 +743,11 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 With strategy <strong>{strategy}</strong>
                 {strategy === "CREATE" ? " these rows will be skipped." : " these rows will update the matched record."}
               </p>
+              </div>
             </div>
           ) : null}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <button type="button" onClick={() => setStep(2)} className="btn btn-secondary">
               Back to mapping
             </button>
@@ -639,14 +765,18 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
 
       {step === 4 && job ? (
         <div className="space-y-4">
-          <div className="card" style={{ padding: "var(--space-6)" }}>
-            <p className="text-sm font-medium">
-              {job.status === "RUNNING"
-                ? `Importing… ${job.processedRows}/${job.totalRows} rows`
-                : job.status === "COMPLETED"
-                  ? "Import completed"
-                  : `Import ${job.status.toLowerCase()}`}
-            </p>
+          <div className="card overflow-hidden">
+            <div className="border-b border-(--border-default) bg-(--bg-hover) px-6 py-5">
+              <p className="text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">Import run</p>
+              <h2 className="mt-1 text-xl font-semibold text-(--text-primary)">
+                {job.status === "RUNNING"
+                  ? `Importing ${job.processedRows}/${job.totalRows} rows`
+                  : job.status === "COMPLETED"
+                    ? "Import completed"
+                    : `Import ${job.status.toLowerCase()}`}
+              </h2>
+            </div>
+            <div className="p-6">
             {job.status === "RUNNING" ? (
               <div className="mt-2 h-2 overflow-hidden rounded bg-(--bg-subtle)">
                 <div
@@ -680,19 +810,25 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 Download error report (CSV)
               </a>
             ) : null}
+            </div>
           </div>
-          <button type="button" onClick={reset} className="btn btn-secondary">
-            Import another file
-          </button>
+          <div className="flex justify-end">
+            <button type="button" onClick={reset} className="btn btn-secondary">
+              Import another file
+            </button>
+          </div>
         </div>
       ) : step === 4 ? (
         <p className="p-6 text-center text-sm text-(--text-tertiary)">Starting import…</p>
       ) : null}
 
       <div className="card table-responsive overflow-hidden">
-        {/* <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">Recent imports</p> */}
+        <div className="border-b border-(--border-default) bg-(--bg-hover) px-4 py-3">
+          <p className="text-sm font-semibold text-(--text-primary)">Recent imports</p>
+          <p className="text-xs text-(--text-secondary)">Audit recent jobs, retries, and outcomes.</p>
+        </div>
         {jobs.length === 0 ? (
-          <p className="text-sm text-(--text-tertiary) p-3">No imports yet.</p>
+          <p className="p-6 text-center text-sm text-(--text-tertiary)">No imports yet.</p>
         ) : (
           <table className="table">
             <thead>
@@ -717,7 +853,17 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                   <td className="px-2 py-1">
                     {entry.createdCount} / {entry.updatedCount} / {entry.duplicateCount} / {entry.errorCount}
                   </td>
-                  <td className="px-2 py-1">{entry.status.toLowerCase()}</td>
+                  <td className="px-2 py-1">
+                    <span className={`badge ${
+                      entry.status === "COMPLETED"
+                        ? "badge-success"
+                        : entry.status === "FAILED"
+                          ? "badge-error"
+                          : "badge-neutral"
+                    }`}>
+                      {entry.status.toLowerCase()}
+                    </span>
+                  </td>
                   <td className="px-2 py-1">{new Date(entry.createdAt).toLocaleString()}</td>
                   <td className="px-2 py-1">
                     <button

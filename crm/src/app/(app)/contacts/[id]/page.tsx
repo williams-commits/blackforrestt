@@ -42,7 +42,16 @@ export default async function ContactDetailPage({ params }: PageProps) {
   let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
   let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
-  let relatedOpportunities: Array<{ id: string; name: string; status: string; stage: { name: string } }> = [];
+  let relatedOpportunities: Array<{
+    id: string;
+    name: string;
+    status: string;
+    value: unknown;
+    currency: string;
+    contactId: string | null;
+    accountId: string | null;
+    stage: { name: string };
+  }> = [];
   let campaigns: Array<{ campaign: { name: string } }> = [];
   let canEdit = false;
   let canUpload = false;
@@ -57,10 +66,26 @@ export default async function ContactDetailPage({ params }: PageProps) {
     notes = await listNotesBySubject("CONTACT", id);
     appointments = await listAppointmentsBySubject("CONTACT", id);
     relatedOpportunities = await prisma.opportunity.findMany({
-      where: { contactId: id, deletedAt: null },
+      where: {
+        deletedAt: null,
+        OR: [
+          { contactId: id },
+          ...(contact.accountId ? [{ accountId: contact.accountId }] : []),
+        ],
+      },
       orderBy: { createdAt: "desc" },
       take: 10,
-      select: { id: true, name: true, status: true, stage: { select: { name: true } } },
+      distinct: ["id"],
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        value: true,
+        currency: true,
+        contactId: true,
+        accountId: true,
+        stage: { select: { name: true } },
+      },
     });
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "CONTACT", subjectId: id }, include: { campaign: true } });
     canEdit = ctx.permissions.includes("CONTACTS_EDIT");
@@ -133,28 +158,46 @@ export default async function ContactDetailPage({ params }: PageProps) {
             </div>
           </section>
 
-          {relatedOpportunities.length > 0 ? (
-            <section className="card">
-              <div className="card-header">
-                <h2 className="card-title">Opportunities</h2>
-                <span className="badge badge-neutral">{relatedOpportunities.length}</span>
-              </div>
-              <div className="card-body">
+          <section className="card">
+            <div className="card-header">
+              <h2 className="card-title">Opportunities</h2>
+              <span className="badge badge-neutral">{relatedOpportunities.length}</span>
+            </div>
+            <div className="card-body">
+              {relatedOpportunities.length === 0 ? (
+                <div className="empty-state" style={{ padding: "var(--space-6)" }}>
+                  <p className="empty-state-title">No opportunities yet</p>
+                  <p className="empty-state-description">
+                    Deals linked to this contact or their account will appear here.
+                  </p>
+                </div>
+              ) : (
                 <ul className="space-y-2">
                   {relatedOpportunities.map((opportunity) => (
-                    <li key={opportunity.id} className="flex items-center justify-between text-[13px]">
-                      <Link href={`/opportunities/${opportunity.id}`} className="font-medium text-(--text-brand) hover:underline">
-                        {opportunity.name}
-                      </Link>
-                      <span className="text-[11px] text-(--text-tertiary)">
-                        {opportunity.stage.name} · {opportunity.status.toLowerCase()}
+                    <li key={opportunity.id} className="flex items-start justify-between gap-3 rounded-md border border-(--border-default) bg-(--bg-subtle) px-3 py-2 text-[13px]">
+                      <div className="min-w-0">
+                        <Link href={`/opportunities/${opportunity.id}`} className="font-medium text-(--text-brand) hover:underline">
+                          {opportunity.name}
+                        </Link>
+                        <p className="mt-0.5 text-[11px] text-(--text-tertiary)">
+                          {opportunity.contactId === id ? "Contact deal" : "Account deal"} · {opportunity.stage.name} · {opportunity.status.toLowerCase()}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-[12px] font-semibold text-(--text-secondary)">
+                        {opportunity.value
+                          ? (Number(opportunity.value) / 100).toLocaleString(undefined, {
+                              style: "currency",
+                              currency: opportunity.currency,
+                              maximumFractionDigits: 0,
+                            })
+                          : "—"}
                       </span>
                     </li>
                   ))}
                 </ul>
-              </div>
-            </section>
-          ) : null}
+              )}
+            </div>
+          </section>
 
           <section className="card">
             <div className="card-header"><h2 className="card-title">Activities</h2></div>

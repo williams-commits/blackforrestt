@@ -23,7 +23,7 @@ export function RecordTabs({
 }) {
   return (
     <div
-      className="no-print flex gap-0 border-b"
+      className="no-print sticky top-13 z-20 flex gap-0 overflow-x-auto border-b bg-(--bg-app)"
       style={{ borderColor: "var(--border-default)" }}
       role="tablist"
       aria-label="Record sections"

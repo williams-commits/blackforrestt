@@ -62,6 +62,37 @@ export interface Client360 {
     createdAt: string;
   }>;
   openPositions: number;
+  presence: { online: boolean };
+  positions: PlatformPosition[];
+}
+
+export interface PlatformPosition {
+  id: string;
+  symbol: string;
+  side: string;
+  type: string;
+  volume: string;
+  openRate: string;
+  currentRate: string;
+  netProfit: string;
+  openedAt: string;
+}
+
+export interface PlatformPresence {
+  platformUserId: string;
+  online: boolean;
+  openPositions: number;
+  positions: PlatformPosition[];
+}
+
+/** Read live presence and open positions for linked platform users. */
+export async function platformPresence(platformUserIds: string[]): Promise<PlatformPresence[]> {
+  const ids = [...new Set(platformUserIds)].filter(Boolean).slice(0, 100);
+  if (ids.length === 0) return [];
+  const response = await bridgeFetch(`/api/internal/crm/presence?platformUserIds=${encodeURIComponent(ids.join(","))}`);
+  if (response === null || !response.ok) return [];
+  const body = (await response.json()) as { data?: PlatformPresence[] };
+  return body.data ?? [];
 }
 
 /** Look up a platform user by email (read-only, for link confirmation). */

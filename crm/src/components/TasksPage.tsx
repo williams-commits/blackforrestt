@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 
 interface TaskRow {
   id: string;
@@ -130,37 +131,28 @@ export function TasksPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="page-title">Tasks</h1>
-          <p className="text-sm text-(--text-secondary)">
-            {meta.openCount} open · {meta.overdueCount} overdue
-            {subjectLabel ? ` · for ${subjectLabel}` : ""}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowForm((previous) => !previous)}
-          className="btn btn-primary"
-          style={{ background: "var(--brand)" }}
-        >
-          New task
-        </button>
-      </div>
+      <WorkspaceHeader
+        eyebrow="Work queue"
+        title="Tasks"
+        subtitle={subjectLabel ? `Follow-up work for ${subjectLabel}` : "Keep the next action visible and moving."}
+        actions={<button type="button" onClick={() => setShowForm((previous) => !previous)} className="btn btn-primary"><span aria-hidden>+</span> New task</button>}
+        metrics={[{ label: "Open", value: meta.openCount, tone: "brand" }, { label: "Overdue", value: meta.overdueCount, tone: meta.overdueCount > 0 ? "warning" : "success" }, { label: "Showing", value: meta.total, tone: "info" }]}
+      />
 
       {showForm ? (
         <form
           method="post"
           onSubmit={createTask}
-          className="grid gap-3 rounded-lg border border-(--border-default) bg-(--bg-surface) p-4 sm:grid-cols-4"
+          className="grid gap-4 rounded-xl border border-(--border-default) bg-(--bg-surface) p-5 shadow-(--shadow-subtle) sm:grid-cols-4"
         >
+          <div className="sm:col-span-4"><p className="form-dialog-eyebrow">Next action</p><p className="form-section-title">Create a task</p><p className="form-section-help">Make the owner, timing, and urgency explicit.</p></div>
           {formError ? (
             <p role="alert" className="sm:col-span-4 rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
               {formError}
             </p>
           ) : null}
           <div className="sm:col-span-2">
-            <label htmlFor="t-title" className="mb-1 block text-sm font-medium">
+            <label htmlFor="t-title" className="form-label">
               Title <span aria-hidden>*</span>
             </label>
             <input
@@ -173,7 +165,7 @@ export function TasksPage() {
             />
           </div>
           <div>
-            <label htmlFor="t-due" className="mb-1 block text-sm font-medium">
+              <label htmlFor="t-due" className="form-label">
               Due
             </label>
             <input
@@ -185,7 +177,7 @@ export function TasksPage() {
             />
           </div>
           <div>
-            <label htmlFor="t-priority" className="mb-1 block text-sm font-medium">
+            <label htmlFor="t-priority" className="form-label">
               Priority
             </label>
             <select
@@ -200,13 +192,13 @@ export function TasksPage() {
               <option value="URGENT">Urgent</option>
             </select>
           </div>
-          <div className="sm:col-span-4">
+          <div className="form-actions sm:col-span-4">
             <button
               type="submit"
               className="btn btn-primary"
               style={{ background: "var(--brand)" }}
             >
-              Create
+              <span aria-hidden>+</span> Create task
             </button>
           </div>
         </form>

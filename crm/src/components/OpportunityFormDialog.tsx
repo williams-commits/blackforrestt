@@ -73,19 +73,19 @@ export function OpportunityForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8" role="dialog" aria-modal="true">
-      <form method="post" onSubmit={submit} className="w-full max-w-md space-y-4 rounded-lg border border-(--border-default) bg-(--bg-surface) text-(--text-primary) p-6 shadow-xl">
-        <h2 className="text-base font-semibold">
-          {initial ? "Edit opportunity" : `New opportunity — ${pipeline.name}`}
-        </h2>
+      <form method="post" onSubmit={submit} className="form-dialog w-full max-w-2xl space-y-4 border border-(--border-default) bg-(--bg-surface) p-6 text-(--text-primary) shadow-xl">
+        <div className="form-dialog-header"><div><p className="form-dialog-eyebrow">Revenue workspace</p><h2 className="form-dialog-title">{initial ? "Edit opportunity" : "New opportunity"}</h2><p className="form-help">Pipeline: {pipeline.name}</p></div><button type="button" onClick={onClose} className="icon-button" aria-label="Close form">×</button></div>
         {error ? (
           <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
             {error}
           </p>
         ) : null}
-        <div>
-          <label htmlFor="o-name" className="mb-1 block text-sm font-medium">Name *</label>
+        <div className="form-section space-y-4">
+          <div><p className="form-section-title">Deal essentials</p><p className="form-section-help">Name the opportunity and place it in the right stage.</p></div>
+          <div>
+          <label htmlFor="o-name" className="form-label">Name <span className="form-required">*</span></label>
           <input id="o-name" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} className={inputClass} />
-        </div>
+          </div>
         <div>
           <label htmlFor="o-stage" className="mb-1 block text-sm font-medium">Stage</label>
           <select id="o-stage" value={stageId} onChange={(e) => setStageId(e.target.value)} className={inputClass}>
@@ -99,7 +99,7 @@ export function OpportunityForm({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="o-account" className="mb-1 block text-sm font-medium">Account</label>
+            <label htmlFor="o-account" className="form-label">Account</label>
             <select id="o-account" value={accountId} onChange={(e) => setAccountId(e.target.value)} className={inputClass}>
               <option value="">— none —</option>
               {accountOptions.map((account) => (
@@ -108,7 +108,7 @@ export function OpportunityForm({
             </select>
           </div>
           <div>
-            <label htmlFor="o-contact" className="mb-1 block text-sm font-medium">Contact</label>
+            <label htmlFor="o-contact" className="form-label">Contact</label>
             <select id="o-contact" value={contactId} onChange={(e) => setContactId(e.target.value)} className={inputClass}>
               <option value="">— none —</option>
               {contactOptions.map((contact) => (
@@ -117,25 +117,27 @@ export function OpportunityForm({
             </select>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        </div>
+        <div className="form-section grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2"><p className="form-section-title">Forecast</p><p className="form-section-help">Use value, probability, and close date to keep the forecast honest.</p></div>
           <div>
-            <label htmlFor="o-value" className="mb-1 block text-sm font-medium">Value (USD)</label>
+            <label htmlFor="o-value" className="form-label">Value (USD)</label>
             <input id="o-value" type="number" step="0.01" min="0" value={value} onChange={(e) => setValue(e.target.value)} className={inputClass} />
           </div>
           <div>
-            <label htmlFor="o-prob" className="mb-1 block text-sm font-medium">Probability %</label>
+            <label htmlFor="o-prob" className="form-label">Probability %</label>
             <input id="o-prob" type="number" min="0" max="100" value={probability} onChange={(e) => setProbability(e.target.value)} className={inputClass} />
           </div>
         </div>
         <div>
-          <label htmlFor="o-close" className="mb-1 block text-sm font-medium">Expected close</label>
+          <label htmlFor="o-close" className="form-label">Expected close</label>
           <input id="o-close" type="date" value={expectedCloseAt} onChange={(e) => setExpectedCloseAt(e.target.value)} className={inputClass} />
         </div>
-        <div className="flex justify-end gap-2 border-t border-(--border-default) pt-4">
+        <div className="form-actions">
           <button type="button" onClick={onClose} className="btn btn-secondary">
             Cancel
           </button>
-          <button type="submit" disabled={busy} className="btn btn-primary" style={{ background: "var(--brand)" }}>
+          <button type="submit" disabled={busy} className="btn btn-primary">
             {busy ? "Saving…" : "Save"}
           </button>
         </div>

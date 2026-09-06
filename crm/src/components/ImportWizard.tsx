@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Papa from "papaparse";
+import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 
 interface FieldDef {
   key: string;
@@ -285,20 +286,15 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Import</h1>
-          <p className="text-sm text-(--text-secondary)">
-            Step {step} of 4 —{" "}
-            {["Upload CSV", "Map columns", "Validate", "Run & results"][step - 1]}
-            {fileName ? ` · ${fileName}` : ""}
-          </p>
-        </div>
-        {step > 1 ? (
-          <button type="button" onClick={reset} className="btn btn-secondary">
-            Start over
-          </button>
-        ) : null}
+      <WorkspaceHeader
+        eyebrow="Data operations"
+        title="Import center"
+        subtitle={fileName ? `${fileName} · Step ${step} of 4` : "Bring clean, trusted data into your workspace."}
+        actions={step > 1 ? <button type="button" onClick={reset} className="btn btn-secondary">Start over</button> : undefined}
+        metrics={[{ label: "Step", value: `${step}/4`, tone: "brand" }, { label: "Recent jobs", value: jobs.length, tone: "info" }, { label: "Destination", value: OBJECT_TYPES.find((entry) => entry.value === objectType)?.label ?? objectType, tone: "success" }]}
+      />
+      <div className="grid grid-cols-4 gap-1 rounded-lg border border-(--border-default) bg-(--bg-surface) p-1">
+        {["Upload", "Map", "Validate", "Run"].map((label, index) => <div key={label} className={`rounded-md px-2 py-2 text-center text-xs font-semibold ${step === index + 1 ? "bg-(--brand-50) text-(--brand-700)" : step > index + 1 ? "text-(--success)" : "text-(--text-tertiary)"}`}><span className="mr-1">{step > index + 1 ? "✓" : index + 1}</span>{label}</div>)}
       </div>
 
       {error ? (

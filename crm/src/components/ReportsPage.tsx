@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { WorkspaceHeader } from "@/components/WorkspaceHeader";
+import { Modal } from "@/components/Modal";
 
 interface ReportMeta {
   id: string;
@@ -99,22 +101,18 @@ export function ReportsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Reports</h1>
-          <p className="text-sm text-(--text-secondary)">Results always reflect your data scope.</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setBuilderOpen((previous) => !previous)}
-          className="btn btn-secondary"
-        >
-          {builderOpen ? "Back to library" : "Build a report"}
-        </button>
-      </div>
+      <WorkspaceHeader
+        eyebrow="Insights"
+        title="Reports"
+        subtitle="Turn your scoped CRM data into a decision you can act on."
+        actions={<button type="button" onClick={() => setBuilderOpen((previous) => !previous)} className="btn btn-secondary">{builderOpen ? "Back to library" : "Build a report"}</button>}
+        metrics={[{ label: "Saved reports", value: library.length, tone: "brand" }, { label: "Scope", value: "Your access", tone: "success" }]}
+      />
 
       {builderOpen ? (
-        <div className="card space-y-4" style={{ padding: "var(--space-4)" }}>
+        <Modal title="Build a report" onClose={() => setBuilderOpen(false)} size="lg">
+        <div className="space-y-4 p-5">
+          <div><p className="form-section-title">Report definition</p><p className="form-section-help">Choose the object, time field, grouping, and bucket for your analysis.</p></div>
           <div>
             <label htmlFor="b-object" className="mb-1 block text-xs font-medium">Object</label>
             <select id="b-object" value={bObject} onChange={(e) => { setBObject(e.target.value); setBDateField(DATE_FIELDS[e.target.value][0]); setBGroup(GROUP_KEYS[e.target.value][0]); }} className="input">
@@ -142,7 +140,7 @@ export function ReportsPage() {
               <option value="month">by month</option>
             </select>
           </div>
-          <button
+          <div className="form-actions"><button type="button" onClick={() => setBuilderOpen(false)} className="btn btn-secondary">Cancel</button><button
             type="button"
             onClick={() => void run()}
             disabled={running}
@@ -150,8 +148,9 @@ export function ReportsPage() {
             style={{ background: "var(--brand)" }}
           >
             {running ? "Running…" : "Run report"}
-          </button>
+          </button></div>
         </div>
+        </Modal>
       ) : null}
 
       <div className={`grid gap-4 ${builderOpen ? "" : "lg:grid-cols-[16rem_1fr]"}`}>
@@ -184,7 +183,7 @@ export function ReportsPage() {
                 <p className="font-medium">{meta.name}</p>
                 <p className="text-sm text-(--text-secondary)">{meta.description}</p>
               </div>
-              <div className="flex items-center justify-between gap-4 mt-3">
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-(--border-default) pt-3">
                 <div className="flex items-center gap-2">
                   <label htmlFor="r-from" className="mb-1 block text-xs font-medium">From</label>
                   <input

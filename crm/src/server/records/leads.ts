@@ -38,6 +38,7 @@ const BaseFields = {
 export const CreateLead = z.object(BaseFields).extend({
   priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).default("NORMAL"),
   statusId: z.string().trim().min(5).optional(),
+  potentialStatusId: z.string().trim().min(5).optional().nullable(),
   campaignId: z.string().trim().min(5).optional().nullable(),
   assignedUserId: z.string().trim().min(5).optional().nullable(),
   assignedTeamId: z.string().trim().min(5).optional().nullable(),
@@ -92,6 +93,7 @@ const SEARCH_FIELDS = ["firstName", "lastName", "email", "phone", "company", "ex
 
 const listInclude = {
   status: { select: { name: true, category: true } },
+  potentialStatus: { select: { id: true, name: true } },
   assignedUser: { select: { id: true, name: true } },
   campaign: { select: { id: true, name: true } },
 } satisfies Prisma.LeadInclude;
@@ -164,6 +166,13 @@ async function assertStatusFor(appliesTo: "LEAD" | "CONTACT" | "CUSTOMER", statu
   return status;
 }
 
+async function assertPotentialStatus(potentialStatusId?: string | null) {
+  if (!potentialStatusId) return undefined;
+  const status = await prisma.potentialStatus.findUnique({ where: { id: potentialStatusId } });
+  if (!status) throw new CrmError("Invalid lead potential status.", 400);
+  return status;
+}
+
 /**
  * Normalize write payloads. Keys the caller did not provide are omitted
  * entirely (Prisma treats undefined as "leave unchanged"); provided values
@@ -209,6 +218,7 @@ export async function createLead(ctx: ScopedContext, input: z.infer<typeof Creat
   });
   const status = (await assertStatusFor("LEAD", input.statusId)) ?? defaultStatus;
   if (!status) throw new CrmError("No lead status configured — seed the database.", 400);
+  const potentialStatus = (await assertPotentialStatus(input.potentialStatusId)) ?? await prisma.potentialStatus.findFirst({ where: { isDefault: true } });
 
   // Assignment control: without LEADS_ASSIGN the actor may only create
   // leads assigned to themselves (the rep workflow).
@@ -228,6 +238,7 @@ export async function createLead(ctx: ScopedContext, input: z.infer<typeof Creat
         priority: input.priority,
         score: input.score ?? 0,
         statusId: status.id,
+        potentialStatusId: potentialStatus?.id ?? null,
         campaignId: input.campaignId ?? null,
         assignedUserId,
         assignedTeamId,
@@ -281,6 +292,7 @@ export async function updateLead(ctx: ScopedContext, id: string, input: z.infer<
 
   const status = input.statusId ? await assertStatusFor("LEAD", input.statusId) : undefined;
   if (input.statusId && !status) throw new CrmError("Invalid lead status.", 400);
+  const potentialStatus = input.potentialStatusId !== undefined ? await assertPotentialStatus(input.potentialStatusId) : undefined;
 
   // Assignment changes require LEADS_ASSIGN.
   if (
@@ -299,6 +311,7 @@ export async function updateLead(ctx: ScopedContext, id: string, input: z.infer<
         ...(input.priority !== undefined ? { priority: input.priority } : {}),
         ...(input.score !== undefined ? { score: input.score } : {}),
         ...(status ? { statusId: status.id } : {}),
+        ...(potentialStatus !== undefined ? { potentialStatusId: potentialStatus?.id ?? null } : {}),
         ...(input.campaignId !== undefined ? { campaignId: input.campaignId } : {}),
         ...(input.assignedUserId !== undefined ? { assignedUserId: input.assignedUserId } : {}),
         ...(input.assignedTeamId !== undefined ? { assignedTeamId: input.assignedTeamId } : {}),

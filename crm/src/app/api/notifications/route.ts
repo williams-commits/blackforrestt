@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { CrmError } from "@/server/guard";
-import { countUnread, listNotifications, markAllRead, sweepOverdueTasks } from "@/server/notifications";
+import { countUnread, listNotifications, markAllRead, sweepOverdueTasks, sweepPlatformPresence } from "@/server/notifications";
 import { handleRouteError } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -18,6 +18,7 @@ export async function GET() {
     const userId = await requireUserId();
     // Lazy sweep: overdue/due-today notifications fire on read (idempotent).
     await sweepOverdueTasks(userId);
+    await sweepPlatformPresence(userId);
     const [notifications, unread] = await Promise.all([
       listNotifications(userId),
       countUnread(userId),

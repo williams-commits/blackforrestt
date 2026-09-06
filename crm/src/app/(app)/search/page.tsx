@@ -1,10 +1,21 @@
 import Link from "next/link";
 import { scopedContext } from "@/server/records/leads";
 import { pgSearch } from "@/server/search/pg";
+import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Search" };
+
+const TYPE_LABELS: Record<string, string> = {
+  LEAD: "Leads",
+  CONTACT: "Contacts",
+  ACCOUNT: "Accounts",
+  CUSTOMER: "Customers",
+  OPPORTUNITY: "Opportunities",
+  TASK: "Tasks",
+  NOTE: "Notes",
+};
 
 type PageProps = { searchParams: Promise<{ q?: string }> };
 
@@ -23,25 +34,25 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="page-title">Search</h1>
-        <p className="text-sm text-(--text-secondary)">
-          {query.length < 2
-            ? "Type at least two characters in the header search."
-            : `${hits.length} result(s) for “${query}” (within your scope)`}
-        </p>
-      </div>
+      <WorkspaceHeader
+        eyebrow="Command center"
+        title="Search"
+        subtitle={query.length < 2
+          ? "Type at least two characters in the header search."
+          : `${hits.length} result(s) for “${query}” (within your scope)`}
+        metrics={query.length >= 2 ? [{ label: "Matches", value: hits.length, tone: hits.length ? "success" : "warning" }] : undefined}
+      />
       {hits.length === 0 && query.length >= 2 ? (
         <p className="card empty-state">
           Nothing matched.
         </p>
       ) : (
         [...grouped.entries()].map(([type, list]) => (
-          <section key={type} className="card" style={{ padding: "var(--space-4)" }}>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-(--text-tertiary)">
-              {type.toLowerCase()}s ({list.length})
+          <section key={type} className="card overflow-hidden">
+            <h2 className="border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3 text-xs font-semibold uppercase tracking-wide text-(--text-tertiary)">
+              {TYPE_LABELS[type] ?? type.toLowerCase()} ({list.length})
             </h2>
-            <ul className="divide-y divide-(--border-default)">
+            <ul className="divide-y divide-(--border-default) px-4">
               {list.map((hit) => (
                 <li key={hit.id} className="flex items-center justify-between py-2 text-sm">
                   <Link href={hit.url} className="font-medium text-(--brand) hover:underline">

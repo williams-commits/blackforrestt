@@ -728,6 +728,86 @@ select.input {
   flex-shrink: 0;
 }
 
+/* Focused workspace chrome shared by operational pages. */
+.workspace-header {
+  border-bottom: 1px solid var(--border-default);
+  padding-bottom: var(--space-4);
+}
+.workspace-eyebrow {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  margin-bottom: var(--space-1);
+  text-transform: uppercase;
+}
+.workspace-title {
+  color: var(--text-primary);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: var(--leading-tight);
+}
+.workspace-subtitle {
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  margin-top: var(--space-1);
+}
+.workspace-metrics {
+  border-top: 1px solid var(--border-default);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+}
+.workspace-metric {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  min-width: 110px;
+}
+.workspace-metric-dot { border-radius: var(--radius-full); height: 7px; width: 7px; }
+.workspace-metric-dot.brand { background: var(--brand-500); }
+.workspace-metric-dot.success { background: var(--success); }
+.workspace-metric-dot.warning { background: var(--warning); }
+.workspace-metric-dot.info { background: var(--info); }
+.workspace-metric-value { color: var(--text-primary); font-size: var(--text-lg); font-weight: 700; }
+.workspace-metric-label { color: var(--text-secondary); font-size: var(--text-xs); }
+
+/* Form surfaces: calm grouping and actions that stay available while editing. */
+.form-dialog {
+  border-radius: var(--radius-xl);
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+}
+.form-dialog-header {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border-default);
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding-bottom: var(--space-4);
+}
+.form-dialog-eyebrow {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.form-dialog-title { color: var(--text-primary); font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.01em; }
+.form-dialog-body { overflow-y: auto; padding-right: var(--space-1); }
+.form-section { border-top: 1px solid var(--border-default); padding-top: var(--space-4); }
+.form-section-title { color: var(--text-primary); font-size: var(--text-sm); font-weight: 700; }
+.form-section-help { color: var(--text-tertiary); font-size: var(--text-xs); margin-top: 2px; }
+.form-label { color: var(--text-secondary); display: block; font-size: var(--text-xs); font-weight: 700; margin-bottom: var(--space-1); }
+.form-required { color: var(--error); }
+.form-help { color: var(--text-tertiary); font-size: var(--text-xs); margin-top: var(--space-1); }
+.form-actions { background: var(--bg-surface); border-top: 1px solid var(--border-default); display: flex; gap: var(--space-2); justify-content: flex-end; padding-top: var(--space-4); }
+.icon-button { align-items: center; background: transparent; border: 0; border-radius: var(--radius-md); color: var(--text-tertiary); display: inline-flex; font-size: 20px; height: 32px; justify-content: center; line-height: 1; width: 32px; }
+.icon-button:hover { background: var(--bg-hover); color: var(--text-primary); }
+
 /* ── Highlights panel (record pages) ── */
 .highlights {
   background: linear-gradient(135deg, var(--brand-700), var(--brand-800));

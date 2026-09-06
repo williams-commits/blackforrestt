@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { OpportunityForm } from "@/components/OpportunityFormDialog";
 import { PipelineAdmin } from "@/components/PipelineAdminDialog";
 import Link from "next/link";
+import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 
 export interface Stage {
   id: string;
@@ -152,33 +153,25 @@ export function OpportunitiesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="page-title">Opportunities</h1>
-          {board?.aggregates ? (
-            <p className="text-sm text-(--text-secondary)">
-              {board.aggregates.openCount} open · {money(board.aggregates.openValue)} · weighted{" "}
-              {money(board.aggregates.weightedValue)}
-              {board.aggregates.winRate !== null ? ` · win rate ${board.aggregates.winRate}%` : ""}
-            </p>
-          ) : (
-            <p className="text-sm text-(--text-secondary)">Pipeline management</p>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            aria-label="Pipeline"
-            value={pipelineId}
-            onChange={(event) => setPipelineId(event.target.value)}
-            className="input"
-          >
-            {pipelines.map((pipeline) => (
-              <option key={pipeline.id} value={pipeline.id}>
-                {pipeline.name}
-                {pipeline.isDefault ? " ★" : ""}
-              </option>
-            ))}
+      <WorkspaceHeader
+        eyebrow="Revenue workspace"
+        title="Opportunities"
+        subtitle="See what is moving, what is at risk, and where to focus next."
+        metrics={board?.aggregates ? [
+          { label: "Open", value: board.aggregates.openCount, tone: "brand" },
+          { label: "Pipeline", value: money(board.aggregates.openValue), tone: "info" },
+          { label: "Weighted", value: money(board.aggregates.weightedValue), tone: "success" },
+          ...(board.aggregates.winRate !== null ? [{ label: "Win rate", value: `${board.aggregates.winRate}%`, tone: "warning" as const }] : []),
+        ] : undefined}
+        actions={<>
+          <select aria-label="Pipeline" value={pipelineId} onChange={(event) => setPipelineId(event.target.value)} className="input">
+            {pipelines.map((pipeline) => <option key={pipeline.id} value={pipeline.id}>{pipeline.name}{pipeline.isDefault ? " ★" : ""}</option>)}
           </select>
+          {can.create ? <button type="button" onClick={() => { setEditRow(null); setShowForm(true); }} className="btn btn-primary"><span aria-hidden>+</span> New opportunity</button> : null}
+        </>}
+      />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex overflow-hidden rounded-md border border-(--border-strong) text-sm">
             <button
               type="button"
@@ -212,19 +205,6 @@ export function OpportunitiesPage() {
               className="btn btn-secondary"
             >
               Manage pipelines
-            </button>
-          ) : null}
-          {can.create ? (
-            <button
-              type="button"
-              onClick={() => {
-                setEditRow(null);
-                setShowForm(true);
-              }}
-              className="btn btn-primary"
-              style={{ background: "var(--brand)" }}
-            >
-              New opportunity
             </button>
           ) : null}
         </div>

@@ -19,6 +19,7 @@ const TYPE_LABELS: Record<string, string> = {
   APPOINTMENT_SCHEDULED: "Appointment scheduled",
   IMPORT_COMPLETED: "Import completed",
   IMPORT_FAILED: "Import failed",
+  PLATFORM_USER_ONLINE: "Client is online",
   SYSTEM: "System",
 };
 

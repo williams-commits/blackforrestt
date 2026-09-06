@@ -25,6 +25,7 @@ export interface FieldConfig {
   options?: Array<{ value: string; label: string }>;
   optionsFrom?:
     | "leadStatuses"
+    | "potentialStatuses"
     | "contactStatuses"
     | "customerStatuses"
     | "users"
@@ -75,6 +76,7 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
       { key: "email", label: "Email", type: "email" },
       { key: "phone", label: "Phone" },
       { key: "status.name", label: "Status", type: "badge" },
+      { key: "potentialStatus.name", label: "Potential", type: "badge" },
       { key: "priority", label: "Priority" },
       { key: "score", label: "Score", type: "number" },
       { key: "assignedUser.name", label: "Assignee" },
@@ -90,6 +92,7 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
       { name: "country", label: "Country", type: "text" },
       { name: "source", label: "Source", type: "text", placeholder: "WEB_FORM, REFERRAL…" },
       { name: "statusId", label: "Status", type: "select", optionsFrom: "leadStatuses" },
+      { name: "potentialStatusId", label: "Potential status", type: "select", optionsFrom: "potentialStatuses" },
       {
         name: "priority",
         label: "Priority",

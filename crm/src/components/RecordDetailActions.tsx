@@ -8,6 +8,7 @@ import { useConfirmDialog } from "@/components/Dialogs";
 
 const EMPTY: OptionSource = {
   leadStatuses: [],
+  potentialStatuses: [],
   contactStatuses: [],
   customerStatuses: [],
   users: [],
@@ -20,6 +21,7 @@ const EMPTY: OptionSource = {
 function freshOptions(): OptionSource {
   return {
     leadStatuses: [],
+    potentialStatuses: [],
     contactStatuses: [],
     customerStatuses: [],
     users: [],
@@ -40,7 +42,11 @@ export function useOptionSources(object: ObjectKey): OptionSource {
           fetch("/api/record-statuses").then((r) => (r.ok ? r.json() : { data: [] })),
           fetch("/api/users").then((r) => (r.ok ? r.json() : { data: [] })),
         ]);
+        const potentialStatuses = await fetch("/api/potential-statuses").then((r) => (r.ok ? r.json() : { data: [] }));
         const next: OptionSource = freshOptions();
+        for (const status of potentialStatuses.data as Array<{ id: string; name: string }>) {
+          next.potentialStatuses.push({ value: status.id, label: status.name });
+        }
         for (const status of statuses.data as Array<{ id: string; name: string; appliesTo: string }>) {
           const key =
             status.appliesTo === "LEAD"

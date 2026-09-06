@@ -19,6 +19,7 @@ export type NotifiableType =
   | "APPOINTMENT_SCHEDULED"
   | "IMPORT_COMPLETED"
   | "IMPORT_FAILED"
+  | "PLATFORM_USER_ONLINE"
   | "TASK_DUE"
   | "TASK_OVERDUE";
 
@@ -65,6 +66,11 @@ function emailFor(type: NotifiableType, payload: Record<string, unknown>): { sub
       return {
         subject: `CRM: Import FAILED`,
         text: `Your import job failed. Open the CRM to download the error report.`,
+      };
+    case "PLATFORM_USER_ONLINE":
+      return {
+        subject: `CRM: Client is online — ${payload.label ?? "linked customer"}`,
+        text: `${payload.label ?? "A client assigned to you"} is currently logged into the trading platform. Open the customer record to review live account activity.`,
       };
     default:
       return null;
@@ -135,6 +141,46 @@ export async function sweepOverdueTasks(userId: string): Promise<void> {
       where: { id: task.id },
       data: { overdueNotifiedAt: now },
     }).catch(() => undefined);
+  }
+}
+
+/**
+ * Lazy presence sweep for linked customers owned by the current CRM user.
+ * The recent-notification window makes this transition-safe without adding a
+ * polling worker or persisting platform presence in the CRM database.
+ */
+export async function sweepPlatformPresence(userId: string): Promise<void> {
+  const { platformPresence } = await import("@/server/platformBridge");
+  const customers = await prisma.customer.findMany({
+    where: { ownerUserId: userId, deletedAt: null, platformUserId: { not: null } },
+    select: { id: true, firstName: true, lastName: true, platformUserId: true },
+    take: 100,
+  });
+  if (customers.length === 0) return;
+  const states = await platformPresence(customers.map((customer) => customer.platformUserId!));
+  if (states.length === 0) return;
+  const since = new Date(Date.now() - 10 * 60 * 1000);
+  const recent = await prisma.notification.findMany({
+    where: { recipientUserId: userId, type: "PLATFORM_USER_ONLINE", createdAt: { gte: since } },
+    select: { payload: true },
+  });
+  const alreadyNotified = new Set(
+    recent.map((entry) => (entry.payload as { platformUserId?: string }).platformUserId).filter(Boolean) as string[],
+  );
+  for (const state of states) {
+    const customer = customers.find((entry) => entry.platformUserId === state.platformUserId);
+    if (!customer || !state.online || alreadyNotified.has(state.platformUserId)) continue;
+    await notify({
+      recipientUserId: userId,
+      type: "PLATFORM_USER_ONLINE",
+      payload: {
+        customerId: customer.id,
+        platformUserId: state.platformUserId,
+        label: `${customer.firstName} ${customer.lastName}`,
+        openPositions: state.openPositions,
+      },
+    });
+    alreadyNotified.add(state.platformUserId);
   }
 }
 

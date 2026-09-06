@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 
 interface CampaignRow {
   id: string;
@@ -70,40 +71,32 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Campaigns</h1>
-          <p className="text-sm text-(--text-secondary)">{rows.length} campaign(s)</p>
-        </div>
-        {canCreate ? (
-          <button
-            type="button"
-            onClick={() => setShowForm((previous) => !previous)}
-            className="btn btn-primary"
-            style={{ background: "var(--brand)" }}
-          >
-            New campaign
-          </button>
-        ) : null}
-      </div>
+      <WorkspaceHeader
+        eyebrow="Reach & engagement"
+        title="Campaigns"
+        subtitle="Coordinate outreach and see which relationships move forward."
+        actions={canCreate ? <button type="button" onClick={() => setShowForm((previous) => !previous)} className="btn btn-primary"><span aria-hidden>+</span> New campaign</button> : undefined}
+        metrics={[{ label: "Campaigns", value: rows.length, tone: "brand" }, { label: "Active", value: rows.filter((row) => row.status === "ACTIVE").length, tone: "success" }, { label: "Members", value: rows.reduce((total, row) => total + row.memberCount, 0), tone: "info" }]}
+      />
 
       {showForm ? (
-        <form method="post" onSubmit={createCampaign} className="grid gap-3 rounded-lg border border-(--border-default) bg-(--bg-surface) p-4 sm:grid-cols-4">
+        <form method="post" onSubmit={createCampaign} className="grid gap-4 rounded-xl border border-(--border-default) bg-(--bg-surface) p-5 shadow-(--shadow-subtle) sm:grid-cols-4">
+          <div className="sm:col-span-4"><p className="form-dialog-eyebrow">Reach &amp; engagement</p><p className="form-section-title">Create a campaign</p><p className="form-section-help">Give the team a clear audience, source, and operating status.</p></div>
           {error ? (
             <p role="alert" className="sm:col-span-4 rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
               {error}
             </p>
           ) : null}
           <div>
-            <label htmlFor="c-name" className="mb-1 block text-sm font-medium">Name *</label>
+            <label htmlFor="c-name" className="form-label">Name <span className="form-required">*</span></label>
             <input id="c-name" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} className={inputClass} />
           </div>
           <div>
-            <label htmlFor="c-source" className="mb-1 block text-sm font-medium">Source</label>
+            <label htmlFor="c-source" className="form-label">Source</label>
             <input id="c-source" value={source} onChange={(e) => setSource(e.target.value)} className={inputClass} />
           </div>
           <div>
-            <label htmlFor="c-status" className="mb-1 block text-sm font-medium">Status</label>
+            <label htmlFor="c-status" className="form-label">Status</label>
             <select id="c-status" value={status} onChange={(e) => setStatus(e.target.value)} className={inputClass}>
               <option value="DRAFT">Draft</option>
               <option value="ACTIVE">Active</option>
@@ -112,12 +105,12 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
             </select>
           </div>
           <div>
-            <label htmlFor="c-desc" className="mb-1 block text-sm font-medium">Description</label>
+            <label htmlFor="c-desc" className="form-label">Description</label>
             <input id="c-desc" value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
           </div>
-          <div className="sm:col-span-4">
-            <button type="submit" className="btn btn-primary" style={{ background: "var(--brand)" }}>
-              Create
+          <div className="form-actions sm:col-span-4">
+            <button type="submit" className="btn btn-primary">
+              <span aria-hidden>+</span> Create campaign
             </button>
           </div>
         </form>
@@ -139,7 +132,7 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
             {loading ? (
               <tr><td colSpan={6} style={{ padding: "10px 12px" }}><div className="skeleton" style={{ height: "16px", width: "70%" }} /></td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={6} style={{ padding: "10px 12px" }}><div className="skeleton" style={{ height: "16px", width: "70%" }} /></td></tr>
+              <tr><td colSpan={6}><div className="empty-state"><p className="empty-state-title">No campaigns yet</p><p className="empty-state-description">Create a campaign to organize outreach and measure response.</p></div></td></tr>
             ) : (
               rows.map((row) => (
                 <tr key={row.id}>

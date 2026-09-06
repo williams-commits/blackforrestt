@@ -72,6 +72,13 @@ const CUSTOMER_STATUSES = [
   { name: "Churned", category: "LOST" as const, sortOrder: 3, isDefault: false },
 ];
 
+const POTENTIAL_STATUSES = [
+  { name: "Junior", sortOrder: 1, isDefault: true },
+  { name: "Senior", sortOrder: 2, isDefault: false },
+  { name: "Institutional", sortOrder: 3, isDefault: false },
+  { name: "VIP", sortOrder: 4, isDefault: false },
+];
+
 async function seedStatuses() {
   for (const status of LEAD_STATUSES) {
     await prisma.recordStatus.upsert({
@@ -92,6 +99,13 @@ async function seedStatuses() {
       where: { name_appliesTo: { name: status.name, appliesTo: "CUSTOMER" } },
       create: { ...status, appliesTo: "CUSTOMER" },
       update: { ...status, appliesTo: "CUSTOMER" },
+    });
+  }
+  for (const status of POTENTIAL_STATUSES) {
+    await prisma.potentialStatus.upsert({
+      where: { name: status.name },
+      create: status,
+      update: status,
     });
   }
 }

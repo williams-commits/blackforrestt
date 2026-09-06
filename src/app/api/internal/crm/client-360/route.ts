@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db";
 import { requireBridgeToken } from "@/server/crmBridge";
+import { hub } from "@/server/engine/hub";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,6 +53,13 @@ export async function GET(request: Request) {
   const openPositions = await prisma.position.count({
     where: { userId: user.id, status: "OPEN" },
   });
+  const positions = await prisma.position.findMany({
+    where: { userId: user.id, status: "OPEN" },
+    orderBy: { openedAt: "desc" },
+    take: 50,
+    select: { id: true, symbol: true, side: true, type: true, volume: true, openRate: true, currentRate: true, netProfit: true, openedAt: true },
+  });
+  const online = hub.onlineUserIds().has(user.id);
 
   return NextResponse.json({
     data: {
@@ -84,6 +92,18 @@ export async function GET(request: Request) {
         createdAt: payment.createdAt.toISOString(),
       })),
       openPositions,
+      presence: { online },
+      positions: positions.map((position) => ({
+        id: position.id,
+        symbol: position.symbol,
+        side: position.side,
+        type: position.type,
+        volume: position.volume.toString(),
+        openRate: position.openRate.toString(),
+        currentRate: position.currentRate.toString(),
+        netProfit: position.netProfit.toString(),
+        openedAt: position.openedAt.toISOString(),
+      })),
     },
   });
 }

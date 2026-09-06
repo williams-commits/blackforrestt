@@ -159,6 +159,11 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                         </span>
                         <span style={{ color: "var(--text-tertiary)" }}> · registered {new Date(platform.user.registeredAt).toLocaleDateString()}</span>
                       </p>
+                      <p className="mt-1 text-[11px]">
+                        <span style={{ color: platform.presence.online ? "var(--success)" : "var(--text-tertiary)" }}>
+                          {platform.presence.online ? "online now" : "offline"}
+                        </span>
+                      </p>
                     </div>
                     <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
                       <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>KYC</p>
@@ -172,6 +177,12 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                       ) : null}
                       <p className="mt-1 text-[11px]" style={{ color: "var(--text-secondary)" }}>{platform.openPositions} open position(s)</p>
                     </div>
+                    {platform.positions.length > 0 ? (
+                      <div className="sm:col-span-3">
+                        <div className="mb-1 flex items-center justify-between"><p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Live positions</p><span className="badge badge-success">{platform.positions.length} open</span></div>
+                        <div className="overflow-x-auto"><table className="table"><thead><tr><th>Symbol</th><th>Side</th><th>Volume</th><th>Open</th><th>Mark</th><th>Net P/L</th></tr></thead><tbody>{platform.positions.map((position) => <tr key={position.id}><td className="font-medium">{position.symbol}</td><td><span className={`badge ${position.side === "BUY" ? "badge-success" : "badge-error"}`}>{position.side}</span></td><td>{position.volume}</td><td>{position.openRate}</td><td>{position.currentRate}</td><td className={Number(position.netProfit) >= 0 ? "text-(--success)" : "text-(--error)"}>{Number(position.netProfit).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td></tr>)}</tbody></table></div>
+                      </div>
+                    ) : null}
                     <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
                       <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Wallets</p>
                       {platform.wallets.length === 0 ? (

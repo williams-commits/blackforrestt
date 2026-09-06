@@ -137,6 +137,7 @@ enum NotificationType {
   APPOINTMENT_SCHEDULED
   IMPORT_COMPLETED
   IMPORT_FAILED
+  PLATFORM_USER_ONLINE
   SYSTEM
 }
 
@@ -278,6 +279,18 @@ model RecordStatus {
   @@index([appliesTo, sortOrder])
 }
 
+// Configurable lead potential tiers, separate from lifecycle status.
+model PotentialStatus {
+  id        String   @id @default(cuid())
+  name      String
+  sortOrder Int      @default(0)
+  isDefault Boolean  @default(false)
+  leads     Lead[]
+
+  @@unique([name])
+  @@index([sortOrder])
+}
+
 model Lead {
   id               String    @id @default(cuid())
   firstName        String
@@ -293,6 +306,8 @@ model Lead {
   campaign         Campaign? @relation("LeadCampaign", fields: [campaignId], references: [id])
   statusId         String
   status           RecordStatus @relation(fields: [statusId], references: [id])
+  potentialStatusId String?
+  potentialStatus   PotentialStatus? @relation(fields: [potentialStatusId], references: [id])
   score            Int       @default(0)
   priority         Priority  @default(NORMAL)
   assignedUserId   String?
@@ -314,6 +329,7 @@ model Lead {
   @@index([email])
   @@index([phone])
   @@index([statusId])
+  @@index([potentialStatusId])
   @@index([assignedUserId])
   @@index([assignedTeamId])
   @@index([campaignId])

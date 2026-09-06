@@ -19,13 +19,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Administration</h1>
-          <p className="page-subtitle">Configuration and system management</p>
-        </div>
+      <div className="mb-6 border-b border-(--border-default) pb-5">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-(--text-tertiary)">Patheo setup</p>
+        <h1 className="page-title">Administration</h1>
+        <p className="page-subtitle">Configure your workspace, access, and operating rules.</p>
       </div>
-      <div className="grid gap-6 lg:grid-cols-[208px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[208px_1fr] lg:items-start">
         <AdminNav />
         <div className="min-w-0">{children}</div>
       </div>

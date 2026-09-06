@@ -39,15 +39,15 @@ function NavIcon({ name }: { name: string }) {
 export function AdminNav() {
   const pathname = usePathname();
   return (
-    <nav className="w-52 shrink-0 space-y-0.5" aria-label="Administration">
+    <nav className="w-full shrink-0 rounded-lg border border-(--border-default) bg-(--bg-surface) p-2 shadow-(--shadow-subtle) lg:sticky lg:top-20" aria-label="Administration">
       <p
-        className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider"
+        className="mb-2 px-3 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
         style={{ color: "var(--text-tertiary)" }}
       >
-        Administration
+        Workspace setup
       </p>
       {ADMIN_NAV.map((item) => {
-        const active = pathname === item.href;
+        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
             key={item.href}
@@ -56,6 +56,7 @@ export function AdminNav() {
             style={{
               color: active ? "var(--brand-700)" : "var(--text-secondary)",
               background: active ? "var(--brand-50)" : "transparent",
+              boxShadow: active ? "inset 3px 0 0 var(--brand-600)" : undefined,
             }}
           >
             <NavIcon name={item.icon} />

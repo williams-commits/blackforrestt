@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { notificationHref } from "@/lib/notificationLink";
 
 interface NotificationRow {
   id: string;
@@ -114,22 +115,24 @@ export function HomeWidgets() {
         ) : (
           <ul className="max-h-56 space-y-2 overflow-y-auto">
             {notifications.map((notification) => (
-              <li
-                key={notification.id}
-                className={`rounded-md border p-2 text-sm ${
-                  notification.readAt ? "border-(--border-default) text-(--text-secondary)" : "border-(--brand)/30 bg-(--brand)/5"
-                }`}
-              >
-                <p className="font-medium">
-                  {TYPE_LABELS[notification.type] ?? notification.type}
-                  {typeof notification.payload.title === "string" ? `: ${notification.payload.title}` : ""}
-                </p>
-                <p className="text-xs text-(--text-tertiary)">
-                  {new Date(notification.createdAt).toLocaleString(undefined, {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </p>
+              <li key={notification.id}>
+                <Link
+                  href={notificationHref(notification)}
+                  className={`block rounded-md border p-2 text-sm transition-colors hover:bg-(--bg-hover) ${
+                    notification.readAt ? "border-(--border-default) text-(--text-secondary)" : "border-(--brand)/30 bg-(--brand)/5"
+                  }`}
+                >
+                  <p className="font-medium">
+                    {TYPE_LABELS[notification.type] ?? notification.type}
+                    {typeof notification.payload.title === "string" ? `: ${notification.payload.title}` : ""}
+                  </p>
+                  <p className="text-xs text-(--text-tertiary)">
+                    {new Date(notification.createdAt).toLocaleString(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                </Link>
               </li>
             ))}
           </ul>

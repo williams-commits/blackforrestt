@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { notificationHref } from "@/lib/notificationLink";
 
 interface NotificationRow {
   id: string;
@@ -27,29 +28,6 @@ function notificationTitle(notification: NotificationRow): string {
   const label = TYPE_LABELS[notification.type] ?? notification.type.replaceAll("_", " ").toLowerCase();
   const subject = notification.payload.label ?? notification.payload.title;
   return typeof subject === "string" ? `${label}: ${subject}` : label;
-}
-
-/** Only allow internal CRM routes supplied by the server-side notification context. */
-function notificationHref(notification: NotificationRow): string | null {
-  const context = notification.payload.context;
-  if (context && typeof context === "object" && !Array.isArray(context)) {
-    const href = (context as { href?: unknown }).href;
-    if (typeof href === "string" && href.startsWith("/") && !href.startsWith("//")) return href;
-  }
-
-  // Notifications saved before contextual destinations were introduced retain
-  // useful links where their legacy payload contains a related record id.
-  const customerId = notification.payload.customerId;
-  if (typeof customerId === "string") return `/customers/${customerId}`;
-  const recordId = notification.payload.recordId;
-  const recordType = notification.payload.recordType;
-  const collection = typeof recordType === "string"
-    ? ({ LEAD: "leads", CONTACT: "contacts", ACCOUNT: "accounts", CUSTOMER: "customers", OPPORTUNITY: "opportunities" } as Record<string, string>)[recordType]
-    : undefined;
-  if (collection && typeof recordId === "string") return `/${collection}/${recordId}`;
-  if (typeof notification.payload.jobId === "string") return "/imports";
-  if (typeof notification.payload.taskId === "string") return "/tasks";
-  return null;
 }
 
 export function NotificationBell() {
@@ -148,7 +126,7 @@ export function NotificationBell() {
               {notifications.slice(0, 12).map((notification) => {
                 const href = notificationHref(notification);
                 const content = <><p className="text-xs font-semibold">{notificationTitle(notification)}</p><p className="mt-1 text-[10px] text-(--text-tertiary)">{new Date(notification.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p></>;
-                return <li key={notification.id} className={`border-b border-(--border-default) px-4 py-3 last:border-0 ${notification.readAt ? "text-(--text-secondary)" : "bg-(--brand-50) text-(--text-primary)"}`}>{href ? <Link href={href} onClick={() => setOpen(false)} className="block hover:opacity-75">{content}</Link> : content}</li>;
+                return <li key={notification.id} className={`border-b border-(--border-default) px-4 py-3 last:border-0 ${notification.readAt ? "text-(--text-secondary)" : "bg-(--brand-50) text-(--text-primary)"}`}><Link href={href} onClick={() => setOpen(false)} className="block hover:opacity-75">{content}</Link></li>;
               })}
             </ul>
           )}

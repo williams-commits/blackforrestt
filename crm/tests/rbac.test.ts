@@ -37,7 +37,7 @@ test("rep scope is OWN — cannot read or mutate another rep's lead", async () =
   await prisma.lead.delete({ where: { id: rep2Lead } });
 });
 
-test("manager sees team members' leads but only an admin can classify or assign them", async () => {
+test("manager without the record-control permissions cannot classify or assign team leads", async () => {
   const rep = await repContext();
   const manager = await managerContext();
   const admin = await adminContext();
@@ -64,7 +64,7 @@ test("manager sees team members' leads but only an admin can classify or assign 
   await prisma.lead.delete({ where: { id: lead } });
 });
 
-test("rep without LEADS_ASSIGN cannot bulk assign; forced create self-assigns", async () => {
+test("rep without RECORDS_ASSIGN cannot bulk assign; forced create self-assigns", async () => {
   const rep = await repContext();
   const lead = await makeLead(rep, "self-assign");
   await assertThrows(
@@ -88,10 +88,16 @@ test("duplicate guard: create with matching email returns 409 + matches", async 
   await prisma.lead.delete({ where: { id: existing } });
 });
 
-test("role definitions keep the superset ordering (SUPER_ADMIN ⊇ ADMIN)", () => {
+test("role definitions enable record controls for administrator roles by default", () => {
   const superAdmin = ROLE_DEFINITIONS.find((role) => role.key === "SUPER_ADMIN")!;
   const admin = ROLE_DEFINITIONS.find((role) => role.key === "ADMIN")!;
+  const lowerRoles = ROLE_DEFINITIONS.filter((role) => !["SUPER_ADMIN", "ADMIN"].includes(role.key));
   for (const permission of admin.permissions) {
     assert.ok(superAdmin.permissions.includes(permission), `SUPER_ADMIN missing ${permission}`);
+  }
+  for (const permission of ["RECORDS_ASSIGN", "RECORDS_CLASSIFY"] as const) {
+    assert.ok(admin.permissions.includes(permission), `ADMIN missing ${permission}`);
+    assert.ok(superAdmin.permissions.includes(permission), `SUPER_ADMIN missing ${permission}`);
+    assert.equal(lowerRoles.some((role) => role.permissions.includes(permission)), false, `${permission} is unexpectedly enabled by default`);
   }
 });

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/server/db";
-import { CrmError, requireAdministratorCapability } from "@/server/guard";
+import { CrmError, requireCapability } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { resolveSubject } from "@/server/records/subjects";
 import type { ScopedContext } from "@/server/records/leads";
@@ -75,7 +75,7 @@ export const LinkTag = z.object({
 
 /** Attach a tag to a record (subject scope-checked first). */
 export async function linkTag(ctx: ScopedContext, input: z.infer<typeof LinkTag>) {
-  if (input.subjectType !== "OPPORTUNITY") requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
+  if (input.subjectType !== "OPPORTUNITY") requireCapability(ctx, "RECORDS_CLASSIFY");
   const tag = await prisma.tag.findUnique({ where: { id: input.tagId } });
   if (!tag) throw new CrmError("Tag not found.", 404);
   const subject = await resolveSubject(ctx, input.subjectType, input.subjectId);
@@ -94,7 +94,7 @@ export async function linkTag(ctx: ScopedContext, input: z.infer<typeof LinkTag>
 
 /** Detach a tag from a record (subject scope-checked first). */
 export async function unlinkTag(ctx: ScopedContext, input: z.infer<typeof LinkTag>) {
-  if (input.subjectType !== "OPPORTUNITY") requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
+  if (input.subjectType !== "OPPORTUNITY") requireCapability(ctx, "RECORDS_CLASSIFY");
   const subject = await resolveSubject(ctx, input.subjectType, input.subjectId);
   await prisma.tagLink.deleteMany({
     where: { tagId: input.tagId, subjectType: subject.type, subjectId: subject.id },

@@ -107,11 +107,10 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
     void fetch("/api/me")
       .then((response) => (response.ok ? response.json() : null))
       .then((body) => {
-        const isAdministrator = body?.data?.roleKey === "ADMIN" || body?.data?.roleKey === "SUPER_ADMIN";
         const permissions = body?.data?.permissions ?? [];
         setCapabilities({
-          classify: isAdministrator && permissions.includes("RECORDS_CLASSIFY"),
-          assign: isAdministrator && permissions.includes("RECORDS_ASSIGN"),
+          classify: permissions.includes("RECORDS_CLASSIFY"),
+          assign: permissions.includes("RECORDS_ASSIGN"),
         });
       })
       .catch(() => setCapabilities({ classify: false, assign: false }));

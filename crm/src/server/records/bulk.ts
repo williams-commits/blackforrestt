@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db";
-import { CrmError, requireAdministratorCapability } from "@/server/guard";
+import { CrmError, requireCapability } from "@/server/guard";
 import type { Permission } from "@/server/permissions";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
@@ -118,9 +118,9 @@ export async function bulkRecords(
   const { permissionPrefix: prefix } = config;
 
   const deletePermission = `${prefix}_DELETE` as Permission;
-  if (input.action === "assign") requireAdministratorCapability(ctx, "RECORDS_ASSIGN");
+  if (input.action === "assign") requireCapability(ctx, "RECORDS_ASSIGN");
   if (input.action === "assign") await assertAssignableUser(input.assignedUserId);
-  if (input.action === "status" || input.action === "tag") requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
+  if (input.action === "status" || input.action === "tag") requireCapability(ctx, "RECORDS_CLASSIFY");
   if (input.action === "delete" && !ctx.permissions.includes(deletePermission)) {
     throw new CrmError(`Forbidden — ${deletePermission} permission required`, 403);
   }

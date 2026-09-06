@@ -74,16 +74,6 @@ const CORE_MANAGE: Permission[] = CORE_OBJECTS.flatMap((object) =>
   ["READ", "CREATE", "EDIT", "DELETE", "EXPORT"].map((action) => `${object}_${action}` as CorePermission),
 );
 
-/** Capabilities reserved for the two administrator roles. */
-export const ADMIN_ONLY_PERMISSIONS: readonly Permission[] = [
-  "RECORDS_ASSIGN",
-  "RECORDS_CLASSIFY",
-];
-
-export function isAdministratorRole(key: RoleKey): boolean {
-  return key === "ADMIN" || key === "SUPER_ADMIN";
-}
-
 export interface RoleDefinition {
   key: RoleKey;
   name: string;

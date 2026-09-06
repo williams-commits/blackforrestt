@@ -21,8 +21,9 @@ BEGIN
   END IF;
 END $$;
 
--- Existing installations receive the two administrator-only capabilities
--- immediately; the seed keeps system roles aligned on future runs.
+-- Existing installations receive the two record-control capabilities for the
+-- administrator roles immediately. Super Admin can delegate them later from
+-- the role-permission matrix when needed.
 -- RolePermission.id has a Prisma-side CUID default, not a database default.
 -- Raw SQL migrations must therefore supply the primary key themselves.
 INSERT INTO "RolePermission" ("id", "roleId", "permission")

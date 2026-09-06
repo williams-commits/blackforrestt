@@ -39,8 +39,7 @@ export function TagEditor({
     void fetch("/api/me")
       .then((response) => (response.ok ? response.json() : null))
       .then((body) => {
-        const isAdministrator = body?.data?.roleKey === "ADMIN" || body?.data?.roleKey === "SUPER_ADMIN";
-        setCanClassify(isAdministrator && (body?.data?.permissions ?? []).includes("RECORDS_CLASSIFY"));
+        setCanClassify((body?.data?.permissions ?? []).includes("RECORDS_CLASSIFY"));
       })
       .catch(() => setCanClassify(false));
   }, []);

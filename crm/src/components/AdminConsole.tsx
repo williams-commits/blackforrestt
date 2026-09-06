@@ -66,6 +66,19 @@ export function AdminConsole({
 
 const inputClass = "w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none focus:ring-2 focus:ring-(--brand)/20";
 
+const RECORD_CONTROL_PERMISSIONS = [
+  {
+    permission: "RECORDS_ASSIGN",
+    label: "Assign CRM records",
+    description: "Assign leads, contacts, accounts, and customers to Managers, Team Leads, Reps, or Viewers.",
+  },
+  {
+    permission: "RECORDS_CLASSIFY",
+    label: "Manage record classification",
+    description: "Change record statuses, lead potential statuses, and tags.",
+  },
+] as const;
+
 function SetupFormModal({ title, onClose, children, size = "md" }: { title: string; onClose: () => void; children: React.ReactNode; size?: "sm" | "md" | "lg" | "xl" }) {
   return <Modal title={title} onClose={onClose} size={size}><div className="p-5">{children}</div></Modal>;
 }
@@ -841,13 +854,37 @@ export function RolesTab() {
             <div className="text-left text-xs text-(--text-tertiary) sm:text-right"><p className="font-semibold text-(--text-primary)">{role._count.users} {role._count.users === 1 ? "user" : "users"}</p><p>{role.permissions.length} permissions</p>{role.key === "SUPER_ADMIN" ? <p className="mt-1">System role · fixed</p> : null}</div>
           </div>
           <div className="border-b border-(--border-default) bg-(--bg-surface) px-4 py-3 text-xs text-(--text-tertiary)">
-            Toggle individual capabilities for this role. Record assignment and classification are reserved for Admin and Super Admin.
+            Toggle individual capabilities for this role. Super Admin can grant or revoke the record controls below for any role.
+          </div>
+          <div className="border-b border-(--border-default) p-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-(--text-secondary)">CRM record controls</p>
+            <div className="grid gap-2 lg:grid-cols-2">
+              {RECORD_CONTROL_PERMISSIONS.map(({ permission, label, description }) => {
+                const enabled = role.permissions.some((entry) => entry.permission === permission);
+                const locked = role.key === "SUPER_ADMIN";
+                return (
+                  <label key={permission} className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 ${enabled ? "border-(--brand)/40 bg-(--bg-subtle)" : "border-(--border-default)"} ${locked ? "cursor-not-allowed opacity-60" : "hover:bg-(--bg-hover)"}`}>
+                    <input
+                      type="checkbox"
+                      checked={enabled}
+                      disabled={locked}
+                      onChange={(event) => void toggle(role.id, permission, event.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-(--text-primary)">{label}</span>
+                      <span className="mt-0.5 block text-xs text-(--text-tertiary)">{description}</span>
+                      {role.key === "SUPER_ADMIN" ? <span className="mt-1 block text-[11px] font-medium text-(--text-tertiary)">Always enabled for Super Admin</span> : null}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
           <div className="flex flex-wrap gap-1.5 p-4">
-            {allPermissions.map((permission) => {
+            {allPermissions.filter((permission) => !RECORD_CONTROL_PERMISSIONS.some((control) => control.permission === permission)).map((permission) => {
               const enabled = role.permissions.some((entry) => entry.permission === permission);
-              const restricted = (permission === "RECORDS_ASSIGN" || permission === "RECORDS_CLASSIFY") && role.key !== "ADMIN" && role.key !== "SUPER_ADMIN";
-              const locked = role.key === "SUPER_ADMIN" || restricted;
+              const locked = role.key === "SUPER_ADMIN";
               return (
                 <label key={permission} className={`flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] ${enabled ? "border-(--brand)/40 bg-[var(--brand)/5" : "border-(--border-default) text-(--text-tertiary)"} ${locked ? "opacity-50" : "hover:bg-(--bg-hover) hover:text-(--text-default)"}}`}>
                   <input

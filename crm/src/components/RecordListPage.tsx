@@ -133,8 +133,8 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       create: permissions.includes(config.can.create),
       edit,
       delete: permissions.includes(config.can.delete),
-      assign: (me?.roleKey === "ADMIN" || me?.roleKey === "SUPER_ADMIN") && permissions.includes("RECORDS_ASSIGN"),
-      classify: (me?.roleKey === "ADMIN" || me?.roleKey === "SUPER_ADMIN") && permissions.includes("RECORDS_CLASSIFY"),
+      assign: permissions.includes("RECORDS_ASSIGN"),
+      classify: permissions.includes("RECORDS_CLASSIFY"),
       bulk: true,
       export: permissions.includes(`${objectUpper}S_EXPORT`),
     };

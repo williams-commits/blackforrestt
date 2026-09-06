@@ -25,6 +25,7 @@ export interface FieldConfig {
   options?: Array<{ value: string; label: string }>;
   optionsFrom?:
     | "leadStatuses"
+    | "accountStatuses"
     | "potentialStatuses"
     | "contactStatuses"
     | "customerStatuses"
@@ -48,7 +49,7 @@ export interface FilterConfig {
   name: string;
   label: string;
   type: "select";
-  optionsFrom?: "leadStatuses" | "contactStatuses" | "customerStatuses";
+  optionsFrom?: "leadStatuses" | "accountStatuses" | "contactStatuses" | "customerStatuses";
   options?: Array<{ value: string; label: string }>;
 }
 
@@ -57,7 +58,7 @@ export interface RecordUiConfig {
   title: string;
   singular: string;
   /** API permission gates (cosmetic; the server enforces independently). */
-  can: { create: string; edit: string; delete: string; assign?: string };
+  can: { create: string; edit: string; delete: string };
   columns: ColumnConfig[];
   filters: FilterConfig[];
   fields: FieldConfig[];
@@ -69,7 +70,7 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
     object: "leads",
     title: "Leads",
     singular: "Lead",
-    can: { create: "LEADS_CREATE", edit: "LEADS_EDIT", delete: "LEADS_DELETE", assign: "LEADS_ASSIGN" },
+    can: { create: "LEADS_CREATE", edit: "LEADS_EDIT", delete: "LEADS_DELETE" },
     columns: [
       { key: "firstName lastName", label: "Name", type: "record", object: "leads" },
       { key: "company", label: "Company" },
@@ -153,11 +154,12 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
       { key: "industry", label: "Industry" },
       { key: "companySize", label: "Size" },
       { key: "country", label: "Country" },
+      { key: "status.name", label: "Status", type: "badge" },
       { key: "_count.contacts", label: "Contacts", type: "number" },
       { key: "owner.name", label: "Owner" },
       { key: "createdAt", label: "Created", type: "date" },
     ],
-    filters: [],
+    filters: [{ name: "statusId", label: "Status", type: "select", optionsFrom: "accountStatuses" }],
     fields: [
       { name: "name", label: "Account name", type: "text", required: true },
       { name: "industry", label: "Industry", type: "text" },
@@ -168,6 +170,7 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
       { name: "city", label: "City", type: "text" },
       { name: "country", label: "Country", type: "text" },
       { name: "externalId", label: "External ID", type: "text" },
+      { name: "statusId", label: "Status", type: "select", optionsFrom: "accountStatuses" },
       { name: "ownerUserId", label: "Owner", type: "select", optionsFrom: "users" },
     ],
     searchPlaceholder: "Search name, industry, city…",

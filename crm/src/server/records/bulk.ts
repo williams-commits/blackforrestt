@@ -1,12 +1,13 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db";
-import { CrmError } from "@/server/guard";
+import { CrmError, requireAdministratorCapability } from "@/server/guard";
 import type { Permission } from "@/server/permissions";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { assignedScopeWhere, ownerScopeWhere } from "@/server/scope";
 import { notify } from "@/server/notifications";
+import { assertAssignableUser } from "@/server/records/assignment";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
@@ -74,7 +75,7 @@ const CONFIGS: Record<BulkObjectKey, ObjectConfig> = {
     subjectType: "ACCOUNT",
     permissionPrefix: "ACCOUNTS",
     auditType: "Account",
-    hasStatus: false,
+    hasStatus: true,
     assigneeField: "ownerUserId",
     teamField: "teamId",
     scopeWhere: (ctx) => ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds),
@@ -116,14 +117,10 @@ export async function bulkRecords(
   const config = CONFIGS[object];
   const { permissionPrefix: prefix } = config;
 
-  const editPermission = `${prefix}_EDIT` as Permission;
   const deletePermission = `${prefix}_DELETE` as Permission;
-  // Leads have a dedicated, narrower ASSIGN permission; owner-keyed objects
-  // treat reassignment as an EDIT.
-  const assignPermission: Permission = object === "leads" ? "LEADS_ASSIGN" : editPermission;
-  if (input.action === "assign" && !ctx.permissions.includes(assignPermission)) {
-    throw new CrmError(`Forbidden — ${assignPermission} permission required`, 403);
-  }
+  if (input.action === "assign") requireAdministratorCapability(ctx, "RECORDS_ASSIGN");
+  if (input.action === "assign") await assertAssignableUser(input.assignedUserId);
+  if (input.action === "status" || input.action === "tag") requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
   if (input.action === "delete" && !ctx.permissions.includes(deletePermission)) {
     throw new CrmError(`Forbidden — ${deletePermission} permission required`, 403);
   }

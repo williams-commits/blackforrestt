@@ -1,13 +1,14 @@
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/server/db";
-import { CrmError } from "@/server/guard";
+import { CrmError, requireAdministratorCapability } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { normalizeCountry, normalizeText } from "@/server/normalize";
 import { ownerScopeWhere } from "@/server/scope";
 import { customFieldWhere, orderByFor, searchWhere } from "@/server/listQuery";
 import { sanitizeCustomFields } from "@/server/records/customFields";
+import { assertAssignableUser } from "@/server/records/assignment";
 import type { ScopedContext } from "@/server/records/leads";
 
 /** Account (company) service. Revenue is stored in integer minor units. */
@@ -22,6 +23,7 @@ export const CreateAccount = z.object({
   city: z.string().trim().max(100).optional().nullable(),
   country: z.string().trim().max(60).optional().nullable(),
   externalId: z.string().trim().min(2).max(120).optional().nullable(),
+  statusId: z.string().trim().min(5).optional(),
   ownerUserId: z.string().trim().min(5).optional().nullable(),
   teamId: z.string().trim().min(5).optional().nullable(),
   customFields: z.record(z.unknown()).optional().nullable(),
@@ -37,6 +39,7 @@ const SEARCH_FIELDS = ["name", "industry", "website", "city", "country"] as cons
 
 const include = {
   owner: { select: { id: true, name: true } },
+  status: { select: { id: true, name: true } },
   _count: { select: { contacts: true, opportunities: true } },
 } satisfies Prisma.AccountInclude;
 
@@ -48,11 +51,13 @@ function serialize(row: Prisma.AccountGetPayload<{ include: typeof include }>) {
 export async function listAccounts(
   ctx: ScopedContext,
   query: { page: number; pageSize: number; sort?: string; q?: string },
+  filters: { statusId?: string } = {},
   cfFilters?: Array<{ key: string; value: string }>,
 ) {
   const where: Prisma.AccountWhereInput = {
     deletedAt: null,
     ...ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds),
+    ...(filters.statusId ? { statusId: filters.statusId } : {}),
     ...searchWhere(SEARCH_FIELDS, query.q ?? ""),
     ...customFieldWhere(cfFilters ?? []),
   };
@@ -74,6 +79,7 @@ export async function getAccount(ctx: ScopedContext, id: string) {
     where: { id, deletedAt: null, ...ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds) },
     include: {
       owner: { select: { id: true, name: true } },
+      status: { select: { id: true, name: true } },
       team: { select: { id: true, name: true } },
       contacts: {
         where: { deletedAt: null },
@@ -107,10 +113,19 @@ function dataFrom(input: z.infer<typeof CreateAccount> | z.infer<typeof UpdateAc
 }
 
 export async function createAccount(ctx: ScopedContext, input: z.infer<typeof CreateAccount>) {
+  if (input.statusId !== undefined) requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
+  if (input.ownerUserId !== undefined || input.teamId !== undefined) requireAdministratorCapability(ctx, "RECORDS_ASSIGN");
+  if (input.ownerUserId) await assertAssignableUser(input.ownerUserId);
+  const defaultStatus = await prisma.recordStatus.findFirst({ where: { appliesTo: "ACCOUNT", isDefault: true } });
+  const status = input.statusId
+    ? await prisma.recordStatus.findFirst({ where: { id: input.statusId, appliesTo: "ACCOUNT" } })
+    : defaultStatus;
+  if (input.statusId && !status) throw new CrmError("Invalid account status.", 400);
   return prisma.$transaction(async (tx) => {
     const created = await tx.account.create({
       data: {
         ...dataFrom(input, false),
+        statusId: status?.id ?? null,
         ownerUserId: input.ownerUserId ?? ctx.userId,
         teamId: input.teamId ?? null,
         customFields: (await sanitizeCustomFields("ACCOUNT", input.customFields, "create")) as never,
@@ -139,11 +154,19 @@ export async function updateAccount(ctx: ScopedContext, id: string, input: z.inf
     where: { id, deletedAt: null, ...ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds) },
   });
   if (!existing) throw new CrmError("Account not found.", 404);
+  const status = input.statusId
+    ? await prisma.recordStatus.findFirst({ where: { id: input.statusId, appliesTo: "ACCOUNT" } })
+    : undefined;
+  if (input.statusId && !status) throw new CrmError("Invalid account status.", 400);
+  if (input.statusId !== undefined) requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
+  if (input.ownerUserId !== undefined || input.teamId !== undefined) requireAdministratorCapability(ctx, "RECORDS_ASSIGN");
+  if (input.ownerUserId) await assertAssignableUser(input.ownerUserId);
   return prisma.$transaction(async (tx) => {
     const saved = await tx.account.update({
       where: { id },
       data: {
         ...dataFrom(input, true),
+        ...(status ? { statusId: status.id } : {}),
         ...(input.ownerUserId !== undefined ? { ownerUserId: input.ownerUserId } : {}),
         ...(input.teamId !== undefined ? { teamId: input.teamId } : {}),
         ...(input.customFields !== undefined
@@ -151,6 +174,15 @@ export async function updateAccount(ctx: ScopedContext, id: string, input: z.inf
           : {}),
       } as Prisma.AccountUncheckedUpdateInput,
     });
+    if (status && status.id !== existing.statusId) {
+      await appendActivity(tx, {
+        subjectType: "ACCOUNT",
+        subjectId: id,
+        kind: "status_changed",
+        actorUserId: ctx.userId,
+        payload: { to: status.name },
+      });
+    }
     await appendActivity(tx, { subjectType: "ACCOUNT", subjectId: id, kind: "updated", actorUserId: ctx.userId });
     await appendAudit(tx, {
       actorId: ctx.userId,

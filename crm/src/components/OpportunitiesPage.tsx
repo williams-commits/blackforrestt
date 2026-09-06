@@ -42,6 +42,7 @@ interface BoardResponse {
   pipeline: { id: string; name: string } | null;
   stages: Stage[];
   opportunities: OpportunityRow[];
+  truncated: boolean;
   aggregates: {
     openCount: number;
     openValue: number;
@@ -209,6 +210,12 @@ export function OpportunitiesPage() {
           ) : null}
         </div>
       </div>
+
+      {view === "board" && board?.truncated ? (
+        <p className="text-xs text-(--text-tertiary)">
+          Showing the 500 highest-value cards; column totals and headline metrics include every opportunity. Use the list view to find the rest.
+        </p>
+      ) : null}
 
       {error ? (
         <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
@@ -378,4 +385,3 @@ export function OpportunitiesPage() {
     </div>
   );
 }
-

@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { auth } from "@/auth";
 import { prisma } from "@/server/db";
 import { logger } from "@/server/observability";
-import type { Permission } from "@/server/permissions";
+import { isAdministratorRole, type Permission, type RoleKey } from "@/server/permissions";
 
 /** Authorization/domain error carrying an HTTP-compatible status and,
  *  optionally, structured details (e.g. duplicate matches for 409s). */
@@ -67,4 +67,15 @@ export async function requirePermissions(...required: Permission[]): Promise<Crm
     context = await requirePermission(permission);
   }
   return context as CrmContext;
+}
+
+/**
+ * Some CRM controls must remain administrator-only even if a role's editable
+ * permission set is changed. The capability checkbox can disable it for the
+ * Admin role; it can never grant it to a lower role.
+ */
+export function requireAdministratorCapability(ctx: CrmContext, permission: Permission): void {
+  if (!isAdministratorRole(ctx.roleKey as RoleKey) || !ctx.permissions.includes(permission)) {
+    throw new CrmError(`Forbidden — ${permission} is restricted to administrators`, 403);
+  }
 }

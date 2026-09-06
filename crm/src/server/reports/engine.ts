@@ -142,6 +142,14 @@ function scopeSql(ctx: ScopedContext, object: ReportObject): Prisma.Sql {
   const table = Prisma.raw(OBJECTS[object].table);
   if (ctx.scope === "OWN") return Prisma.sql`${table}."ownerUserId" = ${userId}`;
   if (ctx.teamIds.length === 0) return Prisma.sql`${table}."ownerUserId" = ${userId}`;
+  // Tasks are deliberately personal records: unlike core records they do
+  // not carry a teamId. Team/HIERARCHY visibility resolves through
+  // TeamMembership, exactly as the task list service does.
+  if (object === "TASK") {
+    return Prisma.sql`(${table}."ownerUserId" = ${userId} OR ${table}."ownerUserId" IN (
+      SELECT "userId" FROM "TeamMembership" WHERE "teamId" IN (${Prisma.join(ctx.teamIds)})
+    ))`;
+  }
   return Prisma.sql`(${table}."ownerUserId" = ${userId} OR ${table}."teamId" IN (${Prisma.join(ctx.teamIds)}))`;
 }
 

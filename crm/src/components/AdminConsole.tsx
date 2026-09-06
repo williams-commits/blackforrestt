@@ -841,12 +841,13 @@ export function RolesTab() {
             <div className="text-left text-xs text-(--text-tertiary) sm:text-right"><p className="font-semibold text-(--text-primary)">{role._count.users} {role._count.users === 1 ? "user" : "users"}</p><p>{role.permissions.length} permissions</p>{role.key === "SUPER_ADMIN" ? <p className="mt-1">System role · fixed</p> : null}</div>
           </div>
           <div className="border-b border-(--border-default) bg-(--bg-surface) px-4 py-3 text-xs text-(--text-tertiary)">
-            Toggle individual capabilities for this role. Changes apply immediately.
+            Toggle individual capabilities for this role. Record assignment and classification are reserved for Admin and Super Admin.
           </div>
           <div className="flex flex-wrap gap-1.5 p-4">
             {allPermissions.map((permission) => {
               const enabled = role.permissions.some((entry) => entry.permission === permission);
-              const locked = role.key === "SUPER_ADMIN";
+              const restricted = (permission === "RECORDS_ASSIGN" || permission === "RECORDS_CLASSIFY") && role.key !== "ADMIN" && role.key !== "SUPER_ADMIN";
+              const locked = role.key === "SUPER_ADMIN" || restricted;
               return (
                 <label key={permission} className={`flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] ${enabled ? "border-(--brand)/40 bg-[var(--brand)/5" : "border-(--border-default) text-(--text-tertiary)"} ${locked ? "opacity-50" : "hover:bg-(--bg-hover) hover:text-(--text-default)"}}`}>
                   <input

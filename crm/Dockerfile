@@ -25,6 +25,7 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001 -G nodejs
+RUN mkdir -p /app/uploads/attachments && chown -R nextjs:nodejs /app/uploads
 
 # Standalone output carries its minimal node_modules inside .next/standalone.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

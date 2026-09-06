@@ -8,6 +8,7 @@ import { useConfirmDialog } from "@/components/Dialogs";
 
 const EMPTY: OptionSource = {
   leadStatuses: [],
+  accountStatuses: [],
   potentialStatuses: [],
   contactStatuses: [],
   customerStatuses: [],
@@ -21,6 +22,7 @@ const EMPTY: OptionSource = {
 function freshOptions(): OptionSource {
   return {
     leadStatuses: [],
+    accountStatuses: [],
     potentialStatuses: [],
     contactStatuses: [],
     customerStatuses: [],
@@ -51,6 +53,8 @@ export function useOptionSources(object: ObjectKey): OptionSource {
           const key =
             status.appliesTo === "LEAD"
               ? "leadStatuses"
+              : status.appliesTo === "ACCOUNT"
+                ? "accountStatuses"
               : status.appliesTo === "CONTACT"
                 ? "contactStatuses"
                 : "customerStatuses";

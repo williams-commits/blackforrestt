@@ -114,7 +114,9 @@ export async function board(ctx: ScopedContext, pipelineId: string, includeClose
       take: 500,
     }),
     prisma.opportunity.groupBy({
-      by: ["stageId", "status"],
+      // Group by probability as well so weighted pipeline value remains
+      // exact even when the board itself is capped to 500 rendered cards.
+      by: ["stageId", "status", "probability"],
       where,
       _count: { _all: true },
       _sum: { value: true },
@@ -125,34 +127,45 @@ export async function board(ctx: ScopedContext, pipelineId: string, includeClose
     string,
     { count: number; value: number }
   >();
+  let openCount = 0;
+  let openValue = 0;
+  let weightedValue = 0;
+  let wonCount = 0;
+  let wonValue = 0;
+  let lostCount = 0;
   for (const group of grouped) {
+    const value = Number(group._sum.value ?? 0n);
     const entry = stageAggregates.get(group.stageId) ?? { count: 0, value: 0 };
     entry.count += group._count._all;
-    entry.value += Number(group._sum.value ?? 0n);
+    entry.value += value;
     stageAggregates.set(group.stageId, entry);
-  }
 
-  const openRows = rows.filter((row) => row.status === "OPEN");
-  const openValue = openRows.reduce((sum, row) => sum + Number(row.value ?? 0n), 0);
-  const weighted = openRows.reduce(
-    (sum, row) => sum + (Number(row.value ?? 0n) * row.probability) / 100,
-    0,
-  );
-  const wonRows = rows.filter((row) => row.status === "WON");
-  const lostRows = rows.filter((row) => row.status === "LOST");
-  const closedTotal = wonRows.length + lostRows.length;
+    if (group.status === "OPEN") {
+      openCount += group._count._all;
+      openValue += value;
+      weightedValue += (value * group.probability) / 100;
+    } else if (group.status === "WON") {
+      wonCount += group._count._all;
+      wonValue += value;
+    } else {
+      lostCount += group._count._all;
+    }
+  }
+  const totalCount = openCount + wonCount + lostCount;
+  const closedTotal = wonCount + lostCount;
 
   return {
     pipeline: { id: pipeline.id, name: pipeline.name },
     stages: pipeline.stages,
     opportunities: rows.map(serialize),
+    truncated: rows.length < totalCount,
     aggregates: {
-      openCount: openRows.length,
+      openCount,
       openValue,
-      weightedValue: Math.round(weighted),
-      wonCount: wonRows.length,
-      wonValue: wonRows.reduce((sum, row) => sum + Number(row.value ?? 0n), 0),
-      winRate: closedTotal === 0 ? null : Math.round((wonRows.length / closedTotal) * 100),
+      weightedValue: Math.round(weightedValue),
+      wonCount,
+      wonValue,
+      winRate: closedTotal === 0 ? null : Math.round((wonCount / closedTotal) * 100),
       byStage: Object.fromEntries(
         pipeline.stages.map((stage) => [stage.id, stageAggregates.get(stage.id) ?? { count: 0, value: 0 }]),
       ),

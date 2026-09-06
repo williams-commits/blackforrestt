@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requirePermission } from "@/server/guard";
+import { requireAdministratorCapability, requirePermission } from "@/server/guard";
 import { CreateTag, createTag, deleteTag, listTags } from "@/server/records/tags";
 import { scopedContext } from "@/server/records/leads";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
@@ -26,6 +26,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const ctx = await scopedContext("SETTINGS_MANAGE");
+    requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
     const parsed = await parseJsonBody(request, CreateTag);
     if (!parsed.ok) return parsed.response;
     return NextResponse.json({ data: await createTag(ctx, parsed.data) }, { status: 201 });
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const ctx = await scopedContext("SETTINGS_MANAGE");
+    requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
     const id = new URL(request.url).searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id." }, { status: 400 });
     await deleteTag(ctx, id);

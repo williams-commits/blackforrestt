@@ -58,11 +58,20 @@ export async function getCampaign(ctx: ScopedContext, id: string) {
     include: { owner: { select: { id: true, name: true } } },
   });
   if (!campaign) throw new CrmError("Campaign not found.", 404);
-  const members = await prisma.campaignMember.findMany({
-    where: { campaignId: id },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
+  const [members, memberGroups, responded, revenueMinorUnits] = await Promise.all([
+    prisma.campaignMember.findMany({
+      where: { campaignId: id },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    }),
+    prisma.campaignMember.groupBy({
+      by: ["subjectType", "status"],
+      where: { campaignId: id },
+      _count: { _all: true },
+    }),
+    prisma.campaignMember.count({ where: { campaignId: id, respondedAt: { not: null } } }),
+    campaignRevenue(id),
+  ]);
   // Resolve member labels per subject type.
   const labels = new Map<string, string>();
   const leadIds = members.filter((m) => m.subjectType === "LEAD").map((m) => m.subjectId);
@@ -93,19 +102,19 @@ export async function getCampaign(ctx: ScopedContext, id: string) {
       label: labels.get(member.subjectId) ?? "(record no longer visible)",
     })),
     stats: {
-      total: members.length,
-      responded: members.filter((member) => member.respondedAt !== null).length,
+      total: memberGroups.reduce((sum, group) => sum + group._count._all, 0),
+      responded,
       byStatus: {
-        MEMBER: members.filter((member) => member.status === "MEMBER").length,
-        RESPONDED: members.filter((member) => member.status === "RESPONDED").length,
-        QUALIFIED: members.filter((member) => member.status === "QUALIFIED").length,
-        CONVERTED: members.filter((member) => member.status === "CONVERTED").length,
+        MEMBER: memberGroups.filter((group) => group.status === "MEMBER").reduce((sum, group) => sum + group._count._all, 0),
+        RESPONDED: memberGroups.filter((group) => group.status === "RESPONDED").reduce((sum, group) => sum + group._count._all, 0),
+        QUALIFIED: memberGroups.filter((group) => group.status === "QUALIFIED").reduce((sum, group) => sum + group._count._all, 0),
+        CONVERTED: memberGroups.filter((group) => group.status === "CONVERTED").reduce((sum, group) => sum + group._count._all, 0),
       },
-      revenueMinorUnits: await campaignRevenue(id),
+      revenueMinorUnits,
       byType: {
-        LEAD: members.filter((member) => member.subjectType === "LEAD").length,
-        CONTACT: members.filter((member) => member.subjectType === "CONTACT").length,
-        CUSTOMER: members.filter((member) => member.subjectType === "CUSTOMER").length,
+        LEAD: memberGroups.filter((group) => group.subjectType === "LEAD").reduce((sum, group) => sum + group._count._all, 0),
+        CONTACT: memberGroups.filter((group) => group.subjectType === "CONTACT").reduce((sum, group) => sum + group._count._all, 0),
+        CUSTOMER: memberGroups.filter((group) => group.subjectType === "CUSTOMER").reduce((sum, group) => sum + group._count._all, 0),
       },
     },
   };
@@ -230,41 +239,35 @@ async function campaignRevenue(campaignId: string): Promise<string> {
   const contactIds = members.filter((m) => m.subjectType === "CONTACT").map((m) => m.subjectId);
   const customerIds = members.filter((m) => m.subjectType === "CUSTOMER").map((m) => m.subjectId);
 
-  // Opportunities linked directly to campaign members OR to their converted records.
-  const [fromCampaign, fromLeads, fromContacts, fromCustomers] = await Promise.all([
-    // Leads attributed to this campaign
+  const [campaignLeads, memberLeads] = await Promise.all([
     prisma.lead.findMany({
       where: { campaignId, convertedOpportunityId: { not: null }, deletedAt: null },
       select: { convertedOpportunityId: true },
     }),
-    contactIds.length > 0
-      ? prisma.opportunity.findMany({
-          where: { contactId: { in: contactIds }, status: "WON", deletedAt: null },
-          select: { value: true },
-        })
-      : Promise.resolve([]),
-    customerIds.length > 0
-      ? prisma.opportunity.findMany({
-          where: { customerId: { in: customerIds }, status: "WON", deletedAt: null },
-          select: { value: true },
-        })
-      : Promise.resolve([]),
     leadIds.length > 0
-      ? prisma.opportunity.findMany({
-          where: { id: { in: (await prisma.lead.findMany({ where: { id: { in: leadIds }, deletedAt: null }, select: { convertedOpportunityId: true } })).map((lead) => lead.convertedOpportunityId).filter((id): id is string => Boolean(id)) }, status: "WON", deletedAt: null },
-          select: { value: true },
+      ? prisma.lead.findMany({
+          where: { id: { in: leadIds }, convertedOpportunityId: { not: null }, deletedAt: null },
+          select: { convertedOpportunityId: true },
         })
       : Promise.resolve([]),
   ]);
+  const convertedOpportunityIds = [...campaignLeads, ...memberLeads]
+    .map((lead) => lead.convertedOpportunityId)
+    .filter((id): id is string => Boolean(id));
+  const relations = [
+    ...(convertedOpportunityIds.length ? [{ id: { in: convertedOpportunityIds } }] : []),
+    ...(contactIds.length ? [{ contactId: { in: contactIds } }] : []),
+    ...(customerIds.length ? [{ customerId: { in: customerIds } }] : []),
+  ];
+  if (relations.length === 0) return "0";
 
-  const oppIds = fromCampaign.map((lead) => lead.convertedOpportunityId).filter((id): id is string => Boolean(id));
-  const directOpps = oppIds.length > 0
-    ? await prisma.opportunity.findMany({ where: { id: { in: oppIds }, status: "WON", deletedAt: null }, select: { value: true } })
-    : [];
-
-  const allValues = [...directOpps, ...fromLeads, ...fromCustomers, ...fromContacts ?? []];
-  const total = allValues.reduce((sum, opp) => sum + Number(opp.value ?? 0n), 0);
-  return String(total);
+  // One query returns each opportunity once even when a contact and its
+  // customer are both campaign members. Keep money as bigint throughout.
+  const opportunities = await prisma.opportunity.findMany({
+    where: { deletedAt: null, status: "WON", OR: relations },
+    select: { value: true },
+  });
+  return opportunities.reduce((sum, opportunity) => sum + (opportunity.value ?? 0n), 0n).toString();
 }
 
 export async function removeMember(ctx: ScopedContext, campaignId: string, memberId: string) {

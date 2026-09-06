@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/server/db";
 import { CrmError, type CrmContext } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
+import { ADMIN_ONLY_PERMISSIONS, isAdministratorRole, type Permission } from "@/server/permissions";
 
 /**
  * Staff administration: users, teams, role permission matrices, and system
@@ -367,6 +368,9 @@ export async function updateRolePermissions(
   if (!role) throw new CrmError("Role not found.", 404);
   if (role.key === "SUPER_ADMIN") {
     throw new CrmError("Super Admin permissions are fixed — the last full-access role must keep them.", 400);
+  }
+  if (!isAdministratorRole(role.key as "ADMIN" | "MANAGER" | "TEAM_LEAD" | "REP" | "VIEWER") && input.permissions.some((permission) => ADMIN_ONLY_PERMISSIONS.includes(permission as Permission))) {
+    throw new CrmError("Record assignment and classification permissions are restricted to administrator roles.", 400);
   }
   const before = role.permissions.map((entry) => entry.permission);
   await prisma.$transaction(async (tx) => {

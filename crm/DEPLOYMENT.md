@@ -11,6 +11,7 @@ Caddy (edge, TLS)  ── crm.<domain> ──▶ crm:3000   (CRM standalone imag
                    ── <domains>     ──▶ app:3000   (trading platform)
 crm container ── read-only bridge ──▶ app:3000    (/api/internal/crm/*)
 both          ──▶ postgres (databases: blackforrestt, blckforest_crm)
+crm container ──▶ crm_attachments named volume     (record attachments)
 ```
 
 ## Environment
@@ -54,7 +55,10 @@ Health: `GET https://crm.<domain>/api/health` (used by Caddy's probe).
 
 The CRM database is a second database on the same postgres instance — the
 platform's `deploy/backup.sh` / `restore.sh` cover it by backing up the
-instance; verify the dump includes `blckforest_crm`.
+instance; verify the dump includes `blckforest_crm`. CRM attachments are
+stored in the persistent `crm_attachments` volume and are included as
+`crm-attachments.tar.gz` in new backups. Never recreate that volume outside
+the backup/restore procedure.
 
 ## Security posture
 

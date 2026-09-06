@@ -6,6 +6,7 @@ import type { FieldConfig, ObjectKey } from "@/lib/recordUi";
 
 export interface OptionSource {
   leadStatuses: Array<{ value: string; label: string }>;
+  accountStatuses: Array<{ value: string; label: string }>;
   potentialStatuses: Array<{ value: string; label: string }>;
   contactStatuses: Array<{ value: string; label: string }>;
   customerStatuses: Array<{ value: string; label: string }>;
@@ -64,6 +65,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
   const [dupMatches, setDupMatches] = useState<DuplicateHit[] | null>(null);
   const [lastPayload, setLastPayload] = useState<Record<string, unknown> | null>(null);
   const [customDefs, setCustomDefs] = useState<CustomFieldDefLite[]>([]);
+  const [capabilities, setCapabilities] = useState({ classify: false, assign: false });
   const [customValues, setCustomValues] = useState<Record<string, string | boolean | string[]>>(() => {
     const initialValues = initial?.customFields as Record<string, unknown> | null | undefined;
     const result: Record<string, string | boolean | string[]> = {};
@@ -101,6 +103,19 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [object]);
+  useEffect(() => {
+    void fetch("/api/me")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        const isAdministrator = body?.data?.roleKey === "ADMIN" || body?.data?.roleKey === "SUPER_ADMIN";
+        const permissions = body?.data?.permissions ?? [];
+        setCapabilities({
+          classify: isAdministrator && permissions.includes("RECORDS_CLASSIFY"),
+          assign: isAdministrator && permissions.includes("RECORDS_ASSIGN"),
+        });
+      })
+      .catch(() => setCapabilities({ classify: false, assign: false }));
+  }, []);
   const editing = Boolean(initial?.id);
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial_: Record<string, string> = {};
@@ -111,6 +126,11 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
       initial_[field.name] = toInputValue(field, initial?.[rawKey]);
     }
     return initial_;
+  });
+  const visibleFields = fields.filter((field) => {
+    if (["statusId", "potentialStatusId"].includes(field.name)) return capabilities.classify;
+    if (["assignedUserId", "assignedTeamId", "ownerUserId", "teamId"].includes(field.name)) return capabilities.assign;
+    return true;
   });
 
   const inputClass =
@@ -162,7 +182,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const payload: Record<string, unknown> = {};
-    for (const field of fields) {
+    for (const field of visibleFields) {
       const value = values[field.name];
       if (value === "") {
         // Create: omit optionals entirely; required stays (browser checks).
@@ -259,7 +279,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
         <div className="form-dialog-body max-h-[60vh] space-y-5">
           <div className="form-section grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2"><p className="form-section-title">Record details</p><p className="form-section-help">Keep the essentials easy to find and update.</p></div>
-          {fields.map((field) => {
+          {visibleFields.map((field) => {
             const resolved =
               field.optionsFrom ? options[field.optionsFrom] : (field.options ?? []);
             return (

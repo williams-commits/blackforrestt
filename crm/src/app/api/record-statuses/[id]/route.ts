@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requirePermission } from "@/server/guard";
+import { requireAdministratorCapability, requirePermission } from "@/server/guard";
 import { UpdateStatus, deleteStatus, updateStatus } from "@/server/records/statuses";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
 
@@ -11,6 +11,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 export async function PATCH(request: Request, context: RouteContext) {
   try {
     const ctx = await requirePermission("SETTINGS_MANAGE");
+    requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
     const { id } = await context.params;
     const parsed = await parseJsonBody(request, UpdateStatus);
     if (!parsed.ok) return parsed.response;
@@ -23,6 +24,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
     const ctx = await requirePermission("SETTINGS_MANAGE");
+    requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
     const { id } = await context.params;
     await deleteStatus(ctx, id);
     return NextResponse.json({ data: { id } });

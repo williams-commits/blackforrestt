@@ -26,6 +26,7 @@ export function TagEditor({
   const router = useRouter();
   const [allTags, setAllTags] = useState<Array<{ id: string; name: string }>>([]);
   const [busy, setBusy] = useState(false);
+  const [canClassify, setCanClassify] = useState(false);
   const attachedIds = new Set(attached.map((tag) => tag.tagId));
 
   useEffect(() => {
@@ -34,6 +35,17 @@ export function TagEditor({
       .then((body) => setAllTags(body?.data ?? []))
       .catch(() => setAllTags([]));
   }, []);
+  useEffect(() => {
+    void fetch("/api/me")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        const isAdministrator = body?.data?.roleKey === "ADMIN" || body?.data?.roleKey === "SUPER_ADMIN";
+        setCanClassify(isAdministrator && (body?.data?.permissions ?? []).includes("RECORDS_CLASSIFY"));
+      })
+      .catch(() => setCanClassify(false));
+  }, []);
+
+  const canManage = canEdit && (subjectType === "OPPORTUNITY" || canClassify);
 
   async function link(tagId: string) {
     setBusy(true);
@@ -78,7 +90,7 @@ export function TagEditor({
               style={{ background: tag.color ?? "#78716c" }}
             >
               {tag.name}
-              {canEdit ? (
+              {canManage ? (
                 <button
                   type="button"
                   aria-label={`Remove tag ${tag.name}`}
@@ -93,7 +105,7 @@ export function TagEditor({
           ))
         )}
       </div>
-      {canEdit && available.length > 0 ? (
+      {canManage && available.length > 0 ? (
         <select
           aria-label="Add tag"
           defaultValue=""

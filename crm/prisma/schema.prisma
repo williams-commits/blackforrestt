@@ -272,6 +272,7 @@ model RecordStatus {
   isDefault Boolean            @default(false)
 
   leads       Lead[]
+  accounts    Account[]
   contacts    Contact[]
   customers   Customer[]
 
@@ -352,6 +353,8 @@ model Account {
   owner        User      @relation("AccountOwner", fields: [ownerUserId], references: [id])
   teamId       String?
   team         Team?     @relation("AccountTeam", fields: [teamId], references: [id])
+  statusId     String?
+  status       RecordStatus? @relation(fields: [statusId], references: [id])
   externalId   String?   @unique
   customFields Json?
   deletedAt    DateTime?
@@ -362,6 +365,7 @@ model Account {
   opportunities  Opportunity[]
 
   @@index([name])
+  @@index([statusId])
   @@index([ownerUserId])
 }
 

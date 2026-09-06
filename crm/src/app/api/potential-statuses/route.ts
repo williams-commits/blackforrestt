@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requirePermission } from "@/server/guard";
+import { requireAdministratorCapability, requirePermission } from "@/server/guard";
 import { CreatePotentialStatus, createPotentialStatus, listPotentialStatuses } from "@/server/records/potentialStatuses";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
 
@@ -14,6 +14,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const ctx = await requirePermission("SETTINGS_MANAGE");
+    requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
     const parsed = await parseJsonBody(request, CreatePotentialStatus);
     if (!parsed.ok) return parsed.response;
     return NextResponse.json({ data: await createPotentialStatus(ctx, parsed.data) }, { status: 201 });

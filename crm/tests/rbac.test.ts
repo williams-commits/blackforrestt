@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { prisma, repContext, viewerContext, managerContext, assertThrows, makeLead } from "./helpers";
+import { prisma, repContext, viewerContext, managerContext, adminContext, assertThrows, makeLead } from "./helpers";
 import { ROLE_DEFINITIONS } from "../src/server/permissions";
 import { listLeads, createLead, getLead, updateLead, softDeleteLead, bulkLeads } from "../src/server/records/leads";
 
@@ -37,17 +37,29 @@ test("rep scope is OWN — cannot read or mutate another rep's lead", async () =
   await prisma.lead.delete({ where: { id: rep2Lead } });
 });
 
-test("manager (HIERARCHY) sees team members' leads and can bulk-assign", async () => {
+test("manager sees team members' leads but only an admin can classify or assign them", async () => {
   const rep = await repContext();
   const manager = await managerContext();
+  const admin = await adminContext();
   const lead = await makeLead(rep, "mgr-bulk");
 
   const managerList = await listLeads(manager, { page: 1, pageSize: 100 }, { assignment: "all" });
   assert.equal(managerList.rows.some((row) => row.id === lead), true, "manager sees team lead");
 
   const status = await prisma.recordStatus.findFirstOrThrow({ where: { appliesTo: "LEAD", name: "Contacted" } });
-  const result = await bulkLeads(manager, { action: "status", ids: [lead], statusId: status.id });
+  await assertThrows(
+    () => bulkLeads(manager, { action: "status", ids: [lead], statusId: status.id }),
+    403,
+    "manager bulk status",
+  );
+  const result = await bulkLeads(admin, { action: "status", ids: [lead], statusId: status.id });
   assert.equal(result.affected, 1);
+
+  await assertThrows(
+    () => bulkLeads(manager, { action: "assign", ids: [lead], assignedUserId: rep.userId, assignedTeamId: null }),
+    403,
+    "manager bulk assign",
+  );
 
   await prisma.lead.delete({ where: { id: lead } });
 });

@@ -69,15 +69,19 @@ export function ReportsPage() {
       .catch(() => setLibrary([]));
   }, []);
 
-  const run = useCallback(async () => {
-    if (!selected) return;
+  const run = useCallback(async (definition?: { object: string; dateField: string; groupBy: { key: string; timeUnit?: "day" | "week" | "month" } }) => {
+    if (!definition && !selected) return;
     setRunning(true);
     setError(null);
     try {
       const response = await fetch("/api/reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reportId: selected, dateFrom: from || undefined, dateTo: to || undefined }),
+        body: JSON.stringify(
+          definition
+            ? { definition, dateFrom: from || undefined, dateTo: to || undefined }
+            : { reportId: selected, dateFrom: from || undefined, dateTo: to || undefined },
+        ),
       });
       const body = (await response.json().catch(() => null)) as { data?: RunResponse; error?: string } | null;
       if (!response.ok || !body?.data) {
@@ -90,6 +94,18 @@ export function ReportsPage() {
       setRunning(false);
     }
   }, [selected, from, to]);
+
+  const runCustomReport = useCallback(async () => {
+    // A custom definition has no stable report id, so it cannot safely use
+    // the prebuilt export URL or inherit the previous report's heading.
+    setSelected("");
+    await run({
+      object: bObject,
+      dateField: bDateField,
+      groupBy: { key: bGroup, ...(bTimeUnit ? { timeUnit: bTimeUnit } : {}) },
+    });
+    setBuilderOpen(false);
+  }, [bDateField, bGroup, bObject, bTimeUnit, run]);
 
   useEffect(() => {
     if (selected) void run();
@@ -142,7 +158,7 @@ export function ReportsPage() {
           </div>
           <div className="form-actions"><button type="button" onClick={() => setBuilderOpen(false)} className="btn btn-secondary">Cancel</button><button
             type="button"
-            onClick={() => void run()}
+            onClick={() => void runCustomReport()}
             disabled={running}
             className="btn btn-primary"
             style={{ background: "var(--brand)" }}

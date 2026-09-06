@@ -66,6 +66,12 @@ const CONTACT_STATUSES = [
   { name: "Inactive", category: "LOST" as const, sortOrder: 2, isDefault: false },
 ];
 
+const ACCOUNT_STATUSES = [
+  { name: "Prospect", category: "OPEN" as const, sortOrder: 1, isDefault: true },
+  { name: "Active", category: "OPEN" as const, sortOrder: 2, isDefault: false },
+  { name: "Inactive", category: "LOST" as const, sortOrder: 3, isDefault: false },
+];
+
 const CUSTOMER_STATUSES = [
   { name: "Onboarding", category: "OPEN" as const, sortOrder: 1, isDefault: true },
   { name: "Active", category: "OPEN" as const, sortOrder: 2, isDefault: false },
@@ -92,6 +98,13 @@ async function seedStatuses() {
       where: { name_appliesTo: { name: status.name, appliesTo: "CONTACT" } },
       create: { ...status, appliesTo: "CONTACT" },
       update: { ...status, appliesTo: "CONTACT" },
+    });
+  }
+  for (const status of ACCOUNT_STATUSES) {
+    await prisma.recordStatus.upsert({
+      where: { name_appliesTo: { name: status.name, appliesTo: "ACCOUNT" } },
+      create: { ...status, appliesTo: "ACCOUNT" },
+      update: { ...status, appliesTo: "ACCOUNT" },
     });
   }
   for (const status of CUSTOMER_STATUSES) {

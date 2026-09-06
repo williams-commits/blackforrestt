@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db";
-import { CrmError, requirePermission, type CrmContext } from "@/server/guard";
+import { CrmError, requireAdministratorCapability, requirePermission, type CrmContext } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { normalizeCountry, normalizeEmail, normalizePhone, normalizeText } from "@/server/normalize";
@@ -12,6 +12,7 @@ import { customFieldWhere, orderByFor, searchWhere } from "@/server/listQuery";
 import { notify } from "@/server/notifications";
 import { findMatches } from "@/server/records/duplicates";
 import { sanitizeCustomFields } from "@/server/records/customFields";
+import { assertAssignableUser } from "@/server/records/assignment";
 import { z } from "zod";
 
 /**
@@ -213,6 +214,13 @@ export async function createLead(ctx: ScopedContext, input: z.infer<typeof Creat
     }
   }
 
+  if (input.statusId !== undefined || input.potentialStatusId !== undefined) {
+    requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
+  }
+  if (input.assignedUserId !== undefined || input.assignedTeamId !== undefined) {
+    requireAdministratorCapability(ctx, "RECORDS_ASSIGN");
+    await assertAssignableUser(input.assignedUserId);
+  }
   const defaultStatus = await prisma.recordStatus.findFirst({
     where: { appliesTo: "LEAD", isDefault: true },
   });
@@ -220,11 +228,10 @@ export async function createLead(ctx: ScopedContext, input: z.infer<typeof Creat
   if (!status) throw new CrmError("No lead status configured — seed the database.", 400);
   const potentialStatus = (await assertPotentialStatus(input.potentialStatusId)) ?? await prisma.potentialStatus.findFirst({ where: { isDefault: true } });
 
-  // Assignment control: without LEADS_ASSIGN the actor may only create
-  // leads assigned to themselves (the rep workflow).
+  // Non-administrators always create leads assigned to themselves.
   let assignedUserId = input.assignedUserId ?? null;
   let assignedTeamId = input.assignedTeamId ?? null;
-  if (!ctx.permissions.includes("LEADS_ASSIGN")) {
+  if (input.assignedUserId === undefined && input.assignedTeamId === undefined) {
     assignedUserId = ctx.userId;
     assignedTeamId = ctx.teamIds[0] ?? null;
   } else if (!assignedUserId && !assignedTeamId) {
@@ -293,14 +300,13 @@ export async function updateLead(ctx: ScopedContext, id: string, input: z.infer<
   const status = input.statusId ? await assertStatusFor("LEAD", input.statusId) : undefined;
   if (input.statusId && !status) throw new CrmError("Invalid lead status.", 400);
   const potentialStatus = input.potentialStatusId !== undefined ? await assertPotentialStatus(input.potentialStatusId) : undefined;
+  if (input.statusId !== undefined || input.potentialStatusId !== undefined) {
+    requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
+  }
 
-  // Assignment changes require LEADS_ASSIGN.
-  if (
-    !ctx.permissions.includes("LEADS_ASSIGN") &&
-    (("assignedUserId" in input && input.assignedUserId !== undefined) ||
-      ("assignedTeamId" in input && input.assignedTeamId !== undefined))
-  ) {
-    throw new CrmError("Forbidden — LEADS_ASSIGN permission required to change assignment", 403);
+  if (input.assignedUserId !== undefined || input.assignedTeamId !== undefined) {
+    requireAdministratorCapability(ctx, "RECORDS_ASSIGN");
+    await assertAssignableUser(input.assignedUserId);
   }
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -389,9 +395,9 @@ export async function softDeleteLead(ctx: ScopedContext, id: string) {
 }
 
 export async function bulkLeads(ctx: ScopedContext, input: z.infer<typeof BulkLeadAction>) {
-  if (input.action === "assign" && !ctx.permissions.includes("LEADS_ASSIGN")) {
-    throw new CrmError("Forbidden — LEADS_ASSIGN permission required", 403);
-  }
+  if (input.action === "assign") requireAdministratorCapability(ctx, "RECORDS_ASSIGN");
+  if (input.action === "assign") await assertAssignableUser(input.assignedUserId);
+  if (input.action === "status" || input.action === "tag") requireAdministratorCapability(ctx, "RECORDS_CLASSIFY");
   if (input.action === "delete" && !ctx.permissions.includes("LEADS_DELETE")) {
     throw new CrmError("Forbidden — LEADS_DELETE permission required", 403);
   }

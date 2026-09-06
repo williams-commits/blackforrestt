@@ -32,7 +32,8 @@ export type RoleKey =
 export type Permission =
   | CorePermission
   | "LEADS_IMPORT"
-  | "LEADS_ASSIGN"
+  | "RECORDS_ASSIGN"
+  | "RECORDS_CLASSIFY"
   | "FILES_READ"
   | "FILES_UPLOAD"
   | "FILES_DELETE"
@@ -50,7 +51,8 @@ export type DataScopeName = "OWN" | "TEAM" | "HIERARCHY" | "ORG";
 export const ALL_PERMISSIONS: readonly Permission[] = [
   ...CORE_OBJECTS.flatMap((object) => CORE_ACTIONS.map((action) => `${object}_${action}` as CorePermission)),
   "LEADS_IMPORT",
-  "LEADS_ASSIGN",
+  "RECORDS_ASSIGN",
+  "RECORDS_CLASSIFY",
   "FILES_READ",
   "FILES_UPLOAD",
   "FILES_DELETE",
@@ -71,6 +73,16 @@ const CORE_WRITE: Permission[] = CORE_OBJECTS.flatMap((object) =>
 const CORE_MANAGE: Permission[] = CORE_OBJECTS.flatMap((object) =>
   ["READ", "CREATE", "EDIT", "DELETE", "EXPORT"].map((action) => `${object}_${action}` as CorePermission),
 );
+
+/** Capabilities reserved for the two administrator roles. */
+export const ADMIN_ONLY_PERMISSIONS: readonly Permission[] = [
+  "RECORDS_ASSIGN",
+  "RECORDS_CLASSIFY",
+];
+
+export function isAdministratorRole(key: RoleKey): boolean {
+  return key === "ADMIN" || key === "SUPER_ADMIN";
+}
 
 export interface RoleDefinition {
   key: RoleKey;
@@ -107,7 +119,6 @@ export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
     permissions: [
       ...CORE_MANAGE,
       "LEADS_IMPORT",
-      "LEADS_ASSIGN",
       "FILES_READ",
       "FILES_UPLOAD",
       "FILES_DELETE",
@@ -123,7 +134,6 @@ export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
     scope: "TEAM",
     permissions: [
       ...CORE_MANAGE,
-      "LEADS_ASSIGN",
       "FILES_READ",
       "FILES_UPLOAD",
       "REPORTS_VIEW",

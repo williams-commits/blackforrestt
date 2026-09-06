@@ -22,6 +22,7 @@ interface ListResponse {
 
 const EMPTY_OPTIONS: OptionSource = {
   leadStatuses: [],
+  accountStatuses: [],
   potentialStatuses: [],
   contactStatuses: [],
   customerStatuses: [],
@@ -40,6 +41,7 @@ const EMPTY_OPTIONS: OptionSource = {
 function freshOptions(): OptionSource {
   return {
     leadStatuses: [],
+    accountStatuses: [],
     potentialStatuses: [],
     contactStatuses: [],
     customerStatuses: [],
@@ -131,9 +133,8 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       create: permissions.includes(config.can.create),
       edit,
       delete: permissions.includes(config.can.delete),
-      // Leads gate reassignment on a dedicated ASSIGN permission; the
-      // owner-keyed objects reassign the owner, which is an EDIT.
-      assign: config.can.assign ? permissions.includes(config.can.assign) : edit,
+      assign: (me?.roleKey === "ADMIN" || me?.roleKey === "SUPER_ADMIN") && permissions.includes("RECORDS_ASSIGN"),
+      classify: (me?.roleKey === "ADMIN" || me?.roleKey === "SUPER_ADMIN") && permissions.includes("RECORDS_CLASSIFY"),
       bulk: true,
       export: permissions.includes(`${objectUpper}S_EXPORT`),
     };
@@ -142,6 +143,8 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   const bulkStatusOptions =
     object === "leads"
       ? options.leadStatuses
+      : object === "accounts"
+        ? options.accountStatuses
       : object === "contacts"
         ? options.contactStatuses
         : object === "customers"
@@ -198,6 +201,8 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         const key =
           status.appliesTo === "LEAD"
             ? "leadStatuses"
+            : status.appliesTo === "ACCOUNT"
+              ? "accountStatuses"
             : status.appliesTo === "CONTACT"
               ? "contactStatuses"
               : "customerStatuses";
@@ -532,7 +537,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               ))}
             </select>
           ) : null}
-          {bulkStatusOptions.length > 0 ? (
+          {can.classify && bulkStatusOptions.length > 0 ? (
             <select
               aria-label="Change status"
               defaultValue=""
@@ -568,7 +573,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               Delete
             </button>
           ) : null}
-          {can.assign ? (
+          {can.classify ? (
             <select
               aria-label="Bulk tag"
               defaultValue=""
@@ -831,7 +836,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                         if (column.type === "badge") {
                           // Inline-editable status for leads (most common use case)
                           const isStatusCol = column.key.includes("status");
-                          if (isStatusCol && can.edit && object === "leads") {
+                          if (isStatusCol && can.classify && object === "leads") {
                             const currentStatusId = row.statusId as string;
                             return (
                               <InlineEdit

@@ -178,7 +178,7 @@ services:
   crm:
     image: ${CRM_IMAGE:-blckforest-crm:latest}
     build:
-      context: ./crm
+      context: ../crm
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: .env.production
@@ -190,9 +190,12 @@ services:
       AUTH_TRUST_HOST: "true"
       PLATFORM_BRIDGE_URL: http://app:3000
       PLATFORM_BRIDGE_TOKEN: ${CRM_BRIDGE_TOKEN:-}
+      ATTACHMENT_STORAGE_DIR: /app/uploads/attachments
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - crm_attachments:/app/uploads/attachments
     networks: [backend]
 
 networks:
@@ -207,3 +210,4 @@ volumes:
   miniodata:
   caddy_data:
   caddy_config:
+  crm_attachments:

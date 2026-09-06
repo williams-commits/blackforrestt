@@ -854,7 +854,9 @@ select.input {
 
 /* ── Highlights panel (record pages) ── */
 .highlights {
-  background: linear-gradient(135deg, var(--brand-700), var(--brand-800));
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 46%),
+    linear-gradient(135deg, var(--brand-700), var(--brand-800));
   color: var(--text-inverse);
   border-radius: var(--radius-lg);
   padding: var(--space-4) var(--space-5);
@@ -881,6 +883,134 @@ select.input {
 .highlights-value {
   font-size: var(--text-base);
   font-weight: 500;
+}
+
+/* ── Record workspace tabs ── */
+.record-workspace-tabs {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-subtle);
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+.record-workspace-tabs-header {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+  padding: 0 var(--space-1);
+}
+.record-workspace-tabs-eyebrow {
+  color: var(--text-tertiary);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.record-workspace-tabs-count {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+.record-workspace-tabs-menu,
+.record-workspace-tab-close {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  display: inline-flex;
+  justify-content: center;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.record-workspace-tabs-menu {
+  height: 30px;
+  width: 30px;
+}
+.record-workspace-tabs-menu:hover,
+.record-workspace-tab-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.record-workspace-tabs-dropdown {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dropdown);
+  min-width: 180px;
+  padding: var(--space-1);
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-1));
+  z-index: 35;
+}
+.record-workspace-tabs-dropdown button {
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  display: block;
+  font-size: var(--text-base);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  width: 100%;
+}
+.record-workspace-tabs-dropdown button:hover {
+  background: var(--bg-hover);
+}
+.record-workspace-tabs-list {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: 1px;
+}
+.record-workspace-tab {
+  align-items: stretch;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  display: flex;
+  min-width: 170px;
+  max-width: 240px;
+  overflow: hidden;
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+.record-workspace-tab.active {
+  background: var(--bg-selected);
+  border-color: var(--brand-200);
+  box-shadow: inset 0 -2px 0 var(--brand-500);
+}
+.record-workspace-tab-link {
+  color: var(--text-primary);
+  display: block;
+  min-width: 0;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  text-decoration: none;
+  flex: 1;
+}
+.record-workspace-tab-title,
+.record-workspace-tab-subtitle {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.record-workspace-tab-title {
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+.record-workspace-tab-subtitle {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  margin-top: 1px;
+}
+.record-workspace-tab-close {
+  align-self: center;
+  height: 24px;
+  margin-right: var(--space-1);
+  width: 24px;
 }
 
 /* ── Breadcrumbs ── */

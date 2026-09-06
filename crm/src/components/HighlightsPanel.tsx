@@ -52,7 +52,7 @@ export function HighlightsPanel({
             </div>
           ) : null}
         </div>
-        {children ? <div className="flex shrink-0 items-start gap-2">{children}</div> : null}
+        {children ? <div className="flex max-w-full shrink-0 flex-wrap items-start justify-end gap-2">{children}</div> : null}
       </div>
     </div>
   );

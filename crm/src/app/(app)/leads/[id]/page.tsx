@@ -19,6 +19,7 @@ import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
 import { SendEmailButton } from "@/components/SendEmailButton";
 import { LeadConvertControls } from "@/components/LeadConvertControls";
+import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,15 @@ export default async function LeadDetailPage({ params }: PageProps) {
         <Link href="/leads">Leads</Link><span className="breadcrumb-sep">/</span>
         <span className="breadcrumb-current">{lead.firstName} {lead.lastName}</span>
       </nav>
+
+      <RecordWorkspaceTabs
+        type="leads"
+        typeLabel="Leads"
+        id={id}
+        label={`${lead.firstName} ${lead.lastName}`}
+        subtitle={[lead.status.name, lead.company].filter(Boolean).join(" · ")}
+        href={`/leads/${id}`}
+      />
 
       <HighlightsPanel
         title={`${lead.firstName} ${lead.lastName}`}

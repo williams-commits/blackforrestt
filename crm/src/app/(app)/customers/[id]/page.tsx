@@ -21,6 +21,7 @@ import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
 import { SendEmailButton } from "@/components/SendEmailButton";
 import { PlatformLinkPanel, PlatformUnlinkButton } from "@/components/PlatformLinkPanel";
+import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,15 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         <span className="breadcrumb-current">{customer.firstName} {customer.lastName}</span>
       </nav>
 
+      <RecordWorkspaceTabs
+        type="customers"
+        typeLabel="Customers"
+        id={id}
+        label={`${customer.firstName} ${customer.lastName}`}
+        subtitle={[customer.source, customer.email].filter(Boolean).join(" · ")}
+        href={`/customers/${id}`}
+      />
+
       <HighlightsPanel
         title={`${customer.firstName} ${customer.lastName}`}
         badge={customer.status ? { label: customer.status.name, variant: "brand" as never } : undefined}
@@ -95,7 +105,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="min-w-0">
           <RecordPageTabs
-                        tabs={[
+            tabs={[
               { key: "overview", label: "Overview" },
               { key: "platform", label: "Platform" },
               { key: "activity", label: "Activity", count: notes.length + appointments.length },

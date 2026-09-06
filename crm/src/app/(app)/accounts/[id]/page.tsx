@@ -18,6 +18,7 @@ import { listCustomFields } from "@/server/records/customFields";
 import { RecordActivities } from "@/components/RecordActivities";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
+import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,15 @@ export default async function AccountDetailPage({ params }: PageProps) {
         <span className="breadcrumb-current">{account.name}</span>
       </nav>
 
+      <RecordWorkspaceTabs
+        type="accounts"
+        typeLabel="Accounts"
+        id={id}
+        label={account.name}
+        subtitle={[account.industry, account.country].filter(Boolean).join(" · ")}
+        href={`/accounts/${id}`}
+      />
+
       <HighlightsPanel
         title={account.name}
         fields={[
@@ -96,7 +106,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="min-w-0">
           <RecordPageTabs
-                        tabs={[
+            tabs={[
               { key: "overview", label: "Overview" },
               { key: "contacts", label: "Contacts", count: account.contacts.length },
               { key: "opportunities", label: "Opportunities", count: relatedOpportunities.length },

@@ -83,6 +83,48 @@ function SetupFormModal({ title, onClose, children, size = "md" }: { title: stri
   return <Modal title={title} onClose={onClose} size={size}><div className="p-5">{children}</div></Modal>;
 }
 
+function AdminTableSkeleton({ rows = 6, columns = 5 }: { rows?: number; columns?: number }) {
+  return (
+    <>
+      {[...Array(rows)].map((_, rowIndex) => (
+        <tr key={`admin-skeleton-row-${rowIndex}`}>
+          {[...Array(columns)].map((__, columnIndex) => (
+            <td key={`admin-skeleton-cell-${rowIndex}-${columnIndex}`} className="px-3 py-3">
+              <div
+                className="skeleton"
+                style={{
+                  height: columnIndex === 0 ? 18 : 14,
+                  width: `${columnIndex === 0 ? 80 : 58 - (columnIndex % 3) * 8}%`,
+                }}
+              />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+function AdminCardGridSkeleton({ cards = 4 }: { cards?: number }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {[...Array(cards)].map((_, index) => (
+        <div key={`admin-card-skeleton-${index}`} className="card p-4">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="skeleton" style={{ height: 36, width: 36 }} />
+            <div className="min-w-0 flex-1">
+              <div className="skeleton" style={{ height: 16, width: "70%" }} />
+              <div className="skeleton mt-2" style={{ height: 12, width: "45%" }} />
+            </div>
+          </div>
+          <div className="skeleton" style={{ height: 12, width: "90%" }} />
+          <div className="skeleton mt-2" style={{ height: 12, width: "60%" }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function StatusesTab({ canManage }: { canManage: boolean }) {
   const [rows, setRows] = useState<Array<{ id: string; name: string; appliesTo: string; category: string; sortOrder: number; isDefault: boolean; _count: { leads: number; contacts: number; customers: number } }>>([]);
   const [name, setName] = useState("");
@@ -93,13 +135,19 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
   const [potentialName, setPotentialName] = useState("");
   const [showPotentialForm, setShowPotentialForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
-    const response = await fetch("/api/record-statuses");
-    if (response.ok) setRows((await response.json()).data);
-    const potentialResponse = await fetch("/api/potential-statuses");
-    if (potentialResponse.ok) setPotentialRows((await potentialResponse.json()).data);
+    setLoading(true);
+    try {
+      const response = await fetch("/api/record-statuses");
+      if (response.ok) setRows((await response.json()).data);
+      const potentialResponse = await fetch("/api/potential-statuses");
+      if (potentialResponse.ok) setPotentialRows((await potentialResponse.json()).data);
+    } finally {
+      setLoading(false);
+    }
   }, []);
   useEffect(() => {
     void load();
@@ -202,7 +250,9 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {loading ? (
+              <AdminTableSkeleton rows={5} columns={canManage ? 6 : 5} />
+            ) : rows.map((row) => (
               <tr key={row.id}>
                 <td className="px-3 py-3 font-medium">{row.name}</td>
                 <td className="px-3 py-3"><span className="badge badge-neutral">{row.appliesTo.toLowerCase()}</span></td>
@@ -231,7 +281,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
       <section className="card overflow-hidden">
         <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3"><div><h2 className="text-sm font-semibold">Potential status</h2><p className="mt-0.5 text-xs text-(--text-tertiary)">Segment leads by commercial potential: Junior, Senior, Institutional, or VIP.</p></div>{canManage ? <button type="button" onClick={() => setShowPotentialForm(true)} className="btn btn-secondary"><span aria-hidden>+</span> Add potential status</button> : null}</div>
         {showPotentialForm && canManage ? <SetupFormModal title="Add potential status" onClose={() => setShowPotentialForm(false)}><form className="space-y-4" onSubmit={async (event) => { event.preventDefault(); const response = await fetch("/api/potential-statuses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: potentialName, sortOrder: potentialRows.length + 1 }) }); if (!response.ok) { setError("Could not create potential status."); return; } setPotentialName(""); setShowPotentialForm(false); void load(); }}><div><label htmlFor="potential-name" className="form-label">Name <span className="form-required">*</span></label><input id="potential-name" value={potentialName} onChange={(event) => setPotentialName(event.target.value)} required className={inputClass} placeholder="VIP" /></div><div className="form-actions"><button type="button" onClick={() => setShowPotentialForm(false)} className="btn btn-secondary">Cancel</button><button type="submit" className="btn btn-primary"><span aria-hidden>+</span> Add status</button></div></form></SetupFormModal> : null}
-        <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">{potentialRows.map((status) => {
+        {loading ? <div className="p-3"><AdminCardGridSkeleton cards={4} /></div> : <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">{potentialRows.map((status) => {
           const leadCount = status._count?.leads ?? 0;
           return (
             <div key={status.id} className="flex items-center justify-between rounded-lg border border-(--border-default) px-3 py-3">
@@ -244,7 +294,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
               ) : null}
             </div>
           );
-        })}</div>
+        })}</div>}
       </section>
     </div>
   );
@@ -256,11 +306,17 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
   const [color, setColor] = useState("#1f6f43");
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
-    const response = await fetch("/api/tags");
-    if (response.ok) setRows((await response.json()).data);
+    setLoading(true);
+    try {
+      const response = await fetch("/api/tags");
+      if (response.ok) setRows((await response.json()).data);
+    } finally {
+      setLoading(false);
+    }
   }, []);
   useEffect(() => {
     void load();
@@ -339,7 +395,9 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
           </div>
           {rows.length > 0 ? <span className="badge badge-neutral">{rows.length} labels</span> : null}
         </div>
-        {rows.length === 0 ? (
+        {loading ? (
+          <div className="p-3"><AdminCardGridSkeleton cards={6} /></div>
+        ) : rows.length === 0 ? (
           <div className="empty-state"><p className="empty-state-title">No tags yet</p><p className="empty-state-description">Create your first label to start segmenting records.</p></div>
         ) : (
           <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -375,11 +433,17 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
   const [options, setOptions] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
-    const response = await fetch("/api/custom-fields");
-    if (response.ok) setRows((await response.json()).data);
+    setLoading(true);
+    try {
+      const response = await fetch("/api/custom-fields");
+      if (response.ok) setRows((await response.json()).data);
+    } finally {
+      setLoading(false);
+    }
   }, []);
   useEffect(() => {
     void load();
@@ -497,7 +561,9 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+            {loading ? (
+              <AdminTableSkeleton rows={6} columns={canManage ? 7 : 6} />
+            ) : rows.length === 0 ? (
               <tr><td colSpan={7} className="px-3 py-6 text-center text-(--text-tertiary)">No custom fields defined.</td></tr>
             ) : (
               rows.map((row) => (
@@ -549,16 +615,22 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
   const [uRole, setURole] = useState("REP");
   const [tName, setTName] = useState("");
   const [tLeader, setTLeader] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    setLoading(true);
     setError(null);
-    const usersResponse = await fetch("/api/admin/users");
-    if (usersResponse.ok) setUsers((await usersResponse.json()).data);
-    else setError("Loading users requires USERS_MANAGE.");
-    const teamsResponse = await fetch("/api/admin/teams");
-    if (teamsResponse.ok) setTeams((await teamsResponse.json()).data);
-    const rolesResponse = await fetch("/api/admin/roles");
-    if (rolesResponse.ok) setRoles((await rolesResponse.json()).data);
+    try {
+      const usersResponse = await fetch("/api/admin/users");
+      if (usersResponse.ok) setUsers((await usersResponse.json()).data);
+      else setError("Loading users requires USERS_MANAGE.");
+      const teamsResponse = await fetch("/api/admin/teams");
+      if (teamsResponse.ok) setTeams((await teamsResponse.json()).data);
+      const rolesResponse = await fetch("/api/admin/roles");
+      if (rolesResponse.ok) setRoles((await rolesResponse.json()).data);
+    } finally {
+      setLoading(false);
+    }
   }, []);
   useEffect(() => {
     void load();
@@ -670,7 +742,9 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
+            {loading ? (
+              <AdminTableSkeleton rows={6} columns={canManage ? 6 : 5} />
+            ) : users.map((user) => (
               <tr key={user.id}>
                 <td className="px-3 py-3"><div className="flex items-center gap-3"><span className="avatar avatar-sm" style={{ background: "var(--brand-100)", color: "var(--brand-800)" }}>{user.name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</span><div><p className="font-medium">{user.name}</p><p className="text-xs text-(--text-tertiary)">{user.email}</p></div></div></td>
                 <td className="px-3 py-2">
@@ -753,7 +827,9 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
         </SetupFormModal>
       ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
-        {teams.map((team) => (
+        {loading ? (
+          <AdminCardGridSkeleton cards={4} />
+        ) : teams.map((team) => (
           <div key={team.id} className="card card-interactive p-4 text-sm">
             <div className="mb-2 flex items-center justify-between gap-2"><p className="font-semibold">{team.name}</p><span className="badge badge-neutral">{team.memberships.length} members</span></div>
             <p className="text-xs text-(--text-secondary)">Lead: {team.leader?.name ?? "Unassigned"}{team.parent ? <span className="text-(--text-tertiary)"> · under {team.parent.name}</span> : null}</p>
@@ -800,16 +876,22 @@ export function RolesTab() {
   }>>([]);
   const [allPermissions, setAllPermissions] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const response = await fetch("/api/admin/roles");
-    if (!response.ok) {
-      setError("Loading roles requires admin access.");
-      return;
+    setLoading(true);
+    try {
+      const response = await fetch("/api/admin/roles");
+      if (!response.ok) {
+        setError("Loading roles requires admin access.");
+        return;
+      }
+      const body = (await response.json()) as { data: typeof roles; meta: { allPermissions: string[] } };
+      setRoles(body.data);
+      setAllPermissions(body.meta.allPermissions);
+    } finally {
+      setLoading(false);
     }
-    const body = (await response.json()) as { data: typeof roles; meta: { allPermissions: string[] } };
-    setRoles(body.data);
-    setAllPermissions(body.meta.allPermissions);
   }, []);
   useEffect(() => {
     void load();
@@ -844,7 +926,9 @@ export function RolesTab() {
         metrics={[{ label: "Roles", value: roles.length, tone: "brand" }, { label: "Permissions", value: allPermissions.length, tone: "info" }, { label: "Assigned users", value: roles.reduce((sum, role) => sum + role._count.users, 0), tone: "success" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
-      {roles.map((role) => (
+      {loading ? (
+        <AdminCardGridSkeleton cards={3} />
+      ) : roles.map((role) => (
         <section key={role.id} className="card overflow-hidden">
           <div className="flex flex-col gap-3 border-b border-(--border-default) bg-(--bg-subtle) px-4 py-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -910,10 +994,16 @@ export function SettingsTab() {
   const [value, setValue] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const response = await fetch("/api/admin/settings");
-    if (response.ok) setSettings((await response.json()).data);
+    setLoading(true);
+    try {
+      const response = await fetch("/api/admin/settings");
+      if (response.ok) setSettings((await response.json()).data);
+    } finally {
+      setLoading(false);
+    }
   }, []);
   useEffect(() => {
     void load();
@@ -965,7 +1055,16 @@ export function SettingsTab() {
           <h2 className="text-sm font-semibold">Configured values</h2>
           <p className="mt-0.5 text-xs text-(--text-tertiary)">Changes are applied across the workspace.</p>
         </div>
-        {settings.length === 0 ? (
+        {loading ? (
+          <div className="p-4">
+            {[...Array(4)].map((_, index) => (
+              <div key={`settings-skeleton-${index}`} className="flex items-center justify-between gap-4 border-b border-(--border-default) py-3 last:border-0">
+                <div className="skeleton" style={{ height: 14, width: "35%" }} />
+                <div className="skeleton" style={{ height: 14, width: "22%" }} />
+              </div>
+            ))}
+          </div>
+        ) : settings.length === 0 ? (
           <div className="empty-state"><p className="empty-state-title">No settings yet</p><p className="empty-state-description">Add a workspace default above to make it available to the CRM.</p></div>
         ) : (
           <ul className="divide-y divide-(--border-default) text-sm">
@@ -986,14 +1085,20 @@ export function AuditTab() {
   const [entries, setEntries] = useState<Array<{ id: string; action: string; objectType: string; objectId: string | null; actor: { name: string } | null; createdAt: string; after: unknown }>>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async (targetPage: number) => {
-    const response = await fetch(`/api/audit?page=${targetPage}&pageSize=25`);
-    if (!response.ok) return;
-    const body = (await response.json()) as { data: typeof entries; meta: { total: number } };
-    setEntries(body.data);
-    setTotal(body.meta.total);
-    setPage(targetPage);
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/audit?page=${targetPage}&pageSize=25`);
+      if (!response.ok) return;
+      const body = (await response.json()) as { data: typeof entries; meta: { total: number } };
+      setEntries(body.data);
+      setTotal(body.meta.total);
+      setPage(targetPage);
+    } finally {
+      setLoading(false);
+    }
   }, []);
   useEffect(() => {
     void load(1);
@@ -1022,7 +1127,9 @@ export function AuditTab() {
             </tr>
           </thead>
           <tbody>
-            {entries.map((entry) => (
+            {loading ? (
+              <AdminTableSkeleton rows={8} columns={4} />
+            ) : entries.map((entry) => (
               <tr key={entry.id}>
                 <td className="px-3 py-3 whitespace-nowrap text-xs text-(--text-secondary)">
                   {new Date(entry.createdAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "medium" })}
@@ -1059,12 +1166,14 @@ export function IntegrationsTab() {
     platformBridge: { enabled: boolean; url: string | null };
     email: { enabled: boolean; from: string | null };
   } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void fetch("/api/admin/integrations")
       .then((r) => (r.ok ? r.json() : null))
       .then((body) => setStatus(body?.data ?? null))
-      .catch(() => setStatus(null));
+      .catch(() => setStatus(null))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -1079,7 +1188,7 @@ export function IntegrationsTab() {
           { label: "Mode", value: "Read-only safe", tone: "info" },
         ]}
       />
-      {!status ? <p className="text-sm text-(--text-tertiary)">Checking connection status…</p> : (
+      {loading ? <AdminCardGridSkeleton cards={2} /> : !status ? <p className="text-sm text-(--text-tertiary)">Unable to check connection status.</p> : (
         <div className="grid gap-4 lg:grid-cols-2">
           <IntegrationCard
             title="Trading-platform bridge"
@@ -1126,11 +1235,17 @@ export function ObjectsTab() {
   const [description, setDescription] = useState("");
   const [fieldsJson, setFieldsJson] = useState('[{"key":"title","label":"Title","type":"TEXT","required":true,"sortOrder":1}]');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
-    const response = await fetch("/api/admin/objects");
-    if (response.ok) setObjects((await response.json()).data);
+    setLoading(true);
+    try {
+      const response = await fetch("/api/admin/objects");
+      if (response.ok) setObjects((await response.json()).data);
+    } finally {
+      setLoading(false);
+    }
   }, []);
   useEffect(() => {
     void load();
@@ -1230,7 +1345,9 @@ export function ObjectsTab() {
       ) : null}
 
       <div className="grid gap-3 lg:grid-cols-2">
-        {objects.map((object) => (
+        {loading ? (
+          <AdminCardGridSkeleton cards={4} />
+        ) : objects.map((object) => (
           <div key={object.id} className="card card-interactive p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -1276,7 +1393,7 @@ export function ObjectsTab() {
             </div>
           </div>
         ))}
-        {objects.length === 0 ? (
+        {!loading && objects.length === 0 ? (
           <p className="card empty-state">
             No custom objects yet — create one above (e.g. Properties, Vendors).
           </p>

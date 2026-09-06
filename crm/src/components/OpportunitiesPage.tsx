@@ -63,6 +63,64 @@ function money(minor: number): string {
   return (minor / 100).toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 }
 
+function OpportunityBoardSkeleton() {
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-2">
+      {[...Array(4)].map((_, columnIndex) => (
+        <div key={`opp-board-skeleton-${columnIndex}`} className="w-64 shrink-0 rounded-lg border border-(--border-default) bg-(--bg-subtle) p-2">
+          <div className="mb-3 flex items-center justify-between gap-3 px-1">
+            <div className="skeleton" style={{ height: 16, width: "46%" }} />
+            <div className="skeleton" style={{ height: 12, width: "30%" }} />
+          </div>
+          <div className="space-y-2">
+            {[...Array(columnIndex === 0 ? 3 : 2)].map((__, cardIndex) => (
+              <div key={`opp-card-skeleton-${columnIndex}-${cardIndex}`} className="rounded-md border border-(--border-default) bg-(--bg-surface) p-2 shadow-sm">
+                <div className="skeleton" style={{ height: 15, width: `${78 - cardIndex * 8}%` }} />
+                <div className="skeleton mt-2" style={{ height: 12, width: "52%" }} />
+                <div className="skeleton mt-2" style={{ height: 11, width: "70%" }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OpportunityListSkeleton() {
+  return (
+    <div className="card overflow-hidden">
+      <table className="table">
+        <thead>
+          <tr className="border-b border-(--border-default) bg-(--bg-hover) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
+            <th className="px-3 py-2 font-medium">Opportunity</th>
+            <th className="px-3 py-2 font-medium">Account</th>
+            <th className="px-3 py-2 font-medium">Stage</th>
+            <th className="px-3 py-2 font-medium">Value</th>
+            <th className="px-3 py-2 font-medium">Prob.</th>
+            <th className="px-3 py-2 font-medium">Close date</th>
+            <th className="px-3 py-2 font-medium">Owner</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[...Array(7)].map((_, rowIndex) => (
+            <tr key={`opp-list-skeleton-${rowIndex}`}>
+              {[...Array(7)].map((__, columnIndex) => (
+                <td key={`opp-list-skeleton-${rowIndex}-${columnIndex}`} className="px-3 py-3">
+                  <div
+                    className="skeleton"
+                    style={{ height: columnIndex === 0 ? 16 : 13, width: `${columnIndex === 0 ? 78 : 55 - (columnIndex % 3) * 8}%` }}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function OpportunitiesPage() {
   const [me, setMe] = useState<MeContext | null>(null);
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
@@ -230,7 +288,7 @@ export function OpportunitiesPage() {
       ) : null}
 
       {loading ? (
-        <p className="p-8 text-center text-sm text-(--text-tertiary)">Loading…</p>
+        view === "board" ? <OpportunityBoardSkeleton /> : <OpportunityListSkeleton />
       ) : view === "board" && stages.length > 0 ? (
         <div className="flex gap-3 overflow-x-auto pb-2">
           {stages.map((stage) => {

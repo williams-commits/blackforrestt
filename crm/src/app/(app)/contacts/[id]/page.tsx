@@ -133,7 +133,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
                 <ul className="space-y-2">
                   {relatedOpportunities.map((opportunity) => (
                     <li key={opportunity.id} className="flex items-center justify-between text-[13px]">
-                      <Link href={`/opportunities/${opportunity.id}`} className="font-medium text-(--brand-700] hover:underline">
+                      <Link href={`/opportunities/${opportunity.id}`} className="font-medium text-(--text-brand) hover:underline">
                         {opportunity.name}
                       </Link>
                       <span className="text-[11px] text-(--text-tertiary)">

@@ -123,7 +123,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                   label="Linked Contact"
                   value={
                     customer.contact ? (
-                      <Link href={`/contacts/${customer.contact.id}`} className="font-medium hover:underline" style={{ color: "var(--brand-700)" }}>
+                      <Link href={`/contacts/${customer.contact.id}`} className="font-medium hover:underline" style={{ color: "var(--text-brand)" }}>
                         {customer.contact.firstName} {customer.contact.lastName}
                       </Link>
                     ) : null

@@ -90,9 +90,9 @@ export function ViewTabs({
               onClick={() => onViewChange(view.key)}
               className="px-3 py-2 text-[13px] font-medium transition-colors"
               style={{
-                color: active ? "var(--brand-700)" : "var(--text-secondary)",
+                color: active ? "var(--text-brand)" : "var(--text-secondary)",
                 borderBottom: active ? "2px solid var(--brand-600)" : "2px solid transparent",
-                background: active ? "var(--brand-50)" : "transparent",
+                background: active ? "var(--bg-selected)" : "transparent",
                 borderTopLeftRadius: "var(--radius-sm)",
                 borderTopRightRadius: "var(--radius-sm)",
               }}
@@ -110,7 +110,7 @@ export function ViewTabs({
               onClick={() => setShowSaved((p) => !p)}
               className="flex items-center gap-1 px-3 py-2 text-[13px] font-medium transition-colors"
               style={{
-                color: savedViews.some((v) => v.key === activeView) ? "var(--brand-700)" : "var(--text-secondary)",
+                color: savedViews.some((v) => v.key === activeView) ? "var(--text-brand)" : "var(--text-secondary)",
               }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -137,7 +137,7 @@ export function ViewTabs({
                     }}
                     className="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] hover:bg-(--bg-hover)"
                     style={{
-                      color: view.key === activeView ? "var(--brand-700)" : "var(--text-primary)",
+                      color: view.key === activeView ? "var(--text-brand)" : "var(--text-primary)",
                     }}
                   >
                     <span className="truncate">{view.label}</span>

@@ -517,7 +517,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       </div>
 
       {selected.size > 0 && can.bulk ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border p-3" style={{ borderColor: "var(--brand-200)", background: "var(--brand-50)", fontSize: "var(--text-sm)" }}>
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border p-3" style={{ borderColor: "var(--brand-200)", background: "var(--bg-selected)", fontSize: "var(--text-sm)" }}>
           <span className="font-medium">{selected.size} selected</span>
           {can.assign ? (
             <select

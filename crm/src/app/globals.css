@@ -118,6 +118,10 @@
 
 /* ── Dark mode tokens ── */
 [data-theme="dark"] {
+  --brand-50: rgba(34, 197, 94, 0.08);
+  --brand-100: rgba(34, 197, 94, 0.14);
+  --brand-200: rgba(74, 222, 128, 0.32);
+  --brand-300: rgba(134, 239, 172, 0.48);
   --bg-app: #111827;
   --bg-surface: #1f2937;
   --bg-elevated: #374151;
@@ -129,7 +133,20 @@
   --text-primary: #f9fafb;
   --text-secondary: #9ca3af;
   --text-tertiary: #6b7280;
-  --text-inverse: #111827;
+  --text-inverse: #ffffff;
+  --text-brand: #86efac;
+  --success: #34d399;
+  --success-bg: rgba(16, 185, 129, 0.14);
+  --success-border: rgba(52, 211, 153, 0.35);
+  --warning: #fbbf24;
+  --warning-bg: rgba(245, 158, 11, 0.16);
+  --warning-border: rgba(251, 191, 36, 0.36);
+  --error: #f87171;
+  --error-bg: rgba(239, 68, 68, 0.15);
+  --error-border: rgba(248, 113, 113, 0.35);
+  --info: #60a5fa;
+  --info-bg: rgba(59, 130, 246, 0.15);
+  --info-border: rgba(96, 165, 250, 0.36);
   --gray-0: #1f2937;
   --gray-25: #1a2332;
   --gray-50: #111827;
@@ -151,6 +168,11 @@ html {
   font-size: var(--text-md);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {
@@ -159,6 +181,19 @@ body {
   line-height: var(--leading-normal);
   color: var(--text-primary);
   background: var(--bg-app);
+}
+
+input:not([type="color"]),
+select,
+textarea {
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
+}
+
+input,
+select,
+textarea {
+  accent-color: var(--brand);
 }
 
 ::selection {
@@ -201,6 +236,11 @@ body {
   border-color: var(--brand-300);
   box-shadow: 0 8px 24px rgba(20, 83, 45, 0.09);
   transform: translateY(-1px);
+}
+
+[data-theme="dark"] .card-interactive:hover {
+  border-color: rgba(74, 222, 128, 0.45);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
 .card-header {
@@ -359,6 +399,10 @@ select.input {
   padding-right: var(--space-6);
 }
 
+[data-theme="dark"] select.input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+}
+
 /* ── Badges & pills ── */
 .badge {
   display: inline-flex;
@@ -377,7 +421,7 @@ select.input {
 .badge-error   { background: var(--error-bg); color: var(--error); border: 1px solid var(--error-border); }
 .badge-info    { background: var(--info-bg); color: var(--info); border: 1px solid var(--info-border); }
 .badge-neutral { background: var(--gray-100); color: var(--text-secondary); border: 1px solid var(--border-default); }
-.badge-brand   { background: var(--brand-50); color: var(--brand-700); border: 1px solid var(--brand-200); }
+.badge-brand   { background: var(--bg-selected); color: var(--text-brand); border: 1px solid var(--brand-200); }
 
 /* ── Data table ── */
 .table {
@@ -678,9 +722,9 @@ select.input {
   border-bottom-color: var(--success);
 }
 .path-step.current {
-  color: var(--brand-700);
+  color: var(--text-brand);
   border-bottom-color: var(--brand-600);
-  background: var(--brand-50);
+  background: var(--bg-selected);
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
 }
 .path-step.future {
@@ -854,7 +898,7 @@ select.input {
   transition: color var(--transition-fast);
 }
 .breadcrumb a:hover {
-  color: var(--brand-700);
+  color: var(--text-brand);
 }
 .breadcrumb-sep {
   color: var(--text-tertiary);

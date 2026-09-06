@@ -125,7 +125,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
                   label="Website"
                   value={
                     account.website ? (
-                      <a href={account.website} target="_blank" rel="noreferrer" className="font-medium hover:underline" style={{ color: "var(--brand-700)" }}>
+                      <a href={account.website} target="_blank" rel="noreferrer" className="font-medium hover:underline" style={{ color: "var(--text-brand)" }}>
                         {account.website}
                       </a>
                     ) : null
@@ -146,7 +146,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
               <h2 className="card-title">Contacts</h2>
               <div className="flex items-center gap-2">
                 <span className="badge badge-neutral">{account.contacts.length}</span>
-                <Link href="/contacts" className="text-[12px] font-medium hover:underline" style={{ color: "var(--brand-700)" }}>
+                <Link href="/contacts" className="text-[12px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>
                   View All →
                 </Link>
               </div>
@@ -160,7 +160,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
                 <ul className="space-y-2">
                   {account.contacts.map((contact) => (
                     <li key={contact.id} className="flex items-center justify-between text-[13px]">
-                      <Link href={`/contacts/${contact.id}`} className="font-medium hover:underline" style={{ color: "var(--brand-700)" }}>
+                      <Link href={`/contacts/${contact.id}`} className="font-medium hover:underline" style={{ color: "var(--text-brand)" }}>
                         {contact.firstName} {contact.lastName}
                       </Link>
                       <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
@@ -179,7 +179,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
               <h2 className="card-title">Opportunities</h2>
               <div className="flex items-center gap-2">
                 <span className="badge badge-neutral">{relatedOpportunities.length}</span>
-                <Link href="/opportunities" className="text-[12px] font-medium hover:underline" style={{ color: "var(--brand-700)" }}>
+                <Link href="/opportunities" className="text-[12px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>
                   View All →
                 </Link>
               </div>
@@ -191,7 +191,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
                 <ul className="space-y-2">
                   {relatedOpportunities.map((opportunity) => (
                     <li key={opportunity.id} className="flex items-center justify-between text-[13px]">
-                      <Link href={`/opportunities/${opportunity.id}`} className="font-medium hover:underline" style={{ color: "var(--brand-700)" }}>
+                      <Link href={`/opportunities/${opportunity.id}`} className="font-medium hover:underline" style={{ color: "var(--text-brand)" }}>
                         {opportunity.name}
                       </Link>
                       <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>

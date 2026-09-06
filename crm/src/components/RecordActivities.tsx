@@ -273,7 +273,7 @@ export function RecordActivities({
             {notes.map((note) => (
               <li key={note.id} className="rounded-md border border-(--border-default) bg-(--bg-hover) p-3 text-sm">
                 <p className="whitespace-pre-wrap">{note.body}</p>
-                <p className="mt-1 text-xs text-(--text-tertiary)]">
+                <p className="mt-1 text-xs text-(--text-tertiary)">
                   {note.author.name} ·{" "}
                   {new Date(note.createdAt).toLocaleString(undefined, {
                     dateStyle: "medium",

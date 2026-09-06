@@ -107,7 +107,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                   label="Account"
                   value={
                     opportunity.account ? (
-                      <Link href={`/accounts/${opportunity.account.id}`} className="font-medium hover:underline" style={{ color: "var(--brand-700)" }}>
+                      <Link href={`/accounts/${opportunity.account.id}`} className="font-medium hover:underline" style={{ color: "var(--text-brand)" }}>
                         {opportunity.account.name}
                       </Link>
                     ) : null
@@ -117,7 +117,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                   label="Contact"
                   value={
                     opportunity.contact ? (
-                      <Link href={`/contacts/${opportunity.contact.id}`} className="font-medium hover:underline" style={{ color: "var(--brand-700)" }}>
+                      <Link href={`/contacts/${opportunity.contact.id}`} className="font-medium hover:underline" style={{ color: "var(--text-brand)" }}>
                         {opportunity.contact.firstName} {opportunity.contact.lastName}
                       </Link>
                     ) : null

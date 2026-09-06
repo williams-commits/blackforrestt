@@ -242,7 +242,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
         ) : null}
 
         {dupMatches ? (
-          <div className="rounded-md border border-amber-300 bg-(--warning-bg) p-3 text-sm">
+          <div className="rounded-md border border-(--warning-border) bg-(--warning-bg) p-3 text-sm text-(--warning)">
             <p className="font-medium text-(--warning)">
               Possible duplicates found ({dupMatches.length})
             </p>

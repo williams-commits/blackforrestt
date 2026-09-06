@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
  * persisted in localStorage.
  */
 export function ThemeToggle() {
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState<boolean | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("crm-theme");
@@ -17,11 +17,13 @@ export function ThemeToggle() {
   }, []);
 
   function toggle() {
-    const next = !dark;
+    const next = !(dark ?? document.documentElement.getAttribute("data-theme") === "dark");
     setDark(next);
     document.documentElement.setAttribute("data-theme", next ? "dark" : "");
     localStorage.setItem("crm-theme", next ? "dark" : "light");
   }
+
+  const isDark = dark ?? false;
 
   return (
     <button
@@ -33,10 +35,10 @@ export function ThemeToggle() {
         color: "var(--text-tertiary)",
         background: "var(--bg-surface)",
       }}
-      title={dark ? "Switch to light mode" : "Switch to dark mode"}
-      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
-      {dark ? (
+      {isDark ? (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="5" />
           <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />

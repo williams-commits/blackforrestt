@@ -122,7 +122,7 @@ export function PlatformLinkPanel({
         <p className="text-sm text-(--warning)"> {lookup.reason}</p>
       ) : null}
       {lookup.status === "found" ? (
-        <div className="space-y-2 rounded-lg border border-(--brand-200) bg-(--brand-50) p-3 text-sm">
+        <div className="space-y-2 rounded-lg border border-(--brand-200) bg-(--bg-selected) p-3 text-sm">
           <p className="font-medium">Platform user found</p>
           <ul className="space-y-0.5 text-(--text-secondary)">
             <li>Name: {lookup.user.name ?? "—"}</li>

@@ -54,8 +54,8 @@ export function AdminNav() {
             href={item.href}
             className="flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors"
             style={{
-              color: active ? "var(--brand-700)" : "var(--text-secondary)",
-              background: active ? "var(--brand-50)" : "transparent",
+              color: active ? "var(--text-brand)" : "var(--text-secondary)",
+              background: active ? "var(--bg-selected)" : "transparent",
               boxShadow: active ? "inset 3px 0 0 var(--brand-600)" : undefined,
             }}
           >

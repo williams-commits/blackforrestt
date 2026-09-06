@@ -294,7 +294,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
         metrics={[{ label: "Step", value: `${step}/4`, tone: "brand" }, { label: "Recent jobs", value: jobs.length, tone: "info" }, { label: "Destination", value: OBJECT_TYPES.find((entry) => entry.value === objectType)?.label ?? objectType, tone: "success" }]}
       />
       <div className="grid grid-cols-4 gap-1 rounded-lg border border-(--border-default) bg-(--bg-surface) p-1">
-        {["Upload", "Map", "Validate", "Run"].map((label, index) => <div key={label} className={`rounded-md px-2 py-2 text-center text-xs font-semibold ${step === index + 1 ? "bg-(--brand-50) text-(--brand-700)" : step > index + 1 ? "text-(--success)" : "text-(--text-tertiary)"}`}><span className="mr-1">{step > index + 1 ? "✓" : index + 1}</span>{label}</div>)}
+        {["Upload", "Map", "Validate", "Run"].map((label, index) => <div key={label} className={`rounded-md px-2 py-2 text-center text-xs font-semibold ${step === index + 1 ? "bg-(--bg-selected) text-(--text-brand)" : step > index + 1 ? "text-(--success)" : "text-(--text-tertiary)"}`}><span className="mr-1">{step > index + 1 ? "✓" : index + 1}</span>{label}</div>)}
       </div>
 
       {error ? (

@@ -110,8 +110,8 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
                 onClick={onNavigate}
                 className="flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors"
                 style={{
-                  color: active ? "var(--brand-700)" : "var(--text-secondary)",
-                  background: active ? "var(--brand-50)" : "transparent",
+                  color: active ? "var(--text-brand)" : "var(--text-secondary)",
+                  background: active ? "var(--bg-selected)" : "transparent",
                 }}
                 onMouseEnter={(event) => {
                   if (!active) event.currentTarget.style.background = "var(--bg-hover)";

@@ -86,7 +86,7 @@ export function HomeWidgets() {
           <Link
             href="/tasks?due=overdue&mine=1"
             className="card-interactive rounded-lg border border-(--border-default) bg-(--bg-subtle) p-4"
-            style={{ borderColor: (overdueCount ?? 0) > 0 ? "#fca5a5" : undefined }}
+            style={{ borderColor: (overdueCount ?? 0) > 0 ? "var(--error-border)" : undefined }}
           >
             <p className="text-2xl font-semibold">{overdueCount ?? "–"}</p>
             <p className="text-sm text-(--text-secondary)">overdue</p>

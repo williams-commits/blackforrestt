@@ -92,14 +92,14 @@ export function SendEmailModal({
         </div>
 
         {!emailEnabled ? (
-          <div className="rounded-md border border-amber-300 bg-(--warning-bg) p-3 text-sm text-(--warning)">
+          <div className="rounded-md border border-(--warning-border) bg-(--warning-bg) p-3 text-sm text-(--warning)">
             Email sending is not configured. Set <code className="rounded bg-amber-100 px-1">SMTP_URL</code> in the
             environment to enable this feature.
           </div>
         ) : null}
 
         {success ? (
-          <div className="rounded-md border border-green-300 bg-(--success-bg) p-3 text-sm text-(--success)">
+          <div className="rounded-md border border-(--success-border) bg-(--success-bg) p-3 text-sm text-(--success)">
             ✓ Email sent successfully{createFollowUp ? ` — follow-up task created for ${followUpInDays} day(s)` : ""}.
           </div>
         ) : null}

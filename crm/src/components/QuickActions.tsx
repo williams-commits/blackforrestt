@@ -78,7 +78,7 @@ export function QuickActions() {
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-(--bg-hover)"
             >
               {action.label}
-              <kbd className="rounded border border-(--border-default) px-1 text-[10px] text-(--text-tertiary)]">{action.hint}</kbd>
+              <kbd className="rounded border border-(--border-default) bg-(--bg-subtle) px-1 text-[10px] text-(--text-tertiary)">{action.hint}</kbd>
             </button>
           ))}
         </div>

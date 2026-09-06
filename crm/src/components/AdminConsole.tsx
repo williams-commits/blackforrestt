@@ -688,7 +688,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                     <button
                       type="button"
                       onClick={() => void patchUser(user.id, { status: user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" })}
-                      className="mr-3 text-xs text-(--brand-700) hover:underline"
+                      className="mr-3 text-xs text-(--text-brand) hover:underline"
                     >
                       {user.status === "ACTIVE" ? "suspend" : "activate"}
                     </button>

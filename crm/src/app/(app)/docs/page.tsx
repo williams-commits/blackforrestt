@@ -472,16 +472,16 @@ export default async function DocsPage() {
         <div className="card-header"><h2 className="card-title">Contents</h2></div>
         <div className="card-body">
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            <a href="#my-profile" className="text-[14px] font-medium hover:underline" style={{ color: "var(--brand-700)" }}>My Profile & Role</a>
-            <a href="#user-roles" className="text-[14px] font-medium hover:underline" style={{ color: "var(--brand-700)" }}>User Roles Guide</a>
-            <a href="#teams" className="text-[14px] font-medium hover:underline" style={{ color: "var(--brand-700)" }}>Teams Directory</a>
+            <a href="#my-profile" className="text-[14px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>My Profile & Role</a>
+            <a href="#user-roles" className="text-[14px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>User Roles Guide</a>
+            <a href="#teams" className="text-[14px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>Teams Directory</a>
             {FEATURE_DOCS.map((doc) => (
-              <a key={doc.id} href={`#${doc.id}`} className="text-[14px] font-medium hover:underline" style={{ color: "var(--brand-700)" }}>
+              <a key={doc.id} href={`#${doc.id}`} className="text-[14px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>
                 {doc.title}
               </a>
             ))}
-            <a href="#shortcuts" className="text-[14px] font-medium hover:underline" style={{ color: "var(--brand-700)" }}>Keyboard Shortcuts</a>
-            <a href="#faq" className="text-[14px] font-medium hover:underline" style={{ color: "var(--brand-700)" }}>FAQ</a>
+            <a href="#shortcuts" className="text-[14px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>Keyboard Shortcuts</a>
+            <a href="#faq" className="text-[14px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>FAQ</a>
           </div>
         </div>
       </div>
@@ -567,7 +567,7 @@ export default async function DocsPage() {
             </div>
 
             <details className="mt-3">
-              <summary className="cursor-pointer text-[13px] font-medium" style={{ color: "var(--brand-700)" }}>
+              <summary className="cursor-pointer text-[13px] font-medium" style={{ color: "var(--text-brand)" }}>
                 View {role.name} workflow guide
               </summary>
               <div className="mt-2 space-y-3">
@@ -583,7 +583,7 @@ export default async function DocsPage() {
             </details>
 
             <details className="mt-2">
-              <summary className="cursor-pointer text-[13px] font-medium" style={{ color: "var(--brand-700)" }}>
+              <summary className="cursor-pointer text-[13px] font-medium" style={{ color: "var(--text-brand)" }}>
                 View all {role.name} permissions
               </summary>
               <div className="mt-2">

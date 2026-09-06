@@ -39,9 +39,9 @@ export function RecordTabs({
             onClick={() => onTabChange(tab.key)}
             className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium transition-colors"
             style={{
-              color: active ? "var(--brand-700)" : "var(--text-secondary)",
+              color: active ? "var(--text-brand)" : "var(--text-secondary)",
               borderBottom: active ? "2px solid var(--brand-600)" : "2px solid transparent",
-              background: active ? "var(--brand-50)" : "transparent",
+              background: active ? "var(--bg-selected)" : "transparent",
               borderTopLeftRadius: "var(--radius-sm)",
               borderTopRightRadius: "var(--radius-sm)",
             }}
@@ -51,8 +51,8 @@ export function RecordTabs({
               <span
                 className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
                 style={{
-                  background: active ? "var(--brand-100)" : "var(--gray-100)",
-                  color: active ? "var(--brand-700)" : "var(--text-secondary)",
+                  background: active ? "var(--bg-selected)" : "var(--gray-100)",
+                  color: active ? "var(--text-brand)" : "var(--text-secondary)",
                 }}
               >
                 {tab.count}

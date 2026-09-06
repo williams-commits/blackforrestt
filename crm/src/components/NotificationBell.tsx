@@ -126,7 +126,7 @@ export function NotificationBell() {
               {notifications.slice(0, 12).map((notification) => {
                 const href = notificationHref(notification);
                 const content = <><p className="text-xs font-semibold">{notificationTitle(notification)}</p><p className="mt-1 text-[10px] text-(--text-tertiary)">{new Date(notification.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p></>;
-                return <li key={notification.id} className={`border-b border-(--border-default) px-4 py-3 last:border-0 ${notification.readAt ? "text-(--text-secondary)" : "bg-(--brand-50) text-(--text-primary)"}`}><Link href={href} onClick={() => setOpen(false)} className="block hover:opacity-75">{content}</Link></li>;
+                return <li key={notification.id} className={`border-b border-(--border-default) px-4 py-3 last:border-0 ${notification.readAt ? "text-(--text-secondary)" : "bg-(--bg-selected) text-(--text-primary)"}`}><Link href={href} onClick={() => setOpen(false)} className="block hover:opacity-75">{content}</Link></li>;
               })}
             </ul>
           )}

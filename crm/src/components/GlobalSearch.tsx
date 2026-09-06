@@ -148,7 +148,7 @@ export function GlobalSearch() {
             href={`/search?q=${encodeURIComponent(query.trim())}`}
             onClick={() => setOpen(false)}
             className="block border-t px-3 py-2 text-center text-[12px] font-medium transition-colors hover:bg-(--bg-hover)"
-            style={{ borderColor: "var(--border-default)", color: "var(--brand-700)" }}
+            style={{ borderColor: "var(--border-default)", color: "var(--text-brand)" }}
           >
             See all results →
           </a>

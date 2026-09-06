@@ -37,7 +37,7 @@ export function ImageAttachment({
       <a
         href={`/api/attachments/${attachmentId}`}
         className="font-medium hover:underline"
-        style={{ color: "var(--brand-700)" }}
+        style={{ color: "var(--text-brand)" }}
       >
         {filename}
       </a>
@@ -50,7 +50,7 @@ export function ImageAttachment({
         type="button"
         onClick={() => setOpen(true)}
         className="flex items-center gap-1.5 font-medium hover:underline"
-        style={{ color: "var(--brand-700)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+        style={{ color: "var(--text-brand)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
       >
         <Icon name="file" size={14} />
         {filename}

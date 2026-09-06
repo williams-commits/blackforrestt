@@ -118,7 +118,7 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
             </p>
 
             {preview.matches.contacts.length + preview.matches.customers.length > 0 ? (
-              <div className="rounded-md border border-amber-300 bg-(--warning-bg) p-3 text-sm">
+              <div className="rounded-md border border-(--warning-border) bg-(--warning-bg) p-3 text-sm text-(--warning)">
                 <p className="font-medium text-(--warning)">Possible existing records</p>
                 <ul className="mt-1 space-y-1 text-amber-900">
                   {preview.matches.contacts.map((match) => (

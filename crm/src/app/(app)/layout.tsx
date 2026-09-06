@@ -7,6 +7,7 @@ import { QuickActions } from "@/components/QuickActions";
 import { ToastProvider } from "@/components/Toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
+import { PageLoadingNotice } from "@/components/PageLoadingNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +101,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         >
           {children}
         </main>
+        <PageLoadingNotice />
       </div>
     </div>
     </ToastProvider>

@@ -4,7 +4,7 @@ import { prisma } from "@/server/db";
 import { CrmError } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
-import { notify } from "@/server/notifications";
+import { isNotificationSubjectType, notify, subjectNotificationContext } from "@/server/notifications";
 import { resolveSubject } from "@/server/records/subjects";
 import type { ScopedContext } from "@/server/records/leads";
 
@@ -145,6 +145,9 @@ export async function createTask(ctx: ScopedContext, input: z.infer<typeof Creat
       recipientUserId: ownerUserId,
       type: "TASK_CREATED",
       payload: { taskId: task.id, title: task.title, byName: ctx.name, subject: subject?.label },
+      context: subject
+        ? subjectNotificationContext(subject.type, subject.id)
+        : { href: "/tasks" },
     });
   }
   return task;
@@ -213,6 +216,9 @@ export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<
       recipientUserId: input.ownerUserId,
       type: "TASK_CREATED",
       payload: { taskId: updated.id, title: updated.title, byName: ctx.name, reassigned: true },
+      context: existing.subjectType && existing.subjectId && isNotificationSubjectType(existing.subjectType)
+        ? subjectNotificationContext(existing.subjectType, existing.subjectId)
+        : { href: "/tasks" },
     });
   }
   return updated;

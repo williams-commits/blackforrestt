@@ -561,6 +561,7 @@ async function processImportJob(jobId: string): Promise<void> {
       duplicates: counts.duplicates,
       errors: counts.errors,
     },
+    context: { href: "/imports" },
   });
 }
 

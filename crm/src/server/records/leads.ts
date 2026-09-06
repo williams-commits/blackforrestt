@@ -9,7 +9,7 @@ import {
   visibleTeamIds,
 } from "@/server/scope";
 import { customFieldWhere, orderByFor, searchWhere } from "@/server/listQuery";
-import { notify } from "@/server/notifications";
+import { collectionNotificationContext, notify, subjectNotificationContext } from "@/server/notifications";
 import { findMatches } from "@/server/records/duplicates";
 import { sanitizeCustomFields } from "@/server/records/customFields";
 import { assertAssignableUser } from "@/server/records/assignment";
@@ -372,6 +372,7 @@ export async function updateLead(ctx: ScopedContext, id: string, input: z.infer<
         label: `${existing.firstName} ${existing.lastName}`,
         byName: ctx.name,
       },
+      context: subjectNotificationContext("LEAD", id),
     });
   }
   return updated;
@@ -475,6 +476,7 @@ export async function bulkLeads(ctx: ScopedContext, input: z.infer<typeof BulkLe
         recipientUserId: input.assignedUserId,
         type: "RECORD_ASSIGNED",
         payload: { recordType: "LEAD", count: ids.length, byName: ctx.name },
+        context: collectionNotificationContext("LEAD"),
       });
     }
     return { affected: ids.length };

@@ -3,7 +3,7 @@ import { prisma } from "@/server/db";
 import { CrmError } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
-import { notify } from "@/server/notifications";
+import { notify, subjectNotificationContext } from "@/server/notifications";
 import { resolveSubject } from "@/server/records/subjects";
 import type { ScopedContext } from "@/server/records/leads";
 
@@ -72,6 +72,7 @@ export async function createAppointment(ctx: ScopedContext, input: z.infer<typeo
       recipientUserId: ownerUserId,
       type: "APPOINTMENT_SCHEDULED",
       payload: { appointmentId: appointment.id, title: appointment.title, byName: ctx.name },
+      context: subjectNotificationContext(subject.type, subject.id),
     });
   }
   return appointment;

@@ -23,10 +23,40 @@ export type NotifiableType =
   | "TASK_DUE"
   | "TASK_OVERDUE";
 
+export type NotificationSubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
+
+/** A safe, internal CRM destination carried by every new notification. */
+export interface NotificationContext {
+  href: string;
+  subjectType?: NotificationSubjectType;
+  subjectId?: string;
+}
+
+const SUBJECT_PATHS: Record<NotificationSubjectType, string> = {
+  LEAD: "/leads",
+  CONTACT: "/contacts",
+  ACCOUNT: "/accounts",
+  CUSTOMER: "/customers",
+  OPPORTUNITY: "/opportunities",
+};
+
+export function isNotificationSubjectType(value: string): value is NotificationSubjectType {
+  return value in SUBJECT_PATHS;
+}
+
+export function subjectNotificationContext(subjectType: NotificationSubjectType, subjectId: string): NotificationContext {
+  return { href: `${SUBJECT_PATHS[subjectType]}/${subjectId}`, subjectType, subjectId };
+}
+
+export function collectionNotificationContext(subjectType: NotificationSubjectType): NotificationContext {
+  return { href: SUBJECT_PATHS[subjectType], subjectType };
+}
+
 interface NotifyInput {
   recipientUserId: string;
   type: NotifiableType;
   payload: Record<string, unknown>;
+  context: NotificationContext;
 }
 
 /** Map a notification to an email subject/body; null = email not wanted. */
@@ -85,7 +115,7 @@ export async function notify(input: NotifyInput): Promise<void> {
       data: {
         recipientUserId: input.recipientUserId,
         type: input.type,
-        payload: input.payload as Prisma.InputJsonValue,
+        payload: { ...input.payload, context: input.context } as unknown as Prisma.InputJsonValue,
       },
     });
   } catch (error) {
@@ -136,6 +166,9 @@ export async function sweepOverdueTasks(userId: string): Promise<void> {
         title: task.title,
         dueAt: task.dueAt!.toISOString(),
       },
+      context: task.subjectType && task.subjectId && isNotificationSubjectType(task.subjectType)
+        ? subjectNotificationContext(task.subjectType, task.subjectId)
+        : { href: "/tasks" },
     });
     await prisma.task.update({
       where: { id: task.id },
@@ -179,6 +212,7 @@ export async function sweepPlatformPresence(userId: string): Promise<void> {
         label: `${customer.firstName} ${customer.lastName}`,
         openPositions: state.openPositions,
       },
+      context: subjectNotificationContext("CUSTOMER", customer.id),
     });
     alreadyNotified.add(state.platformUserId);
   }

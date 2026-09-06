@@ -6,7 +6,7 @@ import type { Permission } from "@/server/permissions";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { assignedScopeWhere, ownerScopeWhere } from "@/server/scope";
-import { notify } from "@/server/notifications";
+import { collectionNotificationContext, notify } from "@/server/notifications";
 import { assertAssignableUser } from "@/server/records/assignment";
 import type { ScopedContext } from "@/server/records/leads";
 
@@ -224,6 +224,7 @@ export async function bulkRecords(
         recipientUserId: input.assignedUserId,
         type: "RECORD_ASSIGNED",
         payload: { recordType: config.subjectType, count: ids.length, byName: ctx.name },
+        context: collectionNotificationContext(config.subjectType),
       });
     }
     return { affected: ids.length };

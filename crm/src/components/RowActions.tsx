@@ -18,7 +18,23 @@ export function RowActions({
   }>;
 }) {
   const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const ref = useRef<HTMLDivElement>(null);
+
+  function positionMenu() {
+    const anchor = ref.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const width = 160;
+    const height = actions.length * 34 + 8;
+    const left = Math.min(Math.max(8, rect.right - width), window.innerWidth - width - 8);
+    const opensUp = rect.bottom + height + 8 > window.innerHeight && rect.top > height;
+    setMenuStyle({
+      left,
+      top: opensUp ? Math.max(8, rect.top - height - 4) : rect.bottom + 4,
+      width,
+    });
+  }
 
   useEffect(() => {
     function onClickOutside(event: MouseEvent) {
@@ -30,11 +46,26 @@ export function RowActions({
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    positionMenu();
+    window.addEventListener("resize", positionMenu);
+    window.addEventListener("scroll", positionMenu, true);
+    return () => {
+      window.removeEventListener("resize", positionMenu);
+      window.removeEventListener("scroll", positionMenu, true);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, actions.length]);
+
   return (
     <div ref={ref} className="relative inline-block">
       <button
         type="button"
-        onClick={() => setOpen((p) => !p)}
+        onClick={() => {
+          setOpen((p) => !p);
+          window.requestAnimationFrame(positionMenu);
+        }}
         className="flex h-6 w-6 items-center justify-center rounded"
         style={{ color: "var(--text-tertiary)" }}
         aria-label="Row actions"
@@ -45,9 +76,10 @@ export function RowActions({
       </button>
       {open ? (
         <div
-          className="absolute right-0 top-full z-30 mt-1 w-40 rounded-lg border py-1"
+          className="fixed z-50 rounded-lg border py-1"
           role="menu"
           style={{
+            ...menuStyle,
             background: "var(--bg-surface)",
             borderColor: "var(--border-default)",
             boxShadow: "var(--shadow-dropdown)",

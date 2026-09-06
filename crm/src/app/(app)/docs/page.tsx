@@ -264,6 +264,41 @@ const ROLE_DOCS = [
 
 const FEATURE_DOCS = [
   {
+    id: "crm-relationships",
+    title: "CRM Relationships",
+    description: "Understand how leads, contacts, accounts, customers, and opportunities fit together.",
+    topics: [
+      {
+        name: "Lead",
+        content: "A lead is a possible future business relationship. Use leads for people or companies that have shown interest but are not fully qualified yet. Leads usually come from campaigns, imports, referrals, website forms, calls, or manual entry.",
+      },
+      {
+        name: "Contact",
+        content: "A contact is a real person you know and communicate with. Contacts can be decision makers, buyers, employees, partners, or client-side representatives. A contact can belong to an account.",
+      },
+      {
+        name: "Account",
+        content: "An account is a company, organization, or business entity. If you sell to a company, the account is the company and the contacts are the people inside that company. One account can have many contacts and many opportunities.",
+      },
+      {
+        name: "Customer",
+        content: "A customer is an actual active client. A customer can be linked to a contact when a known person becomes a paying or active client. Customers represent an active business relationship, not just a known person.",
+      },
+      {
+        name: "Opportunity",
+        content: "An opportunity is a deal or sales chance. It tracks possible revenue, pipeline stage, probability, expected close date, and owner. Opportunities can be linked to a contact, an account, or both.",
+      },
+      {
+        name: "Typical flow",
+        content: "Start with a lead when the relationship is still a maybe. Convert it when qualified into a contact, account, customer, and optionally an opportunity. Use opportunities to track the deal and revenue pipeline.",
+      },
+      {
+        name: "Simple rule",
+        content: "Lead = maybe. Contact = person. Account = company. Customer = active client. Opportunity = deal, money, or pipeline.",
+      },
+    ],
+  },
+  {
     id: "leads",
     title: "Leads",
     description: "Manage prospective customers from first contact through qualification and conversion.",

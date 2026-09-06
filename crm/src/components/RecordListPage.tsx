@@ -6,6 +6,7 @@ import { RECORD_UI, type ObjectKey } from "@/lib/recordUi";
 import { RecordForm, type OptionSource } from "@/components/RecordForm";
 import { ViewTabs, type ViewOption } from "@/components/ViewTabs";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
+import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { RowActions } from "@/components/RowActions";
 import { InlineEdit } from "@/components/InlineEdit";
 import { useConfirmDialog, usePromptDialog } from "@/components/Dialogs";
@@ -409,6 +410,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           ) : null}
         </>}
       />
+      <WorkspaceQuickNav />
       {mounted ? (
         <ViewTabs
           title={config.title}

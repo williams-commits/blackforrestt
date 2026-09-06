@@ -39,31 +39,31 @@ function NavIcon({ name }: { name: string }) {
 export function AdminNav() {
   const pathname = usePathname();
   return (
-    <nav className="w-full shrink-0 rounded-lg border border-(--border-default) bg-(--bg-surface) p-2 shadow-(--shadow-subtle) lg:sticky lg:top-20" aria-label="Administration">
-      <p
-        className="mb-2 px-3 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
-        style={{ color: "var(--text-tertiary)" }}
-      >
-        Workspace setup
-      </p>
-      {ADMIN_NAV.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors"
-            style={{
-              color: active ? "var(--text-brand)" : "var(--text-secondary)",
-              background: active ? "var(--bg-selected)" : "transparent",
-              boxShadow: active ? "inset 3px 0 0 var(--brand-600)" : undefined,
-            }}
-          >
-            <NavIcon name={item.icon} />
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
+      <nav className="w-full shrink-0 rounded-lg border border-(--border-default) bg-(--bg-surface) p-2 shadow-(--shadow-subtle) lg:sticky lg:top-20" aria-label="Administration">
+        <p
+          className="mb-2 px-3 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
+          style={{ color: "var(--text-tertiary)" }}
+        >
+          Workspace setup
+        </p>
+        {ADMIN_NAV.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors"
+              style={{
+                color: active ? "var(--text-brand)" : "var(--text-secondary)",
+                background: active ? "var(--bg-selected)" : "transparent",
+                boxShadow: active ? "inset 3px 0 0 var(--brand-600)" : undefined,
+              }}
+            >
+              <NavIcon name={item.icon} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
   );
 }

@@ -1,8 +1,11 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CrmError } from "@/server/guard";
 import { getCampaign } from "@/server/records/campaigns";
 import { scopedContext } from "@/server/records/leads";
 import { CampaignMemberPicker } from "@/components/CampaignMemberPicker";
+import { WorkspaceHeader } from "@/components/WorkspaceHeader";
+import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 
 export const dynamic = "force-dynamic";
 
@@ -23,50 +26,35 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <header className="card" style={{ padding: "var(--space-6)" }}>
-        <p className="text-xs uppercase tracking-wide text-(--text-tertiary)">Campaign</p>
-        <h1 className="text-xl font-semibold">{campaign.name}</h1>
-        <p className="mt-1 text-sm text-(--text-secondary)">
-          {campaign.status.toLowerCase()} · owner {campaign.owner.name}
-          {campaign.source ? ` · source ${campaign.source}` : ""}
-        </p>
-        {campaign.description ? (
-          <p className="mt-2 text-sm text-(--text-secondary)">{campaign.description}</p>
-        ) : null}
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-7">
-          <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
-            <p className="text-xl font-semibold">{campaign.stats.total}</p>
-            <p className="text-xs text-(--text-secondary)">members</p>
-          </div>
-          <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
-            <p className="text-xl font-semibold">{campaign.stats.responded}</p>
-            <p className="text-xs text-(--text-secondary)">responded</p>
-          </div>
-          <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
-            <p className="text-xl font-semibold">{campaign.stats.byStatus?.QUALIFIED ?? 0}</p>
-            <p className="text-xs text-(--text-secondary)">qualified</p>
-          </div>
-          <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
-            <p className="text-xl font-semibold">{campaign.stats.byStatus?.CONVERTED ?? 0}</p>
-            <p className="text-xs text-(--text-secondary)">converted</p>
-          </div>
-          <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
-            <p className="text-xl font-semibold">
-              {((Number(campaign.stats.revenueMinorUnits) || 0) / 100).toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
-            </p>
-            <p className="text-xs text-(--text-secondary)">won revenue</p>
-          </div>
-          <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
-            <p className="text-xl font-semibold">{campaign.stats.byType.LEAD}</p>
-            <p className="text-xs text-(--text-secondary)">leads</p>
-          </div>
-          <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
-            <p className="text-xl font-semibold">{campaign.stats.byType.CONTACT + campaign.stats.byType.CUSTOMER}</p>
-            <p className="text-xs text-(--text-secondary)">contacts + customers</p>
-          </div>
-        </div>
-      </header>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <nav className="breadcrumb no-print" aria-label="Breadcrumb">
+        <Link href="/">Home</Link><span className="breadcrumb-sep">/</span>
+        <Link href="/campaigns">Campaigns</Link><span className="breadcrumb-sep">/</span>
+        <span className="breadcrumb-current">{campaign.name}</span>
+      </nav>
+
+      <WorkspaceHeader
+        eyebrow="Campaign"
+        title={campaign.name}
+        subtitle={[
+          campaign.status.toLowerCase(),
+          `owner ${campaign.owner.name}`,
+          campaign.source ? `source ${campaign.source}` : null,
+          campaign.description,
+        ].filter(Boolean).join(" · ")}
+        metrics={[
+          { label: "Members", value: campaign.stats.total, tone: "brand" },
+          { label: "Responded", value: campaign.stats.responded, tone: "info" },
+          { label: "Qualified", value: campaign.stats.byStatus?.QUALIFIED ?? 0, tone: "success" },
+          { label: "Converted", value: campaign.stats.byStatus?.CONVERTED ?? 0, tone: "success" },
+          {
+            label: "Won revenue",
+            value: ((Number(campaign.stats.revenueMinorUnits) || 0) / 100).toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }),
+            tone: "warning",
+          },
+        ]}
+      />
+      <WorkspaceQuickNav backHref="/campaigns" backLabel="Campaigns list" />
 
       <section className="card" style={{ padding: "var(--space-6)" }}>
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">Members</h2>

@@ -5,6 +5,7 @@ import { OpportunityForm } from "@/components/OpportunityFormDialog";
 import { PipelineAdmin } from "@/components/PipelineAdminDialog";
 import Link from "next/link";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
+import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 
 export interface Stage {
   id: string;
@@ -229,6 +230,7 @@ export function OpportunitiesPage() {
           {can.create ? <button type="button" onClick={() => { setEditRow(null); setShowForm(true); }} className="btn btn-primary"><span aria-hidden>+</span> New opportunity</button> : null}
         </>}
       />
+      <WorkspaceQuickNav />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex overflow-hidden rounded-md border border-(--border-strong) text-sm">

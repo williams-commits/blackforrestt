@@ -22,6 +22,7 @@ import { RecordDetailActions } from "@/components/RecordDetailActions";
 import { SendEmailButton } from "@/components/SendEmailButton";
 import { PlatformLinkPanel, PlatformUnlinkButton } from "@/components/PlatformLinkPanel";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
+import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         <Link href="/customers">Customers</Link><span className="breadcrumb-sep">/</span>
         <span className="breadcrumb-current">{customer.firstName} {customer.lastName}</span>
       </nav>
+      <WorkspaceQuickNav backHref="/customers" backLabel="Customers list" />
 
       <RecordWorkspaceTabs
         type="customers"

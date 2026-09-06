@@ -2,6 +2,7 @@ import Link from "next/link";
 import { scopedContext } from "@/server/records/leads";
 import { pgSearch } from "@/server/search/pg";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
+import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <WorkspaceHeader
         eyebrow="Command center"
         title="Search"
@@ -42,6 +43,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
           : `${hits.length} result(s) for “${query}” (within your scope)`}
         metrics={query.length >= 2 ? [{ label: "Matches", value: hits.length, tone: hits.length ? "success" : "warning" }] : undefined}
       />
+      <WorkspaceQuickNav />
       {hits.length === 0 && query.length >= 2 ? (
         <p className="card empty-state">
           Nothing matched.

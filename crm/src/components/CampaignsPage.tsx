@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
+import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 
 interface CampaignRow {
   id: string;
@@ -78,6 +79,7 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
         actions={canCreate ? <button type="button" onClick={() => setShowForm((previous) => !previous)} className="btn btn-primary"><span aria-hidden>+</span> New campaign</button> : undefined}
         metrics={[{ label: "Campaigns", value: rows.length, tone: "brand" }, { label: "Active", value: rows.filter((row) => row.status === "ACTIVE").length, tone: "success" }, { label: "Members", value: rows.reduce((total, row) => total + row.memberCount, 0), tone: "info" }]}
       />
+      <WorkspaceQuickNav />
 
       {showForm ? (
         <form method="post" onSubmit={createCampaign} className="grid gap-4 rounded-xl border border-(--border-default) bg-(--bg-surface) p-5 shadow-(--shadow-subtle) sm:grid-cols-4">

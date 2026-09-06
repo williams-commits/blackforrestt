@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
+import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 
 interface TaskRow {
   id: string;
@@ -138,6 +139,7 @@ export function TasksPage() {
         actions={<button type="button" onClick={() => setShowForm((previous) => !previous)} className="btn btn-primary"><span aria-hidden>+</span> New task</button>}
         metrics={[{ label: "Open", value: meta.openCount, tone: "brand" }, { label: "Overdue", value: meta.overdueCount, tone: meta.overdueCount > 0 ? "warning" : "success" }, { label: "Showing", value: meta.total, tone: "info" }]}
       />
+      <WorkspaceQuickNav />
 
       {showForm ? (
         <form

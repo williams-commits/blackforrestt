@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { Modal } from "@/components/Modal";
+import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 
 interface ReportMeta {
   id: string;
@@ -165,6 +166,7 @@ export function ReportsPage() {
         actions={<button type="button" onClick={() => setBuilderOpen((previous) => !previous)} className="btn btn-secondary">{builderOpen ? "Back to library" : "Build a report"}</button>}
         metrics={[{ label: "Saved reports", value: library.length, tone: "brand" }, { label: "Scope", value: "Your access", tone: "success" }]}
       />
+      <WorkspaceQuickNav />
 
       {builderOpen ? (
         <Modal title="Build a report" onClose={() => setBuilderOpen(false)} size="lg">

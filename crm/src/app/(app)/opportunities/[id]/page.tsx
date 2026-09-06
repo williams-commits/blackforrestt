@@ -18,6 +18,7 @@ import { RecordActivities } from "@/components/RecordActivities";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { OpportunityDetailActions } from "@/components/OpportunityDetailActions";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
+import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
         <Link href="/opportunities">Opportunities</Link><span className="breadcrumb-sep">/</span>
         <span className="breadcrumb-current">{opportunity.name}</span>
       </nav>
+      <WorkspaceQuickNav backHref="/opportunities" backLabel="Opportunities list" />
 
       <RecordWorkspaceTabs
         type="opportunities"

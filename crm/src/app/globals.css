@@ -217,6 +217,15 @@ textarea {
   background: var(--gray-400);
 }
 
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    Utility Classes — the component vocabulary
    ═══════════════════════════════════════════════════════════════ */

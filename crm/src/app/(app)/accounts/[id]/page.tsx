@@ -19,6 +19,7 @@ import { RecordActivities } from "@/components/RecordActivities";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
+import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
         <Link href="/accounts">Accounts</Link><span className="breadcrumb-sep">/</span>
         <span className="breadcrumb-current">{account.name}</span>
       </nav>
+      <WorkspaceQuickNav backHref="/accounts" backLabel="Accounts list" />
 
       <RecordWorkspaceTabs
         type="accounts"

@@ -20,6 +20,7 @@ import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
 import { SendEmailButton } from "@/components/SendEmailButton";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
+import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +106,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
         <Link href="/contacts">Contacts</Link><span className="breadcrumb-sep">/</span>
         <span className="breadcrumb-current">{contact.firstName} {contact.lastName}</span>
       </nav>
+      <WorkspaceQuickNav backHref="/contacts" backLabel="Contacts list" />
 
       <RecordWorkspaceTabs
         type="contacts"

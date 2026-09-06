@@ -20,6 +20,7 @@ import { RecordDetailActions } from "@/components/RecordDetailActions";
 import { SendEmailButton } from "@/components/SendEmailButton";
 import { LeadConvertControls } from "@/components/LeadConvertControls";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
+import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +82,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
         <Link href="/leads">Leads</Link><span className="breadcrumb-sep">/</span>
         <span className="breadcrumb-current">{lead.firstName} {lead.lastName}</span>
       </nav>
+      <WorkspaceQuickNav backHref="/leads" backLabel="Leads list" />
 
       <RecordWorkspaceTabs
         type="leads"

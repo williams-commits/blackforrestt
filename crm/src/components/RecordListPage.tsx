@@ -5,6 +5,7 @@ import Link from "next/link";
 import { RECORD_UI, type ObjectKey } from "@/lib/recordUi";
 import { RecordForm, type OptionSource } from "@/components/RecordForm";
 import { ViewTabs, type ViewOption } from "@/components/ViewTabs";
+import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { RowActions } from "@/components/RowActions";
 import { InlineEdit } from "@/components/InlineEdit";
 import { useConfirmDialog, usePromptDialog } from "@/components/Dialogs";
@@ -74,6 +75,19 @@ function cellValue(row: Record<string, unknown>, key: string): string {
   return String(current);
 }
 
+function nestedRecordId(row: Record<string, unknown>, key: string): string {
+  const relationPath = key.split(".").slice(0, -1);
+  if (relationPath.length === 0) return typeof row.id === "string" ? row.id : "";
+  let current: unknown = row;
+  for (const segment of relationPath) {
+    if (current === null || current === undefined || typeof current !== "object") return "";
+    current = (current as Record<string, unknown>)[segment];
+  }
+  if (current === null || current === undefined || typeof current !== "object") return "";
+  const id = (current as Record<string, unknown>).id;
+  return typeof id === "string" ? id : "";
+}
+
 function formatDate(value: string, withTime: boolean): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -129,13 +143,16 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     const permissions = me?.permissions ?? [];
     const objectUpper = object.toUpperCase().slice(0, -1);
     const edit = permissions.includes(config.can.edit);
+    const deletePermission = permissions.includes(config.can.delete);
+    const assign = permissions.includes("RECORDS_ASSIGN");
+    const classify = permissions.includes("RECORDS_CLASSIFY");
     return {
       create: permissions.includes(config.can.create),
       edit,
-      delete: permissions.includes(config.can.delete),
-      assign: permissions.includes("RECORDS_ASSIGN"),
-      classify: permissions.includes("RECORDS_CLASSIFY"),
-      bulk: true,
+      delete: deletePermission,
+      assign,
+      classify,
+      bulk: edit || deletePermission || assign || classify,
       export: permissions.includes(`${objectUpper}S_EXPORT`),
     };
   }, [me, config, object]);
@@ -150,6 +167,10 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         : object === "customers"
           ? options.customerStatuses
           : [];
+
+  const visibleColumnCount = config.columns.filter((column) => !hiddenColumns.includes(column.key)).length;
+  const hasRowActions = can.edit || can.delete;
+  const tableColumnCount = visibleColumnCount + (can.bulk ? 1 : 0) + (hasRowActions ? 1 : 0);
 
   const presetViews: ViewOption[] = [
     { key: "all", label: `All ${config.title}` },
@@ -359,27 +380,46 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
 
   return (
     <div className="space-y-4">
+      <WorkspaceHeader
+        eyebrow="Record workspace"
+        title={config.title}
+        subtitle={`${meta.total} record${meta.total === 1 ? "" : "s"} in your current view.`}
+        metrics={[
+          { label: "Records", value: meta.total, tone: "brand" },
+          { label: "View", value: presetViews.find((view) => view.key === activeView)?.label ?? "Custom", tone: "info" },
+          { label: "Columns", value: `${visibleColumnCount}/${config.columns.length}`, tone: "success" },
+        ]}
+        actions={<>
+          {can.create ? (
+            <button type="button" className="btn btn-primary" onClick={() => { setEditRow(null); setFormMode("create"); }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New {config.singular}
+            </button>
+          ) : null}
+          {can.export ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                window.location.href = `/api/export?object=${object}${search ? `&q=${encodeURIComponent(search)}` : ""}${filters.statusId ? `&statusId=${filters.statusId}` : ""}`;
+              }}
+            >
+              Export
+            </button>
+          ) : null}
+        </>}
+      />
       {mounted ? (
         <ViewTabs
           title={config.title}
           views={presetViews}
           activeView={activeView}
           onViewChange={handleViewChange}
-          onNewClick={can.create ? () => { setEditRow(null); setFormMode("create"); } : undefined}
-          onExportClick={can.export ? () => {
-            window.location.href = `/api/export?object=${object}${search ? `&q=${encodeURIComponent(search)}` : ""}${filters.statusId ? `&statusId=${filters.statusId}` : ""}`;
-          } : undefined}
-          canCreate={can.create}
-          canExport={can.export}
           totalCount={meta.total}
+          showHeader={false}
         />
       ) : (
-        <div className="page-header">
-          <div>
-            <h1 className="page-title">{config.title}</h1>
-            <p className="page-subtitle">{meta.total} record{meta.total === 1 ? "" : "s"}</p>
-          </div>
-        </div>
+        <div className="h-9 border-b border-(--border-default)" />
       )}
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-(--border-default) bg-(--bg-surface) p-3">
@@ -460,26 +500,43 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               ))}
             </select>
           ) : null}
-          <select
-            aria-label="Columns"
-            multiple
-            value={config.columns.filter((c) => !hiddenColumns.includes(c.key)).map((c) => c.key)}
-            onChange={(event) =>
-              setHiddenColumns(
-                config.columns
-                  .map((c) => c.key)
-                  .filter((key) => !Array.from(event.target.selectedOptions).some((o) => o.value === key)),
-              )
-            }
-            className="hidden h-8 rounded-md border border-(--border-strong) px-2 text-xs sm:block"
-            title="Hold Cmd/Ctrl to change visible columns"
-          >
-            {config.columns.map((column) => (
-              <option key={column.key} value={column.key}>
-                {column.label}
-              </option>
-            ))}
-          </select>
+          <details className="group relative hidden sm:block">
+            <summary className="flex h-8 cursor-pointer list-none items-center gap-2 rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 text-xs font-medium hover:bg-(--bg-hover)">
+              Columns
+              <span className="text-(--text-tertiary)">{visibleColumnCount}/{config.columns.length}</span>
+            </summary>
+            <div
+              className="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-(--border-default) bg-(--bg-surface) p-2 shadow-lg"
+              role="menu"
+            >
+              <p className="px-2 pb-2 text-xs font-medium text-(--text-secondary)">Visible columns</p>
+              <div className="max-h-72 space-y-1 overflow-auto">
+                {config.columns.map((column) => {
+                  const checked = !hiddenColumns.includes(column.key);
+                  return (
+                    <label
+                      key={column.key}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-(--bg-hover)"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={checked && visibleColumnCount <= 1}
+                        onChange={(event) => {
+                          setHiddenColumns((prev) =>
+                            event.target.checked
+                              ? prev.filter((key) => key !== column.key)
+                              : [...prev, column.key],
+                          );
+                        }}
+                      />
+                      <span>{column.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </details>
           <input
             aria-label="View name"
             placeholder="Name this view"
@@ -722,39 +779,39 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                   />
                 </th>
               ) : null}
-              {config.columns.map((column) => (
+              {config.columns.filter((column) => !hiddenColumns.includes(column.key)).map((column) => (
                 <th key={column.key} className="px-3 py-2 font-medium">
-                  {hiddenColumns.includes(column.key) ? null : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const key = column.key === "firstName lastName" ? "name" : column.key.split(".")[0];
-                        setSort(sort === key ? "" : key);
-                        setPage(1);
-                      }}
-                      className="text-left hover:underline"
-                    >
-                      {column.label}
-                      {sort === (column.key === "firstName lastName" ? "name" : column.key.split(".")[0]) ? " ▾" : ""}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const key = column.key === "firstName lastName" ? "name" : column.key.split(".")[0];
+                      setSort(sort === key ? "" : key);
+                      setPage(1);
+                    }}
+                    className="text-left hover:underline"
+                  >
+                    {column.label}
+                    {sort === (column.key === "firstName lastName" ? "name" : column.key.split(".")[0]) ? " ▾" : ""}
+                  </button>
                 </th>
               ))}
-              <th className="px-3 py-2 text-right font-medium">Actions</th>
+              {hasRowActions ? (
+                <th className="px-3 py-2 text-right font-medium">Actions</th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
             {loading ? (
               [...Array(6)].map((_, index) => (
                 <tr key={`skeleton-${index}`}>
-                  <td colSpan={config.columns.length + 2} style={{ padding: "10px 12px" }}>
+                  <td colSpan={tableColumnCount} style={{ padding: "10px 12px" }}>
                     <div className="skeleton" style={{ height: "16px", width: `${70 - index * 8}%` }} />
                   </td>
                 </tr>
               ))
             ) : loadError ? (
               <tr>
-                <td colSpan={config.columns.length + 2}>
+                <td colSpan={tableColumnCount}>
                   <div className="empty-state" style={{ padding: "var(--space-8)" }}>
                     <p className="empty-state-title" style={{ color: "var(--error)" }}>{loadError}</p>
                   </div>
@@ -762,7 +819,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={config.columns.length + 2}>
+                <td colSpan={tableColumnCount}>
                   <div className="empty-state">
                     <svg className="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <path d="M21 15V6a2 2 0 00-2-2H5a2 2 0 00-2 2v9m18 0a2 2 0 01-2 2H5a2 2 0 01-2-2m18 0v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -815,7 +872,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                         if (column.type === "record" && index === 0) {
                           return (
                             <Link
-                              href={`/${column.object}/${row.id}`}
+                              href={`/${config.object}/${row.id}`}
                               className="font-medium text-(--brand) hover:underline"
                             >
                               {raw}
@@ -823,8 +880,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                           );
                         }
                         if (column.type === "record") {
-                          const linked = column.key.split(".").slice(0, -1).join(".");
-                          const linkedId = cellValue(row, `${linked}.id`);
+                          const linkedId = nestedRecordId(row, column.key);
                           return linkedId ? (
                             <Link href={`/${column.object}/${linkedId}`} className="hover:underline">
                               {raw}
@@ -881,47 +937,49 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                         </td>
                       );
                     })}
-                    <td className="px-3 py-2 text-right whitespace-nowrap">
-                      <RowActions
-                        actions={[
-                          ...(can.edit
-                            ? [{
-                                label: "Edit",
-                                icon: "edit",
-                                onClick: () => {
-                                  setEditRow(row);
-                                  setFormMode("edit");
-                                },
-                              }]
-                            : []),
-                          ...(object === "leads" && can.edit
-                            ? [{
-                                label: "Add task",
-                                icon: "check",
-                                onClick: async () => {
-                                  const title = await prompt({
-                                    title: "Add task",
-                                    message: `Create a task for this ${config.singular.toLowerCase()}.`,
-                                    placeholder: "Task title",
-                                    confirmLabel: "Add task",
-                                  });
-                                  if (title && title.trim().length >= 2) {
-                                    void runBulk("task", { ids: [row.id], title: title.trim() });
-                                  }
-                                },
-                              }]
-                            : []),
-                          ...(can.delete
-                            ? [{
-                                label: "Delete",
-                                icon: "trash",
-                                destructive: true,
-                                onClick: () => void deleteRow(row),
-                              }]
-                            : []),
-                        ]}
-                      />
-                    </td>
+                    {hasRowActions ? (
+                      <td className="px-3 py-2 text-right whitespace-nowrap">
+                        <RowActions
+                          actions={[
+                            ...(can.edit
+                              ? [{
+                                  label: "Edit",
+                                  icon: "edit",
+                                  onClick: () => {
+                                    setEditRow(row);
+                                    setFormMode("edit");
+                                  },
+                                }]
+                              : []),
+                            ...(object === "leads" && can.edit
+                              ? [{
+                                  label: "Add task",
+                                  icon: "check",
+                                  onClick: async () => {
+                                    const title = await prompt({
+                                      title: "Add task",
+                                      message: `Create a task for this ${config.singular.toLowerCase()}.`,
+                                      placeholder: "Task title",
+                                      confirmLabel: "Add task",
+                                    });
+                                    if (title && title.trim().length >= 2) {
+                                      void runBulk("task", { ids: [row.id], title: title.trim() });
+                                    }
+                                  },
+                                }]
+                              : []),
+                            ...(can.delete
+                              ? [{
+                                  label: "Delete",
+                                  icon: "trash",
+                                  destructive: true,
+                                  onClick: () => void deleteRow(row),
+                                }]
+                              : []),
+                          ]}
+                        />
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })

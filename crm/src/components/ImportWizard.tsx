@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import Papa from "papaparse";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 
@@ -274,8 +275,57 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
 
   if (!hasPermission) {
     return (
-      <div className="card empty-state">
-        You do not have permission to import data (LEADS_IMPORT required).
+      <div className="space-y-6">
+        <WorkspaceHeader
+          eyebrow="Data operations"
+          title="Import center"
+          subtitle="Importing is protected because it can create or update many CRM records at once."
+          metrics={[
+            { label: "Permission", value: "Required", tone: "warning" },
+            { label: "Access", value: "View only", tone: "info" },
+          ]}
+        />
+
+        <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
+          <div className="card overflow-hidden">
+            <div className="border-b border-(--border-default) bg-(--bg-hover) px-6 py-5">
+              <p className="text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">Import access</p>
+              <h2 className="mt-2 text-2xl font-semibold text-(--text-primary)">Ask an admin to enable imports</h2>
+              <p className="mt-2 max-w-2xl text-sm text-(--text-secondary)">
+                Your current role cannot upload CSV files or Google Sheets into the CRM. This keeps leads, contacts,
+                accounts, and customers safe from accidental bulk changes.
+              </p>
+            </div>
+            <div className="grid gap-3 p-6 sm:grid-cols-3">
+              {[
+                ["1", "Prepare your file", "Clean the spreadsheet and keep a header row."],
+                ["2", "Request permission", "Ask for the LEADS_IMPORT role permission."],
+                ["3", "Import safely", "Map, validate, and review duplicates before records are written."],
+              ].map(([stepNumber, title, description]) => (
+                <div key={stepNumber} className="rounded-xl border border-(--border-default) bg-(--bg-surface) p-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-(--bg-selected) text-sm font-semibold text-(--text-brand)">
+                    {stepNumber}
+                  </span>
+                  <p className="mt-3 font-medium text-(--text-primary)">{title}</p>
+                  <p className="mt-1 text-sm text-(--text-secondary)">{description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <aside className="card p-5">
+            <p className="text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">What admins unlock</p>
+            <ul className="mt-4 space-y-3 text-sm text-(--text-secondary)">
+              <li className="rounded-lg bg-(--bg-subtle) p-3">CSV and Google Sheets import wizard</li>
+              <li className="rounded-lg bg-(--bg-subtle) p-3">Column mapping and saved mappings</li>
+              <li className="rounded-lg bg-(--bg-subtle) p-3">Duplicate checks before import</li>
+              <li className="rounded-lg bg-(--bg-subtle) p-3">Import history, retries, and error CSV downloads</li>
+            </ul>
+            <Link href="/docs#imports" className="btn btn-secondary mt-5 w-full justify-center">
+              Read import guide
+            </Link>
+          </aside>
+        </div>
       </div>
     );
   }

@@ -25,6 +25,17 @@ function money(minor: number | null): string {
   });
 }
 
+const PIE_COLORS = [
+  "#2563eb",
+  "#16a34a",
+  "#f59e0b",
+  "#dc2626",
+  "#7c3aed",
+  "#0891b2",
+  "#db2777",
+  "#64748b",
+];
+
 const OBJECTS = ["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY", "TASK"] as const;
 const DATE_FIELDS: Record<string, string[]> = {
   LEAD: ["createdAt", "updatedAt", "convertedAt"],
@@ -113,6 +124,36 @@ export function ReportsPage() {
   }, [selected]);
 
   const maxCount = Math.max(1, ...(result?.rows.map((row) => row.count) ?? [1]));
+  const totalCount = result?.rows.reduce((sum, row) => sum + row.count, 0) ?? 0;
+  const pieRows = (() => {
+    if (!result || result.rows.length === 0) return [];
+    const ordered = [...result.rows].sort((a, b) => b.count - a.count);
+    const visible = ordered.slice(0, 7).map((row) => ({ ...row, label: row.key ?? "(none)" }));
+    const rest = ordered.slice(7);
+    if (rest.length === 0) return visible;
+    return [
+      ...visible,
+      {
+        key: "__other__",
+        label: "Other",
+        count: rest.reduce((sum, row) => sum + row.count, 0),
+        sums: {},
+      },
+    ];
+  })();
+  const pieGradient = (() => {
+    if (totalCount <= 0 || pieRows.length === 0) return "conic-gradient(var(--bg-subtle) 0deg 360deg)";
+    let cursor = 0;
+    return `conic-gradient(${pieRows
+      .map((row, index) => {
+        const start = cursor;
+        const degrees = (row.count / totalCount) * 360;
+        cursor += degrees;
+        const color = PIE_COLORS[index % PIE_COLORS.length];
+        return `${color} ${start.toFixed(2)}deg ${cursor.toFixed(2)}deg`;
+      })
+      .join(", ")})`;
+  })();
   const meta = library.find((report) => report.id === selected);
 
   return (
@@ -254,30 +295,58 @@ export function ReportsPage() {
             ) : result.rows.length === 0 ? (
               <p className="text-center text-sm text-(--text-tertiary)">No rows in range (within your scope).</p>
             ) : (
-              <ul className="space-y-4">
-                {result.rows.map((row, index) => (
-                  <li key={`${row.key ?? "none"}-${index}`} className="text-sm">
-                    <div className="mb-0.5 flex items-baseline justify-between gap-2">
-                      <span className="truncate font-medium">{row.key ?? "(none)"}</span>
-                      <span className="whitespace-nowrap text-(--text-secondary)">
-                        {row.count}
-                        {result.report.sums.includes("value")
-                          ? ` · ${money(row.sums.value ?? 0)}`
-                          : result.report.sums.map((field) => ` · ${field}: ${row.sums[field] ?? 0}`).join("")}
-                      </span>
+              <div className="grid gap-6 xl:grid-cols-[22rem_1fr]">
+                <div className="rounded-2xl border border-(--border-default) bg-(--bg-subtle) p-5">
+                  <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-full shadow-inner" style={{ background: pieGradient }}>
+                    <div className="flex h-28 w-28 flex-col items-center justify-center rounded-full border border-(--border-default) bg-(--bg-surface) text-center shadow-sm">
+                      <span className="text-3xl font-semibold text-(--text-primary)">{totalCount}</span>
+                      <span className="text-xs uppercase tracking-wide text-(--text-secondary)">records</span>
                     </div>
-                    <div className="h-1.5 overflow-hidden rounded bg-(--bg-subtle)">
-                      <div
-                        className="h-full"
-                        style={{
-                          width: `${Math.max(2, Math.round((row.count / maxCount) * 100))}%`,
-                          background: "var(--brand)",
-                        }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                  <div className="mt-5 space-y-2">
+                    {pieRows.map((row, index) => {
+                      const percentage = totalCount === 0 ? 0 : Math.round((row.count / totalCount) * 100);
+                      return (
+                        <div key={`${row.key ?? "none"}-${index}`} className="flex items-center justify-between gap-3 text-sm">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 shrink-0 rounded-full"
+                              style={{ background: PIE_COLORS[index % PIE_COLORS.length] }}
+                            />
+                            <span className="truncate text-(--text-secondary)">{row.label}</span>
+                          </span>
+                          <span className="whitespace-nowrap font-medium text-(--text-primary)">{percentage}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <ul className="space-y-4">
+                  {result.rows.map((row, index) => (
+                    <li key={`${row.key ?? "none"}-${index}`} className="text-sm">
+                      <div className="mb-0.5 flex items-baseline justify-between gap-2">
+                        <span className="truncate font-medium">{row.key ?? "(none)"}</span>
+                        <span className="whitespace-nowrap text-(--text-secondary)">
+                          {row.count}
+                          {result.report.sums.includes("value")
+                            ? ` · ${money(row.sums.value ?? 0)}`
+                            : result.report.sums.map((field) => ` · ${field}: ${row.sums[field] ?? 0}`).join("")}
+                        </span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded bg-(--bg-subtle)">
+                        <div
+                          className="h-full"
+                          style={{
+                            width: `${Math.max(2, Math.round((row.count / maxCount) * 100))}%`,
+                            background: PIE_COLORS[index % PIE_COLORS.length],
+                          }}
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         </div>

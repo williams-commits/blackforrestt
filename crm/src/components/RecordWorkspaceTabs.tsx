@@ -13,29 +13,48 @@ interface WorkspaceTab {
   subtitle?: string | null;
   href: string;
   openedAt: number;
+  type?: RecordWorkspaceType;
 }
 
 const MAX_TABS = 12;
+const STORAGE_PREFIX = "crm-record-tabs:v2";
+const OLD_STORAGE_PREFIX = "crm-record-tabs";
 
 function storageKey(type: RecordWorkspaceType) {
-  return `crm-record-tabs:${type}`;
+  return `${STORAGE_PREFIX}:${type}`;
+}
+
+function removeOldStoredTabs() {
+  for (const type of ["leads", "contacts", "accounts", "customers", "opportunities"] satisfies RecordWorkspaceType[]) {
+    localStorage.removeItem(`${OLD_STORAGE_PREFIX}:${type}`);
+  }
 }
 
 function readTabs(type: RecordWorkspaceType): WorkspaceTab[] {
   try {
-    const raw = localStorage.getItem(storageKey(type));
+    const raw = sessionStorage.getItem(storageKey(type));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as WorkspaceTab[];
-    return Array.isArray(parsed)
-      ? parsed.filter((tab) => tab && typeof tab.id === "string" && typeof tab.href === "string")
-      : [];
+    if (!Array.isArray(parsed)) return [];
+    const validTabs = parsed.filter((tab) => {
+      if (!tab || typeof tab.id !== "string" || typeof tab.href !== "string") return false;
+      if (tab.type !== type) return false;
+      return tab.href === `/${type}/${tab.id}`;
+    });
+    if (validTabs.length !== parsed.length) writeTabs(type, validTabs);
+    return validTabs;
   } catch {
+    sessionStorage.removeItem(storageKey(type));
     return [];
   }
 }
 
 function writeTabs(type: RecordWorkspaceType, tabs: WorkspaceTab[]) {
-  localStorage.setItem(storageKey(type), JSON.stringify(tabs.slice(0, MAX_TABS)));
+  sessionStorage.setItem(storageKey(type), JSON.stringify(tabs.slice(0, MAX_TABS)));
+}
+
+function canonicalHref(type: RecordWorkspaceType, id: string) {
+  return `/${type}/${id}`;
 }
 
 export function RecordWorkspaceTabs({
@@ -44,14 +63,13 @@ export function RecordWorkspaceTabs({
   id,
   label,
   subtitle,
-  href,
 }: {
   type: RecordWorkspaceType;
   typeLabel: string;
   id: string;
   label: string;
   subtitle?: string | null;
-  href: string;
+  href?: string;
 }) {
   const router = useRouter();
   const [tabs, setTabs] = useState<WorkspaceTab[]>([]);
@@ -59,11 +77,12 @@ export function RecordWorkspaceTabs({
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const current: WorkspaceTab = { id, label, subtitle, href, openedAt: Date.now() };
+    removeOldStoredTabs();
+    const current: WorkspaceTab = { id, label, subtitle, href: canonicalHref(type, id), openedAt: Date.now(), type };
     const next = [current, ...readTabs(type).filter((tab) => tab.id !== id)].slice(0, MAX_TABS);
     writeTabs(type, next);
     setTabs(next);
-  }, [href, id, label, subtitle, type]);
+  }, [id, label, subtitle, type]);
 
   useEffect(() => {
     function onClickOutside(event: MouseEvent) {

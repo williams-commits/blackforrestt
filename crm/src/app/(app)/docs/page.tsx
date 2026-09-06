@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth } from "@/auth";
+import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { prisma } from "@/server/db";
 import { permissionsForRoleKey } from "@/server/permissions";
 
@@ -492,15 +493,16 @@ export default async function DocsPage() {
         <span className="breadcrumb-current">Documentation</span>
       </nav>
 
-      {/* Page header */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Documentation</h1>
-          <p className="page-subtitle">
-            User guides, role permissions, team structure, and feature reference
-          </p>
-        </div>
-      </div>
+      <WorkspaceHeader
+        eyebrow="Knowledge base"
+        title="Documentation"
+        subtitle="User guides, role permissions, team structure, and feature reference."
+        metrics={[
+          { label: "Role", value: currentUser?.role.name ?? "Guest", tone: "brand" },
+          { label: "Teams", value: userTeams.length || "None", tone: "info" },
+          { label: "Guides", value: FEATURE_DOCS.length + 4, tone: "success" },
+        ]}
+      />
 
       {/* Table of contents */}
       <div className="card">

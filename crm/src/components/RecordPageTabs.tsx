@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { RecordTabs, RecordTabPanel, type RecordTab } from "@/components/RecordTabs";
 
 /**
@@ -14,7 +15,13 @@ export function RecordPageTabs({
   tabs: RecordTab[];
   children: React.ReactNode[];
 }) {
+  const pathname = usePathname();
   const [activeTab, setActiveTab] = useState(tabs[0]?.key ?? "overview");
+  const firstTab = tabs[0]?.key ?? "overview";
+
+  useEffect(() => {
+    setActiveTab(firstTab);
+  }, [firstTab, pathname]);
 
   return (
     <div className="space-y-4">

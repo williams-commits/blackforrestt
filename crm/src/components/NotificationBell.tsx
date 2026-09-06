@@ -44,6 +44,10 @@ export function NotificationBell() {
       const body = (await response.json()) as { data?: NotificationRow[]; meta?: { unread?: number } };
       setNotifications(body.data ?? []);
       setUnread(body.meta?.unread ?? 0);
+    } catch {
+      // Notification polling is non-critical. Network hiccups, a restarting
+      // dev server, or an expired session must not create an unhandled client
+      // error every 30 seconds; the next poll will retry automatically.
     } finally {
       setLoading(false);
     }
@@ -78,9 +82,14 @@ export function NotificationBell() {
   }, []);
 
   async function markAllRead() {
-    await fetch("/api/notifications", { method: "PATCH" });
-    setNotifications((previous) => previous.map((notification) => ({ ...notification, readAt: new Date().toISOString() })));
-    setUnread(0);
+    try {
+      const response = await fetch("/api/notifications", { method: "PATCH" });
+      if (!response.ok) return;
+      setNotifications((previous) => previous.map((notification) => ({ ...notification, readAt: new Date().toISOString() })));
+      setUnread(0);
+    } catch {
+      // Keep the current unread state when the request did not reach the API.
+    }
   }
 
   return (

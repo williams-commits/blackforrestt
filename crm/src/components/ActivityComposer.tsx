@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/Toast";
 
 type SubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
 
@@ -15,14 +16,19 @@ export function ActivityComposer({
   subjectType,
   subjectId,
   subjectLabel,
-  canEdit,
+  canAddNote,
+  canCreateTask,
+  canScheduleAppointment,
 }: {
   subjectType: SubjectType;
   subjectId: string;
   subjectLabel: string;
-  canEdit: boolean;
+  canAddNote: boolean;
+  canCreateTask: boolean;
+  canScheduleAppointment: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [activeAction, setActiveAction] = useState<"none" | "note" | "task" | "appointment">("none");
   const [noteBody, setNoteBody] = useState("");
   const [taskTitle, setTaskTitle] = useState("");
@@ -32,7 +38,11 @@ export function ActivityComposer({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!canEdit) return null;
+  function refreshAfterToast() {
+    window.setTimeout(() => router.refresh(), 150);
+  }
+
+  if (!canAddNote && !canCreateTask && !canScheduleAppointment) return null;
 
   async function submitNote(event: React.FormEvent) {
     event.preventDefault();
@@ -46,12 +56,18 @@ export function ActivityComposer({
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        setError(body?.error ?? "Could not save note.");
+        const message = body?.error ?? "Could not save note.";
+        setError(message);
+        toast.error("Note not added", message);
         return;
       }
       setNoteBody("");
       setActiveAction("none");
-      router.refresh();
+      toast.success("Note added", `Note added to ${subjectLabel}.`);
+      refreshAfterToast();
+    } catch {
+      setError("Could not save note.");
+      toast.error("Note not added", "Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -69,13 +85,19 @@ export function ActivityComposer({
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        setError(body?.error ?? "Could not create task.");
+        const message = body?.error ?? "Could not create task.";
+        setError(message);
+        toast.error("Task not created", message);
         return;
       }
       setTaskTitle("");
       setTaskDue("");
       setActiveAction("none");
-      router.refresh();
+      toast.success("Task created", `Follow-up task created for ${subjectLabel}.`);
+      refreshAfterToast();
+    } catch {
+      setError("Could not create task.");
+      toast.error("Task not created", "Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -93,13 +115,19 @@ export function ActivityComposer({
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        setError(body?.error ?? "Could not schedule.");
+        const message = body?.error ?? "Could not schedule.";
+        setError(message);
+        toast.error("Appointment not scheduled", message);
         return;
       }
       setApptTitle("");
       setApptStart("");
       setActiveAction("none");
-      router.refresh();
+      toast.success("Appointment scheduled", `Appointment scheduled with ${subjectLabel}.`);
+      refreshAfterToast();
+    } catch {
+      setError("Could not schedule appointment.");
+      toast.error("Appointment not scheduled", "Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -121,7 +149,9 @@ export function ActivityComposer({
         <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
           Log
         </span>
-        {actions.map((action) => {
+        {actions.filter((action) =>
+          action.key === "note" ? canAddNote : action.key === "task" ? canCreateTask : canScheduleAppointment,
+        ).map((action) => {
           const active = activeAction === action.key;
           return (
             <button

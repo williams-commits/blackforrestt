@@ -42,6 +42,9 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
   let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
   let canEdit = false;
+  let canAddNote = false;
+  let canCreateTask = false;
+  let canScheduleAppointment = false;
   let canDelete = false;
   try {
     const ctx = await scopedContext("OPPORTUNITIES_VIEW");
@@ -52,6 +55,9 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
     notes = await listNotesBySubject("OPPORTUNITY", id);
     appointments = await listAppointmentsBySubject("OPPORTUNITY", id);
     canEdit = ctx.permissions.includes("OPPORTUNITIES_EDIT");
+    canAddNote = ctx.permissions.includes("OPPORTUNITIES_ADD_NOTE") && ctx.permissions.includes("NOTES_CREATE");
+    canCreateTask = ctx.permissions.includes("OPPORTUNITIES_CREATE_TASK") && ctx.permissions.includes("TASKS_CREATE");
+    canScheduleAppointment = ctx.permissions.includes("OPPORTUNITIES_SCHEDULE_APPOINTMENT") && ctx.permissions.includes("APPOINTMENTS_CREATE");
     canDelete = ctx.permissions.includes("OPPORTUNITIES_DELETE");
   } catch (error) {
     if (error instanceof CrmError && error.status === 401) redirect("/login");
@@ -161,7 +167,9 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                 subjectType="OPPORTUNITY"
                 subjectId={id}
                 subjectLabel={opportunity.name}
-                canEdit={canEdit}
+                canAddNote={canAddNote}
+                canCreateTask={canCreateTask}
+                canScheduleAppointment={canScheduleAppointment}
                 notes={notes.map((note) => ({ id: note.id, body: note.body, createdAt: note.createdAt.toISOString(), author: note.author }))}
                 appointments={appointments.map((appointment) => ({ id: appointment.id, title: appointment.title, startAt: appointment.startAt.toISOString(), endAt: appointment.endAt?.toISOString() ?? null, status: appointment.status, locationOrLink: appointment.locationOrLink }))}
               />
@@ -186,7 +194,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
               <span className="badge badge-neutral">{events.length}</span>
             </div>
             <div className="mx-3 mt-3">
-              <ActivityComposer subjectType="OPPORTUNITY" subjectId={id} subjectLabel={opportunity.name} canEdit={canEdit} />
+              <ActivityComposer subjectType="OPPORTUNITY" subjectId={id} subjectLabel={opportunity.name} canAddNote={canAddNote} canCreateTask={canCreateTask} canScheduleAppointment={canScheduleAppointment} />
             </div>
             <div className="card-body max-h-150 overflow-y-auto">
               <Timeline events={events} />

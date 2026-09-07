@@ -45,6 +45,10 @@ export default async function LeadDetailPage({ params }: PageProps) {
   let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
   let canEdit = false;
+  let canAddNote = false;
+  let canCreateTask = false;
+  let canScheduleAppointment = false;
+  let canConvert = false;
   let canUpload = false;
   let canDeleteFiles = false;
   let canDelete = false;
@@ -58,6 +62,10 @@ export default async function LeadDetailPage({ params }: PageProps) {
     notes = await listNotesBySubject("LEAD", id);
     appointments = await listAppointmentsBySubject("LEAD", id);
     canEdit = ctx.permissions.includes("LEADS_EDIT");
+    canAddNote = ctx.permissions.includes("LEADS_ADD_NOTE") && ctx.permissions.includes("NOTES_CREATE");
+    canCreateTask = ctx.permissions.includes("LEADS_CREATE_TASK") && ctx.permissions.includes("TASKS_CREATE");
+    canScheduleAppointment = ctx.permissions.includes("LEADS_SCHEDULE_APPOINTMENT") && ctx.permissions.includes("APPOINTMENTS_CREATE");
+    canConvert = ctx.permissions.includes("LEADS_CONVERT");
     canUpload = ctx.permissions.includes("FILES_UPLOAD");
     canDeleteFiles = ctx.permissions.includes("FILES_DELETE");
     canDelete = ctx.permissions.includes("LEADS_DELETE");
@@ -112,7 +120,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
           convertedAt={lead.convertedAt?.toISOString() ?? null}
           convertedContactId={lead.convertedContactId}
           convertedCustomerId={lead.convertedCustomerId}
-          canEdit={canEdit}
+          canConvert={canConvert}
         />
       </HighlightsPanel>
 
@@ -161,7 +169,9 @@ export default async function LeadDetailPage({ params }: PageProps) {
                   subjectType="LEAD"
                   subjectId={id}
                   subjectLabel={`${lead.firstName} ${lead.lastName}`}
-                  canEdit={canEdit}
+                  canAddNote={canAddNote}
+                  canCreateTask={canCreateTask}
+                  canScheduleAppointment={canScheduleAppointment}
                   notes={notes.map((note) => ({
                     id: note.id,
                     body: note.body,
@@ -198,7 +208,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
               <span className="badge badge-neutral">{events.length}</span>
             </div>
             <div className="mx-3 mt-3">
-              <ActivityComposer subjectType="LEAD" subjectId={id} subjectLabel={`${lead.firstName} ${lead.lastName}`} canEdit={canEdit} />
+              <ActivityComposer subjectType="LEAD" subjectId={id} subjectLabel={`${lead.firstName} ${lead.lastName}`} canAddNote={canAddNote} canCreateTask={canCreateTask} canScheduleAppointment={canScheduleAppointment} />
             </div>
             <div className="card-body max-h-150 overflow-y-auto">
               <Timeline events={events} />

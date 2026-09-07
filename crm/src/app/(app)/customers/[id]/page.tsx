@@ -48,6 +48,9 @@ export default async function CustomerDetailPage({ params }: PageProps) {
   let platform: Awaited<ReturnType<typeof client360>> = null;
   let campaigns: Array<{ campaign: { name: string } }> = [];
   let canEdit = false;
+  let canAddNote = false;
+  let canCreateTask = false;
+  let canScheduleAppointment = false;
   let canUpload = false;
   let canDeleteFiles = false;
   let canDelete = false;
@@ -62,6 +65,9 @@ export default async function CustomerDetailPage({ params }: PageProps) {
     platform = customer.platformUserId ? await client360(customer.platformUserId) : null;
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "CUSTOMER", subjectId: id }, include: { campaign: true } });
     canEdit = ctx.permissions.includes("CUSTOMERS_EDIT");
+    canAddNote = ctx.permissions.includes("CUSTOMERS_ADD_NOTE") && ctx.permissions.includes("NOTES_CREATE");
+    canCreateTask = ctx.permissions.includes("CUSTOMERS_CREATE_TASK") && ctx.permissions.includes("TASKS_CREATE");
+    canScheduleAppointment = ctx.permissions.includes("CUSTOMERS_SCHEDULE_APPOINTMENT") && ctx.permissions.includes("APPOINTMENTS_CREATE");
     canUpload = ctx.permissions.includes("FILES_UPLOAD");
     canDeleteFiles = ctx.permissions.includes("FILES_DELETE");
     canDelete = ctx.permissions.includes("CUSTOMERS_DELETE");
@@ -249,7 +255,9 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                 subjectType="CUSTOMER"
                 subjectId={id}
                 subjectLabel={`${customer.firstName} ${customer.lastName}`}
-                canEdit={canEdit}
+                canAddNote={canAddNote}
+                canCreateTask={canCreateTask}
+                canScheduleAppointment={canScheduleAppointment}
                 notes={notes.map((note) => ({ id: note.id, body: note.body, createdAt: note.createdAt.toISOString(), author: note.author }))}
                 appointments={appointments.map((appointment) => ({ id: appointment.id, title: appointment.title, startAt: appointment.startAt.toISOString(), endAt: appointment.endAt?.toISOString() ?? null, status: appointment.status, locationOrLink: appointment.locationOrLink }))}
               />
@@ -274,7 +282,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
               <span className="badge badge-neutral">{events.length}</span>
             </div>
             <div className="mx-3 mt-3">
-              <ActivityComposer subjectType="CUSTOMER" subjectId={id} subjectLabel={`${customer.firstName} ${customer.lastName}`} canEdit={canEdit} />
+              <ActivityComposer subjectType="CUSTOMER" subjectId={id} subjectLabel={`${customer.firstName} ${customer.lastName}`} canAddNote={canAddNote} canCreateTask={canCreateTask} canScheduleAppointment={canScheduleAppointment} />
             </div>
             <div className="card-body max-h-150 overflow-y-auto">
               <Timeline events={events} />

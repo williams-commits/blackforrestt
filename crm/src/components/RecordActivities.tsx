@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/Toast";
 
 export interface SubjectNote {
   id: string;
@@ -32,16 +33,21 @@ export function RecordActivities({
   subjectLabel,
   notes,
   appointments,
-  canEdit,
+  canAddNote,
+  canCreateTask,
+  canScheduleAppointment,
 }: {
   subjectType: SubjectType;
   subjectId: string;
   subjectLabel: string;
   notes: SubjectNote[];
   appointments: SubjectAppointment[];
-  canEdit: boolean;
+  canAddNote: boolean;
+  canCreateTask: boolean;
+  canScheduleAppointment: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [noteBody, setNoteBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +62,10 @@ export function RecordActivities({
   const inputClass =
     "w-full rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
 
+  function refreshAfterToast() {
+    window.setTimeout(() => router.refresh(), 150);
+  }
+
   async function addNote(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
@@ -68,11 +78,17 @@ export function RecordActivities({
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        setError(body?.error ?? "Could not add note.");
+        const message = body?.error ?? "Could not add note.";
+        setError(message);
+        toast.error("Note not added", message);
         return;
       }
       setNoteBody("");
-      router.refresh();
+      toast.success("Note added", `Note added to ${subjectLabel}.`);
+      refreshAfterToast();
+    } catch {
+      setError("Could not add note.");
+      toast.error("Note not added", "Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -81,43 +97,56 @@ export function RecordActivities({
   async function createTask(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    const response = await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: taskTitle,
-        dueAt: taskDue || null,
-        subjectType,
-        subjectId,
-      }),
-    });
-    if (response.ok) {
+    setBusy(true);
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: taskTitle, dueAt: taskDue || null, subjectType, subjectId }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        const message = body?.error ?? "Could not create task.";
+        setError(message);
+        toast.error("Task not created", message);
+        return;
+      }
       setShowTask(false);
-      router.refresh();
-    } else {
+      toast.success("Task created", `Follow-up task created for ${subjectLabel}.`);
+      refreshAfterToast();
+    } catch {
       setError("Could not create task.");
+      toast.error("Task not created", "Check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
   }
 
   async function scheduleAppointment(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    const response = await fetch("/api/appointments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: apptTitle,
-        startAt: apptStart,
-        locationOrLink: apptLocation || null,
-        subjectType,
-        subjectId,
-      }),
-    });
-    if (response.ok) {
+    setBusy(true);
+    try {
+      const response = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: apptTitle, startAt: apptStart, locationOrLink: apptLocation || null, subjectType, subjectId }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        const message = body?.error ?? "Could not schedule appointment.";
+        setError(message);
+        toast.error("Appointment not scheduled", message);
+        return;
+      }
       setShowAppointment(false);
-      router.refresh();
-    } else {
+      toast.success("Appointment scheduled", `Appointment scheduled with ${subjectLabel}.`);
+      refreshAfterToast();
+    } catch {
       setError("Could not schedule appointment.");
+      toast.error("Appointment not scheduled", "Check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -129,9 +158,9 @@ export function RecordActivities({
         </p>
       ) : null}
 
-      {canEdit ? (
+      {canAddNote || canCreateTask || canScheduleAppointment ? (
         <>
-          <form method="post" onSubmit={addNote} className="space-y-2">
+          {canAddNote ? <form method="post" onSubmit={addNote} className="space-y-2">
             <textarea
               value={noteBody}
               onChange={(event) => setNoteBody(event.target.value)}
@@ -151,10 +180,10 @@ export function RecordActivities({
                 {busy ? "Adding…" : "Add note"}
               </button>
             </div>
-          </form>
+          </form> : null}
 
           <div className="flex gap-2">
-            <button
+            {canCreateTask ? <button
               type="button"
               onClick={() => {
                 setShowTask((previous) => !previous);
@@ -163,8 +192,8 @@ export function RecordActivities({
               className="btn btn-secondary"
             >
               Create follow-up task
-            </button>
-            <button
+            </button> : null}
+            {canScheduleAppointment ? <button
               type="button"
               onClick={() => {
                 setShowAppointment((previous) => !previous);
@@ -173,10 +202,10 @@ export function RecordActivities({
               className="btn btn-secondary"
             >
               Schedule appointment
-            </button>
+            </button> : null}
           </div>
 
-          {showTask ? (
+          {canCreateTask && showTask ? (
             <form method="post" onSubmit={createTask} className="grid gap-2 rounded-md border border-(--border-default) p-3 sm:grid-cols-3">
               <input
                 aria-label="Task title"
@@ -203,7 +232,7 @@ export function RecordActivities({
             </form>
           ) : null}
 
-          {showAppointment ? (
+          {canScheduleAppointment && showAppointment ? (
             <form method="post" onSubmit={scheduleAppointment} className="grid gap-2 rounded-md border border-(--border-default) p-3 sm:grid-cols-4">
               <input
                 aria-label="Appointment title"

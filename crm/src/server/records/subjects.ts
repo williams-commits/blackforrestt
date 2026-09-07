@@ -18,9 +18,17 @@ export type ActivitySubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | 
 
 export type SubjectAction = "VIEW" | "EDIT" | "ADD_NOTE" | "CREATE_TASK" | "SCHEDULE_APPOINTMENT" | "CHANGE_STATUS" | "MANAGE_TAGS" | "ASSIGN" | "CONVERT";
 
+const SUBJECT_OBJECT: Record<ActivitySubjectType, string> = {
+  LEAD: "LEADS",
+  CONTACT: "CONTACTS",
+  ACCOUNT: "ACCOUNTS",
+  CUSTOMER: "CUSTOMERS",
+  OPPORTUNITY: "OPPORTUNITIES",
+};
+
 /** Resolve the permission for one business action on one subject type. */
 export function subjectPermission(subjectType: ActivitySubjectType, action: SubjectAction): Permission {
-  const object = `${subjectType[0]}${subjectType.slice(1).toLowerCase()}s`.toUpperCase();
+  const object = SUBJECT_OBJECT[subjectType];
   if (action === "VIEW") return `${object}_VIEW` as Permission;
   if (action === "EDIT") return `${object}_EDIT` as Permission;
   if (action === "ADD_NOTE") return `${object}_ADD_NOTE` as Permission;

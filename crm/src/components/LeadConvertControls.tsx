@@ -9,13 +9,13 @@ export function LeadConvertControls({
   convertedAt,
   convertedContactId,
   convertedCustomerId,
-  canEdit,
+  canConvert,
 }: {
   leadId: string;
   convertedAt: string | null;
   convertedContactId: string | null;
   convertedCustomerId: string | null;
-  canEdit: boolean;
+  canConvert: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -43,7 +43,7 @@ export function LeadConvertControls({
     );
   }
 
-  if (!canEdit) return null;
+  if (!canConvert) return null;
 
   return (
     <div className="flex items-center gap-2">

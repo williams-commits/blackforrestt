@@ -45,6 +45,9 @@ export default async function AccountDetailPage({ params }: PageProps) {
   let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
   let canEdit = false;
+  let canAddNote = false;
+  let canCreateTask = false;
+  let canScheduleAppointment = false;
   let canUpload = false;
   let canDeleteFiles = false;
   let canDelete = false;
@@ -64,6 +67,9 @@ export default async function AccountDetailPage({ params }: PageProps) {
     notes = await listNotesBySubject("ACCOUNT", id);
     appointments = await listAppointmentsBySubject("ACCOUNT", id);
     canEdit = ctx.permissions.includes("ACCOUNTS_EDIT");
+    canAddNote = ctx.permissions.includes("ACCOUNTS_ADD_NOTE") && ctx.permissions.includes("NOTES_CREATE");
+    canCreateTask = ctx.permissions.includes("ACCOUNTS_CREATE_TASK") && ctx.permissions.includes("TASKS_CREATE");
+    canScheduleAppointment = ctx.permissions.includes("ACCOUNTS_SCHEDULE_APPOINTMENT") && ctx.permissions.includes("APPOINTMENTS_CREATE");
     canUpload = ctx.permissions.includes("FILES_UPLOAD");
     canDeleteFiles = ctx.permissions.includes("FILES_DELETE");
     canDelete = ctx.permissions.includes("ACCOUNTS_DELETE");
@@ -228,7 +234,9 @@ export default async function AccountDetailPage({ params }: PageProps) {
                 subjectType="ACCOUNT"
                 subjectId={id}
                 subjectLabel={account.name}
-                canEdit={canEdit}
+                canAddNote={canAddNote}
+                canCreateTask={canCreateTask}
+                canScheduleAppointment={canScheduleAppointment}
                 notes={notes.map((note) => ({ id: note.id, body: note.body, createdAt: note.createdAt.toISOString(), author: note.author }))}
                 appointments={appointments.map((appointment) => ({ id: appointment.id, title: appointment.title, startAt: appointment.startAt.toISOString(), endAt: appointment.endAt?.toISOString() ?? null, status: appointment.status, locationOrLink: appointment.locationOrLink }))}
               />
@@ -253,7 +261,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
               <span className="badge badge-neutral">{events.length}</span>
             </div>
             <div className="mx-3 mt-3">
-              <ActivityComposer subjectType="ACCOUNT" subjectId={id} subjectLabel={account.name} canEdit={canEdit} />
+              <ActivityComposer subjectType="ACCOUNT" subjectId={id} subjectLabel={account.name} canAddNote={canAddNote} canCreateTask={canCreateTask} canScheduleAppointment={canScheduleAppointment} />
             </div>
             <div className="card-body max-h-150 overflow-y-auto">
               <Timeline events={events} />

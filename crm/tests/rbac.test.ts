@@ -177,6 +177,7 @@ test("independent action permissions deny only their own operation", async () =>
   assert.ok(PERMISSION_CATEGORIES.some((category) => category.permissions.some((permission) => permission.key === "RECORD_STATUS_CREATE")), "record status permissions are categorized");
   assert.ok(PERMISSION_CATEGORIES.some((category) => category.permissions.some((permission) => permission.key === "POTENTIAL_STATUS_CREATE")), "potential status permissions are categorized");
   assert.ok(PERMISSION_CATEGORIES.some((category) => category.permissions.some((permission) => permission.key === "TAGS_CREATE")), "tag permissions are categorized");
+  assert.equal(subjectPermission("OPPORTUNITY", "CREATE_TASK"), "OPPORTUNITIES_CREATE_TASK");
 
   await prisma.lead.delete({ where: { id: leadId } });
 });

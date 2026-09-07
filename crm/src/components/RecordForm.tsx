@@ -67,7 +67,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
   const [dupMatches, setDupMatches] = useState<DuplicateHit[] | null>(null);
   const [lastPayload, setLastPayload] = useState<Record<string, unknown> | null>(null);
   const [customDefs, setCustomDefs] = useState<CustomFieldDefLite[]>([]);
-  const [capabilities, setCapabilities] = useState({ classify: false, assign: false });
+  const [capabilities, setCapabilities] = useState({ classify: false, potentialClassify: false, assign: false });
   const [customValues, setCustomValues] = useState<Record<string, string | boolean | string[]>>(() => {
     const initialValues = initial?.customFields as Record<string, unknown> | null | undefined;
     const result: Record<string, string | boolean | string[]> = {};
@@ -113,10 +113,11 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
         const objectPrefix = object.toUpperCase();
         setCapabilities({
           classify: permissions.includes(`${objectPrefix}_CHANGE_STATUS`) || (object === "leads" && permissions.includes("LEADS_CHANGE_POTENTIAL_STATUS")),
+          potentialClassify: object === "leads" && permissions.includes("LEADS_CHANGE_POTENTIAL_STATUS"),
           assign: permissions.includes(`${objectPrefix}_ASSIGN`),
         });
       })
-      .catch(() => setCapabilities({ classify: false, assign: false }));
+      .catch(() => setCapabilities({ classify: false, potentialClassify: false, assign: false }));
   }, [object]);
   const editing = Boolean(initial?.id);
   const [values, setValues] = useState<Record<string, string>>(() => {
@@ -131,7 +132,8 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
   });
   const visibleFields = fields.filter((field) => {
     if (editing && !canEdit && !["statusId", "potentialStatusId", "assignedUserId", "assignedTeamId", "ownerUserId", "teamId"].includes(field.name)) return false;
-    if (["statusId", "potentialStatusId"].includes(field.name)) return capabilities.classify;
+    if (field.name === "statusId") return capabilities.classify;
+    if (field.name === "potentialStatusId") return capabilities.potentialClassify;
     if (["assignedUserId", "assignedTeamId", "ownerUserId", "teamId"].includes(field.name)) return capabilities.assign;
     return true;
   });

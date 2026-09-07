@@ -8,6 +8,7 @@ import { ToastProvider } from "@/components/Toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PageLoadingNotice } from "@/components/PageLoadingNotice";
+import { RealtimeBridge } from "@/components/RealtimeBridge";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <ToastProvider>
+      <RealtimeBridge />
       <div className="flex min-h-screen" style={{ background: "var(--bg-app)" }}>
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">

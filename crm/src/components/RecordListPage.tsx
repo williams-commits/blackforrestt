@@ -317,6 +317,12 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     void fetchRows();
   }, [fetchRows]);
 
+  useEffect(() => {
+    const refresh = () => void fetchRows();
+    window.addEventListener("crm:realtime-refresh", refresh);
+    return () => window.removeEventListener("crm:realtime-refresh", refresh);
+  }, [fetchRows]);
+
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
   const allSelected = rows.length > 0 && rows.every((row) => selected.has(row.id));
 

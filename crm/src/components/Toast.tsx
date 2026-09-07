@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 /**
  * Toast notification system — slide-in messages from bottom-right.
@@ -44,12 +44,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [dismiss],
   );
 
-  const value: ToastContextValue = {
+  const value = useMemo<ToastContextValue>(() => ({
     success: (title, message) => show("success", title, message),
     error: (title, message) => show("error", title, message),
     warning: (title, message) => show("warning", title, message),
     info: (title, message) => show("info", title, message),
-  };
+  }), [show]);
 
   return (
     <ToastContext.Provider value={value}>

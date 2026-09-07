@@ -210,11 +210,21 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
 
   const fetchOptions = useCallback(async () => {
     try {
+      const subjectTypeMap: Record<ObjectKey, string> = {
+        leads: "LEAD",
+        contacts: "CONTACT",
+        accounts: "ACCOUNT",
+        customers: "CUSTOMER",
+      };
+      const subjectType = subjectTypeMap[object];
+      const statusUrl = subjectType ? `/api/record-statuses?subjectType=${subjectType}` : "/api/record-statuses";
       const [statuses, users] = await Promise.all([
-        fetch("/api/record-statuses").then((r) => (r.ok ? r.json() : { data: [] })),
+        fetch(statusUrl).then((r) => (r.ok ? r.json() : { data: [] })),
         fetch("/api/users").then((r) => (r.ok ? r.json() : { data: [] })),
       ]);
-      const potentialStatuses = await fetch("/api/potential-statuses").then((r) => (r.ok ? r.json() : { data: [] }));
+      const potentialStatuses = object === "leads"
+        ? await fetch("/api/potential-statuses?subjectType=LEAD").then((r) => (r.ok ? r.json() : { data: [] }))
+        : { data: [] as Array<{ id: string; name: string }> };
       const next: OptionSource = freshOptions();
       for (const status of potentialStatuses.data as Array<{ id: string; name: string }>) {
         next.potentialStatuses.push({ value: status.id, label: status.name });

@@ -39,7 +39,7 @@ export async function GET(request: Request) {
           });
           if (!newest || (lastSeen && newest.id === lastSeen.id)) return;
           lastSeen = newest;
-          send("refresh", { at: newest.createdAt.toISOString() });
+          send("refresh", { id: newest.id, at: newest.createdAt.toISOString() });
         })().catch(() => undefined);
       }, 2_500);
     },

@@ -218,7 +218,8 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       };
       const subjectType = subjectTypeMap[object];
       const statusUrl = subjectType ? `/api/record-statuses?subjectType=${subjectType}` : "/api/record-statuses";
-      const [statuses, users] = await Promise.all([
+      const [me, statuses, users] = await Promise.all([
+        fetch("/api/me").then((r) => (r.ok ? r.json() : { data: { permissions: [] } })),
         fetch(statusUrl).then((r) => (r.ok ? r.json() : { data: [] })),
         fetch("/api/users").then((r) => (r.ok ? r.json() : { data: [] })),
       ]);
@@ -251,7 +252,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           next.accounts.push({ value: account.id, label: account.name });
         }
       }
-      if (object === "leads" || object === "contacts" || object === "customers") {
+      if ((object === "leads" || object === "contacts" || object === "customers") && (me.data?.permissions as string[] | undefined)?.includes("CAMPAIGNS_VIEW")) {
         const campaigns = await fetch("/api/campaigns").then((r) => (r.ok ? r.json() : { data: [] }));
         for (const campaign of campaigns.data as Array<{ id: string; name: string }>) {
           next.campaigns.push({ value: campaign.id, label: campaign.name });

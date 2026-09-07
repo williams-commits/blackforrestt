@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { notificationHref } from "@/lib/notificationLink";
+import { useToast } from "@/components/Toast";
 
 interface NotificationRow {
   id: string;
@@ -36,14 +37,26 @@ export function NotificationBell() {
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const knownIds = useRef<Set<string> | null>(null);
+  const toast = useToast();
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch("/api/notifications", { cache: "no-store" });
       if (!response.ok) return;
       const body = (await response.json()) as { data?: NotificationRow[]; meta?: { unread?: number } };
-      setNotifications(body.data ?? []);
+      const nextNotifications = body.data ?? [];
+      const previousIds = knownIds.current;
+      if (previousIds) {
+        for (const notification of nextNotifications) {
+          if (!previousIds.has(notification.id) && !notification.readAt) {
+            toast.info(notificationTitle(notification));
+          }
+        }
+      }
+      knownIds.current = new Set(nextNotifications.map((notification) => notification.id));
+      setNotifications(nextNotifications);
       setUnread(body.meta?.unread ?? 0);
     } catch {
       // Notification polling is non-critical. Network hiccups, a restarting
@@ -52,7 +65,7 @@ export function NotificationBell() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [toast]);
 
   useEffect(() => {
     void refresh();
@@ -66,13 +79,16 @@ export function NotificationBell() {
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     document.addEventListener("keydown", onKeyDown);
+    const onRealtimeNotification = () => void refresh();
+    window.addEventListener("crm:notifications-refresh", onRealtimeNotification);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
       document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("crm:notifications-refresh", onRealtimeNotification);
     };
-  }, []);
+  }, [refresh]);
 
   useEffect(() => {
     function onClickOutside(event: MouseEvent) {

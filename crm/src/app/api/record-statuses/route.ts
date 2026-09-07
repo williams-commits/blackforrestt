@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requirePermission } from "@/server/guard";
+import { requireAnyPermission, requirePermission } from "@/server/guard";
 import { subjectPermission, type ActivitySubjectType } from "@/server/records/subjects";
 import { CreateStatus, createStatus, listStatuses } from "@/server/records/statuses";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
@@ -11,7 +11,11 @@ export async function GET(request: Request) {
   try {
     const subjectType = new URL(request.url).searchParams.get("subjectType") as ActivitySubjectType | null;
     const supported = ["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"];
-    await requirePermission(subjectType && supported.includes(subjectType) ? subjectPermission(subjectType, "CHANGE_STATUS") : "RECORD_STATUS_VIEW");
+    if (subjectType && supported.includes(subjectType)) {
+      await requireAnyPermission(subjectPermission(subjectType, "VIEW"), subjectPermission(subjectType, "CHANGE_STATUS"));
+    } else {
+      await requirePermission("RECORD_STATUS_VIEW");
+    }
     return NextResponse.json({ data: await listStatuses() });
   } catch (error) {
     return handleRouteError(error, "Unable to load statuses.");

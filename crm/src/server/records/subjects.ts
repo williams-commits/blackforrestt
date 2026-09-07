@@ -16,7 +16,7 @@ import { getOpportunity } from "@/server/records/opportunities";
 
 export type ActivitySubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
 
-export type SubjectAction = "VIEW" | "EDIT" | "ADD_NOTE" | "CREATE_TASK" | "SCHEDULE_APPOINTMENT" | "CHANGE_STATUS" | "MANAGE_TAGS" | "ASSIGN" | "CONVERT";
+export type SubjectAction = "VIEW" | "EDIT" | "ADD_NOTE" | "CREATE_TASK" | "SCHEDULE_APPOINTMENT" | "CHANGE_STATUS" | "CHANGE_POTENTIAL_STATUS" | "MANAGE_TAGS" | "ASSIGN" | "CONVERT";
 
 const SUBJECT_OBJECT: Record<ActivitySubjectType, string> = {
   LEAD: "LEADS",
@@ -35,6 +35,7 @@ export function subjectPermission(subjectType: ActivitySubjectType, action: Subj
   if (action === "CREATE_TASK") return `${object}_CREATE_TASK` as Permission;
   if (action === "SCHEDULE_APPOINTMENT") return `${object}_SCHEDULE_APPOINTMENT` as Permission;
   if (action === "CHANGE_STATUS") return `${object}_CHANGE_STATUS` as Permission;
+  if (action === "CHANGE_POTENTIAL_STATUS") return `${object}_CHANGE_POTENTIAL_STATUS` as Permission;
   if (action === "MANAGE_TAGS") return `${object}_MANAGE_TAGS` as Permission;
   if (action === "ASSIGN") return `${object}_ASSIGN` as Permission;
   return `${object}_CONVERT` as Permission;

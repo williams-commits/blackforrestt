@@ -60,6 +60,32 @@ export async function requirePermission(permission: Permission): Promise<CrmCont
   return { userId, name: user.name, roleKey: user.role.key, scope: user.role.scope, permissions, ip };
 }
 
+/** Resolve access when a read path legitimately accepts one of several capabilities. */
+export async function requireAnyPermission(...required: Permission[]): Promise<CrmContext> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) throw new CrmError("Unauthorized", 401);
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      name: true,
+      status: true,
+      role: { select: { key: true, scope: true, permissions: { select: { permission: true } } } },
+    },
+  });
+  if (!user || user.status !== "ACTIVE") throw new CrmError("Forbidden — an active CRM account is required", 403);
+
+  const permissions = user.role.permissions.map((entry) => entry.permission) as Permission[];
+  const granted = required.find((permission) => permissions.includes(permission));
+  const ip = (await headers()).get("x-client-ip");
+  if (!granted) {
+    logger.warn("authz_denied", { userId, permission: required.join(" OR "), ip });
+    throw new CrmError(`Forbidden — one of ${required.join(", ")} permissions required`, 403);
+  }
+  return { userId, name: user.name, roleKey: user.role.key, scope: user.role.scope, permissions, ip };
+}
+
 /** Enforce several permissions at once (all must be held). */
 export async function requirePermissions(...required: Permission[]): Promise<CrmContext> {
   let context: CrmContext | null = null;

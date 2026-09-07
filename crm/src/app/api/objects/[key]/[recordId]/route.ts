@@ -10,7 +10,7 @@ type RouteContext = { params: Promise<{ key: string; recordId: string }> };
 
 export async function GET(_request: Request, context: RouteContext) {
   try {
-    const ctx = await scopedContext("LEADS_READ");
+    const ctx = await scopedContext("LEADS_VIEW");
     const { key, recordId } = await context.params;
     return NextResponse.json({ data: await getRecord(ctx, key, recordId) });
   } catch (error) {

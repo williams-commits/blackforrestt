@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { UpdateLead, getLead, scopedContext, softDeleteLead, updateLead } from "@/server/records/leads";
+import type { Permission } from "@/server/permissions";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -9,7 +10,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: RouteContext) {
   try {
-    const ctx = await scopedContext("LEADS_READ");
+    const ctx = await scopedContext("LEADS_VIEW");
     const { id } = await context.params;
     return NextResponse.json({ data: await getLead(ctx, id) });
   } catch (error) {
@@ -19,11 +20,20 @@ export async function GET(_request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
-    const ctx = await scopedContext("LEADS_EDIT");
     const { id } = await context.params;
     const parsed = await parseJsonBody(request, UpdateLead);
     if (!parsed.ok) return parsed.response;
-    return NextResponse.json({ data: await updateLead(ctx, id, parsed.data) });
+    const input = parsed.data;
+    const hasCoreEdit = Object.keys(input).some((key) => !["statusId", "potentialStatusId", "assignedUserId", "assignedTeamId"].includes(key));
+    const required: Permission = hasCoreEdit
+      ? "LEADS_EDIT"
+      : input.statusId !== undefined
+        ? "LEADS_CHANGE_STATUS"
+        : input.potentialStatusId !== undefined
+          ? "LEADS_CHANGE_POTENTIAL_STATUS"
+          : "LEADS_ASSIGN";
+    const ctx = await scopedContext(required);
+    return NextResponse.json({ data: await updateLead(ctx, id, input) });
   } catch (error) {
     return handleRouteError(error, "Unable to update lead.");
   }

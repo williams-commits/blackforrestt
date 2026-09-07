@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/server/db";
-import { CrmError } from "@/server/guard";
+import { CrmError, requireCapability } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { ownerScopeWhere } from "@/server/scope";
@@ -249,6 +249,8 @@ export async function updateOpportunity(
   id: string,
   input: z.infer<typeof UpdateOpportunity>,
 ) {
+  if (input.stageId !== undefined) requireCapability(ctx, "OPPORTUNITIES_CHANGE_STATUS");
+  if (input.ownerUserId !== undefined || input.teamId !== undefined) requireCapability(ctx, "OPPORTUNITIES_ASSIGN");
   const existing = await prisma.opportunity.findFirst({
     where: { id, deletedAt: null, ...scopeWhere(ctx) },
     include: { stage: true },

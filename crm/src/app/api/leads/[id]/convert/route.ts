@@ -11,7 +11,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 /** Conversion pre-flight: lead state + duplicate matches. */
 export async function GET(_request: Request, context: RouteContext) {
   try {
-    const ctx = await scopedContext("LEADS_READ");
+    const ctx = await scopedContext("LEADS_VIEW");
     const { id } = await context.params;
     return NextResponse.json({ data: await conversionPreview(ctx, id) });
   } catch (error) {
@@ -21,7 +21,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
 export async function POST(request: Request, context: RouteContext) {
   try {
-    const ctx = await scopedContext("LEADS_EDIT");
+    const ctx = await scopedContext("LEADS_CONVERT");
     const { id } = await context.params;
     const parsed = await parseJsonBody(request, ConvertLead);
     if (!parsed.ok) return parsed.response;

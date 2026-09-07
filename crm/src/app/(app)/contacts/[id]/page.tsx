@@ -59,7 +59,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
   let canDeleteFiles = false;
   let canDelete = false;
   try {
-    const ctx = await scopedContext("CONTACTS_READ");
+    const ctx = await scopedContext("CONTACTS_VIEW");
     contact = await getContact(ctx, id);
     events = await listTimeline("CONTACT", id);
     tags = await listTagsForSubject("CONTACT", id);
@@ -147,7 +147,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
             <div className="card-body space-y-4">
               <div>
                 <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Tags</p>
-                <TagEditor subjectType="CONTACT" subjectId={id} attached={tags.map((link) => ({ tagId: link.tagId, name: link.tag.name, color: link.tag.color }))} canEdit={canEdit} />
+                <TagEditor subjectType="CONTACT" subjectId={id} attached={tags.map((link) => ({ tagId: link.tagId, name: link.tag.name, color: link.tag.color }))} />
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
                 <Field label="Lead Source" value={contact.leadSource} />

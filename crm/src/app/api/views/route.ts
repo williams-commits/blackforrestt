@@ -33,7 +33,7 @@ const OBJECT_KEY: Record<string, "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER"> = 
 
 export async function GET(request: Request) {
   try {
-    const ctx = await scopedContext("LEADS_READ");
+    const ctx = await scopedContext("LEADS_VIEW");
     const objectType = new URL(request.url).searchParams.get("objectType");
     const views = await prisma.savedView.findMany({
       where: {
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const ctx = await requirePermission("LEADS_READ");
+    const ctx = await requirePermission("LEADS_VIEW");
     const parsed = await parseJsonBody(request, CreateView);
     if (!parsed.ok) return parsed.response;
     const view = await prisma.savedView.upsert({
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const ctx = await requirePermission("LEADS_READ");
+    const ctx = await requirePermission("LEADS_VIEW");
     const id = new URL(request.url).searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id." }, { status: 400 });
     // Only the owner may delete their saved view.

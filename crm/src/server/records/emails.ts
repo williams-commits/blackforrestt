@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { prisma } from "@/server/db";
-import { CrmError } from "@/server/guard";
+import { CrmError, requireCapability } from "@/server/guard";
 import { sendEmail, emailConfigured } from "@/server/email";
 import { appendActivity } from "@/server/activity";
 import { appendAudit } from "@/server/audit";
-import { resolveSubject } from "@/server/records/subjects";
+import { resolveSubject, subjectPermission } from "@/server/records/subjects";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
@@ -28,6 +28,7 @@ export async function sendRecordEmail(
   ctx: ScopedContext,
   input: z.infer<typeof SendEmail>,
 ): Promise<{ sent: boolean; emailDisabled: boolean }> {
+  requireCapability(ctx, subjectPermission(input.subjectType, "VIEW"));
   if (!emailConfigured()) {
     throw new CrmError(
       "Email sending is not configured — set SMTP_URL in the environment.",

@@ -49,7 +49,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
   let canDeleteFiles = false;
   let canDelete = false;
   try {
-    const ctx = await scopedContext("LEADS_READ");
+    const ctx = await scopedContext("LEADS_VIEW");
     lead = await getLead(ctx, id);
     events = await listTimeline("LEAD", id);
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "LEAD", subjectId: id }, include: { campaign: true } });
@@ -136,7 +136,6 @@ export default async function LeadDetailPage({ params }: PageProps) {
                     subjectType="LEAD"
                     subjectId={id}
                     attached={tags.map((link) => ({ tagId: link.tagId, name: link.tag.name, color: link.tag.color }))}
-                    canEdit={canEdit}
                   />
                 </div>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">

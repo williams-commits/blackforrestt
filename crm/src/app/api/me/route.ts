@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 /** The signed-in actor's identity and permissions (for cosmetic UI gating). */
 export async function GET() {
   try {
-    const context = await requirePermission("LEADS_READ");
+    const context = await requirePermission("LEADS_VIEW");
     return NextResponse.json({ data: context });
   } catch (error) {
     return handleRouteError(error, "Unable to load session context.");

@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /** Definitions readable by any core-record user (forms render them). */
 export async function GET(request: Request) {
   try {
-    await requirePermission("LEADS_READ");
+    await requirePermission("LEADS_VIEW");
     const activeOnly = new URL(request.url).searchParams.get("activeOnly") === "1";
     return NextResponse.json({ data: await listCustomFields(activeOnly) });
   } catch (error) {

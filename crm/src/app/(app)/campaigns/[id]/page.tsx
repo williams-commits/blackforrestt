@@ -16,7 +16,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   let campaign;
   let canEdit = false;
   try {
-    const ctx = await scopedContext("CAMPAIGNS_READ");
+    const ctx = await scopedContext("CAMPAIGNS_VIEW");
     campaign = await getCampaign(ctx, id);
     canEdit = ctx.permissions.includes("CAMPAIGNS_EDIT");
   } catch (error) {

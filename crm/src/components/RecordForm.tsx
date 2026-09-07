@@ -108,13 +108,14 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
       .then((response) => (response.ok ? response.json() : null))
       .then((body) => {
         const permissions = body?.data?.permissions ?? [];
+        const objectPrefix = object.toUpperCase();
         setCapabilities({
-          classify: permissions.includes("RECORDS_CLASSIFY"),
-          assign: permissions.includes("RECORDS_ASSIGN"),
+          classify: permissions.includes(`${objectPrefix}_CHANGE_STATUS`) || (object === "leads" && permissions.includes("LEADS_CHANGE_POTENTIAL_STATUS")),
+          assign: permissions.includes(`${objectPrefix}_ASSIGN`),
         });
       })
       .catch(() => setCapabilities({ classify: false, assign: false }));
-  }, []);
+  }, [object]);
   const editing = Boolean(initial?.id);
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial_: Record<string, string> = {};

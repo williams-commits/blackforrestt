@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireCapability, requirePermission } from "@/server/guard";
+import { requirePermission } from "@/server/guard";
 import { CreateTag, createTag, deleteTag, listTags } from "@/server/records/tags";
 import { scopedContext } from "@/server/records/leads";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    await requirePermission("LEADS_READ");
+    await requirePermission("TAGS_VIEW");
     const params = new URL(request.url).searchParams;
     const subjectType = params.get("subjectType");
     const subjectId = params.get("subjectId");
@@ -25,8 +25,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const ctx = await scopedContext("SETTINGS_MANAGE");
-    requireCapability(ctx, "RECORDS_CLASSIFY");
+    const ctx = await scopedContext("TAGS_CREATE");
     const parsed = await parseJsonBody(request, CreateTag);
     if (!parsed.ok) return parsed.response;
     return NextResponse.json({ data: await createTag(ctx, parsed.data) }, { status: 201 });
@@ -37,8 +36,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const ctx = await scopedContext("SETTINGS_MANAGE");
-    requireCapability(ctx, "RECORDS_CLASSIFY");
+    const ctx = await scopedContext("TAGS_DELETE");
     const id = new URL(request.url).searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id." }, { status: 400 });
     await deleteTag(ctx, id);

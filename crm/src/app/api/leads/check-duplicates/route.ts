@@ -17,7 +17,7 @@ const Check = z.object({
 /** Duplicate check on arbitrary keys (form-time or integrations). */
 export async function POST(request: Request) {
   try {
-    const ctx = await scopedContext("LEADS_READ");
+    const ctx = await scopedContext("LEADS_VIEW");
     const parsed = await parseJsonBody(request, Check);
     if (!parsed.ok) return parsed.response;
     return NextResponse.json({ data: await findMatches(ctx, parsed.data) });

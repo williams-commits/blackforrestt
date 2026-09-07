@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/server/db";
-import { CrmError } from "@/server/guard";
+import { CrmError, requireCapability } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { storage } from "@/server/storage";
 import { resolveSubject } from "@/server/records/subjects";
@@ -49,6 +49,7 @@ export async function attachFile(
   input: z.infer<typeof AttachFile>,
   data: Buffer,
 ) {
+  requireCapability(ctx, "FILES_UPLOAD");
   assertFileAllowed(input.filename, input.mimeType, input.size);
   if (data.byteLength !== input.size) {
     throw new CrmError("Declared size does not match the uploaded file.", 400);

@@ -214,11 +214,10 @@ export async function createLead(ctx: ScopedContext, input: z.infer<typeof Creat
     }
   }
 
-  if (input.statusId !== undefined || input.potentialStatusId !== undefined) {
-    requireCapability(ctx, "RECORDS_CLASSIFY");
-  }
+  if (input.statusId !== undefined) requireCapability(ctx, "LEADS_CHANGE_STATUS");
+  if (input.potentialStatusId !== undefined) requireCapability(ctx, "LEADS_CHANGE_POTENTIAL_STATUS");
   if (input.assignedUserId !== undefined || input.assignedTeamId !== undefined) {
-    requireCapability(ctx, "RECORDS_ASSIGN");
+    requireCapability(ctx, "LEADS_ASSIGN");
     await assertAssignableUser(input.assignedUserId);
   }
   const defaultStatus = await prisma.recordStatus.findFirst({
@@ -300,12 +299,11 @@ export async function updateLead(ctx: ScopedContext, id: string, input: z.infer<
   const status = input.statusId ? await assertStatusFor("LEAD", input.statusId) : undefined;
   if (input.statusId && !status) throw new CrmError("Invalid lead status.", 400);
   const potentialStatus = input.potentialStatusId !== undefined ? await assertPotentialStatus(input.potentialStatusId) : undefined;
-  if (input.statusId !== undefined || input.potentialStatusId !== undefined) {
-    requireCapability(ctx, "RECORDS_CLASSIFY");
-  }
+  if (input.statusId !== undefined) requireCapability(ctx, "LEADS_CHANGE_STATUS");
+  if (input.potentialStatusId !== undefined) requireCapability(ctx, "LEADS_CHANGE_POTENTIAL_STATUS");
 
   if (input.assignedUserId !== undefined || input.assignedTeamId !== undefined) {
-    requireCapability(ctx, "RECORDS_ASSIGN");
+    requireCapability(ctx, "LEADS_ASSIGN");
     await assertAssignableUser(input.assignedUserId);
   }
 
@@ -396,9 +394,10 @@ export async function softDeleteLead(ctx: ScopedContext, id: string) {
 }
 
 export async function bulkLeads(ctx: ScopedContext, input: z.infer<typeof BulkLeadAction>) {
-  if (input.action === "assign") requireCapability(ctx, "RECORDS_ASSIGN");
+  if (input.action === "assign") requireCapability(ctx, "LEADS_ASSIGN");
   if (input.action === "assign") await assertAssignableUser(input.assignedUserId);
-  if (input.action === "status" || input.action === "tag") requireCapability(ctx, "RECORDS_CLASSIFY");
+  if (input.action === "status") requireCapability(ctx, "LEADS_CHANGE_STATUS");
+  if (input.action === "tag") requireCapability(ctx, "LEADS_MANAGE_TAGS");
   if (input.action === "delete" && !ctx.permissions.includes("LEADS_DELETE")) {
     throw new CrmError("Forbidden — LEADS_DELETE permission required", 403);
   }

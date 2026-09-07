@@ -1,11 +1,11 @@
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/server/db";
-import { CrmError } from "@/server/guard";
+import { CrmError, requireCapability } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { isNotificationSubjectType, notify, subjectNotificationContext } from "@/server/notifications";
-import { resolveSubject } from "@/server/records/subjects";
+import { resolveSubject, subjectPermission } from "@/server/records/subjects";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
@@ -98,14 +98,16 @@ export async function listTasks(
 }
 
 export async function createTask(ctx: ScopedContext, input: z.infer<typeof CreateTask>) {
+  requireCapability(ctx, "TASKS_CREATE");
+  if (input.subjectType) requireCapability(ctx, subjectPermission(input.subjectType, "CREATE_TASK"));
   const subject = input.subjectType && input.subjectId
     ? await resolveSubject(ctx, input.subjectType, input.subjectId)
     : null;
 
   // Creating for someone else is a managerial action.
   const ownerUserId = input.ownerUserId ?? ctx.userId;
-  if (ownerUserId !== ctx.userId && !ctx.permissions.includes("TASKS_EDIT")) {
-    throw new CrmError("Forbidden — TASKS_EDIT permission required to assign tasks", 403);
+  if (ownerUserId !== ctx.userId && !ctx.permissions.includes("TASKS_ASSIGN")) {
+    throw new CrmError("Forbidden — TASKS_ASSIGN permission required to assign tasks", 403);
   }
 
   const task = await prisma.$transaction(async (tx) => {
@@ -154,6 +156,7 @@ export async function createTask(ctx: ScopedContext, input: z.infer<typeof Creat
 }
 
 export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<typeof UpdateTask>) {
+  requireCapability(ctx, "TASKS_EDIT");
   const ownerIds = await visibleOwnerIds(ctx);
   const existing = await prisma.task.findFirst({
     where: { id, ...(ownerIds ? { ownerUserId: { in: ownerIds } } : {}) },
@@ -163,9 +166,9 @@ export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<
   if (
     input.ownerUserId !== undefined &&
     input.ownerUserId !== existing.ownerUserId &&
-    !ctx.permissions.includes("TASKS_EDIT")
+    !ctx.permissions.includes("TASKS_ASSIGN")
   ) {
-    throw new CrmError("Forbidden — TASKS_EDIT permission required to reassign tasks", 403);
+    throw new CrmError("Forbidden — TASKS_ASSIGN permission required to reassign tasks", 403);
   }
 
   const updated = await prisma.$transaction(async (tx) => {

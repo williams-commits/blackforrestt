@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    await requirePermission("OPPORTUNITIES_READ");
+    await requirePermission("OPPORTUNITIES_VIEW");
     return NextResponse.json({ data: await listPipelines() });
   } catch (error) {
     return handleRouteError(error, "Unable to load pipelines.");

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { attachFile, deleteAttachment, listAttachments } from "@/server/records/attachments";
-import { subjectEditPermission } from "@/server/records/subjects";
 import { scopedContext } from "@/server/records/leads";
 import { handleRouteError } from "@/lib/api";
 
@@ -16,7 +15,7 @@ const SubjectQuery = z.object({
 /** List attachments for a record. */
 export async function GET(request: Request) {
   try {
-    await scopedContext("LEADS_READ");
+    await scopedContext("FILES_READ");
     const params = new URL(request.url).searchParams;
     const parsed = SubjectQuery.safeParse({
       subjectType: params.get("subjectType") ?? undefined,
@@ -51,7 +50,7 @@ export async function POST(request: Request) {
     }
     const parsed = SubjectQuery.safeParse({ subjectType, subjectId });
     if (!parsed.success) return NextResponse.json({ error: "Missing subject." }, { status: 400 });
-    const ctx = await scopedContext(subjectEditPermission(parsed.data.subjectType));
+    const ctx = await scopedContext("FILES_UPLOAD");
     const data = Buffer.from(await file.arrayBuffer());
     const attachment = await attachFile(
       ctx,

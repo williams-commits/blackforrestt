@@ -16,17 +16,20 @@ import { getOpportunity } from "@/server/records/opportunities";
 
 export type ActivitySubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
 
-const EDIT_PERMISSION: Record<ActivitySubjectType, Permission> = {
-  LEAD: "LEADS_EDIT",
-  CONTACT: "CONTACTS_EDIT",
-  ACCOUNT: "ACCOUNTS_EDIT",
-  CUSTOMER: "CUSTOMERS_EDIT",
-  OPPORTUNITY: "OPPORTUNITIES_EDIT",
-};
+export type SubjectAction = "VIEW" | "EDIT" | "ADD_NOTE" | "CREATE_TASK" | "SCHEDULE_APPOINTMENT" | "CHANGE_STATUS" | "MANAGE_TAGS" | "ASSIGN" | "CONVERT";
 
-/** Permission required to attach activities to a subject type. */
-export function subjectEditPermission(subjectType: ActivitySubjectType): Permission {
-  return EDIT_PERMISSION[subjectType];
+/** Resolve the permission for one business action on one subject type. */
+export function subjectPermission(subjectType: ActivitySubjectType, action: SubjectAction): Permission {
+  const object = `${subjectType[0]}${subjectType.slice(1).toLowerCase()}s`.toUpperCase();
+  if (action === "VIEW") return `${object}_VIEW` as Permission;
+  if (action === "EDIT") return `${object}_EDIT` as Permission;
+  if (action === "ADD_NOTE") return `${object}_ADD_NOTE` as Permission;
+  if (action === "CREATE_TASK") return `${object}_CREATE_TASK` as Permission;
+  if (action === "SCHEDULE_APPOINTMENT") return `${object}_SCHEDULE_APPOINTMENT` as Permission;
+  if (action === "CHANGE_STATUS") return `${object}_CHANGE_STATUS` as Permission;
+  if (action === "MANAGE_TAGS") return `${object}_MANAGE_TAGS` as Permission;
+  if (action === "ASSIGN") return `${object}_ASSIGN` as Permission;
+  return `${object}_CONVERT` as Permission;
 }
 
 export interface ResolvedSubject {

@@ -3,7 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/server/db";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
-import { resolveSubject } from "@/server/records/subjects";
+import { requireCapability } from "@/server/guard";
+import { resolveSubject, subjectPermission } from "@/server/records/subjects";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
@@ -18,6 +19,8 @@ export const CreateNote = z.object({
 });
 
 export async function createNote(ctx: ScopedContext, input: z.infer<typeof CreateNote>) {
+  requireCapability(ctx, "NOTES_CREATE");
+  requireCapability(ctx, subjectPermission(input.subjectType, "ADD_NOTE"));
   const subject = await resolveSubject(ctx, input.subjectType, input.subjectId);
   return prisma.$transaction(async (tx) => {
     const note = await tx.note.create({

@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   try {
-    await requirePermission("LEADS_READ");
+    await requirePermission("LEADS_VIEW");
     const users = await prisma.user.findMany({
       where: { status: "ACTIVE" },
       orderBy: { name: "asc" },

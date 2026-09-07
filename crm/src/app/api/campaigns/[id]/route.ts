@@ -15,7 +15,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: RouteContext) {
   try {
-    const ctx = await scopedContext("CAMPAIGNS_READ");
+    const ctx = await scopedContext("CAMPAIGNS_VIEW");
     const { id } = await context.params;
     return NextResponse.json({ data: await getCampaign(ctx, id) });
   } catch (error) {

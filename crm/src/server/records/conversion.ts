@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/server/db";
-import { CrmError } from "@/server/guard";
+import { CrmError, requireCapability } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { ownerScopeWhere } from "@/server/scope";
@@ -91,6 +91,7 @@ export async function conversionPreview(ctx: ScopedContext, leadId: string) {
 }
 
 export async function convertLead(ctx: ScopedContext, leadId: string, input: ConvertLeadInput) {
+  requireCapability(ctx, "LEADS_CONVERT");
   const lead = await getLead(ctx, leadId);
   if (lead.convertedAt) {
     throw new CrmError("Lead is already converted.", 409);

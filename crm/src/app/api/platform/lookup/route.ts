@@ -12,7 +12,7 @@ const Query = z.object({ email: z.string().trim().email() });
 /** Bridge lookup by email — supports the operator-confirmed link flow. */
 export async function POST(request: Request) {
   try {
-    const ctx = await scopedContext("CUSTOMERS_READ");
+    const ctx = await scopedContext("CUSTOMERS_VIEW");
     const parsed = await parseJsonBody(request, Query);
     if (!parsed.ok) return parsed.response;
     const result = await lookupPlatformUser(ctx, parsed.data.email);

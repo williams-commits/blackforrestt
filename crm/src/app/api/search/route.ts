@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /** Global search — grouped, scope-filtered hits across all core objects. */
 export async function GET(request: Request) {
   try {
-    const ctx = await scopedContext("LEADS_READ");
+    const ctx = await scopedContext("LEADS_VIEW");
     const q = new URL(request.url).searchParams.get("q") ?? "";
     const hits = await pgSearch.search(ctx, q, 5);
     return NextResponse.json({ data: hits, meta: { query: q, count: hits.length } });

@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const ctx = await scopedContext("TASKS_READ");
+    const ctx = await scopedContext("TASKS_VIEW");
     const params = new URL(request.url).searchParams;
     const query = parseListQuery(params);
     const filters = TaskFilters.parse({

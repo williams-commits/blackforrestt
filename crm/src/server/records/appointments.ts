@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { prisma } from "@/server/db";
-import { CrmError } from "@/server/guard";
+import { CrmError, requireCapability } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { notify, subjectNotificationContext } from "@/server/notifications";
-import { resolveSubject } from "@/server/records/subjects";
+import { resolveSubject, subjectPermission } from "@/server/records/subjects";
 import type { ScopedContext } from "@/server/records/leads";
 
 /** Appointments: scheduled interactions tied to a record. */
@@ -28,10 +28,12 @@ export const UpdateAppointment = z.object({
 });
 
 export async function createAppointment(ctx: ScopedContext, input: z.infer<typeof CreateAppointment>) {
+  requireCapability(ctx, "APPOINTMENTS_CREATE");
+  requireCapability(ctx, subjectPermission(input.subjectType, "SCHEDULE_APPOINTMENT"));
   const subject = await resolveSubject(ctx, input.subjectType, input.subjectId);
   const ownerUserId = input.ownerUserId ?? ctx.userId;
-  if (ownerUserId !== ctx.userId && !ctx.permissions.includes("TASKS_EDIT")) {
-    throw new CrmError("Forbidden — TASKS_EDIT permission required to schedule for others", 403);
+  if (ownerUserId !== ctx.userId && !ctx.permissions.includes("APPOINTMENTS_ASSIGN")) {
+    throw new CrmError("Forbidden — APPOINTMENTS_ASSIGN permission required to schedule for others", 403);
   }
 
   const appointment = await prisma.$transaction(async (tx) => {
@@ -103,10 +105,11 @@ export async function updateAppointment(
   id: string,
   input: z.infer<typeof UpdateAppointment>,
 ) {
+  requireCapability(ctx, "APPOINTMENTS_EDIT");
   const existing = await prisma.appointment.findFirst({ where: { id, ownerUserId: ctx.userId } });
   // Owners manage their own appointments; managers+ may manage any.
   if (!existing) {
-    if (ctx.scope === "ORG" || ctx.permissions.includes("TASKS_EDIT")) {
+    if (ctx.scope === "ORG" || ctx.permissions.includes("APPOINTMENTS_EDIT")) {
       const any = await prisma.appointment.findUnique({ where: { id } });
       if (!any) throw new CrmError("Appointment not found.", 404);
     } else {

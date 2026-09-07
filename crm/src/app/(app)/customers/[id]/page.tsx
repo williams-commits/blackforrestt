@@ -52,7 +52,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
   let canDeleteFiles = false;
   let canDelete = false;
   try {
-    const ctx = await scopedContext("CUSTOMERS_READ");
+    const ctx = await scopedContext("CUSTOMERS_VIEW");
     customer = await getCustomer(ctx, id);
     events = await listTimeline("CUSTOMER", id);
     tags = await listTagsForSubject("CUSTOMER", id);
@@ -124,7 +124,6 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                   subjectType="CUSTOMER"
                   subjectId={id}
                   attached={tags.map((link) => ({ tagId: link.tagId, name: link.tag.name, color: link.tag.color }))}
-                  canEdit={canEdit}
                 />
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">

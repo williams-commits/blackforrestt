@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useConfirmDialog } from "@/components/Dialogs";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { Modal } from "@/components/Modal";
+import { PERMISSION_CATEGORIES } from "@/server/permissions";
 
 /** Administration console: statuses, tags, custom fields, teams, users, audit. */
 export function AdminConsole({
@@ -65,19 +66,6 @@ export function AdminConsole({
 }
 
 const inputClass = "w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none focus:ring-2 focus:ring-(--brand)/20";
-
-const RECORD_CONTROL_PERMISSIONS = [
-  {
-    permission: "RECORDS_ASSIGN",
-    label: "Assign CRM records",
-    description: "Assign leads, contacts, accounts, and customers to Managers, Team Leads, Reps, or Viewers.",
-  },
-  {
-    permission: "RECORDS_CLASSIFY",
-    label: "Manage record classification",
-    description: "Change record statuses, lead potential statuses, and tags.",
-  },
-] as const;
 
 function SetupFormModal({ title, onClose, children, size = "md" }: { title: string; onClose: () => void; children: React.ReactNode; size?: "sm" | "md" | "lg" | "xl" }) {
   return <Modal title={title} onClose={onClose} size={size}><div className="p-5">{children}</div></Modal>;
@@ -874,7 +862,9 @@ export function RolesTab() {
     permissions: Array<{ permission: string }>;
     _count: { users: number };
   }>>([]);
-  const [allPermissions, setAllPermissions] = useState<string[]>([]);
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string[]>(PERMISSION_CATEGORIES.slice(0, 1).map((category) => category.key));
+  const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -888,7 +878,7 @@ export function RolesTab() {
       }
       const body = (await response.json()) as { data: typeof roles; meta: { allPermissions: string[] } };
       setRoles(body.data);
-      setAllPermissions(body.meta.allPermissions);
+      setSelectedRoleId((current) => current ?? body.data[0]?.id ?? null);
     } finally {
       setLoading(false);
     }
@@ -917,73 +907,55 @@ export function RolesTab() {
     void load();
   }
 
+  async function setCategory(roleId: string, permissions: readonly { key: string }[], enabled: boolean) {
+    const role = roles.find((entry) => entry.id === roleId);
+    if (!role || role.key === "SUPER_ADMIN") return;
+    const current = new Set(role.permissions.map((entry) => entry.permission));
+    permissions.forEach(({ key }) => enabled ? current.add(key) : current.delete(key));
+    const response = await fetch(`/api/admin/roles?id=${roleId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ permissions: [...current] }) });
+    if (!response.ok) setError("Update failed."); else void load();
+  }
+
+  const selectedRole = roles.find((role) => role.id === selectedRoleId) ?? roles[0];
+  const visibleCategories = PERMISSION_CATEGORIES.map((category) => ({
+    ...category,
+    permissions: category.permissions.filter((permission) => !query || category.label.toLowerCase().includes(query.toLowerCase()) || permission.label.toLowerCase().includes(query.toLowerCase())),
+  })).filter((category) => category.permissions.length > 0);
+
   return (
     <div className="space-y-4">
       <WorkspaceHeader
         eyebrow="Access management"
         title="Roles & permissions"
         subtitle="Control what each team role can see and do across Patheo."
-        metrics={[{ label: "Roles", value: roles.length, tone: "brand" }, { label: "Permissions", value: allPermissions.length, tone: "info" }, { label: "Assigned users", value: roles.reduce((sum, role) => sum + role._count.users, 0), tone: "success" }]}
+        metrics={[{ label: "Roles", value: roles.length, tone: "brand" }, { label: "Categories", value: PERMISSION_CATEGORIES.length, tone: "info" }, { label: "Assigned users", value: roles.reduce((sum, role) => sum + role._count.users, 0), tone: "success" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
       {loading ? (
         <AdminCardGridSkeleton cards={3} />
-      ) : roles.map((role) => (
-        <section key={role.id} className="card overflow-hidden">
-          <div className="flex flex-col gap-3 border-b border-(--border-default) bg-(--bg-subtle) px-4 py-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <div className="flex flex-wrap items-center gap-2"><h2 className="text-base font-semibold">{role.name}</h2><span className="badge badge-brand">{role.scope.toLowerCase()} scope</span></div>
-              {role.description ? <p className="mt-1 text-sm text-(--text-secondary)">{role.description}</p> : null}
-            </div>
-            <div className="text-left text-xs text-(--text-tertiary) sm:text-right"><p className="font-semibold text-(--text-primary)">{role._count.users} {role._count.users === 1 ? "user" : "users"}</p><p>{role.permissions.length} permissions</p>{role.key === "SUPER_ADMIN" ? <p className="mt-1">System role · fixed</p> : null}</div>
-          </div>
-          <div className="border-b border-(--border-default) bg-(--bg-surface) px-4 py-3 text-xs text-(--text-tertiary)">
-            Toggle individual capabilities for this role. Super Admin can grant or revoke the record controls below for any role.
-          </div>
-          <div className="border-b border-(--border-default) p-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-(--text-secondary)">CRM record controls</p>
-            <div className="grid gap-2 lg:grid-cols-2">
-              {RECORD_CONTROL_PERMISSIONS.map(({ permission, label, description }) => {
-                const enabled = role.permissions.some((entry) => entry.permission === permission);
-                const locked = role.key === "SUPER_ADMIN";
-                return (
-                  <label key={permission} className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 ${enabled ? "border-(--brand)/40 bg-(--bg-subtle)" : "border-(--border-default)"} ${locked ? "cursor-not-allowed opacity-60" : "hover:bg-(--bg-hover)"}`}>
-                    <input
-                      type="checkbox"
-                      checked={enabled}
-                      disabled={locked}
-                      onChange={(event) => void toggle(role.id, permission, event.target.checked)}
-                      className="mt-0.5"
-                    />
-                    <span>
-                      <span className="block text-sm font-medium text-(--text-primary)">{label}</span>
-                      <span className="mt-0.5 block text-xs text-(--text-tertiary)">{description}</span>
-                      {role.key === "SUPER_ADMIN" ? <span className="mt-1 block text-[11px] font-medium text-(--text-tertiary)">Always enabled for Super Admin</span> : null}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-1.5 p-4">
-            {allPermissions.filter((permission) => !RECORD_CONTROL_PERMISSIONS.some((control) => control.permission === permission)).map((permission) => {
-              const enabled = role.permissions.some((entry) => entry.permission === permission);
-              const locked = role.key === "SUPER_ADMIN";
-              return (
-                <label key={permission} className={`flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] ${enabled ? "border-(--brand)/40 bg-[var(--brand)/5" : "border-(--border-default) text-(--text-tertiary)"} ${locked ? "opacity-50" : "hover:bg-(--bg-hover) hover:text-(--text-default)"}}`}>
-                  <input
-                    type="checkbox"
-                    checked={enabled}
-                    disabled={locked}
-                    onChange={(event) => void toggle(role.id, permission, event.target.checked)}
-                  />
-                  {permission}
-                </label>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+      ) : selectedRole ? <section className="card overflow-hidden">
+        <div className="flex flex-col gap-3 border-b border-(--border-default) bg-(--bg-subtle) px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div><label htmlFor="role-select" className="form-label">Role</label><select id="role-select" value={selectedRole.id} onChange={(event) => setSelectedRoleId(event.target.value)} className="mt-1 min-w-56 rounded-md border border-(--border-strong) bg-(--bg-surface) px-3 py-2 text-sm font-semibold">{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select><p className="mt-2 text-xs text-(--text-secondary)">{selectedRole.description} · {selectedRole._count.users} assigned users · {selectedRole.scope.toLowerCase()} scope</p></div>
+          <div className="relative"><label htmlFor="permission-search" className="sr-only">Search permissions</label><input id="permission-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search permissions" className={inputClass} /></div>
+        </div>
+        <div className="divide-y divide-(--border-default)">
+          {visibleCategories.map((category) => {
+            const enabledCount = category.permissions.filter(({ key }) => selectedRole.permissions.some((entry) => entry.permission === key)).length;
+            const isExpanded = expanded.includes(category.key);
+            const locked = selectedRole.key === "SUPER_ADMIN";
+            return <div key={category.key}>
+              <div className="flex items-center gap-3 px-4 py-3 hover:bg-(--bg-hover)">
+                <button type="button" aria-expanded={isExpanded} onClick={() => setExpanded((current) => current.includes(category.key) ? current.filter((key) => key !== category.key) : [...current, category.key])} className="w-5 text-left text-(--text-secondary)">{isExpanded ? "▾" : "▸"}</button>
+                <button type="button" onClick={() => setExpanded((current) => current.includes(category.key) ? current : [...current, category.key])} className="flex-1 text-left text-sm font-semibold">{category.label}</button>
+                <span className="text-xs tabular-nums text-(--text-secondary)">{enabledCount} / {category.permissions.length} enabled</span>
+                <button type="button" disabled={locked} onClick={() => void setCategory(selectedRole.id, category.permissions, true)} className="text-xs text-(--brand) disabled:opacity-40">Enable all</button>
+                <button type="button" disabled={locked} onClick={() => void setCategory(selectedRole.id, category.permissions, false)} className="text-xs text-(--text-secondary) disabled:opacity-40">Disable all</button>
+              </div>
+              {isExpanded ? <div className="grid gap-1 border-t border-(--border-default) bg-(--bg-surface) px-12 py-2 sm:grid-cols-2 lg:grid-cols-3">{category.permissions.map(({ key, label }) => { const enabled = selectedRole.permissions.some((entry) => entry.permission === key); return <label key={key} className={`flex items-center gap-2 rounded px-2 py-2 text-sm ${enabled ? "bg-(--bg-subtle) text-(--text-primary)" : "text-(--text-tertiary)"}`}><input type="checkbox" checked={enabled} disabled={locked} onChange={(event) => void toggle(selectedRole.id, key, event.target.checked)} />{label}</label>; })}</div> : null}
+            </div>;
+          })}
+        </div>
+      </section> : null}
     </div>
   );
 }

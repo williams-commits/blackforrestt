@@ -44,7 +44,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
   let canEdit = false;
   let canDelete = false;
   try {
-    const ctx = await scopedContext("OPPORTUNITIES_READ");
+    const ctx = await scopedContext("OPPORTUNITIES_VIEW");
     opportunity = await getOpportunity(ctx, id);
     events = await listTimeline("OPPORTUNITY", id);
     tags = await listTagsForSubject("OPPORTUNITY", id);
@@ -120,7 +120,6 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                   subjectType="OPPORTUNITY"
                   subjectId={id}
                   attached={tags.map((link) => ({ tagId: link.tagId, name: link.tag.name, color: link.tag.color }))}
-                  canEdit={canEdit}
                 />
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">

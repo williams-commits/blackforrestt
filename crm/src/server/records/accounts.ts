@@ -113,8 +113,8 @@ function dataFrom(input: z.infer<typeof CreateAccount> | z.infer<typeof UpdateAc
 }
 
 export async function createAccount(ctx: ScopedContext, input: z.infer<typeof CreateAccount>) {
-  if (input.statusId !== undefined) requireCapability(ctx, "RECORDS_CLASSIFY");
-  if (input.ownerUserId !== undefined || input.teamId !== undefined) requireCapability(ctx, "RECORDS_ASSIGN");
+  if (input.statusId !== undefined) requireCapability(ctx, "ACCOUNTS_CHANGE_STATUS");
+  if (input.ownerUserId !== undefined || input.teamId !== undefined) requireCapability(ctx, "ACCOUNTS_ASSIGN");
   if (input.ownerUserId) await assertAssignableUser(input.ownerUserId);
   const defaultStatus = await prisma.recordStatus.findFirst({ where: { appliesTo: "ACCOUNT", isDefault: true } });
   const status = input.statusId
@@ -158,8 +158,8 @@ export async function updateAccount(ctx: ScopedContext, id: string, input: z.inf
     ? await prisma.recordStatus.findFirst({ where: { id: input.statusId, appliesTo: "ACCOUNT" } })
     : undefined;
   if (input.statusId && !status) throw new CrmError("Invalid account status.", 400);
-  if (input.statusId !== undefined) requireCapability(ctx, "RECORDS_CLASSIFY");
-  if (input.ownerUserId !== undefined || input.teamId !== undefined) requireCapability(ctx, "RECORDS_ASSIGN");
+  if (input.statusId !== undefined) requireCapability(ctx, "ACCOUNTS_CHANGE_STATUS");
+  if (input.ownerUserId !== undefined || input.teamId !== undefined) requireCapability(ctx, "ACCOUNTS_ASSIGN");
   if (input.ownerUserId) await assertAssignableUser(input.ownerUserId);
   return prisma.$transaction(async (tx) => {
     const saved = await tx.account.update({

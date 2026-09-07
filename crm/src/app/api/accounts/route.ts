@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const ctx = await scopedContext("ACCOUNTS_READ");
+    const ctx = await scopedContext("ACCOUNTS_VIEW");
     const params = new URL(request.url).searchParams;
     const query = parseListQuery(params);
     const { total, rows } = await listAccounts(ctx, query, { statusId: params.get("statusId") ?? undefined }, customFieldFilters(params));

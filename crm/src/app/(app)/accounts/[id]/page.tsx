@@ -49,7 +49,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
   let canDeleteFiles = false;
   let canDelete = false;
   try {
-    const ctx = await scopedContext("ACCOUNTS_READ");
+    const ctx = await scopedContext("ACCOUNTS_VIEW");
     account = await getAccount(ctx, id);
     events = await listTimeline("ACCOUNT", id);
     relatedOpportunities = await prisma.opportunity.findMany({
@@ -126,7 +126,6 @@ export default async function AccountDetailPage({ params }: PageProps) {
                   subjectType="ACCOUNT"
                   subjectId={id}
                   attached={tags.map((link) => ({ tagId: link.tagId, name: link.tag.name, color: link.tag.color }))}
-                  canEdit={canEdit}
                 />
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">

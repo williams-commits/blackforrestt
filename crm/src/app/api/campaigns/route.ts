@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const ctx = await scopedContext("CAMPAIGNS_READ");
+    const ctx = await scopedContext("CAMPAIGNS_VIEW");
     return NextResponse.json({ data: await listCampaigns(ctx) });
   } catch (error) {
     return handleRouteError(error, "Unable to load campaigns.");

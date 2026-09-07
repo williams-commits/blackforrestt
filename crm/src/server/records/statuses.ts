@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/server/db";
-import { CrmError, type CrmContext } from "@/server/guard";
+import { CrmError, requireCapability, type CrmContext } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 
 /**
@@ -47,6 +47,7 @@ async function ensureDefault(appliesTo: string, tx: { recordStatus: { count(args
 }
 
 export async function createStatus(ctx: CrmContext, input: z.infer<typeof CreateStatus>) {
+  requireCapability(ctx, "RECORD_STATUS_CREATE");
   const duplicate = await prisma.recordStatus.findUnique({
     where: { name_appliesTo: { name: input.name, appliesTo: input.appliesTo } },
   });
@@ -72,6 +73,7 @@ export async function createStatus(ctx: CrmContext, input: z.infer<typeof Create
 }
 
 export async function updateStatus(ctx: CrmContext, id: string, input: z.infer<typeof UpdateStatus>) {
+  requireCapability(ctx, "RECORD_STATUS_EDIT");
   const existing = await prisma.recordStatus.findUnique({ where: { id } });
   if (!existing) throw new CrmError("Status not found.", 404);
   return prisma.$transaction(async (tx) => {
@@ -107,6 +109,7 @@ export async function updateStatus(ctx: CrmContext, id: string, input: z.infer<t
 }
 
 export async function deleteStatus(ctx: CrmContext, id: string) {
+  requireCapability(ctx, "RECORD_STATUS_DELETE");
   const existing = await prisma.recordStatus.findUnique({
     where: { id },
     include: { _count: { select: { leads: true, contacts: true, customers: true } } },

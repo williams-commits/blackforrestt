@@ -16,17 +16,15 @@ export function TagEditor({
   subjectType,
   subjectId,
   attached,
-  canEdit,
 }: {
   subjectType: SubjectType;
   subjectId: string;
   attached: AttachedTag[];
-  canEdit: boolean;
 }) {
   const router = useRouter();
   const [allTags, setAllTags] = useState<Array<{ id: string; name: string }>>([]);
   const [busy, setBusy] = useState(false);
-  const [canClassify, setCanClassify] = useState(false);
+  const [canManageTags, setCanManageTags] = useState(false);
   const attachedIds = new Set(attached.map((tag) => tag.tagId));
 
   useEffect(() => {
@@ -34,17 +32,25 @@ export function TagEditor({
       .then((r) => (r.ok ? r.json() : null))
       .then((body) => setAllTags(body?.data ?? []))
       .catch(() => setAllTags([]));
-  }, []);
+  }, [subjectType]);
   useEffect(() => {
     void fetch("/api/me")
       .then((response) => (response.ok ? response.json() : null))
       .then((body) => {
-        setCanClassify((body?.data?.permissions ?? []).includes("RECORDS_CLASSIFY"));
+        const permissions = body?.data?.permissions ?? [];
+        const subjectPermission = {
+          LEAD: "LEADS_MANAGE_TAGS",
+          CONTACT: "CONTACTS_MANAGE_TAGS",
+          ACCOUNT: "ACCOUNTS_MANAGE_TAGS",
+          CUSTOMER: "CUSTOMERS_MANAGE_TAGS",
+          OPPORTUNITY: "OPPORTUNITIES_MANAGE_TAGS",
+        }[subjectType];
+        setCanManageTags(permissions.includes("TAGS_ASSIGN") && permissions.includes(subjectPermission));
       })
-      .catch(() => setCanClassify(false));
-  }, []);
+      .catch(() => setCanManageTags(false));
+  }, [subjectType]);
 
-  const canManage = canEdit && (subjectType === "OPPORTUNITY" || canClassify);
+  const canManage = canManageTags;
 
   async function link(tagId: string) {
     setBusy(true);

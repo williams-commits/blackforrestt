@@ -10,7 +10,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
-    const ctx = await scopedContext("TASKS_EDIT");
+    const ctx = await scopedContext("APPOINTMENTS_EDIT");
     const { id } = await context.params;
     const parsed = await parseJsonBody(request, UpdateAppointment);
     if (!parsed.ok) return parsed.response;

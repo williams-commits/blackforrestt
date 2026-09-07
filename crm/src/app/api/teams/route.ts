@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /** Team directory (read-only) for the admin page and pickers. */
 export async function GET() {
   try {
-    await requirePermission("LEADS_READ");
+    await requirePermission("LEADS_VIEW");
     const teams = await prisma.team.findMany({
       orderBy: { name: "asc" },
       include: {

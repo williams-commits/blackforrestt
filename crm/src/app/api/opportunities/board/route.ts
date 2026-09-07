@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 /** Kanban payload: pipeline + stages + scoped opportunities + aggregates. */
 export async function GET(request: Request) {
   try {
-    const ctx = await scopedContext("OPPORTUNITIES_READ");
+    const ctx = await scopedContext("OPPORTUNITIES_VIEW");
     const params = new URL(request.url).searchParams;
     let pipelineId = params.get("pipelineId") ?? undefined;
     if (!pipelineId) {

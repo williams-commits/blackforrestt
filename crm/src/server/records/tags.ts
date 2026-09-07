@@ -2,7 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/server/db";
 import { CrmError, requireCapability } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
-import { resolveSubject } from "@/server/records/subjects";
+import { resolveSubject, subjectPermission } from "@/server/records/subjects";
 import type { ScopedContext } from "@/server/records/leads";
 
 /** Tags: global labels attachable to any core record. */
@@ -34,6 +34,7 @@ export function listTagsForSubject(subjectType: string, subjectId: string) {
 }
 
 export async function createTag(ctx: ScopedContext, input: z.infer<typeof CreateTag>) {
+  requireCapability(ctx, "TAGS_CREATE");
   const existing = await prisma.tag.findUnique({ where: { name: input.name } });
   if (existing) throw new CrmError("A tag with this name already exists.", 400);
   const tag = await prisma.$transaction(async (tx) => {
@@ -52,6 +53,7 @@ export async function createTag(ctx: ScopedContext, input: z.infer<typeof Create
 }
 
 export async function deleteTag(ctx: ScopedContext, id: string) {
+  requireCapability(ctx, "TAGS_DELETE");
   const existing = await prisma.tag.findUnique({ where: { id } });
   if (!existing) throw new CrmError("Tag not found.", 404);
   await prisma.$transaction(async (tx) => {
@@ -75,7 +77,8 @@ export const LinkTag = z.object({
 
 /** Attach a tag to a record (subject scope-checked first). */
 export async function linkTag(ctx: ScopedContext, input: z.infer<typeof LinkTag>) {
-  if (input.subjectType !== "OPPORTUNITY") requireCapability(ctx, "RECORDS_CLASSIFY");
+  requireCapability(ctx, "TAGS_ASSIGN");
+  requireCapability(ctx, subjectPermission(input.subjectType, "MANAGE_TAGS"));
   const tag = await prisma.tag.findUnique({ where: { id: input.tagId } });
   if (!tag) throw new CrmError("Tag not found.", 404);
   const subject = await resolveSubject(ctx, input.subjectType, input.subjectId);
@@ -94,7 +97,8 @@ export async function linkTag(ctx: ScopedContext, input: z.infer<typeof LinkTag>
 
 /** Detach a tag from a record (subject scope-checked first). */
 export async function unlinkTag(ctx: ScopedContext, input: z.infer<typeof LinkTag>) {
-  if (input.subjectType !== "OPPORTUNITY") requireCapability(ctx, "RECORDS_CLASSIFY");
+  requireCapability(ctx, "TAGS_ASSIGN");
+  requireCapability(ctx, subjectPermission(input.subjectType, "MANAGE_TAGS"));
   const subject = await resolveSubject(ctx, input.subjectType, input.subjectId);
   await prisma.tagLink.deleteMany({
     where: { tagId: input.tagId, subjectType: subject.type, subjectId: subject.id },

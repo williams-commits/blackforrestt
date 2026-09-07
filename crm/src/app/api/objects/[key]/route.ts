@@ -11,7 +11,7 @@ type RouteContext = { params: Promise<{ key: string }> };
 
 export async function GET(request: Request, context: RouteContext) {
   try {
-    const ctx = await scopedContext("LEADS_READ");
+    const ctx = await scopedContext("LEADS_VIEW");
     const { key } = await context.params;
     const query = parseListQuery(new URL(request.url).searchParams);
     const { total, rows } = await listRecords(ctx, key, query);

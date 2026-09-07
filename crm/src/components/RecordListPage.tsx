@@ -142,11 +142,11 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
 
   const can = useMemo(() => {
     const permissions = me?.permissions ?? [];
-    const objectUpper = object.toUpperCase().slice(0, -1);
     const edit = permissions.includes(config.can.edit);
     const deletePermission = permissions.includes(config.can.delete);
-    const assign = permissions.includes("RECORDS_ASSIGN");
-    const classify = permissions.includes("RECORDS_CLASSIFY");
+    const objectPrefix = object === "leads" ? "LEADS" : object === "contacts" ? "CONTACTS" : object === "accounts" ? "ACCOUNTS" : "CUSTOMERS";
+    const assign = permissions.includes(`${objectPrefix}_ASSIGN`);
+    const classify = permissions.includes(`${objectPrefix}_CHANGE_STATUS`);
     return {
       create: permissions.includes(config.can.create),
       edit,
@@ -154,7 +154,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       assign,
       classify,
       bulk: edit || deletePermission || assign || classify,
-      export: permissions.includes(`${objectUpper}S_EXPORT`),
+      export: permissions.includes(`${objectPrefix}_EXPORT`),
     };
   }, [me, config, object]);
 

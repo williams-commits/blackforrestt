@@ -68,7 +68,7 @@ export function OpportunityDetailActions({
           onClick={() => setEditing(true)}
           className="rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-(--brand) focus:ring-offset-2 cursor-pointer"
         >
-          Edit
+          {canEdit ? "Edit" : "Manage actions"}
         </button>
       ) : null}
       {canDelete ? (
@@ -87,6 +87,7 @@ export function OpportunityDetailActions({
           initial={row as never}
           canEditFields={canEdit}
           canChangeStage={canChangeStatus}
+          canAssign={canAssign}
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);

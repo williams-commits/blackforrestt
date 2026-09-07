@@ -10,7 +10,7 @@ type RouteContext = { params: Promise<{ key: string; recordId: string }> };
 
 export async function GET(_request: Request, context: RouteContext) {
   try {
-    const ctx = await scopedContext("LEADS_VIEW");
+    const ctx = await scopedContext("SETTINGS_MANAGE");
     const { key, recordId } = await context.params;
     return NextResponse.json({ data: await getRecord(ctx, key, recordId) });
   } catch (error) {
@@ -20,7 +20,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
-    const ctx = await scopedContext("LEADS_EDIT");
+    const ctx = await scopedContext("SETTINGS_MANAGE");
     const { key, recordId } = await context.params;
     const parsed = await parseJsonBody(request, UpdateRecord);
     if (!parsed.ok) return parsed.response;
@@ -32,7 +32,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
-    const ctx = await scopedContext("LEADS_DELETE");
+    const ctx = await scopedContext("SETTINGS_MANAGE");
     const { key, recordId } = await context.params;
     await softDeleteRecord(ctx, key, recordId);
     return NextResponse.json({ data: { id: recordId } });

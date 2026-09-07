@@ -10,6 +10,7 @@ export function OpportunityForm({
   onSaved,
   canEditFields,
   canChangeStage = canEditFields,
+  canAssign = false,
 }: {
   pipeline: Pipeline;
   initial: OpportunityRow | null;
@@ -17,18 +18,27 @@ export function OpportunityForm({
   canChangeStage?: boolean;
   onClose: () => void;
   onSaved: () => void;
+  canAssign?: boolean;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [stageId, setStageId] = useState(initial?.stageId ?? "");
-  const [accountId, setAccountId] = useState("");
-  const [contactId, setContactId] = useState("");
+  const [accountId, setAccountId] = useState(initial?.account?.id ?? "");
+  const [contactId, setContactId] = useState(initial?.contact?.id ?? "");
+  const [ownerUserId, setOwnerUserId] = useState((initial as (OpportunityRow & { owner?: { id: string } }) | null)?.owner?.id ?? "");
+  const [teamId, setTeamId] = useState((initial as (OpportunityRow & { team?: { id: string } }) | null)?.team?.id ?? "");
   const [accountOptions, setAccountOptions] = useState<Array<{ id: string; name: string }>>([]);
   const [contactOptions, setContactOptions] = useState<Array<{ id: string; firstName: string; lastName: string }>>([]);
+  const [userOptions, setUserOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [teamOptions, setTeamOptions] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
     void fetch("/api/accounts?pageSize=100").then((r) => (r.ok ? r.json() : null)).then((b) => setAccountOptions(b?.data ?? []));
     void fetch("/api/contacts?pageSize=100").then((r) => (r.ok ? r.json() : null)).then((b) => setContactOptions(b?.data ?? []));
-  }, []);
+    if (canAssign) {
+      void fetch("/api/users").then((r) => (r.ok ? r.json() : null)).then((b) => setUserOptions(b?.data ?? []));
+      void fetch("/api/teams").then((r) => (r.ok ? r.json() : null)).then((b) => setTeamOptions(b?.data ?? []));
+    }
+  }, [canAssign]);
   const [value, setValue] = useState(initial?.value ? String(Number(initial.value) / 100) : "");
   const [probability, setProbability] = useState(initial ? String(initial.probability) : "");
   const [expectedCloseAt, setExpectedCloseAt] = useState(
@@ -45,16 +55,32 @@ export function OpportunityForm({
     setBusy(true);
     setError(null);
     try {
-      const payload: Record<string, unknown> = {
-        name,
-        pipelineId: pipeline.id,
-        ...(stageId ? { stageId } : {}),
-        ...(accountId ? { accountId } : {}),
-        ...(contactId ? { contactId } : {}),
-        ...(value ? { value: Math.round(parseFloat(value) * 100) } : {}),
-        ...(probability ? { probability: parseInt(probability, 10) } : {}),
-        ...(expectedCloseAt ? { expectedCloseAt } : {}),
-      };
+      const payload: Record<string, unknown> = initial
+        ? {
+            ...(canEditFields ? {
+              name,
+              ...(accountId ? { accountId } : { accountId: null }),
+              ...(contactId ? { contactId } : { contactId: null }),
+              ...(value ? { value: Math.round(parseFloat(value) * 100) } : { value: null }),
+              ...(probability ? { probability: parseInt(probability, 10) } : {}),
+              ...(expectedCloseAt ? { expectedCloseAt } : { expectedCloseAt: null }),
+            } : {}),
+            ...(canChangeStage && stageId ? { stageId } : {}),
+            ...(canAssign ? {
+              ...(ownerUserId ? { ownerUserId } : {}),
+              teamId: teamId || null,
+            } : {}),
+          }
+        : {
+            name,
+            pipelineId: pipeline.id,
+            ...(stageId ? { stageId } : {}),
+            ...(accountId ? { accountId } : {}),
+            ...(contactId ? { contactId } : {}),
+            ...(value ? { value: Math.round(parseFloat(value) * 100) } : {}),
+            ...(probability ? { probability: parseInt(probability, 10) } : {}),
+            ...(expectedCloseAt ? { expectedCloseAt } : {}),
+          };
       const response = await fetch(
         initial ? `/api/opportunities/${initial.id}` : "/api/opportunities",
         {
@@ -103,7 +129,7 @@ export function OpportunityForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label htmlFor="o-account" className="form-label">Account</label>
-            <select id="o-account" value={accountId} onChange={(e) => setAccountId(e.target.value)} className={inputClass}>
+            <select id="o-account" value={accountId} onChange={(e) => setAccountId(e.target.value)} disabled={!canEditFields} className={inputClass}>
               <option value="">— none —</option>
               {accountOptions.map((account) => (
                 <option key={account.id} value={account.id}>{account.name}</option>
@@ -112,7 +138,7 @@ export function OpportunityForm({
           </div>
           <div>
             <label htmlFor="o-contact" className="form-label">Contact</label>
-            <select id="o-contact" value={contactId} onChange={(e) => setContactId(e.target.value)} className={inputClass}>
+            <select id="o-contact" value={contactId} onChange={(e) => setContactId(e.target.value)} disabled={!canEditFields} className={inputClass}>
               <option value="">— none —</option>
               {contactOptions.map((contact) => (
                 <option key={contact.id} value={contact.id}>{contact.firstName} {contact.lastName}</option>
@@ -125,17 +151,35 @@ export function OpportunityForm({
           <div className="sm:col-span-2"><p className="form-section-title">Forecast</p><p className="form-section-help">Use value, probability, and close date to keep the forecast honest.</p></div>
           <div>
             <label htmlFor="o-value" className="form-label">Value (USD)</label>
-            <input id="o-value" type="number" step="0.01" min="0" value={value} onChange={(e) => setValue(e.target.value)} className={inputClass} />
+            <input id="o-value" type="number" step="0.01" min="0" value={value} onChange={(e) => setValue(e.target.value)} disabled={!canEditFields} className={inputClass} />
           </div>
           <div>
             <label htmlFor="o-prob" className="form-label">Probability %</label>
-            <input id="o-prob" type="number" min="0" max="100" value={probability} onChange={(e) => setProbability(e.target.value)} className={inputClass} />
+            <input id="o-prob" type="number" min="0" max="100" value={probability} onChange={(e) => setProbability(e.target.value)} disabled={!canEditFields} className={inputClass} />
           </div>
         </div>
         <div>
           <label htmlFor="o-close" className="form-label">Expected close</label>
-          <input id="o-close" type="date" value={expectedCloseAt} onChange={(e) => setExpectedCloseAt(e.target.value)} className={inputClass} />
+          <input id="o-close" type="date" value={expectedCloseAt} onChange={(e) => setExpectedCloseAt(e.target.value)} disabled={!canEditFields} className={inputClass} />
         </div>
+        {canAssign ? (
+          <div className="form-section grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="o-owner" className="form-label">Owner</label>
+              <select id="o-owner" value={ownerUserId} onChange={(e) => setOwnerUserId(e.target.value)} className={inputClass}>
+                <option value="">— none —</option>
+                {userOptions.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="o-team" className="form-label">Team</label>
+              <select id="o-team" value={teamId} onChange={(e) => setTeamId(e.target.value)} className={inputClass}>
+                <option value="">— none —</option>
+                {teamOptions.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
+              </select>
+            </div>
+          </div>
+        ) : null}
         <div className="form-actions">
           <button type="button" onClick={onClose} className="btn btn-secondary">
             Cancel

@@ -19,6 +19,7 @@ import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { OpportunityDetailActions } from "@/components/OpportunityDetailActions";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
+import { getRecordCapabilities } from "@/lib/recordCapabilities";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,8 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
   let canAddNote = false;
   let canCreateTask = false;
   let canScheduleAppointment = false;
+  let canAssign = false;
+  let canChangeStatus = false;
   let canDelete = false;
   try {
     const ctx = await scopedContext("OPPORTUNITIES_VIEW");
@@ -54,10 +57,13 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "OPPORTUNITY");
     notes = await listNotesBySubject("OPPORTUNITY", id);
     appointments = await listAppointmentsBySubject("OPPORTUNITY", id);
-    canEdit = ctx.permissions.includes("OPPORTUNITIES_EDIT");
-    canAddNote = ctx.permissions.includes("OPPORTUNITIES_ADD_NOTE") && ctx.permissions.includes("NOTES_CREATE");
-    canCreateTask = ctx.permissions.includes("OPPORTUNITIES_CREATE_TASK") && ctx.permissions.includes("TASKS_CREATE");
-    canScheduleAppointment = ctx.permissions.includes("OPPORTUNITIES_SCHEDULE_APPOINTMENT") && ctx.permissions.includes("APPOINTMENTS_CREATE");
+    const capabilities = getRecordCapabilities("OPPORTUNITY", ctx.permissions);
+    canEdit = capabilities.canEdit;
+    canAddNote = capabilities.canAddNote;
+    canCreateTask = capabilities.canCreateTask;
+    canScheduleAppointment = capabilities.canScheduleAppointment;
+    canAssign = capabilities.canAssign;
+    canChangeStatus = capabilities.canChangeStatus;
     canDelete = ctx.permissions.includes("OPPORTUNITIES_DELETE");
   } catch (error) {
     if (error instanceof CrmError && error.status === 401) redirect("/login");
@@ -104,7 +110,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
           { label: "Close Date", value: opportunity.expectedCloseAt?.toLocaleDateString() },
         ]}
       >
-        <OpportunityDetailActions row={opportunity as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} />
+        <OpportunityDetailActions row={opportunity as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} canAssign={canAssign} canChangeStatus={canChangeStatus} />
       </HighlightsPanel>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">

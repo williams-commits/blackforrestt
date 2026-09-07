@@ -8,10 +8,13 @@ export function OpportunityForm({
   initial,
   onClose,
   onSaved,
+  canEditFields,
+  canChangeStage = canEditFields,
 }: {
   pipeline: Pipeline;
   initial: OpportunityRow | null;
   canEditFields: boolean;
+  canChangeStage?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -84,11 +87,11 @@ export function OpportunityForm({
           <div><p className="form-section-title">Deal essentials</p><p className="form-section-help">Name the opportunity and place it in the right stage.</p></div>
           <div>
           <label htmlFor="o-name" className="form-label">Name <span className="form-required">*</span></label>
-          <input id="o-name" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} className={inputClass} />
+          <input id="o-name" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} disabled={!canEditFields} className={inputClass} />
           </div>
         <div>
           <label htmlFor="o-stage" className="mb-1 block text-sm font-medium">Stage</label>
-          <select id="o-stage" value={stageId} onChange={(e) => setStageId(e.target.value)} className={inputClass}>
+          <select id="o-stage" value={stageId} onChange={(e) => setStageId(e.target.value)} disabled={!canChangeStage} className={inputClass}>
             <option value="">First open stage</option>
             {pipeline.stages.map((stage) => (
               <option key={stage.id} value={stage.id}>

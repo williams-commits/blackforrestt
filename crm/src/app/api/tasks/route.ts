@@ -3,6 +3,7 @@ import { CreateTask, TaskFilters, createTask, listTasks } from "@/server/records
 import { scopedContext } from "@/server/records/leads";
 import { parseListQuery } from "@/server/listQuery";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
+import { subjectPermission } from "@/server/records/subjects";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,9 +32,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const ctx = await scopedContext("TASKS_CREATE");
     const parsed = await parseJsonBody(request, CreateTask);
     if (!parsed.ok) return parsed.response;
+    const ctx = await scopedContext(
+      parsed.data.subjectType && parsed.data.subjectId
+        ? subjectPermission(parsed.data.subjectType, "CREATE_TASK")
+        : "TASKS_CREATE",
+    );
     return NextResponse.json({ data: await createTask(ctx, parsed.data) }, { status: 201 });
   } catch (error) {
     return handleRouteError(error, "Unable to create task.");

@@ -40,7 +40,7 @@ const core = (key: CoreObject, label: string): PermissionCategory => ({
   permissions: labels([
     "VIEW", "CREATE", "EDIT", "DELETE", "ASSIGN", "EXPORT",
     ...(key === "LEADS" ? ["IMPORT", "CONVERT"] : []),
-    ...(key !== "OPPORTUNITIES" ? ["CHANGE_STATUS"] : []),
+    "CHANGE_STATUS",
     "MANAGE_TAGS", "ADD_NOTE", "CREATE_TASK", "SCHEDULE_APPOINTMENT",
     ...(key === "LEADS" ? ["CHANGE_POTENTIAL_STATUS"] : []),
   ]).map(({ key: action, label: actionLabel }) => ({

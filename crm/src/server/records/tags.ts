@@ -77,7 +77,6 @@ export const LinkTag = z.object({
 
 /** Attach a tag to a record (subject scope-checked first). */
 export async function linkTag(ctx: ScopedContext, input: z.infer<typeof LinkTag>) {
-  requireCapability(ctx, "TAGS_ASSIGN");
   requireCapability(ctx, subjectPermission(input.subjectType, "MANAGE_TAGS"));
   const tag = await prisma.tag.findUnique({ where: { id: input.tagId } });
   if (!tag) throw new CrmError("Tag not found.", 404);
@@ -97,7 +96,6 @@ export async function linkTag(ctx: ScopedContext, input: z.infer<typeof LinkTag>
 
 /** Detach a tag from a record (subject scope-checked first). */
 export async function unlinkTag(ctx: ScopedContext, input: z.infer<typeof LinkTag>) {
-  requireCapability(ctx, "TAGS_ASSIGN");
   requireCapability(ctx, subjectPermission(input.subjectType, "MANAGE_TAGS"));
   const subject = await resolveSubject(ctx, input.subjectType, input.subjectId);
   await prisma.tagLink.deleteMany({

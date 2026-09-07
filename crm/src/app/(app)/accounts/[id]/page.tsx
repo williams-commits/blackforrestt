@@ -20,6 +20,7 @@ import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
+import { getRecordCapabilities } from "@/lib/recordCapabilities";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,8 @@ export default async function AccountDetailPage({ params }: PageProps) {
   let canAddNote = false;
   let canCreateTask = false;
   let canScheduleAppointment = false;
+  let canAssign = false;
+  let canChangeStatus = false;
   let canUpload = false;
   let canDeleteFiles = false;
   let canDelete = false;
@@ -66,10 +69,13 @@ export default async function AccountDetailPage({ params }: PageProps) {
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "ACCOUNT");
     notes = await listNotesBySubject("ACCOUNT", id);
     appointments = await listAppointmentsBySubject("ACCOUNT", id);
-    canEdit = ctx.permissions.includes("ACCOUNTS_EDIT");
-    canAddNote = ctx.permissions.includes("ACCOUNTS_ADD_NOTE") && ctx.permissions.includes("NOTES_CREATE");
-    canCreateTask = ctx.permissions.includes("ACCOUNTS_CREATE_TASK") && ctx.permissions.includes("TASKS_CREATE");
-    canScheduleAppointment = ctx.permissions.includes("ACCOUNTS_SCHEDULE_APPOINTMENT") && ctx.permissions.includes("APPOINTMENTS_CREATE");
+    const capabilities = getRecordCapabilities("ACCOUNT", ctx.permissions);
+    canEdit = capabilities.canEdit;
+    canAddNote = capabilities.canAddNote;
+    canCreateTask = capabilities.canCreateTask;
+    canScheduleAppointment = capabilities.canScheduleAppointment;
+    canAssign = capabilities.canAssign;
+    canChangeStatus = capabilities.canChangeStatus;
     canUpload = ctx.permissions.includes("FILES_UPLOAD");
     canDeleteFiles = ctx.permissions.includes("FILES_DELETE");
     canDelete = ctx.permissions.includes("ACCOUNTS_DELETE");
@@ -108,7 +114,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
           { label: "Team", value: account.team?.name },
         ]}
       >
-        <RecordDetailActions object="accounts" row={account as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} />
+        <RecordDetailActions object="accounts" row={account as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} canAssign={canAssign} canChangeStatus={canChangeStatus} />
       </HighlightsPanel>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">

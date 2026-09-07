@@ -21,6 +21,7 @@ import { SendEmailButton } from "@/components/SendEmailButton";
 import { LeadConvertControls } from "@/components/LeadConvertControls";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
+import { getRecordCapabilities } from "@/lib/recordCapabilities";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,9 @@ export default async function LeadDetailPage({ params }: PageProps) {
   let canCreateTask = false;
   let canScheduleAppointment = false;
   let canConvert = false;
+  let canAssign = false;
+  let canChangeStatus = false;
+  let canChangePotentialStatus = false;
   let canUpload = false;
   let canDeleteFiles = false;
   let canDelete = false;
@@ -61,11 +65,15 @@ export default async function LeadDetailPage({ params }: PageProps) {
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "LEAD");
     notes = await listNotesBySubject("LEAD", id);
     appointments = await listAppointmentsBySubject("LEAD", id);
-    canEdit = ctx.permissions.includes("LEADS_EDIT");
-    canAddNote = ctx.permissions.includes("LEADS_ADD_NOTE") && ctx.permissions.includes("NOTES_CREATE");
-    canCreateTask = ctx.permissions.includes("LEADS_CREATE_TASK") && ctx.permissions.includes("TASKS_CREATE");
-    canScheduleAppointment = ctx.permissions.includes("LEADS_SCHEDULE_APPOINTMENT") && ctx.permissions.includes("APPOINTMENTS_CREATE");
-    canConvert = ctx.permissions.includes("LEADS_CONVERT");
+    const capabilities = getRecordCapabilities("LEAD", ctx.permissions);
+    canEdit = capabilities.canEdit;
+    canAddNote = capabilities.canAddNote;
+    canCreateTask = capabilities.canCreateTask;
+    canScheduleAppointment = capabilities.canScheduleAppointment;
+    canConvert = capabilities.canConvert;
+    canAssign = capabilities.canAssign;
+    canChangeStatus = capabilities.canChangeStatus;
+    canChangePotentialStatus = capabilities.canChangePotentialStatus;
     canUpload = ctx.permissions.includes("FILES_UPLOAD");
     canDeleteFiles = ctx.permissions.includes("FILES_DELETE");
     canDelete = ctx.permissions.includes("LEADS_DELETE");
@@ -114,7 +122,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
         ]}
       >
         <SendEmailButton subjectType="LEAD" subjectId={id} email={lead.email} name={`${lead.firstName} ${lead.lastName}`} />
-        <RecordDetailActions object="leads" row={lead as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} />
+        <RecordDetailActions object="leads" row={lead as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} canAssign={canAssign} canChangeStatus={canChangeStatus} canChangePotentialStatus={canChangePotentialStatus} />
         <LeadConvertControls
           leadId={lead.id}
           convertedAt={lead.convertedAt?.toISOString() ?? null}

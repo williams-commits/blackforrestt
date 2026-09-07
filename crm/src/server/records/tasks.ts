@@ -98,8 +98,8 @@ export async function listTasks(
 }
 
 export async function createTask(ctx: ScopedContext, input: z.infer<typeof CreateTask>) {
-  requireCapability(ctx, "TASKS_CREATE");
   if (input.subjectType) requireCapability(ctx, subjectPermission(input.subjectType, "CREATE_TASK"));
+  else requireCapability(ctx, "TASKS_CREATE");
   const subject = input.subjectType && input.subjectId
     ? await resolveSubject(ctx, input.subjectType, input.subjectId)
     : null;

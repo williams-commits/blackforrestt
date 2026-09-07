@@ -144,17 +144,15 @@ test("activity permissions are independent from lead edit", async () => {
   await prisma.lead.delete({ where: { id: leadId } });
 });
 
-test("task creation is denied when TASKS_CREATE is off even if lead edit is on", async () => {
+test("unlinked task creation still requires TASKS_CREATE", async () => {
   const rep = await repContext();
-  const leadId = await makeLead(rep, "task-permission");
   const actor = { ...rep, permissions: rep.permissions.filter((permission) => permission !== "TASKS_CREATE") };
   await assertThrows(
-    () => createTask(actor, { title: "Denied task", subjectType: "LEAD", subjectId: leadId }),
+    () => createTask(actor, { title: "Denied task" }),
     403,
     "task create without TASKS_CREATE",
   );
   assert.equal(subjectPermission("LEAD", "CREATE_TASK"), "LEADS_CREATE_TASK");
-  await prisma.lead.delete({ where: { id: leadId } });
 });
 
 test("independent action permissions deny only their own operation", async () => {
@@ -165,11 +163,11 @@ test("independent action permissions deny only their own operation", async () =>
   const tag = await prisma.tag.findFirstOrThrow();
   const without = (permission: string) => ({ ...rep, permissions: rep.permissions.filter((entry) => entry !== permission) });
 
-  await assertThrows(() => createNote(without("NOTES_CREATE"), { body: "Denied", subjectType: "LEAD", subjectId: leadId }), 403, "note permission");
-  await assertThrows(() => createAppointment(without("APPOINTMENTS_CREATE"), { title: "Denied", startAt: new Date(Date.now() + 60_000), subjectType: "LEAD", subjectId: leadId }), 403, "appointment permission");
+  await assertThrows(() => createNote(without("LEADS_ADD_NOTE"), { body: "Denied", subjectType: "LEAD", subjectId: leadId }), 403, "note permission");
+  await assertThrows(() => createAppointment(without("LEADS_SCHEDULE_APPOINTMENT"), { title: "Denied", startAt: new Date(Date.now() + 60_000), subjectType: "LEAD", subjectId: leadId }), 403, "appointment permission");
   await assertThrows(() => updateLead(without("LEADS_CHANGE_STATUS"), leadId, { statusId: status.id }), 403, "status permission");
   await assertThrows(() => updateLead(without("LEADS_CHANGE_POTENTIAL_STATUS"), leadId, { potentialStatusId: potentialStatus.id }), 403, "potential status permission");
-  await assertThrows(() => linkTag(without("TAGS_ASSIGN"), { tagId: tag.id, subjectType: "LEAD", subjectId: leadId }), 403, "tag assignment permission");
+  await assertThrows(() => linkTag(without("LEADS_MANAGE_TAGS"), { tagId: tag.id, subjectType: "LEAD", subjectId: leadId }), 403, "tag assignment permission");
   await assertThrows(() => updateLead(without("LEADS_ASSIGN"), leadId, { assignedUserId: rep.userId }), 403, "assignment permission");
   await assertThrows(() => convertLead(without("LEADS_CONVERT"), leadId, { contact: { mode: "create" }, customer: { mode: "none" }, account: { mode: "none" }, opportunity: { mode: "none" } }), 403, "conversion permission");
 

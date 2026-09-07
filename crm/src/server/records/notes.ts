@@ -19,7 +19,6 @@ export const CreateNote = z.object({
 });
 
 export async function createNote(ctx: ScopedContext, input: z.infer<typeof CreateNote>) {
-  requireCapability(ctx, "NOTES_CREATE");
   requireCapability(ctx, subjectPermission(input.subjectType, "ADD_NOTE"));
   const subject = await resolveSubject(ctx, input.subjectType, input.subjectId);
   return prisma.$transaction(async (tx) => {

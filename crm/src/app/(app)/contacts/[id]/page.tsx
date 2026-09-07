@@ -21,6 +21,7 @@ import { RecordDetailActions } from "@/components/RecordDetailActions";
 import { SendEmailButton } from "@/components/SendEmailButton";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
+import { getRecordCapabilities } from "@/lib/recordCapabilities";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,8 @@ export default async function ContactDetailPage({ params }: PageProps) {
   let canAddNote = false;
   let canCreateTask = false;
   let canScheduleAppointment = false;
+  let canAssign = false;
+  let canChangeStatus = false;
   let canUpload = false;
   let canDeleteFiles = false;
   let canDelete = false;
@@ -92,10 +95,13 @@ export default async function ContactDetailPage({ params }: PageProps) {
       },
     });
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "CONTACT", subjectId: id }, include: { campaign: true } });
-    canEdit = ctx.permissions.includes("CONTACTS_EDIT");
-    canAddNote = ctx.permissions.includes("CONTACTS_ADD_NOTE") && ctx.permissions.includes("NOTES_CREATE");
-    canCreateTask = ctx.permissions.includes("CONTACTS_CREATE_TASK") && ctx.permissions.includes("TASKS_CREATE");
-    canScheduleAppointment = ctx.permissions.includes("CONTACTS_SCHEDULE_APPOINTMENT") && ctx.permissions.includes("APPOINTMENTS_CREATE");
+    const capabilities = getRecordCapabilities("CONTACT", ctx.permissions);
+    canEdit = capabilities.canEdit;
+    canAddNote = capabilities.canAddNote;
+    canCreateTask = capabilities.canCreateTask;
+    canScheduleAppointment = capabilities.canScheduleAppointment;
+    canAssign = capabilities.canAssign;
+    canChangeStatus = capabilities.canChangeStatus;
     canUpload = ctx.permissions.includes("FILES_UPLOAD");
     canDeleteFiles = ctx.permissions.includes("FILES_DELETE");
     canDelete = ctx.permissions.includes("CONTACTS_DELETE");
@@ -135,7 +141,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
         ]}
       >
         <SendEmailButton subjectType="CONTACT" subjectId={id} email={contact.email} name={`${contact.firstName} ${contact.lastName}`} />
-        <RecordDetailActions object="contacts" row={contact as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} />
+        <RecordDetailActions object="contacts" row={contact as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} canAssign={canAssign} canChangeStatus={canChangeStatus} />
       </HighlightsPanel>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { LinkTag, linkTag, unlinkTag } from "@/server/records/tags";
 import { scopedContext } from "@/server/records/leads";
+import { subjectPermission } from "@/server/records/subjects";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
   try {
     const parsed = await parseJsonBody(request, LinkTag);
     if (!parsed.ok) return parsed.response;
-    const ctx = await scopedContext("TAGS_ASSIGN");
+    const ctx = await scopedContext(subjectPermission(parsed.data.subjectType, "MANAGE_TAGS"));
     return NextResponse.json({ data: await linkTag(ctx, parsed.data) }, { status: 201 });
   } catch (error) {
     return handleRouteError(error, "Unable to attach tag.");
@@ -21,7 +22,7 @@ export async function DELETE(request: Request) {
   try {
     const parsed = await parseJsonBody(request, LinkTag);
     if (!parsed.ok) return parsed.response;
-    const ctx = await scopedContext("TAGS_ASSIGN");
+    const ctx = await scopedContext(subjectPermission(parsed.data.subjectType, "MANAGE_TAGS"));
     await unlinkTag(ctx, parsed.data);
     return NextResponse.json({ data: { ok: true } });
   } catch (error) {

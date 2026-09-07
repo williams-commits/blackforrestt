@@ -45,7 +45,7 @@ export function TagEditor({
           CUSTOMER: "CUSTOMERS_MANAGE_TAGS",
           OPPORTUNITY: "OPPORTUNITIES_MANAGE_TAGS",
         }[subjectType];
-        setCanManageTags(permissions.includes("TAGS_ASSIGN") && permissions.includes(subjectPermission));
+        setCanManageTags(permissions.includes(subjectPermission));
       })
       .catch(() => setCanManageTags(false));
   }, [subjectType]);

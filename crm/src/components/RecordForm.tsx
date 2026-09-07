@@ -32,6 +32,8 @@ interface RecordFormProps {
   /** Create-time duplicate detection (leads): a 409 shows matches and a
    *  "create anyway" path that re-submits with allowDuplicates. */
   duplicateCheck?: boolean;
+  /** Core fields are read-only in edit mode when only action permissions are enabled. */
+  canEdit?: boolean;
 }
 
 /** Coerce a row value into a form-input value (dates → datetime-local). */
@@ -58,7 +60,7 @@ interface CustomFieldDefLite {
   options: string[] | null;
 }
 
-export function RecordForm({ object, fields, options, initial, onClose, onSaved, duplicateCheck }: RecordFormProps) {
+export function RecordForm({ object, fields, options, initial, onClose, onSaved, duplicateCheck, canEdit = true }: RecordFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,6 +130,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
     return initial_;
   });
   const visibleFields = fields.filter((field) => {
+    if (editing && !canEdit && !["statusId", "potentialStatusId", "assignedUserId", "assignedTeamId", "ownerUserId", "teamId"].includes(field.name)) return false;
     if (["statusId", "potentialStatusId"].includes(field.name)) return capabilities.classify;
     if (["assignedUserId", "assignedTeamId", "ownerUserId", "teamId"].includes(field.name)) return capabilities.assign;
     return true;

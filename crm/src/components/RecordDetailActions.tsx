@@ -107,11 +107,17 @@ export function RecordDetailActions({
   row,
   canEdit,
   canDelete,
+  canAssign = false,
+  canChangeStatus = false,
+  canChangePotentialStatus = false,
 }: {
   object: ObjectKey;
   row: Record<string, unknown>;
   canEdit: boolean;
   canDelete: boolean;
+  canAssign?: boolean;
+  canChangeStatus?: boolean;
+  canChangePotentialStatus?: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -119,7 +125,8 @@ export function RecordDetailActions({
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const options = useOptionSources(object);
 
-  if (!canEdit && !canDelete) return null;
+  const canOpenActionForm = canEdit || canAssign || canChangeStatus || canChangePotentialStatus;
+  if (!canOpenActionForm && !canDelete) return null;
 
   async function handleDelete() {
     const singular = RECORD_UI[object].singular.toLowerCase();
@@ -141,13 +148,13 @@ export function RecordDetailActions({
 
   return (
     <div className="flex gap-2">
-      {canEdit ? (
+      {canOpenActionForm ? (
         <button
           type="button"
           onClick={() => setEditing(true)}
           className="rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-(--brand) focus:ring-offset-2 cursor-pointer"
         >
-          Edit
+          {canEdit ? "Edit" : "Manage actions"}
         </button>
       ) : null}
       {canDelete ? (
@@ -168,6 +175,7 @@ export function RecordDetailActions({
           initial={row}
           onSaved={() => router.refresh()}
           onClose={() => setEditing(false)}
+          canEdit={canEdit}
         />
       ) : null}
 

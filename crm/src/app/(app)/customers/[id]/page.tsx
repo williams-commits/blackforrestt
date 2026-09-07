@@ -23,6 +23,7 @@ import { SendEmailButton } from "@/components/SendEmailButton";
 import { PlatformLinkPanel, PlatformUnlinkButton } from "@/components/PlatformLinkPanel";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
+import { getRecordCapabilities } from "@/lib/recordCapabilities";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,8 @@ export default async function CustomerDetailPage({ params }: PageProps) {
   let canAddNote = false;
   let canCreateTask = false;
   let canScheduleAppointment = false;
+  let canAssign = false;
+  let canChangeStatus = false;
   let canUpload = false;
   let canDeleteFiles = false;
   let canDelete = false;
@@ -64,10 +67,13 @@ export default async function CustomerDetailPage({ params }: PageProps) {
     appointments = await listAppointmentsBySubject("CUSTOMER", id);
     platform = customer.platformUserId ? await client360(customer.platformUserId) : null;
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "CUSTOMER", subjectId: id }, include: { campaign: true } });
-    canEdit = ctx.permissions.includes("CUSTOMERS_EDIT");
-    canAddNote = ctx.permissions.includes("CUSTOMERS_ADD_NOTE") && ctx.permissions.includes("NOTES_CREATE");
-    canCreateTask = ctx.permissions.includes("CUSTOMERS_CREATE_TASK") && ctx.permissions.includes("TASKS_CREATE");
-    canScheduleAppointment = ctx.permissions.includes("CUSTOMERS_SCHEDULE_APPOINTMENT") && ctx.permissions.includes("APPOINTMENTS_CREATE");
+    const capabilities = getRecordCapabilities("CUSTOMER", ctx.permissions);
+    canEdit = capabilities.canEdit;
+    canAddNote = capabilities.canAddNote;
+    canCreateTask = capabilities.canCreateTask;
+    canScheduleAppointment = capabilities.canScheduleAppointment;
+    canAssign = capabilities.canAssign;
+    canChangeStatus = capabilities.canChangeStatus;
     canUpload = ctx.permissions.includes("FILES_UPLOAD");
     canDeleteFiles = ctx.permissions.includes("FILES_DELETE");
     canDelete = ctx.permissions.includes("CUSTOMERS_DELETE");
@@ -107,7 +113,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         ]}
       >
         <SendEmailButton subjectType="CUSTOMER" subjectId={id} email={customer.email} name={`${customer.firstName} ${customer.lastName}`} />
-        <RecordDetailActions object="customers" row={customer as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} />
+        <RecordDetailActions object="customers" row={customer as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} canAssign={canAssign} canChangeStatus={canChangeStatus} />
       </HighlightsPanel>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">

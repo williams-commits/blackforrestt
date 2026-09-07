@@ -11,10 +11,14 @@ export function OpportunityDetailActions({
   row,
   canEdit,
   canDelete,
+  canAssign = false,
+  canChangeStatus = false,
 }: {
   row: Record<string, unknown>;
   canEdit: boolean;
   canDelete: boolean;
+  canAssign?: boolean;
+  canChangeStatus?: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -34,7 +38,8 @@ export function OpportunityDetailActions({
       .catch(() => setPipeline(null));
   }, [editing, pipelineId]);
 
-  if (!canEdit && !canDelete) return null;
+  const canOpenActionForm = canEdit || canAssign || canChangeStatus;
+  if (!canOpenActionForm && !canDelete) return null;
 
   async function handleDelete() {
     const ok = await confirm({
@@ -57,7 +62,7 @@ export function OpportunityDetailActions({
 
   return (
     <div className="flex items-center gap-2">
-      {canEdit ? (
+      {canOpenActionForm ? (
         <button
           type="button"
           onClick={() => setEditing(true)}
@@ -80,7 +85,8 @@ export function OpportunityDetailActions({
         <OpportunityForm
           pipeline={pipeline}
           initial={row as never}
-          canEditFields
+          canEditFields={canEdit}
+          canChangeStage={canChangeStatus}
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);

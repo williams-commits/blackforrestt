@@ -28,7 +28,6 @@ export const UpdateAppointment = z.object({
 });
 
 export async function createAppointment(ctx: ScopedContext, input: z.infer<typeof CreateAppointment>) {
-  requireCapability(ctx, "APPOINTMENTS_CREATE");
   requireCapability(ctx, subjectPermission(input.subjectType, "SCHEDULE_APPOINTMENT"));
   const subject = await resolveSubject(ctx, input.subjectType, input.subjectId);
   const ownerUserId = input.ownerUserId ?? ctx.userId;

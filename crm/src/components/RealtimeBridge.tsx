@@ -16,7 +16,7 @@ export function RealtimeBridge() {
       lastRefresh.current = payload.id;
       window.dispatchEvent(new CustomEvent("crm:realtime-refresh"));
       window.dispatchEvent(new CustomEvent("crm:notifications-refresh"));
-      router.refresh();
+      if (!window.location.pathname.startsWith("/admin")) router.refresh();
     };
     source.addEventListener("refresh", onRefresh as EventListener);
     return () => {

@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     const parsed = await parseJsonBody(request, SendEmail);
     if (!parsed.ok) return parsed.response;
-    const ctx = await scopedContext(subjectPermission(parsed.data.subjectType, "VIEW"));
+    const ctx = await scopedContext(subjectPermission(parsed.data.subjectType, "EDIT"));
     return NextResponse.json({ data: await sendRecordEmail(ctx, parsed.data) });
   } catch (error) {
     return handleRouteError(error, "Unable to send email.");

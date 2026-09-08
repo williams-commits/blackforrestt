@@ -28,7 +28,9 @@ export async function sendRecordEmail(
   ctx: ScopedContext,
   input: z.infer<typeof SendEmail>,
 ): Promise<{ sent: boolean; emailDisabled: boolean }> {
-  requireCapability(ctx, subjectPermission(input.subjectType, "VIEW"));
+  // Sending uses the company's SMTP identity, so it is an edit-class action
+  // on the record — a view-only user must not be able to send mail as the org.
+  requireCapability(ctx, subjectPermission(input.subjectType, "EDIT"));
   if (!emailConfigured()) {
     throw new CrmError(
       "Email sending is not configured — set SMTP_URL in the environment.",

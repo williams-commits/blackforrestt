@@ -574,23 +574,25 @@ function scopesForCase(feedKind: PendingCase["feedKind"]): BlockScope[] {
 async function persistRunResults(runId: string, cases: PendingCase[]): Promise<void> {
   // Per-case create (not createMany): the returned row ids link the
   // reconciliation blocks opened below to their parent case.
-  const created = await withSerializableRetry(async (tx) =>
-    Promise.all(
-      cases.map((pending) =>
-        tx.reconciliationCase.create({
-          data: {
-            runId,
-            userId: pending.userId,
-            feedKind: pending.feedKind,
-            severity: pending.severity,
-            status: "OPEN",
-            message: pending.message.slice(0, 500),
-            expectedValue: pending.expectedValue ?? null,
-            actualValue: pending.actualValue ?? null,
-          },
-        }),
+  const created = await withSerializableRetry(
+    async (tx) =>
+      Promise.all(
+        cases.map((pending) =>
+          tx.reconciliationCase.create({
+            data: {
+              runId,
+              userId: pending.userId,
+              feedKind: pending.feedKind,
+              severity: pending.severity,
+              status: "OPEN",
+              message: pending.message.slice(0, 500),
+              expectedValue: pending.expectedValue ?? null,
+              actualValue: pending.actualValue ?? null,
+            },
+          }),
+        ),
       ),
-    ),
+    { operation: "reconciliation case persistence", timeoutMs: 30_000 },
   );
 
   const systemWideCritical = cases.some(
@@ -606,16 +608,19 @@ async function persistRunResults(runId: string, cases: PendingCase[]): Promise<v
     if (pending.severity !== "CRITICAL") continue;
 
     if (pending.userId) {
-      await withSerializableRetry(async (tx) => {
-        for (const scope of scopesForCase(pending.feedKind)) {
-          await openBlockIdempotent(tx, {
-            userId: pending.userId!,
-            scope,
-            reason: pending.message.slice(0, 240),
-            caseId: caseRow.id,
-          });
-        }
-      });
+      await withSerializableRetry(
+        async (tx) => {
+          for (const scope of scopesForCase(pending.feedKind)) {
+            await openBlockIdempotent(tx, {
+              userId: pending.userId!,
+              scope,
+              reason: pending.message.slice(0, 240),
+              caseId: caseRow.id,
+            });
+          }
+        },
+        { operation: "reconciliation user block", timeoutMs: 30_000 },
+      );
       continue;
     }
 
@@ -633,18 +638,21 @@ async function persistRunResults(runId: string, cases: PendingCase[]): Promise<v
         ...(userCursor ? { cursor: { id: userCursor }, skip: 1 } : {}),
       });
       if (users.length === 0) break;
-      await withSerializableRetry(async (tx) => {
-        for (const user of users) {
-          for (const scope of scopesForCase(pending.feedKind)) {
-            await openBlockIdempotent(tx, {
-              userId: user.id,
-              scope,
-              reason: pending.message.slice(0, 240),
-              caseId: caseRow.id,
-            });
+      await withSerializableRetry(
+        async (tx) => {
+          for (const user of users) {
+            for (const scope of scopesForCase(pending.feedKind)) {
+              await openBlockIdempotent(tx, {
+                userId: user.id,
+                scope,
+                reason: pending.message.slice(0, 240),
+                caseId: caseRow.id,
+              });
+            }
           }
-        }
-      });
+        },
+        { operation: "reconciliation system-wide block chunk", timeoutMs: 30_000 },
+      );
       if (users.length < CHUNK) break;
       userCursor = users.at(-1)?.id;
     }

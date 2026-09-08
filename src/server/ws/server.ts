@@ -289,9 +289,11 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
   const heartbeat = setInterval(() => {
     for (const client of clients) {
       if (!client.isAlive) {
+        // terminate() always emits "close", whose handler unregisters the
+        // client and decrements presence exactly once. Cleaning up here as
+        // well double-decrements users holding several connections, corrupting
+        // the online-presence counts the CRM bridge reports.
         client.ws.terminate();
-        unregisterClient(client);
-        hub.clientDisconnected(client.userId);
         continue;
       }
       client.isAlive = false;

@@ -22,6 +22,16 @@ const DEFAULT_INTERVAL_MS = 6 * 60 * 60_000; // every 6 hours
 const LOCK_KEY = "maintenance:scheduler:leader";
 const LOCK_LEASE_MS = 5 * 60_000;
 
+// Token-checked release: only delete the lease if WE still own it. A plain
+// DEL after an expired lease would remove the NEXT leader's lock and allow a
+// concurrent sweep (the passes are idempotent, but the lock exists for a reason).
+const RELEASE_SCRIPT = `
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+  return redis.call('DEL', KEYS[1])
+end
+return 0
+`;
+
 function enabled(): boolean {
   return (process.env.MAINTENANCE_ENABLED ?? (process.env.NODE_ENV === "production" ? "true" : "false")).toLowerCase() === "true";
 }
@@ -139,7 +149,9 @@ class MaintenanceScheduler {
         const summary = await runMaintenance();
         log.info("maintenance pass complete", { ...summary });
       } finally {
-        await redis.del(LOCK_KEY).catch(() => undefined);
+        await redis
+          .eval(RELEASE_SCRIPT, { keys: [LOCK_KEY], arguments: [token] })
+          .catch(() => undefined);
       }
     } catch (error) {
       log.error("maintenance pass failed", { error: String(error) });

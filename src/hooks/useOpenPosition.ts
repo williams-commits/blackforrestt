@@ -93,22 +93,25 @@ export function useOpenPosition() {
 
 /** Close a position by id. Returns the closed position's symbol and net P/L
  *  so callers can give immediate, exact feedback. */
-export async function closePosition(positionId: string): Promise<{ ok: boolean; symbol?: string; netProfit?: number }> {
+export async function closePosition(positionId: string): Promise<{ ok: boolean; symbol?: string; netProfit?: number; error?: string }> {
   try {
     const response = await fetch(`/api/positions/${encodeURIComponent(positionId)}/close`, {
       method: "POST",
     });
-    if (!response.ok) return { ok: false };
+    if (!response.ok) {
+      const message = await readApiError(response, "Failed to close position.");
+      return { ok: false, error: message };
+    }
     const data = (await response.json().catch(() => null)) as
       | { position?: { symbol?: string; netProfit?: number } }
       | null;
-    if (!data?.position) return { ok: false };
+    if (!data?.position) return { ok: false, error: "The position could not be closed." };
     return {
       ok: true,
       symbol: data.position.symbol,
       netProfit: typeof data.position.netProfit === "number" ? data.position.netProfit : undefined,
     };
   } catch {
-    return { ok: false };
+    return { ok: false, error: "Network error closing position." };
   }
 }

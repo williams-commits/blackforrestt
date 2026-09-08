@@ -53,7 +53,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
     const ctx = await scopedContext("OPPORTUNITIES_VIEW");
     opportunity = await getOpportunity(ctx, id);
     events = await listTimeline("OPPORTUNITY", id);
-    tags = await listTagsForSubject("OPPORTUNITY", id);
+    tags = await listTagsForSubject(ctx, "OPPORTUNITY", id);
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "OPPORTUNITY");
     notes = await listNotesBySubject("OPPORTUNITY", id);
     appointments = await listAppointmentsBySubject("OPPORTUNITY", id);

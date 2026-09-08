@@ -30,14 +30,30 @@ export async function GET(req: Request) {
   const limit = Math.min(100, Math.max(1, Number(params.get("limit") ?? 10) || 10));
   const offset = Math.max(0, Number(params.get("offset") ?? 0) || 0);
 
-  // Lightweight badge poll — just the three counts.
+  // Lightweight badge poll — just the three counts. Operators additionally
+  // get the team-inbox count so their message badge matches the realtime
+  // activity push (which reports both customer and operator counters).
   if (scope === "counts") {
-    const [unreadCount, unreadMessages, openSupportCases] = await Promise.all([
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isAdmin: true, adminRoles: { where: { revokedAt: null }, select: { role: true } } },
+    });
+    const isOperator = Boolean(user && (user.isAdmin || user.adminRoles.length > 0));
+    const [unreadCount, unreadMessages, operatorMessages, openSupportCases] = await Promise.all([
       prisma.notification.count({ where: { userId, readAt: null } }),
       countUnreadDirectMessages(userId),
+      isOperator
+        ? prisma.directMessage.count({
+            where: {
+              readAt: null,
+              sender: { isAdmin: false, adminRoles: { none: { revokedAt: null } } },
+              recipient: { OR: [{ isAdmin: true }, { adminRoles: { some: { revokedAt: null } } }] },
+            },
+          })
+        : Promise.resolve(0),
       prisma.supportCase.count({ where: { userId, status: { in: ["OPEN", "IN_PROGRESS", "WAITING_CUSTOMER"] } } }),
     ]);
-    return NextResponse.json({ unreadCount, unreadMessages, openSupportCases });
+    return NextResponse.json({ unreadCount, unreadMessages, operatorMessages, openSupportCases });
   }
 
   const baseWhere = { userId, ...(groupTypes ? { type: { in: groupTypes } } : {}) };

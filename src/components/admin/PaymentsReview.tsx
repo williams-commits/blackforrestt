@@ -46,8 +46,14 @@ export function PaymentsReview({
 }) {
   const [requests, setRequests] = useState(initialRequests);
 
-  // Sync local state when the parent's polled data changes (auto-sync).
-  useEffect(() => { setRequests(initialRequests); }, [initialRequests]);
+  // Sync local state when the parent's polled data changes (auto-sync). Rows
+  // this operator already decided are kept out — a poll response that was in
+  // flight when the decision landed still contains them, and re-adding them
+  // reads as "my approval didn't stick".
+  const decidedIdsRef = useRef(new Set<string>());
+  useEffect(() => {
+    setRequests(initialRequests.filter((item) => !decidedIdsRef.current.has(item.id)));
+  }, [initialRequests]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -79,6 +85,9 @@ export function PaymentsReview({
     : "A first finance reviewer prepares the request; a second reviewer approves the ledger settlement.";
 
   async function decide(id: string, action: "PREPARE" | "APPROVE" | "REJECT") {
+    // One money-moving decision at a time: `busy` is a single id, so a second
+    // concurrent decision re-enables the first row's buttons mid-flight.
+    if (busy) return;
     const request = requests.find((item) => item.id === id);
     if (!request) return;
     const values = await openCommand({
@@ -117,6 +126,7 @@ export function PaymentsReview({
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error ?? "Unable to update payment request.");
+      decidedIdsRef.current.add(id);
       setRequests((current) => current.filter((item) => item.id !== id));
       commandKeys.current.delete(commandName);
     } catch (cause) {

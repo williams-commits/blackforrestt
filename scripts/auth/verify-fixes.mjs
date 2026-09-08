@@ -33,7 +33,9 @@ check(
 );
 check(
   "logo owns the home link",
-  /<Link href="\/"/.test(logo),
+  // href is computed in useEffect (trade-subdomain → apex routing);
+  // the Logo component still owns the single home-page anchor.
+  /<Link href={href}/.test(logo),
   "Logo remains the single home-page anchor",
 );
 check(

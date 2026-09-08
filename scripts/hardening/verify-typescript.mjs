@@ -53,6 +53,15 @@ const syntaxDiagnostics = [];
 const missingInternalImports = [];
 const importPattern = /(?:from\s+|import\s*\(|require\s*\()\s*["']([^"']+)["']/g;
 
+/** Resolve the `@/` alias against the workspace the file belongs to — the
+ *  repository now ships two Next.js apps (main `src/` and `crm/src/`), each
+ *  with its own `@/` baseUrl mapping in its tsconfig. */
+function aliasRootFor(file) {
+  const relative = path.relative(root, file);
+  if (relative === "crm" || relative.startsWith(`crm${path.sep}`)) return path.join(root, "crm", "src");
+  return path.join(root, "src");
+}
+
 for (const file of files) {
   const text = fs.readFileSync(file, "utf8");
   const sourceFile = ts.createSourceFile(
@@ -73,7 +82,7 @@ for (const file of files) {
   while ((match = importPattern.exec(text))) {
     const specifier = match[1];
     let base = null;
-    if (specifier.startsWith("@/")) base = path.join(root, "src", specifier.slice(2));
+    if (specifier.startsWith("@/")) base = path.join(aliasRootFor(file), specifier.slice(2));
     else if (specifier.startsWith(".")) base = path.resolve(path.dirname(file), specifier);
     if (base && !resolves(base)) {
       missingInternalImports.push({ file: path.relative(root, file), specifier });

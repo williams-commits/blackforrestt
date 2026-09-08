@@ -61,7 +61,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
     lead = await getLead(ctx, id);
     events = await listTimeline("LEAD", id);
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "LEAD", subjectId: id }, include: { campaign: true } });
-    tags = await listTagsForSubject("LEAD", id);
+    tags = await listTagsForSubject(ctx, "LEAD", id);
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "LEAD");
     notes = await listNotesBySubject("LEAD", id);
     appointments = await listAppointmentsBySubject("LEAD", id);

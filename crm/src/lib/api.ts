@@ -12,12 +12,16 @@ export function jsonError(message: string, status: number, details?: unknown): N
 
 /**
  * Map a thrown error to the uniform error envelope. CrmError carries its own
- * HTTP status; anything else is a 500 with a generic message so internals
- * never leak to the client.
+ * HTTP status; a ZodError (query-param/filter parsing on list routes) is a
+ * client error, not a 500; anything else is a 500 with a generic message so
+ * internals never leak to the client.
  */
 export function handleRouteError(error: unknown, fallbackMessage: string): NextResponse {
   if (error instanceof CrmError) {
     return jsonError(error.message, error.status, error.details);
+  }
+  if (error instanceof z.ZodError) {
+    return jsonError("Invalid query parameters.", 400, error.flatten());
   }
   console.error("[crm/api]", error);
   return jsonError(fallbackMessage, 500);

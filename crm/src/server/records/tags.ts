@@ -26,9 +26,16 @@ export function listTags() {
   });
 }
 
-export function listTagsForSubject(subjectType: string, subjectId: string) {
+/** Tags attached to one record — the subject is scope-checked first so tag
+ *  names on out-of-scope records are not disclosed. */
+export async function listTagsForSubject(
+  ctx: ScopedContext,
+  subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
+  subjectId: string,
+) {
+  await resolveSubject(ctx, subjectType, subjectId);
   return prisma.tagLink.findMany({
-    where: { subjectType: subjectType as never, subjectId },
+    where: { subjectType, subjectId },
     include: { tag: true },
   });
 }

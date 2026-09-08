@@ -5,6 +5,7 @@ import { CrmError, requireCapability } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { ownerScopeWhere } from "@/server/scope";
+import { assertAssignableUser } from "@/server/records/assignment";
 import { orderByFor, searchWhere } from "@/server/listQuery";
 import type { ScopedContext } from "@/server/records/leads";
 
@@ -195,6 +196,12 @@ async function assertStage(pipelineId: string, stageId?: string) {
 }
 
 export async function createOpportunity(ctx: ScopedContext, input: z.infer<typeof CreateOpportunity>) {
+  // Same assignment rules as the update path: choosing another owner (or an
+  // explicit team) is an assign action and must be both permitted and valid.
+  if (input.ownerUserId !== undefined || input.teamId !== undefined) {
+    requireCapability(ctx, "OPPORTUNITIES_ASSIGN");
+    await assertAssignableUser(input.ownerUserId);
+  }
   const pipeline = await prisma.pipeline.findUnique({ where: { id: input.pipelineId } });
   if (!pipeline) throw new CrmError("Pipeline not found.", 400);
   const stage =
@@ -250,7 +257,10 @@ export async function updateOpportunity(
   input: z.infer<typeof UpdateOpportunity>,
 ) {
   if (input.stageId !== undefined) requireCapability(ctx, "OPPORTUNITIES_CHANGE_STATUS");
-  if (input.ownerUserId !== undefined || input.teamId !== undefined) requireCapability(ctx, "OPPORTUNITIES_ASSIGN");
+  if (input.ownerUserId !== undefined || input.teamId !== undefined) {
+    requireCapability(ctx, "OPPORTUNITIES_ASSIGN");
+    await assertAssignableUser(input.ownerUserId);
+  }
   const existing = await prisma.opportunity.findFirst({
     where: { id, deletedAt: null, ...scopeWhere(ctx) },
     include: { stage: true },

@@ -171,3 +171,76 @@ npm run dev
 - Changing `AUTH_SECRET` invalidates sessions; changing `FIELD_ENCRYPTION_KEY` without a migration can make encrypted data unreadable.
 - Run `npm run auth:doctor` after changing authentication, database, Redis or origin variables.
 - Run `npm run hardening:verify:source` before packaging a release.
+
+## Multi-brand domains
+
+| Variable | Scope | Description |
+|---|---|---|
+| `BRAND_DOMAINS` | Server | Comma-separated apex domains serving the same files. The FIRST entry is canonical (redirect targets, cookie domain, email links, SEO). `BRAND_DOMAIN` alone still works as a single-entry list. |
+| `BRAND_OVERRIDES` | Server | JSON object keyed by apex domain with per-brand overrides, e.g. `{"agilefgs.com":{"tradeEnabled":true}}`. `tradeEnabled: true` asserts the family's trade subdomain DNS + TLS exist. |
+| `BRAND_TM` | Server | Trademark line shown in the UI footer. Default: `Black Forest™`. |
+| `DOMAIN` / `DOMAIN_2` / `DOMAIN_3` | Production proxy | Apex domains N that this deployment serves (mirrors `BRAND_DOMAINS` for the reverse proxy and domain routing). |
+| `TRADE_DOMAIN` / `TRADE_DOMAIN_2` / `TRADE_DOMAIN_3` | Production proxy | The trade subdomain serving each `DOMAIN_N` family's authenticated app. |
+| `TRADE_SUBDOMAIN` | Server | Subdomain label for trade hosts. Default: `trade`. |
+
+## Market data feeds
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `ALPHAVANTAGE_CANDLE_DELAY_MS` | No | Delay between Alpha Vantage candle requests (rate-limit pacing). Default: `12000`. |
+| `TICKERLAYER_API_KEY` | No | TickerLayer market-data feed key; selecting the `tickerlayer` market-data mode requires it. |
+| `SIFTING_API_KEY` | No | Sifting market-data feed key; selecting the `sifting` market-data mode requires it. |
+| `LSE_API_KEY` | No | LSE market-data feed key; selecting the `lse` market-data mode requires it. |
+
+## Regulation and legal copy
+
+| Variable | Scope | Description |
+|---|---|---|
+| `COMPANY_JURISDICTION` | Server | Jurisdiction line for legal pages/footer. Empty = hidden. |
+| `COMPANY_REGULATOR` | Server | Regulator name shown in legal disclosures. Empty = hidden. |
+| `COMPANY_LICENSE_NUMBER` | Server | License number shown in legal disclosures. Empty = hidden. |
+| `COMPANY_REGISTRATION_NUMBER` | Server | Company registration number shown in legal disclosures. Empty = hidden. |
+| `INVESTOR_COMPENSATION_SCHEME` | Server | Investor-compensation scheme wording for legal pages. Empty = hidden. |
+
+## Payments and demo funding
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `DEPOSIT_WALLET_ADDRESSES` | No | JSON map of per-method deposit destination addresses shown to customers (admin settings defaults). Unset = none shown. |
+| `DEMO_STARTING_BALANCE` | No | USD demo starting balance credited to each new registration via the ledger. `0`/unset = start empty. |
+
+## Platform ↔ CRM bridge
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `CRM_BRIDGE_TOKEN` | Platform (main app) | **Secret.** Shared bearer token the CRM presents to the platform's `/api/internal/crm/*` read-only bridge. Unset = bridge disabled (503). |
+| `PLATFORM_BRIDGE_URL` | CRM | Base URL of the platform's internal bridge the CRM calls for client-360 data. |
+| `PLATFORM_BRIDGE_TOKEN` | CRM | **Secret.** Bearer token the CRM sends to the platform bridge (same value as the platform's `CRM_BRIDGE_TOKEN`). |
+
+## CRM email and storage
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `SMTP_URL` | CRM | `smtp://user:pass@host:port` connection URL for the CRM's outbound email (record-page compose). Unset = email sending disabled. |
+| `SMTP_FROM` | CRM | From address for CRM outbound email. |
+| `ATTACHMENT_STORAGE_DIR` | CRM | Filesystem directory for CRM attachment storage. Default: `uploads/attachments`. |
+
+## Malware-scanning sidecar (deploy/scanner)
+
+| Variable | Scope | Description |
+|---|---|---|
+| `SCANNER_TOKEN` | Scanner + platform | **Secret.** Shared bearer token between the platform and the ClamAV scan sidecar. |
+| `CLAMD_HOST` | Scanner | clamd hostname. Default: `clamav`. |
+| `CLAMD_PORT` | Scanner | clamd port. Default: `3310`. |
+| `CLAMD_TIMEOUT_MS` | Scanner | Idle timeout per scan in milliseconds. Default: `120000`. |
+| `MAX_BODY_BYTES` | Scanner | Request body cap for scan submissions. Default: `33554432` (32 MiB). |
+
+## Operations
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `EMAIL_DELIVERY_ENABLED` | Server | Set `false` to disable the platform's email dispatcher (queueing still records deliveries as skipped). Default: `true`. |
+| `LOG_LEVEL` | Server | Structured log level: `debug`, `info`, `warn` or `error`. Default: `info` in production, `debug` otherwise. |
+| `MAINTENANCE_ENABLED` | Server | Enables the periodic retention-maintenance sweep (expired tokens/sessions, read notifications, terminal email deliveries, KYC retention). Default: `true` in production only. |
+| `MAINTENANCE_INTERVAL_MS` | Server | Sweep interval, minimum 3,600,000 (1 hour). Default: `21600000` (6 hours). |
+| `PHASE8_RELEASE_ARCHIVE` | Release tooling | Output path for `npm run test:release`. Default: `artifacts/phase8/blckforest-release.zip`. |

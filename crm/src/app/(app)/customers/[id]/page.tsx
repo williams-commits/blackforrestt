@@ -61,7 +61,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
     const ctx = await scopedContext("CUSTOMERS_VIEW");
     customer = await getCustomer(ctx, id);
     events = await listTimeline("CUSTOMER", id);
-    tags = await listTagsForSubject("CUSTOMER", id);
+    tags = await listTagsForSubject(ctx, "CUSTOMER", id);
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "CUSTOMER");
     notes = await listNotesBySubject("CUSTOMER", id);
     appointments = await listAppointmentsBySubject("CUSTOMER", id);

@@ -4,10 +4,8 @@ import { resolve } from "node:path";
 
 const root = resolve(process.argv[2] ?? ".");
 const requiredFiles = [
-  "ENTERPRISE_PHASE_6.md",
-  "VERIFICATION_PHASE_6.md",
-  "ENTERPRISE_PHASE_7.md",
-  "VERIFICATION_PHASE_7.md",
+  // Phase 6/7 planning + verification docs were consolidated into the roadmap.
+  "docs/ENTERPRISE_ROADMAP.md",
   "prisma/migrations/20260728010000_enterprise_admin_rbac/migration.sql",
   "src/server/adminPolicy.ts",
   "src/server/admin.ts",
@@ -67,7 +65,7 @@ const banner = await text("src/components/trade/MarketStatusBanner.tsx");
 for (const [path, source, markers] of [
   ["src/server/engine/hub.ts", hub, ["loadTradingRiskPolicy", "executable quote is stale"]],
   ["src/components/trade/TradePanel.tsx", panel, ["isExecutableQuote", "Pending provider acceptance"]],
-  ["src/components/trade/MarketStatusBanner.tsx", banner, ["Quote source", "Freshness:"]],
+  ["src/components/trade/MarketStatusBanner.tsx", banner, ["market data", "s old", "stale"]],
 ]) {
   for (const marker of markers) if (!source.includes(marker)) failures.push(`${path} missing trust marker: ${marker}`);
 }

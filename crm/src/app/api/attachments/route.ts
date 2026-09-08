@@ -15,14 +15,14 @@ const SubjectQuery = z.object({
 /** List attachments for a record. */
 export async function GET(request: Request) {
   try {
-    await scopedContext("FILES_READ");
+    const ctx = await scopedContext("FILES_READ");
     const params = new URL(request.url).searchParams;
     const parsed = SubjectQuery.safeParse({
       subjectType: params.get("subjectType") ?? undefined,
       subjectId: params.get("subjectId") ?? undefined,
     });
     if (!parsed.success) return NextResponse.json({ error: "Missing subject." }, { status: 400 });
-    const attachments = await listAttachments(parsed.data.subjectType, parsed.data.subjectId);
+    const attachments = await listAttachments(ctx, parsed.data.subjectType, parsed.data.subjectId);
     return NextResponse.json({
       data: attachments.map((attachment) => ({
         id: attachment.id,

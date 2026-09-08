@@ -99,22 +99,33 @@ export function upcomingAppointmentsForUser(userId: string, take = 10) {
   });
 }
 
+/** Owner-visible user set for the actor's scope: self + members of visible teams. */
+async function visibleOwnerIds(ctx: ScopedContext): Promise<string[] | null> {
+  if (ctx.scope === "ORG") return null; // no filter
+  if (ctx.scope === "OWN") return [ctx.userId];
+  if (ctx.teamIds.length === 0) return [ctx.userId];
+  const memberships = await prisma.teamMembership.findMany({
+    where: { teamId: { in: ctx.teamIds } },
+    select: { userId: true },
+  });
+  return [...new Set([ctx.userId, ...memberships.map((m) => m.userId)])];
+}
+
 export async function updateAppointment(
   ctx: ScopedContext,
   id: string,
   input: z.infer<typeof UpdateAppointment>,
 ) {
   requireCapability(ctx, "APPOINTMENTS_EDIT");
-  const existing = await prisma.appointment.findFirst({ where: { id, ownerUserId: ctx.userId } });
-  // Owners manage their own appointments; managers+ may manage any.
-  if (!existing) {
-    if (ctx.scope === "ORG" || ctx.permissions.includes("APPOINTMENTS_EDIT")) {
-      const any = await prisma.appointment.findUnique({ where: { id } });
-      if (!any) throw new CrmError("Appointment not found.", 404);
-    } else {
-      throw new CrmError("Appointment not found.", 404);
-    }
-  }
+  // Owners manage their own appointments; ORG-scope roles may manage any.
+  // The visible-owner filter (same as updateTask) keeps TEAM/HIERARCHY roles
+  // inside their scope — the previous fallback checked a permission that
+  // requireCapability had already established, so it never rejected.
+  const ownerIds = await visibleOwnerIds(ctx);
+  const existing = await prisma.appointment.findFirst({
+    where: { id, ...(ownerIds ? { ownerUserId: { in: ownerIds } } : {}) },
+  });
+  if (!existing) throw new CrmError("Appointment not found.", 404);
 
   return prisma.$transaction(async (tx) => {
     const saved = await tx.appointment.update({

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
-import { consumeApiMutation } from "@/server/security/rateLimit";
+import { consumeApiMutation, consumeLoginAttempt } from "@/server/security/rateLimit";
 import { logger } from "@/server/observability";
 
 // The auth() wrapper decodes the session JWT (jose, no DB hit) so decisions
@@ -30,10 +30,18 @@ function withSecurityHeaders(response: NextResponse): NextResponse {
   return response;
 }
 
-/** Client IP for rate limiting (behind Caddy in production). */
+/** Client IP for rate limiting (behind Caddy in production).
+ *
+ * Uses the RIGHTMOST X-Forwarded-For entry — the hop our trusted reverse
+ * proxy appended. The leftmost entry is attacker-controlled (a client can
+ * send its own XFF header to appear as a new "IP" on every request and
+ * bypass per-IP throttles, or forge the IP stamped into audit entries). */
 function clientIp(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
+  if (forwarded) {
+    const hops = forwarded.split(",").map((hop) => hop.trim()).filter(Boolean);
+    if (hops.length > 0) return hops[hops.length - 1]!;
+  }
   return request.headers.get("x-real-ip") ?? "unknown";
 }
 
@@ -107,7 +115,24 @@ export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   let response: NextResponse;
   if (pathname === "/api/auth" || pathname.startsWith("/api/auth/")) {
-    response = withSecurityHeaders(NextResponse.next());
+    // Credential POSTs bypass the session-aware handler below by design, but
+    // must not bypass throttling: the per-email lockout alone cannot stop
+    // password spraying across many accounts. Same-origin gate applies too.
+    if (req.method === "POST" && !mutationOriginAllowed(req)) {
+      response = NextResponse.json({ error: "Cross-origin request rejected." }, { status: 403 });
+    } else if (req.method === "POST") {
+      const limit = consumeLoginAttempt(clientIp(req));
+      if (!limit.allowed) {
+        response = NextResponse.json(
+          { error: "Too many attempts — slow down." },
+          { status: 429, headers: { "Retry-After": String(Math.ceil(limit.retryAfterMs / 1000)) } },
+        );
+      } else {
+        response = withSecurityHeaders(NextResponse.next());
+      }
+    } else {
+      response = withSecurityHeaders(NextResponse.next());
+    }
   } else if (ASSET_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix))) {
     response = NextResponse.next();
   } else {

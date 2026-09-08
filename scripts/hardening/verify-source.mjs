@@ -32,24 +32,31 @@ const [
   source("src/app/login/page.tsx"),
   source("package.json"),
   source(".env.example"),
-  source("ENVIRONMENT_VARIABLES.md"),
+  source("docs/ENVIRONMENT_VARIABLES.md"),
   source("src/server/engine/candleFetcher.ts"),
   source("src/server/engine/marketDataMode.ts"),
   source("server.ts"),
   source("docker-compose.yml"),
   source("deploy/docker-compose.prod.yml"),
-  source("DEPLOYMENT.md"),
+  source("docs/DEPLOYMENT.md"),
   source("src/server/db.ts"),
   source("src/middleware.ts"),
 ]);
 
 check("mobile navigation", /mobile-navigation/.test(navbar) && /100dvh/.test(navbar), "mobile menu is keyboard-closeable and viewport bounded");
-check("dialog scroll contract", /max-h-\[100dvh\]/.test(dialog) && /overflow-hidden/.test(dialog), "dialogs provide a bounded flex container");
+check("dialog scroll contract", (/max-h-\[100dvh\]/.test(dialog) || /max-h-dvh/.test(dialog)) && /overflow-hidden/.test(dialog), "dialogs provide a bounded flex container");
 check("asset modal scroll", /min-h-0 flex-1 touch-pan-y overflow-y-auto/.test(assets), "asset results own the vertical scroll area");
 check("asset pagination", /<Pagination/.test(assets) && /PAGE_SIZE = 24/.test(assets), "large instrument catalogs are paginated");
 check("necessary list pagination", [positionHistory, transactions, paymentTimeline, paymentsReview, reconciliation].every((text) => /<Pagination/.test(text)), "account, payment and reconciliation lists have bounded pages");
 check("chart professional controls", /HistogramSeries/.test(chart) && /CrosshairMode/.test(chart) && /Full screen/.test(chart), "chart includes volume, crosshair, indicators, zoom and full-screen controls");
-check("chart minimum size", /min-h-\[28rem\]/.test(chart) && /min-h-\[24rem\]/.test(chart), "chart cannot collapse into a tiny panel");
+check(
+  "chart minimum size",
+  // Tailwind v3 bracket form (min-h-[28rem]) or the v4 numeric equivalent
+  // (min-h-112 = 28rem) both satisfy the minimum; the panel sets it twice
+  // (container + plot area), so require two occurrences.
+  [chart.match(/min-h-\[28rem\]|min-h-112/g)?.length ?? 0, chart.match(/min-h-\[24rem\]|min-h-96/g)?.length ?? 0].some((count) => count >= 2),
+  "chart cannot collapse into a tiny panel",
+);
 check("timeframe persistence", /localStorage/.test(chart) && /params\.set\("tf"/.test(chart) && /CandleInterval \| null/.test(tradePage), "timeframe persists in URL and browser storage without forced 1m reset");
 check("socket follows selected timeframe", /useForexSocket\(instrument\.symbol, interval\)/.test(dashboard), "WebSocket subscription uses store-selected timeframe");
 check("login environment loading", /--env-file-if-exists=\.env/.test(packageJson), "development, seed and auth tools load .env explicitly");

@@ -65,7 +65,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
       select: { id: true, name: true, status: true, stage: { select: { name: true } } },
     });
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "ACCOUNT", subjectId: id }, include: { campaign: true } });
-    tags = await listTagsForSubject("ACCOUNT", id);
+    tags = await listTagsForSubject(ctx, "ACCOUNT", id);
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "ACCOUNT");
     notes = await listNotesBySubject("ACCOUNT", id);
     appointments = await listAppointmentsBySubject("ACCOUNT", id);

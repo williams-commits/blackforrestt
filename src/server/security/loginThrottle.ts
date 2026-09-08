@@ -32,8 +32,16 @@ export class LoginThrottledError extends Error {
 }
 
 export function requestNetworkAddress(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || request.headers.get("x-real-ip")?.trim() || "unknown";
+  // Rightmost XFF entry: the hop our trusted reverse proxy (Caddy) appended.
+  // The leftmost entry is client-controlled — trusting it lets an attacker
+  // rotate fake IPs to bypass the per-network login throttle and poison
+  // security-session IP hashes.
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const hops = forwarded.split(",").map((hop) => hop.trim()).filter(Boolean);
+    if (hops.length > 0) return hops[hops.length - 1]!;
+  }
+  return request.headers.get("x-real-ip")?.trim() || "unknown";
 }
 
 function incrementLocal(key: string): number {

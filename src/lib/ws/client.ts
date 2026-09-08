@@ -51,7 +51,14 @@ class ForexSocket {
   private desiredSubs = new Map<string, CandleInterval>();
   private accountSubscribed = false;
   private lastServerMessageAt = 0;
-  private reconnectAllowed = true;
+  /**
+   * After a 4401/4403 close the session cookie may simply have expired — the
+   * user can re-authenticate in another tab without reloading this one. Keep
+   * the "unauthorized" status, but keep probing on the normal backoff so the
+   * socket recovers the moment a fresh cookie exists. A permanent latch here
+   * strands the terminal (quotes stale, orders blocked) until a full reload.
+   */
+  private unauthorizedSince = 0;
   private statusListeners = new Set<(status: SocketStatus) => void>();
   status: SocketStatus = "closed";
 
@@ -92,7 +99,7 @@ class ForexSocket {
   }
 
   private ensureOpen(): void {
-    if (typeof window === "undefined" || !this.reconnectAllowed) return;
+    if (typeof window === "undefined") return;
     if (
       this.ws &&
       (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)
@@ -103,20 +110,28 @@ class ForexSocket {
   }
 
   private open(): void {
-    if (!this.reconnectAllowed || typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
     this.clearReconnectTimer();
-    this.setStatus("connecting");
+    // While waiting for a fresh session cookie keep the "unauthorized" label —
+    // flipping to "connecting" on every probe churns the status UI.
+    if (!this.unauthorizedSince) this.setStatus("connecting");
 
+    let ws: WebSocket;
     try {
-      this.ws = new WebSocket(resolveWsUrl());
+      ws = new WebSocket(resolveWsUrl());
     } catch {
-      this.ws = null;
       this.scheduleReconnect();
       return;
     }
+    this.ws = ws;
 
-    this.ws.onopen = () => {
+    // Every handler below is guarded against a REPLACED socket: if a heartbeat
+    // timeout closes socket A and open() already created socket B, A's late
+    // onclose must not null B, spawn socket C, or double-fire reconnects.
+    ws.onopen = () => {
+      if (this.ws !== ws) return;
       this.reconnectAttempts = 0;
+      this.unauthorizedSince = 0;
       this.lastServerMessageAt = Date.now();
       this.setStatus("open");
       if (this.accountSubscribed) this.send({ type: "account_subscribe" });
@@ -126,7 +141,8 @@ class ForexSocket {
       this.startHeartbeat();
     };
 
-    this.ws.onmessage = (event) => {
+    ws.onmessage = (event) => {
+      if (this.ws !== ws) return;
       this.lastServerMessageAt = Date.now();
       if (typeof event.data !== "string") return;
 
@@ -147,13 +163,15 @@ class ForexSocket {
       }
     };
 
-    this.ws.onclose = (event) => {
+    ws.onclose = (event) => {
+      if (this.ws !== ws) return; // a replacement socket is already active
       this.ws = null;
       this.stopHeartbeat();
 
       if (event.code === 4401 || event.code === 4403) {
-        this.reconnectAllowed = false;
+        this.unauthorizedSince = this.unauthorizedSince || Date.now();
         this.setStatus("unauthorized");
+        this.scheduleReconnect();
         return;
       }
 
@@ -161,9 +179,10 @@ class ForexSocket {
       this.scheduleReconnect();
     };
 
-    this.ws.onerror = () => {
+    ws.onerror = () => {
+      if (this.ws !== ws) return;
       // onclose performs cleanup and reconnect scheduling.
-      this.ws?.close();
+      ws.close();
     };
   }
 
@@ -177,7 +196,7 @@ class ForexSocket {
   }
 
   private scheduleReconnect(): void {
-    if (!this.reconnectAllowed || this.reconnectTimer || typeof window === "undefined") return;
+    if (this.reconnectTimer || typeof window === "undefined") return;
     const base = Math.min(1_000 * 2 ** this.reconnectAttempts, 15_000);
     const jitter = Math.floor(Math.random() * 500);
     this.reconnectAttempts += 1;

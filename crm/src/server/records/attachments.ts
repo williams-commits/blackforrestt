@@ -82,9 +82,17 @@ export async function attachFile(
   });
 }
 
-export async function listAttachments(subjectType: string, subjectId: string) {
+/** List a subject's attachments after scope-checking the owning record —
+ *  metadata (filenames, uploader names) is disclosed only with record access,
+ *  matching the download path. */
+export async function listAttachments(
+  ctx: ScopedContext,
+  subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
+  subjectId: string,
+) {
+  await resolveSubject(ctx, subjectType, subjectId);
   return prisma.attachment.findMany({
-    where: { subjectType: subjectType as never, subjectId },
+    where: { subjectType, subjectId },
     orderBy: { createdAt: "desc" },
     take: 50,
     include: { uploader: { select: { name: true } } },

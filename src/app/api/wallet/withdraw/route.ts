@@ -93,6 +93,31 @@ export async function POST(req: Request) {
           return { kind: "ok" as const, transaction: existing, paymentRequest: existing.paymentRequest, replayed: true };
         }
 
+        // Card withdrawals are refunds: they may only target a card the
+        // customer has an APPROVED card deposit on record for. The summary is
+        // the operator-facing "BRAND · •••• last4" fingerprint, so matching
+        // brand + last4 binds the refund to the originally deposited card.
+        if (parsed.data.method === "CARD") {
+          const summary = methodDetails.summary;
+          const approvedCardDeposit = await tx.paymentRequest.findFirst({
+            where: {
+              userId,
+              type: "DEPOSIT",
+              method: "CARD",
+              status: "APPROVED",
+              methodDetailsSummary: summary,
+            },
+            select: { id: true, userReference: true, reviewedAt: true },
+          });
+          if (!approvedCardDeposit) {
+            throw new PaymentError(
+              "Card refunds are only available to the card of an approved card deposit on this account.",
+              400,
+              "CARD_REFUND_REFERENCE_REQUIRED",
+            );
+          }
+        }
+
         const riskHoldUntil = await withdrawalRiskHold(tx, { userId, amount, beneficiaryFingerprint: methodDetails.fingerprint });
         const balances = await userLedgerBalances(tx, userId, "USD");
         const openTotals = await tx.position.aggregate({ where: { userId, status: "OPEN" }, _sum: { profit: true, swap: true } });

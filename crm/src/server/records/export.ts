@@ -21,7 +21,14 @@ const escape = (value: unknown): string => {
       : typeof value === "object"
         ? JSON.stringify(value)
         : String(value);
-  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+  // Neutralize spreadsheet formula injection: operator/user-supplied values
+  // like "=WEBSERVICE(...)" would execute when staff open the export in
+  // Excel/Sheets. A leading apostrophe defuses it in every major spreadsheet.
+  // Genuine negative numbers stay untouched (they are not formulas).
+  const looksNumeric = /^-?\d+(\.\d+)?$/.test(text);
+  const needsGuard = !looksNumeric && /^[=+\-@\t\r]/.test(text);
+  const safe = needsGuard ? `'${text}` : text;
+  return /[",\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
 };
 
 function toCsv(header: string[], rows: Array<Record<string, unknown>>): string {

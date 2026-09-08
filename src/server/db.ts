@@ -58,12 +58,15 @@ export function isRetryableTransactionError(error: unknown): boolean {
 
 export async function withSerializableRetry<T>(
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
-  options: { maxAttempts?: number; operation?: string } = {},
+  options: { maxAttempts?: number; operation?: string; timeoutMs?: number } = {},
 ): Promise<T> {
   const maxAttempts = Math.max(1, options.maxAttempts ?? 5);
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      return await prisma.$transaction(fn, { isolationLevel: "Serializable" });
+      return await prisma.$transaction(fn, {
+        isolationLevel: "Serializable",
+        ...(options.timeoutMs ? { timeout: options.timeoutMs } : {}),
+      });
     } catch (error) {
       if (attempt >= maxAttempts || !isRetryableTransactionError(error)) throw error;
       const delayMs = Math.min(250, 15 * 2 ** (attempt - 1)) + Math.floor(Math.random() * 20);

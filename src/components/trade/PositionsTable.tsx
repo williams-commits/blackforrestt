@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForexStore } from "@/lib/store";
 import { closePosition } from "@/hooks/useOpenPosition";
@@ -108,7 +108,7 @@ function makeCloseHandler(busy: string | null, setBusy: (v: string | null) => vo
         `Position closed at market. Realized P/L ${profit >= 0 ? "+" : "−"}${Math.abs(profit).toFixed(2)} USD.`,
       );
     } else {
-      const ev = new CustomEvent("blckforest:toast", { detail: { type: "error", message: `Failed to close ${position.symbol}. Try again or contact support.` } });
+      const ev = new CustomEvent("blckforest:toast", { detail: { type: "error", message: result.error ? `${position.symbol}: ${result.error}` : `Failed to close ${position.symbol}. Try again or contact support.` } });
       window.dispatchEvent(ev);
     }
   };
@@ -295,8 +295,13 @@ function useHistoryData() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // True once the user pages past the first 25 rows ("Load 25 more"). The
+  // auto-sync poll below must not run in that state — it fetches page 1 and
+  // would yank the browsed list back to the newest 25 rows every 30 seconds.
+  const pagedRef = useRef(false);
 
   const loadHistory = useCallback(async (cursor?: string, append = false) => {
+    pagedRef.current = append;
     if (append) setLoadingMore(true);
     else setLoading(true);
     setError(null);
@@ -321,9 +326,14 @@ function useHistoryData() {
     void loadHistory();
   }, [loadHistory]);
 
-  // Auto-sync: poll every 30s so newly closed positions appear without manual refresh.
+  // Auto-sync: poll every 30s so newly closed positions appear without manual
+  // refresh. Skipped while hidden or once the user has paged into older
+  // history — reloading page 1 there would discard their scrolled context.
   useEffect(() => {
-    const timer = window.setInterval(() => void loadHistory().catch(() => undefined), 30_000);
+    const timer = window.setInterval(() => {
+      if (document.hidden || pagedRef.current) return;
+      void loadHistory().catch(() => undefined);
+    }, 30_000);
     return () => window.clearInterval(timer);
   }, [loadHistory]);
 

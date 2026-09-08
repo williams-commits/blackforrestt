@@ -127,10 +127,13 @@ export function AccountShell(props: Props) {
     try {
       const response = await fetch("/api/notifications?scope=counts", { cache: "no-store" });
       if (!response.ok) return;
-      const data = await response.json() as { unreadCount?: number; unreadMessages?: number; openSupportCases?: number };
+      const data = await response.json() as { unreadCount?: number; unreadMessages?: number; operatorMessages?: number; openSupportCases?: number };
+      // One consistent meaning for the message badge per viewer type — the
+      // operator inbox for staff, the customer thread otherwise. Mixing the
+      // two made the change-detection below fire on phantom deltas.
       const next = {
         unreadNotifications: data.unreadCount ?? 0,
-        unreadMessages: data.unreadMessages ?? 0,
+        unreadMessages: operator ? data.operatorMessages ?? data.unreadMessages ?? 0 : data.unreadMessages ?? 0,
         openSupportCases: data.openSupportCases ?? 0,
       };
       setUnreadNotifications(next.unreadNotifications);
@@ -145,7 +148,7 @@ export function AccountShell(props: Props) {
         window.dispatchEvent(new CustomEvent("blckforest:counts-changed"));
       }
     } catch { /* transient — next poll retries */ }
-  }, []);
+  }, [operator]);
   useEffect(() => {
     const timer = window.setInterval(() => { if (!document.hidden) void refreshCounts(); }, 15_000);
     // Activity pushes CARRY the counts — apply them directly for a
@@ -153,13 +156,16 @@ export function AccountShell(props: Props) {
     const onRealtime = (event: Event) => {
       const message = (event as CustomEvent<ServerMessage>).detail;
       if (message?.type === "activity") {
+        // Operators badge the team inbox; customers their own thread. Store
+        // the DISPLAYED value so the poll's change detection compares like
+        // with like.
+        const displayedMessages = operator ? message.counts.operatorMessages : message.counts.messages;
         setUnreadNotifications(message.counts.notifications);
-        // Operators badge the team inbox; customers their own thread.
-        setUnreadMessages(operator ? message.counts.operatorMessages : message.counts.messages);
+        setUnreadMessages(displayedMessages);
         setOpenSupportCases(message.counts.supportCases);
         prevCounts.current = {
           unreadNotifications: message.counts.notifications,
-          unreadMessages: message.counts.messages,
+          unreadMessages: displayedMessages,
           openSupportCases: message.counts.supportCases,
         };
         window.dispatchEvent(new CustomEvent("blckforest:counts-changed"));

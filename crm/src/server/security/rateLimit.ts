@@ -92,3 +92,13 @@ export function clearLoginFailures(email: string): void {
 export function consumeApiMutation(ip: string): ConsumeResult {
   return consume(`api-mutation:${ip}`, 120, 60 * 1000);
 }
+
+/**
+ * Per-IP throttle for auth-flow POSTs (credential attempts, sign-out).
+ * The per-email lockout above cannot stop password spraying across many
+ * accounts; this caps raw credential attempts per source address. Generous
+ * enough for shared-NAT offices, tight enough to stop bulk spraying.
+ */
+export function consumeLoginAttempt(ip: string): ConsumeResult {
+  return consume(`login-attempt:${ip}`, 20, 5 * 60 * 1000);
+}

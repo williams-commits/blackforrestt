@@ -13,8 +13,8 @@ const payments = read("src/server/payments.ts");
 const middleware = read("src/middleware.ts");
 const schema = read("prisma/schema.prisma");
 const env = read(".env.example");
-const envDocs = read("ENVIRONMENT_VARIABLES.md");
-const emailDocs = read("EMAIL_SETUP.md");
+const envDocs = read("docs/ENVIRONMENT_VARIABLES.md");
+const emailDocs = read("docs/EMAIL_SETUP.md");
 const templates = read("src/server/email/templates.ts");
 const provider = read("src/server/email/provider.ts");
 const service = read("src/server/email/service.ts");
@@ -22,7 +22,7 @@ const deposit = read("src/app/api/wallet/deposit/route.ts");
 const withdraw = read("src/app/api/wallet/withdraw/route.ts");
 
 check("deposit card, bank and crypto UI", ["CARD", "BANK_TRANSFER", "CRYPTO", "Payment proof (required)"].every((value) => wallet.includes(value)), "Wallet modal is missing a deposit method or proof input.");
-check("withdrawal method-specific fields", ["Original verified card deposit reference", "Account number or IBAN", "Destination wallet address"].every((value) => wallet.includes(value)), "Withdrawal methods still share one bank-only contract.");
+check("withdrawal method-specific fields", ["Cardholder name", "Account number or IBAN", "Destination wallet address"].every((value) => wallet.includes(value)), "Withdrawal methods still share one bank-only contract.");
 check("full card data is not collected", !/name="cardNumber"|name="cvv"|name="cvc"|placeholder="Full card/i.test(wallet), "A PCI-sensitive card field appears in the wallet form.");
 check("method detail encryption", paymentMethods.includes("encryptSensitiveString") && deposit.includes("methodDetailsEncrypted") && withdraw.includes("beneficiaryEncrypted"), "Payment method details are not encrypted at rest.");
 check("deposit proof orchestration", wallet.includes("uploadProof(data.paymentRequest") && wallet.includes("Scanning and sealing"), "Deposit request and proof upload are not one guided flow.");
@@ -33,10 +33,10 @@ check("resend and http providers", provider.includes('mode === "resend"') && pro
 check("transactional email outbox", schema.includes("model EmailDelivery") && service.includes("class EmailDispatcher") && service.includes('"RETRY"'), "Email outbox/retry flow is missing.");
 check("email setup documentation", emailDocs.includes("Activate production email with Resend") && emailDocs.includes("npm run email:preview"), "Email activation/design documentation is incomplete.");
 check("email variables documented", ["EMAIL_PROVIDER", "RESEND_API_KEY", "EMAIL_FROM", "EMAIL_BRAND_COLOR", "EMAIL_MAX_ATTEMPTS"].every((value) => env.includes(value) && envDocs.includes(value)), "Email environment variables are not fully documented.");
-check("authenticated guest-route redirect", middleware.includes('pathname === "/login"') && middleware.includes('pathname === "/register"') && middleware.includes('accountUrl.pathname = "/account"'), "Authenticated login/register redirect is missing.");
+check("authenticated guest-route redirect", middleware.includes('isGuestOnlyPage') && middleware.includes('new URL("/account", publicOrigin(req))'), "Authenticated login/register redirect is missing.");
 check("registration email verification configurable", env.includes("REGISTRATION_REQUIRE_EMAIL_VERIFICATION"), "The registration verification flag is not present in the example environment.");
-check("card refund matches approved deposit", withdraw.includes('status: "APPROVED"') && withdraw.includes('userReference: originalDepositReference') && withdraw.includes('CARD_REFUND_REFERENCE_REQUIRED'), "Card withdrawals can be submitted without a matching approved card deposit.");
-check("browser MIME compatibility", payments.includes('"image/jpg": "image/jpeg"') && payments.includes('"application/octet-stream"') && payments.includes("detectMime(bytes)"), "Payment proof MIME normalization is incomplete.");
+check("card refund matches approved deposit", withdraw.includes('status: "APPROVED"') && withdraw.includes("methodDetailsSummary: summary") && withdraw.includes("CARD_REFUND_REFERENCE_REQUIRED"), "Card withdrawals can be submitted without a matching approved card deposit.");
+check("browser MIME compatibility", payments.includes("resolveProofMime(input.bytes)") && payments.includes("detectMime(bytes)") && payments.includes("%PDF"), "Payment proof MIME normalization is incomplete.");
 check("security email idempotency", read("src/server/security/tokens.ts").includes("idempotencyKey") && read("src/app/api/security/email-verification/request/route.ts").includes("security-token-${issued.record.id}"), "Security email retries are not idempotent.");
 check("authenticated redirect browser coverage", read("e2e/tests/customer.spec.ts").includes("authenticated users cannot return to login or registration"), "Authenticated login/register redirects lack browser coverage.");
 

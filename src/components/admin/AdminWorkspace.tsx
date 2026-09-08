@@ -70,25 +70,42 @@ function useResource<T>(url: string, pollMs?: number): Resource<T> {
   // module shows the skeleton. Without this, every keystroke flashes the
   // whole table into a loading state.
   const hasDataRef = useRef(false);
+  // Debounced searches fire overlapping requests; without a sequence guard a
+  // slow response for the OLD query lands last and overwrites the fresh one.
+  const requestSeqRef = useRef(0);
   const refresh = useCallback(async (options: { silent?: boolean } = {}) => {
+    const requestSeq = ++requestSeqRef.current;
     if (!options.silent && !hasDataRef.current) setLoading(true);
     setError(null);
     try {
       const result = await requestJson<T>(url);
+      if (requestSeqRef.current !== requestSeq) return; // superseded by a newer request
       hasDataRef.current = true;
       setData(result);
     } catch (cause) {
+      if (requestSeqRef.current !== requestSeq) return;
       setError(cause instanceof Error ? cause.message : "Unable to load module.");
     } finally {
-      setLoading(false);
+      if (requestSeqRef.current === requestSeq) setLoading(false);
     }
   }, [url]);
   useEffect(() => { void refresh(); }, [refresh]);
   // Optional silent polling so the panel stays in sync with the database.
+  // Paused while the tab is hidden so background admin tabs stop loading the
+  // API (the visibility listener catches up on return).
   useEffect(() => {
     if (!pollMs) return;
-    const timer = window.setInterval(() => void refresh({ silent: true }), pollMs);
-    return () => window.clearInterval(timer);
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void refresh({ silent: true });
+    }, pollMs);
+    const onVisible = () => {
+      if (!document.hidden) void refresh({ silent: true });
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [refresh, pollMs]);
   return { data, loading, error, refresh };
 }
@@ -211,12 +228,6 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
       window.removeEventListener("blckforest:realtime", onRealtime);
     };
   }, []);
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (!document.hidden) void badges.refresh({ silent: true });
-    }, 20_000);
-    return () => window.clearInterval(timer);
-  }, [badges]);
   const badgeFor = (key: TabKey): number | null => {
     const stats = badges.data?.stats;
     if (!stats) return null;
@@ -704,6 +715,11 @@ function UserBalanceDialog({
   const [reason, setReason] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
+  // One idempotency key per logical adjustment: minted when the dialog opens,
+  // reused across failed submit attempts (so a retry after a network error
+  // replays instead of double-posting), and rotated after each success so the
+  // next intentional adjustment is a distinct command.
+  const commandKeyRef = useRef<string>("");
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -725,6 +741,7 @@ function UserBalanceDialog({
     setReason("");
     setNotice(null);
     setPage(1);
+    commandKeyRef.current = `admin-balance-${createDeviceId()}`;
     void load();
   }, [open, load]);
 
@@ -748,10 +765,11 @@ function UserBalanceDialog({
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "idempotency-key": `admin-balance-${createDeviceId()}`,
+          "idempotency-key": commandKeyRef.current || `admin-balance-${createDeviceId()}`,
         },
         body: JSON.stringify({ action, amount, reason }),
       });
+      commandKeyRef.current = `admin-balance-${createDeviceId()}`;
       setAmount("");
       setReason("");
       toast.success(action === "CREDIT" ? "Balance top-up posted" : "Balance deduction posted");

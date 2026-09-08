@@ -15,16 +15,17 @@ const forbiddenNames = [
   /^\.env$/i, /^\.env\.(?!.*example$).+/i, /(^|\.)id_rsa$/i, /(^|\.)id_ed25519$/i,
   /\.pem$/i, /\.p12$/i, /\.pfx$/i, /\.key$/i, /credentials?\.json$/i,
 ];
+// Phase 6–8 planning/verification evidence was consolidated (commit c7cee86)
+// into docs/ENTERPRISE_ROADMAP.md and docs/RELEASE_HARDENING_REPORT.md; the
+// backup-restore runbook was folded into docs/DEPLOYMENT.md with its
+// operational scripts preserved under deploy/.
 const requiredPaths = [
-  "ENTERPRISE_ROADMAP.md",
-  "ENTERPRISE_PHASE_6.md",
-  "VERIFICATION_PHASE_6.md",
-  "ENTERPRISE_PHASE_7.md",
-  "VERIFICATION_PHASE_7.md",
-  "PHASE_6_7_COMPLETION_REPORT.md",
-  "ENTERPRISE_PHASE_8.md",
-  "VERIFICATION_PHASE_8.md",
-  "PHASE8_DELIVERY_VERIFICATION.md",
+  "docs/ENTERPRISE_ROADMAP.md",
+  "docs/RELEASE_HARDENING_REPORT.md",
+  "docs/DEPLOYMENT.md",
+  "docs/ENVIRONMENT_VARIABLES.md",
+  "deploy/backup.sh",
+  "deploy/restore.sh",
   ".github/workflows/phase8-verification.yml",
   "scripts/phase67/verify-source.mjs",
   "tests/enterprisePhase67.test.ts",
@@ -40,7 +41,6 @@ const requiredPaths = [
   "e2e/tsconfig.json",
   "docs/runbooks/incident-response.md",
   "docs/runbooks/release-rollback.md",
-  "docs/runbooks/backup-restore.md",
   "docs/runbooks/key-rotation.md",
   "docs/runbooks/provider-outage.md",
 ];

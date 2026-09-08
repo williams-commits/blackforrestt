@@ -29,7 +29,11 @@ export const CreateContact = z.object({
   customFields: z.record(z.unknown()).optional().nullable(),
 });
 
-export const UpdateContact = CreateContact.partial();
+// PATCH payloads may omit ownerUserId but must not null it — the column is a
+// required FK, and a null reached Prisma as a 500 instead of a 400.
+export const UpdateContact = CreateContact.partial().extend({
+  ownerUserId: z.string().trim().min(5).optional(),
+});
 
 const SORTS = {
   createdAt: { createdAt: "desc" as const },

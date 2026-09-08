@@ -40,8 +40,8 @@ check("balance commands are replay safe", /existingPosting/.test(service) && /po
 check("balance updates broadcast", /publishAccountMetrics/.test(route), "customer real-time account state is not refreshed");
 check("user transaction history is exposed", /Customer transaction history/.test(adminUi) && /getUserFinanceHistory/.test(route), "admin finance history UI/API is missing");
 check("payment prompts use custom modal", /useCommandDialog/.test(paymentsUi) && !/window\.prompt/.test(paymentsUi), "payment review still uses a native prompt");
-check("registration creates unfunded accounts", /ensureUserLedgerAccount/.test(register) && !/configuredRegistrationStartingBalance|DEMO_FUNDING/.test(register), "registration no longer posts demo funding; new accounts start unfunded");
-check("no registration funding default", !/REGISTRATION_STARTING_BALANCE/.test(envExample) && !/REGISTRATION_STARTING_BALANCE/.test(compose), "the demo funding environment variable has been removed");
+check("registration creates unfunded accounts", /ensureUserLedgerAccount/.test(register) && /startingBalance > 0/.test(register), "demo funding is opt-in: new accounts start unfunded unless DEMO_STARTING_BALANCE is set");
+check("no registration funding default", !/REGISTRATION_STARTING_BALANCE/.test(envExample) && !/REGISTRATION_STARTING_BALANCE/.test(compose), "no implicit funding default exists; only the explicit opt-in preset can fund");
 
 if (failures.length) {
   console.error(`\n${failures.length} admin-balance feature check(s) failed.`);

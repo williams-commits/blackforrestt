@@ -71,10 +71,15 @@ export const PERMISSION_CATEGORIES: readonly PermissionCategory[] = [
   { key: "SETTINGS", label: "Settings", permissions: [{ key: "SETTINGS_MANAGE", label: "Manage" }] },
 ];
 
+// Deduplicated: categories already contribute the CAMPAIGNS_* set (and any
+// future category), so appending raw lists here must never yield the same
+// permission twice — duplicates leak into every role matrix derived from
+// this catalog and surface as duplicate React keys / repeated catalog rows.
 export const ALL_PERMISSIONS: readonly Permission[] = [
-  ...PERMISSION_CATEGORIES.flatMap((item) => item.permissions.map(({ key }) => key)),
-  "FILES_READ", "FILES_UPLOAD", "FILES_DELETE", "USERS_MANAGE", "TEAMS_MANAGE", "IMPORTS_MANAGE", "DASHBOARDS_VIEW", "ROLES_MANAGE",
-  "CAMPAIGNS_CREATE", "CAMPAIGNS_EDIT", "CAMPAIGNS_DELETE", "CAMPAIGNS_EXPORT",
+  ...new Set<Permission>([
+    ...PERMISSION_CATEGORIES.flatMap((item) => item.permissions.map(({ key }) => key)),
+    "FILES_READ", "FILES_UPLOAD", "FILES_DELETE", "USERS_MANAGE", "TEAMS_MANAGE", "IMPORTS_MANAGE", "DASHBOARDS_VIEW", "ROLES_MANAGE",
+  ]),
 ];
 const coreManage = CORE_OBJECTS.flatMap((object) => ["VIEW", "CREATE", "EDIT", "DELETE", "ASSIGN", "EXPORT"].map((action) => `${object}_${action}` as CorePermission));
 const coreWrite = CORE_OBJECTS.flatMap((object) => ["VIEW", "CREATE", "EDIT"].map((action) => `${object}_${action}` as CorePermission));

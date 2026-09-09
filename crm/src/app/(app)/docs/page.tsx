@@ -35,15 +35,13 @@ function SubSection({ title, children }: { title: string; children: React.ReactN
 }
 
 function PermTable({ permissions }: { permissions: string[] }) {
-  const groups: Record<string, string[]> = {};
-  for (const perm of permissions) {
-    const prefix = perm.split("_")[0];
-    if (!groups[prefix]) groups[prefix] = [];
-    groups[prefix].push(perm);
-  }
+  // Dedupe: role matrices are composed from overlapping permission groups, so
+  // the same permission may reach this list more than once — React keys must
+  // stay unique and a duplicated badge conveys nothing.
+  const unique = [...new Set(permissions)];
   return (
     <div className="flex flex-wrap gap-1.5">
-      {permissions.map((perm) => (
+      {unique.map((perm) => (
         <span key={perm} className="badge badge-neutral" style={{ fontSize: "10px" }}>{perm}</span>
       ))}
     </div>

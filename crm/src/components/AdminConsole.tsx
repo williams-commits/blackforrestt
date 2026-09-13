@@ -1,7 +1,7 @@
 "use client";
 
 import { useCrmBranding } from "@/components/BrandingProvider";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useConfirmDialog } from "@/components/Dialogs";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { Modal } from "@/components/Modal";
@@ -606,6 +606,11 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
   const [tName, setTName] = useState("");
   const [tLeader, setTLeader] = useState("");
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sort, setSort] = useState("name");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -625,6 +630,12 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const filteredUsers = useMemo(() => users
+    .filter((user) => statusFilter === "ALL" || user.status === statusFilter)
+    .filter((user) => `${user.name} ${user.email} ${user.role.name} ${user.memberships.map((membership) => membership.team.name).join(" ")}`.toLowerCase().includes(search.toLowerCase().trim()))
+    .sort((left, right) => sort === "lastLogin" ? (new Date(right.lastLoginAt ?? 0).getTime() - new Date(left.lastLoginAt ?? 0).getTime()) : left.name.localeCompare(right.name)), [search, sort, statusFilter, users]);
+  const selectedUser = users.find((user) => user.id === selectedUserId) ?? null;
 
   async function createUser(event: React.FormEvent) {
     event.preventDefault();
@@ -655,6 +666,21 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
       setError(body?.error ?? "Update failed.");
       return;
     }
+    void load();
+  }
+
+  async function suspendSelected() {
+    const targets = users.filter((user) => selectedIds.includes(user.id) && user.status === "ACTIVE");
+    if (targets.length === 0) return;
+    const confirmed = await confirm({
+      title: `Suspend ${targets.length} user${targets.length === 1 ? "" : "s"}?`,
+      message: "These users will lose access immediately. Their CRM records remain intact.",
+      confirmLabel: "Suspend users",
+      destructive: true,
+    });
+    if (!confirmed) return;
+    await Promise.all(targets.map((user) => fetch(`/api/admin/users?id=${user.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "SUSPENDED" }) })));
+    setSelectedIds([]);
     void load();
   }
 
@@ -713,16 +739,24 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
         </SetupFormModal>
       ) : null}
       <div className="card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-(--border-default) px-4 py-3">
+        <div className="flex flex-col gap-3 border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h3 className="text-sm font-semibold">People</h3>
             <p className="mt-0.5 text-xs text-(--text-tertiary)">Roles and activity across your workspace</p>
           </div>
-          <span className="badge badge-neutral">{users.length} users</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <label htmlFor="people-search" className="sr-only">Search users</label>
+            <input id="people-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search people, roles, teams" className="input w-full sm:w-64" />
+            <select aria-label="User status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="input"><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="SUSPENDED">Suspended</option><option value="DISABLED">Disabled</option></select>
+            <select aria-label="Sort users" value={sort} onChange={(event) => setSort(event.target.value)} className="input"><option value="name">Name</option><option value="lastLogin">Last login</option></select>
+            <span className="badge badge-neutral">{filteredUsers.length} of {users.length}</span>
+          </div>
         </div>
+        {canManage && selectedIds.length > 0 ? <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-selected) px-4 py-2 text-sm"><span>{selectedIds.length} selected</span><button type="button" onClick={() => void suspendSelected()} className="text-xs font-semibold text-(--error) hover:underline">Suspend selected</button></div> : null}
         <table className="table">
           <thead>
             <tr className="border-b border-(--border-default) bg-(--bg-hover) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
+              {canManage ? <th className="w-10 px-3 py-2"><input type="checkbox" aria-label="Select all visible users" checked={filteredUsers.length > 0 && filteredUsers.every((user) => selectedIds.includes(user.id))} onChange={(event) => setSelectedIds(event.target.checked ? filteredUsers.map((user) => user.id) : [])} /></th> : null}
               <th className="px-3 py-2 font-medium">User</th>
               <th className="px-3 py-2 font-medium">Role</th>
               <th className="px-3 py-2 font-medium">Teams</th>
@@ -734,9 +768,10 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
           <tbody>
             {loading ? (
               <AdminTableSkeleton rows={6} columns={canManage ? 6 : 5} />
-            ) : users.map((user) => (
-              <tr key={user.id}>
-                <td className="px-3 py-3"><div className="flex items-center gap-3"><span className="avatar avatar-sm" style={{ background: "var(--brand-100)", color: "var(--brand-800)" }}>{user.name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</span><div><p className="font-medium">{user.name}</p><p className="text-xs text-(--text-tertiary)">{user.email}</p></div></div></td>
+            ) : filteredUsers.map((user) => (
+              <tr key={user.id} className={selectedUserId === user.id ? "bg-(--bg-selected)" : undefined}>
+                {canManage ? <td className="px-3 py-3"><input type="checkbox" aria-label={`Select ${user.name}`} checked={selectedIds.includes(user.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, user.id] : current.filter((id) => id !== user.id))} /></td> : null}
+                <td className="px-3 py-3"><button type="button" onClick={() => setSelectedUserId(user.id)} className="flex items-center gap-3 text-left"><span className="avatar avatar-sm" style={{ background: "var(--brand-100)", color: "var(--brand-800)" }}>{user.name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</span><span><span className="block font-medium hover:text-(--text-brand)">{user.name}</span><span className="block text-xs text-(--text-tertiary)">{user.email}</span></span></button></td>
                 <td className="px-3 py-2">
                   {canManage ? (
                     <select aria-label={`Role for ${user.name}`} value={user.role.key} onChange={(e) => void patchUser(user.id, { roleKey: e.target.value })} className={inputClass}>
@@ -785,6 +820,20 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
           </tbody>
         </table>
       </div>
+
+      {selectedUser ? <div className="card border-(--brand-200) p-5" aria-label={`Profile for ${selectedUser.name}`}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-(--text-tertiary)">User profile</p><h3 className="mt-1 text-lg font-semibold">{selectedUser.name}</h3><p className="text-sm text-(--text-secondary)">{selectedUser.email}</p></div>
+          <button type="button" onClick={() => setSelectedUserId(null)} className="btn btn-secondary">Close</button>
+        </div>
+        <div className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
+          <div><p className="text-xs text-(--text-tertiary)">Access status</p><p className="mt-1 font-medium">{selectedUser.status.toLowerCase()}</p></div>
+          <div><p className="text-xs text-(--text-tertiary)">Role</p><p className="mt-1 font-medium">{selectedUser.role.name}</p></div>
+          <div><p className="text-xs text-(--text-tertiary)">Last login</p><p className="mt-1 font-medium">{selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleString() : "Never"}</p></div>
+        </div>
+        <div className="mt-4 border-t border-(--border-default) pt-4"><p className="text-xs text-(--text-tertiary)">Team assignments</p><p className="mt-1 text-sm">{selectedUser.memberships.map((membership) => membership.team.name).join(", ") || "No teams assigned"}</p></div>
+        {canManage ? <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => void patchUser(selectedUser.id, { status: selectedUser.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" })} className="btn btn-secondary">{selectedUser.status === "ACTIVE" ? "Suspend access" : "Restore access"}</button><button type="button" onClick={() => setSelectedUserId(null)} className="btn btn-secondary">Done</button></div> : null}
+      </div> : null}
 
       <div className="flex flex-col gap-3 border-b border-(--border-default) pb-3 pt-3 sm:flex-row sm:items-end sm:justify-between">
         <div>

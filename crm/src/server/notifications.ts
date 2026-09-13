@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "@/server/db";
 import { logger } from "@/server/observability";
 import { sendEmail } from "@/server/email";
@@ -22,6 +23,13 @@ export type NotifiableType =
   | "PLATFORM_USER_ONLINE"
   | "TASK_DUE"
   | "TASK_OVERDUE";
+
+export const NotificationQuery = z.object({
+  read: z.enum(["all", "unread", "read"]).default("all"),
+  type: z.string().trim().max(60).optional(),
+  page: z.coerce.number().int().min(1).max(100).default(1),
+  pageSize: z.coerce.number().int().min(10).max(100).default(25),
+});
 
 export type NotificationSubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
 
@@ -218,12 +226,20 @@ export async function sweepPlatformPresence(userId: string): Promise<void> {
   }
 }
 
-export function listNotifications(userId: string) {
-  return prisma.notification.findMany({
-    where: { recipientUserId: userId },
+export async function listNotifications(userId: string, query: z.infer<typeof NotificationQuery> = NotificationQuery.parse({})) {
+  const where: Prisma.NotificationWhereInput = {
+    recipientUserId: userId,
+    ...(query.read === "unread" ? { readAt: null } : query.read === "read" ? { readAt: { not: null } } : {}),
+    ...(query.type ? { type: query.type as NotifiableType } : {}),
+  };
+  const rows = await prisma.notification.findMany({
+    where,
     orderBy: { createdAt: "desc" },
-    take: 50,
+    skip: (query.page - 1) * query.pageSize,
+    take: query.pageSize,
   });
+  const total = await prisma.notification.count({ where });
+  return { rows, total, page: query.page, pageSize: query.pageSize, hasMore: query.page * query.pageSize < total };
 }
 
 export async function countUnread(userId: string): Promise<number> {
@@ -238,4 +254,12 @@ export async function markAllRead(userId: string): Promise<number> {
     data: { readAt: new Date() },
   });
   return result.count;
+}
+
+export async function markNotificationRead(userId: string, id: string, read: boolean): Promise<boolean> {
+  const result = await prisma.notification.updateMany({
+    where: { id, recipientUserId: userId },
+    data: { readAt: read ? new Date() : null },
+  });
+  return result.count > 0;
 }

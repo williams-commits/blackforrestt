@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/opportunities", label: "Opportunities", group: "Revenue" },
   { href: "/campaigns", label: "Campaigns", group: "Growth" },
   { href: "/tasks", label: "Tasks", group: "Work" },
+  { href: "/notifications", label: "Notifications", group: "Work" },
   { href: "/reports", label: "Reports", group: "Insights" },
   { href: "/search", label: "Search", group: "Find" },
   { href: "/admin", label: "Admin", group: "Control" },

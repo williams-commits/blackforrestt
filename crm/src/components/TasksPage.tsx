@@ -63,6 +63,8 @@ export function TasksPage() {
   });
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
+  const [query, setQuery] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
   const [due, setDue] = useState("all");
   const [mine, setMine] = useState("1");
   const [showForm, setShowForm] = useState(false);
@@ -70,12 +72,15 @@ export function TasksPage() {
   const [title, setTitle] = useState(subjectLabel ? `Follow up: ${subjectLabel}` : "");
   const [taskDue, setTaskDue] = useState("");
   const [priority, setPriority] = useState("NORMAL");
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ due, mine, pageSize: "25" });
+      if (query.trim()) params.set("q", query.trim());
       if (status) params.set("status", status);
+      if (priorityFilter) params.set("priority", priorityFilter);
       if (subjectType) params.set("subjectType", subjectType);
       if (subjectId) params.set("subjectId", subjectId);
       const response = await fetch(`/api/tasks?${params.toString()}`);
@@ -87,7 +92,7 @@ export function TasksPage() {
     } finally {
       setLoading(false);
     }
-  }, [status, due, mine, subjectType, subjectId]);
+  }, [status, due, mine, subjectType, subjectId, query, priorityFilter]);
 
   useEffect(() => {
     void fetchTasks();
@@ -119,11 +124,17 @@ export function TasksPage() {
   }
 
   async function setTaskStatus(id: string, next: string) {
-    await fetch(`/api/tasks/${id}`, {
+    setActionError(null);
+    const response = await fetch(`/api/tasks/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: next }),
     });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      setActionError(body?.error ?? "Could not update the task.");
+      return;
+    }
     void fetchTasks();
   }
 
@@ -206,7 +217,10 @@ export function TasksPage() {
         </form>
       ) : null}
 
-      <div className="flex justify-between gap-2 rounded-lg border border-(--border-default) bg-(--bg-surface) p-3">
+      {actionError ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{actionError}</p> : null}
+      <div className="flex flex-col gap-2 rounded-lg border border-(--border-default) bg-(--bg-surface) p-3 md:flex-row">
+        <label htmlFor="task-search" className="sr-only">Search tasks</label>
+        <input id="task-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tasks" className="input md:w-64" />
         <select
           aria-label="Status filter"
           value={status}
@@ -218,6 +232,13 @@ export function TasksPage() {
               {option.label}
             </option>
           ))}
+        </select>
+        <select aria-label="Priority filter" value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)} className="input">
+          <option value="">Priority: any</option>
+          <option value="URGENT">Urgent</option>
+          <option value="HIGH">High</option>
+          <option value="NORMAL">Normal</option>
+          <option value="LOW">Low</option>
         </select>
         <select
           aria-label="Due filter"

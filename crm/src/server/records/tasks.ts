@@ -46,7 +46,9 @@ async function visibleOwnerIds(ctx: ScopedContext): Promise<string[] | null> {
 }
 
 export const TaskFilters = z.object({
+  q: z.string().trim().max(120).optional(),
   status: z.enum(["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
+  priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).optional(),
   due: z.enum(["overdue", "today", "week", "upcoming", "all"]).default("all"),
   mine: z.enum(["0", "1"]).default("1"),
   subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"]).optional(),
@@ -66,6 +68,8 @@ export async function listTasks(
   const where: Prisma.TaskWhereInput = {
     ...(ownerIds ? { ownerUserId: { in: ownerIds } } : {}),
     ...(filters.status ? { status: filters.status } : { status: { in: ["OPEN", "IN_PROGRESS"] } }),
+    ...(filters.priority ? { priority: filters.priority } : {}),
+    ...(filters.q ? { OR: [{ title: { contains: filters.q, mode: "insensitive" } }, { description: { contains: filters.q, mode: "insensitive" } }] } : {}),
     ...(filters.mine === "1" ? { ownerUserId: ctx.userId } : {}),
     ...(filters.subjectType ? { subjectType: filters.subjectType } : {}),
     ...(filters.subjectId ? { subjectId: filters.subjectId } : {}),

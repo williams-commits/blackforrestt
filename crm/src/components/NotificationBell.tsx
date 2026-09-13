@@ -146,7 +146,7 @@ export function NotificationBell() {
               })}
             </ul>
           )}
-          <Link href="/" onClick={() => setOpen(false)} className="block border-t border-(--border-default) px-4 py-2.5 text-center text-xs font-semibold text-(--text-brand) hover:bg-(--bg-hover)">View notification center</Link>
+          <Link href="/notifications" onClick={() => setOpen(false)} className="block border-t border-(--border-default) px-4 py-2.5 text-center text-xs font-semibold text-(--text-brand) hover:bg-(--bg-hover)">View notification center</Link>
         </div>
       ) : null}
     </div>

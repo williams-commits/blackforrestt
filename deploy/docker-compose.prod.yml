@@ -181,7 +181,12 @@ services:
       context: ../crm
       dockerfile: Dockerfile
     restart: unless-stopped
-    env_file: .env.production
+    # Same file as the app service, resolved relative to this compose file
+    # (deploy/): the repository-root .env.production. A bare
+    # ".env.production" here resolved to deploy/.env.production and broke
+    # `docker compose config` with "env file … not found".
+    env_file:
+      - ../.env.production
     environment:
       NODE_ENV: production
       DATABASE_URL: ${CRM_DATABASE_URL:-postgresql://blackforrestt:blackforrestt@postgres:5432/blckforest_crm}

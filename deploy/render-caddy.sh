@@ -13,7 +13,10 @@ ENV_FILE="${1:-$ROOT/.env.production}"
 [[ -f "$ENV_FILE" ]] || { echo "Missing $ENV_FILE" >&2; exit 1; }
 
 env_value() {
-  grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]'
+  # `|| :` keeps an absent OPTIONAL variable from failing the pipeline: with
+  # set -o pipefail, grep's exit 1 on no match would otherwise abort the
+  # whole script (errexit) instead of yielding an empty value to skip.
+  { grep -E "^$1=" "$ENV_FILE" || :; } | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]'
 }
 
 email="$(env_value CADDY_EMAIL)"

@@ -253,3 +253,4 @@ npm run dev
 | `BRANDING_SINGLE_NAME` | No | Short brand name used inside sentences (admin subtitles, section eyebrows). Default: first word of `BRANDING_NAME`. |
 | `BRANDING_LOGO` | No | Single-character logo mark rendered in the sidebar and login brand panels. Default: first letter of `BRANDING_NAME`. |
 | `INBOUND_EMAIL_TOKEN` | No | **Secret.** Bearer token for the CRM inbound-email webhook (`/api/emails/inbound`). Generate with `openssl rand -hex 24`. Unset = inbound email disabled (503). |
+| `CRM_ENCRYPTION_KEY` | When CRM per-user SMTP is used | **Secret.** Encrypts admin-managed per-user SMTP passwords at rest. Generate with `openssl rand -hex 32`. Required to save SMTP overrides; losing it means re-entering those passwords. |

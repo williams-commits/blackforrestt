@@ -15,21 +15,57 @@ function transporter(): Transporter | null {
 export interface EmailPayload {
   to: string;
   cc?: string;
+  bcc?: string;
   subject: string;
   text: string;
 }
 
-export async function sendEmail(payload: EmailPayload): Promise<boolean> {
-  const transport = transporter();
+/**
+ * Per-user SMTP override: when a user has admin-managed SMTP credentials,
+ * their outbound email goes through THEIR mail server with THEIR identity
+ * instead of the global SMTP_URL transport.
+ */
+export interface SmtpTransportConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  username: string;
+  password: string;
+  /** "Name <addr>" or bare address — used as the From header. */
+  from: string;
+}
+
+export function createTransportFrom(config: SmtpTransportConfig): Transporter {
+  return nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    auth: { user: config.username, pass: config.password },
+  });
+}
+
+export async function verifyTransport(config: SmtpTransportConfig): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const transport = createTransportFrom(config);
+    await transport.verify();
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Connection failed." };
+  }
+}
+
+export async function sendEmail(payload: EmailPayload, smtp?: SmtpTransportConfig): Promise<boolean> {
+  const transport = smtp ? createTransportFrom(smtp) : transporter();
   if (!transport) {
     return false; // email channel not configured — silently skip
   }
-  const from = process.env.SMTP_FROM ?? "CRM <noreply@localhost>";
+  const from = smtp?.from ?? process.env.SMTP_FROM ?? "CRM <noreply@localhost>";
   try {
     await transport.sendMail({
       from,
       to: payload.to,
       ...(payload.cc ? { cc: payload.cc } : {}),
+      ...(payload.bcc ? { bcc: payload.bcc } : {}),
       subject: payload.subject,
       text: payload.text,
       html: `<pre style="font-family:inherit;white-space:pre-wrap">${payload.text

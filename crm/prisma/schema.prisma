@@ -176,6 +176,8 @@ model User {
   ownedAppts      Appointment[]        @relation("AppointmentOwner")
   activityBy      ActivityEvent[]      @relation("ActivityActor")
   emailsSent      EmailMessage[]       @relation("EmailSender")
+  emailsOwned     EmailMessage[]       @relation("EmailOwner")
+  smtpConfig      UserSmtp?            @relation("UserSmtp")
   notifications   Notification[]
   importsCreated  ImportJob[]          @relation("ImportCreator")
   filesUploaded   Attachment[]         @relation("FileUploader")
@@ -263,8 +265,13 @@ model EmailMessage {
   fromAddress String
   toAddress   String
   ccAddress   String?
+  bccAddress  String?
   subject     String
   body        String
+  // Owning CRM user: the sender for outbound mail; for inbound mail the user
+  // whose address received it. Powers per-user mailbox views.
+  ownerUserId String?
+  owner       User?          @relation("EmailOwner", fields: [ownerUserId], references: [id])
   // Linked CRM record (nullable for unlinked inbound mail). Scope rules for
   // reads follow the linked record; unlinked mail is visible to EMAILS_VIEW.
   subjectType SubjectType?
@@ -285,6 +292,25 @@ model EmailMessage {
   @@index([threadKey, createdAt])
   @@index([fromAddress])
   @@index([toAddress])
+  @@index([ownerUserId, direction, createdAt])
+}
+
+// Per-user SMTP credentials (admin-managed): when present, that user's
+// outbound email is sent through THEIR own mail server instead of the global
+// SMTP_URL. The password is encrypted at rest with CRM_ENCRYPTION_KEY.
+model UserSmtp {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation("UserSmtp", fields: [userId], references: [id], onDelete: Cascade)
+  host              String
+  port              Int      @default(587)
+  secure            Boolean  @default(true)
+  username          String
+  passwordEncrypted String
+  fromName          String?
+  fromAddress       String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 // Append-only audit trail (mirrors the platform's AuditEvent pattern).

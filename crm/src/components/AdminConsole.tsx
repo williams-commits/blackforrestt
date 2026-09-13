@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCrmBranding } from "@/components/BrandingProvider";
+import { UserSmtpPanel } from "@/components/UserSmtpPanel";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useConfirmDialog } from "@/components/Dialogs";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
@@ -860,6 +861,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
         <div className="mt-4 border-t border-(--border-default) pt-4"><div className="flex items-center justify-between"><p className="text-xs text-(--text-tertiary)">Recent activity</p><span className="text-[11px] text-(--text-tertiary)">{userActivity.length} events</span></div>
           {activityError ? <p role="alert" className="mt-2 text-sm text-(--error)">{activityError}</p> : activityLoading ? <div className="mt-2 space-y-2"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-4 w-1/2" /></div> : userActivity.length === 0 ? <p className="mt-2 text-sm text-(--text-tertiary)">No recorded activity yet.</p> : <ul className="mt-2 max-h-52 space-y-2 overflow-y-auto">{userActivity.map((event) => <li key={event.id} className="flex items-start justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><span><span className="font-medium">{event.label}</span><span className="ml-2 text-xs text-(--text-tertiary)">{event.objectType.toLowerCase()}</span></span><time className="shrink-0 text-[11px] text-(--text-tertiary)">{new Date(event.createdAt).toLocaleDateString()}</time></li>)}</ul>}
         </div>
+        {canManage ? <UserSmtpPanel userId={selectedUser.id} userEmail={selectedUser.email} /> : null}
         {canManage ? <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => void patchUser(selectedUser.id, { status: selectedUser.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" })} className="btn btn-secondary">{selectedUser.status === "ACTIVE" ? "Suspend access" : "Restore access"}</button><button type="button" onClick={() => setSelectedUserId(null)} className="btn btn-secondary">Done</button></div> : null}
       </div> : null}
 

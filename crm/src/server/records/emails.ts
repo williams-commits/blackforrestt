@@ -4,7 +4,8 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db";
 import { CrmError, requireCapability } from "@/server/guard";
-import { sendEmail, emailConfigured } from "@/server/email";
+import { sendEmail, emailConfigured, type SmtpTransportConfig } from "@/server/email";
+import { decryptSecret } from "@/server/secretBox";
 import { appendActivity } from "@/server/activity";
 import { appendAudit } from "@/server/audit";
 import { resolveSubject } from "@/server/records/subjects";
@@ -27,6 +28,7 @@ import type { ScopedContext } from "@/server/records/leads";
 export const SendEmail = z.object({
   to: z.string().trim().email().max(200),
   cc: z.string().trim().email().max(200).optional().nullable(),
+  bcc: z.string().trim().email().max(200).optional().nullable(),
   subject: z.string().trim().min(1).max(300),
   body: z.string().trim().min(1).max(20_000),
   // Optional: when omitted the email is an unlinked outbound message in the
@@ -46,6 +48,8 @@ const PAGE_SIZE = 25;
 export const MailboxQuery = z.object({
   folder: z.enum(["inbox", "sent", "all"]).default("inbox"),
   unread: z.coerce.boolean().default(false),
+  mine: z.coerce.boolean().default(false),
+  userId: z.string().trim().min(5).optional(),
   q: z.string().trim().max(120).optional(),
   subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"]).optional(),
   subjectId: z.string().trim().min(5).optional(),
@@ -70,7 +74,24 @@ export async function sendRecordEmail(
     input.subjectType && input.subjectId
       ? await resolveSubject(ctx, input.subjectType, input.subjectId)
       : null;
-  const from = process.env.SMTP_FROM?.match(/<([^>]+)>/)?.[1] ?? process.env.SMTP_FROM ?? "";
+
+  // Per-user SMTP: when the sender has admin-managed credentials, their mail
+  // goes through THEIR server with THEIR identity. Otherwise the global
+  // SMTP_URL transport is used.
+  const userSmtp = await prisma.userSmtp.findUnique({ where: { userId: ctx.userId } });
+  const senderSmtp: SmtpTransportConfig | undefined = userSmtp
+    ? {
+        host: userSmtp.host,
+        port: userSmtp.port,
+        secure: userSmtp.secure,
+        username: userSmtp.username,
+        password: decryptSecret(userSmtp.passwordEncrypted),
+        from: userSmtp.fromName
+          ? `${userSmtp.fromName} <${userSmtp.fromAddress}>`
+          : userSmtp.fromAddress,
+      }
+    : undefined;
+  const from = senderSmtp?.from ?? process.env.SMTP_FROM?.match(/<([^>]+)>/)?.[1] ?? process.env.SMTP_FROM ?? "";
 
   const persist = async (status: "SENT" | "FAILED", error?: string) =>
     prisma.emailMessage.create({
@@ -80,6 +101,7 @@ export async function sendRecordEmail(
         fromAddress: from,
         toAddress: input.to,
         ccAddress: input.cc ?? null,
+        bccAddress: input.bcc ?? null,
         subject: input.subject,
         body: input.body,
         subjectType: (linked?.type ?? null) as "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY" | null,
@@ -100,7 +122,9 @@ export async function sendRecordEmail(
     : linked?.type === "OPPORTUNITY" ? "Opportunity"
     : "EmailMessage";
 
-  if (!emailConfigured()) {
+  // A user with their own SMTP credentials bypasses the global gate entirely:
+  // their mail server is the transport, whatever SMTP_URL says.
+  if (!emailConfigured() && !senderSmtp) {
     const failed = await persist("FAILED", "SMTP not configured");
     await prisma.$transaction(async (tx) => {
       if (linked) {
@@ -124,7 +148,10 @@ export async function sendRecordEmail(
     throw new CrmError("Email sending is not configured — set SMTP_URL in the environment.", 503);
   }
 
-  const sent = await sendEmail({ to: input.to, cc: input.cc ?? undefined, subject: input.subject, text: input.body });
+  const sent = await sendEmail(
+    { to: input.to, cc: input.cc ?? undefined, bcc: input.bcc ?? undefined, subject: input.subject, text: input.body },
+    senderSmtp,
+  );
   const stored = await persist(sent ? "SENT" : "FAILED", sent ? undefined : "SMTP delivery rejected the message");
   if (!sent) {
     throw new CrmError("Email delivery failed — check SMTP configuration.", 502);
@@ -225,6 +252,10 @@ export async function listMailbox(
     ...(query.folder === "inbox" ? { direction: "INBOUND" } : {}),
     ...(query.folder === "sent" ? { direction: "OUTBOUND" } : {}),
     ...(query.unread ? { readAt: null, direction: "INBOUND" } : {}),
+    // Per-user view: mail the user sent OR received (admin deep-link / mine).
+    ...(query.userId
+      ? { OR: [{ sentById: query.userId }, { ownerUserId: query.userId }] }
+      : {}),
     ...(query.q
       ? { OR: [
           { subject: { contains: query.q, mode: "insensitive" } },
@@ -390,6 +421,13 @@ export async function receiveInboundEmail(
     : lead ? { subjectType: "LEAD" as const, subjectId: lead.id }
     : null;
 
+  // Attribute to the receiving CRM user (their address in To/Cc), so each
+  // user's mailbox view can show the mail sent to THEM.
+  const receivingUser = await prisma.user.findFirst({
+    where: { email: { in: [input.to, input.cc].filter((v): v is string => Boolean(v)) }, status: "ACTIVE" },
+    select: { id: true },
+  });
+
   const created = await prisma.emailMessage.create({
     data: {
       direction: "INBOUND",
@@ -403,6 +441,7 @@ export async function receiveInboundEmail(
       subjectId: link?.subjectId ?? null,
       threadKey: link ? `${link.subjectType}:${link.subjectId}` : freeThreadKey(input.subject),
       messageId: input.messageId ?? null,
+      ownerUserId: receivingUser?.id ?? null,
     },
     select: { id: true },
   });

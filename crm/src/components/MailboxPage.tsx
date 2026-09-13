@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { EmailCompose } from "@/components/EmailCompose";
 
@@ -75,6 +76,10 @@ export function MailboxPage() {
   const [selected, setSelected] = useState<EmailRow | null>(null);
   const [compose, setCompose] = useState<null | { to?: string; subject?: string; body?: string }>(null);
   const [smtpConfigured, setSmtpConfigured] = useState<boolean | null>(null);
+  const searchParams = useSearchParams();
+  const filteredUserId = searchParams.get("userId") ?? null;
+  const filteredUserName = searchParams.get("userName") ?? "selected user";
+  const [mineOnly, setMineOnly] = useState(false);
 
   useEffect(() => {
     void fetch("/api/emails/send")
@@ -98,6 +103,8 @@ export function MailboxPage() {
       });
       if (folder === "unread") params.set("unread", "1");
       if (search) params.set("q", search);
+      if (filteredUserId) params.set("userId", filteredUserId);
+      else if (mineOnly) params.set("mine", "1");
       const response = await fetch(`/api/emails?${params.toString()}`);
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error ?? `Request failed (${response.status})`);
@@ -107,7 +114,7 @@ export function MailboxPage() {
     } finally {
       setLoading(false);
     }
-  }, [folder, page, search]);
+  }, [folder, page, search, filteredUserId, mineOnly]);
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
@@ -154,9 +161,12 @@ export function MailboxPage() {
           <button
             type="button"
             onClick={() => setCompose({})}
-            className="rounded-md px-3 py-1.5 text-sm font-semibold text-(--text-inverse)"
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold text-(--text-inverse)"
             style={{ background: "var(--brand)" }}
           >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
             Compose
           </button>
         }
@@ -205,7 +215,21 @@ export function MailboxPage() {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {filteredUserId ? (
+              <span className="flex items-center gap-1 rounded-full bg-(--bg-selected) px-3 py-1 text-xs font-medium text-(--brand)">
+                Mail of {filteredUserName}
+                <Link href="/emails" aria-label="Clear user filter" className="ml-1 text-(--text-secondary) hover:text-(--text-primary)">×</Link>
+              </span>
+            ) : null}
+            <label className="flex items-center gap-1.5 text-xs text-(--text-secondary)">
+              <input
+                type="checkbox"
+                checked={mineOnly}
+                onChange={(event) => { setMineOnly(event.target.checked); setPage(1); }}
+              />
+              Mine only
+            </label>
             <label htmlFor="mailbox-search" className="sr-only">Search emails</label>
             <input
               id="mailbox-search"

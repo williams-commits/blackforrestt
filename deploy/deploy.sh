@@ -30,7 +30,7 @@ fi
 # subdomain serves TLS errors. Fail BEFORE the multi-minute build.
 CRM_DOMAIN_CFG="$(grep -E '^CRM_DOMAIN=' .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' || :)"
 if [[ -n "$CRM_DOMAIN_CFG" ]]; then
-  for var in AUTH_SECRET_CRM; do
+  for var in AUTH_SECRET_CRM CRM_ENCRYPTION_KEY; do
     value="$(grep -E "^${var}=" .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' || :)"
     if [[ -z "$value" ]]; then
       echo "ERROR: CRM_DOMAIN is set ('$CRM_DOMAIN_CFG') but $var is empty in .env.production." >&2

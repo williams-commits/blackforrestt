@@ -1,6 +1,13 @@
 import test from "node:test";
 import { randomUUID } from "node:crypto";
 
+// A crashed earlier run can leave per-user SMTP overrides behind, which
+// would silently change every later assertion. Start clean.
+test("cleanup: remove leftover test SMTP overrides", async () => {
+  const removed = await prisma.userSmtp.deleteMany({ where: { host: "127.0.0.1", port: 1 } });
+  void removed;
+});
+
 const RUN = randomUUID().slice(0, 8);
 const RUN_EMAIL = `inbox.person.${RUN}@example.com`;
 const RUN_EMAIL_2 = `scoped.inbox.${RUN}@example.com`;
@@ -241,4 +248,76 @@ test("mailbox-level compose sends unlinked email (no record required)", async ()
   assert.ok(allMail.rows.some((row) => row.id === stored.id), "unlinked mail visible to all holders");
 
   await prisma.emailMessage.delete({ where: { id: stored.id } });
+});
+
+test("per-user SMTP: stored credentials drive the send; inbound mail attributes the owner", async () => {
+  const { encryptSecret } = await import("../src/server/secretBox");
+  const rep = await repContext();
+
+  // Admin saves the user's SMTP config (as the admin SMTP dialog does).
+  await prisma.userSmtp.upsert({
+    where: { userId: rep.userId },
+    create: {
+      userId: rep.userId,
+      host: "127.0.0.1",
+      port: 1, // refuses instantly — proves THIS transport was used
+      secure: false,
+      username: "rep@smtp.example",
+      passwordEncrypted: encryptSecret("app-password"),
+      fromName: "Riley via own server",
+      fromAddress: "rep@smtp.example",
+    },
+    update: {
+      host: "127.0.0.1", port: 1, secure: false, username: "rep@smtp.example",
+      passwordEncrypted: encryptSecret("app-password"),
+      fromName: "Riley via own server", fromAddress: "rep@smtp.example",
+    },
+  });
+
+  const lead = await prisma.lead.create({
+    data: {
+      firstName: "Own", lastName: "Smtp", email: "own.smtp@example.com",
+      assignedUserId: rep.userId,
+      statusId: (await prisma.recordStatus.findFirstOrThrow({ where: { appliesTo: "LEAD", isDefault: true } })).id,
+    },
+  });
+
+  // Without SMTP_URL the GLOBAL path would archive "SMTP not configured";
+  // with per-user SMTP the send attempts THEIR server (refused → FAILED with
+  // a delivery error) — proving the per-user transport was selected.
+  await assertThrows(
+    () => sendRecordEmail(rep, {
+      to: "target@example.com", subject: "Per-user SMTP probe", body: "x",
+      subjectType: "LEAD", subjectId: lead.id,
+    }),
+    502,
+    "per-user transport attempted",
+  );
+  const failed = await prisma.emailMessage.findFirstOrThrow({
+    where: { subject: "Per-user SMTP probe" },
+  });
+  assert.equal(failed.status, "FAILED");
+  assert.ok(failed.fromAddress.includes("rep@smtp.example"), "per-user from address");
+  assert.ok(failed.fromAddress.includes("Riley via own server"), "per-user from display name");
+  assert.ok(!(failed.error ?? "").includes("not configured"), "used their server, not the global path");
+
+  // Inbound mail to a user's address attributes ownerUserId.
+  const received = await receiveInboundEmail({
+    from: "someone@example.com",
+    to: "rep@crm.local",
+    subject: "Owner attribution",
+    text: "to my address",
+    messageId: `<owner-${Date.now()}@provider>`,
+  });
+  const inbound = await prisma.emailMessage.findUniqueOrThrow({ where: { id: received.id } });
+  assert.equal(inbound.ownerUserId, rep.userId, "inbound attributed to the receiving user");
+
+  // Per-user mailbox filter shows their sent + received mail.
+  const mine = await listMailbox(rep, { folder: "all", unread: false, userId: rep.userId, page: 1 });
+  assert.ok(mine.rows.some((row) => row.id === failed.id), "their sent mail in their view");
+  assert.ok(mine.rows.some((row) => row.id === inbound.id), "their received mail in their view");
+
+  await prisma.emailMessage.deleteMany({ where: { id: { in: [failed.id, inbound.id] } } });
+  await prisma.lead.delete({ where: { id: lead.id } });
+  await prisma.userSmtp.delete({ where: { userId: rep.userId } });
 });

@@ -54,7 +54,9 @@ export function EmailCompose({
 
   const [to, setTo] = useState(toEmail ?? "");
   const [cc, setCc] = useState("");
+  const [bcc, setBcc] = useState("");
   const [ccVisible, setCcVisible] = useState(false);
+  const [bccVisible, setBccVisible] = useState(false);
   const [subject, setSubject] = useState(initialSubject ?? "");
   const [body, setBody] = useState(initialBody ?? "");
   const [createFollowUp, setCreateFollowUp] = useState(linked);
@@ -70,9 +72,10 @@ export function EmailCompose({
     try {
       const saved = window.localStorage.getItem(draftKey);
       if (saved && !initialBody) {
-        const draft = JSON.parse(saved) as { to?: string; cc?: string; subject?: string; body?: string };
+        const draft = JSON.parse(saved) as { to?: string; cc?: string; bcc?: string; subject?: string; body?: string };
         if (draft.to && !toEmail) setTo(draft.to);
         if (draft.cc) { setCc(draft.cc); setCcVisible(true); }
+        if (draft.bcc) { setBcc(draft.bcc); setBccVisible(true); }
         if (draft.subject && !initialSubject) setSubject(draft.subject);
         if (draft.body) setBody(draft.body);
       }
@@ -80,7 +83,7 @@ export function EmailCompose({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftKey]);
 
-  const saveDraft = useCallback((next: { to: string; cc: string; subject: string; body: string }) => {
+  const saveDraft = useCallback((next: { to: string; cc: string; bcc: string; subject: string; body: string }) => {
     try {
       window.localStorage.setItem(draftKey, JSON.stringify(next));
     } catch { /* storage full/blocked — drafts are best-effort */ }
@@ -91,11 +94,11 @@ export function EmailCompose({
     // would wipe the stored draft before the restore effect has run.
     if (!to && !cc && !subject && !body) return;
     const timer = window.setTimeout(
-      () => saveDraft({ to, cc, subject, body }),
+      () => saveDraft({ to, cc, bcc, subject, body }),
       500,
     );
     return () => window.clearTimeout(timer);
-  }, [to, cc, subject, body, saveDraft]);
+  }, [to, cc, bcc, subject, body, saveDraft]);
 
   // Is SMTP configured? null = unknown (check in flight).
   useEffect(() => {
@@ -119,6 +122,7 @@ export function EmailCompose({
         body: JSON.stringify({
           to: to.trim(),
           cc: cc.trim() || undefined,
+          bcc: bcc.trim() || undefined,
           subject: subject.trim(),
           body,
           ...(linked ? { subjectType, subjectId } : {}),
@@ -137,7 +141,7 @@ export function EmailCompose({
     } finally {
       setBusy(false);
     }
-  }, [to, cc, subject, body, linked, subjectType, subjectId, createFollowUp, followUpInDays, draftKey, onSent]);
+  }, [to, cc, bcc, subject, body, linked, subjectType, subjectId, createFollowUp, followUpInDays, draftKey, onSent]);
 
   // ⌘/Ctrl+Enter sends from any field.
   useEffect(() => {
@@ -221,11 +225,14 @@ export function EmailCompose({
                   placeholder="recipient@example.com"
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none" autoFocus
                 />
-                {!ccVisible ? (
-                  <button type="button" onClick={() => setCcVisible(true)} className="shrink-0 text-xs font-medium text-(--brand) hover:underline">
-                    Cc
-                  </button>
-                ) : null}
+                <div className="flex shrink-0 gap-2">
+                  {!ccVisible ? (
+                    <button type="button" onClick={() => setCcVisible(true)} className="text-xs font-medium text-(--brand) hover:underline">Cc</button>
+                  ) : null}
+                  {!bccVisible ? (
+                    <button type="button" onClick={() => setBccVisible(true)} className="text-xs font-medium text-(--brand) hover:underline">Bcc</button>
+                  ) : null}
+                </div>
               </div>
               {ccVisible ? (
                 <div className="flex items-center gap-3 px-4 py-2.5">
@@ -234,6 +241,17 @@ export function EmailCompose({
                     id="ec-cc" type="email" value={cc} disabled={busy}
                     onChange={(event) => setCc(event.target.value)}
                     placeholder="copy@example.com"
+                    className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                  />
+                </div>
+              ) : null}
+              {bccVisible ? (
+                <div className="flex items-center gap-3 px-4 py-2.5">
+                  <label htmlFor="ec-bcc" className="w-14 shrink-0 text-sm font-medium text-(--text-secondary)">Bcc</label>
+                  <input
+                    id="ec-bcc" type="email" value={bcc} disabled={busy}
+                    onChange={(event) => setBcc(event.target.value)}
+                    placeholder="blind-copy@example.com"
                     className="min-w-0 flex-1 bg-transparent text-sm outline-none"
                   />
                 </div>

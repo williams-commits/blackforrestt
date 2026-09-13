@@ -29,11 +29,17 @@ export const SendEmail = z.object({
   cc: z.string().trim().email().max(200).optional().nullable(),
   subject: z.string().trim().min(1).max(300),
   body: z.string().trim().min(1).max(20_000),
-  subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"]),
-  subjectId: z.string().min(5),
+  // Optional: when omitted the email is an unlinked outbound message in the
+  // shared mailbox (threaded by normalized subject). When provided, both
+  // must be provided and the sender needs scope over that record.
+  subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"]).optional(),
+  subjectId: z.string().min(5).optional(),
   createFollowUp: z.boolean().optional(),
   followUpInDays: z.number().int().min(1).max(90).optional(),
-});
+}).refine(
+  (value) => (value.subjectType == null) === (value.subjectId == null),
+  { message: "subjectType and subjectId must be provided together." },
+);
 
 const PAGE_SIZE = 25;
 
@@ -56,10 +62,14 @@ export async function sendRecordEmail(
   input: z.infer<typeof SendEmail>,
 ): Promise<{ sent: boolean; emailDisabled: boolean; emailId: string }> {
   // Sending uses the company's SMTP identity: the dedicated EMAILS_SEND
-  // permission governs it (the email module's own capability), and the
-  // target record must be inside the sender's data scope.
+  // permission governs it (the email module's own capability), and when the
+  // email is linked to a record, that record must be inside the sender's
+  // data scope. Unlinked sends (mailbox compose) skip record resolution.
   requireCapability(ctx, "EMAILS_SEND");
-  const subject = await resolveSubject(ctx, input.subjectType, input.subjectId);
+  const linked =
+    input.subjectType && input.subjectId
+      ? await resolveSubject(ctx, input.subjectType, input.subjectId)
+      : null;
   const from = process.env.SMTP_FROM?.match(/<([^>]+)>/)?.[1] ?? process.env.SMTP_FROM ?? "";
 
   const persist = async (status: "SENT" | "FAILED", error?: string) =>
@@ -72,9 +82,9 @@ export async function sendRecordEmail(
         ccAddress: input.cc ?? null,
         subject: input.subject,
         body: input.body,
-        subjectType: subject.type as "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
-        subjectId: subject.id,
-        threadKey: `${subject.type}:${subject.id}`,
+        subjectType: (linked?.type ?? null) as "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY" | null,
+        subjectId: linked?.id ?? null,
+        threadKey: linked ? `${linked.type}:${linked.id}` : freeThreadKey(input.subject),
         readAt: new Date(), // your own send is never "unread"
         sentById: ctx.userId,
         error: error ?? null,
@@ -82,15 +92,33 @@ export async function sendRecordEmail(
       select: { id: true },
     });
 
+  const auditObjectType =
+    linked?.type === "LEAD" ? "Lead"
+    : linked?.type === "CONTACT" ? "Contact"
+    : linked?.type === "ACCOUNT" ? "Account"
+    : linked?.type === "CUSTOMER" ? "Customer"
+    : linked?.type === "OPPORTUNITY" ? "Opportunity"
+    : "EmailMessage";
+
   if (!emailConfigured()) {
-    await persist("FAILED", "SMTP not configured");
+    const failed = await persist("FAILED", "SMTP not configured");
     await prisma.$transaction(async (tx) => {
-      await appendActivity(tx, {
-        subjectType: subject.type,
-        subjectId: subject.id,
-        kind: "email_failed" as never,
-        actorUserId: ctx.userId,
-        payload: { to: input.to, subject: input.subject.slice(0, 120), reason: "SMTP not configured" },
+      if (linked) {
+        await appendActivity(tx, {
+          subjectType: linked.type,
+          subjectId: linked.id,
+          kind: "email_failed" as never,
+          actorUserId: ctx.userId,
+          payload: { to: input.to, subject: input.subject.slice(0, 120), reason: "SMTP not configured", emailId: failed.id },
+        });
+      }
+      await appendAudit(tx, {
+        actorId: ctx.userId,
+        ip: ctx.ip,
+        action: "EMAIL_SEND_FAILED",
+        objectType: auditObjectType,
+        objectId: linked?.id ?? failed.id,
+        after: { to: input.to, subject: input.subject.slice(0, 120), reason: "SMTP not configured" },
       });
     });
     throw new CrmError("Email sending is not configured — set SMTP_URL in the environment.", 503);
@@ -103,19 +131,21 @@ export async function sendRecordEmail(
   }
 
   await prisma.$transaction(async (tx) => {
-    await appendActivity(tx, {
-      subjectType: subject.type,
-      subjectId: subject.id,
-      kind: "email_sent" as never,
-      actorUserId: ctx.userId,
-      payload: { to: input.to, subject: input.subject.slice(0, 120), emailId: stored.id },
-    });
+    if (linked) {
+      await appendActivity(tx, {
+        subjectType: linked.type,
+        subjectId: linked.id,
+        kind: "email_sent" as never,
+        actorUserId: ctx.userId,
+        payload: { to: input.to, subject: input.subject.slice(0, 120), emailId: stored.id },
+      });
+    }
     await appendAudit(tx, {
       actorId: ctx.userId,
       ip: ctx.ip,
       action: "EMAIL_SENT",
-      objectType: subject.type === "LEAD" ? "Lead" : subject.type === "CONTACT" ? "Contact" : subject.type === "ACCOUNT" ? "Account" : subject.type === "CUSTOMER" ? "Customer" : "Opportunity",
-      objectId: subject.id,
+      objectType: auditObjectType,
+      objectId: linked?.id ?? stored.id,
       after: { to: input.to, subject: input.subject.slice(0, 120), emailId: stored.id },
     });
 
@@ -128,15 +158,15 @@ export async function sendRecordEmail(
           ownerUserId: ctx.userId,
           dueAt: new Date(Date.now() + days * 24 * 60 * 60 * 1000),
           priority: "NORMAL",
-          subjectType: subject.type,
-          subjectId: subject.id,
+          subjectType: (linked?.type ?? null) as never,
+          subjectId: linked?.id ?? null,
         },
       });
     }
 
-    if (subject.type === "LEAD") {
+    if (linked?.type === "LEAD") {
       await tx.lead.update({
-        where: { id: subject.id },
+        where: { id: linked.id },
         data: { lastContactAt: new Date() },
       }).catch(() => undefined);
     }

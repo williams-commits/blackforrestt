@@ -206,3 +206,39 @@ async function assertThrows(fn: () => Promise<unknown>, status: number, label: s
   }
   throw new Error(`${label}: expected error ${status}, got success`);
 }
+
+test("mailbox-level compose sends unlinked email (no record required)", async () => {
+  const rep = await repContext();
+  // SMTP is not configured in tests: the call throws 503 but the attempt is
+  // still archived as FAILED (never lost).
+  await assertThrows(
+    () => sendRecordEmail(rep, {
+      to: "outside.partner@example.com",
+      subject: "Quarterly logistics note",
+      body: "Sharing the updated schedule with the group.",
+      // no subjectType/subjectId — unlinked mailbox compose
+    }),
+    503,
+    "SMTP not configured",
+  );
+
+  const stored = await prisma.emailMessage.findUniqueOrThrow({
+    where: { id: (await prisma.emailMessage.findFirstOrThrow({
+      where: { toAddress: "outside.partner@example.com" },
+      orderBy: { createdAt: "desc" },
+    })).id },
+  });
+  assert.equal(stored.status, "FAILED"); // SMTP not configured in tests — still archived
+  assert.equal(stored.subjectType, null, "unlinked: no record subject");
+  assert.equal(stored.threadKey, "free:quarterly logistics note", "grouped by normalized subject");
+  assert.ok(stored.error?.includes("SMTP"), "failure reason recorded");
+  assert.ok(stored.readAt, "own sends are never unread");
+
+  // Visible to every EMAILS_VIEW holder (shared mailbox), including another
+  // rep — unlinked outbound mail appears under Sent/all.
+  const rep2 = await rep2Context();
+  const allMail = await listMailbox(rep2, { folder: "all", unread: false, page: 1 });
+  assert.ok(allMail.rows.some((row) => row.id === stored.id), "unlinked mail visible to all holders");
+
+  await prisma.emailMessage.delete({ where: { id: stored.id } });
+});

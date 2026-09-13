@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { EmailCompose } from "@/components/EmailCompose";
 
 /** "Send Email" trigger button — shown on record pages with an email. */
 export function SendEmailButton({
@@ -33,7 +34,7 @@ export function SendEmailButton({
         Email
       </button>
       {open ? (
-        <SendEmailModalLazy
+        <EmailCompose
           subjectType={subjectType}
           subjectId={subjectId}
           toEmail={email}
@@ -43,16 +44,4 @@ export function SendEmailButton({
       ) : null}
     </>
   );
-}
-
-// Inline lazy to avoid importing the modal until needed
-import { SendEmailModal } from "@/components/SendEmailModal";
-function SendEmailModalLazy(props: {
-  subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
-  subjectId: string;
-  toEmail: string | null;
-  toName: string;
-  onClose: () => void;
-}) {
-  return <SendEmailModal {...props} />;
 }

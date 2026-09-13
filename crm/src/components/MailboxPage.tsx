@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
+import { EmailCompose } from "@/components/EmailCompose";
 
 /**
  * Mailbox — inbox / unread / sent folders, a reading pane, search, and
@@ -72,6 +73,15 @@ export function MailboxPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<EmailRow | null>(null);
+  const [compose, setCompose] = useState<null | { to?: string; subject?: string; body?: string }>(null);
+  const [smtpConfigured, setSmtpConfigured] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    void fetch("/api/emails/send")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => setSmtpConfigured(Boolean(body?.data?.configured)))
+      .catch(() => setSmtpConfigured(false));
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => { setSearch(query); setPage(1); }, 300);
@@ -140,6 +150,16 @@ export function MailboxPage() {
         eyebrow="Mail"
         title="Emails"
         subtitle="Correspondence history — inbound replies arrive here automatically; every send is archived against its record."
+        actions={
+          <button
+            type="button"
+            onClick={() => setCompose({})}
+            className="rounded-md px-3 py-1.5 text-sm font-semibold text-(--text-inverse)"
+            style={{ background: "var(--brand)" }}
+          >
+            Compose
+          </button>
+        }
         metrics={[
           { label: "Unread", value: data?.unreadCount ?? 0, tone: data?.unreadCount ? "warning" : "brand" },
           { label: "On page", value: rows.length, tone: "info" },
@@ -147,6 +167,17 @@ export function MailboxPage() {
       />
       {error ? (
         <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p>
+      ) : null}
+      {smtpConfigured === false ? (
+        <div role="status" className="flex items-start gap-2 rounded-md border border-(--warning-border) bg-(--warning-bg) px-3 py-2 text-sm text-(--warning)">
+          <span aria-hidden>⚠</span>
+          <span>
+            <strong>SMTP is not configured.</strong> Sending is disabled — set{" "}
+            <code className="rounded bg-(--bg-subtle) px-1">SMTP_URL</code> and{" "}
+            <code className="rounded bg-(--bg-subtle) px-1">SMTP_FROM</code> in the environment and reload. Inbound
+            email (webhook) is unaffected.
+          </span>
+        </div>
       ) : null}
 
       <div className="card overflow-hidden">
@@ -276,13 +307,26 @@ export function MailboxPage() {
                       </Link>
                     ) : null}
                     {selected.direction === "INBOUND" ? (
-                      <button
-                        type="button"
-                        onClick={() => void markUnread(selected)}
-                        className="rounded-md border border-(--border-strong) px-2.5 py-1.5 text-xs font-medium hover:bg-(--bg-hover)"
-                      >
-                        Mark unread
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setCompose({
+                            to: selected.from,
+                            subject: selected.subject.startsWith("Re:") ? selected.subject : `Re: ${selected.subject}`,
+                            body: `\n\n---- On ${new Date(selected.createdAt).toLocaleString()}, ${selected.from} wrote:\n${selected.body.split("\n").map((line) => `> ${line}`).join("\n")}`,
+                          })}
+                          className="rounded-md border border-(--border-strong) px-2.5 py-1.5 text-xs font-medium hover:bg-(--bg-hover)"
+                        >
+                          Reply
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void markUnread(selected)}
+                          className="rounded-md border border-(--border-strong) px-2.5 py-1.5 text-xs font-medium hover:bg-(--bg-hover)"
+                        >
+                          Mark unread
+                        </button>
+                      </>
                     ) : null}
                   </div>
                 </div>
@@ -296,6 +340,16 @@ export function MailboxPage() {
           </div>
         </div>
       </div>
+      {compose ? (
+        <EmailCompose
+          toEmail={compose.to ?? null}
+          initialSubject={compose.subject}
+          initialBody={compose.body}
+          onClose={() => { setCompose(null); void load(); }}
+          onSent={() => void load()}
+        />
+      ) : null}
     </div>
   );
 }
+

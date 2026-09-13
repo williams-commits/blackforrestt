@@ -16,7 +16,10 @@ env_value() {
   # `|| :` keeps an absent OPTIONAL variable from failing the pipeline: with
   # set -o pipefail, grep's exit 1 on no match would otherwise abort the
   # whole script (errexit) instead of yielding an empty value to skip.
-  { grep -E "^$1=" "$ENV_FILE" || :; } | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]'
+  # Trailing slashes are stripped: CRM_DOMAIN=crm.example.com/ in the env
+  # would otherwise emit the site address "crm.example.com/" — a
+  # path-qualified site that breaks Caddy's listener set (443 refuses).
+  { grep -E "^$1=" "$ENV_FILE" || :; } | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' -e 's|/*$||' | tr -d '[:space:]'
 }
 
 email="$(env_value CADDY_EMAIL)"

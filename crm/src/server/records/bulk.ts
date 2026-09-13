@@ -8,13 +8,16 @@ import { appendActivity } from "@/server/activity";
 import { assignedScopeWhere, ownerScopeWhere } from "@/server/scope";
 import { collectionNotificationContext, notify } from "@/server/notifications";
 import { assertAssignableUser } from "@/server/records/assignment";
+import { subjectPermission } from "@/server/records/subjects";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
  * Generic bulk actions across the four core objects. The leads-specific
  * `bulkLeads` predates this; both share the same authorization model:
- * the route gates on <OBJECT>_EDIT, and delete/assign tighten further
- * inside the transaction.
+ * the route only requires <OBJECT>_VIEW to obtain a scoped context — THIS
+ * function is the per-action authority (assign→ASSIGN, status→CHANGE_STATUS,
+ * tag→MANAGE_TAGS, task→CREATE_TASK, delete→DELETE). A blanket <OBJECT>_EDIT
+ * route gate wrongly locked status-only users out of bulk status changes.
  */
 
 export const BulkObject = z.enum(["leads", "contacts", "accounts", "customers"]);
@@ -122,6 +125,7 @@ export async function bulkRecords(
   if (input.action === "assign") await assertAssignableUser(input.assignedUserId);
   if (input.action === "status") requireCapability(ctx, `${prefix}_CHANGE_STATUS` as Permission);
   if (input.action === "tag") requireCapability(ctx, `${prefix}_MANAGE_TAGS` as Permission);
+  if (input.action === "task") requireCapability(ctx, subjectPermission(config.subjectType, "CREATE_TASK"));
   if (input.action === "delete" && !ctx.permissions.includes(deletePermission)) {
     throw new CrmError(`Forbidden — ${deletePermission} permission required`, 403);
   }

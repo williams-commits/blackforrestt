@@ -78,7 +78,8 @@ const ROLE_DOCS = [
       "Create, edit, and view their own leads, contacts, accounts, and customers",
       "Create and manage their own opportunities in any pipeline",
       "Create tasks, notes, and appointments on records they own",
-      "Send emails from record pages (when SMTP is configured)",
+      "Send emails from record pages (when SMTP is configured) — every send is archived",
+      "Read the shared inbox and their records' email history (EMAILS_VIEW)",
       "View reports and dashboards (scoped to their own data)",
       "Export their own records to CSV",
       "Attach files to records they can see",
@@ -241,7 +242,7 @@ const ROLE_DOCS = [
     cannotDo: [
       "Create, edit, or delete any record",
       "Create tasks, notes, or appointments",
-      "Send emails",
+      "Send emails or access the mailbox",
       "Import or export data",
       "Attach files",
       "Access the Administration section",
@@ -306,7 +307,7 @@ const FEATURE_DOCS = [
       { name: "Converting a lead", content: "Open a qualified lead → click \"Convert\" in the header. The system checks for duplicate contacts and customers. Choose to create new records or link existing ones. Open tasks and notes automatically move to the new contact. An optional opportunity is created in the default pipeline." },
       { name: "Changing status", content: "Click the status badge directly in the table (inline edit) or use the Edit form. Statuses are configurable by admins (Administration → Statuses)." },
       { name: "Merging duplicates", content: "Select exactly 2 leads in the list view → click \"Merge selected\" → choose which record survives. Timeline events are copied, notes and tasks re-pointed, and a snapshot is stored for recovery." },
-      { name: "Bulk actions", content: "Select multiple rows with checkboxes → use the bulk action bar to assign, change status, add tags, create tasks, or delete." },
+      { name: "Bulk actions", content: "Select multiple rows with checkboxes → use the bulk action bar to assign, change status, add tags, create tasks, or delete. Each button appears only when your role holds the matching permission (Assign, Change status, Manage tags, Create task, Delete) — you will never be offered an action the system would reject." },
     ],
   },
   {
@@ -338,6 +339,7 @@ const FEATURE_DOCS = [
     topics: [
       { name: "CSV import", content: "Navigate to Import → select \"CSV file\" → upload → preview → map columns to CRM fields → validate (checks required fields, email/phone format, duplicates) → choose strategy (Create/Update/Upsert) → run. Progress shows in real-time." },
       { name: "Google Sheets import", content: "Publish your sheet to the web (File → Share → Publish to web → CSV), then paste the link. The system fetches and parses the sheet automatically." },
+      { name: "Default source", content: "In the Map step, set a default Source (or Lead source for contacts) applied to every row whose sheet has no source value — the same field the create form offers. A mapped, non-empty column always wins, and defaults never overwrite the source of existing records on update/upsert." },
       { name: "Duplicate handling", content: "Configure matching rules (email, phone, external ID). With \"Create\" strategy, duplicates are skipped and reported. With \"Upsert\", duplicates update the existing record." },
       { name: "Error reports", content: "After import, download a CSV of all failed rows with the reason for each failure. Nothing is silently discarded." },
       { name: "Retry", content: "Any completed import can be retried — the original data is re-validated and re-run as a new job." },
@@ -367,11 +369,15 @@ const FEATURE_DOCS = [
   {
     id: "email",
     title: "Email",
-    description: "Send emails directly from record pages and receive email notifications.",
+    description: "A full correspondence record: send from any record, receive replies in the shared inbox, and see the complete history on every lead, contact, account, customer, and opportunity.",
     topics: [
-      { name: "Sending from a record", content: "Open any lead, contact, or customer with an email address → click the \"Email\" button in the header. The modal pre-fills the recipient, lets you write a subject and body, and optionally creates a follow-up task." },
+      { name: "Mailbox", content: "The Emails page (sidebar → Work → Emails) is a shared mailbox with Inbox, Unread, and Sent folders, full-text search, and a reading pane. Opening an inbound email marks it read; \"Mark unread\" puts it back in the triage queue." },
+      { name: "Sending from a record", content: "Open any lead, contact, or customer with an email address → click the \"Email\" button in the header. The modal pre-fills the recipient, lets you write a subject and body, and optionally creates a follow-up task. Every send is archived — a failed attempt (e.g. SMTP not configured) is recorded with the reason." },
+      { name: "Receiving replies", content: "Wire your mail provider's inbound webhook (SendGrid Inbound Parse, SES, cloudmailin…) to POST {from, to, subject, text, messageId} to /api/emails/inbound with the INBOUND_EMAIL_TOKEN bearer token. Replies are stored, deduplicated by Message-ID, and auto-linked to the matching contact, customer, or lead by sender address — the record's timeline gets an \"email received\" event and its Email history updates." },
+      { name: "Record email history", content: "Every record page has an Emails tab showing both directions — sends and received replies — with the latest ten and a link to the full mailbox. Emails follow record permissions: a rep sees the history of records in their scope, and the mailbox hides rows linked to records they cannot see." },
+      { name: "Permissions", content: "The Emails category in Roles & Permissions controls the module: EMAILS_VIEW (mailbox + record history) and EMAILS_SEND (send from records). Both are independent of the record Edit permission." },
       { name: "Email notifications", content: "When SMTP is configured, you'll receive email notifications for: lead assignments, task assignments, overdue tasks, and import completion/failure." },
-      { name: "Configuration", content: "Admins configure SMTP in the environment (SMTP_URL, SMTP_FROM). Status is visible under Administration → Integrations." },
+      { name: "Configuration", content: "Admins configure SMTP in the environment (SMTP_URL, SMTP_FROM). Inbound mail requires INBOUND_EMAIL_TOKEN. Status is visible under Administration → Integrations." },
     ],
   },
   {
@@ -380,7 +386,7 @@ const FEATURE_DOCS = [
     description: "Complete system configuration and governance.",
     topics: [
       { name: "Users & Teams", content: "Create user accounts with role assignment and team membership. Create teams with hierarchy (parent/child). Assign team leaders. Suspend or activate accounts." },
-      { name: "Roles & Permissions", content: "Visual permission matrix — toggle any permission for any role. Super Admin is fixed. Changes take effect immediately." },
+      { name: "Roles & Permissions", content: "Visual permission matrix grouped by category — toggle any permission for any role. Super Admin is fixed. Changes take effect immediately. Permissions are independent: turning off Record status does not affect Potential status (and vice versa), and every module (leads, contacts, accounts, customers) has its own set — a contacts permission never unlocks leads. The whole UI follows: forms, inline status editing, and bulk action buttons appear only for actions your role may perform." },
       { name: "Statuses", content: "Add, rename, reorder, or delete lead/contact/customer statuses. Set defaults. Statuses with records cannot be deleted." },
       { name: "Custom Fields", content: "Define typed fields on any object: text, number, currency, boolean, date, datetime, select, multi-select, phone, email, URL. Values are validated on every write." },
       { name: "Custom Objects", content: "Create entirely new record types (Properties, Vendors, etc.) with their own field schemas. Records are JSONB documents validated against the definition." },

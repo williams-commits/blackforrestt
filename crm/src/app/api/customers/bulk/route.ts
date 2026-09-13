@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const ctx = await scopedContext("CUSTOMERS_EDIT");
+    // VIEW is the floor: bulkRecords enforces the per-action permission
+    // (ASSIGN / CHANGE_STATUS / MANAGE_TAGS / CREATE_TASK / DELETE) — a
+    // blanket CUSTOMERS_EDIT gate locked status-only users out of bulk status changes.
+    const ctx = await scopedContext("CUSTOMERS_VIEW");
     const parsed = await parseJsonBody(request, BulkRecordAction);
     if (!parsed.ok) return parsed.response;
     const result = await bulkRecords(ctx, "customers", parsed.data);

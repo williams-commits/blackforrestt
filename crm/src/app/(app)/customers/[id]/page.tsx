@@ -11,6 +11,7 @@ import { Timeline } from "@/components/Timeline";
 import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
 import { RecordPageTabs } from "@/components/RecordPageTabs";
+import { RecordEmailHistory } from "@/components/RecordEmailHistory";
 import { TagEditor } from "@/components/TagEditor";
 import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
 import { listTagsForSubject } from "@/server/records/tags";
@@ -48,6 +49,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
   let platform: Awaited<ReturnType<typeof client360>> = null;
   let campaigns: Array<{ campaign: { name: string } }> = [];
+  let canViewEmails = false;
   let canEdit = false;
   let canAddNote = false;
   let canCreateTask = false;
@@ -67,6 +69,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
     appointments = await listAppointmentsBySubject("CUSTOMER", id);
     platform = customer.platformUserId ? await client360(customer.platformUserId) : null;
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "CUSTOMER", subjectId: id }, include: { campaign: true } });
+    canViewEmails = ctx.permissions.includes("EMAILS_VIEW");
     const capabilities = getRecordCapabilities("CUSTOMER", ctx.permissions);
     canEdit = capabilities.canEdit;
     canAddNote = capabilities.canAddNote;
@@ -124,6 +127,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
               { key: "platform", label: "Platform" },
               { key: "activity", label: "Activity", count: notes.length + appointments.length },
               { key: "files", label: "Files" },
+              ...(canViewEmails ? [{ key: "emails", label: "Emails" }] : []),
             ]}
           >
           {/* Details */}
@@ -277,7 +281,10 @@ export default async function CustomerDetailPage({ params }: PageProps) {
               <AttachmentsPanel subjectType="CUSTOMER" subjectId={id} canUpload={canUpload} canDelete={canDeleteFiles} />
             </div>
           </section>
-          </RecordPageTabs>
+                    {canViewEmails ? (
+            <RecordEmailHistory subjectType="CUSTOMER" subjectId={id} />
+          ) : null}
+        </RecordPageTabs>
         </div>
 
         {/* Timeline sidebar */}

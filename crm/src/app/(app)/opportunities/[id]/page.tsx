@@ -10,6 +10,7 @@ import { Timeline } from "@/components/Timeline";
 import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
 import { RecordPageTabs } from "@/components/RecordPageTabs";
+import { RecordEmailHistory } from "@/components/RecordEmailHistory";
 import { TagEditor } from "@/components/TagEditor";
 import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
 import { listTagsForSubject } from "@/server/records/tags";
@@ -42,6 +43,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
   let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
   let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
+  let canViewEmails = false;
   let canEdit = false;
   let canAddNote = false;
   let canCreateTask = false;
@@ -57,6 +59,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "OPPORTUNITY");
     notes = await listNotesBySubject("OPPORTUNITY", id);
     appointments = await listAppointmentsBySubject("OPPORTUNITY", id);
+    canViewEmails = ctx.permissions.includes("EMAILS_VIEW");
     const capabilities = getRecordCapabilities("OPPORTUNITY", ctx.permissions);
     canEdit = capabilities.canEdit;
     canAddNote = capabilities.canAddNote;
@@ -120,6 +123,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
               { key: "overview", label: "Overview" },
               { key: "activity", label: "Activity", count: notes.length + appointments.length },
               { key: "files", label: "Files" },
+              ...(canViewEmails ? [{ key: "emails", label: "Emails" }] : []),
             ]}
           >
           {/* Details */}
@@ -189,7 +193,10 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
               <AttachmentsPanel subjectType="OPPORTUNITY" subjectId={id} canUpload={canEdit} canDelete={canDelete} />
             </div>
           </section>
-          </RecordPageTabs>
+                    {canViewEmails ? (
+            <RecordEmailHistory subjectType="OPPORTUNITY" subjectId={id} />
+          ) : null}
+        </RecordPageTabs>
         </div>
 
         {/* Timeline sidebar */}

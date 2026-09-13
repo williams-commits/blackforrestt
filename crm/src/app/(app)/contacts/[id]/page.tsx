@@ -11,6 +11,7 @@ import { Timeline } from "@/components/Timeline";
 import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
 import { RecordPageTabs } from "@/components/RecordPageTabs";
+import { RecordEmailHistory } from "@/components/RecordEmailHistory";
 import { TagEditor } from "@/components/TagEditor";
 import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
 import { listTagsForSubject } from "@/server/records/tags";
@@ -55,6 +56,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
     stage: { name: string };
   }> = [];
   let campaigns: Array<{ campaign: { name: string } }> = [];
+  let canViewEmails = false;
   let canEdit = false;
   let canAddNote = false;
   let canCreateTask = false;
@@ -95,6 +97,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
       },
     });
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "CONTACT", subjectId: id }, include: { campaign: true } });
+    canViewEmails = ctx.permissions.includes("EMAILS_VIEW");
     const capabilities = getRecordCapabilities("CONTACT", ctx.permissions);
     canEdit = capabilities.canEdit;
     canAddNote = capabilities.canAddNote;
@@ -152,6 +155,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
               { key: "opportunities", label: "Opportunities", count: relatedOpportunities.length },
               { key: "activity", label: "Activity", count: notes.length + appointments.length },
               { key: "files", label: "Files" },
+              ...(canViewEmails ? [{ key: "emails", label: "Emails" }] : []),
             ]}
           >
           <section className="card">
@@ -235,7 +239,10 @@ export default async function ContactDetailPage({ params }: PageProps) {
               <AttachmentsPanel subjectType="CONTACT" subjectId={id} canUpload={canUpload} canDelete={canDeleteFiles} />
             </div>
           </section>
-          </RecordPageTabs>
+                    {canViewEmails ? (
+            <RecordEmailHistory subjectType="CONTACT" subjectId={id} />
+          ) : null}
+        </RecordPageTabs>
         </div>
 
         <aside className="no-print">

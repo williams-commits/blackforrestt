@@ -88,10 +88,20 @@ export const MatchRules = z.object({
   externalId: z.boolean().default(true),
 });
 
+/**
+ * Field defaults applied when a row provides no value: the import's answer to
+ * the create form's Source input. A mapped, non-empty CSV column always wins;
+ * the default fills rows whose sheet has no source column (or empty cells).
+ */
+export const ImportDefaults = z.object({
+  source: z.string().trim().max(60).optional(),
+});
+
 export const ValidateInput = z.object({
   objectType: z.enum(ImportObjectTypes),
   mapping: z.record(z.string()),
   matchRules: MatchRules,
+  defaults: ImportDefaults.default({}),
   rows: z.array(z.record(z.string())).min(1).max(MAX_ROWS),
 });
 
@@ -116,6 +126,10 @@ export interface RowDuplicate {
 export interface TransformedRow {
   data: Record<string, unknown>;
   label: string;
+  /** Fields filled from ImportDefaults (not from the sheet). Defaults are a
+   *  CREATE-time concept — they must never overwrite an existing record on
+   *  UPDATE/UPSERT, so the executor strips them from update patches. */
+  defaultsApplied?: string[];
 }
 
 /** Normalize a mapped cell per field kind. */
@@ -227,6 +241,13 @@ export async function validateImport(
     statuses.map((status) => [`${status.appliesTo}:${status.name.toLowerCase()}`, status.id]),
   );
 
+  // Default source: only for objects that actually carry a source field
+  // (LEAD/CUSTOMER → "source", CONTACT → "leadSource"; ACCOUNT has none).
+  const sourceFieldKey = input.objectType === "CONTACT" ? "leadSource" : "source";
+  const hasSourceField = defs.some((def) => def.key === sourceFieldKey);
+  const defaultSource =
+    hasSourceField && input.defaults?.source ? normalizeText(input.defaults.source) : undefined;
+
   input.rows.forEach((row, index) => {
     const rowNumber = index + 2; // spreadsheet row: +1 header, +1 one-based
     const data: Record<string, unknown> = {};
@@ -271,7 +292,15 @@ export async function validateImport(
       }
     }
 
-    transformed.push(rowOk ? { data, label: label || `Row ${rowNumber}` } : null);
+    // Apply the default source when the row supplied none (unmapped column or
+    // empty cell) — a mapped, non-empty column already set the value above.
+    let defaultsApplied: string[] | undefined;
+    if (defaultSource && data[sourceFieldKey] === undefined) {
+      data[sourceFieldKey] = defaultSource;
+      defaultsApplied = [sourceFieldKey];
+    }
+
+    transformed.push(rowOk ? { data, label: label || `Row ${rowNumber}`, defaultsApplied } : null);
   });
 
   const emailKey = Object.entries(input.mapping).find(([, key]) => key === "email")?.[0];
@@ -398,6 +427,7 @@ export async function startImport(ctx: ScopedContext, input: z.infer<typeof Star
       strategy: input.strategy,
       mapping: input.mapping as never,
       matchRules: input.matchRules as never,
+      defaults: (input.defaults ?? {}) as never,
       payload: input.rows as never,
       totalRows: input.rows.length,
       fileKey: input.fileName ?? null,
@@ -463,6 +493,7 @@ async function processImportJob(jobId: string): Promise<void> {
     mapping,
     matchRules,
     rows,
+    defaults: job.defaults as { source?: string } | null ?? {},
   });
   const duplicateByRow = new Map<number, RowDuplicate>();
   for (const duplicate of validation.duplicates) duplicateByRow.set(duplicate.row, duplicate);
@@ -510,7 +541,11 @@ async function processImportJob(jobId: string): Promise<void> {
           });
         } else {
           // UPDATE / UPSERT: write mapped fields onto the matched record.
-          await updateImported(objectType, ctx, duplicate.existingId, transformed.data);
+          // Strip default-filled fields: an update writes only what the sheet
+          // actually provided for this row.
+          const patch = { ...transformed.data };
+          for (const key of transformed.defaultsApplied ?? []) delete patch[key];
+          await updateImported(objectType, ctx, duplicate.existingId, patch);
           counts.updated += 1;
         }
       } else if (strategy === "UPDATE") {

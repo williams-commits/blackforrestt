@@ -14,6 +14,7 @@ function transporter(): Transporter | null {
 
 export interface EmailPayload {
   to: string;
+  cc?: string;
   subject: string;
   text: string;
 }
@@ -28,6 +29,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
     await transport.sendMail({
       from,
       to: payload.to,
+      ...(payload.cc ? { cc: payload.cc } : {}),
       subject: payload.subject,
       text: payload.text,
       html: `<pre style="font-family:inherit;white-space:pre-wrap">${payload.text

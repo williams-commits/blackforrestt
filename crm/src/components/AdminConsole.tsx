@@ -1,5 +1,6 @@
 "use client";
 
+import { useCrmBranding } from "@/components/BrandingProvider";
 import { useCallback, useEffect, useState } from "react";
 import { useConfirmDialog } from "@/components/Dialogs";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
@@ -582,6 +583,7 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
 }
 
 export function PeopleTab({ canManage }: { canManage: boolean }) {
+  const branding = useCrmBranding();
   const [users, setUsers] = useState<Array<{
     id: string; email: string; name: string; status: string; lastLoginAt: string | null;
     role: { key: string; name: string };
@@ -680,7 +682,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
       <WorkspaceHeader
         eyebrow="Access management"
         title="Users & teams"
-        subtitle="Manage who can work in Patheo and how records are shared."
+        subtitle={`Manage who can work in ${branding.short} and how records are shared.`}
         actions={canManage ? <button type="button" onClick={() => setShowUserForm(true)} className="btn btn-primary"><span aria-hidden>+</span> New user</button> : undefined}
         metrics={[{ label: "Total users", value: users.length, tone: "brand" }, { label: "Active", value: users.filter((user) => user.status === "ACTIVE").length, tone: "success" }, { label: "Teams", value: teams.length, tone: "info" }, { label: "Roles", value: roles.length, tone: "warning" }]}
       />
@@ -856,6 +858,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
 }
 
 export function RolesTab() {
+  const branding = useCrmBranding();
   const [roles, setRoles] = useState<Array<{
     id: string; key: string; name: string; description: string | null; isSystem: boolean;
     scope: string;
@@ -927,7 +930,7 @@ export function RolesTab() {
       <WorkspaceHeader
         eyebrow="Access management"
         title="Roles & permissions"
-        subtitle="Control what each team role can see and do across Patheo."
+        subtitle={`Control what each team role can see and do across ${branding.short}.`}
         metrics={[{ label: "Roles", value: roles.length, tone: "brand" }, { label: "Categories", value: PERMISSION_CATEGORIES.length, tone: "info" }, { label: "Assigned users", value: roles.reduce((sum, role) => sum + role._count.users, 0), tone: "success" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
@@ -961,6 +964,7 @@ export function RolesTab() {
 }
 
 export function SettingsTab() {
+  const branding = useCrmBranding();
   const [settings, setSettings] = useState<Array<{ id: string; key: string; value: unknown }>>([]);
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
@@ -1003,7 +1007,7 @@ export function SettingsTab() {
       <WorkspaceHeader
         eyebrow="Workspace behavior"
         title="Settings"
-        subtitle="Manage organization-level defaults used throughout Patheo."
+        subtitle={`Manage organization-level defaults used throughout ${branding.short}.`}
         actions={<button type="button" onClick={() => setShowForm(true)} className="btn btn-primary"><span aria-hidden>+</span> Add setting</button>}
         metrics={[{ label: "Configured", value: settings.length, tone: "brand" }, { label: "Storage", value: "Workspace", tone: "info" }]}
       />
@@ -1134,6 +1138,7 @@ export function AuditTab() {
 
 
 export function IntegrationsTab() {
+  const branding = useCrmBranding();
   const [status, setStatus] = useState<{
     platformBridge: { enabled: boolean; url: string | null };
     email: { enabled: boolean; from: string | null };
@@ -1153,7 +1158,7 @@ export function IntegrationsTab() {
       <WorkspaceHeader
         eyebrow="Connections"
         title="Integrations"
-        subtitle="Connect Patheo to the services your team depends on."
+        subtitle={`Connect ${branding.short} to the services your team depends on.`}
         metrics={[
           { label: "Connections", value: status ? 2 : "—", tone: "brand" },
           { label: "Configured", value: status ? [status.platformBridge.enabled, status.email.enabled].filter(Boolean).length : "—", tone: "success" },
@@ -1194,6 +1199,7 @@ function IntegrationCard({ title, description, enabled, detail }: { title: strin
 
 
 export function ObjectsTab() {
+  const branding = useCrmBranding();
   const [objects, setObjects] = useState<Array<{
     id: string; key: string; name: string; pluralName: string;
     description: string | null; icon: string | null; active: boolean;
@@ -1262,7 +1268,7 @@ export function ObjectsTab() {
       <WorkspaceHeader
         eyebrow="Data model"
         title="Custom objects"
-        subtitle="Extend Patheo with record types that match how your business works."
+        subtitle={`Extend ${branding.short} with record types that match how your business works.`}
         actions={<button type="button" onClick={() => setShowForm(true)} className="btn btn-primary"><span aria-hidden>+</span> New object type</button>}
         metrics={[{ label: "Object types", value: objects.length, tone: "brand" }, { label: "Active", value: objects.filter((object) => object.active).length, tone: "success" }, { label: "Records", value: objects.reduce((sum, object) => sum + object._count.records, 0), tone: "info" }]}
       />

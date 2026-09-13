@@ -10,6 +10,7 @@ import { Timeline } from "@/components/Timeline";
 import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
 import { RecordPageTabs } from "@/components/RecordPageTabs";
+import { RecordEmailHistory } from "@/components/RecordEmailHistory";
 import { TagEditor } from "@/components/TagEditor";
 import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
 import { listTagsForSubject } from "@/server/records/tags";
@@ -45,6 +46,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
   let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
   let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
+  let canViewEmails = false;
   let canEdit = false;
   let canAddNote = false;
   let canCreateTask = false;
@@ -65,6 +67,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "LEAD");
     notes = await listNotesBySubject("LEAD", id);
     appointments = await listAppointmentsBySubject("LEAD", id);
+    canViewEmails = ctx.permissions.includes("EMAILS_VIEW");
     const capabilities = getRecordCapabilities("LEAD", ctx.permissions);
     canEdit = capabilities.canEdit;
     canAddNote = capabilities.canAddNote;
@@ -140,6 +143,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
               { key: "overview", label: "Overview" },
               { key: "activity", label: "Activity", count: noteCount + appointmentCount },
               { key: "files", label: "Files" },
+              ...(canViewEmails ? [{ key: "emails", label: "Emails" }] : []),
             ]}
           >
             {/* ── Overview tab ── */}
@@ -205,7 +209,10 @@ export default async function LeadDetailPage({ params }: PageProps) {
                 <AttachmentsPanel subjectType="LEAD" subjectId={id} canUpload={canUpload} canDelete={canDeleteFiles} />
               </div>
             </section>
-          </RecordPageTabs>
+                    {canViewEmails ? (
+            <RecordEmailHistory subjectType="LEAD" subjectId={id} />
+          ) : null}
+        </RecordPageTabs>
         </div>
 
         {/* Timeline sidebar (always visible) */}

@@ -18,8 +18,9 @@
     "test:conversion": "node --env-file-if-exists=.env --import tsx --test tests/conversion.test.ts",
     "test:import": "node --env-file-if-exists=.env --import tsx --test tests/import.test.ts",
     "test:platform": "node --env-file-if-exists=.env --import tsx --test tests/platform.test.ts",
-    "test:all": "npm run test:rbac && npm run test:conversion && npm run test:import && npm run test:platform && npm run test:workflow",
-    "test:workflow": "node --env-file-if-exists=.env --import tsx --test tests/workflow.test.ts"
+    "test:all": "npm run test:rbac && npm run test:conversion && npm run test:import && npm run test:emails && npm run test:platform && npm run test:workflow",
+    "test:workflow": "node --env-file-if-exists=.env --import tsx --test tests/workflow.test.ts",
+    "test:emails": "node --env-file-if-exists=.env --import tsx --test tests/emails.test.ts"
   },
   "prisma": {
     "seed": "node --env-file-if-exists=.env --import tsx prisma/seed.ts"

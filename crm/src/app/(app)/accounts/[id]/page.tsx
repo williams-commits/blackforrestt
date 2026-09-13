@@ -11,6 +11,7 @@ import { Timeline } from "@/components/Timeline";
 import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
 import { RecordPageTabs } from "@/components/RecordPageTabs";
+import { RecordEmailHistory } from "@/components/RecordEmailHistory";
 import { TagEditor } from "@/components/TagEditor";
 import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
 import { listTagsForSubject } from "@/server/records/tags";
@@ -45,6 +46,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
   let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
   let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
+  let canViewEmails = false;
   let canEdit = false;
   let canAddNote = false;
   let canCreateTask = false;
@@ -69,6 +71,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "ACCOUNT");
     notes = await listNotesBySubject("ACCOUNT", id);
     appointments = await listAppointmentsBySubject("ACCOUNT", id);
+    canViewEmails = ctx.permissions.includes("EMAILS_VIEW");
     const capabilities = getRecordCapabilities("ACCOUNT", ctx.permissions);
     canEdit = capabilities.canEdit;
     canAddNote = capabilities.canAddNote;
@@ -126,6 +129,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
               { key: "opportunities", label: "Opportunities", count: relatedOpportunities.length },
               { key: "activity", label: "Activity", count: notes.length + appointments.length },
               { key: "files", label: "Files" },
+              ...(canViewEmails ? [{ key: "emails", label: "Emails" }] : []),
             ]}
           >
           {/* Overview */}
@@ -256,7 +260,10 @@ export default async function AccountDetailPage({ params }: PageProps) {
               <AttachmentsPanel subjectType="ACCOUNT" subjectId={id} canUpload={canUpload} canDelete={canDeleteFiles} />
             </div>
           </section>
-          </RecordPageTabs>
+                    {canViewEmails ? (
+            <RecordEmailHistory subjectType="ACCOUNT" subjectId={id} />
+          ) : null}
+        </RecordPageTabs>
         </div>
 
         {/* Timeline sidebar */}

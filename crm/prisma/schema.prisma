@@ -154,24 +154,25 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  role            Role             @relation(fields: [roleId], references: [id])
+  role            Role                 @relation(fields: [roleId], references: [id])
   memberships     TeamMembership[]
-  ledTeams        Team[]           @relation("TeamLeader")
-  assignedLeads   Lead[]           @relation("LeadAssignee")
-  ownedAccounts   Account[]        @relation("AccountOwner")
-  ownedContacts   Contact[]        @relation("ContactOwner")
-  ownedCustomers  Customer[]       @relation("CustomerOwner")
-  ownedOpps       Opportunity[]    @relation("OpportunityOwner")
-  ownedCampaigns  Campaign[]       @relation("CampaignOwner")
-  ownedTasks      Task[]           @relation("TaskOwner")
-  authoredNotes   Note[]           @relation("NoteAuthor")
-  ownedAppts      Appointment[]    @relation("AppointmentOwner")
-  activityBy      ActivityEvent[]  @relation("ActivityActor")
+  ledTeams        Team[]               @relation("TeamLeader")
+  assignedLeads   Lead[]               @relation("LeadAssignee")
+  ownedAccounts   Account[]            @relation("AccountOwner")
+  ownedContacts   Contact[]            @relation("ContactOwner")
+  ownedCustomers  Customer[]           @relation("CustomerOwner")
+  ownedOpps       Opportunity[]        @relation("OpportunityOwner")
+  ownedCampaigns  Campaign[]           @relation("CampaignOwner")
+  ownedTasks      Task[]               @relation("TaskOwner")
+  authoredNotes   Note[]               @relation("NoteAuthor")
+  ownedAppts      Appointment[]        @relation("AppointmentOwner")
+  activityBy      ActivityEvent[]      @relation("ActivityActor")
+  emailsSent      EmailMessage[]       @relation("EmailSender")
   notifications   Notification[]
-  importsCreated  ImportJob[]      @relation("ImportCreator")
-  filesUploaded   Attachment[]     @relation("FileUploader")
-  mergesBy        MergeRecord[]    @relation("MergeActor")
-  settingsUpdated SystemSetting[]  @relation("SettingUpdater")
+  importsCreated  ImportJob[]          @relation("ImportCreator")
+  filesUploaded   Attachment[]         @relation("FileUploader")
+  mergesBy        MergeRecord[]        @relation("MergeActor")
+  settingsUpdated SystemSetting[]      @relation("SettingUpdater")
   views           SavedView[]
   auditLogs       AuditLog[]
   customRecords   CustomObjectRecord[] @relation("CustomRecordOwner")
@@ -180,11 +181,11 @@ model User {
 }
 
 model Role {
-  id          String    @id @default(cuid())
-  key         String    @unique
+  id          String           @id @default(cuid())
+  key         String           @unique
   name        String
   description String?
-  isSystem    Boolean   @default(false)
+  isSystem    Boolean          @default(false)
   scope       DataScope
   permissions RolePermission[]
   users       User[]
@@ -212,11 +213,11 @@ model Team {
   updatedAt DateTime @updatedAt
 
   memberships    TeamMembership[]
-  assignedLeads  Lead[]        @relation("LeadTeam")
-  contacts       Contact[]     @relation("ContactTeam")
-  ownedAccounts  Account[]     @relation("AccountTeam")
-  ownedCustomers Customer[]    @relation("CustomerTeam")
-  ownedOpps      Opportunity[] @relation("OpportunityTeam")
+  assignedLeads  Lead[]           @relation("LeadTeam")
+  contacts       Contact[]        @relation("ContactTeam")
+  ownedAccounts  Account[]        @relation("AccountTeam")
+  ownedCustomers Customer[]       @relation("CustomerTeam")
+  ownedOpps      Opportunity[]    @relation("OpportunityTeam")
 }
 
 model TeamMembership {
@@ -231,19 +232,66 @@ model TeamMembership {
   @@index([teamId])
 }
 
+// ── Email module ─────────────────────────────────────────────────────────────
+// Emails are first-class records: outbound sends persist here, inbound
+// messages arrive through the ingestion webhook, and both link to CRM
+// records by subjectType/subjectId exactly like notes, tasks and files.
+
+enum EmailDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum EmailStatus {
+  RECEIVED
+  SENT
+  FAILED
+}
+
+model EmailMessage {
+  id          String         @id @default(cuid())
+  direction   EmailDirection
+  status      EmailStatus
+  fromAddress String
+  toAddress   String
+  ccAddress   String?
+  subject     String
+  body        String
+  // Linked CRM record (nullable for unlinked inbound mail). Scope rules for
+  // reads follow the linked record; unlinked mail is visible to EMAILS_VIEW.
+  subjectType SubjectType?
+  subjectId   String?
+  // Conversation grouping: "<TYPE>:<id>" for record threads, the normalized
+  // subject for free conversations, so replies stay together.
+  threadKey   String
+  // RFC Message-ID — deduplicates webhook redeliveries.
+  messageId   String?        @unique
+  readAt      DateTime?
+  sentById    String?
+  sentBy      User?          @relation("EmailSender", fields: [sentById], references: [id])
+  error       String?
+  createdAt   DateTime       @default(now())
+
+  @@index([direction, readAt, createdAt])
+  @@index([subjectType, subjectId, createdAt])
+  @@index([threadKey, createdAt])
+  @@index([fromAddress])
+  @@index([toAddress])
+}
+
 // Append-only audit trail (mirrors the platform's AuditEvent pattern).
 // No update or delete path may ever exist for this model.
 model AuditLog {
-  id           String   @id @default(cuid())
-  actorUserId  String?
-  actor        User?    @relation(fields: [actorUserId], references: [id])
-  action       String
-  objectType   String
-  objectId     String?
-  before       Json?
-  after        Json?
-  ip           String?
-  createdAt    DateTime @default(now())
+  id          String   @id @default(cuid())
+  actorUserId String?
+  actor       User?    @relation(fields: [actorUserId], references: [id])
+  action      String
+  objectType  String
+  objectId    String?
+  before      Json?
+  after       Json?
+  ip          String?
+  createdAt   DateTime @default(now())
 
   @@index([actorUserId, createdAt])
   @@index([objectType, objectId, createdAt])
@@ -264,17 +312,17 @@ model SystemSetting {
 
 // Configurable record statuses for leads and contacts (never hard-coded).
 model RecordStatus {
-  id        String             @id @default(cuid())
+  id        String               @id @default(cuid())
   name      String
-  sortOrder Int                @default(0)
+  sortOrder Int                  @default(0)
   category  RecordStatusCategory
   appliesTo SubjectType
-  isDefault Boolean            @default(false)
+  isDefault Boolean              @default(false)
 
-  leads       Lead[]
-  accounts    Account[]
-  contacts    Contact[]
-  customers   Customer[]
+  leads     Lead[]
+  accounts  Account[]
+  contacts  Contact[]
+  customers Customer[]
 
   @@unique([name, appliesTo])
   @@index([appliesTo, sortOrder])
@@ -282,10 +330,10 @@ model RecordStatus {
 
 // Configurable lead potential tiers, separate from lifecycle status.
 model PotentialStatus {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   name      String
-  sortOrder Int      @default(0)
-  isDefault Boolean  @default(false)
+  sortOrder Int     @default(0)
+  isDefault Boolean @default(false)
   leads     Lead[]
 
   @@unique([name])
@@ -293,39 +341,39 @@ model PotentialStatus {
 }
 
 model Lead {
-  id               String    @id @default(cuid())
-  firstName        String
-  lastName         String
-  company          String?
-  email            String?
-  phone            String?
-  secondaryPhone   String?
-  country          String?
-  region           String?
-  source           String?
-  campaignId       String?
-  campaign         Campaign? @relation("LeadCampaign", fields: [campaignId], references: [id])
-  statusId         String
-  status           RecordStatus @relation(fields: [statusId], references: [id])
-  potentialStatusId String?
-  potentialStatus   PotentialStatus? @relation(fields: [potentialStatusId], references: [id])
-  score            Int       @default(0)
-  priority         Priority  @default(NORMAL)
-  assignedUserId   String?
-  assignedUser     User?     @relation("LeadAssignee", fields: [assignedUserId], references: [id])
-  assignedTeamId   String?
-  assignedTeam     Team?     @relation("LeadTeam", fields: [assignedTeamId], references: [id])
-  lastContactAt    DateTime?
-  nextFollowUpAt   DateTime?
-  externalId       String?   @unique
-  customFields     Json?
-  convertedContactId    String?
-  convertedCustomerId   String?
+  id                     String           @id @default(cuid())
+  firstName              String
+  lastName               String
+  company                String?
+  email                  String?
+  phone                  String?
+  secondaryPhone         String?
+  country                String?
+  region                 String?
+  source                 String?
+  campaignId             String?
+  campaign               Campaign?        @relation("LeadCampaign", fields: [campaignId], references: [id])
+  statusId               String
+  status                 RecordStatus     @relation(fields: [statusId], references: [id])
+  potentialStatusId      String?
+  potentialStatus        PotentialStatus? @relation(fields: [potentialStatusId], references: [id])
+  score                  Int              @default(0)
+  priority               Priority         @default(NORMAL)
+  assignedUserId         String?
+  assignedUser           User?            @relation("LeadAssignee", fields: [assignedUserId], references: [id])
+  assignedTeamId         String?
+  assignedTeam           Team?            @relation("LeadTeam", fields: [assignedTeamId], references: [id])
+  lastContactAt          DateTime?
+  nextFollowUpAt         DateTime?
+  externalId             String?          @unique
+  customFields           Json?
+  convertedContactId     String?
+  convertedCustomerId    String?
   convertedOpportunityId String?
-  convertedAt      DateTime?
-  deletedAt        DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  convertedAt            DateTime?
+  deletedAt              DateTime?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
 
   @@index([email])
   @@index([phone])
@@ -340,7 +388,7 @@ model Lead {
 }
 
 model Account {
-  id           String    @id @default(cuid())
+  id           String        @id @default(cuid())
   name         String
   industry     String?
   companySize  String?
@@ -350,19 +398,19 @@ model Account {
   city         String?
   country      String?
   ownerUserId  String
-  owner        User      @relation("AccountOwner", fields: [ownerUserId], references: [id])
+  owner        User          @relation("AccountOwner", fields: [ownerUserId], references: [id])
   teamId       String?
-  team         Team?     @relation("AccountTeam", fields: [teamId], references: [id])
+  team         Team?         @relation("AccountTeam", fields: [teamId], references: [id])
   statusId     String?
   status       RecordStatus? @relation(fields: [statusId], references: [id])
-  externalId   String?   @unique
+  externalId   String?       @unique
   customFields Json?
   deletedAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
-  contacts       Contact[]
-  opportunities  Opportunity[]
+  contacts      Contact[]
+  opportunities Opportunity[]
 
   @@index([name])
   @@index([statusId])
@@ -370,31 +418,31 @@ model Account {
 }
 
 model Contact {
-  id           String    @id @default(cuid())
+  id           String        @id @default(cuid())
   firstName    String
   lastName     String
   email        String?
   phone        String?
   jobTitle     String?
   accountId    String?
-  account      Account?  @relation(fields: [accountId], references: [id])
+  account      Account?      @relation(fields: [accountId], references: [id])
   ownerUserId  String
-  owner        User      @relation("ContactOwner", fields: [ownerUserId], references: [id])
+  owner        User          @relation("ContactOwner", fields: [ownerUserId], references: [id])
   teamId       String?
-  team         Team?     @relation("ContactTeam", fields: [teamId], references: [id])
+  team         Team?         @relation("ContactTeam", fields: [teamId], references: [id])
   leadSource   String?
   campaignId   String?
-  campaign     Campaign? @relation("ContactCampaign", fields: [campaignId], references: [id])
+  campaign     Campaign?     @relation("ContactCampaign", fields: [campaignId], references: [id])
   statusId     String?
   status       RecordStatus? @relation(fields: [statusId], references: [id])
-  externalId   String?   @unique
+  externalId   String?       @unique
   customFields Json?
   deletedAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
-  customer       Customer?
-  opportunities  Opportunity[]
+  customer      Customer?
+  opportunities Opportunity[]
 
   @@index([email])
   @@index([phone])
@@ -406,29 +454,29 @@ model Contact {
 // An active client. Optionally linked to a Contact (1:1) and, once matching
 // is confirmed by an operator, to a registered trading-platform user.
 model Customer {
-  id             String    @id @default(cuid())
+  id             String        @id @default(cuid())
   firstName      String
   lastName       String
   email          String?
   phone          String?
-  contactId      String?   @unique
-  contact        Contact?  @relation(fields: [contactId], references: [id])
-  platformUserId String?   @unique
+  contactId      String?       @unique
+  contact        Contact?      @relation(fields: [contactId], references: [id])
+  platformUserId String?       @unique
   ownerUserId    String
-  owner          User      @relation("CustomerOwner", fields: [ownerUserId], references: [id])
+  owner          User          @relation("CustomerOwner", fields: [ownerUserId], references: [id])
   teamId         String?
-  team           Team?     @relation("CustomerTeam", fields: [teamId], references: [id])
+  team           Team?         @relation("CustomerTeam", fields: [teamId], references: [id])
   statusId       String?
   status         RecordStatus? @relation(fields: [statusId], references: [id])
   source         String?
   campaignId     String?
-  campaign       Campaign? @relation("CustomerCampaign", fields: [campaignId], references: [id])
+  campaign       Campaign?     @relation("CustomerCampaign", fields: [campaignId], references: [id])
   customFields   Json?
   deletedAt      DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  opportunities  Opportunity[]
+  opportunities Opportunity[]
 
   @@index([email])
   @@index([ownerUserId])
@@ -461,33 +509,33 @@ model PipelineStage {
 }
 
 model Opportunity {
-  id               String            @id @default(cuid())
-  name             String
-  accountId        String?
-  account          Account?          @relation(fields: [accountId], references: [id])
-  contactId        String?
-  contact          Contact?          @relation(fields: [contactId], references: [id])
-  customerId       String?
-  customer         Customer?         @relation(fields: [customerId], references: [id])
-  ownerUserId      String
-  owner            User              @relation("OpportunityOwner", fields: [ownerUserId], references: [id])
-  teamId           String?
-  team             Team?             @relation("OpportunityTeam", fields: [teamId], references: [id])
-  pipelineId       String
-  pipeline         Pipeline          @relation(fields: [pipelineId], references: [id])
-  stageId          String
-  stage            PipelineStage     @relation(fields: [stageId], references: [id])
-  value            BigInt?
-  currency         String            @default("USD")
-  probability      Int               @default(0)
-  expectedCloseAt  DateTime?
-  source           String?
-  status           OpportunityStatus @default(OPEN)
-  closedAt         DateTime?
-  customFields     Json?
-  deletedAt        DateTime?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id              String            @id @default(cuid())
+  name            String
+  accountId       String?
+  account         Account?          @relation(fields: [accountId], references: [id])
+  contactId       String?
+  contact         Contact?          @relation(fields: [contactId], references: [id])
+  customerId      String?
+  customer        Customer?         @relation(fields: [customerId], references: [id])
+  ownerUserId     String
+  owner           User              @relation("OpportunityOwner", fields: [ownerUserId], references: [id])
+  teamId          String?
+  team            Team?             @relation("OpportunityTeam", fields: [teamId], references: [id])
+  pipelineId      String
+  pipeline        Pipeline          @relation(fields: [pipelineId], references: [id])
+  stageId         String
+  stage           PipelineStage     @relation(fields: [stageId], references: [id])
+  value           BigInt?
+  currency        String            @default("USD")
+  probability     Int               @default(0)
+  expectedCloseAt DateTime?
+  source          String?
+  status          OpportunityStatus @default(OPEN)
+  closedAt        DateTime?
+  customFields    Json?
+  deletedAt       DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   @@index([pipelineId, stageId])
   @@index([ownerUserId])
@@ -510,9 +558,9 @@ model Campaign {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  leads     Lead[]          @relation("LeadCampaign")
-  contacts  Contact[]       @relation("ContactCampaign")
-  customers Customer[]      @relation("CustomerCampaign")
+  leads     Lead[]           @relation("LeadCampaign")
+  contacts  Contact[]        @relation("ContactCampaign")
+  customers Customer[]       @relation("CustomerCampaign")
   members   CampaignMember[]
 
   @@index([status])
@@ -533,8 +581,8 @@ model CampaignMember {
 }
 
 model Tag {
-  id    String @id @default(cuid())
-  name  String @unique
+  id    String  @id @default(cuid())
+  name  String  @unique
   color String?
 
   links TagLink[]
@@ -555,17 +603,17 @@ model TagLink {
 // owning record's customFields JSONB column, validated against this
 // registry on every write.
 model CustomFieldDef {
-  id         String    @id @default(cuid())
+  id         String      @id @default(cuid())
   objectType SubjectType
   key        String
   label      String
   fieldType  FieldType
   options    Json?
-  required   Boolean   @default(false)
-  sortOrder  Int       @default(0)
-  active     Boolean   @default(true)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  required   Boolean     @default(false)
+  sortOrder  Int         @default(0)
+  active     Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
   @@unique([objectType, key])
   @@index([objectType, active])
@@ -574,33 +622,33 @@ model CustomFieldDef {
 // ────────────────────── Activities & timeline ──────────────────────
 
 model Task {
-  id          String     @id @default(cuid())
-  title       String
-  description String?
-  ownerUserId String
-  owner       User       @relation("TaskOwner", fields: [ownerUserId], references: [id])
-  dueAt       DateTime?
-  priority    Priority   @default(NORMAL)
-  status      TaskStatus @default(OPEN)
-  completedAt DateTime?
+  id                String       @id @default(cuid())
+  title             String
+  description       String?
+  ownerUserId       String
+  owner             User         @relation("TaskOwner", fields: [ownerUserId], references: [id])
+  dueAt             DateTime?
+  priority          Priority     @default(NORMAL)
+  status            TaskStatus   @default(OPEN)
+  completedAt       DateTime?
   overdueNotifiedAt DateTime?
-  subjectType SubjectType?
-  subjectId   String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  subjectType       SubjectType?
+  subjectId         String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   @@index([ownerUserId, dueAt, status])
   @@index([subjectType, subjectId])
 }
 
 model Note {
-  id          String   @id @default(cuid())
-  body        String
+  id           String      @id @default(cuid())
+  body         String
   authorUserId String
-  author      User     @relation("NoteAuthor", fields: [authorUserId], references: [id])
-  subjectType SubjectType
-  subjectId   String
-  createdAt   DateTime @default(now())
+  author       User        @relation("NoteAuthor", fields: [authorUserId], references: [id])
+  subjectType  SubjectType
+  subjectId    String
+  createdAt    DateTime    @default(now())
 
   @@index([subjectType, subjectId, createdAt])
   @@index([authorUserId])
@@ -658,30 +706,37 @@ model SavedView {
 // ──────────────────────────── Import system ────────────────────────────
 
 model ImportJob {
-  id             String          @id @default(cuid())
+  id             String           @id @default(cuid())
   source         ImportSource
   objectType     ImportObjectType
-  status         ImportStatus    @default(DRAFT)
-  strategy       ImportStrategy  @default(CREATE)
+  status         ImportStatus     @default(DRAFT)
+  strategy       ImportStrategy   @default(CREATE)
   mapping        Json?
   matchRules     Json?
-  /** The uploaded, parsed rows (bounded by MAX_ROWS) — the worker's input. */
+  /**
+   * Field defaults chosen in the wizard (e.g. default source) — persisted
+   * so retries replay the exact original import configuration.
+   */
+  defaults       Json?
+  /**
+   * The uploaded, parsed rows (bounded by MAX_ROWS) — the worker's input.
+   */
   payload        Json?
-  totalRows      Int             @default(0)
-  processedRows  Int             @default(0)
-  createdCount   Int             @default(0)
-  updatedCount   Int             @default(0)
-  skippedCount   Int             @default(0)
-  duplicateCount Int             @default(0)
-  errorCount     Int             @default(0)
+  totalRows      Int              @default(0)
+  processedRows  Int              @default(0)
+  createdCount   Int              @default(0)
+  updatedCount   Int              @default(0)
+  skippedCount   Int              @default(0)
+  duplicateCount Int              @default(0)
+  errorCount     Int              @default(0)
   fileKey        String?
   errorReportKey String?
   createdById    String
-  createdBy      User            @relation("ImportCreator", fields: [createdById], references: [id])
+  createdBy      User             @relation("ImportCreator", fields: [createdById], references: [id])
   startedAt      DateTime?
   finishedAt     DateTime?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   errors ImportError[]
 
@@ -703,13 +758,13 @@ model ImportError {
 }
 
 model ImportMapping {
-  id         String       @id @default(cuid())
+  id         String           @id @default(cuid())
   name       String
   source     ImportSource
   objectType ImportObjectType
   mapping    Json
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   @@unique([name, source, objectType])
 }
@@ -729,16 +784,16 @@ model Notification {
 }
 
 model Attachment {
-  id              String      @id @default(cuid())
-  filename        String
-  mimeType        String
-  size            BigInt
-  storageKey      String
-  uploaderUserId  String
-  uploader        User        @relation("FileUploader", fields: [uploaderUserId], references: [id])
-  subjectType     SubjectType
-  subjectId       String
-  createdAt       DateTime    @default(now())
+  id             String      @id @default(cuid())
+  filename       String
+  mimeType       String
+  size           BigInt
+  storageKey     String
+  uploaderUserId String
+  uploader       User        @relation("FileUploader", fields: [uploaderUserId], references: [id])
+  subjectType    SubjectType
+  subjectId      String
+  createdAt      DateTime    @default(now())
 
   @@index([subjectType, subjectId, createdAt])
 }
@@ -758,7 +813,6 @@ model MergeRecord {
   @@index([objectType, primaryId])
 }
 
-
 // ─────────────────── Admin-defined custom objects ───────────────────
 
 // Definition of a custom object type (e.g. "Properties", "Deals", "Vendors").
@@ -766,11 +820,11 @@ model MergeRecord {
 model CustomObject {
   id          String   @id @default(cuid())
   key         String   @unique // URL slug, e.g. "properties"
-  name        String           // singular, e.g. "Property"
-  pluralName  String           // e.g. "Properties"
+  name        String // singular, e.g. "Property"
+  pluralName  String // e.g. "Properties"
   description String?
-  icon        String?  // lucide icon name
-  fields      Json?    // [{key,label,type,required,options,sortOrder}]
+  icon        String? // lucide icon name
+  fields      Json? // [{key,label,type,required,options,sortOrder}]
   active      Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
@@ -781,18 +835,18 @@ model CustomObject {
 
 // A record of a custom object — values live in JSONB keyed by the definition.
 model CustomObjectRecord {
-  id              String       @id @default(cuid())
-  customObjectId  String
-  customObject    CustomObject @relation(fields: [customObjectId], references: [id], onDelete: Cascade)
-  name            String // denormalized display name (first required text field)
-  data            Json // field values, validated against the definition
-  ownerUserId     String
-  owner           User         @relation("CustomRecordOwner", fields: [ownerUserId], references: [id])
-  assignedTeamId  String?
-  externalId      String?      @unique
-  deletedAt       DateTime?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  customObjectId String
+  customObject   CustomObject @relation(fields: [customObjectId], references: [id], onDelete: Cascade)
+  name           String // denormalized display name (first required text field)
+  data           Json // field values, validated against the definition
+  ownerUserId    String
+  owner          User         @relation("CustomRecordOwner", fields: [ownerUserId], references: [id])
+  assignedTeamId String?
+  externalId     String?      @unique
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@index([customObjectId, deletedAt])
   @@index([ownerUserId])

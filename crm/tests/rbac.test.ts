@@ -9,7 +9,7 @@ import { createAppointment } from "../src/server/records/appointments";
 import { linkTag } from "../src/server/records/tags";
 import { subjectPermission } from "../src/server/records/subjects";
 import { convertLead } from "../src/server/records/conversion";
-import { PERMISSION_CATEGORIES } from "../src/server/permissions";
+import { ALL_PERMISSIONS, PERMISSION_CATEGORIES } from "../src/server/permissions";
 
 /**
  * Authorization + scope suite: the permission matrix and row visibility
@@ -178,4 +178,174 @@ test("independent action permissions deny only their own operation", async () =>
   assert.equal(subjectPermission("OPPORTUNITY", "CREATE_TASK"), "OPPORTUNITIES_CREATE_TASK");
 
   await prisma.lead.delete({ where: { id: leadId } });
+});
+
+// ── Generic bulk actions: per-action permission model ──────────────────────
+// Regression: routes used to blanket-require <OBJECT>_EDIT, so a status-only
+// user got "Forbidden — LEADS_EDIT permission required" on bulk status
+// changes. The service is now the per-action authority (ASSIGN, CHANGE_STATUS,
+// MANAGE_TAGS, CREATE_TASK, DELETE) — these tests pin that contract.
+import { bulkRecords } from "../src/server/records/bulk";
+
+test("bulk status change requires CHANGE_STATUS, not EDIT", async () => {
+  const rep = await repContext();
+  const lead = await makeLead(rep, "bulk-status-perm");
+  const status = await prisma.recordStatus.findFirstOrThrow({ where: { appliesTo: "LEAD", name: "Contacted" } });
+
+  // Status-only user (no LEADS_EDIT) CAN bulk-status — the reported bug.
+  const statusOnly = { ...rep, permissions: rep.permissions.filter((permission) => permission !== "LEADS_EDIT") };
+  const result = await bulkRecords(statusOnly, "leads", { action: "status", ids: [lead], statusId: status.id });
+  assert.equal(result.affected, 1, "status-only user bulk-statuses");
+
+  // EDIT without CHANGE_STATUS cannot bulk-status. (Explicit sets: the DB
+  // role matrix is admin-editable, so never assume what the seed granted.)
+  const editorOnly = { ...rep, permissions: [...new Set([...rep.permissions, "LEADS_EDIT" as const])].filter((permission) => permission !== "LEADS_CHANGE_STATUS") };
+  await assertThrows(
+    () => bulkRecords(editorOnly, "leads", { action: "status", ids: [lead], statusId: status.id }),
+    403,
+    "editor without CHANGE_STATUS bulk status",
+  );
+
+  await prisma.lead.delete({ where: { id: lead } });
+});
+
+test("bulk tag requires MANAGE_TAGS regardless of EDIT", async () => {
+  const rep = await repContext();
+  const lead = await makeLead(rep, "bulk-tag-perm");
+  const tag = await prisma.tag.create({ data: { name: `perm-${Date.now()}` } });
+
+  // EDIT but no MANAGE_TAGS → denied (explicit set: don't trust the seed).
+  const editorOnly = { ...rep, permissions: rep.permissions.filter((permission) => permission !== "LEADS_MANAGE_TAGS") };
+  await assertThrows(
+    () => bulkRecords(editorOnly, "leads", { action: "tag", ids: [lead], tagId: tag.id }),
+    403,
+    "editor without MANAGE_TAGS bulk tag",
+  );
+
+  // Tags-only user (no EDIT) → allowed.
+  const tagsOnly = { ...rep, permissions: [...rep.permissions, "LEADS_MANAGE_TAGS" as const] };
+  const result = await bulkRecords(tagsOnly, "leads", { action: "tag", ids: [lead], tagId: tag.id });
+  assert.equal(result.affected, 1, "tags-capability user bulk-tags");
+
+  await prisma.lead.delete({ where: { id: lead } });
+  await prisma.tag.delete({ where: { id: tag.id } });
+});
+
+test("bulk task requires the object's CREATE_TASK, not EDIT", async () => {
+  const rep = await repContext();
+  const lead = await makeLead(rep, "bulk-task-perm");
+
+  // REP holds LEADS_CREATE_TASK by default → allowed even with EDIT removed.
+  const taskOnly = { ...rep, permissions: rep.permissions.filter((permission) => permission !== "LEADS_EDIT") };
+  const created = await bulkRecords(taskOnly, "leads", { action: "task", ids: [lead], title: "Bulk task check" });
+  assert.equal(created.affected, 1, "task-capability user bulk-creates tasks");
+
+  // Without LEADS_CREATE_TASK → denied (this action previously had NO check).
+  const noTask = { ...rep, permissions: rep.permissions.filter((permission) => permission !== "LEADS_CREATE_TASK") };
+  await assertThrows(
+    () => bulkRecords(noTask, "leads", { action: "task", ids: [lead], title: "Should fail" }),
+    403,
+    "user without CREATE_TASK bulk task",
+  );
+
+  // Cross-object: CONTACTS_CREATE_TASK governs the contacts endpoint.
+  const contact = await prisma.contact.create({
+    data: { firstName: "Bulk", lastName: "Perm", ownerUserId: rep.userId },
+  });
+  const noContactTask = { ...rep, permissions: rep.permissions.filter((permission) => permission !== "CONTACTS_CREATE_TASK") };
+  await assertThrows(
+    () => bulkRecords(noContactTask, "contacts", { action: "task", ids: [contact.id], title: "Should fail" }),
+    403,
+    "user without CONTACTS_CREATE_TASK bulk task",
+  );
+  const withContactTask = { ...rep, permissions: [...rep.permissions, "CONTACTS_CREATE_TASK" as const] };
+  const contactResult = await bulkRecords(withContactTask, "contacts", { action: "task", ids: [contact.id], title: "Contact task" });
+  assert.equal(contactResult.affected, 1);
+
+  await prisma.contact.delete({ where: { id: contact.id } });
+  await prisma.lead.delete({ where: { id: lead } });
+});
+
+test("every permission is visible in the roles editor categories", () => {
+  // Regression: FILES_*, USERS_MANAGE, TEAMS_MANAGE, IMPORTS_MANAGE,
+  // DASHBOARDS_VIEW and ROLES_MANAGE were grantable but rendered nowhere —
+  // "Disable all" silently kept them.
+  const categorized = new Set(PERMISSION_CATEGORIES.flatMap((category) => category.permissions.map(({ key }) => key)));
+  for (const permission of ALL_PERMISSIONS) {
+    assert.ok(categorized.has(permission), `${permission} missing from PERMISSION_CATEGORIES (invisible in roles UI)`);
+  }
+});
+
+type ScopedContextLike = Parameters<typeof updateLead>[0];
+
+// ── Status × potential-status independence matrix ───────────────────────────
+// Admin can toggle each permission independently; the backend must enforce
+// exactly the toggled capability — never one in place of the other, and never
+// a fallthrough that silently allows both.
+import { updateContact } from "../src/server/records/contacts";
+import { updateAccount } from "../src/server/records/accounts";
+import { updateCustomer } from "../src/server/records/customers";
+
+const WITHOUT = (permissions: readonly string[], remove: string) => permissions.filter((p) => p !== remove);
+const WITH = (permissions: readonly string[], add: string) => [...new Set([...permissions, add])];
+
+test("record status and potential status are enforced independently (leads)", async () => {
+  const rep = await repContext();
+  const lead = await makeLead(rep, "status-matrix");
+  const status = await prisma.recordStatus.findFirstOrThrow({ where: { appliesTo: "LEAD", name: "Contacted" } });
+  const potential = await prisma.potentialStatus.findFirstOrThrow({ where: { isDefault: true } });
+  const other = await prisma.potentialStatus.findFirstOrThrow({ where: { isDefault: false } });
+
+  // Permission sets are applied to a copy of the actor's context — the
+  // scope fields (userId/teamIds) must always stay intact.
+  const as = (permissions: string[]): ScopedContextLike => ({ ...rep, permissions });
+
+  // Combo A: status OFF, potential ON → status denied, potential allowed.
+  const comboA = as(WITH(WITHOUT(rep.permissions, "LEADS_CHANGE_STATUS"), "LEADS_CHANGE_POTENTIAL_STATUS"));
+  await assertThrows(() => updateLead(comboA, lead, { statusId: status.id }), 403, "A: status denied");
+  await updateLead(comboA, lead, { potentialStatusId: other.id }); // A: potential allowed
+
+  // Combo B: status ON, potential OFF → status allowed, potential denied.
+  const comboB = as(WITH(WITHOUT(rep.permissions, "LEADS_CHANGE_POTENTIAL_STATUS"), "LEADS_CHANGE_STATUS"));
+  await updateLead(comboB, lead, { statusId: status.id }); // B: status allowed
+  await assertThrows(() => updateLead(comboB, lead, { potentialStatusId: potential.id }), 403, "B: potential denied");
+
+  // Combo C: both OFF → both denied.
+  const comboC = as(WITHOUT(WITHOUT(rep.permissions, "LEADS_CHANGE_STATUS"), "LEADS_CHANGE_POTENTIAL_STATUS"));
+  await assertThrows(() => updateLead(comboC, lead, { statusId: status.id }), 403, "C: status denied");
+  await assertThrows(() => updateLead(comboC, lead, { potentialStatusId: other.id }), 403, "C: potential denied");
+
+  await prisma.lead.delete({ where: { id: lead } });
+});
+
+test("record status permission is enforced per module", async () => {
+  const rep = await repContext();
+  const leadStatus = await prisma.recordStatus.findFirstOrThrow({ where: { appliesTo: "LEAD", name: "Contacted" } });
+
+  const contact = await prisma.contact.create({ data: { firstName: "Matrix", lastName: "Contact", ownerUserId: rep.userId } });
+  const account = await prisma.account.create({ data: { name: "Matrix Account", ownerUserId: rep.userId } });
+  const customer = await prisma.customer.create({ data: { firstName: "Matrix", lastName: "Customer", ownerUserId: rep.userId } });
+  const byApplies = async (applies: string) => prisma.recordStatus.findFirstOrThrow({ where: { appliesTo: applies, isDefault: false } });
+
+  for (const [name, prefix, update, row, statusRow] of [
+    ["contacts", "CONTACTS", updateContact, contact, await byApplies("CONTACT")] as const,
+    ["accounts", "ACCOUNTS", updateAccount, account, await byApplies("ACCOUNT")] as const,
+    ["customers", "CUSTOMERS", updateCustomer, customer, await byApplies("CUSTOMER")] as const,
+  ]) {
+    const run = update as unknown as (ctx: ScopedContextLike, id: string, input: Record<string, unknown>) => Promise<unknown>;
+    // OFF (even with EDIT): denied.
+    const off = { ...rep, permissions: WITHOUT(rep.permissions, `${prefix}_CHANGE_STATUS`) };
+    await assertThrows(() => run(off, row.id, { statusId: statusRow.id }), 403, `${name}: status denied when off`);
+    // ON (without EDIT): allowed.
+    const on = { ...rep, permissions: WITHOUT(WITH(rep.permissions, `${prefix}_CHANGE_STATUS`), `${prefix}_EDIT`) };
+    await run(on, row.id, { statusId: statusRow.id });
+    // Cross-module: another object's CHANGE_STATUS does not unlock this one.
+    const cross = { ...rep, permissions: WITH(WITHOUT(rep.permissions, `${prefix}_CHANGE_STATUS`), "LEADS_CHANGE_STATUS") };
+    await assertThrows(() => run(cross, row.id, { statusId: statusRow.id }), 403, `${name}: cross-object permission does not unlock`);
+    void leadStatus;
+  }
+
+  await prisma.customer.delete({ where: { id: customer.id } });
+  await prisma.account.delete({ where: { id: account.id } });
+  await prisma.contact.delete({ where: { id: contact.id } });
 });

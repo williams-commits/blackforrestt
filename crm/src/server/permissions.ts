@@ -22,7 +22,8 @@ export type Permission = CorePermission |
   "USERS_VIEW" | "USERS_CREATE" | "USERS_EDIT" | "USERS_SUSPEND" | "USERS_MANAGE_ROLES" |
   "TEAMS_VIEW" | "TEAMS_CREATE" | "TEAMS_EDIT" | "TEAMS_DELETE" | "TEAMS_MANAGE_MEMBERSHIP" |
   "FILES_READ" | "FILES_UPLOAD" | "FILES_DELETE" | "USERS_MANAGE" | "TEAMS_MANAGE" | "SETTINGS_MANAGE" | "IMPORTS_MANAGE" | "AUDIT_VIEW" | "DASHBOARDS_VIEW" | "ROLES_MANAGE" |
-  "CAMPAIGNS_VIEW" | "CAMPAIGNS_CREATE" | "CAMPAIGNS_EDIT" | "CAMPAIGNS_DELETE" | "CAMPAIGNS_EXPORT";
+  "CAMPAIGNS_VIEW" | "CAMPAIGNS_CREATE" | "CAMPAIGNS_EDIT" | "CAMPAIGNS_DELETE" | "CAMPAIGNS_EXPORT"
+  | "EMAILS_VIEW" | "EMAILS_SEND";
 
 export interface PermissionCategory {
   key: string;
@@ -68,7 +69,32 @@ export const PERMISSION_CATEGORIES: readonly PermissionCategory[] = [
   category("TEAMS", "Teams", ["VIEW", "CREATE", "EDIT", "DELETE", "MANAGE_MEMBERSHIP"]),
   category("CAMPAIGNS", "Campaigns", ["VIEW", "CREATE", "EDIT", "DELETE", "EXPORT"]),
   { key: "AUDIT", label: "Audit", permissions: [{ key: "AUDIT_VIEW", label: "View" }] },
+  {
+    key: "EMAILS",
+    label: "Emails",
+    permissions: [
+      { key: "EMAILS_VIEW", label: "View mailbox & record history" },
+      { key: "EMAILS_SEND", label: "Send from records" },
+    ],
+  },
   { key: "SETTINGS", label: "Settings", permissions: [{ key: "SETTINGS_MANAGE", label: "Manage" }] },
+  {
+    // Platform-level permissions referenced by the code but previously listed
+    // ONLY in the flat ALL_PERMISSIONS tail — invisible and untogglable in the
+    // roles editor even while granted, so "Disable all" silently kept them.
+    key: "PLATFORM",
+    label: "Platform",
+    permissions: [
+      { key: "FILES_READ", label: "Attachments: view" },
+      { key: "FILES_UPLOAD", label: "Attachments: upload" },
+      { key: "FILES_DELETE", label: "Attachments: delete" },
+      { key: "USERS_MANAGE", label: "Users: manage" },
+      { key: "TEAMS_MANAGE", label: "Teams: manage" },
+      { key: "IMPORTS_MANAGE", label: "Imports: manage" },
+      { key: "DASHBOARDS_VIEW", label: "Dashboards: view" },
+      { key: "ROLES_MANAGE", label: "Roles: manage" },
+    ],
+  },
 ];
 
 // Deduplicated: categories already contribute the CAMPAIGNS_* set (and any
@@ -93,9 +119,9 @@ export interface RoleDefinition { key: RoleKey; name: string; description: strin
 export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
   { key: "SUPER_ADMIN", name: "Super Admin", description: "Full control, including role and permission administration.", scope: "ORG", permissions: [...ALL_PERMISSIONS] },
   { key: "ADMIN", name: "Admin", description: "Manages users, teams, configuration, imports, and audit.", scope: "ORG", permissions: ALL_PERMISSIONS.filter((permission) => permission !== "ROLES_MANAGE") },
-  { key: "MANAGER", name: "Manager", description: "Org-wide record management, imports, and reporting.", scope: "HIERARCHY", permissions: [...coreManage, ...activity, ...activityManage, ...leadControls, "LEADS_IMPORT", "FILES_READ", "FILES_UPLOAD", "FILES_DELETE", "IMPORTS_MANAGE", "REPORTS_VIEW", "DASHBOARDS_VIEW"] },
-  { key: "TEAM_LEAD", name: "Team Lead", description: "Manages the team's records, assignments, and exports.", scope: "TEAM", permissions: [...coreManage, ...activity, ...activityManage, ...leadControls, "FILES_READ", "FILES_UPLOAD", "REPORTS_VIEW", "DASHBOARDS_VIEW"] },
-  { key: "REP", name: "Rep", description: "Works their own records; cannot delete or import.", scope: "OWN", permissions: [...coreWrite, ...activity, ...activityCreate, "LEADS_EXPORT", "TASKS_EXPORT", "FILES_READ", "FILES_UPLOAD", "REPORTS_VIEW", "DASHBOARDS_VIEW"] },
+  { key: "MANAGER", name: "Manager", description: "Org-wide record management, imports, and reporting.", scope: "HIERARCHY", permissions: [...coreManage, ...activity, ...activityManage, ...leadControls, "LEADS_IMPORT", "FILES_READ", "FILES_UPLOAD", "FILES_DELETE", "IMPORTS_MANAGE", "REPORTS_VIEW", "DASHBOARDS_VIEW", "EMAILS_VIEW", "EMAILS_SEND"] },
+  { key: "TEAM_LEAD", name: "Team Lead", description: "Manages the team's records, assignments, and exports.", scope: "TEAM", permissions: [...coreManage, ...activity, ...activityManage, ...leadControls, "FILES_READ", "FILES_UPLOAD", "REPORTS_VIEW", "DASHBOARDS_VIEW", "EMAILS_VIEW", "EMAILS_SEND"] },
+  { key: "REP", name: "Rep", description: "Works their own records; cannot delete or import.", scope: "OWN", permissions: [...coreWrite, ...activity, ...activityCreate, "LEADS_EXPORT", "TASKS_EXPORT", "FILES_READ", "FILES_UPLOAD", "REPORTS_VIEW", "DASHBOARDS_VIEW", "EMAILS_VIEW", "EMAILS_SEND"] },
   { key: "VIEWER", name: "Viewer", description: "Read-only org-wide access for observers and auditors.", scope: "ORG", permissions: [...CORE_OBJECTS.map((object) => `${object}_VIEW` as CorePermission), "TASKS_VIEW", "APPOINTMENTS_VIEW", "NOTES_VIEW", "TAGS_VIEW", "REPORTS_VIEW", "FILES_READ", "DASHBOARDS_VIEW"] },
 ];
 export function permissionsForRoleKey(key: RoleKey): readonly Permission[] {

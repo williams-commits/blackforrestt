@@ -1,5 +1,6 @@
 "use client";
 
+import { useCrmBranding } from "@/components/BrandingProvider";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -35,6 +36,7 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
     label: "Work",
     items: [
       { href: "/tasks", label: "Tasks", icon: "check-square" },
+      { href: "/emails", label: "Emails", icon: "mail" },
       { href: "/imports", label: "Import", icon: "upload" },
     ],
   },
@@ -64,6 +66,7 @@ function Icon({ name, size = 16 }: { name: string; size?: number }) {
     megaphone: <path d="M3 11l18-5v12L3 14v-3z" />,
     "check-square": <><polyline points="9 11 12 14 22 4" /><path d="M21 14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></>,
     upload: <><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></>,
+    mail: <><rect x="2" y="4" width="20" height="16" rx="2" /><polyline points="22 6 12 13 2 6" /></>,
     "bar-chart": <><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></>,
     search: <><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>,
     "file-text": <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>,
@@ -142,6 +145,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
  * off-canvas drawer on mobile with backdrop and animation.
  */
 export function Sidebar() {
+  const branding = useCrmBranding();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -191,11 +195,11 @@ export function Sidebar() {
               className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold"
               style={{ background: "var(--brand)", color: "var(--text-inverse)" }}
             >
-              P
+              {branding.logo}
             </span>
             <div>
               <p className="text-[14px] font-bold leading-tight" style={{ color: "var(--text-primary)" }}>
-                Patheo CRM
+                {branding.name}
               </p>
               <p className="text-[10px] font-medium leading-tight" style={{ color: "var(--text-tertiary)" }}>
                 CRM
@@ -220,7 +224,7 @@ export function Sidebar() {
           style={{ borderColor: "var(--border-default)" }}
         >
           <p className="text-[10px] text-(--text-tertiary)">
-            Patheo CRM v0.1
+            {branding.name} v0.1
           </p>
         </div>
       </aside>

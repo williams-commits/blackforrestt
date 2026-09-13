@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { RECORD_UI, type ObjectKey } from "@/lib/recordUi";
+import { getRecordCapabilities } from "@/lib/recordCapabilities";
 import { RecordForm, type OptionSource } from "@/components/RecordForm";
 import { ViewTabs, type ViewOption } from "@/components/ViewTabs";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
@@ -141,22 +142,30 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   }, []);
 
   const can = useMemo(() => {
-    const permissions = me?.permissions ?? [];
-    const edit = permissions.includes(config.can.edit);
-    const deletePermission = permissions.includes(config.can.delete);
-    const objectPrefix = object === "leads" ? "LEADS" : object === "contacts" ? "CONTACTS" : object === "accounts" ? "ACCOUNTS" : "CUSTOMERS";
-    const assign = permissions.includes(`${objectPrefix}_ASSIGN`);
-    const classify = permissions.includes(`${objectPrefix}_CHANGE_STATUS`);
-    return {
-      create: permissions.includes(config.can.create),
-      edit,
-      delete: deletePermission,
-      assign,
-      classify,
-      bulk: edit || deletePermission || assign || classify,
-      export: permissions.includes(`${objectPrefix}_EXPORT`),
+    // Single source of truth — the SAME capability resolver the record detail
+    // pages use. The previous hand-rolled mapping only knew edit/delete/
+    // assign/classify, so the bulk bar showed tag actions to users without
+    // tag permissions and hid the whole bar from task-only users.
+    const subjectType: Record<ObjectKey, "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER"> = {
+      leads: "LEAD",
+      contacts: "CONTACT",
+      accounts: "ACCOUNT",
+      customers: "CUSTOMER",
     };
-  }, [me, config, object]);
+    const caps = getRecordCapabilities(subjectType[object], me?.permissions ?? []);
+    return {
+      create: caps.canCreate,
+      edit: caps.canEdit,
+      delete: caps.canDelete,
+      assign: caps.canAssign,
+      classify: caps.canChangeStatus,
+      potential: caps.canChangePotentialStatus,
+      tags: caps.canManageTags,
+      task: caps.canCreateTask,
+      export: caps.canExport,
+      bulk: caps.canEdit || caps.canDelete || caps.canAssign || caps.canChangeStatus || caps.canManageTags || caps.canCreateTask,
+    };
+  }, [me, object]);
 
   const bulkStatusOptions =
     object === "leads"
@@ -170,7 +179,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           : [];
 
   const visibleColumnCount = config.columns.filter((column) => !hiddenColumns.includes(column.key)).length;
-  const hasRowActions = can.edit || can.delete;
+  const hasRowActions = can.edit || can.delete || can.task;
   const tableColumnCount = visibleColumnCount + (can.bulk ? 1 : 0) + (hasRowActions ? 1 : 0);
 
   const presetViews: ViewOption[] = [
@@ -304,15 +313,25 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       .then((body) => setMe(body?.data ?? null))
       .catch(() => setMe(null));
     void fetchOptions();
-    void fetch("/api/tags")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((body) => setAllTags(body?.data ?? []))
-      .catch(() => setAllTags([]));
     void fetch(`/api/views?objectType=${object.toUpperCase().slice(0, -1)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((body) => setViews(body?.data ?? []))
       .catch(() => setViews([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchOptions, object]);
+
+  // Tags are fetched only for users who may act on them — the tag catalog is
+  // invisible (and unretrieved) when MANAGE_TAGS is off for this object.
+  useEffect(() => {
+    if (!can.tags) {
+      setAllTags([]);
+      return;
+    }
+    void fetch("/api/tags")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => setAllTags(body?.data ?? []))
+      .catch(() => setAllTags([]));
+  }, [can.tags]);
 
   useEffect(() => {
     void fetchRows();
@@ -649,7 +668,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               Delete
             </button>
           ) : null}
-          {can.classify ? (
+          {can.tags && allTags.length > 0 ? (
             <select
               aria-label="Bulk tag"
               defaultValue=""
@@ -667,7 +686,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               ))}
             </select>
           ) : null}
-          {can.edit ? (
+          {can.task ? (
             <button
               type="button"
               disabled={bulkBusy}
@@ -909,19 +928,45 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                           );
                         }
                         if (column.type === "badge") {
-                          // Inline-editable status for leads (most common use case)
-                          const isStatusCol = column.key.includes("status");
-                          if (isStatusCol && can.classify && object === "leads") {
+                          // Inline status editing for every core object (same
+                          // CHANGE_STATUS capability the bulk bar uses), and a
+                          // separate potential-status editor for leads. Exact
+                          // key match: a substring test also caught
+                          // "potentialStatus.name" and wired it to the STATUS
+                          // editor — clicking Potential changed Status.
+                          if (column.key === "status.name" && can.classify) {
                             const currentStatusId = row.statusId as string;
                             return (
                               <InlineEdit
                                 value={currentStatusId ?? ""}
-                                options={options.leadStatuses}
+                                options={bulkStatusOptions}
+                                onSave={async (newStatusId) => {
+                                  await fetch(`/api/${object}/${row.id}`, {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ statusId: newStatusId }),
+                                  });
+                                  void fetchRows();
+                                }}
+                                render={(val, onClick) => (
+                                  <span className="badge badge-neutral" onClick={onClick}>
+                                    {raw}
+                                  </span>
+                                )}
+                              />
+                            );
+                          }
+                          if (column.key === "potentialStatus.name" && can.potential) {
+                            const currentStatusId = row.potentialStatusId as string;
+                            return (
+                              <InlineEdit
+                                value={currentStatusId ?? ""}
+                                options={options.potentialStatuses}
                                 onSave={async (newStatusId) => {
                                   await fetch(`/api/leads/${row.id}`, {
                                     method: "PATCH",
                                     headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ statusId: newStatusId }),
+                                    body: JSON.stringify({ potentialStatusId: newStatusId }),
                                   });
                                   void fetchRows();
                                 }}
@@ -970,7 +1015,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                                   },
                                 }]
                               : []),
-                            ...(object === "leads" && can.edit
+                            ...(can.task
                               ? [{
                                   label: "Add task",
                                   icon: "check",

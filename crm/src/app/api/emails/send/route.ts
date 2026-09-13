@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { SendEmail, sendRecordEmail } from "@/server/records/emails";
-import { subjectPermission } from "@/server/records/subjects";
 import { scopedContext } from "@/server/records/leads";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
 import { emailConfigured } from "@/server/email";
@@ -16,7 +15,9 @@ export async function POST(request: Request) {
   try {
     const parsed = await parseJsonBody(request, SendEmail);
     if (!parsed.ok) return parsed.response;
-    const ctx = await scopedContext(subjectPermission(parsed.data.subjectType, "EDIT"));
+    // The email module's own capability governs sending; the service still
+    // scope-checks the target record via resolveSubject.
+    const ctx = await scopedContext("EMAILS_SEND");
     return NextResponse.json({ data: await sendRecordEmail(ctx, parsed.data) });
   } catch (error) {
     return handleRouteError(error, "Unable to send email.");

@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { crmBranding } from "@/lib/branding";
+import { BrandingProvider } from "@/components/BrandingProvider";
+
+const branding = crmBranding();
 
 export const metadata: Metadata = {
   title: {
-    default: "Patheo CRM",
-    template: "%s · Patheo CRM",
+    default: branding.name,
+    template: `%s · ${branding.name}`,
   },
   description: "Sales and relationship management platform.",
 };
@@ -19,7 +23,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <BrandingProvider value={branding}>{children}</BrandingProvider>
+      </body>
     </html>
   );
 }

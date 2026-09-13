@@ -102,3 +102,77 @@ test("CSV parser handles quotes, commas, and CRLF", () => {
   assert.equal(parsed.rows[0]!.Note, 'said "hi"');
   assert.equal(parsed.rows.length, 2);
 });
+
+test("default source fills rows without a source; mapped column wins; updates untouched", async () => {
+  const rep = await repContext();
+  const manager = await managerContext();
+  const mapping = { First: "firstName", Last: "lastName", Email: "email", Ext: "externalId", Src: "source" };
+  const match = { email: true, phone: false, externalId: true };
+
+  // Validation preview reflects the default on rows with no source cell,
+  // and keeps a mapped non-empty value.
+  const validation = await validateImport(rep, {
+    objectType: "LEAD",
+    mapping,
+    matchRules: match,
+    defaults: { source: "WEB_FORM" },
+    rows: [
+      { First: "No", Last: "Source", Email: "default.none@example.com", Ext: "DEF-SRC-1" },
+      { First: "Has", Last: "Source", Email: "default.some@example.com", Ext: "DEF-SRC-2", Src: "REFERRAL" },
+    ],
+  });
+  const noSource = validation.transformed[0]!;
+  const hasSource = validation.transformed[1]!;
+  assert.equal(noSource.data.source, "WEB_FORM", "default applied when row has no source");
+  assert.deepEqual(noSource.defaultsApplied, ["source"]);
+  assert.equal(hasSource.data.source, "REFERRAL", "mapped column wins over default");
+  assert.equal(hasSource.defaultsApplied, undefined, "no default marker for mapped value");
+
+  // CREATE writes the default; a later UPDATE of the same record must NOT
+  // overwrite its source with the default.
+  const { jobId } = await startImport(manager, {
+    objectType: "LEAD",
+    strategy: "CREATE",
+    mapping,
+    matchRules: match,
+    defaults: { source: "WEB_FORM" },
+    fileName: "test-default-source.csv",
+    rows: [{ First: "Default", Last: "Source", Email: "default.create@example.com", Ext: "DEF-SRC-3" }],
+  });
+  let job: { status: string; createdCount: number } | null = null;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    job = await prisma.importJob.findUniqueOrThrow({ where: { id: jobId } });
+    if (job.status !== "RUNNING") break;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  assert.equal(job!.status, "COMPLETED");
+  const created = await prisma.lead.findUniqueOrThrow({ where: { externalId: "DEF-SRC-3" } });
+  assert.equal(created.source, "WEB_FORM", "created row carries default source");
+
+  // Upsert-update with a default must leave the stored source alone.
+  await startImport(manager, {
+    objectType: "LEAD",
+    strategy: "UPSERT",
+    mapping,
+    matchRules: match,
+    defaults: { source: "PARTNER_EVENT" },
+    fileName: "test-default-update.csv",
+    rows: [{ First: "Default", Last: "Updated", Email: "default.create@example.com", Ext: "DEF-SRC-3" }],
+  });
+  let updated: { source: string; lastName: string } | null = null;
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    updated = await prisma.lead.findUniqueOrThrow({ where: { externalId: "DEF-SRC-3" } });
+    if (updated.lastName === "Updated") break;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  assert.equal(updated!.lastName, "Updated", "upsert updated the record");
+  assert.equal(updated!.source, "WEB_FORM", "default never overwrites an existing record's source");
+
+  await prisma.lead.deleteMany({ where: { externalId: { in: ["DEF-SRC-1", "DEF-SRC-2", "DEF-SRC-3"] } } });
+  // Error rows FK-reference their job — clear them before removing the jobs.
+  const jobs = await prisma.importJob.findMany({ where: { fileKey: { in: ["test-default-source.csv", "test-default-update.csv"] } }, select: { id: true } });
+  for (const { id } of jobs) {
+    await prisma.importError.deleteMany({ where: { jobId: id } });
+    await prisma.importJob.delete({ where: { id } });
+  }
+});

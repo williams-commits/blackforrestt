@@ -89,7 +89,7 @@ const FIELDS: Record<string, FieldDef[]> = {
 
 const MAX_ROWS = 5000;
 const IMPORT_STEPS = [
-  { label: "Upload", help: "Choose destination and source" },
+  { label: "Upload", help: "Choose destination and data source" },
   { label: "Map", help: "Connect columns to CRM fields" },
   { label: "Validate", help: "Review errors and duplicates" },
   { label: "Run", help: "Import and track progress" },
@@ -98,6 +98,9 @@ const IMPORT_STEPS = [
 export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [source, setSource] = useState<"csv" | "sheets">("csv");
+  // Default Source applied to rows whose sheet has no source value — the
+  // import equivalent of the Source field on the create form.
+  const [defaultSource, setDefaultSource] = useState("");
   const [sheetUrl, setSheetUrl] = useState("");
   const [objectType, setObjectType] = useState<"LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER">("LEAD");
   const [fileName, setFileName] = useState<string>("");
@@ -175,7 +178,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
       const response = await fetch("/api/imports/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ objectType, mapping, matchRules, rows }),
+        body: JSON.stringify({ objectType, mapping, matchRules, defaults: { source: defaultSource.trim() || undefined }, rows }),
       });
       const body = (await response.json().catch(() => null)) as { data?: ValidationResponse; error?: string } | null;
       if (!response.ok || !body?.data) {
@@ -227,10 +230,11 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
   async function runImport() {
     setError(null);
     const endpoint = source === "sheets" ? "/api/imports/sheets" : "/api/imports";
+    const defaults = { source: defaultSource.trim() || undefined };
     const payload =
       source === "sheets"
-        ? { url: sheetUrl.trim(), objectType, strategy, mapping, matchRules }
-        : { objectType, strategy, mapping, matchRules, rows, fileName };
+        ? { url: sheetUrl.trim(), objectType, strategy, mapping, matchRules, defaults }
+        : { objectType, strategy, mapping, matchRules, defaults, rows, fileName };
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -419,7 +423,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               </select>
             </div>
             <div>
-              <p className="mb-2 text-sm font-medium">Source</p>
+              <p className="mb-2 text-sm font-medium">Data source</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
                   ["csv", "CSV file", "Upload a spreadsheet export from your computer."],
@@ -588,6 +592,29 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           </div>
 
           <div className="card grid gap-5 sm:grid-cols-2" style={{ padding: "var(--space-4)" }}>
+            {(() => {
+              const sourceField = fields.find((f) => f.key === "source" || f.key === "leadSource");
+              if (!sourceField) return null;
+              return (
+                <div className="rounded-xl bg-(--bg-subtle) p-4">
+                  <p className="mb-2 text-sm font-semibold text-(--text-primary)">Default values</p>
+                  <label htmlFor="default-source" className="mb-1 block text-sm text-(--text-secondary)">
+                    Default {sourceField.label.toLowerCase()} for imported rows
+                  </label>
+                  <input
+                    id="default-source"
+                    value={defaultSource}
+                    onChange={(event) => setDefaultSource(event.target.value)}
+                    placeholder={objectType === "LEAD" ? "e.g. WEB_FORM, REFERRAL…" : "e.g. WEBSITE, PARTNER…"}
+                    maxLength={60}
+                    className="input"
+                  />
+                  <p className="mt-2 text-xs text-(--text-tertiary)">
+                    Applied to every row whose sheet has no {sourceField.label.toLowerCase()} value — a mapped column always wins. Ignored when updating existing records.
+                  </p>
+                </div>
+              );
+            })()}
             <div className="rounded-xl bg-(--bg-subtle) p-4">
               <p className="mb-2 text-sm font-semibold text-(--text-primary)">Duplicate matching</p>
               {(["email", "phone", "externalId"] as const).map((rule) => (

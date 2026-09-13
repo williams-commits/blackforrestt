@@ -10,7 +10,10 @@ import { logger } from "@/server/observability";
 // and signing in issues a fresh cookie. With a cookie-presence check the
 // user would bounce between / (needs session) and /login (sees a cookie)
 // forever with no way out.
-const PUBLIC_PREFIXES = ["/login", "/api/auth", "/api/health"];
+// "/api/emails/inbound" is the mail-provider webhook: it authenticates with
+// its own INBOUND_EMAIL_TOKEN bearer (constant-time checked in the route),
+// so it must pass the middleware without a CRM session.
+const PUBLIC_PREFIXES = ["/login", "/api/auth", "/api/health", "/api/emails/inbound"];
 
 // Asset paths must never pass through the auth wrapper: a redirect here
 // makes the browser load the login HTML for a <script src>, which surfaces

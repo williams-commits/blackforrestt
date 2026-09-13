@@ -27,6 +27,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
       strategy: original.strategy,
       mapping: (original.mapping ?? {}) as Record<string, string>,
       matchRules: MatchRules.parse(original.matchRules ?? {}),
+      defaults: (original.defaults ?? {}) as { source?: string },
       rows: original.payload as never,
       fileName: (original.fileKey ?? "retry") + " (retry)",
     });

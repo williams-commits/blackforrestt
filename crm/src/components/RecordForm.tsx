@@ -112,7 +112,11 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
         const permissions = body?.data?.permissions ?? [];
         const objectPrefix = object.toUpperCase();
         setCapabilities({
-          classify: permissions.includes(`${objectPrefix}_CHANGE_STATUS`) || (object === "leads" && permissions.includes("LEADS_CHANGE_POTENTIAL_STATUS")),
+          // Exact, independent gates: the STATUS select needs CHANGE_STATUS,
+          // the POTENTIAL select needs CHANGE_POTENTIAL_STATUS. The previous
+          // OR-combination showed the status field to potential-status-only
+          // users, offering a change the server then rejected with 403.
+          classify: permissions.includes(`${objectPrefix}_CHANGE_STATUS`),
           potentialClassify: object === "leads" && permissions.includes("LEADS_CHANGE_POTENTIAL_STATUS"),
           assign: permissions.includes(`${objectPrefix}_ASSIGN`),
         });

@@ -1,5 +1,6 @@
 "use client";
 
+import { useCrmBranding } from "@/components/BrandingProvider";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -9,6 +10,7 @@ import { signIn } from "next-auth/react";
  * form on the right. Clean, focused, no distraction.
  */
 export function LoginForm() {
+  const branding = useCrmBranding();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -50,10 +52,10 @@ export function LoginForm() {
             className="flex h-12 w-12 items-center justify-center rounded-xl text-lg font-bold"
             style={{ background: "rgba(255,255,255,0.15)" }}
           >
-            P
+            {branding.logo}
           </span>
           <div>
-            <h1 className="text-2xl font-bold">Patheo CRM</h1>
+            <h1 className="text-2xl font-bold">{branding.name}</h1>
             <p className="text-sm opacity-75">Sales & relationship management</p>
           </div>
         </div>
@@ -91,10 +93,10 @@ export function LoginForm() {
               className="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold"
               style={{ background: "var(--brand)", color: "var(--text-inverse)" }}
             >
-              P
+              {branding.logo}
             </span>
             <div>
-              <p className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Patheo CRM</p>
+              <p className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>{branding.name}</p>
               <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>Staff sign-in</p>
             </div>
           </div>

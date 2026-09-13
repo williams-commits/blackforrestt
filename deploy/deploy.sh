@@ -9,7 +9,20 @@ command -v docker >/dev/null || { echo "Docker is required." >&2; exit 1; }
 cd "$ROOT"
 # Render the Caddy config from the env (one site block per non-empty domain).
 # Compose mounts the rendered file; see render-caddy.sh for why.
+#
+# Caddy reads its config ONLY at startup, and compose does not recreate a
+# container for bind-mount CONTENT changes — a re-rendered Caddyfile would
+# silently never load. Remember whether the render changed the file so the
+# final step can force-recreate Caddy when it did.
+CADDYFILE="$ROOT/deploy/Caddyfile.rendered"
+CADDY_HASH_BEFORE="$(sha256sum "$CADDYFILE" 2>/dev/null | cut -d' ' -f1 || :)"
 "$ROOT/deploy/render-caddy.sh" "$ROOT/.env.production"
+CADDY_HASH_AFTER="$(sha256sum "$CADDYFILE" | cut -d' ' -f1)"
+CADDY_CHANGED=false
+if [[ "$CADDY_HASH_BEFORE" != "$CADDY_HASH_AFTER" ]]; then
+  CADDY_CHANGED=true
+  echo "Caddyfile changed — Caddy will be recreated to load it."
+fi
 "${COMPOSE[@]}" config --quiet
 
 # CRM sanity: if the CRM is routed (CRM_DOMAIN set), its dedicated secrets
@@ -82,6 +95,11 @@ fi
 "$ROOT/deploy/crm-grant-permissions.sh"
 "${COMPOSE[@]}" run --rm app npm run production:check
 "${COMPOSE[@]}" up -d malware-scanner crm app caddy
+if [[ "$CADDY_CHANGED" == true ]]; then
+  echo "Recreating Caddy to load the new configuration…"
+  "${COMPOSE[@]}" up -d --no-deps --force-recreate caddy
+  sleep 3
+fi
 "${COMPOSE[@]}" ps
 
 DOMAIN="$(grep -E '^DOMAIN=' .env.production | tail -1 | cut -d= -f2-)"

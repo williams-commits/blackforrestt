@@ -29,8 +29,8 @@ update: ## Routine update: pull code, rebuild app + crm, restart both + caddy
 restart-app: ## Restart the app container only (no rebuild, no seed)
 	$(DC) restart app
 
-only-env: ## Recreate app from .env.production changes (no rebuild)
-	$(DC) up -d --no-deps --force-recreate app
+only-env: ## Recreate app + crm from .env.production changes (no rebuild)
+	$(DC) up -d --no-deps --force-recreate app crm
 
 down: ## Stop the whole production stack
 	$(DC) down

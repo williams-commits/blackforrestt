@@ -125,7 +125,9 @@ crm-grant: ## Roll out new CRM role permissions additively (idempotent)
 
 crm-seed: ## Bootstrap the CRM database (roles + first demo users) — change passwords after!
 	docker build --target builder -t blckforest-crm-seed:tmp $(ROOT)/crm
-	NET=$$(docker network ls --filter label=com.docker.compose.project=$(notdir $(ROOT)) --format '{{.Name}}' | grep backend | head -1); \
+	PG_CID=$$($(DC) ps -q postgres); \
+	NET=$$(docker inspect -f '{{range $$k, $$v := .NetworkSettings.Networks}}{{$k}}{{end}}' $$PG_CID); \
+	if [ -z "$$NET" ]; then echo "Cannot resolve the postgres network — run make deploy first."; exit 1; fi; \
 	CRM_DB=$$(sed -n 's/^CRM_DATABASE_URL=//p' $(ROOT)/.env.production | head -1); \
 	PGPWD=$$(sed -n 's/^POSTGRES_PASSWORD=//p' $(ROOT)/.env.production | head -1); \
 	docker run --rm --network $$NET \

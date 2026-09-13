@@ -33,6 +33,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Schema + migrations for `prisma migrate deploy` inside the container.
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+# Prisma CLI for `npx prisma migrate deploy` (deploy.sh / make crm-migrate).
+# The standalone bundle has no dev tooling, and the CRM runs on the
+# internal-only backend network — npx could NEVER download the CLI there
+# (npm EAI_AGAIN), so it is installed at BUILD time while the builder still
+# has network access. Runtime stays fully offline.
+RUN cd /app && npm install --no-save --omit=dev --loglevel=error prisma
 
 USER nextjs
 EXPOSE 3000

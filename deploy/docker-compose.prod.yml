@@ -201,7 +201,10 @@ services:
         condition: service_healthy
     volumes:
       - crm_attachments:/app/uploads/attachments
-    networks: [backend]
+    # backend: postgres + platform bridge. egress: outbound SMTP (record
+    # email sending) and provider APIs — migrations never need it because
+    # the Prisma CLI is vendored into the image.
+    networks: [backend, egress]
 
 networks:
   edge:

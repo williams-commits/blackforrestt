@@ -193,7 +193,9 @@ test("bulk status change requires CHANGE_STATUS, not EDIT", async () => {
   const status = await prisma.recordStatus.findFirstOrThrow({ where: { appliesTo: "LEAD", name: "Contacted" } });
 
   // Status-only user (no LEADS_EDIT) CAN bulk-status — the reported bug.
-  const statusOnly = { ...rep, permissions: rep.permissions.filter((permission) => permission !== "LEADS_EDIT") };
+  // Explicit set: the DB role matrix is admin-editable, so guarantee
+  // CHANGE_STATUS is present instead of trusting the seed.
+  const statusOnly = { ...rep, permissions: WITH(WITHOUT(rep.permissions, "LEADS_EDIT"), "LEADS_CHANGE_STATUS") };
   const result = await bulkRecords(statusOnly, "leads", { action: "status", ids: [lead], statusId: status.id });
   assert.equal(result.affected, 1, "status-only user bulk-statuses");
 

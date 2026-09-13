@@ -38,6 +38,7 @@ export function Icon({
     more: <><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></>,
     close: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>,
     chevron_down: <polyline points="6 9 12 15 18 9" />,
+    chevron_up: <polyline points="18 15 12 9 6 15" />,
     chevron_right: <polyline points="9 18 15 12 9 6" />,
     external: <><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></>,
 

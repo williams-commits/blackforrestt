@@ -189,7 +189,9 @@ services:
       - ../.env.production
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${CRM_DATABASE_URL:-postgresql://blackforrestt:blackforrestt@postgres:5432/blckforest_crm}
+      # Defaults to the stack's own postgres credentials — no separate
+      # password to keep in sync. Override only for an EXTERNAL CRM database.
+      DATABASE_URL: ${CRM_DATABASE_URL:-postgresql://${POSTGRES_USER:-blackforrestt}:${POSTGRES_PASSWORD}@postgres:5432/blckforest_crm}
       AUTH_URL: ${AUTH_URL_CRM:-}
       AUTH_SECRET: ${AUTH_SECRET_CRM:-}
       AUTH_TRUST_HOST: "true"

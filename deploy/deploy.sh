@@ -32,7 +32,36 @@ POSTGRES_USER="$("${COMPOSE[@]}" exec -T postgres printenv POSTGRES_USER)"
 SELECT 'CREATE DATABASE "blckforest_crm"'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'blckforest_crm')\gexec
 SQL
-"${COMPOSE[@]}" run --rm crm npx prisma migrate deploy
+
+# ── CRM database target ──────────────────────────────────────────────────────
+# Default: the IN-STACK postgres, with credentials read from the postgres
+# container itself (never guessed from .env interpolation). CRM_DATABASE_URL
+# in .env.production may override this — but if it points at the in-stack
+# postgres with a STALE password, the runtime container would 500 on every
+# query even though migrations succeeded, so fail here with the fix instead.
+CRM_DB_URL_CFG="$(grep -E '^CRM_DATABASE_URL=' .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' || :)"
+CRM_URL_IS_STACK=true
+if [[ -n "$CRM_DB_URL_CFG" && "$CRM_DB_URL_CFG" != *@postgres:* ]]; then
+  CRM_URL_IS_STACK=false   # external CRM database — respect it verbatim
+elif [[ -n "$CRM_DB_URL_CFG" ]]; then
+  POSTGRES_PASSWORD_VAL="$("${COMPOSE[@]}" exec -T postgres printenv POSTGRES_PASSWORD)"
+  if [[ "$CRM_DB_URL_CFG" != *":${POSTGRES_PASSWORD_VAL}@"* ]]; then
+    echo "ERROR: CRM_DATABASE_URL in .env.production points at the in-stack postgres" >&2
+    echo "but its password does not match POSTGRES_PASSWORD." >&2
+    echo "Fix: either REMOVE the CRM_DATABASE_URL line (the stack password is used" >&2
+    echo "automatically), or set its password to POSTGRES_PASSWORD — then re-run make deploy." >&2
+    exit 1
+  fi
+fi
+if [[ "$CRM_URL_IS_STACK" == true ]]; then
+  POSTGRES_PASSWORD_VAL="$("${COMPOSE[@]}" exec -T postgres printenv POSTGRES_PASSWORD)"
+  CRM_DB_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD_VAL}@postgres:5432/blckforest_crm"
+else
+  CRM_DB_URL="$CRM_DB_URL_CFG"
+fi
+
+# Migrate the CRM database with the resolved target.
+"${COMPOSE[@]}" run --rm -e DATABASE_URL="$CRM_DB_URL" crm npx prisma migrate deploy
 "$ROOT/deploy/crm-grant-permissions.sh"
 "${COMPOSE[@]}" run --rm app npm run production:check
 "${COMPOSE[@]}" up -d malware-scanner app caddy

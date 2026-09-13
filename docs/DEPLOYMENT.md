@@ -239,7 +239,9 @@ with `DOMAIN_3`/`TRADE_DOMAIN_3`.
 
 ```env
 CRM_DOMAIN=crm.yourdomain.com        # empty = CRM not routed publicly
-CRM_DATABASE_URL=postgresql://blackforrestt:$PG_PWD@postgres:5432/blckforest_crm
+# Leave CRM_DATABASE_URL EMPTY for the in-stack postgres (recommended — the
+# password syncs automatically). Set it only for an external CRM database.
+CRM_DATABASE_URL=
 AUTH_URL_CRM=https://crm.yourdomain.com
 AUTH_SECRET_CRM=<generated above>    # MUST differ from AUTH_SECRET
 CRM_BRIDGE_TOKEN=<openssl rand -hex 24>   # shared platform↔CRM read-only secret

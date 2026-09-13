@@ -244,3 +244,12 @@ npm run dev
 | `MAINTENANCE_ENABLED` | Server | Enables the periodic retention-maintenance sweep (expired tokens/sessions, read notifications, terminal email deliveries, KYC retention). Default: `true` in production only. |
 | `MAINTENANCE_INTERVAL_MS` | Server | Sweep interval, minimum 3,600,000 (1 hour). Default: `21600000` (6 hours). |
 | `PHASE8_RELEASE_ARCHIVE` | Release tooling | Output path for `npm run test:release`. Default: `artifacts/phase8/blckforest-release.zip`. |
+
+## CRM branding and inbound email
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `BRANDING_NAME` | No | CRM product name shown in the browser title, sidebar, login page, and admin copy. Default: `Collo CRM`. |
+| `BRANDING_SINGLE_NAME` | No | Short brand name used inside sentences (admin subtitles, section eyebrows). Default: first word of `BRANDING_NAME`. |
+| `BRANDING_LOGO` | No | Single-character logo mark rendered in the sidebar and login brand panels. Default: first letter of `BRANDING_NAME`. |
+| `INBOUND_EMAIL_TOKEN` | No | **Secret.** Bearer token for the CRM inbound-email webhook (`/api/emails/inbound`). Generate with `openssl rand -hex 24`. Unset = inbound email disabled (503). |

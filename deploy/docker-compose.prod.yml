@@ -198,6 +198,12 @@ services:
       PLATFORM_BRIDGE_URL: http://app:3000
       PLATFORM_BRIDGE_TOKEN: ${CRM_BRIDGE_TOKEN:-}
       ATTACHMENT_STORAGE_DIR: /app/uploads/attachments
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     depends_on:
       postgres:
         condition: service_healthy

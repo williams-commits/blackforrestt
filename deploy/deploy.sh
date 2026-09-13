@@ -64,7 +64,7 @@ fi
 "${COMPOSE[@]}" run --rm -e DATABASE_URL="$CRM_DB_URL" crm npx prisma migrate deploy
 "$ROOT/deploy/crm-grant-permissions.sh"
 "${COMPOSE[@]}" run --rm app npm run production:check
-"${COMPOSE[@]}" up -d malware-scanner app caddy
+"${COMPOSE[@]}" up -d malware-scanner crm app caddy
 "${COMPOSE[@]}" ps
 
 DOMAIN="$(grep -E '^DOMAIN=' .env.production | tail -1 | cut -d= -f2-)"

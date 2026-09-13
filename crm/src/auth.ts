@@ -15,7 +15,17 @@ import { clearLoginFailures, loginIsLocked, recordLoginFailure } from "@/server/
 // A missing secret must never degrade into per-boot ephemeral keys: any
 // session cookie issued before a restart would become undecryptable and
 // surface as "no matching decryption secret" far from the real cause.
-if (!process.env.AUTH_SECRET) {
+//
+// `next build` is the one sanctioned exception: page-data collection imports
+// route modules inside the Docker builder stage, where no runtime env exists
+// yet (env_file only applies when the container runs). Next.js marks that
+// phase with NEXT_PHASE=phase-production-build — supply a throwaway value
+// there and still hard-fail at real runtime without a secret.
+const BUILD_PHASE = process.env.NEXT_PHASE === "phase-production-build";
+const AUTH_SECRET_VALUE =
+  process.env.AUTH_SECRET ?? (BUILD_PHASE ? "throwaway-build-time-secret" : undefined);
+
+if (!AUTH_SECRET_VALUE) {
   if (process.env.NODE_ENV === "production") {
     throw new Error("AUTH_SECRET is required — generate one with: openssl rand -base64 32");
   }
@@ -31,6 +41,9 @@ const CredentialsSchema = z.object({
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
+  // Explicit so the build phase (throwaway value above) never trips Auth.js's
+  // own missing-secret error during page-data collection.
+  ...(AUTH_SECRET_VALUE ? { secret: AUTH_SECRET_VALUE } : {}),
   // Distinct cookie names are REQUIRED for local development: the trading
   // platform (localhost:3000) and this app (localhost:3100) share the
   // localhost cookie jar (cookies ignore ports), and Auth.js's default

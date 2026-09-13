@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
+  { href: "/", label: "Home", group: "Workspace" },
   { href: "/leads", label: "Leads", group: "Records" },
   { href: "/contacts", label: "Contacts", group: "Records" },
   { href: "/accounts", label: "Accounts", group: "Records" },
@@ -33,7 +34,7 @@ export function WorkspaceQuickNav({
   return (
     <nav
       aria-label="Workspace navigation"
-      className="no-print rounded-2xl border border-(--border-default) bg-(--bg-surface) p-2 shadow-(--shadow-subtle)"
+      className="no-print rounded-2xl border border-(--border-default) bg-(--bg-surface) p-2 shadow-(--shadow-subtle) lg:hidden"
     >
       <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto">
         {backHref ? (

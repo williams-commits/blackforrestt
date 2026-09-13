@@ -18,6 +18,7 @@ const TYPE_LABELS: Record<string, string> = {
   TASK_CREATED: "New task",
   TASK_DUE: "Task due today",
   TASK_OVERDUE: "Task overdue",
+  TASK_REMINDER: "Task reminder",
   APPOINTMENT_SCHEDULED: "Appointment scheduled",
   IMPORT_COMPLETED: "Import completed",
   IMPORT_FAILED: "Import failed",

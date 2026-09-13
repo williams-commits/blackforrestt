@@ -865,6 +865,18 @@ select.input {
   margin-top: var(--space-4);
   padding-top: var(--space-3);
 }
+@media (max-width: 640px) {
+  .workspace-metrics {
+    flex-wrap: nowrap;
+    gap: var(--space-4);
+    margin-right: calc(var(--space-6) * -1);
+    overflow-x: auto;
+    padding-right: var(--space-6);
+    scrollbar-width: none;
+  }
+  .workspace-metrics::-webkit-scrollbar { display: none; }
+  .workspace-metric { flex: 0 0 auto; min-width: 96px; }
+}
 .workspace-metric {
   align-items: center;
   display: flex;
@@ -1152,7 +1164,7 @@ select.input {
 @media (max-width: 767px) {
   .table-responsive .table thead { display: none; }
   .table-responsive .table, .table-responsive .table tbody, .table-responsive .table tr, .table-responsive .table td { display: block; width: 100%; }
-  .table-responsive .table tr { border: 1px solid var(--border-default); border-radius: var(--radius-md); margin-bottom: var(--space-2); padding: var(--space-2); background: var(--bg-surface); }
+  .table-responsive .table tr { border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-2); background: var(--bg-surface); margin-bottom: var(--space-2); }
   .table-responsive .table td { border: none; padding: var(--space-1) 0; }
   .table-responsive .table td:first-child { font-weight: 600; }
 }

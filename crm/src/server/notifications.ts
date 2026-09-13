@@ -22,7 +22,8 @@ export type NotifiableType =
   | "IMPORT_FAILED"
   | "PLATFORM_USER_ONLINE"
   | "TASK_DUE"
-  | "TASK_OVERDUE";
+  | "TASK_OVERDUE"
+  | "TASK_REMINDER";
 
 export const NotificationQuery = z.object({
   read: z.enum(["all", "unread", "read"]).default("all"),
@@ -89,6 +90,11 @@ function emailFor(type: NotifiableType, payload: Record<string, unknown>): { sub
       return {
         subject: `CRM: Task due today — ${payload.title ?? "untitled"}`,
         text: `Your task "${payload.title}" is due today.`,
+      };
+    case "TASK_REMINDER":
+      return {
+        subject: `CRM: Task reminder — ${payload.title ?? "untitled"}`,
+        text: `Reminder: your task "${payload.title}" is due ${payload.dueAt ?? "soon"}.`,
       };
     case "APPOINTMENT_SCHEDULED":
       return {
@@ -182,6 +188,25 @@ export async function sweepOverdueTasks(userId: string): Promise<void> {
       where: { id: task.id },
       data: { overdueNotifiedAt: now },
     }).catch(() => undefined);
+  }
+}
+
+export async function sweepTaskReminders(userId: string): Promise<void> {
+  const now = new Date();
+  const tasks = await prisma.task.findMany({
+    where: { ownerUserId: userId, status: { in: ["OPEN", "IN_PROGRESS"] }, reminderAt: { not: null, lte: now }, reminderNotifiedAt: null },
+    take: 50,
+  });
+  for (const task of tasks) {
+    await notify({
+      recipientUserId: userId,
+      type: "TASK_REMINDER",
+      payload: { taskId: task.id, title: task.title, dueAt: task.dueAt?.toISOString() ?? "soon" },
+      context: task.subjectType && task.subjectId && isNotificationSubjectType(task.subjectType)
+        ? subjectNotificationContext(task.subjectType, task.subjectId)
+        : { href: "/tasks" },
+    });
+    await prisma.task.update({ where: { id: task.id }, data: { reminderNotifiedAt: now } }).catch(() => undefined);
   }
 }
 

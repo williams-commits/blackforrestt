@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Pipeline } from "@/components/OpportunitiesPage";
 import { useConfirmDialog } from "@/components/Dialogs";
+import { Icon } from "@/components/Icon";
 
 export function PipelineAdmin({
   pipelines,
@@ -35,7 +36,7 @@ export function PipelineAdmin({
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8" role="dialog" aria-modal="true">
       <div className="w-full max-w-2xl space-y-4 rounded-lg border border-(--border-default) bg-(--bg-surface) text-(--text-primary) p-6 shadow-xl">
-        <h2 className="text-base font-semibold">Manage pipelines</h2>
+        <div className="flex items-center justify-between"><h2 className="text-base font-semibold">Manage pipelines</h2><button type="button" onClick={onClose} className="icon-button" aria-label="Close pipeline manager"><Icon name="close" size={16} /></button></div>
         {error ? (
           <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
             {error}

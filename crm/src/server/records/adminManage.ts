@@ -37,9 +37,48 @@ export async function listUsers() {
       lastLoginAt: true,
       role: { select: { key: true, name: true } },
       memberships: { include: { team: { select: { id: true, name: true } } } },
+      _count: { select: { assignedLeads: true, ownedContacts: true, ownedAccounts: true, ownedCustomers: true, ownedOpps: true, ownedTasks: true } },
     },
   });
   return users;
+}
+
+export async function listUserActivity(userId: string, limit = 40) {
+  const [audit, activity] = await Promise.all([
+    prisma.auditLog.findMany({
+      where: { actorUserId: userId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: { id: true, action: true, objectType: true, objectId: true, after: true, createdAt: true },
+    }),
+    prisma.activityEvent.findMany({
+      where: { actorUserId: userId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: { id: true, kind: true, subjectType: true, subjectId: true, payload: true, createdAt: true },
+    }),
+  ]);
+
+  return [
+    ...audit.map((entry) => ({
+      id: `audit:${entry.id}`,
+      source: "audit" as const,
+      label: entry.action.replaceAll("_", " ").toLowerCase(),
+      objectType: entry.objectType,
+      objectId: entry.objectId,
+      payload: entry.after,
+      createdAt: entry.createdAt,
+    })),
+    ...activity.map((entry) => ({
+      id: `activity:${entry.id}`,
+      source: "activity" as const,
+      label: entry.kind.replaceAll("_", " ").toLowerCase(),
+      objectType: entry.subjectType,
+      objectId: entry.subjectId,
+      payload: entry.payload,
+      createdAt: entry.createdAt,
+    })),
+  ].sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime()).slice(0, limit);
 }
 
 async function assertRole(roleKey: string) {

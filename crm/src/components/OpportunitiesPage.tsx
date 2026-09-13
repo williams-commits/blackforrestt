@@ -6,6 +6,7 @@ import { PipelineAdmin } from "@/components/PipelineAdminDialog";
 import Link from "next/link";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
+import { SmartTips } from "@/components/SmartTips";
 
 export interface Stage {
   id: string;
@@ -231,6 +232,7 @@ export function OpportunitiesPage() {
         </>}
       />
       <WorkspaceQuickNav />
+      <SmartTips context="records" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex overflow-hidden rounded-md border border-(--border-strong) text-sm">
@@ -278,9 +280,10 @@ export function OpportunitiesPage() {
       ) : null}
 
       {error ? (
-        <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
-          {error}
-        </p>
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
+          <span>{error}</span>
+          <button type="button" onClick={() => void load()} className="font-semibold underline">Retry</button>
+        </div>
       ) : null}
 
       {pipelines.length === 0 && !loading ? (

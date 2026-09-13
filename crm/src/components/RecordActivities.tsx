@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useToast } from "@/components/Toast";
 
 export interface SubjectNote {
@@ -18,6 +19,14 @@ export interface SubjectAppointment {
   endAt: string | null;
   status: string;
   locationOrLink: string | null;
+}
+
+interface SubjectTask {
+  id: string;
+  title: string;
+  dueAt: string | null;
+  priority: string;
+  status: string;
 }
 
 type SubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
@@ -53,6 +62,9 @@ export function RecordActivities({
   const [error, setError] = useState<string | null>(null);
   const [showTask, setShowTask] = useState(false);
   const [showAppointment, setShowAppointment] = useState(false);
+  const [activeTab, setActiveTab] = useState<"notes" | "tasks" | "appointments">("notes");
+  const [tasks, setTasks] = useState<SubjectTask[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
   const [taskTitle, setTaskTitle] = useState(`Follow up: ${subjectLabel}`);
   const [taskDue, setTaskDue] = useState("");
   const [apptTitle, setApptTitle] = useState(`Meeting: ${subjectLabel}`);
@@ -64,6 +76,17 @@ export function RecordActivities({
 
   function refreshAfterToast() {
     window.setTimeout(() => router.refresh(), 150);
+  }
+
+  async function loadTasks() {
+    setTasksLoading(true);
+    try {
+      const response = await fetch(`/api/tasks?subjectType=${subjectType}&subjectId=${subjectId}&mine=0&due=all&pageSize=50`);
+      const body = await response.json().catch(() => null) as { data?: SubjectTask[] } | null;
+      setTasks(response.ok ? body?.data ?? [] : []);
+    } finally {
+      setTasksLoading(false);
+    }
   }
 
   async function addNote(event: React.FormEvent) {
@@ -269,50 +292,15 @@ export function RecordActivities({
         </>
       ) : null}
 
-      {appointments.length > 0 ? (
-        <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-(--text-tertiary)">
-            Appointments
-          </h3>
-          <ul className="space-y-1">
-            {appointments.map((appointment) => (
-              <li key={appointment.id} className="flex items-center justify-between text-sm">
-                <span className="font-medium">{appointment.title}</span>
-                <span className="text-(--text-secondary)">
-                  {new Date(appointment.startAt).toLocaleString(undefined, {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}{" "}
-                  · {appointment.status.toLowerCase()}
-                </span>
-              </li>
-            ))}
-          </ul>
+      <div className="overflow-hidden rounded-lg border border-(--border-default)">
+        <div className="flex border-b border-(--border-default) bg-(--bg-subtle)" role="tablist" aria-label="Related activity">
+          {[{ key: "notes" as const, label: "Notes", count: notes.length }, { key: "tasks" as const, label: "Tasks", count: tasks.length }, { key: "appointments" as const, label: "Schedule", count: appointments.length }].map((tab) => <button key={tab.key} type="button" role="tab" aria-selected={activeTab === tab.key} onClick={() => { setActiveTab(tab.key); if (tab.key === "tasks" && tasks.length === 0) void loadTasks(); }} className={`flex-1 px-3 py-2 text-xs font-semibold ${activeTab === tab.key ? "bg-(--bg-surface) text-(--text-brand) shadow-sm" : "text-(--text-secondary) hover:bg-(--bg-hover)"}`}>{tab.label} <span className="ml-1 text-(--text-tertiary)">{tab.count}</span></button>)}
         </div>
-      ) : null}
-
-      <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-(--text-tertiary)">
-          Notes ({notes.length})
-        </h3>
-        {notes.length === 0 ? (
-          <p className="text-sm text-(--text-tertiary)">No notes yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {notes.map((note) => (
-              <li key={note.id} className="rounded-md border border-(--border-default) bg-(--bg-hover) p-3 text-sm">
-                <p className="whitespace-pre-wrap">{note.body}</p>
-                <p className="mt-1 text-xs text-(--text-tertiary)">
-                  {note.author.name} ·{" "}
-                  {new Date(note.createdAt).toLocaleString(undefined, {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="p-3">
+          {activeTab === "notes" ? notes.length === 0 ? <p className="text-sm text-(--text-tertiary)">No notes yet.</p> : <ul className="space-y-2">{notes.map((note) => <li key={note.id} className="rounded-md border border-(--border-default) bg-(--bg-hover) p-3 text-sm"><p className="whitespace-pre-wrap">{note.body}</p><p className="mt-1 text-xs text-(--text-tertiary)">{note.author.name} · {new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p></li>)}</ul> : null}
+          {activeTab === "tasks" ? tasksLoading ? <div className="skeleton h-12" /> : tasks.length === 0 ? <p className="text-sm text-(--text-tertiary)">No related tasks yet.</p> : <ul className="space-y-2">{tasks.map((task) => <li key={task.id} className="flex items-center justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><Link href={`/tasks?subjectType=${subjectType}&subjectId=${subjectId}`} className="min-w-0 truncate font-medium text-(--text-brand) hover:underline">{task.title}</Link><span className="shrink-0 text-xs text-(--text-tertiary)">{task.dueAt ? new Date(task.dueAt).toLocaleDateString() : "No due date"} · {task.status.toLowerCase()}</span></li>)}</ul> : null}
+          {activeTab === "appointments" ? appointments.length === 0 ? <p className="text-sm text-(--text-tertiary)">No appointments yet.</p> : <ul className="space-y-2">{appointments.map((appointment) => <li key={appointment.id} className="flex items-center justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><span className="font-medium">{appointment.title}</span><span className="text-xs text-(--text-secondary)">{new Date(appointment.startAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} · {appointment.status.toLowerCase()}</span></li>)}</ul> : null}
+        </div>
       </div>
     </div>
   );

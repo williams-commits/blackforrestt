@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { OpportunityForm } from "@/components/OpportunityFormDialog";
 import { useConfirmDialog } from "@/components/Dialogs";
@@ -62,6 +63,9 @@ export function OpportunityDetailActions({
 
   return (
     <div className="flex items-center gap-2">
+      <Link href={`/tasks?subjectType=OPPORTUNITY&subjectId=${(row as { id: string }).id}`} className="rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary)">
+        Related tasks
+      </Link>
       {canOpenActionForm ? (
         <button
           type="button"

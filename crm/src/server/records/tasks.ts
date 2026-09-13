@@ -19,6 +19,8 @@ export const CreateTask = z.object({
   description: z.string().trim().max(5000).optional().nullable(),
   dueAt: z.coerce.date().optional().nullable(),
   priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).default("NORMAL"),
+  recurrence: z.enum(["NONE", "DAILY", "WEEKLY", "MONTHLY"]).default("NONE"),
+  reminderAt: z.coerce.date().optional().nullable(),
   ownerUserId: z.string().trim().min(5).optional(),
   subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"]).optional(),
   subjectId: z.string().trim().min(5).optional(),
@@ -29,6 +31,8 @@ export const UpdateTask = z.object({
   description: z.string().trim().max(5000).optional().nullable(),
   dueAt: z.coerce.date().optional().nullable(),
   priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).optional(),
+  recurrence: z.enum(["NONE", "DAILY", "WEEKLY", "MONTHLY"]).optional(),
+  reminderAt: z.coerce.date().optional().nullable(),
   status: z.enum(["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
   ownerUserId: z.string().trim().min(5).optional(),
 });
@@ -121,6 +125,8 @@ export async function createTask(ctx: ScopedContext, input: z.infer<typeof Creat
         description: input.description ?? null,
         dueAt: input.dueAt ?? null,
         priority: input.priority,
+        recurrence: input.recurrence,
+        reminderAt: input.reminderAt ?? null,
         ownerUserId,
         subjectType: subject?.type,
         subjectId: subject?.id,
@@ -183,6 +189,9 @@ export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.dueAt !== undefined ? { dueAt: input.dueAt } : {}),
         ...(input.priority !== undefined ? { priority: input.priority } : {}),
+        ...(input.recurrence !== undefined ? { recurrence: input.recurrence } : {}),
+        ...(input.reminderAt !== undefined ? { reminderAt: input.reminderAt } : {}),
+        ...(input.reminderAt !== undefined ? { reminderNotifiedAt: null } : {}),
         ...(input.ownerUserId !== undefined ? { ownerUserId: input.ownerUserId } : {}),
         ...(input.status !== undefined
           ? { status: input.status, completedAt: input.status === "COMPLETED" ? new Date() : null }
@@ -204,6 +213,26 @@ export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<
         kind: input.status === "COMPLETED" ? "task_completed" : "task_cancelled",
         actorUserId: ctx.userId,
         payload: { taskId: id, title: existing.title },
+      });
+    }
+    if (input.status === "COMPLETED" && existing.status !== "COMPLETED" && existing.recurrence !== "NONE" && existing.dueAt) {
+      const nextDueAt = new Date(existing.dueAt);
+      if (existing.recurrence === "DAILY") nextDueAt.setDate(nextDueAt.getDate() + 1);
+      if (existing.recurrence === "WEEKLY") nextDueAt.setDate(nextDueAt.getDate() + 7);
+      if (existing.recurrence === "MONTHLY") nextDueAt.setMonth(nextDueAt.getMonth() + 1);
+      const reminderOffset = existing.reminderAt ? existing.dueAt.getTime() - existing.reminderAt.getTime() : null;
+      await tx.task.create({
+        data: {
+          title: existing.title,
+          description: existing.description,
+          ownerUserId: existing.ownerUserId,
+          dueAt: nextDueAt,
+          priority: existing.priority,
+          recurrence: existing.recurrence,
+          reminderAt: reminderOffset === null ? null : new Date(nextDueAt.getTime() - reminderOffset),
+          subjectType: existing.subjectType,
+          subjectId: existing.subjectId,
+        },
       });
     }
     await appendAudit(tx, {

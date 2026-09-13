@@ -27,20 +27,27 @@ function money(minor: string | number): string {
 /** Scope-aware KPI strip for the home page. */
 export function DashboardCards() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     void fetch("/api/dashboards")
-      .then((r) => (r.ok ? r.json() : null))
+      .then((response) => {
+        if (!response.ok) throw new Error("Dashboard request failed");
+        return response.json();
+      })
       .then((body) => setData(body?.data ?? null))
-      .catch(() => setData(null));
+      .catch(() => setError(true));
   }, []);
 
   if (!data) {
     return (
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[0, 1, 2, 3].map((index) => (
+      <div className="space-y-3">
+        {error ? <div role="alert" className="flex items-center justify-between rounded-md border border-(--error-border) bg-(--error-bg) px-3 py-2 text-sm text-(--error)"><span>Dashboard metrics are temporarily unavailable.</span><button type="button" onClick={() => window.location.reload()} className="font-semibold underline">Retry</button></div> : null}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
+        {[0, 1, 2, 3, 4, 5, 6].map((index) => (
           <div key={index} className="h-20 animate-pulse rounded-lg border border-(--border-default) bg-(--bg-surface)" />
         ))}
+        </div>
       </div>
     );
   }
@@ -64,7 +71,7 @@ export function DashboardCards() {
       tone: "success",
     },
     { label: "My open tasks", value: String(data.myOpenTasks), href: "/tasks", tone: "blue" },
-    { label: "Activity · 7d", value: String(data.activity7d), href: "/", tone: "slate" },
+    { label: "Activity · 7d", value: String(data.activity7d), href: "/reports", tone: "slate" },
   ];
 
   return (

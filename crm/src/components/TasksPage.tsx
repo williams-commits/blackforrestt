@@ -1,15 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
+import { SmartTips } from "@/components/SmartTips";
 
 interface TaskRow {
   id: string;
   title: string;
   description: string | null;
   dueAt: string | null;
+  recurrence: string;
+  reminderAt: string | null;
   priority: string;
   status: string;
   owner: { id: string; name: string } | null;
@@ -20,6 +24,11 @@ interface TaskRow {
 interface TasksResponse {
   data: TaskRow[];
   meta: { page: number; pageSize: number; total: number; openCount: number; overdueCount: number };
+}
+
+interface UserOption {
+  id: string;
+  name: string;
 }
 
 const STATUS_OPTIONS = [
@@ -37,6 +46,14 @@ const DUE_OPTIONS = [
   { value: "week", label: "Next 7 days" },
   { value: "upcoming", label: "Upcoming" },
 ];
+
+const SUBJECT_PATH: Record<string, string> = {
+  LEAD: "leads",
+  CONTACT: "contacts",
+  ACCOUNT: "accounts",
+  CUSTOMER: "customers",
+  OPPORTUNITY: "opportunities",
+};
 
 function formatDue(value: string | null): string {
   if (!value) return "—";
@@ -62,20 +79,28 @@ export function TasksPage() {
     overdueCount: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [query, setQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [due, setDue] = useState("all");
   const [mine, setMine] = useState("1");
   const [showForm, setShowForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskRow | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [title, setTitle] = useState(subjectLabel ? `Follow up: ${subjectLabel}` : "");
+  const [description, setDescription] = useState("");
   const [taskDue, setTaskDue] = useState("");
+  const [recurrence, setRecurrence] = useState("NONE");
+  const [reminderAt, setReminderAt] = useState("");
   const [priority, setPriority] = useState("NORMAL");
+  const [ownerUserId, setOwnerUserId] = useState("");
+  const [users, setUsers] = useState<UserOption[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const params = new URLSearchParams({ due, mine, pageSize: "25" });
       if (query.trim()) params.set("q", query.trim());
@@ -84,11 +109,12 @@ export function TasksPage() {
       if (subjectType) params.set("subjectType", subjectType);
       if (subjectId) params.set("subjectId", subjectId);
       const response = await fetch(`/api/tasks?${params.toString()}`);
-      if (response.ok) {
-        const body = (await response.json()) as TasksResponse;
-        setRows(body.data);
-        setMeta(body.meta);
-      }
+      const body = await response.json().catch(() => null) as (TasksResponse & { error?: string }) | null;
+      if (!response.ok) throw new Error(body?.error ?? `Request failed (${response.status})`);
+      setRows(body?.data ?? []);
+      setMeta(body?.meta ?? { page: 1, pageSize: 25, total: 0, openCount: 0, overdueCount: 0 });
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Unable to load tasks.");
     } finally {
       setLoading(false);
     }
@@ -98,16 +124,24 @@ export function TasksPage() {
     void fetchTasks();
   }, [fetchTasks]);
 
+  useEffect(() => {
+    void fetch("/api/users").then((response) => response.ok ? response.json() : null).then((body) => setUsers((body?.data ?? []).map((user: UserOption) => ({ id: user.id, name: user.name })))).catch(() => setUsers([]));
+  }, []);
+
   async function createTask(event: React.FormEvent) {
     event.preventDefault();
     setFormError(null);
-    const response = await fetch("/api/tasks", {
-      method: "POST",
+    const response = await fetch(editingTask ? `/api/tasks/${editingTask.id}` : "/api/tasks", {
+      method: editingTask ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title,
+        description: description || null,
         dueAt: taskDue || null,
         priority,
+        recurrence,
+        reminderAt: reminderAt || null,
+        ...(ownerUserId ? { ownerUserId } : {}),
         ...(subjectType && subjectId ? { subjectType, subjectId } : {}),
       }),
     });
@@ -117,9 +151,14 @@ export function TasksPage() {
       return;
     }
     setShowForm(false);
+    setEditingTask(null);
     setTitle("");
+    setDescription("");
     setTaskDue("");
+    setRecurrence("NONE");
+    setReminderAt("");
     setPriority("NORMAL");
+    setOwnerUserId("");
     void fetchTasks();
   }
 
@@ -138,6 +177,19 @@ export function TasksPage() {
     void fetchTasks();
   }
 
+  function openEdit(task: TaskRow) {
+    setEditingTask(task);
+    setShowForm(true);
+    setFormError(null);
+    setTitle(task.title);
+    setDescription(task.description ?? "");
+    setTaskDue(task.dueAt ? new Date(task.dueAt).toISOString().slice(0, 16) : "");
+    setRecurrence(task.recurrence ?? "NONE");
+    setReminderAt(task.reminderAt ? new Date(task.reminderAt).toISOString().slice(0, 16) : "");
+    setPriority(task.priority);
+    setOwnerUserId(task.owner?.id ?? "");
+  }
+
   const inputClass =
     "w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none";
 
@@ -151,6 +203,7 @@ export function TasksPage() {
         metrics={[{ label: "Open", value: meta.openCount, tone: "brand" }, { label: "Overdue", value: meta.overdueCount, tone: meta.overdueCount > 0 ? "warning" : "success" }, { label: "Showing", value: meta.total, tone: "info" }]}
       />
       <WorkspaceQuickNav />
+      <SmartTips context="tasks" />
 
       {showForm ? (
         <form
@@ -158,7 +211,7 @@ export function TasksPage() {
           onSubmit={createTask}
           className="grid gap-4 rounded-xl border border-(--border-default) bg-(--bg-surface) p-5 shadow-(--shadow-subtle) sm:grid-cols-4"
         >
-          <div className="sm:col-span-4"><p className="form-dialog-eyebrow">Next action</p><p className="form-section-title">Create a task</p><p className="form-section-help">Make the owner, timing, and urgency explicit.</p></div>
+          <div className="sm:col-span-4"><p className="form-dialog-eyebrow">Next action</p><p className="form-section-title">{editingTask ? "Edit task" : "Create a task"}</p><p className="form-section-help">Make the owner, timing, and urgency explicit.</p></div>
           {formError ? (
             <p role="alert" className="sm:col-span-4 rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
               {formError}
@@ -177,6 +230,10 @@ export function TasksPage() {
               className={inputClass}
             />
           </div>
+          <div className="sm:col-span-4">
+            <label htmlFor="t-description" className="form-label">Description</label>
+            <textarea id="t-description" value={description} onChange={(event) => setDescription(event.target.value)} rows={3} className={inputClass} placeholder="Add useful context for the next action" />
+          </div>
           <div>
               <label htmlFor="t-due" className="form-label">
               Due
@@ -188,6 +245,26 @@ export function TasksPage() {
               onChange={(event) => setTaskDue(event.target.value)}
               className={inputClass}
             />
+          </div>
+          <div>
+            <label htmlFor="t-owner" className="form-label">Owner</label>
+            <select id="t-owner" value={ownerUserId} onChange={(event) => setOwnerUserId(event.target.value)} className={inputClass}>
+              <option value="">Me</option>
+              {users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="t-recurrence" className="form-label">Repeat</label>
+            <select id="t-recurrence" value={recurrence} onChange={(event) => setRecurrence(event.target.value)} className={inputClass}>
+              <option value="NONE">Does not repeat</option>
+              <option value="DAILY">Daily</option>
+              <option value="WEEKLY">Weekly</option>
+              <option value="MONTHLY">Monthly</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="t-reminder" className="form-label">Reminder</label>
+            <input id="t-reminder" type="datetime-local" value={reminderAt} onChange={(event) => setReminderAt(event.target.value)} className={inputClass} />
           </div>
           <div>
             <label htmlFor="t-priority" className="form-label">
@@ -211,7 +288,7 @@ export function TasksPage() {
               className="btn btn-primary"
               style={{ background: "var(--brand)" }}
             >
-              <span aria-hidden>+</span> Create task
+              <span aria-hidden>{editingTask ? "✓" : "+"}</span> {editingTask ? "Save task" : "Create task"}
             </button>
           </div>
         </form>
@@ -280,6 +357,8 @@ export function TasksPage() {
               [...Array(5)].map((_, i) => (
                 <tr key={`sk-${i}`}><td colSpan={6} style={{ padding: "10px 12px" }}><div className="skeleton" style={{ height: "16px", width: `${75 - i * 10}%` }} /></td></tr>
               ))
+            ) : loadError ? (
+              <tr><td colSpan={6}><div className="empty-state"><p className="empty-state-title" style={{ color: "var(--error)" }}>{loadError}</p><button type="button" onClick={() => void fetchTasks()} className="btn btn-secondary" style={{ marginTop: "var(--space-3)" }}>Retry</button></div></td></tr>
             ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={6}>
@@ -296,7 +375,7 @@ export function TasksPage() {
                     <p className="font-medium">{task.title}</p>
                     {task.subjectType && task.subjectId ? (
                       <p className="text-xs text-(--text-tertiary)">
-                        linked to {task.subjectType.toLowerCase()} …{task.subjectId.slice(-6)}
+                        linked to {SUBJECT_PATH[task.subjectType] ? <Link href={`/${SUBJECT_PATH[task.subjectType]}/${task.subjectId}`} className="text-(--text-brand) hover:underline">{task.subjectType.toLowerCase()} …{task.subjectId.slice(-6)}</Link> : `${task.subjectType.toLowerCase()} …${task.subjectId.slice(-6)}`}
                       </p>
                     ) : null}
                   </td>
@@ -318,6 +397,7 @@ export function TasksPage() {
                         >
                           Complete
                         </button>
+                        <button type="button" onClick={() => openEdit(task)} className="mr-2 text-(--text-secondary) hover:underline">Edit</button>
                         <button
                           type="button"
                           onClick={() => void setTaskStatus(task.id, "CANCELLED")}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCrmBranding } from "@/components/BrandingProvider";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useConfirmDialog } from "@/components/Dialogs";
@@ -588,6 +589,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
     id: string; email: string; name: string; status: string; lastLoginAt: string | null;
     role: { key: string; name: string };
     memberships: Array<{ team: { id: string; name: string } }>;
+    _count: { assignedLeads: number; ownedContacts: number; ownedAccounts: number; ownedCustomers: number; ownedOpps: number; ownedTasks: number };
   }>>([]);
   const [teams, setTeams] = useState<Array<{
     id: string; name: string; leader: { id: string; name: string } | null;
@@ -611,6 +613,9 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
   const [sort, setSort] = useState("name");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [userActivity, setUserActivity] = useState<Array<{ id: string; source: string; label: string; objectType: string; objectId: string; createdAt: string }>>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -630,6 +635,25 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!selectedUserId) {
+      setUserActivity([]);
+      return;
+    }
+    let active = true;
+    setActivityLoading(true);
+    setActivityError(null);
+    void fetch(`/api/admin/users?id=${selectedUserId}`)
+      .then(async (response) => {
+        const body = await response.json().catch(() => null) as { data?: typeof userActivity; error?: string } | null;
+        if (!response.ok) throw new Error(body?.error ?? "Unable to load user activity.");
+        if (active) setUserActivity(body?.data ?? []);
+      })
+      .catch((cause: unknown) => { if (active) setActivityError(cause instanceof Error ? cause.message : "Unable to load user activity."); })
+      .finally(() => { if (active) setActivityLoading(false); });
+    return () => { active = false; };
+  }, [selectedUserId]);
 
   const filteredUsers = useMemo(() => users
     .filter((user) => statusFilter === "ALL" || user.status === statusFilter)
@@ -832,6 +856,10 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
           <div><p className="text-xs text-(--text-tertiary)">Last login</p><p className="mt-1 font-medium">{selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleString() : "Never"}</p></div>
         </div>
         <div className="mt-4 border-t border-(--border-default) pt-4"><p className="text-xs text-(--text-tertiary)">Team assignments</p><p className="mt-1 text-sm">{selectedUser.memberships.map((membership) => membership.team.name).join(", ") || "No teams assigned"}</p></div>
+        <div className="mt-4 border-t border-(--border-default) pt-4"><p className="text-xs text-(--text-tertiary)">Workspace overview</p><div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3"><Link href={`/leads?assignment=user:${selectedUser.id}`} className="rounded-md border border-(--border-default) p-2 hover:bg-(--bg-hover)"><span className="block text-lg font-semibold">{selectedUser._count.assignedLeads}</span><span className="text-xs text-(--text-secondary)">Leads</span></Link><Link href={`/contacts?ownerUserId=${selectedUser.id}`} className="rounded-md border border-(--border-default) p-2 hover:bg-(--bg-hover)"><span className="block text-lg font-semibold">{selectedUser._count.ownedContacts}</span><span className="text-xs text-(--text-secondary)">Contacts</span></Link><Link href={`/accounts?ownerUserId=${selectedUser.id}`} className="rounded-md border border-(--border-default) p-2 hover:bg-(--bg-hover)"><span className="block text-lg font-semibold">{selectedUser._count.ownedAccounts}</span><span className="text-xs text-(--text-secondary)">Accounts</span></Link><Link href={`/customers?ownerUserId=${selectedUser.id}`} className="rounded-md border border-(--border-default) p-2 hover:bg-(--bg-hover)"><span className="block text-lg font-semibold">{selectedUser._count.ownedCustomers}</span><span className="text-xs text-(--text-secondary)">Customers</span></Link><Link href={`/opportunities?ownerUserId=${selectedUser.id}`} className="rounded-md border border-(--border-default) p-2 hover:bg-(--bg-hover)"><span className="block text-lg font-semibold">{selectedUser._count.ownedOpps}</span><span className="text-xs text-(--text-secondary)">Opportunities</span></Link><Link href={`/tasks?mine=0&ownerUserId=${selectedUser.id}`} className="rounded-md border border-(--border-default) p-2 hover:bg-(--bg-hover)"><span className="block text-lg font-semibold">{selectedUser._count.ownedTasks}</span><span className="text-xs text-(--text-secondary)">Tasks</span></Link></div></div>
+        <div className="mt-4 border-t border-(--border-default) pt-4"><div className="flex items-center justify-between"><p className="text-xs text-(--text-tertiary)">Recent activity</p><span className="text-[11px] text-(--text-tertiary)">{userActivity.length} events</span></div>
+          {activityError ? <p role="alert" className="mt-2 text-sm text-(--error)">{activityError}</p> : activityLoading ? <div className="mt-2 space-y-2"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-4 w-1/2" /></div> : userActivity.length === 0 ? <p className="mt-2 text-sm text-(--text-tertiary)">No recorded activity yet.</p> : <ul className="mt-2 max-h-52 space-y-2 overflow-y-auto">{userActivity.map((event) => <li key={event.id} className="flex items-start justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><span><span className="font-medium">{event.label}</span><span className="ml-2 text-xs text-(--text-tertiary)">{event.objectType.toLowerCase()}</span></span><time className="shrink-0 text-[11px] text-(--text-tertiary)">{new Date(event.createdAt).toLocaleDateString()}</time></li>)}</ul>}
+        </div>
         {canManage ? <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => void patchUser(selectedUser.id, { status: selectedUser.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" })} className="btn btn-secondary">{selectedUser.status === "ACTIVE" ? "Suspend access" : "Restore access"}</button><button type="button" onClick={() => setSelectedUserId(null)} className="btn btn-secondary">Done</button></div> : null}
       </div> : null}
 

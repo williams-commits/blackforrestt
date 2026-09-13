@@ -33,6 +33,7 @@ export function ActivityComposer({
   const [noteBody, setNoteBody] = useState("");
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDue, setTaskDue] = useState("");
+  const [taskPriority, setTaskPriority] = useState("NORMAL");
   const [apptTitle, setApptTitle] = useState("");
   const [apptStart, setApptStart] = useState("");
   const [busy, setBusy] = useState(false);
@@ -81,7 +82,7 @@ export function ActivityComposer({
       const response = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: taskTitle, dueAt: taskDue || null, subjectType, subjectId }),
+        body: JSON.stringify({ title: taskTitle, dueAt: taskDue || null, priority: taskPriority, subjectType, subjectId }),
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -92,6 +93,7 @@ export function ActivityComposer({
       }
       setTaskTitle("");
       setTaskDue("");
+      setTaskPriority("NORMAL");
       setActiveAction("none");
       toast.success("Task created", `Follow-up task created for ${subjectLabel}.`);
       refreshAfterToast();
@@ -220,6 +222,12 @@ export function ActivityComposer({
             className="input"
             style={{ width: "100%" }}
           />
+          <select aria-label="Task priority" value={taskPriority} onChange={(event) => setTaskPriority(event.target.value)} className="input">
+            <option value="LOW">Low priority</option>
+            <option value="NORMAL">Normal priority</option>
+            <option value="HIGH">High priority</option>
+            <option value="URGENT">Urgent priority</option>
+          </select>
           <button type="submit" className="btn btn-primary" disabled={busy || !taskTitle.trim()}>
             {busy ? "…" : "Add task"}
           </button>

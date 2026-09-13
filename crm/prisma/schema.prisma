@@ -67,6 +67,13 @@ enum TaskStatus {
   CANCELLED
 }
 
+enum TaskRecurrence {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
 enum AppointmentStatus {
   SCHEDULED
   COMPLETED
@@ -139,6 +146,7 @@ enum NotificationType {
   IMPORT_FAILED
   PLATFORM_USER_ONLINE
   SYSTEM
+  TASK_REMINDER
 }
 
 // ──────────────────────── Identity & structure ────────────────────────
@@ -630,6 +638,9 @@ model Task {
   dueAt             DateTime?
   priority          Priority     @default(NORMAL)
   status            TaskStatus   @default(OPEN)
+  recurrence        TaskRecurrence @default(NONE)
+  reminderAt        DateTime?
+  reminderNotifiedAt DateTime?
   completedAt       DateTime?
   overdueNotifiedAt DateTime?
   subjectType       SubjectType?

@@ -12,11 +12,21 @@ interface NotificationRow {
   createdAt: string;
 }
 
+interface TaskRow {
+  id: string;
+  title: string;
+  dueAt: string | null;
+  priority: string;
+  subjectType: string | null;
+  subjectId: string | null;
+}
+
 const TYPE_LABELS: Record<string, string> = {
   RECORD_ASSIGNED: "Assigned to you",
   TASK_CREATED: "New task",
   TASK_DUE: "Task due",
   TASK_OVERDUE: "Task overdue",
+  TASK_REMINDER: "Task reminder",
   APPOINTMENT_SCHEDULED: "Appointment scheduled",
   IMPORT_COMPLETED: "Import completed",
   IMPORT_FAILED: "Import failed",
@@ -24,11 +34,20 @@ const TYPE_LABELS: Record<string, string> = {
   SYSTEM: "System",
 };
 
+const SUBJECT_PATH: Record<string, string> = {
+  LEAD: "leads",
+  CONTACT: "contacts",
+  ACCOUNT: "accounts",
+  CUSTOMER: "customers",
+  OPPORTUNITY: "opportunities",
+};
+
 /** Home widgets: my task counters + in-app notifications with mark-all-read. */
 export function HomeWidgets() {
   const [openCount, setOpenCount] = useState<number | null>(null);
   const [overdueCount, setOverdueCount] = useState<number | null>(null);
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
+  const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [unread, setUnread] = useState(0);
 
   const refresh = useCallback(async () => {
@@ -36,6 +55,7 @@ export function HomeWidgets() {
     if (tasks) {
       setOpenCount(tasks.meta.openCount);
       setOverdueCount(tasks.meta.overdueCount);
+      setTasks((tasks.data as TaskRow[]).slice(0, 4));
     }
     const notes = await fetch("/api/notifications").then((r) => (r.ok ? r.json() : null));
     if (notes) {
@@ -70,8 +90,8 @@ export function HomeWidgets() {
       <section className="card" style={{ padding: "var(--space-6)" }}>
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-(--text-tertiary)">Focus</p>
-            <h2 className="mt-1 text-lg font-semibold tracking-tight">My work</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-(--text-tertiary)">Attention</p>
+            <h2 className="mt-1 text-lg font-semibold tracking-tight">My work queue</h2>
           </div>
           <Link href="/tasks?mine=1" className="text-xs font-semibold text-(--text-brand) hover:underline">View tasks</Link>
         </div>
@@ -92,23 +112,22 @@ export function HomeWidgets() {
             <p className="text-sm text-(--text-secondary)">overdue</p>
           </Link>
         </div>
+        <div className="mt-5 border-t border-(--border-default) pt-4">
+          <div className="mb-2 flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-wide text-(--text-tertiary)">Next actions</p><Link href="/tasks?due=upcoming&mine=1" className="text-xs font-medium text-(--text-brand) hover:underline">Upcoming</Link></div>
+          {tasks.length === 0 ? <p className="text-sm text-(--text-tertiary)">No pending tasks in your queue.</p> : <ul className="space-y-2">{tasks.map((task) => { const href = task.subjectType && task.subjectId && SUBJECT_PATH[task.subjectType] ? `/${SUBJECT_PATH[task.subjectType]}/${task.subjectId}` : "/tasks?mine=1"; return <li key={task.id}><Link href={href} className="flex items-center justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm hover:bg-(--bg-hover)"><span className="min-w-0 truncate font-medium">{task.title}</span><span className={`shrink-0 text-[10px] font-semibold uppercase ${task.priority === "URGENT" ? "text-(--error)" : "text-(--text-tertiary)"}`}>{task.dueAt ? new Date(task.dueAt).toLocaleDateString() : "no due date"}</span></Link></li>; })}</ul>}
+        </div>
       </section>
 
       <section className="card" style={{ padding: "var(--space-6)" }}>
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-(--text-tertiary)">Inbox</p>
-            <h2 className="mt-1 text-lg font-semibold tracking-tight">Notifications {unread > 0 ? <span className="text-sm font-medium text-(--brand)">· {unread} unread</span> : ""}</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-(--text-tertiary)">Attention</p>
+            <h2 className="mt-1 text-lg font-semibold tracking-tight">Team inbox {unread > 0 ? <span className="text-sm font-medium text-(--brand)">· {unread} unread</span> : ""}</h2>
           </div>
-          {unread > 0 ? (
-            <button
-              type="button"
-              onClick={() => void markAllRead()}
-              className="text-xs font-medium text-(--brand) hover:underline"
-            >
-              Mark all read
-            </button>
-          ) : null}
+          <div className="flex items-center gap-3">
+            <Link href="/notifications" className="text-xs font-semibold text-(--text-brand) hover:underline">View all</Link>
+            {unread > 0 ? <button type="button" onClick={() => void markAllRead()} className="text-xs font-medium text-(--brand) hover:underline">Mark all read</button> : null}
+          </div>
         </div>
         {notifications.length === 0 ? (
           <p className="text-sm text-(--text-tertiary)">Nothing yet — assignments and shared tasks land here.</p>

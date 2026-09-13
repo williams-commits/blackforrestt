@@ -7,6 +7,7 @@ import {
   createUser,
   deleteUser,
   listUsers,
+  listUserActivity,
   updateUser,
 } from "@/server/records/adminManage";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
@@ -18,9 +19,11 @@ export const dynamic = "force-dynamic";
 
 const IdQuery = z.object({ id: z.string().min(5) });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await requirePermission("USERS_MANAGE");
+    const id = new URL(request.url).searchParams.get("id");
+    if (id) return NextResponse.json({ data: await listUserActivity(id) });
     return NextResponse.json({ data: await listUsers() });
   } catch (error) {
     return handleRouteError(error, "Unable to load users.");

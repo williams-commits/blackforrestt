@@ -8,6 +8,8 @@ import { RecordForm, type OptionSource } from "@/components/RecordForm";
 import { ViewTabs, type ViewOption } from "@/components/ViewTabs";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
+import { SmartTips } from "@/components/SmartTips";
+import { rememberRecentRecord } from "@/components/RecentRecords";
 import { RowActions } from "@/components/RowActions";
 import { InlineEdit } from "@/components/InlineEdit";
 import { useConfirmDialog, usePromptDialog } from "@/components/Dialogs";
@@ -447,6 +449,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         </>}
       />
       <WorkspaceQuickNav />
+      <SmartTips context="records" />
       {mounted ? (
         <ViewTabs
           title={config.title}
@@ -704,7 +707,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               Create task…
             </button>
           ) : null}
-          {can.delete && selected.size === 2 ? (
+          {object === "leads" && can.delete && selected.size === 2 ? (
             <button
               type="button"
               onClick={() => {
@@ -801,7 +804,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         </div>
       ) : null}
 
-      <div className="card table-responsive overflow-hidden">
+      <div className="card table-responsive overflow-hidden p-2 lg:p-0">
         <table className={`table ${density === "compact" ? "table-compact" : ""}`}>
           <thead>
             <tr className="border-b border-(--border-default) bg-(--bg-hover) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
@@ -852,6 +855,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 <td colSpan={tableColumnCount}>
                   <div className="empty-state" style={{ padding: "var(--space-8)" }}>
                     <p className="empty-state-title" style={{ color: "var(--error)" }}>{loadError}</p>
+                    <button type="button" onClick={() => void fetchRows()} className="btn btn-secondary" style={{ marginTop: "var(--space-3)" }}>
+                      Retry
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -911,6 +917,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                           return (
                             <Link
                               href={`/${config.object}/${row.id}`}
+                              onClick={() => rememberRecentRecord({ href: `/${config.object}/${row.id}`, label: raw, module: config.title })}
                               className="font-medium text-(--brand) hover:underline"
                             >
                               {raw}

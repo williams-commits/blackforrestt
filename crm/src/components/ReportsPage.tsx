@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { Modal } from "@/components/Modal";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
+import { SmartTips } from "@/components/SmartTips";
+import Link from "next/link";
 
 interface ReportMeta {
   id: string;
@@ -38,6 +40,14 @@ const PIE_COLORS = [
 ];
 
 const OBJECTS = ["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY", "TASK"] as const;
+const OBJECT_PATH: Record<string, string> = {
+  LEAD: "leads",
+  CONTACT: "contacts",
+  ACCOUNT: "accounts",
+  CUSTOMER: "customers",
+  OPPORTUNITY: "opportunities",
+  TASK: "tasks",
+};
 const DATE_FIELDS: Record<string, string[]> = {
   LEAD: ["createdAt", "updatedAt", "convertedAt"],
   CONTACT: ["createdAt", "updatedAt"],
@@ -62,6 +72,8 @@ export function ReportsPage() {
   const [bGroup, setBGroup] = useState("source");
   const [bTimeUnit, setBTimeUnit] = useState<"" | "day" | "week" | "month">("");
   const [library, setLibrary] = useState<ReportMeta[]>([]);
+  const [libraryLoading, setLibraryLoading] = useState(true);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string>("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -70,15 +82,20 @@ export function ReportsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setLibraryLoading(true);
+    setLibraryError(null);
     void fetch("/api/reports")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((body) => {
-        if (body?.data) {
-          setLibrary(body.data);
-          setSelected((current) => current || body.data[0]?.id || "");
-        }
+      .then((response) => {
+        if (!response.ok) throw new Error(`Request failed (${response.status})`);
+        return response.json();
       })
-      .catch(() => setLibrary([]));
+      .then((body) => {
+        const reports = body?.data ?? [];
+        setLibrary(reports);
+        setSelected((current) => current || reports[0]?.id || "");
+      })
+      .catch((cause: unknown) => setLibraryError(cause instanceof Error ? cause.message : "Unable to load reports."))
+      .finally(() => setLibraryLoading(false));
   }, []);
 
   const run = useCallback(async (definition?: { object: string; dateField: string; groupBy: { key: string; timeUnit?: "day" | "week" | "month" } }) => {
@@ -102,6 +119,9 @@ export function ReportsPage() {
         return;
       }
       setResult(body.data);
+    } catch (cause) {
+      setResult(null);
+      setError(cause instanceof Error ? cause.message : "Unable to run report.");
     } finally {
       setRunning(false);
     }
@@ -167,6 +187,7 @@ export function ReportsPage() {
         metrics={[{ label: "Saved reports", value: library.length, tone: "brand" }, { label: "Scope", value: "Your access", tone: "success" }]}
       />
       <WorkspaceQuickNav />
+      <SmartTips context="records" />
 
       {builderOpen ? (
         <Modal title="Build a report" onClose={() => setBuilderOpen(false)} size="lg">
@@ -214,10 +235,14 @@ export function ReportsPage() {
 
       <div className={`grid gap-4 ${builderOpen ? "" : "lg:grid-cols-[16rem_1fr]"}`}>
         <nav className={`card space-y-1 p-2 ${builderOpen ? "hidden" : ""}`} aria-label="Report library">
-          {library.length === 0 ? (
+          {libraryLoading ? (
             <div style={{ padding: "var(--space-3)" }}>
               {[...Array(5)].map((_, i) => (<div key={i} className="skeleton" style={{ height: "14px", width: `${80 - i * 10}%`, marginBottom: "10px" }} />))}
             </div>
+          ) : libraryError ? (
+            <div className="space-y-2 p-3"><p className="text-sm text-(--error)">{libraryError}</p><button type="button" onClick={() => window.location.reload()} className="text-xs font-semibold text-(--text-brand) underline">Retry</button></div>
+          ) : library.length === 0 ? (
+            <div className="p-3"><p className="text-sm font-medium">No saved reports yet</p><p className="mt-1 text-xs text-(--text-tertiary)">Build a report to create your first analysis.</p></div>
           ) : (
             library.map((report) => (
               <button
@@ -241,6 +266,7 @@ export function ReportsPage() {
               <div className="flex-1">
                 <p className="font-medium">{meta.name}</p>
                 <p className="text-sm text-(--text-secondary)">{meta.description}</p>
+                {OBJECT_PATH[meta.object] ? <Link href={`/${OBJECT_PATH[meta.object]}`} className="mt-2 inline-block text-xs font-semibold text-(--text-brand) hover:underline">Open {meta.object.toLowerCase()} records →</Link> : null}
               </div>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-(--border-default) pt-3">
                 <div className="flex items-center gap-2">

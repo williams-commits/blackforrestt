@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RECORD_UI, type ObjectKey } from "@/lib/recordUi";
 import { RecordForm, type OptionSource } from "@/components/RecordForm";
@@ -137,7 +138,8 @@ export function RecordDetailActions({
   const options = useOptionSources(object);
 
   const canOpenActionForm = canEdit || canAssign || canChangeStatus || canChangePotentialStatus;
-  if (!canOpenActionForm && !canDelete) return null;
+  const subjectType = object === "leads" ? "LEAD" : object === "contacts" ? "CONTACT" : object === "accounts" ? "ACCOUNT" : "CUSTOMER";
+  const recordId = (row as { id: string }).id;
 
   async function handleDelete() {
     const singular = RECORD_UI[object].singular.toLowerCase();
@@ -159,6 +161,9 @@ export function RecordDetailActions({
 
   return (
     <div className="flex gap-2">
+      <Link href={`/tasks?subjectType=${subjectType}&subjectId=${recordId}`} className="flex items-center gap-1.5 rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary)">
+        Related tasks
+      </Link>
       {canOpenActionForm ? (
         <button
           type="button"

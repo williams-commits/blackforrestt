@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
+import { SmartTips } from "@/components/SmartTips";
 
 interface CampaignRow {
   id: string;
@@ -20,6 +21,7 @@ interface CampaignRow {
 export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
   const [rows, setRows] = useState<CampaignRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -29,9 +31,14 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const response = await fetch("/api/campaigns");
-      if (response.ok) setRows((await response.json()).data);
+      const body = await response.json().catch(() => null) as { data?: CampaignRow[]; error?: string } | null;
+      if (!response.ok) throw new Error(body?.error ?? `Request failed (${response.status})`);
+      setRows(body?.data ?? []);
+    } catch (cause) {
+      setLoadError(cause instanceof Error ? cause.message : "Unable to load campaigns.");
     } finally {
       setLoading(false);
     }
@@ -80,6 +87,7 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
         metrics={[{ label: "Campaigns", value: rows.length, tone: "brand" }, { label: "Active", value: rows.filter((row) => row.status === "ACTIVE").length, tone: "success" }, { label: "Members", value: rows.reduce((total, row) => total + row.memberCount, 0), tone: "info" }]}
       />
       <WorkspaceQuickNav />
+      <SmartTips context="records" />
 
       {showForm ? (
         <form method="post" onSubmit={createCampaign} className="grid gap-4 rounded-xl border border-(--border-default) bg-(--bg-surface) p-5 shadow-(--shadow-subtle) sm:grid-cols-4">
@@ -133,6 +141,8 @@ export function CampaignsPage({ canCreate }: { canCreate: boolean }) {
           <tbody>
             {loading ? (
               <tr><td colSpan={6} style={{ padding: "10px 12px" }}><div className="skeleton" style={{ height: "16px", width: "70%" }} /></td></tr>
+            ) : loadError ? (
+              <tr><td colSpan={6}><div className="empty-state"><p className="empty-state-title" style={{ color: "var(--error)" }}>{loadError}</p><button type="button" onClick={() => void load()} className="btn btn-secondary" style={{ marginTop: "var(--space-3)" }}>Retry</button></div></td></tr>
             ) : rows.length === 0 ? (
               <tr><td colSpan={6}><div className="empty-state"><p className="empty-state-title">No campaigns yet</p><p className="empty-state-description">Create a campaign to organize outreach and measure response.</p></div></td></tr>
             ) : (

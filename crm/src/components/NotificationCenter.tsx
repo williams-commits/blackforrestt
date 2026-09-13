@@ -9,12 +9,22 @@ import { notificationHref } from "@/lib/notificationLink";
 type NotificationRow = { id: string; type: string; payload: Record<string, unknown>; readAt: string | null; createdAt: string };
 type ResponseData = { data: NotificationRow[]; meta: { unread: number; total: number; page: number; pageSize: number; hasMore: boolean } };
 
-const TYPE_LABELS: Record<string, string> = { RECORD_ASSIGNED: "Assignment", TASK_CREATED: "Task", TASK_DUE: "Task due", TASK_OVERDUE: "Overdue task", APPOINTMENT_SCHEDULED: "Appointment", IMPORT_COMPLETED: "Import completed", IMPORT_FAILED: "Import failed", PLATFORM_USER_ONLINE: "Client activity", SYSTEM: "System" };
+const TYPE_LABELS: Record<string, string> = { RECORD_ASSIGNED: "Assignment", TASK_CREATED: "Task", TASK_DUE: "Task due", TASK_OVERDUE: "Overdue task", TASK_REMINDER: "Task reminder", APPOINTMENT_SCHEDULED: "Appointment", IMPORT_COMPLETED: "Import completed", IMPORT_FAILED: "Import failed", PLATFORM_USER_ONLINE: "Client activity", SYSTEM: "System" };
 
 function titleFor(row: NotificationRow) {
   const label = TYPE_LABELS[row.type] ?? row.type.replaceAll("_", " ").toLowerCase();
   const subject = row.payload.label ?? row.payload.title;
   return typeof subject === "string" ? `${label}: ${subject}` : label;
+}
+
+function dayLabel(iso: string): string {
+  const date = new Date(iso);
+  const today = new Date();
+  const start = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+  const difference = Math.round((start(today) - start(date)) / 86_400_000);
+  if (difference === 0) return "Today";
+  if (difference === 1) return "Yesterday";
+  return date.toLocaleDateString(undefined, { dateStyle: "medium" });
 }
 
 export function NotificationCenter() {
@@ -42,6 +52,13 @@ export function NotificationCenter() {
   useEffect(() => { void load(); }, [load]);
   const rows = useMemo(() => data?.data ?? [], [data]);
   const types = useMemo(() => [...new Set(rows.map((row) => row.type))], [rows]);
+  const groupedRows = useMemo(() => rows.reduce<Array<{ label: string; rows: NotificationRow[] }>>((groups, row) => {
+    const label = dayLabel(row.createdAt);
+    const group = groups.find((entry) => entry.label === label);
+    if (group) group.rows.push(row);
+    else groups.push({ label, rows: [row] });
+    return groups;
+  }, []), [rows]);
 
   async function setReadState(row: NotificationRow, nextRead: boolean) {
     setData((current) => current ? { ...current, data: current.data.map((item) => item.id === row.id ? { ...item, readAt: nextRead ? new Date().toISOString() : null } : item) } : current);
@@ -63,7 +80,7 @@ export function NotificationCenter() {
         <select aria-label="Notification type" value={type} onChange={(event) => { setType(event.target.value); setPage(1); }} className="input sm:w-52"><option value="">All event types</option>{types.map((item) => <option key={item} value={item}>{TYPE_LABELS[item] ?? item}</option>)}</select>
       </div>
       {error ? <div className="m-4 rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error} <button type="button" onClick={() => void load()} className="ml-2 font-semibold underline">Retry</button></div> : null}
-      {loading && rows.length === 0 ? <div className="space-y-3 p-5">{[1, 2, 3, 4].map((item) => <div key={item} className="skeleton h-16 rounded-md" />)}</div> : rows.length === 0 ? <div className="empty-state"><p className="empty-state-title">You are all caught up</p><p className="empty-state-description">Meaningful assignments, reminders, and system events will appear here.</p></div> : <ul className="divide-y divide-(--border-default)">{rows.map((row) => <li key={row.id} className={`flex gap-4 p-4 transition-colors hover:bg-(--bg-hover) ${row.readAt ? "" : "bg-(--bg-selected)"}`}><div className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${row.readAt ? "border border-(--border-strong)" : "bg-(--brand)"}`} /><div className="min-w-0 flex-1"><Link href={notificationHref(row)} className="font-medium hover:text-(--text-brand)">{titleFor(row)}</Link><p className="mt-1 text-xs text-(--text-tertiary)">{new Date(row.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p></div><button type="button" onClick={() => void setReadState(row, !row.readAt)} className="shrink-0 text-xs font-medium text-(--text-brand) hover:underline">{row.readAt ? "Mark unread" : "Mark read"}</button></li>)}</ul>}
+      {loading && rows.length === 0 ? <div className="space-y-3 p-5">{[1, 2, 3, 4].map((item) => <div key={item} className="skeleton h-16 rounded-md" />)}</div> : rows.length === 0 ? <div className="empty-state"><p className="empty-state-title">You are all caught up</p><p className="empty-state-description">Meaningful assignments, reminders, and system events will appear here.</p></div> : <div>{groupedRows.map((group) => <section key={group.label} aria-label={group.label}><h2 className="border-b border-(--border-default) bg-(--bg-subtle) px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-(--text-tertiary)">{group.label}</h2><ul className="divide-y divide-(--border-default)">{group.rows.map((row) => <li key={row.id} className={`flex gap-4 p-4 transition-colors hover:bg-(--bg-hover) ${row.readAt ? "" : "bg-(--bg-selected)"}`}><div className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${row.readAt ? "border border-(--border-strong)" : "bg-(--brand)"}`} /><div className="min-w-0 flex-1"><Link href={notificationHref(row)} className="font-medium hover:text-(--text-brand)">{titleFor(row)}</Link><p className="mt-1 text-xs text-(--text-tertiary)">{new Date(row.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p></div><button type="button" onClick={() => void setReadState(row, !row.readAt)} className="shrink-0 text-xs font-medium text-(--text-brand) hover:underline">{row.readAt ? "Mark unread" : "Mark read"}</button></li>)}</ul></section>)}</div>}
       {data && (data.meta.page > 1 || data.meta.hasMore) ? <div className="flex items-center justify-between border-t border-(--border-default) px-4 py-3 text-xs text-(--text-secondary)"><button type="button" disabled={page <= 1 || loading} onClick={() => setPage((value) => Math.max(1, value - 1))} className="btn btn-secondary disabled:opacity-40">Previous</button><span>Page {page}</span><button type="button" disabled={!data.meta.hasMore || loading} onClick={() => setPage((value) => value + 1)} className="btn btn-secondary disabled:opacity-40">Next</button></div> : null}
     </div>
   </div>;

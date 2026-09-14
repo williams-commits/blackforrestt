@@ -41,8 +41,8 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
               <svg viewBox="0 0 220 64" className="mt-6 w-full" aria-hidden="true" focusable="false">
                 <defs>
                   <linearGradient id="ag-bento-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgba(99,232,145,0.25)" />
-                    <stop offset="100%" stopColor="rgba(99,232,145,0)" />
+                    <stop offset="0%" stopColor="rgba(240,185,11,0.25)" />
+                    <stop offset="100%" stopColor="rgba(240,185,11,0)" />
                   </linearGradient>
                 </defs>
                 <path

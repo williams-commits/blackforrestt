@@ -119,7 +119,7 @@ export function MarketsSection({
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0"
-              style={{ background: "radial-gradient(100% 70% at 90% -10%, rgba(99,232,145,0.14), transparent 60%)" }}
+              style={{ background: "radial-gradient(100% 70% at 90% -10%, rgba(240,185,11,0.14), transparent 60%)" }}
             />
             <div className="relative flex h-full flex-col">
               <h3 className="text-[clamp(1.6rem,2.6vw,2.3rem)] font-bold leading-[1.12] tracking-[-0.02em] text-[#f1f3ef] text-balance">

@@ -21,7 +21,7 @@ interface Props {
  *                  confident title · sub (mirrors the landing's section bands)
  *   body         — the deep-charcoal canvas at a comfortable measure,
  *                  sections in the landing's type and card grammar
- *   closing CTA  — the landing's deep-green conversion band, so every
+ *   closing CTA  — the landing's warm-black conversion band, so every
  *                  interior page ends in the product's voice
  *
  * This is the Agile replacement for the primary brand's editorial article
@@ -39,7 +39,7 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 h-px"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(99,232,145,0.35) 30%, rgba(255,255,255,0.12) 55%, transparent)" }}
+          style={{ background: "linear-gradient(90deg, transparent, rgba(240,185,11,0.4) 30%, rgba(255,255,255,0.12) 55%, transparent)" }}
         />
         <div className="ag-container relative grid items-center gap-10 py-16 lg:grid-cols-[1.25fr_0.75fr] lg:py-20">
           <div>
@@ -52,8 +52,8 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
             <svg viewBox="0 0 220 80" className="w-full" focusable="false">
               <defs>
                 <linearGradient id="ag-page-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgba(99,232,145,0.22)" />
-                  <stop offset="100%" stopColor="rgba(99,232,145,0)" />
+                  <stop offset="0%" stopColor="rgba(240,185,11,0.24)" />
+                  <stop offset="100%" stopColor="rgba(240,185,11,0)" />
                 </linearGradient>
               </defs>
               {[16, 32, 48, 64].map((y) => (
@@ -88,13 +88,13 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
         )}
       </div>
 
-      {/* Closing CTA — the landing's deep-green band, ending every interior
+      {/* Closing CTA — the landing's warm-black band, ending every interior
           page in the product's voice. Same honest copy as the landing. */}
-      <aside className="ag-page-cta relative overflow-hidden bg-[#263b33]">
+      <aside className="ag-page-cta relative overflow-hidden bg-[#211b0b]">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
-          style={{ background: "radial-gradient(46% 90% at 82% -20%, rgba(99,232,145,0.12), transparent 70%)" }}
+          style={{ background: "radial-gradient(46% 90% at 82% -20%, rgba(240,185,11,0.12), transparent 70%)" }}
         />
         <div className="ag-container relative flex flex-col items-start justify-between gap-6 py-12 lg:flex-row lg:items-center lg:py-14">
           <div>
@@ -132,7 +132,7 @@ export function AgileSection({ title, children }: { title?: string; children: Re
           <span
             aria-hidden="true"
             className="mt-2.5 block h-px w-full"
-            style={{ background: "linear-gradient(90deg, rgba(99,232,145,0.45), rgba(255,255,255,0.1) 40%, transparent 80%)" }}
+            style={{ background: "linear-gradient(90deg, rgba(240,185,11,0.5), rgba(255,255,255,0.1) 40%, transparent 80%)" }}
           />
         </h2>
       )}

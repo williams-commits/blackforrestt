@@ -8,13 +8,20 @@
 export function AgileStyles() {
   return (
     <style>{`
+      html:has(.ag-shell),
+      body:has(.ag-shell) { margin: 0; }
+      .ag-shell,
+      .ag-shell *,
+      .ag-shell *::before,
+      .ag-shell *::after { box-sizing: border-box; }
       .ag-shell {
+        min-height: 100vh;
         --ag-bg: #0b0e11;
         --ag-bg-2: #0e1114;
         --ag-bg-3: #181a20;
         --ag-card: #1e2329;
-        --ag-green: #37321c;
-        --ag-green-2: #463d1e;
+        --ag-yellow-deep: #2a2108;
+        --ag-yellow-soft: #3a2d0b;
         --ag-accent: #f0b90b;
         --ag-text: #eaecef;
         --ag-text-2: #b7bdc6;
@@ -37,7 +44,7 @@ export function AgileStyles() {
         border-radius: 12px;
       }
       .ag-card-hover { transition: border-color 220ms ease, transform 220ms ease, background-color 220ms ease; }
-      .ag-card-hover:hover { border-color: rgba(99, 232, 145, 0.38); transform: translateY(-2px); }
+      .ag-card-hover:hover { border-color: rgba(240, 185, 11, 0.48); transform: translateY(-2px); }
 
       /* Frosted glass over the photo bands: used for panels/tiles that float
          on SectionBackdrop plates. Solid fallback where backdrop-filter is
@@ -57,7 +64,7 @@ export function AgileStyles() {
         border: 1px solid rgba(255, 255, 255, 0.12);
         border-radius: 10px;
       }
-      .ag-glass-tile.ag-card-hover:hover { border-color: rgba(99, 232, 145, 0.5); }
+      .ag-glass-tile.ag-card-hover:hover { border-color: rgba(240, 185, 11, 0.55); }
       @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
         .ag-glass { background: rgba(17, 21, 19, 0.92); }
         .ag-glass-tile { background: rgba(17, 21, 19, 0.92); }
@@ -78,9 +85,9 @@ export function AgileStyles() {
         background: linear-gradient(
           90deg,
           transparent,
-          rgba(99, 232, 145, 0.6) 22%,
+          rgba(240, 185, 11, 0.7) 22%,
           rgba(255, 255, 255, 0.32) 50%,
-          rgba(99, 232, 145, 0.6) 78%,
+          rgba(240, 185, 11, 0.7) 78%,
           transparent
         );
       }
@@ -141,7 +148,7 @@ export function AgileStyles() {
         --color-border: rgba(255, 255, 255, 0.12);
         --color-border-soft: rgba(255, 255, 255, 0.07);
         --color-brand: #f0b90b;
-        --color-brand-soft: rgba(99, 232, 145, 0.12);
+        --color-brand-soft: rgba(240, 185, 11, 0.14);
         --color-text: #f1f3ef;
         --color-text-muted: #a7ada8;
         --color-text-faint: #747a75;
@@ -168,8 +175,8 @@ export function AgileStyles() {
       .ag-scope .text-brand { color: #f0b90b; }
       .ag-scope .text-up { color: #0ecb81; }
       .ag-scope .text-down { color: #ff6b6b; }
-      .ag-scope .bg-brand-soft { background-color: rgba(99, 232, 145, 0.12); }
-      .ag-scope .border-brand { border-color: rgba(99, 232, 145, 0.5); }
+      .ag-scope .bg-brand-soft { background-color: rgba(240, 185, 11, 0.14); }
+      .ag-scope .border-brand { border-color: rgba(240, 185, 11, 0.55); }
       .ag-scope .border-up\/30 { border-color: rgba(14, 203, 129, 0.3); }
       .ag-scope .bg-up\/10 { background-color: rgba(14, 203, 129, 0.08); }
       /* Variant forms (hover/focus) of the same utilities — the palette must
@@ -227,13 +234,12 @@ export function AgileStyles() {
 
       /* ─── Trading-desk surface system ──────────────────────────────────── */
 
-      /* Mesh gradient — layered radial washes used as section ambience (the
-         premium-fintech depth device; replaces flat bands). */
+      /* Mesh gradient — layered warm-black washes used as section ambience. */
       .ag-mesh {
         background:
-          radial-gradient(42% 56% at 12% 8%, rgba(38, 59, 51, 0.55), transparent 68%),
-          radial-gradient(36% 48% at 88% 22%, rgba(99, 232, 145, 0.06), transparent 66%),
-          radial-gradient(40% 52% at 70% 96%, rgba(38, 59, 51, 0.42), transparent 70%);
+          radial-gradient(42% 56% at 12% 8%, rgba(58, 45, 11, 0.5), transparent 68%),
+          radial-gradient(36% 48% at 88% 22%, rgba(240, 185, 11, 0.07), transparent 66%),
+          radial-gradient(40% 52% at 70% 96%, rgba(42, 33, 8, 0.48), transparent 70%);
       }
 
       /* Chart gridlines — the terminal's graph-paper texture as section
@@ -245,14 +251,14 @@ export function AgileStyles() {
         background-size: 44px 44px;
       }
 
-      /* Hairline frame with mint catchlights — the terminal-panel device. */
+      /* Hairline frame with yellow catchlights — the terminal-panel device. */
       .ag-frame {
         position: relative;
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 14px;
         background:
           linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 46%),
-          #101412;
+          #11100d;
         box-shadow: 0 30px 80px -32px rgba(0, 0, 0, 0.9);
       }
       .ag-frame::before,
@@ -263,7 +269,7 @@ export function AgileStyles() {
         right: 6%;
         height: 1px;
         pointer-events: none;
-        background: linear-gradient(90deg, transparent, rgba(99, 232, 145, 0.5) 26%, rgba(255, 255, 255, 0.28) 52%, rgba(99, 232, 145, 0.5) 78%, transparent);
+        background: linear-gradient(90deg, transparent, rgba(240, 185, 11, 0.58) 26%, rgba(255, 255, 255, 0.28) 52%, rgba(240, 185, 11, 0.58) 78%, transparent);
       }
       .ag-frame::before { top: 0; }
       .ag-frame::after { bottom: 0; }
@@ -296,7 +302,7 @@ export function AgileStyles() {
         border-radius: 14px;
         transition: border-color 220ms ease, transform 220ms ease;
       }
-      .ag-bento-cell:hover { border-color: rgba(99, 232, 145, 0.35); transform: translateY(-2px); }
+      .ag-bento-cell:hover { border-color: rgba(240, 185, 11, 0.42); transform: translateY(-2px); }
 
       /* Live ticker marquee — infinite horizontal scroll. */
       .ag-ticker {
@@ -372,14 +378,14 @@ export function AgileStyles() {
         width: 0;
       }
 
-      /* Featured bento cell — the deep-green accent surface used to vary
+      /* Featured bento cell — the warm-black accent surface used to vary
          carousel/bento rhythm against the standard charcoal cells. */
       .ag-cell-accent {
         background:
           radial-gradient(120% 130% at 85% -10%, rgb(23, 27, 25), transparent 55%),
           linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0) 46%),
-          #1a2a23;
-        border-color: rgba(99, 232, 145, 0.22);
+          #211b0b;
+        border-color: rgba(240, 185, 11, 0.24);
       }
 
       /* Globe animation — data flows along the arcs while the trading-centre

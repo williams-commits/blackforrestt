@@ -25,13 +25,13 @@ export function GlobeArcs({ className = "" }: { className?: string }) {
     <svg viewBox="0 0 260 200" className={`ag-globe ${className}`} aria-hidden="true" focusable="false">
       <defs>
         <radialGradient id="ag-globe-glow" cx="50%" cy="42%" r="60%">
-          <stop offset="0%" stopColor="rgba(99,232,145,0.14)" />
-          <stop offset="100%" stopColor="rgba(99,232,145,0)" />
+          <stop offset="0%" stopColor="rgba(240,185,11,0.16)" />
+          <stop offset="100%" stopColor="rgba(240,185,11,0)" />
         </radialGradient>
         <linearGradient id="ag-arc" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="rgba(99,232,145,0)" />
-          <stop offset="50%" stopColor="rgba(99,232,145,0.75)" />
-          <stop offset="100%" stopColor="rgba(99,232,145,0)" />
+          <stop offset="0%" stopColor="rgba(240,185,11,0)" />
+          <stop offset="50%" stopColor="rgba(240,185,11,0.78)" />
+          <stop offset="100%" stopColor="rgba(240,185,11,0)" />
         </linearGradient>
       </defs>
 
@@ -89,7 +89,7 @@ export function GlobeArcs({ className = "" }: { className?: string }) {
       {/* Nodes — pulsing trading centres. */}
       {nodes.map(([x, y, r], i) => (
         <g key={i} className="ag-globe-node" style={{ animationDelay: `${i * 0.3}s` }}>
-          <circle cx={x} cy={y} r={r * 2.4} fill="rgba(99,232,145,0.12)" />
+          <circle cx={x} cy={y} r={r * 2.4} fill="rgba(240,185,11,0.14)" />
           <circle cx={x} cy={y} r={r} fill="#f0b90b" />
         </g>
       ))}

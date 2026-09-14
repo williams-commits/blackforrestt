@@ -39,7 +39,7 @@ function StoryStats({ returns, trades, label }: { returns?: string; trades?: str
 }
 
 /**
- * Testimonials — a static bento: the section voice sits in a deep-green
+ * Testimonials — a static bento: the section voice sits in a warm-black
  * feature panel (with the five-star mark), the client stories fill a card
  * grid beside it — four tiles and one wide cell. No carousel: the grid IS
  * the composition, every story visible at once.
@@ -63,7 +63,7 @@ export async function TestimonialsSection() {
               <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0"
-                style={{ background: "radial-gradient(90% 60% at 90% -10%, rgba(99,232,145,0.14), transparent 60%)" }}
+                style={{ background: "radial-gradient(90% 60% at 90% -10%, rgba(240,185,11,0.14), transparent 60%)" }}
               />
               <div className="relative flex h-full flex-col">
                 <span className="ag-eyebrow">{t("eyebrow")}</span>

@@ -46,7 +46,7 @@ export async function Hero() {
 
       <div className="ag-container relative grid items-center gap-16 pb-24 pt-24 lg:grid-cols-[1.12fr_0.88fr] lg:pb-32 lg:pt-36">
         <Reveal>
-          <span className="inline-flex items-center gap-2.5 rounded-full border border-[#f0b90b]/25 bg-[#f0b90b]/5 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8ff0b4] backdrop-blur-md">
+          <span className="inline-flex items-center gap-2.5 rounded-full border border-[#f0b90b]/30 bg-[#f0b90b]/8 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f8d56a] backdrop-blur-md">
             <span className="relative flex h-1.5 w-1.5" aria-hidden>
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#f0b90b] opacity-60 motion-reduce:animate-none" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#f0b90b]" />

@@ -17,7 +17,7 @@ import { currentBrandProfile } from "@/lib/branding";
 
 /**
  * Intelligence — the analysis pitch on the terminal's own texture: no photo,
- * just graph-paper gridlines and mesh over the deep green. Left carries the
+ * just graph-paper gridlines and mesh over the warm-black canvas. Left carries the
  * narrative WITH the checklist; right is a layered analyst composition — a
  * signal card (entry/exit guide bands, blank level chips) with a small
  * calendar card leaning against it. Abstract and honest: interface grammar,
@@ -27,7 +27,7 @@ export async function IntelligenceSection() {
   const t = await getTranslations("agile.intelligence");
   const bullets = [t("b1"), t("b2"), t("b3"), t("b4")];
   return (
-    <section id="intelligence" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#16211c]">
+    <section id="intelligence" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#17140b]">
       {/* Graph-paper texture dissolving into the band, then the mesh glow. */}
       <div
         aria-hidden="true"
@@ -74,15 +74,15 @@ export async function IntelligenceSection() {
               <svg viewBox="0 0 320 132" className="mt-5 w-full" aria-hidden="true" focusable="false">
                 <defs>
                   <linearGradient id="ag-int-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgba(99,232,145,0.2)" />
-                    <stop offset="100%" stopColor="rgba(99,232,145,0)" />
+                    <stop offset="0%" stopColor="rgba(240,185,11,0.2)" />
+                    <stop offset="100%" stopColor="rgba(240,185,11,0)" />
                   </linearGradient>
                 </defs>
                 {/* Entry / exit guide bands — abstract zones, no numbers. */}
                 <rect x="0" y="14" width="320" height="16" fill="rgba(255,107,107,0.07)" />
-                <rect x="0" y="100" width="320" height="16" fill="rgba(99,232,145,0.08)" />
+                <rect x="0" y="100" width="320" height="16" fill="rgba(240,185,11,0.08)" />
                 <line x1="0" y1="22" x2="320" y2="22" stroke="rgba(255,107,107,0.4)" strokeDasharray="3 4" strokeWidth="1" />
-                <line x1="0" y1="108" x2="320" y2="108" stroke="rgba(99,232,145,0.45)" strokeDasharray="3 4" strokeWidth="1" />
+                <line x1="0" y1="108" x2="320" y2="108" stroke="rgba(240,185,11,0.45)" strokeDasharray="3 4" strokeWidth="1" />
                 <path
                   d="M0 96 L24 88 L48 92 L72 70 L96 77 L120 54 L144 61 L168 40 L192 47 L216 30 L240 37 L264 22 L288 29 L320 16 L320 132 L0 132 Z"
                   fill="url(#ag-int-fill)"
@@ -96,7 +96,7 @@ export async function IntelligenceSection() {
                 />
                 {/* Entry marker on the line */}
                 <circle cx="168" cy="40" r="3" fill="#f0b90b" />
-                <circle cx="168" cy="40" r="6" fill="none" stroke="rgba(99,232,145,0.5)" strokeWidth="1" />
+                <circle cx="168" cy="40" r="6" fill="none" stroke="rgba(240,185,11,0.5)" strokeWidth="1" />
               </svg>
 
               {/* Level chips — the signal card's footer, values blank. */}
@@ -216,8 +216,8 @@ export async function ShowcaseSection() {
                         <path d="M 30 0 L 0 0 0 24" fill="none" stroke="rgba(255,255,255,0.045)" strokeWidth="1" />
                       </pattern>
                       <linearGradient id="ag-show-fill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgba(99,232,145,0.2)" />
-                        <stop offset="100%" stopColor="rgba(99,232,145,0)" />
+                        <stop offset="0%" stopColor="rgba(240,185,11,0.2)" />
+                        <stop offset="100%" stopColor="rgba(240,185,11,0)" />
                       </linearGradient>
                     </defs>
                     <rect width="300" height="120" fill="url(#ag-show-grid)" />
@@ -281,7 +281,7 @@ export async function ShowcaseSection() {
                 {/* chart — stretches so the phone stands tall */}
                 <div className="flex-1 px-1 pt-1">
                   <svg viewBox="0 0 120 130" className="h-full w-full" preserveAspectRatio="none">
-                    <path d="M0 116 L12 106 L24 110 L36 88 L48 96 L60 72 L72 80 L84 56 L96 64 L108 44 L120 52 L120 130 L0 130 Z" fill="rgba(99,232,145,0.13)" />
+                    <path d="M0 116 L12 106 L24 110 L36 88 L48 96 L60 72 L72 80 L84 56 L96 64 L108 44 L120 52 L120 130 L0 130 Z" fill="rgba(240,185,11,0.13)" />
                     <path d="M0 116 L12 106 L24 110 L36 88 L48 96 L60 72 L72 80 L84 56 L96 64 L108 44 L120 52" fill="none" stroke="#f0b90b" strokeWidth="1.6" />
                   </svg>
                 </div>
@@ -420,14 +420,14 @@ export async function StepsBand() {
               <span
                 aria-hidden="true"
                 className="absolute left-7 top-6 hidden h-px w-[calc(100%-3.5rem)] lg:block"
-                style={{ background: "linear-gradient(90deg, rgba(99,232,145,0.45), rgba(255,255,255,0.1) 70%, transparent)" }}
+                style={{ background: "linear-gradient(90deg, rgba(240,185,11,0.5), rgba(255,255,255,0.1) 70%, transparent)" }}
               />
               {/* Vertical connector for stacked/mobile */}
               <span
                 aria-hidden="true"
                 className="absolute left-7 top-14 h-[calc(100%-2.5rem)] w-px bg-linear-to-b from-[#f0b90b]/40 to-transparent lg:hidden"
               />
-              <span className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#f0b90b]/40 bg-[#101412] tnum text-[15px] font-bold text-[#f0b90b] shadow-[0_0_24px_-8px_rgba(99,232,145,0.45)]">
+              <span className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#f0b90b]/40 bg-[#101412] tnum text-[15px] font-bold text-[#f0b90b] shadow-[0_0_24px_-8px_rgba(240,185,11,0.45)]">
                 {String(n).padStart(2, "0")}
               </span>
               <div className="lg:mt-8">

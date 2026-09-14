@@ -84,15 +84,15 @@ html.dim {
 /*
   Global Forex Services app accent — the two-tone identity on light app surfaces
   (login/register/recovery, account, admin on the gbfxs family).
-  The mint (#63e891) fails WCAG as TEXT on white (~1.6:1), so filled brand
-  surfaces take the mint with dark ink (the landing's primary-button
-  treatment, ~12:1), while text/link accents keep the deep green
+  Binance-yellow (#f0b90b) fails WCAG as TEXT on white (~1.7:1), so filled
+  brand surfaces take the yellow with dark ink (#181a20 — the landing's
+  primary-button treatment), while text/link accents keep the deep gold
   (--color-brand). Scoped by the host class set in the root layout — the
   primary brand never matches these rules.
 */
 .agile-app .bg-brand {
-  background-color: #63e891;
-  color: #0d100f;
+  background-color: #f0b90b;
+  color: #181a20;
 }
 
 /*

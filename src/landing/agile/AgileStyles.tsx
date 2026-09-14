@@ -9,18 +9,18 @@ export function AgileStyles() {
   return (
     <style>{`
       .ag-shell {
-        --ag-bg: #0d100f;
-        --ag-bg-2: #111513;
-        --ag-bg-3: #181c1a;
-        --ag-card: #151a17;
-        --ag-green: #263b33;
-        --ag-green-2: #2d463b;
-        --ag-accent: #63e891;
-        --ag-text: #f1f3ef;
-        --ag-text-2: #a7ada8;
-        --ag-muted: #747a75;
+        --ag-bg: #0b0e11;
+        --ag-bg-2: #0e1114;
+        --ag-bg-3: #181a20;
+        --ag-card: #1e2329;
+        --ag-green: #37321c;
+        --ag-green-2: #463d1e;
+        --ag-accent: #f0b90b;
+        --ag-text: #eaecef;
+        --ag-text-2: #b7bdc6;
+        --ag-muted: #848e9c;
         --ag-border: rgba(255, 255, 255, 0.12);
-        --ag-negative: #ff6b6b;
+        --ag-negative: #f6465d;
         background: var(--ag-bg);
         color: var(--ag-text);
         font-family: var(--font-agile-inter), Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -115,7 +115,7 @@ export function AgileStyles() {
       }
       .ag-sub { color: var(--ag-text-2); font-size: 1.125rem; line-height: 1.65; }
 
-      .ag-up { color: var(--ag-accent); }
+      .ag-up { color: #0ecb81; }
       .ag-down { color: var(--ag-negative); }
 
       /*
@@ -140,13 +140,13 @@ export function AgileStyles() {
         --color-panel-3: #1f2421;
         --color-border: rgba(255, 255, 255, 0.12);
         --color-border-soft: rgba(255, 255, 255, 0.07);
-        --color-brand: #63e891;
+        --color-brand: #f0b90b;
         --color-brand-soft: rgba(99, 232, 145, 0.12);
         --color-text: #f1f3ef;
         --color-text-muted: #a7ada8;
         --color-text-faint: #747a75;
-        --color-up: #63e891;
-        --color-down: #ff6b6b;
+        --color-up: #0ecb81;
+        --color-down: #f6465d;
         --color-surface-dark: #15181a;
         --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.5);
         --shadow-card: 0 18px 44px rgba(0, 0, 0, 0.55);
@@ -165,21 +165,21 @@ export function AgileStyles() {
       .ag-scope .text-text { color: #f1f3ef; }
       .ag-scope .text-text-muted { color: #a7ada8; }
       .ag-scope .text-text-faint { color: #747a75; }
-      .ag-scope .text-brand { color: #63e891; }
-      .ag-scope .text-up { color: #63e891; }
+      .ag-scope .text-brand { color: #f0b90b; }
+      .ag-scope .text-up { color: #0ecb81; }
       .ag-scope .text-down { color: #ff6b6b; }
       .ag-scope .bg-brand-soft { background-color: rgba(99, 232, 145, 0.12); }
       .ag-scope .border-brand { border-color: rgba(99, 232, 145, 0.5); }
-      .ag-scope .border-up\/30 { border-color: rgba(99, 232, 145, 0.3); }
-      .ag-scope .bg-up\/10 { background-color: rgba(99, 232, 145, 0.08); }
+      .ag-scope .border-up\/30 { border-color: rgba(14, 203, 129, 0.3); }
+      .ag-scope .bg-up\/10 { background-color: rgba(14, 203, 129, 0.08); }
       /* Variant forms (hover/focus) of the same utilities — the palette must
          hold through interaction states, not just resting states. */
       .ag-scope .hover\:bg-panel:hover,
       .ag-scope .hover\:bg-panel-2:hover { background-color: #1b211d; }
       .ag-scope .hover\:text-text:hover { color: #f1f3ef; }
-      .ag-scope .hover\:text-brand:hover { color: #63e891; }
+      .ag-scope .hover\:text-brand:hover { color: #f0b90b; }
       .ag-scope .focus\:border-brand:focus,
-      .ag-scope .focus-visible\:border-brand:focus-visible { border-color: #63e891; }
+      .ag-scope .focus-visible\:border-brand:focus-visible { border-color: #f0b90b; }
 
       /* Filled accent/status surfaces get dark ink — white text fails
          contrast on Agile's bright green/red fills. */
@@ -207,10 +207,10 @@ export function AgileStyles() {
         line-height: 1.75;
         color: #c3c9c4;
       }
-      .ag-scope .prose-content a { color: #63e891; }
+      .ag-scope .prose-content a { color: #f0b90b; }
       .ag-scope .prose-content strong,
       .ag-scope .prose-content b { color: #f1f3ef; }
-      .ag-scope .marker\:text-brand::marker { color: #63e891; }
+      .ag-scope .marker\:text-brand::marker { color: #f0b90b; }
 
       /* Metric numerals (stat bands, hero numbers) render in the landing's
          ledger grammar: large, tight, mint. Only this scale class is used
@@ -341,7 +341,7 @@ export function AgileStyles() {
         border-right: 1px solid rgba(255, 255, 255, 0.07);
         transition: color 150ms ease;
       }
-      .ag-ticker-item:hover { color: #63e891; }
+      .ag-ticker-item:hover { color: #f0b90b; }
       .ag-ticker-item .tnum { color: #a7ada8; }
       @keyframes ag-marquee {
         from { transform: translateX(0); }
@@ -356,7 +356,7 @@ export function AgileStyles() {
         font-size: 12px;
         font-weight: 700;
         letter-spacing: 0.18em;
-        color: #63e891;
+        color: #f0b90b;
         font-variant-numeric: tabular-nums;
       }
 
@@ -414,7 +414,7 @@ export function AgileStyles() {
       .ag-scope .prose-content > section > h2::before {
         content: counter(agsec, decimal-leading-zero);
         margin-right: 0.75rem;
-        color: #63e891;
+        color: #f0b90b;
         font-weight: 700;
         font-variant-numeric: tabular-nums;
       }

@@ -90,7 +90,7 @@ export function GlobeArcs({ className = "" }: { className?: string }) {
       {nodes.map(([x, y, r], i) => (
         <g key={i} className="ag-globe-node" style={{ animationDelay: `${i * 0.3}s` }}>
           <circle cx={x} cy={y} r={r * 2.4} fill="rgba(99,232,145,0.12)" />
-          <circle cx={x} cy={y} r={r} fill="#63e891" />
+          <circle cx={x} cy={y} r={r} fill="#f0b90b" />
         </g>
       ))}
     </svg>

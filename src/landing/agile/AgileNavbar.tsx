@@ -151,7 +151,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
                         key={item.href}
                         href={item.href}
                         onClick={() => setOpen(null)}
-                        className="block px-4 py-2.5 text-[13px] text-[#a7ada8] transition-colors hover:bg-white/5 hover:text-[#63e891]"
+                        className="block px-4 py-2.5 text-[13px] text-[#a7ada8] transition-colors hover:bg-white/5 hover:text-[#f0b90b]"
                       >
                         {t(`menu.${item.key}`)}
                       </Link>
@@ -187,7 +187,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
             href={clientTradeUrl("/login")}
             aria-label={tA("login")}
             title={tA("login")}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 text-[#a7ada8] transition-colors hover:border-[#63e891]/50 hover:text-[#63e891] lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 text-[#a7ada8] transition-colors hover:border-[#f0b90b]/50 hover:text-[#f0b90b] lg:hidden"
           >
             <LogIn size={17} strokeWidth={1.75} aria-hidden />
           </Link>
@@ -195,7 +195,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
             href={clientTradeUrl("/register")}
             aria-label={tA("cta")}
             title={tA("cta")}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#63e891] text-[#0d100f] transition-transform hover:scale-105 motion-reduce:transition-none lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f0b90b] text-[#0d100f] transition-transform hover:scale-105 motion-reduce:transition-none lg:hidden"
           >
             <UserPlus size={16} strokeWidth={2} aria-hidden />
           </Link>
@@ -252,7 +252,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
                           key={item.href}
                           href={item.href}
                           onClick={() => setMobileOpen(false)}
-                          className="rounded-md px-3 py-2.5 text-[13.5px] text-[#a7ada8] transition-colors hover:bg-white/5 hover:text-[#63e891]"
+                          className="rounded-md px-3 py-2.5 text-[13.5px] text-[#a7ada8] transition-colors hover:bg-white/5 hover:text-[#f0b90b]"
                         >
                           {t(`menu.${item.key}`)}
                         </Link>

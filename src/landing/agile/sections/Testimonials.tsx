@@ -24,7 +24,7 @@ function StoryStats({ returns, trades, label }: { returns?: string; trades?: str
     <div className="flex items-center gap-6">
       {returns && (
         <span className="flex flex-col gap-0.5">
-          <span className="tnum text-lg font-extrabold tracking-[-0.02em] text-[#63e891]">{returns}</span>
+          <span className="tnum text-lg font-extrabold tracking-[-0.02em] text-[#f0b90b]">{returns}</span>
           <span className="text-[9.5px] font-semibold uppercase tracking-[0.16em] text-[#747a75]">{label.returns}</span>
         </span>
       )}
@@ -68,7 +68,7 @@ export async function TestimonialsSection() {
               <div className="relative flex h-full flex-col">
                 <span className="ag-eyebrow">{t("eyebrow")}</span>
                 <h2 className="ag-h2 mt-4 text-[clamp(1.6rem,2.4vw,2.1rem)]!">{t("title")}</h2>
-                <span role="img" aria-label="Rated 5 out of 5" className="mt-auto flex items-center gap-1 pt-10 text-[#63e891]">
+                <span role="img" aria-label="Rated 5 out of 5" className="mt-auto flex items-center gap-1 pt-10 text-[#f0b90b]">
                   {Array.from({ length: 5 }).map((_, index) => (
                     <Star key={index} size={16} strokeWidth={0} fill="currentColor" aria-hidden />
                   ))}

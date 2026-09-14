@@ -52,12 +52,12 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
                 <path
                   d="M0 52 L22 44 L44 48 L66 34 L88 40 L110 26 L132 31 L154 18 L176 24 L198 12 L220 16"
                   fill="none"
-                  stroke="#63e891"
+                  stroke="#f0b90b"
                   strokeWidth="1"
                   strokeLinecap="round"
                 />
                 {[34, 88, 154].map((x) => (
-                  <circle key={x} cx={x + 22} cy={x === 34 ? 34 : x === 88 ? 26 : 18} r="2.4" fill="#63e891" />
+                  <circle key={x} cx={x + 22} cy={x === 34 ? 34 : x === 88 ? 26 : 18} r="2.4" fill="#f0b90b" />
                 ))}
               </svg>
             </article>
@@ -67,10 +67,10 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
           <Reveal delay={70} className="ag-bento-execution">
             <article className="ag-bento-cell flex h-full flex-col p-7">
               <span className="ag-stepnum">02</span>
-              <Zap size={20} strokeWidth={1.75} className="mt-4 text-[#63e891]" aria-hidden />
+              <Zap size={20} strokeWidth={1.75} className="mt-4 text-[#f0b90b]" aria-hidden />
               <h3 className="mt-4 text-base font-bold text-[#f1f3ef]">{t("speed.title")}</h3>
               <p className="mt-2 text-sm leading-relaxed text-[#a7ada8]">{t("speed.desc")}</p>
-              <div className="mt-auto pt-5 tnum text-4xl font-extrabold tracking-[-0.03em] text-[#63e891]">&lt;1s</div>
+              <div className="mt-auto pt-5 tnum text-4xl font-extrabold tracking-[-0.03em] text-[#f0b90b]">&lt;1s</div>
             </article>
           </Reveal>
 
@@ -78,7 +78,7 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
           <Reveal delay={140} className="ag-bento-security">
             <article className="ag-bento-cell flex h-full flex-col p-7">
               <span className="ag-stepnum">03</span>
-              <ShieldCheck size={20} strokeWidth={1.75} className="mt-4 text-[#63e891]" aria-hidden />
+              <ShieldCheck size={20} strokeWidth={1.75} className="mt-4 text-[#f0b90b]" aria-hidden />
               <h3 className="mt-4 text-base font-bold text-[#f1f3ef]">{t("security.title")}</h3>
               <p className="mt-2 text-sm leading-relaxed text-[#a7ada8]">{t("security.desc")}</p>
             </article>
@@ -96,7 +96,7 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
                     key={category}
                     className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-[#a7ada8]"
                   >
-                    <span className="text-[#63e891]" aria-hidden>
+                    <span className="text-[#f0b90b]" aria-hidden>
                       <MarketIcon category={category} className="h-3.5 w-3.5" />
                     </span>
                     {tM(`categories.${category.toLowerCase()}`)}
@@ -116,7 +116,7 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
                 <span className="ag-stepnum">05</span>
                 <h3 className="mt-3 text-base font-bold text-[#f1f3ef]">{tA("globalTitle")}</h3>
                 <p className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-[#a7ada8]">
-                  <LineChart size={15} strokeWidth={1.75} className="mt-0.5 shrink-0 text-[#63e891]" aria-hidden />
+                  <LineChart size={15} strokeWidth={1.75} className="mt-0.5 shrink-0 text-[#f0b90b]" aria-hidden />
                   {t("all.desc")}
                 </p>
               </div>

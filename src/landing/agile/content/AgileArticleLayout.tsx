@@ -66,11 +66,11 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
               <path
                 d="M0 64 L20 56 L40 60 L60 44 L80 50 L100 34 L120 40 L140 26 L160 32 L180 18 L200 24 L220 12"
                 fill="none"
-                stroke="#63e891"
+                stroke="#f0b90b"
                 strokeWidth="1.8"
                 strokeLinecap="round"
               />
-              <circle cx="220" cy="12" r="2.6" fill="#63e891" />
+              <circle cx="220" cy="12" r="2.6" fill="#f0b90b" />
             </svg>
           </div>
         </div>

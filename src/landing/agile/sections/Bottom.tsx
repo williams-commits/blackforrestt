@@ -44,7 +44,7 @@ export async function IntelligenceSection() {
           <ul className="mt-8 space-y-3.5">
             {bullets.map((bullet) => (
               <li key={bullet} className="flex items-start gap-3 text-[14.5px] leading-relaxed text-[#f1f3ef]/85">
-                <Check size={16} strokeWidth={2.5} className="mt-0.5 shrink-0 text-[#63e891]" aria-hidden />
+                <Check size={16} strokeWidth={2.5} className="mt-0.5 shrink-0 text-[#f0b90b]" aria-hidden />
                 {bullet}
               </li>
             ))}
@@ -60,13 +60,13 @@ export async function IntelligenceSection() {
             <div className="ag-frame p-6 sm:p-7">
               <div className="flex items-center justify-between" aria-hidden="true">
                 <span className="flex items-center gap-2.5">
-                  <span className="rounded-md bg-[#63e891]/12 px-2.5 py-1 font-mono text-[10px] font-bold tracking-widest text-[#63e891]">SIGNAL</span>
+                  <span className="rounded-md bg-[#f0b90b]/12 px-2.5 py-1 font-mono text-[10px] font-bold tracking-widest text-[#f0b90b]">SIGNAL</span>
                   <span className="font-mono text-[10px] tracking-widest text-[#747a75]">H4</span>
                 </span>
                 {/* Confidence dots */}
                 <span className="flex items-center gap-1">
                   {[0.35, 0.65, 1].map((opacity) => (
-                    <span key={opacity} className="h-1.5 w-1.5 rounded-full bg-[#63e891]" style={{ opacity }} />
+                    <span key={opacity} className="h-1.5 w-1.5 rounded-full bg-[#f0b90b]" style={{ opacity }} />
                   ))}
                 </span>
               </div>
@@ -90,12 +90,12 @@ export async function IntelligenceSection() {
                 <path
                   d="M0 96 L24 88 L48 92 L72 70 L96 77 L120 54 L144 61 L168 40 L192 47 L216 30 L240 37 L264 22 L288 29 L320 16"
                   fill="none"
-                  stroke="#63e891"
+                  stroke="#f0b90b"
                   strokeWidth="1.8"
                   strokeLinecap="round"
                 />
                 {/* Entry marker on the line */}
-                <circle cx="168" cy="40" r="3" fill="#63e891" />
+                <circle cx="168" cy="40" r="3" fill="#f0b90b" />
                 <circle cx="168" cy="40" r="6" fill="none" stroke="rgba(99,232,145,0.5)" strokeWidth="1" />
               </svg>
 
@@ -107,7 +107,7 @@ export async function IntelligenceSection() {
                     className={`rounded-md border py-2 text-center font-mono text-[8.5px] font-bold tracking-widest ${
                       index === 1
                         ? "border-[#ff6b6b]/25 bg-[#ff6b6b]/8 text-[#ff6b6b]"
-                        : "border-[#63e891]/25 bg-[#63e891]/8 text-[#63e891]"
+                        : "border-[#f0b90b]/25 bg-[#f0b90b]/8 text-[#f0b90b]"
                     }`}
                   >
                     {level}
@@ -123,12 +123,12 @@ export async function IntelligenceSection() {
             >
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[8px] font-bold tracking-widest text-[#747a75]">CALENDAR</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-[#63e891]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f0b90b]" />
               </div>
               <div className="mt-2.5 space-y-1.5">
                 {[0, 1, 2].map((row) => (
                   <span key={row} className="flex items-center gap-2 rounded-md border border-white/8 bg-white/5 px-2 py-1.5">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-xs bg-[#63e891]/70" />
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-xs bg-[#f0b90b]/70" />
                     <span className="h-1.5 flex-1 rounded-full bg-white/12" />
                     <span className="h-1.5 w-4 rounded-full bg-white/8" />
                   </span>
@@ -195,7 +195,7 @@ export async function ShowcaseSection() {
               <div className="flex items-center gap-1.5 border-b border-white/8 px-1 pb-1.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#ff6b6b]/60" />
                 <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
-                <span className="h-1.5 w-1.5 rounded-full bg-[#63e891]/70" />
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f0b90b]/70" />
                 <span className="ml-1.5 flex-1 rounded bg-white/5 px-2 py-0.5 font-mono text-[6.5px] tracking-widest text-[#747a75]">trade.gbfxs.com</span>
               </div>
               {/* AccountBar — the real metrics strip */}
@@ -228,24 +228,24 @@ export async function ShowcaseSection() {
                     <path
                       d="M0 96 L20 88 L40 92 L60 72 L80 78 L100 56 L120 63 L140 42 L160 49 L180 30 L200 38 L220 22 L240 29 L260 16 L280 24 L300 12"
                       fill="none"
-                      stroke="#63e891"
+                      stroke="#f0b90b"
                       strokeWidth="1.7"
                       strokeLinecap="round"
                     />
                   </svg>
                   {/* blank last-price hairline */}
-                  <div className="pointer-events-none absolute inset-x-6 top-[32%] border-t border-dashed border-[#63e891]/45" />
+                  <div className="pointer-events-none absolute inset-x-6 top-[32%] border-t border-dashed border-[#f0b90b]/45" />
                 </div>
                 {/* Order rail — the real TradePanel grammar */}
                 <div className="flex flex-col gap-1.5">
                   <span className="rounded-md border border-[#ff6b6b]/25 bg-[#ff6b6b]/10 py-1.5 text-center font-mono text-[8px] font-bold tracking-widest text-[#ff6b6b]">SELL</span>
-                  <span className="rounded-md border border-[#63e891]/25 bg-[#63e891]/10 py-1.5 text-center font-mono text-[8px] font-bold tracking-widest text-[#63e891]">BUY</span>
+                  <span className="rounded-md border border-[#f0b90b]/25 bg-[#f0b90b]/10 py-1.5 text-center font-mono text-[8px] font-bold tracking-widest text-[#f0b90b]">BUY</span>
                   <div className="grid grid-cols-4 gap-1 rounded-md border border-white/8 p-1.5">
                     {Array.from({ length: 8 }).map((_, i) => (
                       <span key={i} className="h-2 rounded-sm bg-white/10" />
                     ))}
                   </div>
-                  <span className="mt-auto h-6 rounded-md bg-[#63e891] opacity-90" />
+                  <span className="mt-auto h-6 rounded-md bg-[#f0b90b] opacity-90" />
                 </div>
               </div>
               {/* Positions dock */}
@@ -265,7 +265,7 @@ export async function ShowcaseSection() {
                 {/* App navbar — logo mark, section pills, account dot */}
                 <div className="flex items-center justify-between border-b border-white/8 px-2 py-1.5">
                   <span className="flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-[3px] bg-[#63e891]" />
+                    <span className="h-2 w-2 rounded-[3px] bg-[#f0b90b]" />
                     <span className="h-1 w-4 rounded-full bg-white/20" />
                   </span>
                   <span className="flex gap-1">
@@ -275,24 +275,24 @@ export async function ShowcaseSection() {
                 </div>
                 {/* Instrument chip strip */}
                 <div className="flex items-center justify-between border-b border-white/8 px-2 py-1.5">
-                  <span className="rounded bg-[#63e891]/12 px-1.5 py-0.5 font-mono text-[7px] font-bold tracking-widest text-[#63e891]">XAUUSD</span>
+                  <span className="rounded bg-[#f0b90b]/12 px-1.5 py-0.5 font-mono text-[7px] font-bold tracking-widest text-[#f0b90b]">XAUUSD</span>
                   <span className="h-1 w-5 rounded-full bg-white/12" />
                 </div>
                 {/* chart — stretches so the phone stands tall */}
                 <div className="flex-1 px-1 pt-1">
                   <svg viewBox="0 0 120 130" className="h-full w-full" preserveAspectRatio="none">
                     <path d="M0 116 L12 106 L24 110 L36 88 L48 96 L60 72 L72 80 L84 56 L96 64 L108 44 L120 52 L120 130 L0 130 Z" fill="rgba(99,232,145,0.13)" />
-                    <path d="M0 116 L12 106 L24 110 L36 88 L48 96 L60 72 L72 80 L84 56 L96 64 L108 44 L120 52" fill="none" stroke="#63e891" strokeWidth="1.6" />
+                    <path d="M0 116 L12 106 L24 110 L36 88 L48 96 L60 72 L72 80 L84 56 L96 64 L108 44 L120 52" fill="none" stroke="#f0b90b" strokeWidth="1.6" />
                   </svg>
                 </div>
                 {/* order boxes — SELL over BUY, like the sheet */}
                 <div className="grid grid-cols-2 gap-1.5 p-2">
                   <span className="rounded-md border border-[#ff6b6b]/25 bg-[#ff6b6b]/10 py-2 text-center font-mono text-[8px] font-bold tracking-widest text-[#ff6b6b]">SELL</span>
-                  <span className="rounded-md border border-[#63e891]/25 bg-[#63e891]/10 py-2 text-center font-mono text-[8px] font-bold tracking-widest text-[#63e891]">BUY</span>
+                  <span className="rounded-md border border-[#f0b90b]/25 bg-[#f0b90b]/10 py-2 text-center font-mono text-[8px] font-bold tracking-widest text-[#f0b90b]">BUY</span>
                 </div>
                 {/* trade FAB */}
                 <div className="flex justify-end p-2.5 pt-1">
-                  <span className="flex h-7 w-14 items-center justify-center rounded-full bg-[#63e891] font-sans text-[8px] font-bold text-[#0d100f]">Trade</span>
+                  <span className="flex h-7 w-14 items-center justify-center rounded-full bg-[#f0b90b] font-sans text-[8px] font-bold text-[#0d100f]">Trade</span>
                 </div>
               </div>
               {/* gloss shade */}
@@ -357,7 +357,7 @@ export async function TrustSection() {
             <Reveal key={title} delay={index * 90}>
               <article className="ag-bento-cell flex h-full flex-col p-8">
                 <div className="flex items-center justify-between">
-                  <Icon size={20} strokeWidth={1.75} className="text-[#63e891]" aria-hidden />
+                  <Icon size={20} strokeWidth={1.75} className="text-[#f0b90b]" aria-hidden />
                   <span className="ag-stepnum">{String(index + 1).padStart(2, "0")}</span>
                 </div>
                 <h3 className="mt-6 text-base font-bold text-[#f1f3ef]">{title}</h3>
@@ -425,9 +425,9 @@ export async function StepsBand() {
               {/* Vertical connector for stacked/mobile */}
               <span
                 aria-hidden="true"
-                className="absolute left-7 top-14 h-[calc(100%-2.5rem)] w-px bg-linear-to-b from-[#63e891]/40 to-transparent lg:hidden"
+                className="absolute left-7 top-14 h-[calc(100%-2.5rem)] w-px bg-linear-to-b from-[#f0b90b]/40 to-transparent lg:hidden"
               />
-              <span className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#63e891]/40 bg-[#101412] tnum text-[15px] font-bold text-[#63e891] shadow-[0_0_24px_-8px_rgba(99,232,145,0.45)]">
+              <span className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#f0b90b]/40 bg-[#101412] tnum text-[15px] font-bold text-[#f0b90b] shadow-[0_0_24px_-8px_rgba(99,232,145,0.45)]">
                 {String(n).padStart(2, "0")}
               </span>
               <div className="lg:mt-8">
@@ -484,7 +484,7 @@ export async function FinalCta() {
             <dl className="mx-auto mt-14 flex max-w-2xl flex-wrap items-center justify-center gap-x-12 gap-y-5 border-t border-white/10 pt-9">
               {stats.map(({ v, l }) => (
                 <div key={l} className="text-center">
-                  <dd className="font-mono text-2xl font-bold tnum text-[#63e891]">{v}</dd>
+                  <dd className="font-mono text-2xl font-bold tnum text-[#f0b90b]">{v}</dd>
                   <dt className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#747a75]">{l}</dt>
                 </div>
               ))}

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useBrand } from "@/components/providers";
 
 /**
  * The Agile wordmark — the eToro-concept lockup: chunky rounded angle
@@ -22,13 +25,15 @@ const RIGHT_BRACKET = {
 
 function Bracket({ d, viewBox, w, h }: { d: string; viewBox: string; w: number; h: number }) {
   return (
-    <svg width={w} height={h} viewBox={viewBox} fill="#63E891" aria-hidden="true" focusable="false">
+    <svg width={w} height={h} viewBox={viewBox} style={{ fill: "var(--ag-accent, #f0b90b)" }} aria-hidden="true" focusable="false">
       <path d={d} />
     </svg>
   );
 }
 
 export function AgileMark({ className = "", size = "md" }: { className?: string; size?: "md" | "lg" }) {
+  const brand = useBrand();
+  const word = brand.logoWord || "gbfxs";
   const wordClass = size === "lg" ? "text-[27px]" : "text-[22px]";
   const bracketH = size === "lg" ? 20 : 16;
   const bracketW = Math.round(bracketH * (7.62 / 13.06));
@@ -40,8 +45,8 @@ export function AgileMark({ className = "", size = "md" }: { className?: string;
       className={`flex select-none items-center gap-1 ${className}`}
     >
       <Bracket d={LEFT_BRACKET.d} viewBox={LEFT_BRACKET.viewBox} w={bracketW} h={bracketH} />
-      <span className={`${wordClass} font-extrabold leading-none tracking-widest text-[#63e891]`}>
-        agile
+      <span className={`${wordClass} font-extrabold leading-none tracking-widest text-[#f0b90b]`}>
+        {word}
       </span>
       <Bracket d={RIGHT_BRACKET.d} viewBox={RIGHT_BRACKET.viewBox} w={bracketW} h={bracketH} />
     </Link>

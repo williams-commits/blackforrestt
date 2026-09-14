@@ -46,17 +46,17 @@ export async function Hero() {
 
       <div className="ag-container relative grid items-center gap-16 pb-24 pt-24 lg:grid-cols-[1.12fr_0.88fr] lg:pb-32 lg:pt-36">
         <Reveal>
-          <span className="inline-flex items-center gap-2.5 rounded-full border border-[#63e891]/25 bg-[#63e891]/5 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8ff0b4] backdrop-blur-md">
+          <span className="inline-flex items-center gap-2.5 rounded-full border border-[#f0b90b]/25 bg-[#f0b90b]/5 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8ff0b4] backdrop-blur-md">
             <span className="relative flex h-1.5 w-1.5" aria-hidden>
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#63e891] opacity-60 motion-reduce:animate-none" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#63e891]" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#f0b90b] opacity-60 motion-reduce:animate-none" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#f0b90b]" />
             </span>
             {badge}
           </span>
           <h1 className="ag-display mt-9 text-balance">
             {t("heroTitleA")}
             <br />
-            <span className="text-[#63e891]">{t("heroTitleB")}</span>
+            <span className="text-[#f0b90b]">{t("heroTitleB")}</span>
           </h1>
           <p className="mt-7 max-w-xl text-lg leading-relaxed text-[#a7ada8]">{subtitle}</p>
           <div className="mt-10 flex flex-wrap gap-3">
@@ -70,7 +70,7 @@ export async function Hero() {
           <p className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium text-[#747a75]">
             {t("heroTrustLine").split("·").map((part, index) => (
               <span key={index} className="flex items-center gap-3">
-                {index > 0 && <span className="h-0.5 w-0.5 rounded-full bg-[#63e891]/60" aria-hidden />}
+                {index > 0 && <span className="h-0.5 w-0.5 rounded-full bg-[#f0b90b]/60" aria-hidden />}
                 <span>{part.trim()}</span>
               </span>
             ))}

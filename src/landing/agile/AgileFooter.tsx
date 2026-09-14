@@ -72,12 +72,12 @@ export async function AgileFooter() {
                   <br />
                 </>
               )}
-              <a href={`mailto:${support}`} className="transition-colors hover:text-[#63e891]">
+              <a href={`mailto:${support}`} className="transition-colors hover:text-[#f0b90b]">
                 {support}
               </a>
             </address>
             {registration && (
-              <p className="mt-4 border-l-2 border-[#63e891]/50 pl-3 text-xs leading-relaxed text-[#747a75]">
+              <p className="mt-4 border-l-2 border-[#f0b90b]/50 pl-3 text-xs leading-relaxed text-[#747a75]">
                 {registration}
               </p>
             )}
@@ -91,7 +91,7 @@ export async function AgileFooter() {
               <ul className="mt-4 space-y-2.5">
                 {column.links.map(([label, href]) => (
                   <li key={href}>
-                    <Link href={href} className="text-sm transition-colors hover:text-[#63e891]">
+                    <Link href={href} className="text-sm transition-colors hover:text-[#f0b90b]">
                       {label}
                     </Link>
                   </li>

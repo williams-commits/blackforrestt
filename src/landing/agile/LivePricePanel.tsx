@@ -38,8 +38,8 @@ export function LivePricePanel({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5" aria-live="polite">
           <span className="relative flex h-2 w-2" aria-hidden="true">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#63e891] opacity-60 motion-reduce:animate-none" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#63e891]" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#f0b90b] opacity-60 motion-reduce:animate-none" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#f0b90b]" />
           </span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#747a75]">{labels.live}</span>
         </div>
@@ -52,7 +52,7 @@ export function LivePricePanel({
               aria-pressed={tab.symbol === activeInstrument.symbol}
               className={`rounded-md px-2.5 py-1.5 font-mono text-[11px] font-semibold transition-colors ${
                 tab.symbol === activeInstrument.symbol
-                  ? "bg-[#63e891]/15 text-[#63e891]"
+                  ? "bg-[#0ecb81]/15 text-[#0ecb81]"
                   : "text-[#747a75] hover:text-[#a7ada8]"
               }`}
             >
@@ -85,7 +85,7 @@ export function LivePricePanel({
         </div>
         <div className="px-3">
           <dt className="text-[10px] uppercase tracking-widest text-[#747a75]">{labels.spread}</dt>
-          <dd className="mt-1 font-mono text-sm tnum text-[#63e891]">{spread.toFixed(activeInstrument.digits)}</dd>
+          <dd className="mt-1 font-mono text-sm tnum text-[#f0b90b]">{spread.toFixed(activeInstrument.digits)}</dd>
         </div>
         <div className="flex items-center justify-end pl-3">
           <Link

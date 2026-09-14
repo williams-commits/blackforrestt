@@ -101,7 +101,7 @@ export function MarketsSection({
               onClick={() => setSelected(tab)}
               className={`rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${
                 active === tab
-                  ? "border-[#63e891]/60 bg-[#63e891]/15 text-[#63e891]"
+                  ? "border-[#f0b90b]/60 bg-[#f0b90b]/15 text-[#f0b90b]"
                   : "border-white/10 text-[#a7ada8] hover:border-white/25 hover:text-[#f1f3ef]"
               }`}
             >
@@ -128,7 +128,7 @@ export function MarketsSection({
               <ul className="mt-6 space-y-3.5">
                 {panel.bullets.map((bullet) => (
                   <li key={bullet} className="flex items-start gap-3 text-[14.5px] leading-relaxed text-[#f1f3ef]/85">
-                    <span className="mt-1.75 h-1.5 w-1.5 shrink-0 rounded-full bg-[#63e891]" aria-hidden />
+                    <span className="mt-1.75 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f0b90b]" aria-hidden />
                     {bullet}
                   </li>
                 ))}

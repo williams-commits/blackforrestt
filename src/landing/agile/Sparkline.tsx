@@ -41,7 +41,7 @@ export function Sparkline({
   });
   const path = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(" ");
   const area = `${path} L${width - 1} ${height} L1 ${height} Z`;
-  const color = up ? "#63e891" : "#ff6b6b";
+  const color = up ? "#0ecb81" : "#f6465d";
   const gradientId = `ag-spark-${symbol.replace(/[^A-Z0-9]/gi, "")}`;
 
   return (

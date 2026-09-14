@@ -767,12 +767,28 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
         <div className="flex flex-col gap-3 border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h3 className="text-sm font-semibold">People</h3>
-            <p className="mt-0.5 text-xs text-(--text-tertiary)">Roles and activity across your workspace</p>
+            <p className="mt-0.5 text-xs text-(--text-tertiary)">Roles, access, and activity across your workspace</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <label htmlFor="people-search" className="sr-only">Search users</label>
             <input id="people-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search people, roles, teams" className="input w-full sm:w-64" />
-            <select aria-label="User status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="input"><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="SUSPENDED">Suspended</option><option value="DISABLED">Disabled</option></select>
+            <div role="group" aria-label="Filter by status" className="flex rounded-md border border-(--border-strong) p-0.5">
+              {(["ALL", "ACTIVE", "SUSPENDED", "DISABLED"] as const).map((value) => {
+                const label = value === "ALL" ? "All" : value.charAt(0) + value.slice(1).toLowerCase();
+                const active = statusFilter === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setStatusFilter(value)}
+                    className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${active ? "bg-(--bg-surface) text-(--text-primary) shadow-sm" : "text-(--text-secondary) hover:text-(--text-primary)"}`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
             <select aria-label="Sort users" value={sort} onChange={(event) => setSort(event.target.value)} className="input"><option value="name">Name</option><option value="lastLogin">Last login</option></select>
             <span className="badge badge-neutral">{filteredUsers.length} of {users.length}</span>
           </div>
@@ -842,6 +858,9 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                 ) : null}
               </tr>
             ))}
+            {!loading && filteredUsers.length === 0 ? (
+              <tr><td colSpan={canManage ? 7 : 5} className="px-3 py-10 text-center text-sm text-(--text-tertiary)">No users match this view — adjust the search or status filter.</td></tr>
+            ) : null}
           </tbody>
         </table>
       </div>

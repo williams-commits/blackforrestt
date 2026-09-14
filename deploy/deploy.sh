@@ -30,13 +30,16 @@ fi
 # subdomain serves TLS errors. Fail BEFORE the multi-minute build.
 CRM_DOMAIN_CFG="$(grep -E '^CRM_DOMAIN=' .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' || :)"
 if [[ -n "$CRM_DOMAIN_CFG" ]]; then
-  for var in AUTH_SECRET_CRM CRM_ENCRYPTION_KEY; do
+  # Missing CRM secrets are generated and PERSISTED into .env.production
+  # (which stays mode 600) instead of failing the deploy: AUTH_SECRET_CRM
+  # signs CRM sessions, CRM_ENCRYPTION_KEY encrypts per-user SMTP passwords,
+  # CRM_BRIDGE_TOKEN is the shared platform ↔ CRM read-only secret.
+  for var in AUTH_SECRET_CRM CRM_ENCRYPTION_KEY CRM_BRIDGE_TOKEN; do
     value="$(grep -E "^${var}=" .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' || :)"
     if [[ -z "$value" ]]; then
-      echo "ERROR: CRM_DOMAIN is set ('$CRM_DOMAIN_CFG') but $var is empty in .env.production." >&2
-      echo "The CRM will crash-loop without it. Add:  $var=$(openssl rand -hex 32)" >&2
-      echo "(Or empty CRM_DOMAIN to skip the CRM module entirely.)" >&2
-      exit 1
+      generated="$(openssl rand -hex 32)"
+      printf '\n%s=%s\n' "$var" "$generated" >> .env.production
+      echo "Generated missing $var and appended it to .env.production."
     fi
   done
 fi

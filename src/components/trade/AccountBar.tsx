@@ -11,6 +11,7 @@ import { useForexStore } from "@/lib/store";
 import { fmtNum, getFormatLocale } from "@/lib/format";
 import { ConnectionDot } from "./ConnectionDot";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useTheme } from "@/components/ThemeProvider";
 import { Logo } from "./Logo";
 import { WalletModal } from "@/components/account/WalletModal";
 import type { SocketStatus } from "@/lib/ws/client";
@@ -37,6 +38,7 @@ interface Props {
 export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, disabledPaymentMethods = [], walletAddresses = [], marginWarningPercent = 125 }: Props) {
   const account = useForexStore((s) => s.account);
   const { data: session } = useSession();
+  const { theme } = useTheme();
   const router = useRouter();
   const [clock, setClock] = useState("");
   const [walletOpen, setWalletOpen] = useState(false);
@@ -139,7 +141,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
       {/* Logo — the TRADE badge is desktop-only; on the phone it just repeated
           where the user already is. */}
       <div className="flex items-center gap-2.5 px-3 shrink-0 h-full">
-        <Logo />
+        <Logo inverted={theme === "dim"} />
         <span className="hidden sm:inline-block text-[10px] font-semibold text-brand bg-brand-soft px-1.5 py-0.5 rounded">TRADE</span>
       </div>
 

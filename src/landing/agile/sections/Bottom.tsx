@@ -337,7 +337,7 @@ export async function TrustSection() {
   ];
 
   return (
-    <section id="trust" className="ag-section scroll-mt-24 border-y border-white/10 bg-[#111113]">
+    <section id="trust" className="ag-section scroll-mt-24 bg-[#111113]">
       <div className="ag-container">
         <Reveal>
           <span className="ag-eyebrow">{t("eyebrow")}</span>

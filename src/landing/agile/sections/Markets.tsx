@@ -74,7 +74,7 @@ export function MarketsSection({
   return (
     <section
       id="markets"
-      className="ag-section relative scroll-mt-24 overflow-hidden border-y border-white/10 bg-[#111113]"
+      className="ag-section relative scroll-mt-24 overflow-hidden bg-[#111113]"
     >
       {/* <div className="pointer-events-none absolute inset-0 ag-mesh opacity-50" aria-hidden="true" /> */}
       <div className="ag-container relative">
@@ -149,7 +149,7 @@ export function MarketsSection({
                 <Link
                   key={instrument.symbol}
                   href={`/trade/${instrument.symbol}`}
-                  className="ag-bento-cell group flex items-center gap-4 rounded-2xl px-5 py-4"
+                  className="ag-bento-cell group flex items-center gap-4 rounded-2xl px-5 py-6"
                 >
                   <InstrumentLogo
                     symbol={instrument.symbol}

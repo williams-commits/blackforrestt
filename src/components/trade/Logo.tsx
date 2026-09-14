@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useBrand } from "@/components/providers";
+import { useTheme } from "@/components/ThemeProvider";
 import { GlobalFXLogo } from "@/components/branding/GlobalFXLogo";
 
 /**
@@ -20,13 +21,15 @@ import { GlobalFXLogo } from "@/components/branding/GlobalFXLogo";
  */
 export function Logo({
   className = "",
-  inverted = false,
+  inverted,
 }: {
   className?: string;
   /** Use on dark backgrounds: renders the wordmark in white instead of dark. */
   inverted?: boolean;
 }) {
   const brand = useBrand();
+  const { theme } = useTheme();
+  const useInvertedLogo = inverted ?? theme === "dim";
   const [href, setHref] = useState("/");
   const [external, setExternal] = useState(false);
 
@@ -44,7 +47,7 @@ export function Logo({
 
   const cls = `flex items-center gap-2 select-none ${className}`;
   if (isGlobalFx) {
-    return <GlobalFXLogo className={className} href={external ? href : "/"} external={external} inverted={inverted} size="md" />;
+    return <GlobalFXLogo className={className} href={external ? href : "/"} external={external} inverted={useInvertedLogo} size="md" />;
   }
   const glyph = brand.glyph;
   // Bracket lockup (logoLockup: "brackets"): the glyph's two bracket paths
@@ -66,8 +69,8 @@ export function Logo({
         <path d={lockupPaths[0].d} fill={lockupPaths[0].fill === "ink" ? "currentColor" : "var(--color-brand)"} />
       </svg>
       <span
-        className={`text-[22px] font-bold leading-none tracking-widest ${inverted ? "text-white" : ""}`}
-        style={brand.accentColor && !inverted ? { color: brand.accentColor } : undefined}
+        className={`text-[22px] font-bold leading-none tracking-widest ${useInvertedLogo ? "text-white" : ""}`}
+        style={brand.accentColor && !useInvertedLogo ? { color: brand.accentColor } : undefined}
       >
         {brand.logoWord}
       </span>
@@ -103,7 +106,7 @@ export function Logo({
           )}
       </svg>
       <span className="text-base font-semibold tracking-tight">
-        <span className={inverted ? "text-white" : "text-text"}>{brand.wordmark[0]}</span>
+        <span className={useInvertedLogo ? "text-white" : "text-text"}>{brand.wordmark[0]}</span>
         <span className="text-brand">{brand.wordmark[1]}</span>
       </span>
     </>

@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { currentBrandProfile } from "@/lib/branding";
 
 export const runtime = "nodejs";
@@ -9,24 +11,39 @@ const DEFAULT_GLYPH_PATHS = [
   "M11 19h2v3.5h-2z",
 ];
 
+/** Brands with a custom favicon file at public/brands/<slug>/favicon.svg —
+ *  the actual logo artwork, served verbatim. Everyone else gets the
+ *  glyph-generated mark below. */
+const CUSTOM_FAVICON_SLUGS = new Set(["gbfxs"]);
+
 /**
- * GET /brand/icon.svg — per-domain favicon generated from the request's brand
- * profile (custom glyph + accent color, defaulting to the primary tree mark).
+ * GET /brand/icon.svg — per-domain favicon. Brands with a favicon.svg in
+ * their brand asset folder get that exact logo; other brands get the mark
+ * generated from their profile (custom glyph + accent, default tree mark).
  * Served through the app origin so it inherits the family's host and TLS.
  */
 export async function GET() {
   const brand = await currentBrandProfile();
-  const accent = brand.markColor || brand.accentColor || "#fd7e14";
-  const isGlobalFx = brand.logoWord === "gbfxs" || brand.shortName === "GBFXS" || brand.domain === "gbfxs.com";
-  if (isGlobalFx) {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${accent}"/><path d="M24.7 11.2a10.4 10.4 0 1 0 0 9.6l-3.4-2.4a6.25 6.25 0 1 1 0-4.8h-4.1v3.2h7.5v-5.6h-3.2v2.4h-2.1a6.25 6.25 0 0 1 5.3 2.9Z" fill="#0d0d0f" fill-rule="evenodd"/><path d="M10.2 9.2h3.3v13.6h-3.3zM13.5 9.2h8.1v3.2h-8.1zM13.5 14.3h6.2v3.1h-6.2z" fill="#0d0d0f"/></svg>`;
-    return new Response(svg, {
-      headers: {
-        "Content-Type": "image/svg+xml",
-        "Cache-Control": "private, max-age=3600",
-      },
-    });
+  const slug = (brand.domain || "").split(".")[0];
+
+  if (CUSTOM_FAVICON_SLUGS.has(slug)) {
+    try {
+      const svg = await readFile(
+        path.join(process.cwd(), "public", "brands", slug, "favicon.svg"),
+        "utf8",
+      );
+      return new Response(svg, {
+        headers: {
+          "Content-Type": "image/svg+xml",
+          "Cache-Control": "private, max-age=3600",
+        },
+      });
+    } catch {
+      // fall through to the generated mark if the file is missing
+    }
   }
+
+  const accent = brand.markColor || brand.accentColor || "#fd7e14";
   const viewBox = brand.glyph?.viewBox ?? "0 0 24 24";
   const paths = brand.glyph?.paths ?? DEFAULT_GLYPH_PATHS.map((d) => ({ d, fill: "accent" as const }));
   // Optional brand background: a rounded square behind the glyph (guards

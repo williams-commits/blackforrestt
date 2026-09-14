@@ -25,14 +25,14 @@ export async function Hero() {
   const subtitle = brand.heroSubtitle || tHero("subtitle");
 
   return (
-    <section id="hero" className="relative scroll-mt-24 overflow-hidden bg-[#0a0d0b]">
+    <section id="hero" className="relative scroll-mt-24 overflow-hidden bg-[#0a0a0b]">
       <SectionBackdrop
         src="/brands/gbfxs/backgrounds/hero-bg.jpg"
         opacity={0.8}
         position="74% 36%"
         blur={0}
         filter="saturate(1.2)"
-        scrim="linear-gradient(90deg, #0a0d0b 0%, rgba(10,13,11,0.94) 46%, rgba(10,13,11,0.42) 100%)"
+        scrim="linear-gradient(90deg, #0a0a0b 0%, rgba(10,10,11,0.94) 46%, rgba(10,10,11,0.42) 100%)"
       />
       {/* <div
         className="pointer-events-none absolute inset-0 ag-mesh opacity-90"
@@ -40,7 +40,7 @@ export async function Hero() {
       /> */}
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 h-40"
-        style={{ background: "linear-gradient(180deg, transparent, #0a0d0b)" }}
+        style={{ background: "linear-gradient(180deg, transparent, #0a0a0b)" }}
         aria-hidden="true"
       />
 
@@ -58,16 +58,16 @@ export async function Hero() {
             <br />
             <span className="text-[#f0b90b]">{t("heroTitleB")}</span>
           </h1>
-          <p className="mt-7 max-w-xl text-lg leading-relaxed text-[#a7ada8]">{subtitle}</p>
+          <p className="mt-7 max-w-xl text-lg leading-relaxed text-[#a9a9ae]">{subtitle}</p>
           <div className="mt-10 flex flex-wrap gap-3">
-            <Link href="/register" className="ag-btn ag-btn-primary rounded-full! px-9">
+            <Link href="/register" className="ag-btn ag-btn-primary px-9">
               {tCta("primary")}
             </Link>
             <Link href="/trade/XAUUSD" className="ag-btn ag-btn-ghost">
               {tHero("ctaSecondary")}
             </Link>
           </div>
-          <p className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium text-[#747a75]">
+          <p className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium text-[#75757b]">
             {t("heroTrustLine").split("·").map((part, index) => (
               <span key={index} className="flex items-center gap-3">
                 {index > 0 && <span className="h-0.5 w-0.5 rounded-full bg-[#f0b90b]/60" aria-hidden />}
@@ -115,7 +115,7 @@ export async function StatBar() {
   const t = await getTranslations("agile");
   const tV = await getTranslations("agile.value");
   return (
-    <section id="value" aria-label={tV("subtitle")} className="scroll-mt-24 border-b border-white/8 bg-[#0d100f]">
+    <section id="value" aria-label={tV("subtitle")} className="scroll-mt-24 border-b border-white/8 bg-[#0d0d0f]">
       <dl className="ag-container grid grid-cols-2 divide-x divide-white/8 lg:grid-cols-4">
         {STATS.map(({ v, key }, index) => (
           <div
@@ -125,7 +125,7 @@ export async function StatBar() {
             <dd className="tnum text-4xl font-extrabold tracking-[-0.03em] text-[#f1f3ef] lg:text-[2.75rem]">
               {v}
             </dd>
-            <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#747a75]">
+            <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">
               {t(key)}
             </dt>
           </div>

@@ -16,8 +16,7 @@ import { SectionBackdrop } from "../SectionBackdrop";
 import { currentBrandProfile } from "@/lib/branding";
 
 /**
- * Intelligence — the analysis pitch on the terminal's own texture: no photo,
- * just graph-paper gridlines and mesh over the warm-black canvas. Left carries the
+ * Intelligence — the analysis pitch on a quiet warm-black canvas. Left carries the
  * narrative WITH the checklist; right is a layered analyst composition — a
  * signal card (entry/exit guide bands, blank level chips) with a small
  * calendar card leaning against it. Abstract and honest: interface grammar,
@@ -28,13 +27,6 @@ export async function IntelligenceSection() {
   const bullets = [t("b1"), t("b2"), t("b3"), t("b4")];
   return (
     <section id="intelligence" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#17140b]">
-      {/* Graph-paper texture dissolving into the band, then the mesh glow. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 ag-gridlines opacity-70 mask-image-[radial-gradient(75%_75%_at_28%_38%,black,transparent)]"
-      />
-      {/* <div aria-hidden="true" className="pointer-events-none absolute inset-0 ag-mesh opacity-80" /> */}
-
       <div className="ag-container relative grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
         {/* Narrative + checklist */}
         <Reveal>
@@ -49,7 +41,7 @@ export async function IntelligenceSection() {
               </li>
             ))}
           </ul>
-          <Link href="/analytics/technical" className="ag-btn ag-btn-primary mt-9 rounded-full!">
+          <Link href="/analytics/technical" className="ag-btn ag-btn-primary mt-9">
             {t("cta")} <ArrowRight size={15} strokeWidth={2} aria-hidden />
           </Link>
         </Reveal>
@@ -61,7 +53,7 @@ export async function IntelligenceSection() {
               <div className="flex items-center justify-between" aria-hidden="true">
                 <span className="flex items-center gap-2.5">
                   <span className="rounded-md bg-[#f0b90b]/12 px-2.5 py-1 font-mono text-[10px] font-bold tracking-widest text-[#f0b90b]">SIGNAL</span>
-                  <span className="font-mono text-[10px] tracking-widest text-[#747a75]">H4</span>
+                  <span className="font-mono text-[10px] tracking-widest text-[#75757b]">H4</span>
                 </span>
                 {/* Confidence dots */}
                 <span className="flex items-center gap-1">
@@ -122,7 +114,7 @@ export async function IntelligenceSection() {
               aria-hidden="true"
             >
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[8px] font-bold tracking-widest text-[#747a75]">CALENDAR</span>
+                <span className="font-mono text-[8px] font-bold tracking-widest text-[#75757b]">CALENDAR</span>
                 <span className="h-1.5 w-1.5 rounded-full bg-[#f0b90b]" />
               </div>
               <div className="mt-2.5 space-y-1.5">
@@ -153,7 +145,7 @@ export async function ShowcaseSection() {
   const bullets = [t("b1"), t("b2"), t("b3")];
 
   return (
-    <section id="terminal" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#0d100f]">
+    <section id="terminal" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
       {/* <div className="pointer-events-none absolute inset-0 ag-mesh opacity-80" aria-hidden="true" /> */}
       <div className="ag-container relative grid items-center gap-16 lg:grid-cols-[0.9fr_1.1fr]">
         {/* Narrative + capabilities */}
@@ -165,12 +157,12 @@ export async function ShowcaseSection() {
             {bullets.map((bullet, index) => (
               <li key={bullet} className="flex items-start gap-4">
                 <span className="ag-stepnum shrink-0 pt-1">{String(index + 1).padStart(2, "0")}</span>
-                <span className="text-[15px] leading-relaxed text-[#a7ada8]">{bullet}</span>
+                <span className="text-[15px] leading-relaxed text-[#a9a9ae]">{bullet}</span>
               </li>
             ))}
           </ul>
           <div className="mt-9 flex flex-wrap gap-3">
-            <Link href="/trade/XAUUSD" className="ag-btn ag-btn-primary rounded-full!">
+            <Link href="/trade/XAUUSD" className="ag-btn ag-btn-primary">
               {t("cta")}
             </Link>
           </div>
@@ -196,20 +188,20 @@ export async function ShowcaseSection() {
                 <span className="h-1.5 w-1.5 rounded-full bg-[#ff6b6b]/60" />
                 <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
                 <span className="h-1.5 w-1.5 rounded-full bg-[#f0b90b]/70" />
-                <span className="ml-1.5 flex-1 rounded bg-white/5 px-2 py-0.5 font-mono text-[6.5px] tracking-widest text-[#747a75]">trade.gbfxs.com</span>
+                <span className="ml-1.5 flex-1 rounded bg-white/5 px-2 py-0.5 font-mono text-[6.5px] tracking-widest text-[#75757b]">trade.gbfxs.com</span>
               </div>
               {/* AccountBar — the real metrics strip */}
               <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">
                 {["ACCOUNT", "BALANCE", "EQUITY", "P/L"].map((metric) => (
                   <span key={metric} className="flex flex-col gap-1">
-                    <span className="font-mono text-[6.5px] tracking-[0.16em] text-[#747a75]">{metric}</span>
+                    <span className="font-mono text-[6.5px] tracking-[0.16em] text-[#75757b]">{metric}</span>
                     <span className="h-1.5 w-8 rounded-sm bg-white/12" />
                   </span>
                 ))}
               </div>
               {/* Chart + order panel */}
               <div className="grid grid-cols-[1fr_84px] gap-2 p-2">
-                <div className="relative overflow-hidden rounded-md bg-[#0a0d0b] p-1.5">
+                <div className="relative overflow-hidden rounded-md bg-[#0a0a0b] p-1.5">
                   <svg viewBox="0 0 300 120" className="h-36 w-full" preserveAspectRatio="none">
                     <defs>
                       <pattern id="ag-show-grid" width="30" height="24" patternUnits="userSpaceOnUse">
@@ -250,7 +242,7 @@ export async function ShowcaseSection() {
               </div>
               {/* Positions dock */}
               <div className="flex items-center gap-2 border-t border-white/8 px-3 py-2">
-                <span className="font-mono text-[6.5px] tracking-[0.16em] text-[#747a75]">POSITIONS</span>
+                <span className="font-mono text-[6.5px] tracking-[0.16em] text-[#75757b]">POSITIONS</span>
                 {Array.from({ length: 3 }).map((_, i) => (
                   <span key={i} className="h-1.5 flex-1 rounded-sm bg-white/8" />
                 ))}
@@ -260,8 +252,8 @@ export async function ShowcaseSection() {
             </div>
 
             {/* Phone — beside the desktop, standing taller; navbar on top */}
-            <div className="relative z-0 -my-10 flex w-[33%] shrink-0 flex-col rounded-[18px] border border-white/10 bg-[#101412] p-1.5 shadow-[0_30px_70px_-30px_rgba(0,0,0,0.9)] transform-[rotateY(10deg)_rotateX(2deg)]">
-              <div className="flex h-full flex-col overflow-hidden rounded-[13px] bg-[#0a0d0b]">
+            <div className="relative z-0 -my-10 flex w-[33%] shrink-0 flex-col rounded-[18px] border border-white/10 bg-[#111113] p-1.5 shadow-[0_30px_70px_-30px_rgba(0,0,0,0.9)] transform-[rotateY(10deg)_rotateX(2deg)]">
+              <div className="flex h-full flex-col overflow-hidden rounded-[13px] bg-[#0a0a0b]">
                 {/* App navbar — logo mark, section pills, account dot */}
                 <div className="flex items-center justify-between border-b border-white/8 px-2 py-1.5">
                   <span className="flex items-center gap-1">
@@ -292,7 +284,7 @@ export async function ShowcaseSection() {
                 </div>
                 {/* trade FAB */}
                 <div className="flex justify-end p-2.5 pt-1">
-                  <span className="flex h-7 w-14 items-center justify-center rounded-full bg-[#f0b90b] font-sans text-[8px] font-bold text-[#0d100f]">Trade</span>
+                  <span className="flex h-7 w-14 items-center justify-center rounded-full bg-[#f0b90b] font-sans text-[8px] font-bold text-[#0d0d0f]">Trade</span>
                 </div>
               </div>
               {/* gloss shade */}
@@ -345,7 +337,7 @@ export async function TrustSection() {
   ];
 
   return (
-    <section id="trust" className="ag-section scroll-mt-24 border-y border-white/10 bg-[#111513]">
+    <section id="trust" className="ag-section scroll-mt-24 border-y border-white/10 bg-[#111113]">
       <div className="ag-container">
         <Reveal>
           <span className="ag-eyebrow">{t("eyebrow")}</span>
@@ -361,9 +353,9 @@ export async function TrustSection() {
                   <span className="ag-stepnum">{String(index + 1).padStart(2, "0")}</span>
                 </div>
                 <h3 className="mt-6 text-base font-bold text-[#f1f3ef]">{title}</h3>
-                <p className="mt-2.5 text-sm leading-relaxed text-[#a7ada8]">{desc}</p>
+                <p className="mt-2.5 text-sm leading-relaxed text-[#a9a9ae]">{desc}</p>
                 {meta && (
-                  <p className="mt-5 text-[11px] font-medium uppercase tracking-[0.16em] text-[#747a75]">
+                  <p className="mt-5 text-[11px] font-medium uppercase tracking-[0.16em] text-[#75757b]">
                     {meta}
                   </p>
                 )}
@@ -374,7 +366,7 @@ export async function TrustSection() {
                     {tags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full border border-white/12 bg-white/5 px-3.5 py-1.5 text-[11px] font-semibold tracking-wide text-[#a7ada8]"
+                        className="rounded-full border border-white/12 bg-white/5 px-3.5 py-1.5 text-[11px] font-semibold tracking-wide text-[#a9a9ae]"
                       >
                         {tag}
                       </span>
@@ -402,7 +394,7 @@ export async function StepsBand() {
     { n: 3, title: t("s3.title"), desc: t("s3.desc"), icon: CandlestickChart },
   ];
   return (
-    <section id="get-started" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#0d100f]">
+    <section id="get-started" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
       {/* <div className="pointer-events-none absolute inset-0 ag-mesh opacity-60" aria-hidden="true" /> */}
       <div className="ag-container relative">
         <div className="flex flex-wrap items-end justify-between gap-6">
@@ -427,12 +419,12 @@ export async function StepsBand() {
                 aria-hidden="true"
                 className="absolute left-7 top-14 h-[calc(100%-2.5rem)] w-px bg-linear-to-b from-[#f0b90b]/40 to-transparent lg:hidden"
               />
-              <span className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#f0b90b]/40 bg-[#101412] tnum text-[15px] font-bold text-[#f0b90b] shadow-[0_0_24px_-8px_rgba(240,185,11,0.45)]">
+              <span className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#f0b90b]/40 bg-[#111113] tnum text-[15px] font-bold text-[#f0b90b] shadow-[0_0_24px_-8px_rgba(240,185,11,0.45)]">
                 {String(n).padStart(2, "0")}
               </span>
               <div className="lg:mt-8">
                 <h3 className="text-lg font-bold tracking-[-0.015em] text-[#f1f3ef]">{title}</h3>
-                <p className="mt-2.5 max-w-sm text-sm leading-relaxed text-[#a7ada8]">{desc}</p>
+                <p className="mt-2.5 max-w-sm text-sm leading-relaxed text-[#a9a9ae]">{desc}</p>
               </div>
             </li>
           ))}
@@ -453,14 +445,14 @@ export async function FinalCta() {
   const tV = await getTranslations("agile.value");
   const stats = (["c1", "c2", "c3"] as const).map((key) => ({ v: tV(`${key}.v`), l: tV(`${key}.l`) }));
   return (
-    <section id="final-cta" className="relative scroll-mt-24 overflow-hidden bg-[#0d100f]">
+    <section id="final-cta" className="relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
       <SectionBackdrop
         src="/brands/gbfxs/backgrounds/cta-bg.jpg"
         opacity={0.5}
         position="center 30%"
         blur={0}
         filter="saturate(1.05)"
-        scrim="linear-gradient(180deg, #0d100f 0%, rgba(13,16,15,0.82) 45%, rgba(13,16,15,0.9) 100%)"
+        scrim="linear-gradient(180deg, #0d0d0f 0%, rgba(13,13,15,0.82) 45%, rgba(13,13,15,0.9) 100%)"
       />
       <div
         aria-hidden="true"
@@ -472,9 +464,9 @@ export async function FinalCta() {
           <div className="mx-auto max-w-3xl text-center">
             <span className="ag-eyebrow">{tCta("eyebrow")}</span>
             <h2 className="ag-display mt-6 text-[clamp(2.5rem,5vw,4.25rem)]!">{t("ctaTitle")}</h2>
-            <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[#a7ada8]">{t("ctaSubtitle")}</p>
+            <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[#a9a9ae]">{t("ctaSubtitle")}</p>
             <div className="mt-11 flex flex-wrap justify-center gap-3">
-              <Link href="/register" className="ag-btn ag-btn-primary rounded-full! px-9">
+              <Link href="/register" className="ag-btn ag-btn-primary px-9">
                 {tCta("primary")}
               </Link>
               <Link href="/login" className="ag-btn ag-btn-ghost">
@@ -485,7 +477,7 @@ export async function FinalCta() {
               {stats.map(({ v, l }) => (
                 <div key={l} className="text-center">
                   <dd className="font-mono text-2xl font-bold tnum text-[#f0b90b]">{v}</dd>
-                  <dt className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#747a75]">{l}</dt>
+                  <dt className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">{l}</dt>
                 </div>
               ))}
             </dl>

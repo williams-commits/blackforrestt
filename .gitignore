@@ -26,3 +26,4 @@ bugs.md
 deploy/Caddyfile.rendered
 fixes.md
 -copy.env
+updates.md

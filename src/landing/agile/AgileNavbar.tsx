@@ -103,7 +103,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
     <header
       className={`sticky top-0 z-50 border-b transition-colors duration-300 ${
         scrolled || mobileOpen
-          ? "border-white/10 bg-[#0d100f]/80 backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_16px_40px_-24px_rgba(0,0,0,0.9)]"
+          ? "border-white/10 bg-[#0d0d0f]/80 backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_16px_40px_-24px_rgba(0,0,0,0.9)]"
           : "border-transparent bg-transparent"
       }`}
       onMouseLeave={() => setOpen(null)}
@@ -116,13 +116,13 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
         <div className="hidden min-w-0 items-center gap-1 lg:flex">
           <Link
             href={anchor("markets")}
-            className="rounded-md px-3 py-2 text-[13px] font-medium text-[#a7ada8] transition-colors hover:text-[#f1f3ef]"
+            className="rounded-md px-3 py-2 text-[13px] font-medium text-[#a9a9ae] transition-colors hover:text-[#f1f3ef]"
           >
             {tA("markets")}
           </Link>
           <Link
             href={anchor("platform")}
-            className="rounded-md px-3 py-2 text-[13px] font-medium text-[#a7ada8] transition-colors hover:text-[#f1f3ef]"
+            className="rounded-md px-3 py-2 text-[13px] font-medium text-[#a9a9ae] transition-colors hover:text-[#f1f3ef]"
           >
             {tA("platform")}
           </Link>
@@ -133,25 +133,25 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
                 type="button"
                 aria-expanded={open === group.key}
                 onClick={() => setOpen((value) => (value === group.key ? null : group.key))}
-                className="flex items-center gap-1.5 rounded-md px-3 py-2 text-[13px] font-medium text-[#a7ada8] transition-colors hover:text-[#f1f3ef]"
+                className="flex items-center gap-1.5 rounded-md px-3 py-2 text-[13px] font-medium text-[#a9a9ae] transition-colors hover:text-[#f1f3ef]"
               >
                 {t(group.key)}
                 <ChevronDown
                   size={12}
                   strokeWidth={2.5}
                   aria-hidden
-                  className={`text-[#747a75] transition-transform duration-200 ${open === group.key ? "rotate-180" : ""}`}
+                  className={`text-[#75757b] transition-transform duration-200 ${open === group.key ? "rotate-180" : ""}`}
                 />
               </button>
               {open === group.key && group.items && (
                 <div className="absolute left-0 top-full pt-2">
-                  <div className="min-w-52 rounded-xl border border-white/10 bg-[#141815] py-2 shadow-[0_28px_70px_-24px_rgba(0,0,0,0.9)]">
+                  <div className="min-w-52 rounded-xl border border-white/10 bg-[#141417] py-2 shadow-[0_28px_70px_-24px_rgba(0,0,0,0.9)]">
                     {group.items.map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
                         onClick={() => setOpen(null)}
-                        className="block px-4 py-2.5 text-[13px] text-[#a7ada8] transition-colors hover:bg-white/5 hover:text-[#f0b90b]"
+                        className="block px-4 py-2.5 text-[13px] text-[#a9a9ae] transition-colors hover:bg-white/5 hover:text-[#f0b90b]"
                       >
                         {t(`menu.${item.key}`)}
                       </Link>
@@ -176,7 +176,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
             </Link>
             <Link
               href={clientTradeUrl("/register")}
-              className="ag-btn ag-btn-primary hidden min-h-0! rounded-full! px-4 py-2.5 text-[13px] lg:inline-flex"
+              className="ag-btn ag-btn-primary hidden min-h-0! px-4 py-2.5 text-[13px] lg:inline-flex"
             >
               {tA("cta")}
             </Link>
@@ -187,7 +187,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
             href={clientTradeUrl("/login")}
             aria-label={tA("login")}
             title={tA("login")}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 text-[#a7ada8] transition-colors hover:border-[#f0b90b]/50 hover:text-[#f0b90b] lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 text-[#a9a9ae] transition-colors hover:border-[#f0b90b]/50 hover:text-[#f0b90b] lg:hidden"
           >
             <LogIn size={17} strokeWidth={1.75} aria-hidden />
           </Link>
@@ -195,7 +195,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
             href={clientTradeUrl("/register")}
             aria-label={tA("cta")}
             title={tA("cta")}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f0b90b] text-[#0d100f] transition-transform hover:scale-105 motion-reduce:transition-none lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f0b90b] text-[#0d0d0f] transition-transform hover:scale-105 motion-reduce:transition-none lg:hidden"
           >
             <UserPlus size={16} strokeWidth={2} aria-hidden />
           </Link>
@@ -213,7 +213,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
 
       {/* Mobile accordion sheet */}
       {mobileOpen && (
-        <div className="fixed inset-x-0 top-16 z-50 h-[calc(100dvh-4rem)] overflow-y-auto border-t border-white/10 bg-[#0d100f] lg:hidden">
+        <div className="fixed inset-x-0 top-16 z-50 h-[calc(100dvh-4rem)] overflow-y-auto border-t border-white/10 bg-[#0d0d0f] lg:hidden">
           <nav className="ag-container flex min-h-full flex-col pt-3" aria-label={tA("primary")}>
             {/* Landing sections — only meaningful from the landing itself */}
             {!anchorPrefix && (
@@ -242,7 +242,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
                       size={14}
                       strokeWidth={2.5}
                       aria-hidden
-                      className={`text-[#747a75] transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+                      className={`text-[#75757b] transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
                     />
                   </button>
                   {expanded && group.items && (
@@ -252,7 +252,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
                           key={item.href}
                           href={item.href}
                           onClick={() => setMobileOpen(false)}
-                          className="rounded-md px-3 py-2.5 text-[13.5px] text-[#a7ada8] transition-colors hover:bg-white/5 hover:text-[#f0b90b]"
+                          className="rounded-md px-3 py-2.5 text-[13.5px] text-[#a9a9ae] transition-colors hover:bg-white/5 hover:text-[#f0b90b]"
                         >
                           {t(`menu.${item.key}`)}
                         </Link>
@@ -271,7 +271,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
                 <Link href={clientTradeUrl("/login")} onClick={() => setMobileOpen(false)} className="ag-btn ag-btn-ghost flex-1">
                   {tA("login")}
                 </Link>
-                <Link href={clientTradeUrl("/register")} onClick={() => setMobileOpen(false)} className="ag-btn ag-btn-primary flex-1 rounded-full!">
+                <Link href={clientTradeUrl("/register")} onClick={() => setMobileOpen(false)} className="ag-btn ag-btn-primary flex-1">
                   {tA("cta")}
                 </Link>
               </div>

@@ -16,17 +16,20 @@ export function AgileStyles() {
       .ag-shell *::after { box-sizing: border-box; }
       .ag-shell {
         min-height: 100vh;
-        --ag-bg: #0b0e11;
-        --ag-bg-2: #0e1114;
-        --ag-bg-3: #181a20;
-        --ag-card: #1e2329;
+        --ag-bg: #0b0b0d;
+        --ag-bg-2: #101013;
+        --ag-bg-3: #18181b;
+        --ag-card: #1c1c20;
         --ag-yellow-deep: #2a2108;
         --ag-yellow-soft: #3a2d0b;
         --ag-accent: #f0b90b;
+        --ag-accent-bright: #f8d56a;
         --ag-text: #eaecef;
-        --ag-text-2: #b7bdc6;
-        --ag-muted: #848e9c;
+        --ag-text-2: #b9b9bd;
+        --ag-muted: #85858a;
         --ag-border: rgba(255, 255, 255, 0.12);
+        --ag-border-soft: rgba(255, 255, 255, 0.08);
+        --ag-focus: 0 0 0 3px rgba(240, 185, 11, 0.28);
         --ag-negative: #f6465d;
         background: var(--ag-bg);
         color: var(--ag-text);
@@ -40,7 +43,7 @@ export function AgileStyles() {
 
       .ag-card {
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0) 42%), var(--ag-card);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--ag-border-soft);
         border-radius: 12px;
       }
       .ag-card-hover { transition: border-color 220ms ease, transform 220ms ease, background-color 220ms ease; }
@@ -58,7 +61,7 @@ export function AgileStyles() {
         box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.85);
       }
       .ag-glass-tile {
-        background: rgba(17, 21, 19, 0.5);
+        background: rgba(19, 19, 22, 0.5);
         backdrop-filter: blur(18px) saturate(1.15);
         -webkit-backdrop-filter: blur(18px) saturate(1.15);
         border: 1px solid rgba(255, 255, 255, 0.12);
@@ -66,8 +69,8 @@ export function AgileStyles() {
       }
       .ag-glass-tile.ag-card-hover:hover { border-color: rgba(240, 185, 11, 0.55); }
       @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-        .ag-glass { background: rgba(17, 21, 19, 0.92); }
-        .ag-glass-tile { background: rgba(17, 21, 19, 0.92); }
+        .ag-glass { background: rgba(19, 19, 22, 0.92); }
+        .ag-glass-tile { background: rgba(19, 19, 22, 0.92); }
       }
 
       /* Clipped accent border — replaces the panel's full hairline with two
@@ -101,14 +104,17 @@ export function AgileStyles() {
         transition: filter 200ms ease, transform 200ms ease, background-color 200ms ease;
         min-height: 44px;
       }
-      .ag-btn-primary { background: var(--ag-accent); color: #0d100f; }
+      .ag-btn-primary { background: var(--ag-accent); color: #0d0d0f; }
       .ag-btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
       .ag-btn-ghost { background: transparent; color: var(--ag-text); border: 1px solid var(--ag-border); }
       .ag-btn-ghost:hover { background: rgba(255, 255, 255, 0.06); }
+      .ag-btn:focus-visible,
+      .ag-shell a:focus-visible,
+      .ag-shell button:focus-visible { outline: none; box-shadow: var(--ag-focus); }
 
       .ag-eyebrow {
         font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
-        color: var(--ag-accent);
+        color: var(--ag-accent-bright);
       }
       /* Hero display scale — the one place the type gets genuinely large. */
       .ag-display {
@@ -141,20 +147,20 @@ export function AgileStyles() {
         leak light-theme values onto the dark canvas.
       */
       .ag-scope {
-        --color-canvas: #0d100f;
-        --color-panel: #151a17;
-        --color-panel-2: #181c1a;
-        --color-panel-3: #1f2421;
+        --color-canvas: #0d0d0f;
+        --color-panel: #151517;
+        --color-panel-2: #1b1b1e;
+        --color-panel-3: #232327;
         --color-border: rgba(255, 255, 255, 0.12);
         --color-border-soft: rgba(255, 255, 255, 0.07);
         --color-brand: #f0b90b;
         --color-brand-soft: rgba(240, 185, 11, 0.14);
         --color-text: #f1f3ef;
-        --color-text-muted: #a7ada8;
-        --color-text-faint: #747a75;
+        --color-text-muted: #a9a9ae;
+        --color-text-faint: #75757b;
         --color-up: #0ecb81;
         --color-down: #f6465d;
-        --color-surface-dark: #15181a;
+        --color-surface-dark: #151517;
         --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.5);
         --shadow-card: 0 18px 44px rgba(0, 0, 0, 0.55);
         /* Agile's typographic voice: geometric sans everywhere — the serif
@@ -164,14 +170,14 @@ export function AgileStyles() {
         font-family: var(--font-agile-inter), Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
       }
       /* Direct scoped utility rules — the guaranteed palette layer. */
-      .ag-scope .bg-canvas { background-color: #0d100f; }
-      .ag-scope .bg-panel { background-color: #151a17; }
-      .ag-scope .bg-panel-2 { background-color: #181c1a; }
+      .ag-scope .bg-canvas { background-color: #0d0d0f; }
+      .ag-scope .bg-panel { background-color: #151517; }
+      .ag-scope .bg-panel-2 { background-color: #1b1b1e; }
       .ag-scope .border-border { border-color: rgba(255, 255, 255, 0.12); }
       .ag-scope .border-border-soft { border-color: rgba(255, 255, 255, 0.07); }
       .ag-scope .text-text { color: #f1f3ef; }
-      .ag-scope .text-text-muted { color: #a7ada8; }
-      .ag-scope .text-text-faint { color: #747a75; }
+      .ag-scope .text-text-muted { color: #a9a9ae; }
+      .ag-scope .text-text-faint { color: #75757b; }
       .ag-scope .text-brand { color: #f0b90b; }
       .ag-scope .text-up { color: #0ecb81; }
       .ag-scope .text-down { color: #ff6b6b; }
@@ -182,7 +188,7 @@ export function AgileStyles() {
       /* Variant forms (hover/focus) of the same utilities — the palette must
          hold through interaction states, not just resting states. */
       .ag-scope .hover\:bg-panel:hover,
-      .ag-scope .hover\:bg-panel-2:hover { background-color: #1b211d; }
+      .ag-scope .hover\:bg-panel-2:hover { background-color: #222225; }
       .ag-scope .hover\:text-text:hover { color: #f1f3ef; }
       .ag-scope .hover\:text-brand:hover { color: #f0b90b; }
       .ag-scope .focus\:border-brand:focus,
@@ -193,7 +199,7 @@ export function AgileStyles() {
       .ag-scope .bg-brand,
       .ag-scope .bg-up,
       .ag-scope .bg-down {
-        color: #0d100f;
+        color: #0d0d0f;
       }
       /* Shared token-card patterns (stats bands, fact grids, form cards —
          anything built as "rounded-xl border bg-panel/bg-canvas") take the
@@ -220,7 +226,7 @@ export function AgileStyles() {
       .ag-scope .marker\:text-brand::marker { color: #f0b90b; }
 
       /* Metric numerals (stat bands, hero numbers) render in the landing's
-         ledger grammar: large, tight, mint. Only this scale class is used
+        ledger grammar: large and tight. Only this scale class is used
          for stat numerals inside the content scope. */
       .ag-scope .text-2xl {
         font-size: 2.25rem;
@@ -240,15 +246,6 @@ export function AgileStyles() {
           radial-gradient(42% 56% at 12% 8%, rgba(58, 45, 11, 0.5), transparent 68%),
           radial-gradient(36% 48% at 88% 22%, rgba(240, 185, 11, 0.07), transparent 66%),
           radial-gradient(40% 52% at 70% 96%, rgba(42, 33, 8, 0.48), transparent 70%);
-      }
-
-      /* Chart gridlines — the terminal's graph-paper texture as section
-         ambience; pair with a radial mask so the grid dissolves at the edges. */
-      .ag-gridlines {
-        background-image:
-          linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-        background-size: 44px 44px;
       }
 
       /* Hairline frame with yellow catchlights — the terminal-panel device. */
@@ -297,7 +294,7 @@ export function AgileStyles() {
       .ag-bento-cell {
         background:
           linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0) 44%),
-          #121614;
+          #151518;
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 14px;
         transition: border-color 220ms ease, transform 220ms ease;
@@ -310,7 +307,7 @@ export function AgileStyles() {
         overflow: hidden;
         border-top: 1px solid rgba(255, 255, 255, 0.08);
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        background: #0a0d0b;
+        background: #0a0a0b;
       }
       .ag-ticker::before,
       .ag-ticker::after {
@@ -322,8 +319,8 @@ export function AgileStyles() {
         z-index: 1;
         pointer-events: none;
       }
-      .ag-ticker::before { left: 0; background: linear-gradient(90deg, #0a0d0b, transparent); }
-      .ag-ticker::after { right: 0; background: linear-gradient(270deg, #0a0d0b, transparent); }
+      .ag-ticker::before { left: 0; background: linear-gradient(90deg, #0a0a0b, transparent); }
+      .ag-ticker::after { right: 0; background: linear-gradient(270deg, #0a0a0b, transparent); }
       .ag-ticker-track {
         display: flex;
         width: max-content;
@@ -348,7 +345,7 @@ export function AgileStyles() {
         transition: color 150ms ease;
       }
       .ag-ticker-item:hover { color: #f0b90b; }
-      .ag-ticker-item .tnum { color: #a7ada8; }
+      .ag-ticker-item .tnum { color: #a9a9ae; }
       @keyframes ag-marquee {
         from { transform: translateX(0); }
         to { transform: translateX(-50%); }

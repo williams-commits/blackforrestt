@@ -56,16 +56,16 @@ export async function AgileFooter() {
   ];
 
   return (
-    <footer className="bg-[#15181a] text-[#a7ada8]">
+    <footer className="bg-[#151517] text-[#a9a9ae]">
       <div className="ag-container py-14">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
             {/* The mark renders its own home link — never wrap it in another. */}
             <AgileMark size="lg" />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-[#747a75]">
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-[#75757b]">
               {t("tagline", { company })}
             </p>
-            <address className="mt-5 text-sm not-italic leading-relaxed text-[#747a75]">
+            <address className="mt-5 text-sm not-italic leading-relaxed text-[#75757b]">
               {address && (
                 <>
                   {address}
@@ -77,7 +77,7 @@ export async function AgileFooter() {
               </a>
             </address>
             {registration && (
-              <p className="mt-4 border-l-2 border-[#f0b90b]/50 pl-3 text-xs leading-relaxed text-[#747a75]">
+              <p className="mt-4 border-l-2 border-[#f0b90b]/50 pl-3 text-xs leading-relaxed text-[#75757b]">
                 {registration}
               </p>
             )}
@@ -103,9 +103,9 @@ export async function AgileFooter() {
       </div>
 
       <div className="border-t border-white/10">
-        <div className="ag-container space-y-3 py-8 text-xs leading-relaxed text-[#747a75]">
+        <div className="ag-container space-y-3 py-8 text-xs leading-relaxed text-[#75757b]">
           <p>
-            <strong className="text-[#a7ada8]">{t("riskWarning")}</strong> {t("risk1")}
+            <strong className="text-[#a9a9ae]">{t("riskWarning")}</strong> {t("risk1")}
           </p>
           <p>{t("risk2")}</p>
           <p>{t("risk3")}</p>

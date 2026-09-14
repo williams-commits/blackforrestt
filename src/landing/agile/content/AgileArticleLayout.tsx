@@ -34,7 +34,7 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
   return (
     <div>
       {/* Header band — split composition: narrative left, desk mark right. */}
-      <header className="ag-page-band border-b border-white/10 bg-[#111513]">
+      <header className="ag-page-band border-b border-white/10 bg-[#111113]">
         {/* <div className="pointer-events-none absolute inset-0 ag-mesh" aria-hidden="true" /> */}
         <div
           aria-hidden="true"
@@ -102,7 +102,7 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
             <p className="mt-2 max-w-md text-sm leading-relaxed text-[#f1f3ef]/70">{t("subtitle")}</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href={clientTradeUrl("/register")} className="ag-btn ag-btn-primary rounded-full!">
+            <Link href={clientTradeUrl("/register")} className="ag-btn ag-btn-primary">
               {t("primary")}
             </Link>
             <Link

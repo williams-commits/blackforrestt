@@ -19,7 +19,7 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
   const tM = await getTranslations("agile.markets");
 
   return (
-    <section id="platform" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#0d100f]">
+    <section id="platform" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
       {/* <div className="pointer-events-none absolute inset-0 ag-mesh opacity-70" aria-hidden="true" /> */}
       <div className="ag-container relative">
         <Reveal>
@@ -35,7 +35,7 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
               <div>
                 <span className="ag-stepnum">01</span>
                 <h3 className="mt-3 text-xl font-bold tracking-[-0.015em] text-[#f1f3ef]">{t("all.title")}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[#a7ada8]">{t("all.desc")}</p>
+                <p className="mt-2 text-sm leading-relaxed text-[#a9a9ae]">{t("all.desc")}</p>
               </div>
               {/* Abstract chart mark — the desk's signature motif. */}
               <svg viewBox="0 0 220 64" className="mt-6 w-full" aria-hidden="true" focusable="false">
@@ -69,7 +69,7 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
               <span className="ag-stepnum">02</span>
               <Zap size={20} strokeWidth={1.75} className="mt-4 text-[#f0b90b]" aria-hidden />
               <h3 className="mt-4 text-base font-bold text-[#f1f3ef]">{t("speed.title")}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#a7ada8]">{t("speed.desc")}</p>
+              <p className="mt-2 text-sm leading-relaxed text-[#a9a9ae]">{t("speed.desc")}</p>
               <div className="mt-auto pt-5 tnum text-4xl font-extrabold tracking-[-0.03em] text-[#f0b90b]">&lt;1s</div>
             </article>
           </Reveal>
@@ -80,7 +80,7 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
               <span className="ag-stepnum">03</span>
               <ShieldCheck size={20} strokeWidth={1.75} className="mt-4 text-[#f0b90b]" aria-hidden />
               <h3 className="mt-4 text-base font-bold text-[#f1f3ef]">{t("security.title")}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#a7ada8]">{t("security.desc")}</p>
+              <p className="mt-2 text-sm leading-relaxed text-[#a9a9ae]">{t("security.desc")}</p>
             </article>
           </Reveal>
 
@@ -89,12 +89,12 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
             <article className="ag-bento-cell h-full p-8">
               <span className="ag-stepnum">04</span>
               <h3 className="mt-3 text-xl font-bold tracking-[-0.015em] text-[#f1f3ef]">{t("pricing.title")}</h3>
-              <p className="mt-2 max-w-md text-sm leading-relaxed text-[#a7ada8]">{t("pricing.desc")}</p>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-[#a9a9ae]">{t("pricing.desc")}</p>
               <div className="mt-6 flex flex-wrap gap-2.5">
                 {CATEGORY_ORDER.map((category: InstrumentCategory) => (
                   <span
                     key={category}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-[#a7ada8]"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-[#a9a9ae]"
                   >
                     <span className="text-[#f0b90b]" aria-hidden>
                       <MarketIcon category={category} className="h-3.5 w-3.5" />
@@ -115,7 +115,7 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
               <div className="relative">
                 <span className="ag-stepnum">05</span>
                 <h3 className="mt-3 text-base font-bold text-[#f1f3ef]">{tA("globalTitle")}</h3>
-                <p className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-[#a7ada8]">
+                <p className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-[#a9a9ae]">
                   <LineChart size={15} strokeWidth={1.75} className="mt-0.5 shrink-0 text-[#f0b90b]" aria-hidden />
                   {t("all.desc")}
                 </p>

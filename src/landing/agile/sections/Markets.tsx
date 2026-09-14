@@ -74,7 +74,7 @@ export function MarketsSection({
   return (
     <section
       id="markets"
-      className="ag-section relative scroll-mt-24 overflow-hidden border-y border-white/10 bg-[#111513]"
+      className="ag-section relative scroll-mt-24 overflow-hidden border-y border-white/10 bg-[#111113]"
     >
       {/* <div className="pointer-events-none absolute inset-0 ag-mesh opacity-50" aria-hidden="true" /> */}
       <div className="ag-container relative">
@@ -102,7 +102,7 @@ export function MarketsSection({
               className={`rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${
                 active === tab
                   ? "border-[#f0b90b]/60 bg-[#f0b90b]/15 text-[#f0b90b]"
-                  : "border-white/10 text-[#a7ada8] hover:border-white/25 hover:text-[#f1f3ef]"
+                  : "border-white/10 text-[#a9a9ae] hover:border-white/25 hover:text-[#f1f3ef]"
               }`}
             >
               {labels.categories[tab.toLowerCase()] ?? tab}
@@ -134,7 +134,7 @@ export function MarketsSection({
                 ))}
               </ul>
               <div className="mt-auto pt-8">
-                <Link href="/register" className="ag-btn ag-btn-primary rounded-full!">
+                <Link href="/register" className="ag-btn ag-btn-primary">
                   {panel.cta} <ArrowRight size={15} strokeWidth={2} aria-hidden />
                 </Link>
               </div>
@@ -162,7 +162,7 @@ export function MarketsSection({
                     <span className="block font-mono text-[15px] font-bold text-[#f1f3ef]">
                       {instrument.symbol}
                     </span>
-                    <span className="mt-0.5 block truncate font-sans text-[12px] text-[#747a75]">
+                    <span className="mt-0.5 block truncate font-sans text-[12px] text-[#75757b]">
                       {instrument.name}
                     </span>
                   </span>
@@ -171,7 +171,7 @@ export function MarketsSection({
                       {instrument.mid.toFixed(instrument.digits)}
                     </span>
                     <span className="mt-0.5 flex items-center justify-end gap-1.5 text-[11px]">
-                      <span className="text-[#747a75]">{labels.today}</span>
+                      <span className="text-[#75757b]">{labels.today}</span>
                       <span className={`font-semibold tnum ${up ? "ag-up" : "ag-down"}`}>
                         {up ? "+" : ""}
                         {instrument.changePct.toFixed(2)}%
@@ -182,13 +182,13 @@ export function MarketsSection({
               );
             })}
             {filtered.length === 0 && (
-              <p className="flex flex-1 items-center justify-center rounded-2xl border border-white/10 px-6 py-10 text-center text-sm text-[#747a75]">
+              <p className="flex flex-1 items-center justify-center rounded-2xl border border-white/10 px-6 py-10 text-center text-sm text-[#75757b]">
                 {labels.empty}
               </p>
             )}
             {updatedAt && (
-              <p className="mt-1 text-right text-[11px] text-[#747a75]">
-                {labels.updated}: <span className="tnum text-[#a7ada8]">{updatedAt}</span>
+              <p className="mt-1 text-right text-[11px] text-[#75757b]">
+                {labels.updated}: <span className="tnum text-[#a9a9ae]">{updatedAt}</span>
               </p>
             )}
           </div>

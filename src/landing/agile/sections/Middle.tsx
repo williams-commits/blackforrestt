@@ -32,7 +32,7 @@ export function MoversSection({
   );
 
   return (
-    <section id="movers" className="ag-section scroll-mt-24 bg-[#0d100f]">
+    <section id="movers" className="ag-section scroll-mt-24 bg-[#0d0d0f]">
       <div className="ag-container">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="max-w-2xl">
@@ -65,7 +65,7 @@ export function MoversSection({
                     />
                     <div>
                       <div className="font-mono text-sm font-bold text-[#f1f3ef]">{instrument.symbol}</div>
-                      <div className="text-[11px] text-[#747a75]">{instrument.name}</div>
+                      <div className="text-[11px] text-[#75757b]">{instrument.name}</div>
                     </div>
                   </div>
                   <Sparkline
@@ -82,7 +82,7 @@ export function MoversSection({
                       {up ? "+" : ""}
                       {instrument.changePct.toFixed(2)}%
                     </div>
-                    <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#747a75]">
+                    <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">
                       {labels.metric}
                     </div>
                   </div>
@@ -90,7 +90,7 @@ export function MoversSection({
                     <div className="font-mono text-sm font-semibold tnum text-[#f1f3ef]">
                       {instrument.mid.toFixed(instrument.digits)}
                     </div>
-                    <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#747a75]">
+                    <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">
                       {labels.last}
                     </div>
                   </div>

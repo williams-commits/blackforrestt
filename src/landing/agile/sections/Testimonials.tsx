@@ -25,13 +25,13 @@ function StoryStats({ returns, trades, label }: { returns?: string; trades?: str
       {returns && (
         <span className="flex flex-col gap-0.5">
           <span className="tnum text-lg font-extrabold tracking-[-0.02em] text-[#f0b90b]">{returns}</span>
-          <span className="text-[9.5px] font-semibold uppercase tracking-[0.16em] text-[#747a75]">{label.returns}</span>
+          <span className="text-[9.5px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">{label.returns}</span>
         </span>
       )}
       {trades && (
         <span className="flex flex-col gap-0.5">
           <span className="tnum text-lg font-extrabold tracking-[-0.02em] text-[#f1f3ef]">{trades}</span>
-          <span className="text-[9.5px] font-semibold uppercase tracking-[0.16em] text-[#747a75]">{label.trades}</span>
+          <span className="text-[9.5px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">{label.trades}</span>
         </span>
       )}
     </div>
@@ -54,7 +54,7 @@ export async function TestimonialsSection() {
   const wide = items[4];
 
   return (
-    <section id="reviews" className="relative scroll-mt-24 overflow-hidden bg-[#0d100f] pb-24 pt-4">
+    <section id="reviews" className="relative scroll-mt-24 overflow-hidden bg-[#0d0d0f] pb-24 pt-4">
       <div className="ag-container relative">
         <div className="grid gap-5 lg:grid-cols-[0.85fr_1.5fr]">
           {/* Feature panel — the section voice. */}
@@ -100,7 +100,7 @@ export async function TestimonialsSection() {
                   </div>
                   <figcaption className="mt-4 border-t border-white/10 pt-4">
                     <div className="text-[13px] font-bold text-[#f1f3ef]">{item.name}</div>
-                    <div className="mt-0.5 text-[11px] text-[#747a75]">{item.role}</div>
+                    <div className="mt-0.5 text-[11px] text-[#75757b]">{item.role}</div>
                   </figcaption>
                 </figure>
               </Reveal>
@@ -126,8 +126,8 @@ export async function TestimonialsSection() {
                     <div className="mt-4 flex flex-wrap items-end justify-between gap-4 border-t border-white/10 pt-4">
                       <figcaption className="flex items-center gap-3">
                         <div className="text-[13px] font-bold text-[#f1f3ef]">{wide.name}</div>
-                        <span aria-hidden="true" className="h-0.5 w-0.5 rounded-full bg-[#747a75]" />
-                        <div className="text-[11px] text-[#747a75]">{wide.role}</div>
+                        <span aria-hidden="true" className="h-0.5 w-0.5 rounded-full bg-[#75757b]" />
+                        <div className="text-[11px] text-[#75757b]">{wide.role}</div>
                       </figcaption>
                       <StoryStats returns={wide.returns} trades={wide.trades} label={{ returns: t("returns"), trades: t("trades") }} />
                     </div>

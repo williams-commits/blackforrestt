@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useBrand } from "@/components/providers";
+import { GlobalFXLogo } from "@/components/branding/GlobalFXLogo";
 
 /**
  * blckforest wordmark with a simple tree-mark glyph.
@@ -29,6 +30,8 @@ export function Logo({
   const [href, setHref] = useState("/");
   const [external, setExternal] = useState(false);
 
+  const isGlobalFx = brand.logoWord === "gbfxs" || brand.shortName === "GBFXS" || brand.domain === "gbfxs.com";
+
   useEffect(() => {
     const host = window.location.hostname;
     const parts = host.split(".");
@@ -40,6 +43,9 @@ export function Logo({
   }, []);
 
   const cls = `flex items-center gap-2 select-none ${className}`;
+  if (isGlobalFx) {
+    return <GlobalFXLogo className={className} href={external ? href : "/"} external={external} inverted={inverted} size="md" />;
+  }
   const glyph = brand.glyph;
   // Bracket lockup (logoLockup: "brackets"): the glyph's two bracket paths
   // flank a lowercase word — the config-driven agile app mark. The brackets

@@ -17,6 +17,16 @@ const DEFAULT_GLYPH_PATHS = [
 export async function GET() {
   const brand = await currentBrandProfile();
   const accent = brand.markColor || brand.accentColor || "#fd7e14";
+  const isGlobalFx = brand.logoWord === "gbfxs" || brand.shortName === "GBFXS" || brand.domain === "gbfxs.com";
+  if (isGlobalFx) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${accent}"/><path d="M22.5 9.5a9 9 0 1 0 1.1 10.3M23.5 16H17" fill="none" stroke="#0d0d0f" stroke-width="3" stroke-linecap="round"/><path d="M13 10.5v11M13 10.5h7M13 15.5h5.5" fill="none" stroke="#0d0d0f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    return new Response(svg, {
+      headers: {
+        "Content-Type": "image/svg+xml",
+        "Cache-Control": "private, max-age=3600",
+      },
+    });
+  }
   const viewBox = brand.glyph?.viewBox ?? "0 0 24 24";
   const paths = brand.glyph?.paths ?? DEFAULT_GLYPH_PATHS.map((d) => ({ d, fill: "accent" as const }));
   // Optional brand background: a rounded square behind the glyph (guards

@@ -27,3 +27,4 @@ deploy/Caddyfile.rendered
 fixes.md
 -copy.env
 updates.md
+AGENTS.md

@@ -16,39 +16,45 @@ import { SectionBackdrop } from "../SectionBackdrop";
 import { currentBrandProfile } from "@/lib/branding";
 
 /**
- * Intelligence — the analysis pitch on a quiet warm-black canvas. Left carries the
- * narrative WITH the checklist; right is a layered analyst composition — a
- * signal card (entry/exit guide bands, blank level chips) with a small
- * calendar card leaning against it. Abstract and honest: interface grammar,
+ * Intelligence — the analysis pitch on the GBFXS statement yellow. Left carries the
+ * narrative WITH the checklist in ink; right is a layered analyst composition — a
+ * dark signal card (entry/exit guide bands, blank level chips) with a small
+ * calendar card leaning against it. The dark frames sit on yellow as the
+ * terminal-on-brand device. Abstract and honest: interface grammar,
  * no fabricated levels.
  */
 export async function IntelligenceSection() {
   const t = await getTranslations("agile.intelligence");
   const bullets = [t("b1"), t("b2"), t("b3"), t("b4")];
   return (
-    <section id="intelligence" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#17140b]">
-      <div className="ag-container relative grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
+    <section id="intelligence" className="ag-cell-yellow relative scroll-mt-24 overflow-hidden">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{ background: "radial-gradient(80% 55% at 92% -10%, rgba(255,255,255,0.32), transparent 62%)" }}
+      />
+      <div className="ag-container relative grid items-center gap-10 py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:py-34">
         {/* Narrative + checklist */}
         <Reveal>
-          <span className="ag-eyebrow">{t("eyebrow")}</span>
-          <h2 className="ag-h2 mt-4 text-balance">{t("title")}</h2>
-          <p className="ag-sub mt-4 max-w-lg">{t("subtitle")}</p>
+          <span className="ag-eyebrow ag-eyebrow-ink">{t("eyebrow")}</span>
+          <h2 className="ag-h2 ag-ink-h2 mt-4 text-balance">{t("title")}</h2>
+          <p className="ag-sub ag-ink-sub mt-4 max-w-lg">{t("subtitle")}</p>
           <ul className="mt-8 space-y-3.5">
             {bullets.map((bullet) => (
-              <li key={bullet} className="flex items-start gap-3 text-[14.5px] leading-relaxed text-[#f1f3ef]/85">
-                <Check size={16} strokeWidth={2.5} className="mt-0.5 shrink-0 text-[#f0b90b]" aria-hidden />
+              <li key={bullet} className="flex items-start gap-3 text-[14.5px] leading-relaxed text-[#0d0d0f]/84">
+                <Check size={16} strokeWidth={2.5} className="mt-0.5 shrink-0 text-[#0d0d0f]" aria-hidden />
                 {bullet}
               </li>
             ))}
           </ul>
-          <Link href="/analytics/technical" className="ag-btn ag-btn-primary mt-9">
+          <Link href="/analytics/technical" className="ag-btn ag-btn-ink mt-9">
             {t("cta")} <ArrowRight size={15} strokeWidth={2} aria-hidden />
           </Link>
         </Reveal>
 
         {/* Analyst composition — signal card + leaning calendar card */}
         <Reveal delay={120}>
-          <div className="relative pb-10 pl-8 sm:pl-10">
+          <div className="relative pb-8 pl-6 sm:pb-10 sm:pl-10">
             <div className="ag-frame p-6 sm:p-7">
               <div className="flex items-center justify-between" aria-hidden="true">
                 <span className="flex items-center gap-2.5">

@@ -39,10 +39,10 @@ function StoryStats({ returns, trades, label }: { returns?: string; trades?: str
 }
 
 /**
- * Testimonials — a static bento: the section voice sits in a warm-black
- * feature panel (with the five-star mark), the client stories fill a card
- * grid beside it — four tiles and one wide cell. No carousel: the grid IS
- * the composition, every story visible at once.
+ * Testimonials — a static bento: the section voice sits in the yellow
+ * statement panel (ink text + the five-star mark in ink), the client
+ * stories fill a card grid beside it — four tiles and one wide cell. No
+ * carousel: the grid IS the composition, every story visible at once.
  */
 export async function TestimonialsSection() {
   const t = await getTranslations("agile.testimonials");
@@ -57,18 +57,18 @@ export async function TestimonialsSection() {
     <section id="reviews" className="relative scroll-mt-24 overflow-hidden bg-[#0d0d0f] pb-24 pt-4">
       <div className="ag-container relative">
         <div className="grid gap-5 lg:grid-cols-[0.85fr_1.5fr]">
-          {/* Feature panel — the section voice. */}
+          {/* Feature panel — the section voice on brand yellow. */}
           <Reveal className="h-full">
-            <div className="ag-cell-accent relative flex h-full flex-col overflow-hidden rounded-[14px] p-9 lg:p-10">
+            <div className="ag-cell-yellow relative flex h-full flex-col overflow-hidden rounded-[14px] p-7 sm:p-9 lg:p-10">
               <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0"
-                style={{ background: "radial-gradient(90% 60% at 90% -10%, rgba(240,185,11,0.14), transparent 60%)" }}
+                style={{ background: "radial-gradient(90% 60% at 90% -10%, rgba(255,255,255,0.26), transparent 60%)" }}
               />
               <div className="relative flex h-full flex-col">
-                <span className="ag-eyebrow">{t("eyebrow")}</span>
-                <h2 className="ag-h2 mt-4 text-[clamp(1.6rem,2.4vw,2.1rem)]!">{t("title")}</h2>
-                <span role="img" aria-label="Rated 5 out of 5" className="mt-auto flex items-center gap-1 pt-10 text-[#f0b90b]">
+                <span className="ag-eyebrow ag-eyebrow-ink">{t("eyebrow")}</span>
+                <h2 className="ag-h2 ag-ink-h2 mt-4 text-[clamp(1.6rem,2.4vw,2.1rem)]!">{t("title")}</h2>
+                <span role="img" aria-label="Rated 5 out of 5" className="mt-auto flex items-center gap-1 pt-8 text-[#0d0d0f] sm:pt-10">
                   {Array.from({ length: 5 }).map((_, index) => (
                     <Star key={index} size={16} strokeWidth={0} fill="currentColor" aria-hidden />
                   ))}

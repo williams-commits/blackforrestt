@@ -245,20 +245,17 @@ CRM_DATABASE_URL=
 AUTH_URL_CRM=https://crm.yourdomain.com
 AUTH_SECRET_CRM=<generated above>    # MUST differ from AUTH_SECRET
 CRM_BRIDGE_TOKEN=<openssl rand -hex 24>   # shared platform↔CRM read-only secret
-CRM_BRANDING_NAME="Global Forex Services CRM"   # CRM module branding
-CRM_BRANDING_SINGLE_NAME="GBFXS"
-CRM_BRANDING_LOGO="G"
+BRANDING_NAME="Global Forex Services CRM"   # CRM module branding — the CRM reads
+BRANDING_SINGLE_NAME="GBFXS"                # these UNPREFIXED names (a CRM_BRANDING_*
+BRANDING_LOGO="G"                           # prefix is NOT read by any code)
 CRM_ENCRYPTION_KEY=<openssl rand -hex 32>   # encrypts per-user SMTP passwords
 ```
 
-**New feature vars (both apps read these from the shared env file):**
+**Feature vars (from the shared env file):**
 
 ```env
-BRANDING_NAME="Collo CRM"            # CRM product name in every surface
-BRANDING_SINGLE_NAME="Collo"         # short name used in sentences
-BRANDING_LOGO="C"                    # single-character logo mark
 INBOUND_EMAIL_TOKEN=<generated above>  # CRM inbound-email webhook secret
-DEMO_STARTING_BALANCE=0              # opt-in demo credit for new registrations
+DEMO_STARTING_BALANCE=0              # opt-in demo credit for new registrations (platform)
 ```
 
 Verify nothing was left as a placeholder, then deploy:

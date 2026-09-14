@@ -6,8 +6,19 @@
  *
  * Animated: arcs carry a flowing dash and nodes pulse (see the .ag-globe-*
  * keyframes in AgileStyles — disabled entirely under reduced motion).
+ *
+ * `ink` swaps the palette to near-black strokes/nodes for yellow surfaces,
+ * where the default white wireframe and yellow nodes would wash out.
  */
-export function GlobeArcs({ className = "" }: { className?: string }) {
+export function GlobeArcs({ className = "", ink = false }: { className?: string; ink?: boolean }) {
+  const wireStrong = ink ? "rgba(13,13,15,0.26)" : "rgba(255,255,255,0.2)";
+  const wireSoft = ink ? "rgba(13,13,15,0.12)" : "rgba(255,255,255,0.09)";
+  const wireMid = ink ? "rgba(13,13,15,0.18)" : "rgba(255,255,255,0.14)";
+  const node = ink ? "#0d0d0f" : "#f0b90b";
+  const nodeHalo = ink ? "rgba(13,13,15,0.16)" : "rgba(240,185,11,0.14)";
+  const arcColor = ink ? "13,13,15" : "240,185,11";
+  const glowColor = ink ? "13,13,15" : "240,185,11";
+  const ids = ink ? { glow: "ag-globe-glow-ink", arc: "ag-arc-ink" } : { glow: "ag-globe-glow", arc: "ag-arc" };
   const nodes: Array<[number, number, number]> = [
     // [x, y, r] — financial centres scattered across the sphere face.
     [73, 62, 2.6], [152, 48, 2.2], [205, 86, 2.8], [128, 118, 2.2], [52, 132, 2.4],
@@ -24,20 +35,20 @@ export function GlobeArcs({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 260 200" className={`ag-globe ${className}`} aria-hidden="true" focusable="false">
       <defs>
-        <radialGradient id="ag-globe-glow" cx="50%" cy="42%" r="60%">
-          <stop offset="0%" stopColor="rgba(240,185,11,0.16)" />
-          <stop offset="100%" stopColor="rgba(240,185,11,0)" />
+        <radialGradient id={ids.glow} cx="50%" cy="42%" r="60%">
+          <stop offset="0%" stopColor={`rgba(${glowColor},0.16)`} />
+          <stop offset="100%" stopColor={`rgba(${glowColor},0)`} />
         </radialGradient>
-        <linearGradient id="ag-arc" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="rgba(240,185,11,0)" />
-          <stop offset="50%" stopColor="rgba(240,185,11,0.78)" />
-          <stop offset="100%" stopColor="rgba(240,185,11,0)" />
+        <linearGradient id={ids.arc} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor={`rgba(${arcColor},0)`} />
+          <stop offset="50%" stopColor={`rgba(${arcColor},0.78)`} />
+          <stop offset="100%" stopColor={`rgba(${arcColor},0)`} />
         </linearGradient>
       </defs>
 
-      <circle cx="130" cy="100" r="86" fill="url(#ag-globe-glow)" />
+      <circle cx="130" cy="100" r="86" fill={`url(#${ids.glow})`} />
       {/* Sphere */}
-      <circle cx="130" cy="100" r="74" fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="1" />
+      <circle cx="130" cy="100" r="74" fill="none" stroke={wireMid} strokeWidth="1" />
       {/* Parallels */}
       {[52, 74, 100, 126, 148].map((y, i) => {
         const ry = 74;
@@ -51,7 +62,7 @@ export function GlobeArcs({ className = "" }: { className?: string }) {
             rx={rx}
             ry={ry * 0.16 + 3}
             fill="none"
-            stroke={i === 2 ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.09)"}
+            stroke={i === 2 ? wireStrong : wireSoft}
             strokeWidth="1"
             opacity={1 - Math.abs(t) * 0.5}
           />
@@ -66,11 +77,11 @@ export function GlobeArcs({ className = "" }: { className?: string }) {
           rx={rx}
           ry="74"
           fill="none"
-          stroke={i === 0 ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.09)"}
+          stroke={i === 0 ? wireStrong : wireSoft}
           strokeWidth="1"
         />
       ))}
-      <line x1="130" y1="26" x2="130" y2="174" stroke="rgba(255,255,255,0.14)" strokeWidth="1" />
+      <line x1="130" y1="26" x2="130" y2="174" stroke={wireMid} strokeWidth="1" />
 
       {/* Arcs — data flow along the network. */}
       {arcs.map(([x1, y1, x2, y2], i) => (
@@ -80,7 +91,7 @@ export function GlobeArcs({ className = "" }: { className?: string }) {
           style={{ animationDelay: `${(i % 4) * 0.8}s` }}
           d={`M${x1} ${y1} Q ${midX(x1, x2)} ${midY(y1, y2)} ${x2} ${y2}`}
           fill="none"
-          stroke="url(#ag-arc)"
+          stroke={`url(#${ids.arc})`}
           strokeWidth="1.2"
           strokeLinecap="round"
         />
@@ -89,8 +100,8 @@ export function GlobeArcs({ className = "" }: { className?: string }) {
       {/* Nodes — pulsing trading centres. */}
       {nodes.map(([x, y, r], i) => (
         <g key={i} className="ag-globe-node" style={{ animationDelay: `${i * 0.3}s` }}>
-          <circle cx={x} cy={y} r={r * 2.4} fill="rgba(240,185,11,0.14)" />
-          <circle cx={x} cy={y} r={r} fill="#f0b90b" />
+          <circle cx={x} cy={y} r={r * 2.4} fill={nodeHalo} />
+          <circle cx={x} cy={y} r={r} fill={node} />
         </g>
       ))}
     </svg>

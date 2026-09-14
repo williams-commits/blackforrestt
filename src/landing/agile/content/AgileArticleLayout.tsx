@@ -17,12 +17,12 @@ interface Props {
  * Global Forex Services interior-page architecture — the landing's design system applied
  * to content routes:
  *
- *   header band  — dark plate, ambient green glow, hairline, eyebrow ·
- *                  confident title · sub (mirrors the landing's section bands)
+ *   header band  — brand-yellow statement plate, ink type, hairline, eyebrow ·
+ *                  confident title · sub (mirrors the landing's yellow bands)
  *   body         — the deep-charcoal canvas at a comfortable measure,
  *                  sections in the landing's type and card grammar
- *   closing CTA  — the landing's warm-black conversion band, so every
- *                  interior page ends in the product's voice
+ *   closing CTA  — the landing's yellow conversion band, so every interior
+ *                  page ends in the product's voice
  *
  * This is the Agile replacement for the primary brand's editorial article
  * layout; selection happens in @/landing/composition (the host dispatcher),
@@ -34,18 +34,17 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
   return (
     <div>
       {/* Header band — split composition: narrative left, desk mark right. */}
-      <header className="ag-page-band border-b border-white/10 bg-[#111113]">
-        {/* <div className="pointer-events-none absolute inset-0 ag-mesh" aria-hidden="true" /> */}
+      <header className="ag-page-band ag-cell-yellow border-b border-black/10">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 h-px"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(240,185,11,0.4) 30%, rgba(255,255,255,0.12) 55%, transparent)" }}
+          style={{ background: "linear-gradient(90deg, transparent, rgba(13,13,15,0.45) 30%, rgba(13,13,15,0.16) 55%, transparent)" }}
         />
-        <div className="ag-container relative grid items-center gap-10 py-16 lg:grid-cols-[1.25fr_0.75fr] lg:py-20">
+        <div className="ag-container relative grid items-center gap-8 py-12 sm:py-16 lg:grid-cols-[1.25fr_0.75fr] lg:py-20">
           <div>
-            <span className="ag-eyebrow">{eyebrow}</span>
-            <h1 className="ag-h2 mt-4 max-w-2xl text-balance">{title}</h1>
-            {description && <p className="ag-sub mt-5 max-w-xl">{description}</p>}
+            <span className="ag-eyebrow ag-eyebrow-ink">{eyebrow}</span>
+            <h1 className="ag-h2 ag-ink-h2 mt-4 max-w-2xl text-balance">{title}</h1>
+            {description && <p className="ag-sub ag-ink-sub mt-5 max-w-xl">{description}</p>}
           </div>
           {/* Desk mark — the brand's chart motif, framed. Decorative. */}
           <div className="ag-frame hidden p-5 lg:block" aria-hidden="true">
@@ -88,26 +87,26 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
         )}
       </div>
 
-      {/* Closing CTA — the landing's warm-black band, ending every interior
+      {/* Closing CTA — the landing's yellow band, ending every interior
           page in the product's voice. Same honest copy as the landing. */}
-      <aside className="ag-page-cta relative overflow-hidden bg-[#211b0b]">
+      <aside className="ag-page-cta ag-cell-yellow relative overflow-hidden">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
-          style={{ background: "radial-gradient(46% 90% at 82% -20%, rgba(240,185,11,0.12), transparent 70%)" }}
+          style={{ background: "radial-gradient(46% 90% at 82% -20%, rgba(255,255,255,0.3), transparent 70%)" }}
         />
         <div className="ag-container relative flex flex-col items-start justify-between gap-6 py-12 lg:flex-row lg:items-center lg:py-14">
           <div>
-            <h2 className="text-2xl font-bold tracking-[-0.02em] text-[#f1f3ef] lg:text-3xl">{t("title")}</h2>
-            <p className="mt-2 max-w-md text-sm leading-relaxed text-[#f1f3ef]/70">{t("subtitle")}</p>
+            <h2 className="text-2xl font-bold tracking-[-0.02em] text-[#0d0d0f] lg:text-3xl">{t("title")}</h2>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-[#0d0d0f]/72">{t("subtitle")}</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href={clientTradeUrl("/register")} className="ag-btn ag-btn-primary">
+            <Link href={clientTradeUrl("/register")} className="ag-btn ag-btn-ink">
               {t("primary")}
             </Link>
             <Link
               href={clientTradeUrl("/login")}
-              className="ag-btn ag-btn-ghost border-[#f1f3ef]/25! text-[#f1f3ef]! hover:bg-[#f1f3ef]/10!"
+              className="ag-btn ag-btn-ghost border-[#0d0d0f]/30! text-[#0d0d0f]! hover:bg-[#0d0d0f]/8!"
             >
               {t("secondary")}
             </Link>

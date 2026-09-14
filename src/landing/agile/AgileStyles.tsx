@@ -106,6 +106,10 @@ export function AgileStyles() {
       }
       .ag-btn-primary { background: var(--ag-accent); color: #0d0d0f; }
       .ag-btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+      /* Ink button — the dark counterpart for yellow surfaces, where the
+         yellow primary would disappear into the background. */
+      .ag-btn-ink { background: #0d0d0f; color: #f1f3ef; }
+      .ag-btn-ink:hover { background: #232327; transform: translateY(-1px); }
       .ag-btn-ghost { background: transparent; color: var(--ag-text); border: 1px solid var(--ag-border); }
       .ag-btn-ghost:hover { background: rgba(255, 255, 255, 0.06); }
       .ag-btn:focus-visible,
@@ -116,6 +120,10 @@ export function AgileStyles() {
         font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
         color: var(--ag-accent-bright);
       }
+      /* Ink eyebrow — the same type voice for surfaces where the accent IS
+         the background (yellow panels/bands); the accent-bright default
+         would vanish into it. */
+      .ag-eyebrow-ink { color: rgba(13, 13, 15, 0.66); }
       /* Hero display scale — the one place the type gets genuinely large. */
       .ag-display {
         font-size: clamp(2.75rem, 5.6vw, 4.75rem);
@@ -127,6 +135,13 @@ export function AgileStyles() {
         font-weight: 700; letter-spacing: -0.024em; line-height: 1.08; color: var(--ag-text);
       }
       .ag-sub { color: var(--ag-text-2); font-size: 1.125rem; line-height: 1.65; }
+      /* Ink-on-yellow text ramp — overrides for the ag-* voice classes on
+         accent-yellow surfaces (declared after them so same-specificity
+         source order wins without !important). */
+      .ag-ink-h2 { color: #0d0d0f; }
+      .ag-ink-sub { color: rgba(13, 13, 15, 0.76); }
+      .ag-ink-text { color: rgba(13, 13, 15, 0.84); }
+      .ag-ink-faint { color: rgba(13, 13, 15, 0.58); }
 
       .ag-up { color: #0ecb81; }
       .ag-down { color: var(--ag-negative); }
@@ -294,8 +309,8 @@ export function AgileStyles() {
       .ag-bento-cell {
         background:
           linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0) 44%),
-          #151518;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+          #1a1a1e;
+        /* border: 1px solid rgba(255, 255, 255, 0.08); */
         border-radius: 14px;
         transition: border-color 220ms ease, transform 220ms ease;
       }
@@ -369,6 +384,8 @@ export function AgileStyles() {
         color: #f0b90b;
         font-variant-numeric: tabular-nums;
       }
+      /* Ink variant for yellow surfaces. */
+      .ag-stepnum-ink { color: rgba(13, 13, 15, 0.55); }
 
       /* Carousel track — snap scrolling with the scrollbar fully suppressed
          on every engine (the affordance lives in the arrows and dots). */
@@ -391,6 +408,21 @@ export function AgileStyles() {
           #211b0b;
         border-color: rgba(240, 185, 11, 0.24);
       }
+
+      /* Yellow feature surface — the GBFXS statement panels: solid brand
+         yellow with a soft white top-light so large flats still read as a
+         lit plane, not a sticker. Pair with the ag-ink-* text ramp and
+         ag-btn-ink; dark ink keeps AA contrast on #f0b90b. */
+      .ag-cell-yellow {
+        background:
+          radial-gradient(120% 130% at 85% -10%, rgba(255, 255, 255, 0.28), transparent 58%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(0, 0, 0, 0) 46%),
+          #f0b90b;
+        border-color: rgba(13, 13, 15, 0.1);
+      }
+      /* Bento hover keeps the lift but swaps the (invisible-on-yellow) accent
+         border for an ink hairline. */
+      .ag-bento-cell.ag-cell-yellow:hover { border-color: rgba(13, 13, 15, 0.24); }
 
       /* Globe animation — data flows along the arcs while the trading-centre
          nodes pulse on staggered beats. Fully disabled for reduced motion. */

@@ -110,31 +110,32 @@ export function MarketsSection({
           ))}
         </div>
 
-        <div className="mt-10 grid items-stretch gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:gap-10">
-          {/* Market panel — the selected category's story */}
+        <div className="mt-8 grid items-stretch gap-5 sm:mt-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-10">
+          {/* Market panel — the selected category's story on the yellow
+              statement surface; ink text keeps AA contrast on brand yellow. */}
           <div
             key={active}
-            className="ag-cell-accent relative flex flex-col overflow-hidden rounded-2xl p-9 lg:p-10"
+            className="ag-cell-yellow relative flex flex-col overflow-hidden rounded-2xl p-6 sm:p-9 lg:p-10"
           >
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0"
-              style={{ background: "radial-gradient(100% 70% at 90% -10%, rgba(240,185,11,0.14), transparent 60%)" }}
+              style={{ background: "radial-gradient(100% 70% at 90% -10%, rgba(255,255,255,0.3), transparent 60%)" }}
             />
             <div className="relative flex h-full flex-col">
-              <h3 className="text-[clamp(1.6rem,2.6vw,2.3rem)] font-bold leading-[1.12] tracking-[-0.02em] text-[#f1f3ef] text-balance">
+              <h3 className="text-[clamp(1.5rem,2.6vw,2.3rem)] font-bold leading-[1.12] tracking-[-0.02em] text-[#0d0d0f] text-balance">
                 {panel.title}
               </h3>
-              <ul className="mt-6 space-y-3.5">
+              <ul className="mt-5 space-y-3 sm:mt-6 sm:space-y-3.5">
                 {panel.bullets.map((bullet) => (
-                  <li key={bullet} className="flex items-start gap-3 text-[14.5px] leading-relaxed text-[#f1f3ef]/85">
-                    <span className="mt-1.75 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f0b90b]" aria-hidden />
+                  <li key={bullet} className="flex items-start gap-3 text-[13.5px] leading-relaxed text-[#0d0d0f]/82 sm:text-[14.5px]">
+                    <span className="mt-1.75 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0d0d0f]" aria-hidden />
                     {bullet}
                   </li>
                 ))}
               </ul>
-              <div className="mt-auto pt-8">
-                <Link href="/register" className="ag-btn ag-btn-primary">
+              <div className="mt-auto pt-6 sm:pt-8">
+                <Link href="/register" className="ag-btn ag-btn-ink">
                   {panel.cta} <ArrowRight size={15} strokeWidth={2} aria-hidden />
                 </Link>
               </div>

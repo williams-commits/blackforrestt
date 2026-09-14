@@ -107,25 +107,30 @@ const STATS = [
 ] as const;
 
 /**
- * Stat bar — the platform's real numbers as a hairline-divided ledger row.
- * Replaces the old benefits strip + value cards: same truthful claims, far
- * more institutional composition.
+ * Stat bar — the platform's real numbers as the GBFXS statement band: solid
+ * brand yellow, ink numerals, hairline-divided ledger row. Borders are drawn
+ * per cell (not divide-x) so the 2-up mobile wrap never shows a stray rule
+ * at a row start.
  */
 export async function StatBar() {
   const t = await getTranslations("agile");
   const tV = await getTranslations("agile.value");
   return (
-    <section id="value" aria-label={tV("subtitle")} className="scroll-mt-24 border-b border-white/8 bg-[#0d0d0f]">
-      <dl className="ag-container grid grid-cols-2 divide-x divide-white/8 lg:grid-cols-4">
+    <section id="value" aria-label={tV("subtitle")} className="ag-cell-yellow scroll-mt-24 border-y border-black/10">
+      <dl className="ag-container grid grid-cols-2 lg:grid-cols-4">
         {STATS.map(({ v, key }, index) => (
           <div
             key={key}
-            className={`flex flex-col gap-1.5 px-6 py-10 lg:px-10 ${index > 1 ? "border-t border-white/8 lg:border-t-0" : ""}`}
+            className={`flex flex-col gap-1.5 px-5 py-8 sm:px-6 sm:py-10 lg:px-10 ${
+              index % 2 === 1 ? "border-l border-black/12" : ""
+            } ${index > 1 ? "border-t border-black/12 lg:border-t-0" : ""} ${
+              index > 0 ? "lg:border-l lg:border-black/12" : ""
+            }`}
           >
-            <dd className="tnum text-4xl font-extrabold tracking-[-0.03em] text-[#f1f3ef] lg:text-[2.75rem]">
+            <dd className="tnum text-4xl font-extrabold tracking-[-0.03em] text-[#0d0d0f] lg:text-[2.75rem]">
               {v}
             </dd>
-            <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">
+            <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0d0d0f]/62">
               {t(key)}
             </dt>
           </div>

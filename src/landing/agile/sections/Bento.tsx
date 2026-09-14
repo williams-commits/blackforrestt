@@ -108,15 +108,16 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
           </Reveal>
 
           {/* Global reach — spans the full row below lg so the copy beside
-              the globe never clips (the 2-col bento squeezed it). */}
+              the globe never clips (the 2-col bento squeezed it). Yellow
+              statement cell: ink globe + ink copy on brand yellow. */}
           <Reveal delay={150} className="ag-bento-global col-span-1 lg:col-span-1">
-            <article className="ag-bento-cell relative flex h-full min-h-48 items-center gap-4 overflow-hidden p-6 sm:gap-6 sm:p-8">
-              <GlobeArcs className="w-28 shrink-0 sm:w-44 lg:w-52" />
+            <article className="ag-bento-cell ag-cell-yellow relative flex h-full min-h-48 items-center gap-4 overflow-hidden p-6 sm:gap-6 sm:p-8">
+              <GlobeArcs ink className="w-28 shrink-0 sm:w-44 lg:w-52" />
               <div className="relative">
-                <span className="ag-stepnum">05</span>
-                <h3 className="mt-3 text-base font-bold text-[#f1f3ef]">{tA("globalTitle")}</h3>
-                <p className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-[#a9a9ae]">
-                  <LineChart size={15} strokeWidth={1.75} className="mt-0.5 shrink-0 text-[#f0b90b]" aria-hidden />
+                <span className="ag-stepnum ag-stepnum-ink">05</span>
+                <h3 className="mt-3 text-base font-bold tracking-[-0.015em] text-[#0d0d0f]">{tA("globalTitle")}</h3>
+                <p className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-[#0d0d0f]/78">
+                  <LineChart size={15} strokeWidth={1.75} className="mt-0.5 shrink-0 text-[#0d0d0f]" aria-hidden />
                   {t("all.desc")}
                 </p>
               </div>

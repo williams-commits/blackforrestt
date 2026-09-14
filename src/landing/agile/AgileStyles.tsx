@@ -275,7 +275,7 @@ export function AgileStyles() {
       .ag-bento {
         display: grid;
         gap: 1rem;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr);
       }
       @media (min-width: 1024px) {
         .ag-bento {
@@ -300,6 +300,13 @@ export function AgileStyles() {
         transition: border-color 220ms ease, transform 220ms ease;
       }
       .ag-bento-cell:hover { border-color: rgba(240, 185, 11, 0.42); transform: translateY(-2px); }
+      @media (max-width: 639px) {
+        .ag-bento { gap: 0.75rem; }
+        .ag-bento-cell { border-radius: 12px; }
+        .ag-bento-cell.p-8 { padding: 1.25rem; }
+        .ag-bento-cell.p-7 { padding: 1.125rem; }
+        .ag-bento-global { grid-column: auto; }
+      }
 
       /* Live ticker marquee — infinite horizontal scroll. */
       .ag-ticker {

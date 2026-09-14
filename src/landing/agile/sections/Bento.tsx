@@ -31,7 +31,7 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
         <div className="ag-bento mt-14">
           {/* Terminal — the anchor cell */}
           <Reveal className="ag-bento-terminal">
-            <article className="ag-bento-cell flex h-full flex-col justify-between p-8">
+            <article className="ag-bento-cell flex h-full min-h-52 flex-col justify-between p-8">
               <div>
                 <span className="ag-stepnum">01</span>
                 <h3 className="mt-3 text-xl font-bold tracking-[-0.015em] text-[#f1f3ef]">{t("all.title")}</h3>
@@ -109,9 +109,9 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
 
           {/* Global reach — spans the full row below lg so the copy beside
               the globe never clips (the 2-col bento squeezed it). */}
-          <Reveal delay={150} className="ag-bento-global col-span-2 lg:col-span-1">
-            <article className="ag-bento-cell relative flex h-full items-center gap-6 overflow-hidden p-8">
-              <GlobeArcs className="w-36 shrink-0 sm:w-44 lg:w-52" />
+          <Reveal delay={150} className="ag-bento-global col-span-1 lg:col-span-1">
+            <article className="ag-bento-cell relative flex h-full min-h-48 items-center gap-4 overflow-hidden p-6 sm:gap-6 sm:p-8">
+              <GlobeArcs className="w-28 shrink-0 sm:w-44 lg:w-52" />
               <div className="relative">
                 <span className="ag-stepnum">05</span>
                 <h3 className="mt-3 text-base font-bold text-[#f1f3ef]">{tA("globalTitle")}</h3>

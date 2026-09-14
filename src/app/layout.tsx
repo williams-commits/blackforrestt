@@ -71,7 +71,8 @@ export async function generateMetadata(): Promise<Metadata> {
   // REQUEST origin (relative canonicals below follow metadataBase), not the
   // primary domain.
   const siteUrl = `${requestProto}://${requestHost}`;
-  const ogImageUrl = new URL(brand.ogImage || "/og.png", siteUrl).toString();
+  const ogImagePath = brand.domain === "gbfxs.com" ? "/brand/og.svg" : brand.ogImage || "/og.png";
+  const ogImageUrl = new URL(ogImagePath, siteUrl).toString();
   const locale = await getLocale();
   const ogLocale = LOCALE_OG[locale as keyof typeof LOCALE_OG] ?? LOCALE_OG.en;
   const t = await getTranslations({ namespace: "Metadata", locale });
@@ -154,7 +155,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     name: brand.legalName,
     alternateName: brand.name,
     url: siteUrl,
-    logo: `${siteUrl}/favicon.svg`,
+    logo: `${siteUrl}/brand/logo.svg?theme=light`,
     email: brand.supportEmail,
   };
   if (brand.address) organization.address = { "@type": "PostalAddress", streetAddress: brand.address };

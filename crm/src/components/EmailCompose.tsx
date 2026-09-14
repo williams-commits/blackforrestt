@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePromptDialog } from "@/components/Dialogs";
 
 type SubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
 
@@ -106,6 +107,7 @@ export function EmailCompose({
   const [sent, setSent] = useState(false);
   const [smtpConfigured, setSmtpConfigured] = useState<boolean | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+  const { prompt: promptDialog, dialog: linkDialog } = usePromptDialog();
 
   // ── Draft restore ──
   useEffect(() => {
@@ -252,10 +254,25 @@ export function EmailCompose({
     { cmd: "insertOrderedList", label: "1. List", title: "Numbered list" },
   ];
 
-  function insertLink() {
-    const url = window.prompt("Link URL (https://… or mailto:)", "https://");
+  async function insertLink() {
+    editorRef.current?.focus();
+    const selection = window.getSelection();
+    const hasSelection = Boolean(
+      selection && !selection.isCollapsed && editorRef.current?.contains(selection.anchorNode),
+    );
+    const url = await promptDialog({
+      title: "Insert link",
+      message: "Choose the address the link opens (https://… or mailto:).",
+      placeholder: "https://example.com",
+      defaultValue: "https://",
+      confirmLabel: "Insert link",
+      required: true,
+    });
     if (!url) return;
-    exec("createLink", url);
+    // With selected text createLink wraps it; with no selection insert the
+    // URL itself as the link text at the cursor.
+    if (hasSelection) exec("createLink", url);
+    else exec("insertHTML", `<a href="${url.replaceAll('"', "&quot;")}">${escapeHtml(url)}</a>&nbsp;`);
   }
 
   return (
@@ -460,6 +477,7 @@ export function EmailCompose({
           </form>
         )}
       </div>
+      {linkDialog}
     </div>
   );
 }

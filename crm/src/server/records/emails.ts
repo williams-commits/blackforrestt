@@ -6,6 +6,7 @@ import { prisma } from "@/server/db";
 import { CrmError, requireCapability } from "@/server/guard";
 import { sendEmail, emailConfigured, type SmtpTransportConfig } from "@/server/email";
 import { decryptSecret } from "@/server/secretBox";
+import { sanitizeEmailHtml } from "@/server/emailHtml";
 import { appendActivity } from "@/server/activity";
 import { appendAudit } from "@/server/audit";
 import { resolveSubject } from "@/server/records/subjects";
@@ -31,6 +32,8 @@ export const SendEmail = z.object({
   bcc: z.string().trim().email().max(200).optional().nullable(),
   subject: z.string().trim().min(1).max(300),
   body: z.string().trim().min(1).max(20_000),
+  /** Rich-text part from the compose editor; sanitized server-side. */
+  html: z.string().max(500_000).optional(),
   // Optional: when omitted the email is an unlinked outbound message in the
   // shared mailbox (threaded by normalized subject). When provided, both
   // must be provided and the sender needs scope over that record.
@@ -103,6 +106,7 @@ export async function sendRecordEmail(
         ccAddress: input.cc ?? null,
         bccAddress: input.bcc ?? null,
         subject: input.subject,
+        htmlBody: input.html ? sanitizeEmailHtml(input.html) : null,
         body: input.body,
         subjectType: (linked?.type ?? null) as "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY" | null,
         subjectId: linked?.id ?? null,
@@ -149,7 +153,14 @@ export async function sendRecordEmail(
   }
 
   const sent = await sendEmail(
-    { to: input.to, cc: input.cc ?? undefined, bcc: input.bcc ?? undefined, subject: input.subject, text: input.body },
+    {
+      to: input.to,
+      cc: input.cc ?? undefined,
+      bcc: input.bcc ?? undefined,
+      subject: input.subject,
+      text: input.body,
+      html: input.html ? sanitizeEmailHtml(input.html) : undefined,
+    },
     senderSmtp,
   );
   const stored = await persist(sent ? "SENT" : "FAILED", sent ? undefined : "SMTP delivery rejected the message");
@@ -301,6 +312,7 @@ export type EmailListRow = {
   subject: string;
   preview: string;
   body: string;
+  htmlBody: string | null;
   subjectType: string | null;
   subjectId: string | null;
   read: boolean;
@@ -312,6 +324,7 @@ export type EmailListRow = {
 function serializeEmail(row: {
   id: string; direction: "INBOUND" | "OUTBOUND"; status: "RECEIVED" | "SENT" | "FAILED";
   fromAddress: string; toAddress: string; ccAddress: string | null; subject: string; body: string;
+  htmlBody?: string | null;
   subjectType: string | null; subjectId: string | null; readAt: Date | null; error: string | null;
   createdAt: Date; sentBy?: { name: string } | null;
 }): EmailListRow {
@@ -325,6 +338,7 @@ function serializeEmail(row: {
     subject: row.subject,
     preview: row.body.replace(/\s+/g, " ").slice(0, 140),
     body: row.body,
+    htmlBody: ("htmlBody" in row ? row.htmlBody : null) ?? null,
     subjectType: row.subjectType,
     subjectId: row.subjectId,
     read: row.readAt != null,

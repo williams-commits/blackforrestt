@@ -18,6 +18,8 @@ export interface EmailPayload {
   bcc?: string;
   subject: string;
   text: string;
+  /** Sanitized rich-text part; sent alongside the plain text. */
+  html?: string;
 }
 
 /**
@@ -68,7 +70,9 @@ export async function sendEmail(payload: EmailPayload, smtp?: SmtpTransportConfi
       ...(payload.bcc ? { bcc: payload.bcc } : {}),
       subject: payload.subject,
       text: payload.text,
-      html: `<pre style="font-family:inherit;white-space:pre-wrap">${payload.text
+      // Sanitized upstream; fall back to the escaped-plain wrapper when the
+      // compose was plain text only.
+      html: payload.html ?? `<pre style="font-family:inherit;white-space:pre-wrap">${payload.text
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")}</pre>`,
     });

@@ -23,6 +23,7 @@ type EmailRow = {
   subject: string;
   preview: string;
   body: string;
+  htmlBody: string | null;
   subjectType: string | null;
   subjectId: string | null;
   read: boolean;
@@ -74,7 +75,7 @@ export function MailboxPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<EmailRow | null>(null);
-  const [compose, setCompose] = useState<null | { to?: string; subject?: string; body?: string }>(null);
+  const [compose, setCompose] = useState<null | { to?: string; subject?: string; body?: string; html?: string }>(null);
   const [smtpConfigured, setSmtpConfigured] = useState<boolean | null>(null);
   const searchParams = useSearchParams();
   const filteredUserId = searchParams.get("userId") ?? null;
@@ -334,11 +335,19 @@ export function MailboxPage() {
                       <>
                         <button
                           type="button"
-                          onClick={() => setCompose({
-                            to: selected.from,
-                            subject: selected.subject.startsWith("Re:") ? selected.subject : `Re: ${selected.subject}`,
-                            body: `\n\n---- On ${new Date(selected.createdAt).toLocaleString()}, ${selected.from} wrote:\n${selected.body.split("\n").map((line) => `> ${line}`).join("\n")}`,
-                          })}
+                          onClick={() => {
+                            const escapeHtml = (text: string) => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+                            const quote = selected.body
+                              .split("\n")
+                              .map((line) => `<p>${escapeHtml(line) || "<br>"}</p>`)
+                              .join("");
+                            setCompose({
+                              to: selected.from,
+                              subject: selected.subject.startsWith("Re:") ? selected.subject : `Re: ${selected.subject}`,
+                              body: `\n\n---- On ${new Date(selected.createdAt).toLocaleString()}, ${selected.from} wrote:\n${selected.body}`,
+                              html: `<p><br></p><p>On ${new Date(selected.createdAt).toLocaleString()}, ${escapeHtml(selected.from)} wrote:</p><blockquote><p>${selected.body.split("\n").map((line) => `${escapeHtml(line) || "<br>"}`).join("<br>")}</p></blockquote>`,
+                            });
+                          }}
                           className="rounded-md border border-(--border-strong) px-2.5 py-1.5 text-xs font-medium hover:bg-(--bg-hover)"
                         >
                           Reply
@@ -354,7 +363,14 @@ export function MailboxPage() {
                     ) : null}
                   </div>
                 </div>
-                <pre className="mt-4 whitespace-pre-wrap font-sans text-sm leading-relaxed text-(--text-primary)">{selected.body}</pre>
+                {selected.htmlBody ? (
+                  <div
+                    className="mt-4 max-w-none text-sm leading-relaxed text-(--text-primary) [&_a]:text-(--brand) [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-(--border-strong) [&_blockquote]:pl-3 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-6"
+                    dangerouslySetInnerHTML={{ __html: selected.htmlBody }}
+                  />
+                ) : (
+                  <pre className="mt-4 whitespace-pre-wrap font-sans text-sm leading-relaxed text-(--text-primary)">{selected.body}</pre>
+                )}
               </article>
             ) : (
               <div className="flex h-full min-h-64 items-center justify-center text-sm text-(--text-tertiary)">

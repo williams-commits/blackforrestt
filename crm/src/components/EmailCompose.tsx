@@ -13,18 +13,7 @@ const RECORD_PATH: Record<string, string> = {
   OPPORTUNITY: "opportunities",
 };
 
-/**
- * Email compose — the single composer used everywhere (record pages, the
- * mailbox, replies). Full-screen-centered modal with:
- *   - To / CC, subject, body; ⌘/Ctrl+Enter sends
- *   - draft autosave to localStorage (survives accidental closes)
- *   - a prominent warning when SMTP is not configured (sends are archived
- *     as FAILED rather than lost)
- *   - after send: a link straight into the Emails module
- * When subjectType/subjectId are given the email is linked to that record
- * (and may create a follow-up task); without them it is an unlinked
- * mailbox send visible to every EMAILS_VIEW holder.
- */
+const MAX_BODY = 20_000;
 
 export interface EmailComposeProps {
   subjectType?: SubjectType;
@@ -33,11 +22,60 @@ export interface EmailComposeProps {
   toName?: string;
   initialSubject?: string;
   initialBody?: string;
+  initialHtml?: string;
   onClose: () => void;
   onSent?: () => void;
 }
 
-const MAX_BODY = 20_000;
+interface Draft {
+  to?: string;
+  cc?: string;
+  bcc?: string;
+  subject?: string;
+  body?: string;
+  html?: string;
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+/** Client-side copy of the server allowlist, so previews match what sends. */
+function sanitizeClient(html: string): string {
+  const root = document.createElement("div");
+  root.innerHTML = html;
+  root.querySelectorAll("script,style,iframe,object,embed,noscript,template,svg,math").forEach((el) => el.remove());
+  const walk = (node: Element): void => {
+    Array.from(node.children).forEach((child) => {
+      walk(child);
+      const tag = child.tagName.toUpperCase();
+      const allowed = ["P", "BR", "DIV", "SPAN", "BLOCKQUOTE", "PRE", "B", "STRONG", "I", "EM", "U", "S", "STRIKE", "UL", "OL", "LI", "H1", "H2", "H3", "A", "FONT"];
+      if (!allowed.includes(tag)) {
+        const frag = document.createDocumentFragment();
+        while (child.firstChild) frag.appendChild(child.firstChild);
+        child.replaceWith(frag);
+        return;
+      }
+      if (tag === "A") {
+        const href = child.getAttribute("href") ?? "";
+        if (!/^(https?:\/\/|mailto:)/i.test(href)) child.removeAttribute("href");
+        else {
+          child.setAttribute("rel", "noopener noreferrer");
+          child.setAttribute("target", "_blank");
+        }
+      }
+      Array.from(child.attributes).forEach((attr) => {
+        if (tag === "A" && attr.name === "href") return;
+        child.removeAttribute(attr.name);
+      });
+    });
+  };
+  walk(root);
+  return root.innerHTML;
+}
 
 export function EmailCompose({
   subjectType,
@@ -46,6 +84,7 @@ export function EmailCompose({
   toName,
   initialSubject,
   initialBody,
+  initialHtml,
   onClose,
   onSent,
 }: EmailComposeProps) {
@@ -58,49 +97,71 @@ export function EmailCompose({
   const [ccVisible, setCcVisible] = useState(false);
   const [bccVisible, setBccVisible] = useState(false);
   const [subject, setSubject] = useState(initialSubject ?? "");
-  const [body, setBody] = useState(initialBody ?? "");
+  const [bodyText, setBodyText] = useState(initialBody ?? "");
+  const [bodyHtml, setBodyHtml] = useState(initialHtml ?? "");
   const [createFollowUp, setCreateFollowUp] = useState(linked);
   const [followUpInDays, setFollowUpInDays] = useState(3);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sentId, setSentId] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
   const [smtpConfigured, setSmtpConfigured] = useState<boolean | null>(null);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
-  // Draft autosave — restored on mount, cleared after a successful send.
+  // ── Draft restore ──
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(draftKey);
-      if (saved && !initialBody) {
-        const draft = JSON.parse(saved) as { to?: string; cc?: string; bcc?: string; subject?: string; body?: string };
+      if (saved && !initialBody && !initialHtml) {
+        const draft = JSON.parse(saved) as Draft;
         if (draft.to && !toEmail) setTo(draft.to);
         if (draft.cc) { setCc(draft.cc); setCcVisible(true); }
         if (draft.bcc) { setBcc(draft.bcc); setBccVisible(true); }
         if (draft.subject && !initialSubject) setSubject(draft.subject);
-        if (draft.body) setBody(draft.body);
+        if (draft.body) setBodyText(draft.body);
+        if (draft.html && editorRef.current) editorRef.current.innerHTML = draft.html;
       }
     } catch { /* draft restore is best-effort */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftKey]);
 
-  const saveDraft = useCallback((next: { to: string; cc: string; bcc: string; subject: string; body: string }) => {
+  // ── Seed the editor with the initial content (after restore, restore wins) ──
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current || !editorRef.current) return;
+    seededRef.current = true;
+    if (initialHtml && editorRef.current) {
+      editorRef.current.innerHTML = initialHtml;
+      setBodyText(editorRef.current.innerText ?? "");
+      setBodyHtml(initialHtml);
+    } else if (initialBody) {
+      editorRef.current.innerHTML = initialBody
+        .split("\n")
+        .map((line) => `<p>${escapeHtml(line) || "<br>"}</p>`)
+        .join("");
+      setBodyText(initialBody);
+      setBodyHtml(editorRef.current.innerHTML);
+    }
+  }, [initialBody, initialHtml]);
+
+  // ── Draft autosave (debounced) ──
+  const saveDraft = useCallback((next: Draft) => {
     try {
       window.localStorage.setItem(draftKey, JSON.stringify(next));
     } catch { /* storage full/blocked — drafts are best-effort */ }
   }, [draftKey]);
 
   useEffect(() => {
-    // A pristine composer must never autosave — otherwise its empty state
-    // would wipe the stored draft before the restore effect has run.
-    if (!to && !cc && !subject && !body) return;
+    // A pristine composer must never autosave — its empty state would wipe a
+    // stored draft before the restore effect gets a chance to run.
+    if (!to && !cc && !bcc && !subject && !bodyText) return;
     const timer = window.setTimeout(
-      () => saveDraft({ to, cc, bcc, subject, body }),
+      () => saveDraft({ to, cc, bcc, subject, body: bodyText, html: bodyHtml }),
       500,
     );
     return () => window.clearTimeout(timer);
-  }, [to, cc, bcc, subject, body, saveDraft]);
+  }, [to, cc, bcc, subject, bodyText, bodyHtml, saveDraft]);
 
-  // Is SMTP configured? null = unknown (check in flight).
+  // ── SMTP configured? ──
   useEffect(() => {
     void fetch("/api/emails/send")
       .then((r) => (r.ok ? r.json() : null))
@@ -108,10 +169,32 @@ export function EmailCompose({
       .catch(() => setSmtpConfigured(false));
   }, []);
 
+  // ── Rich-text editor plumbing ──
+  const syncFromEditor = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const text = (editor.innerText ?? "").replace(/\u00a0/g, " ");
+    setBodyText(text.slice(0, MAX_BODY));
+    setBodyHtml(sanitizeClient(editor.innerHTML));
+  }, []);
+
+  const exec = useCallback((command: string, value?: string) => {
+    const editor = editorRef.current;
+    editor?.focus();
+    document.execCommand(command, false, value);
+    syncFromEditor();
+  }, [syncFromEditor]);
+
   const send = useCallback(async () => {
     setError(null);
-    if (!to.trim() || !subject.trim() || !body.trim()) {
+    const editor = editorRef.current;
+    const plainText = (editor?.innerText ?? bodyText).trim();
+    if (!to.trim() || !subject.trim() || !plainText) {
       setError("To, subject, and message are required.");
+      return;
+    }
+    if (plainText.length > MAX_BODY) {
+      setError(`Message is too long — keep it under ${MAX_BODY.toLocaleString()} characters.`);
       return;
     }
     setBusy(true);
@@ -124,40 +207,56 @@ export function EmailCompose({
           cc: cc.trim() || undefined,
           bcc: bcc.trim() || undefined,
           subject: subject.trim(),
-          body,
+          body: plainText,
+          html: editor?.innerHTML,
           ...(linked ? { subjectType, subjectId } : {}),
           createFollowUp: linked ? createFollowUp : undefined,
           followUpInDays: linked ? followUpInDays : undefined,
         }),
       });
-      const result = (await response.json().catch(() => null)) as { error?: string; emailId?: string } | null;
+      const result = (await response.json().catch(() => null)) as { error?: string } | null;
       if (!response.ok) {
         setError(result?.error ?? "Send failed.");
         return;
       }
       try { window.localStorage.removeItem(draftKey); } catch { /* best-effort */ }
-      setSentId(result?.emailId ?? "sent");
+      setSent(true);
       onSent?.();
     } finally {
       setBusy(false);
     }
-  }, [to, cc, bcc, subject, body, linked, subjectType, subjectId, createFollowUp, followUpInDays, draftKey, onSent]);
+  }, [to, cc, bcc, subject, bodyText, bodyHtml, linked, subjectType, subjectId, createFollowUp, followUpInDays, draftKey, onSent]);
 
   // ⌘/Ctrl+Enter sends from any field.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
         event.preventDefault();
-        if (!busy && !sentId) void send();
+        if (!busy && !sent) void send();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [send, busy, sentId]);
+  }, [send, busy, sent]);
 
   const inputClass =
     "w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none focus:ring-2 focus:ring-(--brand)/20 disabled:opacity-60";
-  const canSend = !busy && !sentId && Boolean(to.trim()) && Boolean(subject.trim()) && Boolean(body.trim());
+  const canSend = !busy && !sent && Boolean(to.trim()) && Boolean(subject.trim()) && Boolean(bodyText.trim());
+
+  const toolbarButtons: Array<{ cmd: string; label: string; title: string; value?: string }> = [
+    { cmd: "bold", label: "B", title: "Bold (Ctrl/⌘+B)" },
+    { cmd: "italic", label: "I", title: "Italic (Ctrl/⌘+I)" },
+    { cmd: "underline", label: "U", title: "Underline (Ctrl/⌘+U)" },
+    { cmd: "strikeThrough", label: "S", title: "Strikethrough" },
+    { cmd: "insertUnorderedList", label: "• List", title: "Bullet list" },
+    { cmd: "insertOrderedList", label: "1. List", title: "Numbered list" },
+  ];
+
+  function insertLink() {
+    const url = window.prompt("Link URL (https://… or mailto:)", "https://");
+    if (!url) return;
+    exec("createLink", url);
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8" role="dialog" aria-modal="true" aria-label="Compose email">
@@ -165,7 +264,7 @@ export function EmailCompose({
         {/* Title bar */}
         <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-subtle) px-5 py-3">
           <div className="min-w-0">
-            <h2 className="text-base font-semibold">{sentId ? "Email sent" : "New email"}</h2>
+            <h2 className="text-base font-semibold">{sent ? "Email sent" : "New email"}</h2>
             <p className="truncate text-xs text-(--text-tertiary)">
               {linked
                 ? "Linked to this record — it appears in the record's email history."
@@ -175,7 +274,7 @@ export function EmailCompose({
           <button type="button" onClick={onClose} className="text-xl leading-none text-(--text-tertiary) hover:text-(--text-secondary)" aria-label="Close composer">×</button>
         </div>
 
-        {/* SMTP warning — the explicit not-configured notice */}
+        {/* SMTP warning */}
         {smtpConfigured === false ? (
           <div role="alert" className="flex items-start gap-2 border-b border-(--warning-border) bg-(--warning-bg) px-5 py-3 text-sm text-(--warning)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 shrink-0" aria-hidden>
@@ -184,26 +283,21 @@ export function EmailCompose({
             </svg>
             <span>
               <strong>SMTP is not configured.</strong> Sending is disabled — set{" "}
-              <code className="rounded bg-(--bg-subtle) px-1">SMTP_URL</code> (and{" "}
-              <code className="rounded bg-(--bg-subtle) px-1">SMTP_FROM</code>) in the environment, then reload.
+              <code className="rounded bg-(--bg-subtle) px-1">SMTP_URL</code> (or ask an admin to add your personal SMTP) and reload.
             </span>
           </div>
         ) : null}
 
-        {sentId ? (
+        {sent ? (
           <div className="space-y-4 p-6">
             <div className="flex items-center gap-2 rounded-md border border-(--success-border) bg-(--success-bg) p-3 text-sm text-(--success)">
               <span aria-hidden>✓</span> Email sent{createFollowUp && linked ? ` — follow-up task created for ${followUpInDays} day(s)` : ""}.
             </div>
             <div className="flex gap-2">
               {linked && subjectType ? (
-                <Link href={`/${RECORD_PATH[subjectType]}/${subjectId}`} className="btn btn-secondary">
-                  View record
-                </Link>
+                <Link href={`/${RECORD_PATH[subjectType]}/${subjectId}`} className="btn btn-secondary">View record</Link>
               ) : null}
-              <Link href="/emails" className="btn btn-primary" style={{ background: "var(--brand)" }}>
-                Open mailbox →
-              </Link>
+              <Link href="/emails" className="btn btn-primary" style={{ background: "var(--brand)" }}>Open mailbox →</Link>
               <button type="button" onClick={onClose} className="btn btn-secondary ml-auto">Close</button>
             </div>
           </div>
@@ -216,6 +310,7 @@ export function EmailCompose({
               <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p>
             ) : null}
 
+            {/* Recipients */}
             <div className="divide-y divide-(--border-default) rounded-lg border border-(--border-default)">
               <div className="flex items-center gap-3 px-4 py-2.5">
                 <label htmlFor="ec-to" className="w-14 shrink-0 text-sm font-medium text-(--text-secondary)">To</label>
@@ -235,7 +330,7 @@ export function EmailCompose({
                 </div>
               </div>
               {ccVisible ? (
-                <div className="flex items-center gap-3 px-4 py-2.5">
+                <div className="flex items-center gap-3 bg-(--bg-subtle) px-4 py-2">
                   <label htmlFor="ec-cc" className="w-14 shrink-0 text-sm font-medium text-(--text-secondary)">Cc</label>
                   <input
                     id="ec-cc" type="email" value={cc} disabled={busy}
@@ -243,10 +338,15 @@ export function EmailCompose({
                     placeholder="copy@example.com"
                     className="min-w-0 flex-1 bg-transparent text-sm outline-none"
                   />
+                  <button
+                    type="button" aria-label="Close Cc field" disabled={busy}
+                    onClick={() => { setCc(""); setCcVisible(false); }}
+                    className="text-sm text-(--text-tertiary) hover:text-(--error)"
+                  >×</button>
                 </div>
               ) : null}
               {bccVisible ? (
-                <div className="flex items-center gap-3 px-4 py-2.5">
+                <div className="flex items-center gap-3 bg-(--bg-subtle) px-4 py-2">
                   <label htmlFor="ec-bcc" className="w-14 shrink-0 text-sm font-medium text-(--text-secondary)">Bcc</label>
                   <input
                     id="ec-bcc" type="email" value={bcc} disabled={busy}
@@ -254,6 +354,11 @@ export function EmailCompose({
                     placeholder="blind-copy@example.com"
                     className="min-w-0 flex-1 bg-transparent text-sm outline-none"
                   />
+                  <button
+                    type="button" aria-label="Close Bcc field" disabled={busy}
+                    onClick={() => { setBcc(""); setBccVisible(false); }}
+                    className="text-sm text-(--text-tertiary) hover:text-(--error)"
+                  >×</button>
                 </div>
               ) : null}
               <div className="flex items-center gap-3 px-4 py-2.5">
@@ -266,17 +371,58 @@ export function EmailCompose({
               </div>
             </div>
 
-            <textarea
-              ref={bodyRef}
-              value={body}
-              onChange={(event) => setBody(event.target.value.slice(0, MAX_BODY))}
-              required minLength={1} maxLength={MAX_BODY} rows={12} disabled={busy}
-              aria-label="Message body"
-              placeholder={toName ? `Hi ${toName.split(" ")[0]},` : "Write your message…"}
-              className={`${inputClass} min-h-[220px] font-mono text-[13px] leading-relaxed`}
-            />
+            {/* Formatting toolbar */}
+            <div className="flex flex-wrap items-center gap-1 rounded-lg border border-(--border-default) bg-(--bg-subtle) p-1" role="toolbar" aria-label="Formatting">
+              {toolbarButtons.map((button) => (
+                <button
+                  key={button.cmd}
+                  type="button"
+                  title={button.title}
+                  aria-label={button.title}
+                  disabled={busy}
+                  onMouseDown={(event) => { event.preventDefault(); }}
+                  onClick={() => exec(button.cmd, button.value)}
+                  className="min-w-8 rounded px-2 py-1 text-xs font-semibold text-(--text-secondary) hover:bg-(--bg-hover) hover:text-(--text-primary) disabled:opacity-50"
+                >
+                  {button.label}
+                </button>
+              ))}
+              <span className="mx-1 h-4 w-px bg-(--border-strong)" aria-hidden />
+              <button
+                type="button" title="Insert link" aria-label="Insert link" disabled={busy}
+                onMouseDown={(event) => { event.preventDefault(); }}
+                onClick={() => insertLink()}
+                className="rounded px-2 py-1 text-xs font-semibold text-(--text-secondary) hover:bg-(--bg-hover) hover:text-(--text-primary) disabled:opacity-50"
+              >
+                Link
+              </button>
+              <button
+                type="button" title="Clear formatting" aria-label="Clear formatting" disabled={busy}
+                onMouseDown={(event) => { event.preventDefault(); }}
+                onClick={() => exec("removeFormat")}
+                className="rounded px-2 py-1 text-xs font-medium text-(--text-secondary) hover:bg-(--bg-hover) hover:text-(--text-primary) disabled:opacity-50"
+              >
+                Clear
+              </button>
+            </div>
+
+            {/* Rich-text body */}
+            <div className="overflow-hidden rounded-lg border border-(--border-strong) focus-within:border-(--brand) focus-within:ring-2 focus-within:ring-(--brand)/20">
+              <div
+                ref={editorRef}
+                contentEditable={!busy && !sent}
+                role="textbox"
+                aria-multiline="true"
+                aria-label="Email body"
+                suppressContentEditableWarning
+                onInput={syncFromEditor}
+                onBlur={syncFromEditor}
+                data-empty={bodyText ? undefined : (toName ? `Hi ${toName.split(" ")[0]},` : "Write your message…")}
+                className="min-h-50 max-h-90 overflow-y-auto bg-(--bg-surface) px-4 py-3 text-sm leading-relaxed text-(--text-primary) outline-none empty:before:content-[attr(data-empty)] empty:before:text-(--text-tertiary) [&_a]:text-(--brand) [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-(--border-strong) [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
+              />
+            </div>
             <p className="text-right text-[11px] text-(--text-tertiary)">
-              {body.length.toLocaleString()} / {MAX_BODY.toLocaleString()} · ⌘/Ctrl+Enter to send
+              {bodyText.length.toLocaleString()} / {MAX_BODY.toLocaleString()} characters · ⌘/Ctrl+Enter to send
             </p>
 
             {linked ? (
@@ -307,7 +453,7 @@ export function EmailCompose({
               <div className="flex gap-2">
                 <button type="button" onClick={onClose} className="btn btn-secondary" disabled={busy}>Cancel</button>
                 <button type="submit" disabled={!canSend || smtpConfigured === false} className="btn btn-primary" style={{ background: "var(--brand)" }}>
-                  {busy ? "Sending…" : sentId ? "✓ Sent" : "Send"}
+                  {busy ? "Sending…" : sent ? "✓ Sent" : "Send"}
                 </button>
               </div>
             </div>

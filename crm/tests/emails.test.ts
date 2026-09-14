@@ -6,6 +6,10 @@ import { randomUUID } from "node:crypto";
 test("cleanup: remove leftover test SMTP overrides", async () => {
   const removed = await prisma.userSmtp.deleteMany({ where: { host: "127.0.0.1", port: 1 } });
   void removed;
+  await prisma.emailMessage.deleteMany({ where: { subject: { contains: "Per-user SMTP probe" } } });
+  await prisma.emailMessage.deleteMany({ where: { subject: { contains: "Rich compose probe" } } });
+  await prisma.emailMessage.deleteMany({ where: { subject: { contains: "Rich compose probe" } } });
+  await prisma.lead.deleteMany({ where: { lastName: { startsWith: "Compose " } } });
 });
 
 const RUN = randomUUID().slice(0, 8);
@@ -276,7 +280,7 @@ test("per-user SMTP: stored credentials drive the send; inbound mail attributes 
 
   const lead = await prisma.lead.create({
     data: {
-      firstName: "Own", lastName: "Smtp", email: "own.smtp@example.com",
+      firstName: "Own", lastName: "Smtp", email: `own.smtp.${RUN}@example.com`,
       assignedUserId: rep.userId,
       statusId: (await prisma.recordStatus.findFirstOrThrow({ where: { appliesTo: "LEAD", isDefault: true } })).id,
     },
@@ -287,14 +291,14 @@ test("per-user SMTP: stored credentials drive the send; inbound mail attributes 
   // a delivery error) — proving the per-user transport was selected.
   await assertThrows(
     () => sendRecordEmail(rep, {
-      to: "target@example.com", subject: "Per-user SMTP probe", body: "x",
+      to: "target@example.com", subject: `Per-user SMTP probe ${RUN}`, body: "x",
       subjectType: "LEAD", subjectId: lead.id,
     }),
     502,
     "per-user transport attempted",
   );
   const failed = await prisma.emailMessage.findFirstOrThrow({
-    where: { subject: "Per-user SMTP probe" },
+    where: { subject: `Per-user SMTP probe ${RUN}` },
   });
   assert.equal(failed.status, "FAILED");
   assert.ok(failed.fromAddress.includes("rep@smtp.example"), "per-user from address");
@@ -320,4 +324,33 @@ test("per-user SMTP: stored credentials drive the send; inbound mail attributes 
   await prisma.emailMessage.deleteMany({ where: { id: { in: [failed.id, inbound.id] } } });
   await prisma.lead.delete({ where: { id: lead.id } });
   await prisma.userSmtp.delete({ where: { userId: rep.userId } });
+});
+
+test("rich-text html is sanitized before storage; plain text derived for the body", async () => {
+  const rep = await repContext();
+  const maliciousHtml = '<p style="x:onload=alert(1)">Hello <strong>world</strong></p><script>alert("xss")</script><a href="javascript:alert(1)">bad</a><a href="https://ok.example">good</a>';
+
+  // Global SMTP unset → 503, but the row is archived with sanitized html.
+  const defaultStatus = await prisma.recordStatus.findFirstOrThrow({ where: { appliesTo: "LEAD", isDefault: true } });
+  const lead = await prisma.lead.create({
+    data: { firstName: "Rich", lastName: `Compose ${RUN}`, assignedUserId: rep.userId, statusId: defaultStatus.id },
+  });
+  await assertThrows(
+    () => sendRecordEmail(rep, {
+      to: `rich.${RUN}@example.com`, subject: "Rich compose probe", body: "plain fallback",
+      html: maliciousHtml, subjectType: "LEAD", subjectId: lead.id,
+    }),
+    503,
+    "still fails without smtp",
+  );
+
+  const stored = await prisma.emailMessage.findFirstOrThrow({ where: { subject: "Rich compose probe" }, });
+  assert.ok(!stored.htmlBody?.includes("<script"), "script tag stripped");
+  assert.ok(!stored.htmlBody?.includes("javascript:"), "javascript: href stripped");
+  assert.ok(stored.htmlBody?.includes("<strong>world</strong>"), "allowed formatting kept");
+  assert.ok(stored.htmlBody?.includes('href="https://ok.example"'), "safe href kept");
+  assert.equal(stored.body, "plain fallback", "plain text part untouched");
+
+  await prisma.emailMessage.delete({ where: { id: stored.id } });
+  await prisma.lead.delete({ where: { id: lead.id } });
 });

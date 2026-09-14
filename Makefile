@@ -3,7 +3,7 @@ DC := docker compose --env-file $(ROOT)/.env.production -f $(ROOT)/deploy/docker
 
 # .PHONY is required: e.g. the deploy/ directory would otherwise make Make
 # consider the "deploy" target already up to date and silently skip its recipe.
-.PHONY: help build build-no-cache deploy update restart-app only-env dev dev-agile dev-open-agile stop \
+.PHONY: help build build-no-cache deploy update restart-app only-env dev dev-gbfxs dev-open-gbfxs stop \
         ps logs log-app log-caddy log-crm health diagnose preflight auth-doctor env-verify \
         psql crm-psql studio migrate crm-migrate seed crm-seed crm-grant promote-admin \
         backup restore test test-fast lint typecheck \
@@ -40,13 +40,13 @@ down: ## Stop the whole production stack
 dev: ## Run the Next.js dev server (primary brand at http://localhost:3000)
 	npm run dev
 
-dev-agile: ## Dev server + open the AgileFGS brand (http://agilefgs.localhost:3000)
+dev-gbfxs: ## Dev server + open the GBFXS brand (http://gbfxs.localhost:3000)
 	npm run dev
 
-dev-open-agile: ## Open the AgileFGS local site in your browser (server must be running)
-	@echo "AgileFGS  → http://agilefgs.localhost:3000"
+dev-open-gbfxs: ## Open the GBFXS local site in your browser (server must be running)
+	@echo "GBFXS      → http://gbfxs.localhost:3000"
 	@echo "BlackForest → http://localhost:3000"
-	@if command -v open >/dev/null 2>&1; then open http://agilefgs.localhost:3000; fi
+	@if command -v open >/dev/null 2>&1; then open http://gbfxs.localhost:3000; fi
 
 stop: ## Stop whatever is running on port 3000
 	npm run stop:server

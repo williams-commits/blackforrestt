@@ -45,8 +45,8 @@ function familyTradeEnabled(domain: string): boolean {
 //      subdomain's DNS + TLS exist even without a TRADE_DOMAIN_N pair).
 //   3. Neither → the family's app traffic uses the canonical trade host.
 // Reading only BRAND_OVERRIDES caused a silent cross-brand leak: forgetting
-// the JSON flag sent agilefgs.com/logins to trade.blackforrestt.com while
-// Caddy was happily serving trade.agilefgs.com.
+// the JSON flag sent gbfxs.com/logins to trade.blackforrestt.com while
+// Caddy was happily serving trade.gbfxs.com.
 function familyTradeHost(domain: string): string | null {
   const pairs: Array<[string | undefined, string | undefined]> = [
     [process.env.DOMAIN, process.env.TRADE_DOMAIN],
@@ -381,7 +381,7 @@ const authHandler = auth((req) => {
   // Both auth redirects below are built on publicOrigin(req) — the REAL
   // request host — never req.nextUrl.clone(): with AUTH_URL pinned to the
   // canonical trade host, req.nextUrl carries that host on every request, so
-  // a logged-in agilefgs visitor hitting /login would be redirected to the
+  // a logged-in gbfxs visitor hitting /login would be redirected to the
   // PRIMARY brand's /account (cross-brand session leak).
   if (isGuestOnlyPage && req.auth?.user?.id) {
     const accountUrl = new URL("/account", publicOrigin(req));

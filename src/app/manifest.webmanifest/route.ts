@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
  * GET /manifest.webmanifest — per-domain PWA manifest (installable name and
  * theme follow the requesting brand family; icons use the generated
  * /brand/icon.svg). Replaces the static app/manifest.ts so mirror domains
- * such as agilefgs.com install under their own brand.
+ * such as gbfxs.com install under their own brand.
  */
 export async function GET() {
   const brand = await currentBrandProfile();

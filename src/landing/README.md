@@ -13,7 +13,7 @@ src/landing/
   blackforest/                  ← Black Forest Digital (blackforrestt.com)
     BlackForestLanding.tsx      ← composition only — sections come from the
                                     shared library in src/components/landing/*
-  agile/                        ← Agile FGS (agilefgs.com)
+  agile/                        ← Global Forex Services (gbfxs.com)
     AgileLanding.tsx            ← composition
     AgileContentShell.tsx       ← interior-page chrome (navbar+footer+scope)
     content/AgileArticleLayout  ← interior-page architecture (header band +
@@ -71,7 +71,7 @@ primary brand's root (light) tokens are untouched.
 3. **Adding a brand** = new folder under `src/landing/<brand>/` + a
    `landingTemplate` key in `BRAND_OVERRIDES` + a case in both dispatchers.
 4. **Shared visuals** live in `public/brands/<brand>/` — each brand's assets
-   (e.g. `public/brands/agilefgs/backgrounds/`) belong to that brand only.
+   (e.g. `public/brands/gbfxs/backgrounds/`) belong to that brand only.
 5. **Shared components stay generic.** A component in `src/components/**`
    must never branch on brand/product. Brand identity enters through tokens
    (scoped CSS variables), the brand profile, and brand-owned composition.

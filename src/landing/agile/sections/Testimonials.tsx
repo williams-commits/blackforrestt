@@ -4,7 +4,7 @@ import { Reveal } from "@/components/landing/Reveal";
 
 /** Photo avatars in the source feedback order (Anton→2, Sophie→3, Carlos→1…). */
 const AVATARS = [2, 3, 1, 4, 5].map(
-  (n) => `/brands/agilefgs/testimonials/feedback__avatar-${n}.svg`,
+  (n) => `/brands/gbfxs/testimonials/feedback__avatar-${n}.svg`,
 );
 
 interface Testimonial {

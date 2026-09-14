@@ -1,7 +1,7 @@
 /**
  * Real instrument imagery — the shared symbol → asset map.
  *
- * Assets live under public/brands/agilefgs/markets/ (currency flags from
+ * Assets live under public/brands/gbfxs/markets/ (currency flags from
  * flagcdn, crypto coins, exchange/index marks, stock logos, and authored
  * emblems for unbranded commodities). Both ends consume this one map: the
  * shared InstrumentIcon (terminal, account portal, primary-brand landing)
@@ -9,7 +9,7 @@
  * the inline SVG badges, so no instrument ever renders an empty slot.
  */
 
-export const ASSET_DIR = "/brands/agilefgs/markets/";
+export const ASSET_DIR = "/brands/gbfxs/markets/";
 
 /** ISO currency → round-cropped flag asset. */
 export const CURRENCY_FLAGS: Record<string, string> = {

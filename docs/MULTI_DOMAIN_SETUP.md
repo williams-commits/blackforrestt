@@ -1,7 +1,7 @@
 # Multi-Domain / Multi-Brand Setup
 
 How this deployment serves several brand families (e.g. `blackforrestt.com`
-and `agilefgs.com`) from one codebase, and the exact runbook for adding the
+and `gbfxs.com`) from one codebase, and the exact runbook for adding the
 next one. Security properties of the shared architecture live in
 `MULTI_BRAND_SECURITY.md`.
 
@@ -44,20 +44,20 @@ directives). Use `BRAND_DOMAINS` for the list.
 
 ```json
 {
-  "agilefgs.com": {
-    "name": "Agile FGS", "shortName": "Agile FGS", "legalName": "Agile FGS Ltd",
-    "supportEmail": "support@agilefgs.com",
+  "gbfxs.com": {
+    "name": "Global Forex Services", "shortName": "Global Forex Services", "legalName": "Global Forex Services Ltd",
+    "supportEmail": "support@gbfxs.com",
     "address": "Airedale House, 423 Kirkstall Road, Leeds, England, LS4 2EW",
-    "trademark": "Agile FGS™",
+    "trademark": "Global Forex Services™",
     "wordmark": ["Agile", "FGS"],
     "tradeEnabled": true,
     "accentColor": "#00644e",
     "emailColor": "#00644e",
     "glyph": { "viewBox": "0 0 24 24", "paths": [{"d": "M4 20v-5.5h3.4V20H4Z"}] },
-    "ogImage": "/brands/agilefgs/og.png",
-    "heroBadge": "Agile FGS — Multi-asset execution",
+    "ogImage": "/brands/gbfxs/og.png",
+    "heroBadge": "Global Forex Services — Multi-asset execution",
     "heroSubtitle": "…",
-    "emailFrom": "Agile FGS <no-reply@agilefgs.com>",
+    "emailFrom": "Global Forex Services <no-reply@gbfxs.com>",
     "depositWallets": "USDT:TRON (TRC20):T…; BTC:Bitcoin:bc1q…"
   }
 }
@@ -104,7 +104,7 @@ No code changes, no Caddyfile edits — the renderer generates site blocks
    ```bash
    DOMAIN_3=newbrand.com
    TRADE_DOMAIN_3=trade.newbrand.com
-   BRAND_DOMAINS=blackforrestt.com,agilefgs.com,newbrand.com
+   BRAND_DOMAINS=blackforrestt.com,gbfxs.com,newbrand.com
    # append to APP_ORIGIN:
    #   https://newbrand.com,https://trade.newbrand.com
    # add a "newbrand.com":{…} entry to BRAND_OVERRIDES (template above)
@@ -126,11 +126,11 @@ No code changes, no Caddyfile edits — the renderer generates site blocks
 
 - Brand config comes from `.env` **at process start** — restart `npm run dev`
   after editing it (hot reload covers code only).
-- Map hosts for browser testing: add `127.0.0.1 agilefgs.com
-  trade.agilefgs.com` to `/etc/hosts`, then browse `http://agilefgs.com:3000`.
+- Map hosts for browser testing: add `127.0.0.1 gbfxs.com
+  trade.gbfxs.com` to `/etc/hosts`, then browse `http://gbfxs.com:3000`.
 - The middleware strips ports for host matching, so `:3000` URLs route
-  correctly (e.g. `agilefgs.com:3000/login` → `trade.agilefgs.com:3000`).
-- `curl -H "x-forwarded-host: agilefgs.com" http://localhost:3000/…` simulates
+  correctly (e.g. `gbfxs.com:3000/login` → `trade.gbfxs.com:3000`).
+- `curl -H "x-forwarded-host: gbfxs.com" http://localhost:3000/…` simulates
   a host without touching DNS.
 - Regression suite: `npm run test:multibrand` (wallet layering, referral
   family links, trade-host resolution order, support-inbox brand attribution).
@@ -148,7 +148,7 @@ never interfere. Password changes revoke sessions on all families
 resolves *relative* redirect targets against it — **all client sign-outs use
 `redirect: false` + `window.location.assign(...)`** (self-navigation) rather
 than a server-resolved `callbackUrl`. Without that, logging out on
-`trade.agilefgs.com` bounces to `trade.blackforrestt.com`. Removing
+`trade.gbfxs.com` bounces to `trade.blackforrestt.com`. Removing
 `AUTH_URL` entirely is NOT a workaround: with this custom server the
 header-less base resolves to the bind address (`0.0.0.0`) and auth redirects
 break (verified empirically).

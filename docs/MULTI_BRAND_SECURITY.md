@@ -1,6 +1,6 @@
 # Multi-Brand Security Tradeoffs
 
-Black Forest and Agile FGS (and any future brand family) run on **one shared
+Black Forest and Global Forex Services (and any future brand family) run on **one shared
 deployment**: one app process, one PostgreSQL database, one Redis, one MinIO,
 one set of signing keys. This document details the security properties that
 follow from that architecture — what is isolated, what is shared, and what the
@@ -14,7 +14,7 @@ regulatorily or legally isolated.
 ## What IS isolated per brand (verified)
 
 - **Login sessions / cookies.** Auth.js cookies are host-only (no `Domain`
-  attribute), so a session on `trade.agilefgs.com` never touches
+  attribute), so a session on `trade.gbfxs.com` never touches
   `trade.blackforrestt.com`. Two brands can be logged in simultaneously in
   one browser without interference.
 - **Branding surface.** Theme, logo, favicon, manifest, hero copy, emails,
@@ -34,7 +34,7 @@ rate-limit namespace.
 ## Tradeoff #10 — One `AUTH_SECRET` signs every brand's session tokens
 
 **Mechanics.** Auth.js signs each session token with `AUTH_SECRET`. Both
-brands verify tokens with the same key, so a token minted on `trade.agilefgs.com`
+brands verify tokens with the same key, so a token minted on `trade.gbfxs.com`
 is cryptographically valid on `trade.blackforrestt.com` if it is presented
 there.
 

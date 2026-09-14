@@ -106,7 +106,7 @@ export async function POST(req: Request) {
 
   const passwordHash = await bcrypt.hash(password, 12);
   const requireEmailVerification = registrationRequiresEmailVerification();
-  // Resolve the brand from the request host (signup on agilefgs.com stores
+  // Resolve the brand from the request host (signup on gbfxs.com stores
   // that family; unconfigured hosts store the primary).
   const signupBrand = await currentBrandProfile();
 

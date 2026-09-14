@@ -18,7 +18,7 @@ import { TestimonialsSection } from "./sections/Testimonials";
 import { getLandingInstruments } from "@/lib/landingData";
 
 /**
- * Agile FGS landing — the global trading desk.
+ * Global Forex Services landing — the global trading desk.
  *
  * Narrative: cinematic hero with the live desk module and floor ticker →
  * the platform's real numbers as a ledger bar → the platform bento (why

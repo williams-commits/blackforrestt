@@ -8,7 +8,7 @@ import { AgileContentShell } from "@/landing/agile/AgileContentShell";
  * Education, Legal) — a thin brand dispatcher, mirroring src/app/page.tsx.
  *
  * Each brand family gets its own chrome for these routes: the primary brand
- * keeps the light editorial navbar + footer, Agile FGS renders its
+ * keeps the light editorial navbar + footer, Global Forex Services renders its
  * dark-institutional shell (own navbar, footer, scoped tokens). Page bodies
  * stay shared; identity stays brand-owned.
  */

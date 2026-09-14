@@ -54,7 +54,7 @@ export const dynamic = "force-dynamic";
 // generateMetadata (not a static export) so og:locale reflects the active
 // language resolved from the NEXT_LOCALE cookie.
 export async function generateMetadata(): Promise<Metadata> {
-  // Per-host branding: the mirror domain (e.g. agilefgs.com) titles and
+  // Per-host branding: the mirror domain (e.g. gbfxs.com) titles and
   // describes itself under its own brand. Canonical/SEO URLs stay on the
   // primary domain so mirror content consolidates search indexing — but
   // og:image must be ABSOLUTE, and resolving it against metadataBase (the

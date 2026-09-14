@@ -302,7 +302,7 @@ meaningful on first run.
 
 ## 10. Open decisions (non-blocking, defaults noted)
 
-1. Subdomain: `crm.agilefgs.com`
+1. Subdomain: `crm.gbfxs.com`
 2. Opportunity currency: single org currency initially, per-record currency
    field deferred (default: yes).
 3. Reporting depth in phase 9: prebuilt report library first vs. user-buildable

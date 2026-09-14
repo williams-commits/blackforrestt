@@ -27,7 +27,7 @@ export async function Hero() {
   return (
     <section id="hero" className="relative scroll-mt-24 overflow-hidden bg-[#0a0d0b]">
       <SectionBackdrop
-        src="/brands/agilefgs/backgrounds/hero-bg.jpg"
+        src="/brands/gbfxs/backgrounds/hero-bg.jpg"
         opacity={0.8}
         position="74% 36%"
         blur={0}

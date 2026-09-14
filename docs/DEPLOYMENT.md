@@ -8,7 +8,7 @@ mandatory compose flags for you.
 
 The deployment serves **one or two domains from the same stack** — a single
 brand (`blackforrestt.com` alone) or a dual-brand family (any second domain,
-e.g. `agilefgs.com`). Both are pure `.env.production` configuration; no code or
+e.g. `gbfxs.com`). Both are pure `.env.production` configuration; no code or
 Caddyfile edits are ever needed.
 
 For specialized procedures, this guide cross-references:
@@ -166,8 +166,8 @@ ufw --force enable
 | A | `crm` | server IP (only if you want the CRM subdomain) |
 
 **Option B — dual domain (two brands, same stack):** repeat the four records
-for the second domain (e.g. `agilefgs.com`, `www.agilefgs.com`,
-`trade.agilefgs.com`, `crm` optional). Caddy provisions TLS for every host
+for the second domain (e.g. `gbfxs.com`, `www.gbfxs.com`,
+`trade.gbfxs.com`, `crm` optional). Caddy provisions TLS for every host
 automatically.
 
 ### 4. Create `.env.production`
@@ -245,6 +245,10 @@ CRM_DATABASE_URL=
 AUTH_URL_CRM=https://crm.yourdomain.com
 AUTH_SECRET_CRM=<generated above>    # MUST differ from AUTH_SECRET
 CRM_BRIDGE_TOKEN=<openssl rand -hex 24>   # shared platform↔CRM read-only secret
+CRM_BRANDING_NAME="Global Forex Services CRM"   # CRM module branding
+CRM_BRANDING_SINGLE_NAME="GBFXS"
+CRM_BRANDING_LOGO="G"
+CRM_ENCRYPTION_KEY=<openssl rand -hex 32>   # encrypts per-user SMTP passwords
 ```
 
 **New feature vars (both apps read these from the shared env file):**

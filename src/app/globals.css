@@ -82,8 +82,8 @@ html.dim {
 }
 
 /*
-  Agile FGS app accent — the two-tone identity on light app surfaces
-  (login/register/recovery, account, admin on the agilefgs family).
+  Global Forex Services app accent — the two-tone identity on light app surfaces
+  (login/register/recovery, account, admin on the gbfxs family).
   The mint (#63e891) fails WCAG as TEXT on white (~1.6:1), so filled brand
   surfaces take the mint with dark ink (the landing's primary-button
   treatment, ~12:1), while text/link accents keep the deep green

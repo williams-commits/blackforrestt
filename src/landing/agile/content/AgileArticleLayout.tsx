@@ -14,7 +14,7 @@ interface Props {
 }
 
 /**
- * Agile FGS interior-page architecture — the landing's design system applied
+ * Global Forex Services interior-page architecture — the landing's design system applied
  * to content routes:
  *
  *   header band  — dark plate, ambient green glow, hairline, eyebrow ·

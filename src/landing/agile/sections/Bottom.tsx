@@ -196,7 +196,7 @@ export async function ShowcaseSection() {
                 <span className="h-1.5 w-1.5 rounded-full bg-[#ff6b6b]/60" />
                 <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
                 <span className="h-1.5 w-1.5 rounded-full bg-[#63e891]/70" />
-                <span className="ml-1.5 flex-1 rounded bg-white/5 px-2 py-0.5 font-mono text-[6.5px] tracking-widest text-[#747a75]">trade.agilefgs.com</span>
+                <span className="ml-1.5 flex-1 rounded bg-white/5 px-2 py-0.5 font-mono text-[6.5px] tracking-widest text-[#747a75]">trade.gbfxs.com</span>
               </div>
               {/* AccountBar — the real metrics strip */}
               <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">
@@ -455,7 +455,7 @@ export async function FinalCta() {
   return (
     <section id="final-cta" className="relative scroll-mt-24 overflow-hidden bg-[#0d100f]">
       <SectionBackdrop
-        src="/brands/agilefgs/backgrounds/cta-bg.jpg"
+        src="/brands/gbfxs/backgrounds/cta-bg.jpg"
         opacity={0.5}
         position="center 30%"
         blur={0}

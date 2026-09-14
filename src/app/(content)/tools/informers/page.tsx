@@ -12,7 +12,7 @@ export async function generateMetadata() {
 }
 
 /** Server component: the embed snippets must point at the REQUESTING brand
- *  family (agilefgs.com visitors get agilefgs.com embeds), not the canonical
+ *  family (gbfxs.com visitors get gbfxs.com embeds), not the canonical
  *  primary domain. The page frame comes from the brand dispatcher so each
  *  family renders in its own page architecture. */
 export default async function InformersPage() {

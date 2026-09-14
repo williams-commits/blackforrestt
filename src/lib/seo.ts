@@ -57,7 +57,7 @@ const PAGE_DESCRIPTIONS: Record<string, string> = {
  */
 export async function contentMetadata(path: string, title: string): Promise<Metadata> {
   // {brand} placeholders resolve against the REQUESTING brand family, so
-  // agilefgs.com never ships meta copy that names Black Forest.
+  // gbfxs.com never ships meta copy that names Black Forest.
   const brand = await currentBrandProfile();
   const rawDescription = PAGE_DESCRIPTIONS[path];
   return {

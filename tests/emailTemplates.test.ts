@@ -44,22 +44,22 @@ test("email variables are HTML escaped", () => {
 test("brand variables restyle the email without touching env config", () => {
   const rendered = renderEmail("welcome", {
     name: "Agile User",
-    actionUrl: "https://agilefgs.com/account",
-    brandName: "Agile FGS",
-    brandSupport: "support@agilefgs.com",
+    actionUrl: "https://gbfxs.com/account",
+    brandName: "Global Forex Services",
+    brandSupport: "support@gbfxs.com",
     brandColor: "#0ea5e9",
-    brandFrom: "no-reply@agilefgs.com",
-    brandReplyTo: "help@agilefgs.com",
+    brandFrom: "no-reply@gbfxs.com",
+    brandReplyTo: "help@gbfxs.com",
   });
   // Header, footer support address, subject, and button accent all follow the
   // brand variables; the from/replyTo ride along for the provider layer.
-  assert.match(rendered.subject, /Welcome to Agile FGS/);
-  assert.match(rendered.html, /Agile FGS/);
-  assert.match(rendered.html, /support@agilefgs\.com/);
+  assert.match(rendered.subject, /Welcome to Global Forex Services/);
+  assert.match(rendered.html, /Global Forex Services/);
+  assert.match(rendered.html, /support@gbfxs\.com/);
   assert.match(rendered.html, /background:#0ea5e9/);
   assert.match(rendered.html, /border-bottom:4px solid #0ea5e9/);
-  assert.equal(rendered.from, "no-reply@agilefgs.com");
-  assert.equal(rendered.replyTo, "help@agilefgs.com");
+  assert.equal(rendered.from, "no-reply@gbfxs.com");
+  assert.equal(rendered.replyTo, "help@gbfxs.com");
 });
 
 test("emails without brand variables keep the primary env identity", () => {

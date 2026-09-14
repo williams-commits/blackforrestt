@@ -13,7 +13,7 @@ const inter = Inter({
 });
 
 /**
- * Agile FGS content shell — the brand-owned chrome for every interior
+ * Global Forex Services content shell — the brand-owned chrome for every interior
  * marketing route (about, tools, analytics, education, legal, contact).
  *
  * The page bodies themselves are shared components built on the global design

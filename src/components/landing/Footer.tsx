@@ -30,7 +30,7 @@ export async function Footer() {
   const tLinks = await getTranslations("footer.links");
   const tCols = await getTranslations("footer.columns");
   const iconW = 38;
-  // Per-domain brand (mirror domains like agilefgs.com show their own name,
+  // Per-domain brand (mirror domains like gbfxs.com show their own name,
   // contact email, address, legal entity, and registration identity).
   const brand = await currentBrandProfile();
   const company = brand.legalName;

@@ -37,7 +37,7 @@ export function supportEmail(): string {
 
 /**
  * Every apex domain the platform answers on (e.g.
- * ["blackforrestt.com", "agilefgs.com"]). Mirror/alias domains serve the
+ * ["blackforrestt.com", "gbfxs.com"]). Mirror/alias domains serve the
  * SAME files as the primary until they get their own landing page.
  *
  * Configure via BRAND_DOMAINS (comma-separated); BRAND_DOMAIN alone still
@@ -61,9 +61,9 @@ export function brandDomains(): string[] {
  * (identical UI — the initial "same files, different domain" phase).
  */
 export interface BrandProfile {
-  /** Apex domain of this brand family (e.g. "agilefgs.com"). */
+  /** Apex domain of this brand family (e.g. "gbfxs.com"). */
   domain: string;
-  /** Public brand name (e.g. "Agile FGS"). */
+  /** Public brand name (e.g. "Global Forex Services"). */
   name: string;
   /** Short name for tight spaces / metadata authors. */
   shortName: string;
@@ -73,7 +73,7 @@ export interface BrandProfile {
   supportEmail: string;
   /** Registered company address shown in the footer. */
   address: string;
-  /** Trademark wordmark (e.g. "Agile FGS™"). */
+  /** Trademark wordmark (e.g. "Global Forex Services™"). */
   trademark: string;
   /** Two-tone logo wordmark parts — [plain, accent] (["Agile", "FGS"]). */
   wordmark: [string, string];
@@ -97,7 +97,7 @@ export interface BrandProfile {
   emailColor: string;
   /** Logo image URL for email headers (overrides EMAIL_LOGO_URL). */
   emailLogoUrl: string;
-  /** Open Graph share image path (e.g. "/brands/agilefgs/og.png"). */
+  /** Open Graph share image path (e.g. "/brands/gbfxs/og.png"). */
   ogImage: string;
   /** Brand accent color for the generated favicon glyph. */
   accentColor: string;
@@ -190,9 +190,9 @@ interface BrandOverride {
  * Per-domain brand overrides, keyed by apex domain, from the BRAND_OVERRIDES
  * JSON env var. Example:
  *
- *   BRAND_OVERRIDES='{"agilefgs.com":{"name":"Agile FGS","shortName":"Agile FGS",
- *     "legalName":"Agile FGS Ltd","supportEmail":"support@agilefgs.com",
- *     "address":"…","trademark":"Agile FGS™","wordmark":["Agile","FGS"],
+ *   BRAND_OVERRIDES='{"gbfxs.com":{"name":"Global Forex Services","shortName":"Global Forex Services",
+ *     "legalName":"Global Forex Services Ltd","supportEmail":"support@gbfxs.com",
+ *     "address":"…","trademark":"Global Forex Services™","wordmark":["Agile","FGS"],
  *     "tradeEnabled":true}}'
  *
  * Parsed lazily; invalid JSON is ignored (primary branding everywhere) rather
@@ -263,7 +263,7 @@ function familyTradeEnabled(domain: string): boolean {
 
 /**
  * The trade host serving a brand family's authenticated app
- * (e.g. "trade.agilefgs.com"). Resolution mirrors the middleware: the
+ * (e.g. "trade.gbfxs.com"). Resolution mirrors the middleware: the
  * DOMAIN_N/TRADE_DOMAIN_N deployment pairs first, then "tradeEnabled" in
  * BRAND_OVERRIDES, else the canonical trade host. Keep in sync with
  * familyTradeHost() in src/middleware.ts.

@@ -36,7 +36,7 @@ export function AgileMark({ className = "", size = "md" }: { className?: string;
   return (
     <Link
       href="/"
-      aria-label="Agile FGS — home"
+      aria-label="Global Forex Services — home"
       className={`flex select-none items-center gap-1 ${className}`}
     >
       <Bracket d={LEFT_BRACKET.d} viewBox={LEFT_BRACKET.viewBox} w={bracketW} h={bracketH} />

@@ -19,7 +19,7 @@ export async function GET() {
   const accent = brand.markColor || brand.accentColor || "#fd7e14";
   const isGlobalFx = brand.logoWord === "gbfxs" || brand.shortName === "GBFXS" || brand.domain === "gbfxs.com";
   if (isGlobalFx) {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${accent}"/><path d="M22.5 9.5a9 9 0 1 0 1.1 10.3M23.5 16H17" fill="none" stroke="#0d0d0f" stroke-width="3" stroke-linecap="round"/><path d="M13 10.5v11M13 10.5h7M13 15.5h5.5" fill="none" stroke="#0d0d0f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${accent}"/><path d="M24.7 11.2a10.4 10.4 0 1 0 0 9.6l-3.4-2.4a6.25 6.25 0 1 1 0-4.8h-4.1v3.2h7.5v-5.6h-3.2v2.4h-2.1a6.25 6.25 0 0 1 5.3 2.9Z" fill="#0d0d0f" fill-rule="evenodd"/><path d="M10.2 9.2h3.3v13.6h-3.3zM13.5 9.2h8.1v3.2h-8.1zM13.5 14.3h6.2v3.1h-6.2z" fill="#0d0d0f"/></svg>`;
     return new Response(svg, {
       headers: {
         "Content-Type": "image/svg+xml",

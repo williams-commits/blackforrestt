@@ -27,4 +27,12 @@ test.describe("GBFXS landing visual contract", () => {
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
       .toBeLessThanOrEqual(390);
   });
+
+  test("Auth.js session endpoint always returns JSON", async ({ request }) => {
+    const response = await request.get(`${landingUrl}/api/auth/session`, { timeout: 30_000 });
+
+    expect(response.ok()).toBeTruthy();
+    expect(response.headers()["content-type"]).toContain("application/json");
+    await expect(response.json()).resolves.toBeNull();
+  });
 });

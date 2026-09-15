@@ -128,8 +128,8 @@ crm-seed: ## Bootstrap the CRM database (roles + first demo users) — change pa
 	PG_CID=$$($(DC) ps -q postgres); \
 	NET=$$(docker inspect -f '{{range $$k, $$v := .NetworkSettings.Networks}}{{$$k}}{{end}}' $$PG_CID); \
 	if [ -z "$$NET" ]; then echo "Cannot resolve the postgres network — run make deploy first."; exit 1; fi; \
-	CRM_DB=$$(sed -n 's/^CRM_DATABASE_URL=//p' $(ROOT)/.env.production | head -1); \
-	PGPWD=$$(sed -n 's/^POSTGRES_PASSWORD=//p' $(ROOT)/.env.production | head -1); \
+	CRM_DB=$$(sed -n 's/^CRM_DATABASE_URL=//p' $(ROOT)/.env.production | head -1 | sed -e 's/^"//' -e 's/"$$//'); \
+	PGPWD=$$(sed -n 's/^POSTGRES_PASSWORD=//p' $(ROOT)/.env.production | head -1 | sed -e 's/^"//' -e 's/"$$//'); \
 	docker run --rm --network $$NET \
 	  -e DATABASE_URL="$${CRM_DB:-postgresql://blackforrestt:$${PGPWD}@postgres:5432/blckforest_crm}" \
 	  blckforest-crm-seed:tmp sh -c "npx prisma migrate deploy && node --import tsx prisma/seed.ts"
@@ -143,8 +143,8 @@ crm-seed-admin: ## CRM admin-only bootstrap (no demo data); CRM_ADMIN_EMAIL/CRM_
 	PG_CID=$$($(DC) ps -q postgres); \
 	NET=$$(docker inspect -f '{{range $$k, $$v := .NetworkSettings.Networks}}{{$$k}}{{end}}' $$PG_CID); \
 	if [ -z "$$NET" ]; then echo "Cannot resolve the postgres network — run make deploy first."; exit 1; fi; \
-	CRM_DB=$$(sed -n 's/^CRM_DATABASE_URL=//p' $(ROOT)/.env.production | head -1); \
-	PGPWD=$$(sed -n 's/^POSTGRES_PASSWORD=//p' $(ROOT)/.env.production | head -1); \
+	CRM_DB=$$(sed -n 's/^CRM_DATABASE_URL=//p' $(ROOT)/.env.production | head -1 | sed -e 's/^"//' -e 's/"$$//'); \
+	PGPWD=$$(sed -n 's/^POSTGRES_PASSWORD=//p' $(ROOT)/.env.production | head -1 | sed -e 's/^"//' -e 's/"$$//'); \
 	docker run --rm --network $$NET \
 	  -e DATABASE_URL="$${CRM_DB:-postgresql://blackforrestt:$${PGPWD}@postgres:5432/blckforest_crm}" \
 	  -e CRM_ADMIN_EMAIL="$${CRM_ADMIN_EMAIL:-}" \

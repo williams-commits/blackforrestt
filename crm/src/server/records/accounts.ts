@@ -55,13 +55,14 @@ function serialize(row: Prisma.AccountGetPayload<{ include: typeof include }>) {
 export async function listAccounts(
   ctx: ScopedContext,
   query: { page: number; pageSize: number; sort?: string; q?: string },
-  filters: { statusId?: string } = {},
+  filters: { statusId?: string; mine?: boolean } = {},
   cfFilters?: Array<{ key: string; value: string }>,
 ) {
   const where: Prisma.AccountWhereInput = {
     deletedAt: null,
     ...ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds),
     ...(filters.statusId ? { statusId: filters.statusId } : {}),
+    ...(filters.mine ? { ownerUserId: ctx.userId } : {}),
     ...searchWhere(SEARCH_FIELDS, query.q ?? ""),
     ...customFieldWhere(cfFilters ?? []),
   };

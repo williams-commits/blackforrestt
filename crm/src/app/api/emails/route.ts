@@ -22,6 +22,10 @@ export async function GET(request: Request) {
       subjectType: params.get("subjectType") ?? undefined,
       subjectId: params.get("subjectId") ?? undefined,
       page: params.get("page") ?? undefined,
+      // "Mine only" + the admin "Mail of {user}" deep-link — both were sent
+      // by MailboxPage and silently dropped here, making the filters no-ops.
+      mine: params.get("mine") ?? undefined,
+      userId: params.get("userId") ?? undefined,
     });
     if (!parsed.success) return NextResponse.json({ error: "Invalid mailbox query." }, { status: 400 });
     return NextResponse.json({ data: await listMailbox(ctx, parsed.data) });

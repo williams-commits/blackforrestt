@@ -350,10 +350,15 @@ const authHandler = auth((req) => {
   const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
   const tradeSubdomainLabel = (process.env.TRADE_SUBDOMAIN ?? "trade").trim();
   const onTradeHost = brandDomainList().some((domain) => bareHost(req) === `${tradeSubdomainLabel}.${domain}`);
+  // Locale-independent public assets never localize — redirecting them
+  // (favicon, robots, sitemap, manifest, og/share images, payment icons)
+  // just costs locale-cookie holders an extra round-trip per fetch.
+  const STATIC_ASSET = /^\/(favicon\.svg|favicon\.ico|robots\.txt|sitemap\.xml|manifest\.webmanifest|og\.png|brand\/|payments\/)/;
   if (
     cookieLocale &&
     (LOCALES as readonly string[]).includes(cookieLocale) &&
     cookieLocale !== DEFAULT_LOCALE &&
+    !STATIC_ASSET.test(strippedPath) &&
     !strippedPath.startsWith("/api/") &&
     !onTradeHost &&
     !req.headers.get("x-locale-resolved")

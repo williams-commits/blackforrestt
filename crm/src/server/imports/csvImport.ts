@@ -307,6 +307,11 @@ export async function validateImport(
   const phoneKey = Object.entries(input.mapping).find(([, key]) => key === "phone")?.[0];
   const externalKey = Object.entries(input.mapping).find(([, key]) => key === "externalId")?.[0];
 
+  // Duplicates WITHIN the file itself: the DB-only check let two rows with
+  // the same key both "validate" (and both create under CREATE). First
+  // occurrence wins; later ones are reported as in-file duplicates
+  // (existingId empty) and skipped by every strategy.
+  const seenInFile = new Map<string, number>(); // "field:value" → first row number
   for (let index = 0; index < input.rows.length; index += 1) {
     if (!transformed[index]) continue;
     const row = input.rows[index];
@@ -324,12 +329,20 @@ export async function validateImport(
             ? (normalizePhone(rawValue) ?? "")
             : (rawValue?.trim() ?? "");
       if (!value) continue;
+      const fileKey = `${field}:${value}`;
+      const firstRow = seenInFile.get(fileKey);
+      if (firstRow != null) {
+        duplicates.push({ row: rowNumber, matchOn: `${field} (in file)`, existingId: "", label: `row ${firstRow}` });
+        duplicateRows.add(rowNumber);
+        break; // one reported match per row
+      }
       const existing = await findExisting(input.objectType, ctx, field, value);
       if (existing) {
         duplicates.push({ row: rowNumber, matchOn: field, existingId: existing.id, label: existing.label });
         duplicateRows.add(rowNumber);
         break; // one reported match per row
       }
+      seenInFile.set(fileKey, rowNumber);
     }
   }
 
@@ -534,7 +547,14 @@ async function processImportJob(jobId: string): Promise<void> {
         );
       } else if (duplicateByRow.has(rowNumber)) {
         const duplicate = duplicateByRow.get(rowNumber)!;
-        if (strategy === "CREATE") {
+        if (!duplicate.existingId) {
+          // In-file duplicate — there is no DB record to update, so every
+          // strategy skips it (updating "" would just error).
+          counts.duplicates += 1;
+          await prisma.importError.create({
+            data: { jobId, rowNumber, data: row as never, message: `Duplicate of ${duplicate.label} (${duplicate.matchOn}) within this file — skipped.` },
+          });
+        } else if (strategy === "CREATE") {
           counts.duplicates += 1;
           await prisma.importError.create({
             data: { jobId, rowNumber, data: row as never, message: `Duplicate of “${duplicate.label}” (${duplicate.matchOn}) — skipped.` },
@@ -600,8 +620,24 @@ async function processImportJob(jobId: string): Promise<void> {
   });
 }
 
+/** RUNNING jobs untouched for 30+ minutes are dead workers (the process
+ *  restarts that strand fire-and-forget jobs) — fail them with a reason so
+ *  the wizard's poller terminates instead of spinning forever. */
+async function reapStrandedJobs(userId: string): Promise<void> {
+  const cutoff = new Date(Date.now() - 30 * 60_000);
+  await prisma.importJob.updateMany({
+    where: {
+      createdById: userId,
+      status: "RUNNING",
+      updatedAt: { lt: cutoff },
+    },
+    data: { status: "FAILED", finishedAt: new Date() },
+  });
+}
+
 /** Recent jobs for the wizard's history panel. */
-export function listJobs(userId: string) {
+export async function listJobs(userId: string) {
+  await reapStrandedJobs(userId);
   return prisma.importJob.findMany({
     where: { createdById: userId },
     orderBy: { createdAt: "desc" },

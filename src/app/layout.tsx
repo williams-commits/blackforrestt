@@ -9,6 +9,7 @@ import { FormatLocaleBridge } from "@/components/FormatLocaleBridge";
 import { TopProgressBar } from "@/components/ui/TopProgressBar";
 import { currentBrandProfile, safeBrandColor } from "@/lib/branding";
 import { LOCALE_BCP47, LOCALE_OG, RTL_LOCALES } from "@/i18n/config";
+import { deepMergeMessages } from "@/i18n/request";
 import { languageAlternates } from "@/lib/seo";
 
 /*
@@ -144,8 +145,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = await getLocale();
   const htmlLang = LOCALE_BCP47[locale as keyof typeof LOCALE_BCP47] ?? "en";
   const isRTL = RTL_LOCALES.has(locale);
-  // Load messages for the client provider (same resolver as request.ts).
-  const messages = (await import(`../messages/${locale}.json`)).default;
+  // Load messages for the client provider with the same DEEP English fallback
+  // as the server resolver (request.ts) — a shallow import here would hand
+  // client components raw locale files whose nested gaps render as key paths.
+  const [localeMsgs, defaultMsgs] = await Promise.all([
+    import(`../messages/${locale}.json`),
+    import(`../messages/en.json`),
+  ]);
+  const messages = deepMergeMessages(defaultMsgs.default as Record<string, unknown>, localeMsgs.default as Record<string, unknown>);
 
   // Organization + WebSite structured data. Regulatory identifiers are only
   // included when configured via the COMPANY_* env placeholders — never

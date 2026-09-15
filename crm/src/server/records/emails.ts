@@ -263,9 +263,10 @@ export async function listMailbox(
     ...(query.folder === "inbox" ? { direction: "INBOUND" } : {}),
     ...(query.folder === "sent" ? { direction: "OUTBOUND" } : {}),
     ...(query.unread ? { readAt: null, direction: "INBOUND" } : {}),
-    // Per-user view: mail the user sent OR received (admin deep-link / mine).
-    ...(query.userId
-      ? { OR: [{ sentById: query.userId }, { ownerUserId: query.userId }] }
+    // Per-user view: mail the user sent OR received (admin deep-link /
+    // "mine only" — the route forwards both params).
+    ...(query.userId || query.mine
+      ? { OR: [{ sentById: query.userId ?? ctx.userId }, { ownerUserId: query.userId ?? ctx.userId }] }
       : {}),
     ...(query.q
       ? { OR: [
@@ -277,27 +278,53 @@ export async function listMailbox(
       : {}),
   };
 
-  // Linked rows must pass the record-scope filter. Fetch a wider page, then
-  // trim — scope checks are per-record resolver calls, bounded by page size.
-  const candidates = await prisma.emailMessage.findMany({
-    where,
+  // Linked rows must pass the record-scope filter, which SQL can't express —
+  // so paginate AFTER filtering, not before. Walk the feed forward in chunks
+  // until this page (+1 lookahead for hasMore) fills or rows run out; rows
+  // hidden by scope never shift page boundaries, so pages can't overlap or
+  // strand deep mail the way the old pre-filter skip windows did.
+  const BATCH = PAGE_SIZE * 4;
+  const target = query.page * PAGE_SIZE + 1;
+  const visible: Prisma.EmailMessageGetPayload<{ include: { sentBy: { select: { name: true } } } }>[] = [];
+  let scanned = 0;
+  let exhausted = false;
+  while (!exhausted && visible.length < target) {
+    const batch = await prisma.emailMessage.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: BATCH,
+      skip: scanned,
+      include: { sentBy: { select: { name: true } } },
+    });
+    scanned += batch.length;
+    if (batch.length < BATCH) exhausted = true;
+    for (const row of batch) {
+      if (visible.length >= target) break;
+      if (await canSee(ctx, row)) visible.push(row);
+    }
+  }
+  const rows = visible.slice((query.page - 1) * PAGE_SIZE, query.page * PAGE_SIZE);
+
+  // Unread badge over mail the reader can actually see — the old global
+  // count included inbound rows linked to out-of-scope records, so REP
+  // badges overcounted vs. what the Unread folder lists. Bounded to the
+  // newest 200 unread; canSee is a per-record resolver call.
+  const unreadCandidates = await prisma.emailMessage.findMany({
+    where: { direction: "INBOUND", readAt: null },
     orderBy: { createdAt: "desc" },
-    take: PAGE_SIZE * 4,
-    skip: (query.page - 1) * PAGE_SIZE,
-    include: { sentBy: { select: { name: true } } },
+    take: 200,
+    select: { subjectType: true, subjectId: true },
   });
-  const visible: typeof candidates = [];
-  for (const row of candidates) {
-    if (await canSee(ctx, row)) visible.push(row);
-    if (visible.length === PAGE_SIZE) break;
+  let unreadCount = 0;
+  for (const row of unreadCandidates) {
+    if (await canSee(ctx, row)) unreadCount += 1;
   }
 
-  const unreadCount = await prisma.emailMessage.count({ where: { direction: "INBOUND", readAt: null } });
   return {
-    rows: visible.map(serializeEmail),
+    rows: rows.map(serializeEmail),
     page: query.page,
     pageSize: PAGE_SIZE,
-    hasMore: candidates.length === PAGE_SIZE * 4,
+    hasMore: visible.length > query.page * PAGE_SIZE,
     unreadCount,
   };
 }

@@ -7,6 +7,7 @@ import {
   markPosition,
   openPosition,
   pipsBetween,
+  strikeRateAllowed,
   type InstrumentCfg,
 } from "../src/server/engine/positionEngine.js";
 
@@ -154,4 +155,18 @@ test("strike positions settle only at expiry", () => {
   const atExpiry = markPosition(opened, 1.101, instrument, opened.openedTillMs!);
   assert.equal(atExpiry.shouldClose, true);
   assert.equal(atExpiry.closeReason, "EXPIRY");
+});
+
+test("strike entries beyond the market-distance limit are rejected", () => {
+  // Near-market strike (≈0.02% away) — allowed.
+  assert.equal(strikeRateAllowed(1.1, 1.1002), true);
+  // Just inside the default 5% band (≈4.98%).
+  assert.equal(strikeRateAllowed(1.155, 1.1002), true);
+  // Just outside the band (≈6.3%).
+  assert.equal(strikeRateAllowed(1.17, 1.1002), false);
+  // The audit's exploit payload: a near-zero strike on EURUSD.
+  assert.equal(strikeRateAllowed(0.0001, 1.1002), false);
+  // Degenerate inputs never pass.
+  assert.equal(strikeRateAllowed(NaN, 1.1002), false);
+  assert.equal(strikeRateAllowed(1.1, 0), false);
 });

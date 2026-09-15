@@ -147,6 +147,8 @@ export function MailboxPage() {
     if (response?.ok) {
       setSelected(null);
       void load();
+    } else {
+      setError("Could not mark the message as unread — try again.");
     }
   }
 
@@ -345,7 +347,7 @@ export function MailboxPage() {
                               to: selected.from,
                               subject: selected.subject.startsWith("Re:") ? selected.subject : `Re: ${selected.subject}`,
                               body: `\n\n---- On ${new Date(selected.createdAt).toLocaleString()}, ${selected.from} wrote:\n${selected.body}`,
-                              html: `<p><br></p><p>On ${new Date(selected.createdAt).toLocaleString()}, ${escapeHtml(selected.from)} wrote:</p><blockquote><p>${selected.body.split("\n").map((line) => `${escapeHtml(line) || "<br>"}`).join("<br>")}</p></blockquote>`,
+                              html: `<p><br></p><p>On ${new Date(selected.createdAt).toLocaleString()}, ${escapeHtml(selected.from)} wrote:</p><blockquote>${quote}</blockquote>`,
                             });
                           }}
                           className="rounded-md border border-(--border-strong) px-2.5 py-1.5 text-xs font-medium hover:bg-(--bg-hover)"
@@ -385,6 +387,7 @@ export function MailboxPage() {
           toEmail={compose.to ?? null}
           initialSubject={compose.subject}
           initialBody={compose.body}
+          initialHtml={compose.html}
           onClose={() => { setCompose(null); void load(); }}
           onSent={() => void load()}
         />

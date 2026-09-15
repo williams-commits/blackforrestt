@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Reveal } from "@/components/landing/Reveal";
 import { SectionBackdrop } from "../SectionBackdrop";
-import { currentBrandProfile } from "@/lib/branding";
+import { currentBrandProfile, tradeHostForDomain } from "@/lib/branding";
 
 /**
  * Intelligence — the analysis pitch on the GBFXS statement yellow. Left carries the
@@ -54,7 +54,7 @@ export async function IntelligenceSection() {
 
         {/* Analyst composition — signal card + leaning calendar card */}
         <Reveal delay={120}>
-          <div className="relative pb-8 pl-6 sm:pb-10 sm:pl-10">
+          <div className="relative">
             <div className="ag-frame p-6 sm:p-7">
               <div className="flex items-center justify-between" aria-hidden="true">
                 <span className="flex items-center gap-2.5">
@@ -148,6 +148,7 @@ export async function IntelligenceSection() {
  */
 export async function ShowcaseSection() {
   const t = await getTranslations("agile.showcase");
+  const showcaseBrand = await currentBrandProfile();
   const bullets = [t("b1"), t("b2"), t("b3")];
 
   return (
@@ -194,7 +195,7 @@ export async function ShowcaseSection() {
                 <span className="h-1.5 w-1.5 rounded-full bg-[#ff6b6b]/60" />
                 <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
                 <span className="h-1.5 w-1.5 rounded-full bg-[#f0b90b]/70" />
-                <span className="ml-1.5 flex-1 rounded bg-white/5 px-2 py-0.5 font-mono text-[6.5px] tracking-widest text-[#75757b]">trade.gbfxs.com</span>
+                <span className="ml-1.5 flex-1 rounded bg-white/5 px-2 py-0.5 font-mono text-[6.5px] tracking-widest text-[#75757b]">{tradeHostForDomain(showcaseBrand.domain)}</span>
               </div>
               {/* AccountBar — the real metrics strip */}
               <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">

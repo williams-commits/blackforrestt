@@ -51,7 +51,7 @@ const include = {
 export async function listContacts(
   ctx: ScopedContext,
   query: { page: number; pageSize: number; sort?: string; q?: string },
-  filters: { accountId?: string; statusId?: string },
+  filters: { accountId?: string; statusId?: string; mine?: boolean },
   cfFilters?: Array<{ key: string; value: string }>,
 ) {
   const where: Prisma.ContactWhereInput = {
@@ -59,6 +59,7 @@ export async function listContacts(
     ...ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds),
     ...(filters.accountId ? { accountId: filters.accountId } : {}),
     ...(filters.statusId ? { statusId: filters.statusId } : {}),
+    ...(filters.mine ? { ownerUserId: ctx.userId } : {}),
     ...searchWhere(SEARCH_FIELDS, query.q ?? ""),
     ...customFieldWhere(cfFilters ?? []),
   };

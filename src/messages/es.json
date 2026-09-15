@@ -27,7 +27,10 @@
       "fundamental": "Análisis fundamental",
       "trend": "Análisis de tendencia",
       "beginners": "Guía para principiantes",
-      "advanced": "Estrategias avanzadas"
+      "advanced": "Estrategias avanzadas",
+      "beginnersVods": "Cursos en vídeo — Principiantes",
+      "advancedVods": "Cursos en vídeo — Avanzados",
+      "cryptoVods": "Cursos en vídeo — Cripto"
     }
   },
   "hero": {
@@ -451,7 +454,16 @@
     "valuesIcon": "speed",
     "complianceTitle": "Regulación y cumplimiento",
     "complianceP1": "{company} opera en pleno cumplimiento de la normativa aplicable de prevención del blanqueo de capitales (AML) y de Conozca a su Cliente (KYC). Los fondos de los clientes se mantienen en cuentas segregadas, separadas de los fondos operativos de la empresa, y nunca se utilizan para otro fin que no sea su actividad de trading.",
-    "complianceP2": "No ofrecemos servicios a ciudadanos o residentes de Estados Unidos, Siria, Sudán, Irán o Corea del Norte. El trading solo está disponible para mayores de 18 años."
+    "complianceP2": "No ofrecemos servicios a ciudadanos o residentes de Estados Unidos, Siria, Sudán, Irán o Corea del Norte. El trading solo está disponible para mayores de 18 años.",
+    "factsTitle": "Datos de la empresa",
+    "facts": {
+      "legalEntity": "Entidad jurídica",
+      "registration": "Número de registro",
+      "jurisdiction": "Jurisdicción",
+      "regulator": "Regulador",
+      "protection": "Protección del inversor",
+      "office": "Domicilio social registrado"
+    }
   },
   "beginners": {
     "metaTitle": "Guía para principiantes",

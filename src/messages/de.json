@@ -27,7 +27,10 @@
       "fundamental": "Fundamentalanalyse",
       "trend": "Trendanalyse",
       "beginners": "Einsteiger-Leitfaden",
-      "advanced": "Fortgeschrittene Strategien"
+      "advanced": "Fortgeschrittene Strategien",
+      "beginnersVods": "Video-Kurse — Anfänger",
+      "advancedVods": "Video-Kurse — Fortgeschrittene",
+      "cryptoVods": "Video-Kurse — Krypto"
     }
   },
   "hero": {
@@ -451,7 +454,16 @@
     "valuesIcon": "speed",
     "complianceTitle": "Regulierung & Compliance",
     "complianceP1": "{company} arbeitet in voller Übereinstimmung mit den geltenden Anti-Geldwäsche- (AML) und Know-Your-Customer-Bestimmungen (KYC). Kundengelder werden auf segregierten Konten verwahrt, getrennt von den operativen Mitteln des Unternehmens, und nie für andere Zwecke als Ihre Handelsaktivität verwendet.",
-    "complianceP2": "Wir bieten keine Dienstleistungen für Staatsbürger oder Einwohner der Vereinigten Staaten, Syriens, Sudans, des Iran oder Nordkoreas an. Der Handel ist nur für Personen ab 18 Jahren verfügbar."
+    "complianceP2": "Wir bieten keine Dienstleistungen für Staatsbürger oder Einwohner der Vereinigten Staaten, Syriens, Sudans, des Iran oder Nordkoreas an. Der Handel ist nur für Personen ab 18 Jahren verfügbar.",
+    "factsTitle": "Unternehmensangaben",
+    "facts": {
+      "legalEntity": "Rechtsträger",
+      "registration": "Registernummer",
+      "jurisdiction": "Rechtsraum",
+      "regulator": "Aufsichtsbehörde",
+      "protection": "Anlegerschutz",
+      "office": "Eingetragener Firmensitz"
+    }
   },
   "beginners": {
     "metaTitle": "Einsteiger-Leitfaden",

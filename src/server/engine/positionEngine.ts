@@ -148,6 +148,46 @@ export function openPosition(input: OpenInput): OpenResult {
 }
 
 /**
+ * Max distance a STRIKE entry may sit from the live market rate, in percent.
+ * Env-tunable dealer control (STRIKE_MAX_DISTANCE_PERCENT). A strike's whole
+ * payoff is measured strike→market, so an off-market strike mints synthetic
+ * P&L; this limit is the hard gate against that.
+ */
+export function strikeDistanceLimitPercent(): number {
+  const parsed = Number(process.env.STRIKE_MAX_DISTANCE_PERCENT);
+  return Number.isFinite(parsed) && parsed > 0 && parsed <= 100 ? parsed : 5;
+}
+
+/** True when a strike entry is within the allowed distance of the live rate. */
+export function strikeRateAllowed(strikeRate: number, marketRate: number): boolean {
+  if (!Number.isFinite(strikeRate) || strikeRate <= 0 || !Number.isFinite(marketRate) || marketRate <= 0) {
+    return false;
+  }
+  return (Math.abs(strikeRate - marketRate) / marketRate) * 100 <= strikeDistanceLimitPercent();
+}
+
+/**
+ * Recompute the P/L percentage adjustment from gross profit. MUST be
+ * re-derived (not accumulated) at every application to prevent exponential
+ * compounding: gross = profit − priorAdjustment, then adjustment = gross ×
+ * pct/100. Applied by the tick loop AND every close path (manual, admin,
+ * stop-out) so the booked realized amount always matches the last displayed
+ * net P&L on dealer-adjusted accounts.
+ */
+export function applyPnlAdjustment(pos: Position, pnlPercent: number): Position {
+  if (!Number.isFinite(pnlPercent) || pnlPercent === 0) return pos;
+  const priorAdjustment = new Prisma.Decimal(pos.adminPnlAdjustment);
+  const grossProfit = new Prisma.Decimal(pos.profit).sub(priorAdjustment);
+  const newAdjustment = grossProfit.mul(pnlPercent / 100);
+  return {
+    ...pos,
+    adminPnlAdjustment: newAdjustment,
+    profit: grossProfit.add(newAdjustment),
+    netProfit: new Prisma.Decimal(pos.netProfit).sub(priorAdjustment).add(newAdjustment),
+  };
+}
+
+/**
  * Recompute a position's floating PnL at a new mark rate.
  * Returns the updated position and whether it should close (SL/TP/STRIKE expiry).
  */
@@ -222,6 +262,8 @@ export interface AccountInput {
 export interface AccountOutput {
   balance: Prisma.Decimal;
   credit: Prisma.Decimal;
+  /** Ledger available — the pool the server actually reserves margin+commission from. */
+  available: Prisma.Decimal;
   equity: Prisma.Decimal;
   margin: Prisma.Decimal;
   marginLevel: Prisma.Decimal | null;
@@ -244,7 +286,7 @@ export function computeMetrics(input: AccountInput): AccountOutput {
     ? equity.div(margin).mul(100).toDecimalPlaces(4, Decimal.ROUND_HALF_EVEN)
     : null;
   const free = monetary(input.available.add(input.credit).add(floatingPl));
-  return { balance: input.balance, credit: input.credit, equity, margin, marginLevel, free, floatingPl };
+  return { balance: input.balance, credit: input.credit, available: input.available, equity, margin, marginLevel, free, floatingPl };
 }
 
 /**

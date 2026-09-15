@@ -54,6 +54,32 @@ export default getRequestConfig(async () => {
 
   return {
     locale,
-    messages: { ...(defaultMsgs.default as Record<string, unknown>), ...(localeMsgs.default as Record<string, unknown>) },
+    messages: deepMergeMessages(
+      defaultMsgs.default as Record<string, unknown>,
+      localeMsgs.default as Record<string, unknown>,
+    ),
   };
 });
+
+/**
+ * Deep English fallback: nested namespaces exist in BOTH files, so a shallow
+ * top-level spread lets the locale's (partial) namespace shadow the English
+ * one entirely — missing nested keys then render as raw key paths. Recursively
+ * merge instead: every missing leaf falls back to English.
+ */
+export function deepMergeMessages(
+  base: Record<string, unknown>,
+  override: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...base };
+  for (const [key, value] of Object.entries(override)) {
+    const baseValue = out[key];
+    if (baseValue && value && typeof baseValue === "object" && typeof value === "object"
+      && !Array.isArray(baseValue) && !Array.isArray(value)) {
+      out[key] = deepMergeMessages(baseValue as Record<string, unknown>, value as Record<string, unknown>);
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}

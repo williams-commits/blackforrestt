@@ -57,6 +57,9 @@ const PAGE_GROUPS: MenuGroup[] = [
     items: [
       { key: "beginners", href: "/education/beginners" },
       { key: "advanced", href: "/education/advanced" },
+      { key: "beginnersVods", href: "/education/beginners-vods" },
+      { key: "advancedVods", href: "/education/advanced-vods" },
+      { key: "cryptoVods", href: "/education/crypto-vods" },
     ],
   },
 ];

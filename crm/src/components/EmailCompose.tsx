@@ -227,7 +227,7 @@ export function EmailCompose({
     } finally {
       setBusy(false);
     }
-  }, [to, cc, bcc, subject, bodyText, bodyHtml, linked, subjectType, subjectId, createFollowUp, followUpInDays, draftKey, onSent]);
+  }, [to, cc, bcc, subject, bodyText, linked, subjectType, subjectId, createFollowUp, followUpInDays, draftKey, onSent]);
 
   // ⌘/Ctrl+Enter sends from any field.
   useEffect(() => {
@@ -241,8 +241,6 @@ export function EmailCompose({
     return () => window.removeEventListener("keydown", onKey);
   }, [send, busy, sent]);
 
-  const inputClass =
-    "w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none focus:ring-2 focus:ring-(--brand)/20 disabled:opacity-60";
   const canSend = !busy && !sent && Boolean(to.trim()) && Boolean(subject.trim()) && Boolean(bodyText.trim());
 
   const toolbarButtons: Array<{ cmd: string; label: string; title: string; value?: string }> = [

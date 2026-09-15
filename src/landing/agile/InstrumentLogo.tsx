@@ -29,9 +29,9 @@ export function InstrumentLogo({
   if (single) {
     return (
       <span className={`inline-flex shrink-0 ${className}`}>
-        <span className="inline-flex h-full aspect-square items-center justify-center rounded-full border border-white/10 bg-white/[0.05]">
+        <span className="inline-flex h-full aspect-square items-center justify-center rounded-xl boder border-white/10 bg-white/5">
           {/* eslint-disable-next-line @next/next/no-img-element -- decorative instrument mark; the symbol sits adjacent */}
-          <img src={ASSET_DIR + single} alt="" loading="lazy" decoding="async" className="h-[62%] w-[62%] object-contain" />
+          <img src={ASSET_DIR + single} alt="" loading="lazy" decoding="async" className="h-[62%] w-[62%] object-contain rounded-xl" />
         </span>
       </span>
     );
@@ -48,7 +48,7 @@ export function InstrumentLogo({
           alt=""
           loading="lazy"
           decoding="async"
-          className="relative z-10 aspect-square h-full w-auto rounded-full object-cover ring-1 ring-black/40"
+          className="relative z-10 aspect-square h-full w-auto rounded-xl object-cover ring-1 ring-black/40"
         />
         {/* eslint-disable-next-line @next/next/no-img-element -- decorative currency flags; the symbol sits adjacent */}
         <img
@@ -56,7 +56,7 @@ export function InstrumentLogo({
           alt=""
           loading="lazy"
           decoding="async"
-          className="-ml-[26%] aspect-square h-[74%] w-auto rounded-full object-cover ring-1 ring-black/40"
+          className="ml-[-26%] aspect-square h-[74%] w-auto rounded-xl object-cover ring-1 ring-black/40"
         />
       </span>
     );

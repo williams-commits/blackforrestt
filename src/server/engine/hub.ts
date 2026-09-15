@@ -31,11 +31,14 @@ import { seedAlphavantageCandles } from "./alphavantageCandles";
 import { getGenericFeed, type GenericFeed } from "./genericFeed";
 import { getMarketDataMode } from "./marketDataMode";
 import {
+  applyPnlAdjustment,
   computeMetrics,
   marginFor,
   markPosition,
   openPosition,
   accrueSwap,
+  strikeDistanceLimitPercent,
+  strikeRateAllowed,
   type InstrumentCfg,
   type Position,
 } from "./positionEngine";
@@ -55,6 +58,15 @@ import type {
 const { Decimal } = Prisma;
 
 /** Human wording for a position's close reason, used in customer notifications. */
+/** Resolve a user's dealer P/L percentage; 0 when settings are unreadable. */
+async function pnlPercentForUser(userId: string): Promise<number> {
+  try {
+    return (await resolveUserSettings(userId)).pnl.pnlAdjustmentPercent;
+  } catch {
+    return 0;
+  }
+}
+
 function closeReasonLabel(reason: string): string {
   switch (reason) {
     case "MANUAL": return "manual close";
@@ -452,19 +464,9 @@ class Hub {
 
         const withSwap = accrueSwap(position, cfg);
         const marked = markPosition(withSwap, markRate, cfg);
-
-        // Apply P/L percentage adjustment. The adjustment must be RECOMPUTED
-        // from gross profit each tick (not accumulated) to prevent exponential
-        // compounding. We derive gross from (profit - priorAdminAdjustment),
-        // then set adminPnlAdjustment = gross * pct/100 and rebuild profit/net.
-        if (pnlPercent !== 0) {
-          const priorAdjustment = new Prisma.Decimal(position.adminPnlAdjustment);
-          const grossProfit = new Prisma.Decimal(marked.position.profit).sub(priorAdjustment);
-          const newAdjustment = grossProfit.mul(pnlPercent / 100);
-          marked.position.adminPnlAdjustment = newAdjustment;
-          marked.position.profit = grossProfit.add(newAdjustment);
-          marked.position.netProfit = new Prisma.Decimal(marked.position.netProfit).sub(priorAdjustment).add(newAdjustment);
-        }
+        // Recompute the P/L percentage adjustment from gross (never
+        // accumulated — see applyPnlAdjustment).
+        marked.position = applyPnlAdjustment(marked.position, pnlPercent);
 
         positions[index] = marked.position;
         changedUsers.add(userId);
@@ -560,7 +562,12 @@ class Hub {
           const rate = state.sim.rateFor(worst.side === "BUY" ? "SELL" : "BUY");
           const index = positions.findIndex((position) => position.id === worst.id);
           if (index < 0) break;
-          positions[index] = markPosition(accrueSwap(worst, cfg), rate, cfg).position;
+          // Same dealer P/L adjustment the tick loop applies, so the booked close
+          // matches the last displayed net P&L.
+          positions[index] = applyPnlAdjustment(
+            markPosition(accrueSwap(worst, cfg), rate, cfg).position,
+            await pnlPercentForUser(userId),
+          );
 
           console.warn(
             `Stop-out closing ${worst.symbol} ${worst.side}; margin level ${metrics.marginLevel?.toFixed(1)}%.`,
@@ -918,7 +925,12 @@ class Hub {
       if (!state) throw new TradingError("The position instrument is unavailable.", "CONFLICT");
       const cfg = this.cfg(state);
       const closeRate = state.sim.rateFor(current.side === "BUY" ? "SELL" : "BUY");
-      positions[index] = markPosition(accrueSwap(current, cfg), closeRate, cfg).position;
+      // Same dealer P/L adjustment the tick loop applies, so the booked close
+      // matches the last displayed net P&L.
+      positions[index] = applyPnlAdjustment(
+        markPosition(accrueSwap(current, cfg), closeRate, cfg).position,
+        await pnlPercentForUser(durable.userId),
+      );
       const closed = await this.closePositionInternal(
         durable.userId,
         input.positionId,
@@ -944,7 +956,12 @@ class Hub {
       if (!state) return null;
       const cfg = this.cfg(state);
       const closeRate = state.sim.rateFor(current.side === "BUY" ? "SELL" : "BUY");
-      positions[index] = markPosition(accrueSwap(current, cfg), closeRate, cfg).position;
+      // Same dealer P/L adjustment the tick loop applies, so the booked close
+      // matches the last displayed net P&L.
+      positions[index] = applyPnlAdjustment(
+        markPosition(accrueSwap(current, cfg), closeRate, cfg).position,
+        await pnlPercentForUser(userId),
+      );
       return this.closePositionInternal(userId, positionId, cfg, "MANUAL", true, userId, null);
     });
   }
@@ -1197,6 +1214,7 @@ class Hub {
       accountNo,
       balance: Number(calculated.balance),
       credit: Number(calculated.credit),
+      available: Number(calculated.available),
       equity: Number(calculated.equity),
       margin: Number(calculated.margin),
       marginLevel: calculated.marginLevel == null ? null : Number(calculated.marginLevel),
@@ -1429,6 +1447,15 @@ class Hub {
       }
       if (input.stopLoss != null || input.takeProfit != null) {
         throw new TradingError("Strike positions do not accept stop-loss or take-profit levels.", "VALIDATION");
+      }
+      // A strike's payoff is measured strike→market, so an off-market strike
+      // mints synthetic P&L. Hard gate: the strike must sit within the
+      // dealer-tunable distance of the live entry rate.
+      if (input.strikeRate != null && !strikeRateAllowed(input.strikeRate, entryRate)) {
+        throw new TradingError(
+          `Strike rate must be within ${strikeDistanceLimitPercent()}% of the current market rate.`,
+          "VALIDATION",
+        );
       }
       return;
     }

@@ -36,10 +36,20 @@ interface RecordFormProps {
   canEdit?: boolean;
 }
 
+/** UTC instant → local datetime-local value (YYYY-MM-DDTHH:mm). */
+function toLocalInputValue(instant: string): string {
+  const date = new Date(instant);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
 /** Coerce a row value into a form-input value (dates → datetime-local). */
 function toInputValue(field: FieldConfig, raw: unknown): string {
   if (raw === null || raw === undefined) return "";
-  if (field.type === "datetime-local" && typeof raw === "string") return raw.slice(0, 16);
+  // UTC ISO → LOCAL wall time: a raw slice(0,16) hands a UTC timestamp to a
+  // local-time input, silently shifting the value on every edit-save cycle.
+  if (field.type === "datetime-local" && typeof raw === "string") return toLocalInputValue(raw);
   if (field.type === "date" && typeof raw === "string") return raw.slice(0, 10);
   return String(raw);
 }
@@ -195,7 +205,10 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
       const value = values[field.name];
       if (value === "") {
         // Create: omit optionals entirely; required stays (browser checks).
-        if (!field.required && !editing) continue;
+        // Edit: numerics are omitted too — the API coerces null against
+        // z.coerce.number() and 400s the whole save, so a cleared Score
+        // could never be saved. Nullable string fields still send null.
+        if (!field.required && (!editing || field.type === "number")) continue;
         payload[field.name] = null;
       } else if (field.type === "number") {
         payload[field.name] = Number(value);

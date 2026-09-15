@@ -63,7 +63,10 @@ export function TradePanel({ instrument }: Props) {
   const commission = Number.isFinite(vol) ? vol * instrument.commissionPerLot : 0;
   const pipValue = Number.isFinite(vol) ? vol * instrument.pipValue : 0;
   const requiredCash = margin + commission;
-  const freeMargin = account?.free ?? 0;
+  // The server reserves margin+commission from LEDGER available (not
+  // free = available+credit+floating) — pre-check the same pool so the
+  // button's verdict matches the server's INSUFFICIENT_FUNDS gate.
+  const freeMargin = account?.available ?? account?.free ?? 0;
   const hasValidVolume = Number.isFinite(vol) && vol >= 0.01 && vol <= 100;
   const hasFunds = account != null && freeMargin + 1e-8 >= requiredCash;
 
@@ -89,6 +92,17 @@ export function TradePanel({ instrument }: Props) {
     if (type === "STRIKE" && parsedStrike != null && (!Number.isFinite(parsedStrike) || parsedStrike <= 0)) {
       setValidationError("Enter a valid strike rate or leave it blank to use the market rate.");
       return;
+    }
+    // Mirror of the server's hard gate (hub.validateOpenInput →
+    // strikeRateAllowed, env STRIKE_MAX_DISTANCE_PERCENT, default 5%): a
+    // strike's payoff is strike→market, so far-from-market strikes are
+    // rejected server-side — fail fast with the same rule here.
+    if (type === "STRIKE" && parsedStrike != null && entryRate > 0) {
+      const distancePercent = (Math.abs(parsedStrike - entryRate) / entryRate) * 100;
+      if (distancePercent > 5) {
+        setValidationError("Strike rate must be within 5% of the live market rate.");
+        return;
+      }
     }
     if (type === "CFD") {
       if (parsedStopLoss != null && (!Number.isFinite(parsedStopLoss) || parsedStopLoss <= 0)) {

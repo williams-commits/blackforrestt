@@ -156,6 +156,36 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
       return;
     }
     if (pathname !== "/ws") return;
+    // Origin gate — WS handshakes carry session cookies and bypass the HTTP
+    // middleware's origin check, so a cross-site page could otherwise open a
+    // victim's socket and stream their account/positions (cross-site WS
+    // hijacking). Browsers always send Origin; same-origin and every
+    // APP_ORIGIN entry pass. In production an absent Origin is rejected too.
+    const originHeader = req.headers.origin;
+    if (originHeader) {
+      const allowed = new Set<string>();
+      for (const value of (process.env.APP_ORIGIN ?? "").split(",")) {
+        const configured = value.trim();
+        if (!configured) continue;
+        try { allowed.add(new URL(configured).origin); } catch { /* skip malformed entry */ }
+      }
+      const host = req.headers.host;
+      if (host) {
+        allowed.add(`https://${host}`);
+        allowed.add(`http://${host}`);
+      }
+      let origin = "";
+      try { origin = new URL(originHeader).origin; } catch { /* malformed origin */ }
+      if (!origin || !allowed.has(origin)) {
+        socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+        socket.destroy();
+        return;
+      }
+    } else if (process.env.NODE_ENV === "production") {
+      socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+      socket.destroy();
+      return;
+    }
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit("connection", ws, req));
   });
 
@@ -224,7 +254,9 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
     // silently dropped (no listener yet), losing fast client subscribes.
     const earlyFrames: RawClientPayload[] = [];
     let authed = false;
-    ws.on("message", (raw) => { if (!authed) earlyFrames.push(raw); });
+    // Bound the pre-auth buffer: frames streamed during the async auth
+    // window had no cap (each ≤16KB, but unbounded count = memory pressure).
+    ws.on("message", (raw) => { if (!authed && earlyFrames.length < 16) earlyFrames.push(raw); });
     ws.on("pong", () => { /* heartbeat handled post-auth */ });
 
     void (async () => {
@@ -272,8 +304,18 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
           }
         });
       });
-      ws.on("close", () => { unregisterClient(client); hub.clientDisconnected(userId); });
-      ws.on("error", () => { unregisterClient(client); hub.clientDisconnected(userId); });
+      // `error` is ALWAYS followed by `close` in the ws library — run the
+      // unregister path exactly once or the presence count double-decrements
+      // and drops a still-online user from the CRM presence bridge.
+      let disconnected = false;
+      const onGone = () => {
+        if (disconnected) return;
+        disconnected = true;
+        unregisterClient(client);
+        hub.clientDisconnected(userId);
+      };
+      ws.on("close", onGone);
+      ws.on("error", onGone);
 
       // Replay anything that arrived during the auth window.
       authed = true;

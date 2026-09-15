@@ -201,7 +201,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       setSearch("");
       setSort("");
     } else if (key === "mine") {
-      setFilters(object === "leads" ? { assignment: "mine" } : {});
+      setFilters(object === "leads" ? { assignment: "mine" } : { mine: "1" });
       setSearch("");
     } else if (key === "recent") {
       setFilters({});
@@ -283,12 +283,20 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     }
   }, [object]);
 
+  // Debounce the search box (300ms, mirrors MailboxPage) — typing a
+  // 10-char query fired one API request per keystroke otherwise.
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const fetchRows = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: "25" });
-      if (search) params.set("q", search);
+      if (debouncedSearch) params.set("q", debouncedSearch);
       if (sort) params.set("sort", sort);
       for (const [key, value] of Object.entries(filters)) {
         if (value) params.set(key, value);
@@ -307,7 +315,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     } finally {
       setLoading(false);
     }
-  }, [object, page, search, filters, sort]);
+  }, [object, page, debouncedSearch, filters, sort]);
 
   useEffect(() => {
     void fetch("/api/me")
@@ -386,7 +394,15 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       destructive: true,
     });
     if (!ok) return;
-    await fetch(`/api/${object}/${row.id}`, { method: "DELETE" });
+    const response = await fetch(`/api/${object}/${row.id}`, { method: "DELETE" }).catch(() => null);
+    if (!response?.ok) {
+      setLoadError(
+        response?.status === 403 ? `You do not have permission to delete this ${config.singular.toLowerCase()}.`
+          : response?.status === 409 ? `This ${config.singular.toLowerCase()} cannot be deleted (it has related history).`
+          : `Deleting this ${config.singular.toLowerCase()} failed — try again.`,
+      );
+      return;
+    }
     void fetchRows();
   }
 
@@ -948,11 +964,12 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                                 value={currentStatusId ?? ""}
                                 options={bulkStatusOptions}
                                 onSave={async (newStatusId) => {
-                                  await fetch(`/api/${object}/${row.id}`, {
+                                  const response = await fetch(`/api/${object}/${row.id}`, {
                                     method: "PATCH",
                                     headers: { "Content-Type": "application/json" },
                                     body: JSON.stringify({ statusId: newStatusId }),
                                   });
+                                  if (!response.ok) throw new Error(`Status change failed (${response.status}).`);
                                   void fetchRows();
                                 }}
                                 render={(val, onClick) => (

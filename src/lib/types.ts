@@ -50,6 +50,8 @@ export interface AccountMetricsView {
   accountNo: string | null;
   balance: number;
   credit: number;
+  /** Ledger available — the pool the server reserves margin+commission from. */
+  available: number;
   equity: number;
   margin: number;
   marginLevel: number | null;

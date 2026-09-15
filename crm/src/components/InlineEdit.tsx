@@ -28,6 +28,9 @@ export function InlineEdit({
     try {
       await onSave(newValue);
       setEditing(false);
+    } catch {
+      // Save failed ( onSave throws on !response.ok) — keep the editor
+      // open so the value isn't silently reverted on the next refetch.
     } finally {
       setSaving(false);
     }

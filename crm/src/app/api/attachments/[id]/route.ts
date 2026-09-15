@@ -16,7 +16,10 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       status: 200,
       headers: {
         "Content-Type": attachment.mimeType,
-        "Content-Disposition": `attachment; filename="${attachment.filename.replaceAll('"', "")}"`,
+        // Strip quotes AND control characters (C0/C1 + CRLF) - a filename
+        // with control bytes produces an invalid header value and 500s
+        // the download instead of header-injecting.
+        "Content-Disposition": `attachment; filename="${attachment.filename.replaceAll(/["\p{C}]/gu, "").slice(0, 180)}"`,
         "Content-Length": String(data.byteLength),
         "X-Content-Type-Options": "nosniff",
       },

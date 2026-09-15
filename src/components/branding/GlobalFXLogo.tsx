@@ -7,6 +7,7 @@ export function GlobalFXLogo({
   href = "/",
   external = false,
   inverted = false,
+  ariaLabel,
   children,
 }: {
   className?: string;
@@ -14,6 +15,8 @@ export function GlobalFXLogo({
   href?: string;
   external?: boolean;
   inverted?: boolean;
+  /** Accessible name — brand-agnostic override (e.g. the brand profile's name). */
+  ariaLabel?: string;
   children?: ReactNode;
 }) {
   const logoHeight = size === "lg" ? 38 : size === "sm" ? 24 : 30;
@@ -35,7 +38,10 @@ export function GlobalFXLogo({
     </span>
   );
 
+  // Brand-aware accessible name — the component is brand-agnostic, so a
+  // second Agile family must not announce itself as GlobalFX.
+  const label = ariaLabel ?? "Global Forex Services";
   if (!href) return content;
-  if (external) return <a href={href} aria-label="GlobalFX — Global Forex Services">{content}</a>;
-  return <Link href={href} aria-label="GlobalFX — Global Forex Services">{content}</Link>;
+  if (external) return <a href={href} aria-label={label}>{content}</a>;
+  return <Link href={href} aria-label={label}>{content}</Link>;
 }

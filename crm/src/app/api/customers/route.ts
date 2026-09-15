@@ -14,6 +14,7 @@ export async function GET(request: Request) {
     const query = parseListQuery(params);
     const { total, rows } = await listCustomers(ctx, query, {
       statusId: params.get("statusId") ?? undefined,
+      mine: params.get("mine") === "1",
     }, customFieldFilters(params));
     return NextResponse.json({ data: rows, meta: { page: query.page, pageSize: query.pageSize, total } });
   } catch (error) {

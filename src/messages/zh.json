@@ -27,7 +27,10 @@
       "fundamental": "基本面分析",
       "trend": "趋势分析",
       "beginners": "新手指南",
-      "advanced": "进阶策略"
+      "advanced": "进阶策略",
+      "beginnersVods": "入门视频课程",
+      "advancedVods": "进阶视频课程",
+      "cryptoVods": "加密货币视频课程"
     }
   },
   "hero": {
@@ -451,7 +454,16 @@
     "valuesIcon": "speed",
     "complianceTitle": "监管与合规",
     "complianceP1": "{company} 全面遵循适用的反洗钱（AML）与客户身份识别（KYC）法规运营。客户资金存放于独立隔离账户，与公司运营资金分开，绝不用于您交易活动以外的任何用途。",
-    "complianceP2": "我们不向美国、叙利亚、苏丹、伊朗或朝鲜的公民或居民提供服务。交易仅限年满18周岁人士使用。"
+    "complianceP2": "我们不向美国、叙利亚、苏丹、伊朗或朝鲜的公民或居民提供服务。交易仅限年满18周岁人士使用。",
+    "factsTitle": "公司资料",
+    "facts": {
+      "legalEntity": "法律实体",
+      "registration": "注册编号",
+      "jurisdiction": "司法管辖区",
+      "regulator": "监管机构",
+      "protection": "投资者保障",
+      "office": "注册办公地址"
+    }
   },
   "beginners": {
     "metaTitle": "新手交易指南",

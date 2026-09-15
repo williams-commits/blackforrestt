@@ -27,7 +27,10 @@
       "fundamental": "Fundamental Analysis",
       "trend": "Trend Analysis",
       "beginners": "Beginners Guide",
-      "advanced": "Advanced Strategies"
+      "advanced": "Advanced Strategies",
+      "beginnersVods": "Beginners video courses",
+      "advancedVods": "Advanced video courses",
+      "cryptoVods": "Crypto video courses"
     }
   },
   "hero": {
@@ -1148,49 +1151,49 @@
         "desc": "Stop-loss, take-profit and margin guards on every position. You set the boundaries."
       }
     },
-  "testimonials": {
-    "eyebrow": "Real feedback",
-    "title": "Trusted by individuals, teams, and trading communities across the globe.",
-    "returns": "Returns",
-    "trades": "Trades",
-    "items": [
-   {
-    "quote": "I onboarded our small team in a day. It’s a scalable solution that feels personal.",
-    "name": "Anton K.",
-    "role": "Manager, Czech Republic",
-    "returns": "+88.2%",
-    "trades": "412"
-   },
-   {
-    "quote": "The platform just makes sense. Everything I need is right there — fast, clean, intuitive.",
-    "name": "Sophie L.",
-    "role": "Trader, Germany",
-    "returns": "+34.7%",
-    "trades": "1,024"
-   },
-   {
-    "quote": "I’ve tested dozens of platforms. Global Forex Services strikes the perfect balance between simplicity and power.",
-    "name": "Carlos R.",
-    "role": "Analyst, Spain",
-    "returns": "+68.9%",
-    "trades": "287"
-   },
-   {
-    "quote": "Execution speed is outstanding. Even during volatile markets, I feel fully in control.",
-    "name": "Jamal A.",
-    "role": "Equity Trader, UAE",
-    "returns": "+11.3%",
-    "trades": "658"
-   },
-   {
-    "quote": "I started with zero experience. The tutorials and tools gave me real confidence to begin.",
-    "name": "Eliza M.",
-    "role": "Trader, Poland",
-    "returns": "+74.8%",
-    "trades": "156"
-   }
-  ]
-  },
+    "testimonials": {
+      "eyebrow": "Real feedback",
+      "title": "Trusted by individuals, teams, and trading communities across the globe.",
+      "returns": "Returns",
+      "trades": "Trades",
+      "items": [
+        {
+          "quote": "I onboarded our small team in a day. It’s a scalable solution that feels personal.",
+          "name": "Anton K.",
+          "role": "Manager, Czech Republic",
+          "returns": "+88.2%",
+          "trades": "412"
+        },
+        {
+          "quote": "The platform just makes sense. Everything I need is right there — fast, clean, intuitive.",
+          "name": "Sophie L.",
+          "role": "Trader, Germany",
+          "returns": "+34.7%",
+          "trades": "1,024"
+        },
+        {
+          "quote": "I’ve tested dozens of platforms. Global Forex Services strikes the perfect balance between simplicity and power.",
+          "name": "Carlos R.",
+          "role": "Analyst, Spain",
+          "returns": "+68.9%",
+          "trades": "287"
+        },
+        {
+          "quote": "Execution speed is outstanding. Even during volatile markets, I feel fully in control.",
+          "name": "Jamal A.",
+          "role": "Equity Trader, UAE",
+          "returns": "+11.3%",
+          "trades": "658"
+        },
+        {
+          "quote": "I started with zero experience. The tutorials and tools gave me real confidence to begin.",
+          "name": "Eliza M.",
+          "role": "Trader, Poland",
+          "returns": "+74.8%",
+          "trades": "156"
+        }
+      ]
+    },
     "steps": {
       "eyebrow": "Get started",
       "title": "Trading in three steps.",
@@ -1215,17 +1218,29 @@
       "company": {
         "title": "Registered company",
         "fallback": "A registered legal entity operating under the laws of its jurisdiction.",
-        "tags": ["FCA", "CySEC", "ASIC"]
+        "tags": [
+          "FCA",
+          "CySEC",
+          "ASIC"
+        ]
       },
       "segregated": {
         "title": "Segregated client funds",
         "desc": "Client funds are held separately from company operating funds and reconciled continuously.",
-        "tags": ["Barclays", "Deutsche", "BNY Mellon"]
+        "tags": [
+          "Barclays",
+          "Deutsche",
+          "BNY Mellon"
+        ]
       },
       "protection": {
         "title": "Investor protection",
         "fallback": "Clients may be covered by an investor compensation scheme where applicable.",
-        "tags": ["FSCS", "ICF", "Lloyd's of London"]
+        "tags": [
+          "FSCS",
+          "ICF",
+          "Lloyd's of London"
+        ]
       }
     },
     "edu": {

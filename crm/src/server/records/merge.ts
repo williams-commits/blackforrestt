@@ -81,6 +81,17 @@ export async function mergeLeads(ctx: ScopedContext, input: z.infer<typeof Merge
       where: { subjectType: "LEAD", subjectId: merged.id },
       data: { subjectType: "LEAD", subjectId: primary.id },
     });
+    // Email history + appointments follow the survivor too — leaving them
+    // pointed at the soft-deleted lead orphaned the correspondence and 404'd
+    // the mailbox's "View lead" chip.
+    await tx.emailMessage.updateMany({
+      where: { subjectType: "LEAD", subjectId: merged.id },
+      data: { subjectType: "LEAD", subjectId: primary.id },
+    });
+    await tx.appointment.updateMany({
+      where: { subjectType: "LEAD", subjectId: merged.id },
+      data: { subjectType: "LEAD", subjectId: primary.id },
+    });
 
     // Copy timeline events onto the survivor — original timestamps, actors,
     // and payloads preserved; only the subject reference is new.
@@ -190,6 +201,16 @@ export async function mergeRecords(ctx: ScopedContext, input: z.infer<typeof Mer
       data: { subjectType: input.objectType, subjectId: primary.id },
     });
     await tx.note.updateMany({
+      where: { subjectType: input.objectType, subjectId: merged.id },
+      data: { subjectType: input.objectType, subjectId: primary.id },
+    });
+    // Email history + appointments follow the survivor too (same orphaning
+    // the lead merge had).
+    await tx.emailMessage.updateMany({
+      where: { subjectType: input.objectType, subjectId: merged.id },
+      data: { subjectType: input.objectType, subjectId: primary.id },
+    });
+    await tx.appointment.updateMany({
       where: { subjectType: input.objectType, subjectId: merged.id },
       data: { subjectType: input.objectType, subjectId: primary.id },
     });

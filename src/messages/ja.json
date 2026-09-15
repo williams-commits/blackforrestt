@@ -27,7 +27,10 @@
       "fundamental": "ファンダメンタル分析",
       "trend": "トレンド分析",
       "beginners": "初心者ガイド",
-      "advanced": "上級者ストラテジー"
+      "advanced": "上級者ストラテジー",
+      "beginnersVods": "入門ビデオ講座",
+      "advancedVods": "上級ビデオ講座",
+      "cryptoVods": "仮想通貨ビデオ講座"
     }
   },
   "hero": {
@@ -451,7 +454,16 @@
     "valuesIcon": "speed",
     "complianceTitle": "規制とコンプライアンス",
     "complianceP1": "{company}は、適用されるマネーロンダリング防止（AML）および本人確認（KYC）規制に完全に準拠して事業を運営しています。顧客資金は会社の運営資金から分離された信託口座で保管され、お客様の取引活動以外の目的には一切使用されません。",
-    "complianceP2": "米国、シリア、スーダン、イラン、北朝鮮の市民または居住者にはサービスを提供しません。取引は18歳以上の方のみが利用できます。"
+    "complianceP2": "米国、シリア、スーダン、イラン、北朝鮮の市民または居住者にはサービスを提供しません。取引は18歳以上の方のみが利用できます。",
+    "factsTitle": "会社概要",
+    "facts": {
+      "legalEntity": "法人名",
+      "registration": "登録番号",
+      "jurisdiction": "管轄",
+      "regulator": "規制当局",
+      "protection": "投資家保護",
+      "office": "登記上の所在地"
+    }
   },
   "beginners": {
     "metaTitle": "初心者向けトレーディングガイド",

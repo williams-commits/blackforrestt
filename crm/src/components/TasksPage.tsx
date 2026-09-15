@@ -183,15 +183,25 @@ export function TasksPage() {
     setFormError(null);
     setTitle(task.title);
     setDescription(task.description ?? "");
-    setTaskDue(task.dueAt ? new Date(task.dueAt).toISOString().slice(0, 16) : "");
+    // datetime-local inputs hold LOCAL wall time — a raw UTC ISO string here
+    // silently shifts the value by the user's UTC offset on every save.
+    setTaskDue(task.dueAt ? toLocalInputValue(task.dueAt) : "");
     setRecurrence(task.recurrence ?? "NONE");
-    setReminderAt(task.reminderAt ? new Date(task.reminderAt).toISOString().slice(0, 16) : "");
+    setReminderAt(task.reminderAt ? toLocalInputValue(task.reminderAt) : "");
     setPriority(task.priority);
     setOwnerUserId(task.owner?.id ?? "");
   }
 
-  const inputClass =
-    "w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none";
+/** UTC instant → local datetime-local value (YYYY-MM-DDTHH:mm). */
+function toLocalInputValue(instant: string | Date): string {
+  const date = new Date(instant);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+const inputClass =
+  "w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none";
 
   return (
     <div className="space-y-4">

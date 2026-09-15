@@ -15,6 +15,7 @@ export async function GET(request: Request) {
     const { total, rows } = await listContacts(ctx, query, {
       accountId: params.get("accountId") ?? undefined,
       statusId: params.get("statusId") ?? undefined,
+      mine: params.get("mine") === "1",
     }, customFieldFilters(params));
     return NextResponse.json({ data: rows, meta: { page: query.page, pageSize: query.pageSize, total } });
   } catch (error) {

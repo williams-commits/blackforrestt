@@ -27,7 +27,10 @@
       "fundamental": "기본적 분석",
       "trend": "추세 분석",
       "beginners": "입문자 가이드",
-      "advanced": "고급 전략"
+      "advanced": "고급 전략",
+      "beginnersVods": "입문 동영상 강의",
+      "advancedVods": "고급 동영상 강의",
+      "cryptoVods": "암호화폐 동영상 강의"
     }
   },
   "hero": {
@@ -451,7 +454,16 @@
     "valuesIcon": "speed",
     "complianceTitle": "규제 및 컴플라이언스",
     "complianceP1": "{company}는 적용 가능한 자금세탁방지(AML) 및 고객확인(KYC) 규정을 완전히 준수하며 운영됩니다. 고객 자산은 회사 운영 자금과 분리된 별도 계좌에 보관되며, 고객의 거래 활동 외 어떤 목적으로도 사용되지 않습니다.",
-    "complianceP2": "미국, 시리아, 수단, 이란, 북한의 시민 또는 거주자에게는 서비스를 제공하지 않습니다. 거래는 만 18세 이상만 이용할 수 있습니다."
+    "complianceP2": "미국, 시리아, 수단, 이란, 북한의 시민 또는 거주자에게는 서비스를 제공하지 않습니다. 거래는 만 18세 이상만 이용할 수 있습니다.",
+    "factsTitle": "회사 정보",
+    "facts": {
+      "legalEntity": "법인 명칭",
+      "registration": "등록 번호",
+      "jurisdiction": "관할권",
+      "regulator": "규제 기관",
+      "protection": "투자자 보호",
+      "office": "등록된 사무소"
+    }
   },
   "beginners": {
     "metaTitle": "입문자 트레이딩 가이드",

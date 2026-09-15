@@ -51,13 +51,14 @@ const include = {
 export async function listCustomers(
   ctx: ScopedContext,
   query: { page: number; pageSize: number; sort?: string; q?: string },
-  filters: { statusId?: string },
+  filters: { statusId?: string; mine?: boolean },
   cfFilters?: Array<{ key: string; value: string }>,
 ) {
   const where: Prisma.CustomerWhereInput = {
     deletedAt: null,
     ...ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds),
     ...(filters.statusId ? { statusId: filters.statusId } : {}),
+    ...(filters.mine ? { ownerUserId: ctx.userId } : {}),
     ...searchWhere(SEARCH_FIELDS, query.q ?? ""),
     ...customFieldWhere(cfFilters ?? []),
   };

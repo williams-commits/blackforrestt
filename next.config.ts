@@ -7,44 +7,90 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const isProduction = process.env.NODE_ENV === "production";
 
-// CSP connect-src origins: 'self' covers every brand family's own host
-// (each apex/trade host is same-origin with its own pages), and the explicit
-// primary origins below cover historical cross-domain fetch patterns. These
-// are baked at BUILD time from BRAND_DOMAIN — changing domains requires a
-// rebuild (brand UI/emails, by contrast, are runtime-env driven).
-const brandDomain = process.env.BRAND_DOMAIN || "blackforrestt.com";
-const tradeSubdomain = process.env.TRADE_SUBDOMAIN || "trade";
-const tradeOrigin = `https://${tradeSubdomain}.${brandDomain}`;
-const apexOrigin = `https://${brandDomain}`;
+// CSP connect-src origins: 'self' covers each host's own pages; the explicit
+// origins below cover the legitimate cross-host hops a browser makes in the
+// multi-brand deployment — apex→trade-host RSC prefetch redirects (the
+// middleware 307s /trade/*, /login, /register on tradeEnabled families),
+// Auth.js session fetches, and the live WebSocket.
+//
+// Computed from the MULTI-BRAND env (BRAND_DOMAINS + DOMAIN_N/TRADE_DOMAIN_N
+// pairs, falling back to <sub>.<domain>): the custom server (server.ts)
+// loads this config at BOOT with the container's runtime env, so adding a
+// brand via .env.production needs only a restart — no rebuild. The old
+// single-BRAND_DOMAIN computation silently omitted every family after the
+// first, which blocked RSC prefetches on gbfxs.com (CSP connect-src
+// violation → "Failed to fetch RSC payload" console spam + full-page
+// fallback navigation).
+const brandDomains = (process.env.BRAND_DOMAINS || process.env.BRAND_DOMAIN || "blackforrestt.com")
+  .split(",")
+  .map((domain) => domain.trim().toLowerCase())
+  .filter(Boolean);
+const tradeSubdomain = (process.env.TRADE_SUBDOMAIN || "trade").trim().toLowerCase();
+const tradeHostFor = (domain: string): string => {
+  const pairs: Array<[string | undefined, string | undefined]> = [
+    [process.env.DOMAIN, process.env.TRADE_DOMAIN],
+    [process.env.DOMAIN_2, process.env.TRADE_DOMAIN_2],
+    [process.env.DOMAIN_3, process.env.TRADE_DOMAIN_3],
+  ];
+  for (const [apex, trade] of pairs) {
+    if ((apex ?? "").trim().toLowerCase() === domain && trade?.trim()) return trade.trim().toLowerCase();
+  }
+  return `${tradeSubdomain}.${domain}`;
+};
+const connectOrigins = new Set<string>();
+for (const domain of brandDomains) {
+  const tradeHost = tradeHostFor(domain);
+  connectOrigins.add(`https://${domain}`);
+  connectOrigins.add(`https://${tradeHost}`);
+  connectOrigins.add(`wss://${tradeHost}`);
+}
 
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
-  {
-    key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      // Next.js emits small inline bootstrap scripts. A nonce-based policy is
-      // preferable for a regulated deployment, but this still blocks remote JS.
-      `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}`,
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://i.ytimg.com",
-      "font-src 'self' data:",
-      // Allow both the apex + trade subdomain (Auth.js session fetches,
-      // live instrument data, WebSocket). 'self' covers same-origin; the
-      // explicit origins cover the cross-domain auth/session API calls.
-      `connect-src 'self' ${apexOrigin} ${tradeOrigin} wss://${tradeSubdomain}.${brandDomain}${isProduction ? "" : " ws://localhost:* ws://127.0.0.1:*"}`,
-      // Allow YouTube embeds for the education video courses.
-      "frame-src 'self' https://www.youtube.com https://youtube.com",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "object-src 'none'",
-      ...(isProduction ? ["upgrade-insecure-requests"] : []),
-    ].join("; "),
-  },
+];
+
+const cspHeader = (extra: string[] = []) =>
+  [
+    "default-src 'self'",
+    // Next.js emits small inline bootstrap scripts. A nonce-based policy is
+    // preferable for a regulated deployment, but this still blocks remote JS.
+    `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://i.ytimg.com",
+    "font-src 'self' data:",
+    // Allow every brand family's apex + trade hosts (Auth.js session
+    // fetches, apex→trade RSC prefetch redirects, live instrument data,
+    // WebSocket). 'self' covers same-origin; the explicit origins cover
+    // the cross-host hops enumerated above.
+    `connect-src 'self' ${[...connectOrigins].join(" ")}${isProduction ? "" : " ws://localhost:* ws://127.0.0.1:*"}`,
+    // Allow YouTube embeds for the education video courses.
+    "frame-src 'self' https://www.youtube.com https://youtube.com",
+    ...extra,
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+    ...(isProduction ? ["upgrade-insecure-requests"] : []),
+  ].join("; ");
+
+// Documents: no framing at all.
+const documentHeaders = [
+  ...securityHeaders,
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Content-Security-Policy", value: cspHeader(["frame-ancestors 'none'"]) },
+  ...(isProduction
+    ? [{ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" }]
+    : []),
+];
+
+// /widgets/* — the embeddable data strips advertised by /tools/informers.
+// Public, unauthenticated, data-only: framing is the entire point, so the
+// frame locks are relaxed to frame-ancestors * (and XFO omitted). Every
+// other directive stays as strict as documents.
+const widgetHeaders = [
+  ...securityHeaders,
+  { key: "Content-Security-Policy", value: cspHeader(["frame-ancestors *"]) },
   ...(isProduction
     ? [{ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" }]
     : []),
@@ -61,7 +107,12 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      // Everything except /widgets/* — full document lockdown.
+      { source: "/((?!widgets/).*)", headers: documentHeaders },
+      // Embeddable widget strips — frame locks relaxed.
+      { source: "/widgets/:path*", headers: widgetHeaders },
+    ];
   },
 };
 

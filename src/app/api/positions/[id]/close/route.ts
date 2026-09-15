@@ -17,7 +17,14 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
 
   const session = await auth();
-  const userId = await resolveUserId(session?.user?.id);
+  // Defense-in-depth: middleware normally 401s first, but if it is ever
+  // bypassed resolveUserId THROWS — answer 401 instead of an unhandled 500.
+  let userId: string;
+  try {
+    userId = await resolveUserId(session?.user?.id);
+  } catch {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
   try {
     const result = await hub.closePositionReq(userId, id);
     if (!result) {

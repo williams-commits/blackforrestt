@@ -270,8 +270,13 @@ export async function convertLead(ctx: ScopedContext, leadId: string, input: Con
       });
     }
 
-    await tx.lead.update({
-      where: { id: lead.id },
+    // Claim the conversion atomically: the guarded updateMany re-checks
+    // convertedAt AT WRITE TIME, so two concurrent conversions can't both
+    // win (the findUnique re-check alone can't serialize them under READ
+    // COMMITTED — both read null, both created records, second update
+    // silently orphaned the first contact).
+    const claimed = await tx.lead.updateMany({
+      where: { id: lead.id, convertedAt: null },
       data: {
         convertedContactId: contactId,
         convertedCustomerId: customerId,
@@ -280,6 +285,7 @@ export async function convertLead(ctx: ScopedContext, leadId: string, input: Con
         statusId: convertedStatus.id,
       },
     });
+    if (claimed.count === 0) throw new CrmError("Lead is already converted.", 409);
     await appendActivity(tx, {
       subjectType: "LEAD",
       subjectId: lead.id,

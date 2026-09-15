@@ -203,7 +203,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
       const response = await fetch("/api/imports/sheets/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: sheetUrl.trim() }),
+        body: JSON.stringify({ url: sheetUrl.trim(), rows: 500 }),
       });
       const body = (await response.json().catch(() => null)) as {
         data?: { columns: string[]; preview: Array<Record<string, string>>; totalRows: number };
@@ -218,8 +218,10 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
         return;
       }
       setColumns(body.data.columns);
-      setRows(body.data.preview.concat(await Promise.resolve(body.data.preview)).slice(0, body.data.totalRows) as never);
-      // Full rows come at import time; preview carries the shape only.
+      // Real leading rows for mapping + validation (up to 500) — the old
+      // code concatenated the 5-row display preview with itself, making the
+      // validation step's counts fiction. Full sheet still re-reads at import.
+      setRows(body.data.preview);
       setFileName(`sheet (${body.data.totalRows} rows)`);
       setStep(2);
     } finally {

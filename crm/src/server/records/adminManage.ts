@@ -252,6 +252,52 @@ export async function deleteUser(ctx: CrmContext, userId: string): Promise<void>
       data: { ownerUserId: ctx.userId },
     });
 
+    // Every remaining REQUIRED User FK with Restrict onDelete — a user who
+    // authored a note, ran an import, uploaded a file, owned a campaign/
+    // appointment/custom record, or acted on a merge would otherwise P2003
+    // and roll the whole deletion back with a generic 500. Authorship
+    // transfers to the deleting admin (history stays intact).
+    await tx.note.updateMany({
+      where: { authorUserId: userId },
+      data: { authorUserId: ctx.userId },
+    });
+    await tx.campaign.updateMany({
+      where: { ownerUserId: userId },
+      data: { ownerUserId: ctx.userId },
+    });
+    await tx.appointment.updateMany({
+      where: { ownerUserId: userId },
+      data: { ownerUserId: ctx.userId },
+    });
+    await tx.importJob.updateMany({
+      where: { createdById: userId },
+      data: { createdById: ctx.userId },
+    });
+    await tx.attachment.updateMany({
+      where: { uploaderUserId: userId },
+      data: { uploaderUserId: ctx.userId },
+    });
+    await tx.mergeRecord.updateMany({
+      where: { actorUserId: userId },
+      data: { actorUserId: ctx.userId },
+    });
+    await tx.customObjectRecord.updateMany({
+      where: { ownerUserId: userId },
+      data: { ownerUserId: ctx.userId },
+    });
+
+    // Nullable User FKs that still Restrict when set — clear them instead.
+    // Teams led by the deleted user become leaderless; mailbox rows the user
+    // owned become unowned shared-inbox mail.
+    await tx.team.updateMany({
+      where: { leaderId: userId },
+      data: { leaderId: null },
+    });
+    await tx.emailMessage.updateMany({
+      where: { ownerUserId: userId },
+      data: { ownerUserId: null },
+    });
+
     // Delete the user (memberships cascade)
     await tx.user.delete({ where: { id: userId } });
 

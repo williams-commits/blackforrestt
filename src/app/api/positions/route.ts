@@ -47,7 +47,14 @@ export async function POST(req: Request) {
   }
 
   const session = await auth();
-  const userId = await resolveUserId(session?.user?.id);
+  // Defense-in-depth: middleware normally 401s first, but if it is ever
+  // bypassed resolveUserId THROWS — answer 401 instead of an unhandled 500.
+  let userId: string;
+  try {
+    userId = await resolveUserId(session?.user?.id);
+  } catch {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
   const idempotencyKey = req.headers.get("idempotency-key")?.trim();
   if (!idempotencyKey || idempotencyKey.length < 6 || idempotencyKey.length > 128) {
     return NextResponse.json(
@@ -106,7 +113,14 @@ export async function POST(req: Request) {
 /** GET /api/positions?status=OPEN|CLOSED&limit=25&cursor=<position-id> */
 export async function GET(req: Request) {
   const session = await auth();
-  const userId = await resolveUserId(session?.user?.id);
+  // Defense-in-depth: middleware normally 401s first, but if it is ever
+  // bypassed resolveUserId THROWS — answer 401 instead of an unhandled 500.
+  let userId: string;
+  try {
+    userId = await resolveUserId(session?.user?.id);
+  } catch {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
   const url = new URL(req.url);
   const requestedStatus = url.searchParams.get("status") ?? "OPEN";
   if (requestedStatus !== "OPEN" && requestedStatus !== "CLOSED") {

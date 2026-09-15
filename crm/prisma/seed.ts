@@ -6,7 +6,16 @@
  * Demo credentials (change before any shared environment):
  *   admin@crm.local / manager@crm.local / lead@crm.local / rep@crm.local /
  *   rep2@crm.local / viewer@crm.local — password "ChangeMe123!"
+ *
+ * Minimal bootstrap (--admin-only): seeds ONLY the structural minimum
+ * (roles + permissions, record/potential statuses, default pipeline) plus a
+ * single SUPER_ADMIN account — no demo users, teams, or demo records. Add
+ * everything else from the CRM's Settings UI (users, teams, roles).
+ *   Email/name/password via CRM_ADMIN_EMAIL / CRM_ADMIN_NAME /
+ *   CRM_ADMIN_PASSWORD; if no password is given a strong one is generated
+ *   and printed once. An existing admin's password is never overwritten.
  */
+import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/server/db";
 import { ROLE_DEFINITIONS } from "../src/server/permissions";
@@ -414,11 +423,52 @@ async function seedDemoData(users: Record<string, string>, teamIds: { sales: str
   }
 }
 
+/**
+ * Minimal bootstrap: structural minimum (roles, statuses, pipeline) plus one
+ * SUPER_ADMIN. Everything else — users, teams, roles tuning — belongs to the
+ * Settings UI afterwards. Re-runs are safe: an existing admin keeps their
+ * password (only the role binding is re-asserted).
+ */
+async function seedAdminOnly() {
+  const email = (process.env.CRM_ADMIN_EMAIL || "admin@crm.local").trim().toLowerCase();
+  const name = (process.env.CRM_ADMIN_NAME || "Administrator").trim();
+  const role = await prisma.role.findUniqueOrThrow({ where: { key: "SUPER_ADMIN" } });
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    await prisma.user.update({ where: { id: existing.id }, data: { roleId: role.id } });
+    console.log(`Admin ${email} already exists — password left untouched, SUPER_ADMIN role re-asserted.`);
+    return existing.id;
+  }
+
+  const password = process.env.CRM_ADMIN_PASSWORD?.trim() || randomBytes(12).toString("hex");
+  const passwordHash = await bcrypt.hash(password, 12);
+  const admin = await prisma.user.create({
+    data: { email, name, roleId: role.id, passwordHash },
+  });
+  console.log(`Admin created: ${email}`);
+  if (!process.env.CRM_ADMIN_PASSWORD?.trim()) {
+    console.log(`Generated password (shown once, store it now): ${password}`);
+  }
+  return admin.id;
+}
+
 async function main() {
-  console.log("Seeding CRM…");
+  const adminOnly = process.argv.includes("--admin-only");
+  console.log(adminOnly ? "Seeding CRM (admin-only bootstrap)…" : "Seeding CRM…");
   await seedRoles();
   await seedStatuses();
   await seedPipeline();
+  if (adminOnly) {
+    const adminId = await seedAdminOnly();
+    await prisma.systemSetting.upsert({
+      where: { key: "org.currency" },
+      create: { key: "org.currency", value: "USD", updatedById: adminId },
+      update: {},
+    });
+    console.log("CRM admin-only bootstrap complete. Add users, teams, and roles from the Settings UI.");
+    return;
+  }
   const users = await seedUsers();
   const teams = await seedTeams(users);
   await seedDemoData(users, { sales: teams.sales.id, retention: teams.retention.id });

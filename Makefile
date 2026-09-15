@@ -134,6 +134,23 @@ crm-seed: ## Bootstrap the CRM database (roles + first demo users) — change pa
 	  -e DATABASE_URL="$${CRM_DB:-postgresql://blackforrestt:$${PGPWD}@postgres:5432/blckforest_crm}" \
 	  blckforest-crm-seed:tmp sh -c "npx prisma migrate deploy && node --import tsx prisma/seed.ts"
 
+# Clean production bootstrap: structural minimum (roles/statuses/pipeline) +
+# ONE SUPER_ADMIN — no demo users or demo records. Set CRM_ADMIN_EMAIL /
+# CRM_ADMIN_PASSWORD (a strong password is generated+printed if omitted).
+# Existing admins keep their password on re-runs. Add staff from Settings → Users.
+crm-seed-admin: ## CRM admin-only bootstrap (no demo data); CRM_ADMIN_EMAIL/CRM_ADMIN_PASSWORD override defaults
+	docker build --target builder -t blckforest-crm-seed:tmp $(ROOT)/crm
+	PG_CID=$$($(DC) ps -q postgres); \
+	NET=$$(docker inspect -f '{{range $$k, $$v := .NetworkSettings.Networks}}{{$$k}}{{end}}' $$PG_CID); \
+	if [ -z "$$NET" ]; then echo "Cannot resolve the postgres network — run make deploy first."; exit 1; fi; \
+	CRM_DB=$$(sed -n 's/^CRM_DATABASE_URL=//p' $(ROOT)/.env.production | head -1); \
+	PGPWD=$$(sed -n 's/^POSTGRES_PASSWORD=//p' $(ROOT)/.env.production | head -1); \
+	docker run --rm --network $$NET \
+	  -e DATABASE_URL="$${CRM_DB:-postgresql://blackforrestt:$${PGPWD}@postgres:5432/blckforest_crm}" \
+	  -e CRM_ADMIN_EMAIL="$${CRM_ADMIN_EMAIL:-}" \
+	  -e CRM_ADMIN_PASSWORD="$${CRM_ADMIN_PASSWORD:-}" \
+	  blckforest-crm-seed:tmp sh -c "npx prisma migrate deploy && node --import tsx prisma/seed.ts --admin-only"
+
 # ── Backup & restore ─────────────────────────────────────────────────────────
 
 backup: ## Backup database + volumes (deploy/backup.sh)

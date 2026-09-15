@@ -312,17 +312,27 @@ their own request. From the third admin onwards use the console:
 
 ### 8. Bootstrap the CRM (first login)
 
+Two shapes — demo data or clean production:
+
 ```bash
-make crm-seed      # creates role defaults + demo users, then…
+# A) Clean production: structural minimum + ONE admin, no demo anything.
+#    Add staff, teams, and roles afterwards from Settings → Users / Teams / Roles.
+CRM_ADMIN_EMAIL=you@yourdomain.com CRM_ADMIN_PASSWORD='a-strong-password' make crm-seed-admin
+# Omit CRM_ADMIN_PASSWORD to get a strong generated one printed once.
+# Local dev equivalent: npm --prefix crm run db:seed:admin
+
+# B) Demo/evaluation: role defaults + demo users + sample records.
+make crm-seed
 ```
 
-**Immediately change every demo password** (`admin@crm.local` etc. ship with
-`ChangeMe123!`) — sign in at `https://crm.yourdomain.com` and rotate, or
-disable the demo accounts after creating real staff. The seed also aligns
-system roles with code defaults, so re-running it after upgrades is safe — but
-it does **reset** system-role permission edits made in the UI; for
-permission *additions* without resets, `make crm-grant` is the safe path
-(`make deploy` runs it automatically).
+With option A the admin's password is never overwritten on re-runs (only the
+SUPER_ADMIN role binding is re-asserted). With option B, **immediately change
+every demo password** (`admin@crm.local` etc. ship with `ChangeMe123!`) — sign
+in at `https://crm.yourdomain.com` and rotate, or disable the demo accounts
+after creating real staff. Both seeds align system roles with code defaults,
+so re-running after upgrades is safe — but it does **reset** system-role
+permission edits made in the UI; for permission *additions* without resets,
+`make crm-grant` is the safe path (`make deploy` runs it automatically).
 
 ---
 

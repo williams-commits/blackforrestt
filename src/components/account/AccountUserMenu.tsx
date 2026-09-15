@@ -2,6 +2,7 @@
 
 import { CandlestickChart, ChevronDown, FileText, LogOut, Settings, User } from "lucide-react";
 
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
@@ -39,22 +40,26 @@ export function AccountUserMenu({
 
   return (
     <div ref={containerRef} className="relative ml-auto">
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        className="flex max-w-[58vw] items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-panel-2 sm:max-w-xs"
-      >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand">{initial}</span>
-        <span className="min-w-0 hidden sm:block">
-          <span className="block truncate text-xs font-medium text-text">{displayName}</span>
-          <span className="block truncate text-[10px] text-text-faint">#{accountNo ?? "—"}</span>
-        </span>
-        <span aria-hidden="true" className={`text-xs text-text-muted transition-transform}`}>
-          <ChevronIcon open={open} />
-        </span>
-      </button>
+      <div className="flex items-center gap-2">
+        <ThemeToggle className="h-8 w-8" />
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          className="flex max-w-[58vw] items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-panel-2 sm:max-w-xs"
+        >
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand">{initial}</span>
+          <span className="min-w-0 hidden sm:block">
+            <span className="block truncate text-xs font-medium text-text">{displayName}</span>
+            <span className="block truncate text-[10px] text-text-faint">#{accountNo ?? "—"}</span>
+          </span>
+          <span aria-hidden="true" className={`text-xs text-text-muted transition-transform}`}>
+            <ChevronIcon open={open} />
+          </span>
+        </button>
+      </div>
+      
 
       {open && (
         <div role="menu" className="absolute right-0 z-50 mt-1 w-64 overflow-hidden rounded-lg border border-border bg-canvas shadow-xl">

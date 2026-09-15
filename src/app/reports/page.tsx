@@ -188,7 +188,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           <Link href="/reports" className="flex items-center gap-1 whitespace-nowrap text-text-muted hover:text-text font-bold">{ReportsIcon()} Reports</Link>
         </nav>
         <AccountUserMenu
-          displayName={user.name ?? user.email ?? "Trader"} 
+          displayName={user.name ?? user.email ?? "Trader"}
           email={user.email ?? ""}
           accountNo={user.accountNo}
           isAdmin={session?.user?.role === "admin"}

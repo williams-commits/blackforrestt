@@ -872,7 +872,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
           </div>
         )}
         {legendChips.length > 0 && (
-          <div className="pointer-events-none absolute left-2 top-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
+          <div className="pointer-events-none absolute left-2 top-2 z-10 flex max-w-[calc(100%-1rem)] flex-col gap-1">
             {legendChips.map((chip) => (
               <LegendChip key={chip.label} color={chip.color} label={chip.label} value={chip.value} onRemove={chip.onRemove} />
             ))}

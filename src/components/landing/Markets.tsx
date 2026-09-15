@@ -1,35 +1,37 @@
-import { getTranslations } from "next-intl/server";
 import { SectionTicker } from "@/components/landing/SectionTicker";
 import { MarketIcon } from "@/components/landing/MarketIcons";
-import {
-  CATEGORY_ORDER,
-  getInstrumentsByCategory,
-} from "@/lib/landingData";
+import { CATEGORY_ORDER, getInstrumentsByCategory } from "@/lib/landingData";
+import type { MarketsEditorialContent } from "@/content/contracts";
 import type { InstrumentCategory } from "@/lib/types";
 
 /**
  * Market Types — one deep section per asset class (Forex, Crypto, Commodities,
  * Indices). Each section opens with serif prose, then a live instrument table
  * rendered server-side and kept fresh by a SectionTicker client island.
+ * Section copy arrives as the typed MarketsEditorialContent contract.
  *
  * `ids` mirror the TOC / progress checklist so scroll-spy tracks each section.
  */
-export async function Markets() {
+export async function Markets({ content }: { content: MarketsEditorialContent }) {
   return (
     <div>
       {CATEGORY_ORDER.map((category) => (
-        <MarketSection key={category} category={category} />
+        <MarketSection key={category} category={category} content={content} />
       ))}
     </div>
   );
 }
 
-async function MarketSection({ category }: { category: InstrumentCategory }) {
+async function MarketSection({
+  category,
+  content,
+}: {
+  category: InstrumentCategory;
+  content: MarketsEditorialContent;
+}) {
   const id = `market-${category.toLowerCase()}`;
   const catKey = category.toLowerCase();
-  const t = await getTranslations(`markets.${catKey}`);
-  const tCommon = await getTranslations("markets.section");
-  const label = await getTranslations("toc.sections");
+  const editorial = content.categories[catKey === "commodity" ? "commodity" : catKey];
   const instruments = getInstrumentsByCategory(category);
 
   return (
@@ -42,16 +44,16 @@ async function MarketSection({ category }: { category: InstrumentCategory }) {
               <MarketIcon category={category} className="h-7 w-7" />
             </div>
             <span className="text-[11px] font-semibold uppercase tracking-widest text-brand">
-              {t("eyebrow")}
+              {editorial?.eyebrow}
             </span>
           </div>
-          <h3 className="mt-1 text-2xl font-bold tracking-tight">{label(catKey === "commodity" ? "commodity" : catKey)}</h3>
+          <h3 className="mt-1 text-2xl font-bold tracking-tight">{content.labels[catKey]}</h3>
           <p className="font-prose mt-3 text-text-muted leading-relaxed">
-            {t("tagline")}. {tCommon("body")}
+            {editorial?.tagline}. {content.common.body}
           </p>
           <div className="mt-5 inline-flex items-center gap-2 text-xs text-text-faint font-mono">
             <span className="h-1.5 w-1.5 rounded-full bg-up animate-pulse" />
-            {tCommon("live")}
+            {content.common.live}
           </div>
         </div>
 

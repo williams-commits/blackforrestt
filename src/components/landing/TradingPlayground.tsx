@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { clientTradeUrl } from "@/lib/branding";
+import type { PlaygroundContent } from "@/content/contracts";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { useInstruments } from "@/components/landing/useInstruments";
 import type { InstrumentCategory, InstrumentView } from "@/lib/types";
@@ -11,17 +11,13 @@ import { CATEGORY_LABEL, formatPrice, formatChange } from "@/lib/landingUi";
 interface TradingPlaygroundProps {
   /** Server-rendered instrument list (initial values, avoids empty flash). */
   initial: InstrumentView[];
+  /** Section labels (typed contract from the domain content package). The two
+   *  count-dependent plural strings (matches/indexed) stay on the intl runtime
+   *  — plural categories are locale grammar, not content data. */
+  content: PlaygroundContent;
 }
 
 const CATEGORY_ORDER: InstrumentCategory[] = ["FOREX", "CRYPTO", "COMMODITY", "INDEX", "STOCK"];
-
-const PRESET_QUERIES = [
-  { label: "gold", q: "gold" },
-  { label: "btc", q: "btc" },
-  { label: "eur", q: "eur" },
-  { label: "oil", q: "oil" },
-  { label: "us30", q: "us30" },
-];
 
 /**
  * The trading playground — a code-styled prompt that reveals available market
@@ -29,7 +25,7 @@ const PRESET_QUERIES = [
  * with a mono font, a blinking prompt caret, and syntax-coloured live results.
  * Results group by category and each row links to the trade route.
  */
-export function TradingPlayground({ initial }: TradingPlaygroundProps) {
+export function TradingPlayground({ initial, content }: TradingPlaygroundProps) {
   const t = useTranslations("playground");
   const instruments = useInstruments(initial, 3000);
   const [query, setQuery] = useState("");
@@ -65,16 +61,16 @@ export function TradingPlayground({ initial }: TradingPlaygroundProps) {
         <span className="h-2.5 w-2.5 rounded-full bg-down/60" />
         <span className="h-2.5 w-2.5 rounded-full bg-brand/70" />
         <span className="h-2.5 w-2.5 rounded-full bg-up/60" />
-        <span className="ml-3 text-[10px] font-mono text-text-faint">{t("windowTitle")}</span>
+        <span className="ml-3 text-[10px] font-mono text-text-faint">{content.windowTitle}</span>
         <span className="ml-auto inline-flex items-center gap-1.5 text-[10px] font-mono text-up">
-          <span className="h-1.5 w-1.5 rounded-full bg-up animate-pulse" /> {t("connected")}
+          <span className="h-1.5 w-1.5 rounded-full bg-up animate-pulse" /> {content.connected}
         </span>
       </div>
 
       {/* Prompt input */}
       <div className="px-4 py-3 border-b border-border-soft bg-canvas">
         <label htmlFor="pg-input" className="sr-only">
-          {t("searchLabel")}
+          {content.searchLabel}
         </label>
         <div className="flex items-center gap-2 font-mono text-sm">
           <span className="text-brand select-none" aria-hidden="true">$</span>
@@ -83,7 +79,7 @@ export function TradingPlayground({ initial }: TradingPlaygroundProps) {
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("placeholder")}
+            placeholder={content.placeholder}
             spellCheck={false}
             autoComplete="off"
             className="flex-1 bg-transparent outline-none text-text placeholder:text-text-faint caret-brand"
@@ -95,13 +91,13 @@ export function TradingPlayground({ initial }: TradingPlaygroundProps) {
 
         {/* Preset chips */}
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {PRESET_QUERIES.map((p) => (
+          {content.presets.map((p) => (
             <button
               key={p.label}
               type="button"
               onMouseDown={(e) => {
                 e.preventDefault();
-                setQuery(p.q);
+                setQuery(p.query);
                 inputRef.current?.focus();
               }}
               className="px-2 py-0.5 rounded border border-border bg-panel text-[11px] font-mono text-text-muted hover:text-brand hover:border-brand transition"
@@ -119,7 +115,7 @@ export function TradingPlayground({ initial }: TradingPlaygroundProps) {
               }}
               className="px-2 py-0.5 rounded border border-border bg-panel text-[11px] font-mono text-text-muted hover:text-down transition"
             >
-              {t("clear")}
+              {content.clear}
             </button>
           )}
         </div>
@@ -129,8 +125,8 @@ export function TradingPlayground({ initial }: TradingPlaygroundProps) {
       <div className="max-h-[420px] overflow-y-auto">
         {grouped.length === 0 ? (
           <div className="px-4 py-10 text-center font-mono text-sm text-text-faint">
-            <div className="text-text-muted">{t("noMatch")} “{query}”</div>
-            <div className="mt-1 text-xs">{t("noMatchHint")}</div>
+            <div className="text-text-muted">{content.noMatch} “{query}”</div>
+            <div className="mt-1 text-xs">{content.noMatchHint}</div>
           </div>
         ) : (
           grouped.map((g) => (
@@ -145,7 +141,7 @@ export function TradingPlayground({ initial }: TradingPlaygroundProps) {
                   return (
                     <li key={inst.symbol}>
                       <a
-                        href={clientTradeUrl(`/trade/${inst.symbol}`)}
+                        href={`/trade/${inst.symbol}`}
                         className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-x-4 px-4 py-2.5 hover:bg-panel-2 transition border-b border-border-soft last:border-0"
                       >
                         <span className="flex items-center gap-2 min-w-0">
@@ -174,7 +170,7 @@ export function TradingPlayground({ initial }: TradingPlaygroundProps) {
 
       {/* Status bar */}
       <div className="flex items-center justify-between px-4 py-2 bg-panel-2 border-t border-border text-[10px] font-mono text-text-faint">
-        <span>{t("clickToTrade")}</span>
+        <span>{content.clickToTrade}</span>
         <span>{t("indexed", { count: instruments.length })}</span>
       </div>
     </div>

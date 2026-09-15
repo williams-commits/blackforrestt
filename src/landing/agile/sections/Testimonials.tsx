@@ -1,21 +1,6 @@
-import { getTranslations } from "next-intl/server";
 import { Star } from "lucide-react";
 import { Reveal } from "@/components/landing/Reveal";
-
-/** Photo avatars in the source feedback order (Anton→2, Sophie→3, Carlos→1…). */
-const AVATARS = [2, 3, 1, 4, 5].map(
-  (n) => `/brands/gbfxs/testimonials/feedback__avatar-${n}.svg`,
-);
-
-interface Testimonial {
-  quote: string;
-  name: string;
-  role: string;
-  avatar: string;
-  /** Illustrative per-story stats (card design, like the sample). */
-  returns?: string;
-  trades?: string;
-}
+import type { TestimonialContent, TestimonialsContent } from "@/content/contracts";
 
 /** The per-story stat strip: Returns (mint) + Trades (mono count). */
 function StoryStats({ returns, trades, label }: { returns?: string; trades?: string; label: { returns: string; trades: string } }) {
@@ -43,15 +28,11 @@ function StoryStats({ returns, trades, label }: { returns?: string; trades?: str
  * statement panel (ink text + the five-star mark in ink), the client
  * stories fill a card grid beside it — four tiles and one wide cell. No
  * carousel: the grid IS the composition, every story visible at once.
+ * Content (including avatar assets) arrives as the typed contract.
  */
-export async function TestimonialsSection() {
-  const t = await getTranslations("agile.testimonials");
-  const items = (t.raw("items") as Testimonial[]).map((item, index) => ({
-    ...item,
-    avatar: AVATARS[index] ?? AVATARS[0],
-  }));
-  const tiles = items.slice(0, 4);
-  const wide = items[4];
+export function TestimonialsSection({ content }: { content: TestimonialsContent }) {
+  const tiles = content.items.slice(0, 4);
+  const wide = content.items[4];
 
   return (
     <section id="reviews" className="relative scroll-mt-24 overflow-hidden bg-[#0d0d0f] pb-24 pt-4">
@@ -66,8 +47,8 @@ export async function TestimonialsSection() {
                 style={{ background: "radial-gradient(90% 60% at 90% -10%, rgba(255,255,255,0.26), transparent 60%)" }}
               />
               <div className="relative flex h-full flex-col">
-                <span className="ag-eyebrow ag-eyebrow-ink">{t("eyebrow")}</span>
-                <h2 className="ag-h2 ag-ink-h2 mt-4 text-[clamp(1.6rem,2.4vw,2.1rem)]!">{t("title")}</h2>
+                <span className="ag-eyebrow ag-eyebrow-ink">{content.eyebrow}</span>
+                <h2 className="ag-h2 ag-ink-h2 mt-4 text-[clamp(1.6rem,2.4vw,2.1rem)]!">{content.title}</h2>
                 <span role="img" aria-label="Rated 5 out of 5" className="mt-auto flex items-center gap-1 pt-8 text-[#0d0d0f] sm:pt-10">
                   {Array.from({ length: 5 }).map((_, index) => (
                     <Star key={index} size={16} strokeWidth={0} fill="currentColor" aria-hidden />
@@ -79,7 +60,7 @@ export async function TestimonialsSection() {
 
           {/* Story grid — four tiles + one wide cell. */}
           <div className="grid gap-5 sm:grid-cols-2">
-            {tiles.map((item, index) => (
+            {tiles.map((item: TestimonialContent, index) => (
               <Reveal key={item.name} delay={index * 80}>
                 <figure className="ag-bento-cell flex h-full flex-col p-7">
                   {/* eslint-disable-next-line @next/next/no-img-element -- decorative portrait; name sits below */}
@@ -96,7 +77,7 @@ export async function TestimonialsSection() {
                     <p className="text-[14.5px] leading-relaxed text-[#f1f3ef]/90">“{item.quote}”</p>
                   </blockquote>
                   <div className="mt-5">
-                    <StoryStats returns={item.returns} trades={item.trades} label={{ returns: t("returns"), trades: t("trades") }} />
+                    <StoryStats returns={item.returns} trades={item.trades} label={content.statLabels} />
                   </div>
                   <figcaption className="mt-4 border-t border-white/10 pt-4">
                     <div className="text-[13px] font-bold text-[#f1f3ef]">{item.name}</div>
@@ -129,7 +110,7 @@ export async function TestimonialsSection() {
                         <span aria-hidden="true" className="h-0.5 w-0.5 rounded-full bg-[#75757b]" />
                         <div className="text-[11px] text-[#75757b]">{wide.role}</div>
                       </figcaption>
-                      <StoryStats returns={wide.returns} trades={wide.trades} label={{ returns: t("returns"), trades: t("trades") }} />
+                      <StoryStats returns={wide.returns} trades={wide.trades} label={content.statLabels} />
                     </div>
                   </div>
                 </figure>

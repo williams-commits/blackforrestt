@@ -40,6 +40,7 @@ export const PRIMARY_BRAND_FALLBACK: BrandProfile = {
   logoWord: "",
   depositWallets: "",
   landingTemplate: "default",
+  publicDesign: "default",
 };
 
 const BrandContext = createContext<BrandProfile>(PRIMARY_BRAND_FALLBACK);

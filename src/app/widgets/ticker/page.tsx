@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { getTranslations } from "next-intl/server";
-import { AgileStyles } from "@/landing/agile/AgileStyles";
-import { TickerMarquee } from "@/landing/agile/TickerMarquee";
+import { TickerStrip } from "@/components/landing/TickerStrip";
 import { getLandingInstruments } from "@/lib/landingData";
 
 // The widget strip is a standalone surface — its font must not depend on a
@@ -21,8 +20,8 @@ export const metadata: Metadata = {
 /**
  * /widgets/ticker — the embeddable live-rates strip advertised by
  * /tools/informers ("Embed code"). Bare page: no navbar/shell, just the
- * agile ticker marquee on a transparent-friendly plate sized for a ~40px
- * iframe. ?theme=light flips the strip for light embeds.
+ * shared TickerStrip (self-contained styles) on a transparent-friendly plate
+ * sized for a ~40px iframe. ?theme=light flips the strip for light embeds.
  */
 export default async function TickerWidgetPage({
   searchParams,
@@ -36,7 +35,6 @@ export default async function TickerWidgetPage({
 
   return (
     <div className={`${inter.variable} ${light ? "ag-widget-light" : ""}`}>
-      <AgileStyles />
       {/* Scoped theme override — the marquee's own palette is dark; light
           embeds flip background, text, and edge fades. */}
       {light && (
@@ -48,7 +46,7 @@ export default async function TickerWidgetPage({
           .ag-widget-light .ag-ticker::after { background: linear-gradient(270deg, #ffffff, transparent); }
         `}</style>
       )}
-      <TickerMarquee initial={instruments} ariaLabel={t("live")} />
+      <TickerStrip initial={instruments} ariaLabel={t("live")} />
     </div>
   );
 }

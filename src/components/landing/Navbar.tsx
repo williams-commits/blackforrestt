@@ -6,57 +6,16 @@ import { usePathname } from "next/navigation";
 import { Logo } from "@/components/trade/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
-import { useTranslations } from "next-intl";
-import { clientTradeUrl } from "@/lib/branding";
+import type { NavigationContent } from "@/content/contracts";
 
-interface MenuGroup {
-  /** Translation key under `nav` for the group label (e.g. "company"). */
-  key: string;
-  items: { /** Translation key under `nav.menu`. */ key: string; href: string }[];
-}
-
-const MENUS: MenuGroup[] = [
-  {
-    key: "company",
-    items: [
-      { key: "about", href: "/about" },
-      { key: "contact", href: "/contact" },
-    ],
-  },
-  {
-    key: "tools",
-    items: [
-      { key: "informers", href: "/tools/informers" },
-      { key: "calendars", href: "/tools/calendars" },
-      { key: "calculators", href: "/tools/calculators" },
-      { key: "signals", href: "/tools/signals" },
-    ],
-  },
-  {
-    key: "analytics",
-    items: [
-      { key: "news", href: "/analytics/news" },
-      { key: "technical", href: "/analytics/technical" },
-      { key: "fundamental", href: "/analytics/fundamental" },
-      { key: "trend", href: "/analytics/trend" },
-    ],
-  },
-  {
-    key: "education",
-    items: [
-      { key: "beginners", href: "/education/beginners" },
-      { key: "advanced", href: "/education/advanced" },
-      // { key: "beginnersVods", href: "/education/beginners-vods" },
-      // { key: "advancedVods", href: "/education/advanced-vods" },
-      // { key: "cryptoVods", href: "/education/crypto-vods" },
-    ],
-  },
-];
-
-/** Responsive marketing navbar with desktop dropdowns and a mobile navigation sheet. */
-export function Navbar() {
+/**
+ * Responsive marketing navbar with desktop dropdowns and a mobile navigation
+ * sheet. ALL labels arrive as the typed NavigationContent contract (assembled
+ * by the domain content package) — this component never fetches translations.
+ */
+export function Navbar({ content }: { content: NavigationContent }) {
   const pathname = usePathname();
-  const t = useTranslations("nav");
+  const menus = content.groups;
   const [open, setOpen] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileGroup, setMobileGroup] = useState<string | null>(null);
@@ -90,9 +49,9 @@ export function Navbar() {
           <Logo className="gap-1.5 sm:gap-2" />
         </div>
 
-        <nav className="hidden items-center gap-1 lg:flex" aria-label={t("company")}>
-          {MENUS.map((menu) => {
-            const groupLabel = t(menu.key);
+        <nav className="hidden items-center gap-1 lg:flex" aria-label={content.ariaLabel}>
+          {menus.map((menu) => {
+            const groupLabel = menu.label;
             return (
             <div key={menu.key} className="relative" onMouseEnter={() => setOpen(menu.key)}>
               <button
@@ -107,13 +66,13 @@ export function Navbar() {
               {open === menu.key ? (
                 <div className="absolute left-0 top-full pt-1">
                   <div className="min-w-55 rounded-lg border border-border bg-canvas py-2 shadow-card">
-                    {menu.items.map((item) => (
+                    {menu.links.map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
                         className="block px-4 py-2 text-sm text-text-muted transition-colors hover:bg-panel hover:text-brand"
                       >
-                        {t(`menu.${item.key}`)}
+                        {item.label}
                       </Link>
                     ))}
                   </div>
@@ -128,20 +87,20 @@ export function Navbar() {
           <ThemeToggle className="hidden sm:inline-flex" />
           <LanguageSwitcher className="hidden sm:block" />
           <Link
-            href={clientTradeUrl("/login")}
+            href={content.loginHref}
             className="hidden px-2 py-2 text-sm font-medium text-text transition-colors hover:text-brand sm:inline-flex lg:px-4"
           >
-            {t("login")}
+            {content.loginLabel}
           </Link>
           <Link
-            href={clientTradeUrl("/register")}
+            href={content.registerHref}
             className="hidden rounded bg-brand px-3 py-2 text-xs font-semibold text-white transition hover:brightness-110 sm:inline-flex lg:px-4 lg:text-sm"
           >
-            {t("openAccount")}
+            {content.registerLabel}
           </Link>
           <button
             type="button"
-            aria-label={mobileOpen ? t("closeMenu") : t("openMenu")}
+            aria-label={mobileOpen ? content.menuToggle.close : content.menuToggle.open}
             aria-expanded={mobileOpen}
             aria-controls="mobile-navigation"
             onClick={() => setMobileOpen((value) => !value)}
@@ -155,8 +114,8 @@ export function Navbar() {
       {mobileOpen ? (
         <div id="mobile-navigation" className="fixed inset-x-0 top-16 z-50 h-[calc(100dvh-4rem)] overflow-y-auto border-t border-border bg-canvas lg:hidden">
           <nav className="mx-auto flex min-h-full max-w-3xl flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-3" aria-label="Mobile navigation">
-            {MENUS.map((menu) => {
-              const groupLabel = t(menu.key);
+            {menus.map((menu) => {
+              const groupLabel = menu.label;
               const expanded = mobileGroup === menu.key;
               return (
                 <section key={menu.key} className="border-b border-border-soft">
@@ -171,13 +130,13 @@ export function Navbar() {
                   </button>
                   {expanded ? (
                     <div className="grid gap-1 pb-3 sm:grid-cols-2">
-                      {menu.items.map((item) => (
+                      {menu.links.map((item) => (
                         <Link
                           key={item.href}
                           href={item.href}
                           className="rounded px-3 py-3 text-sm text-text-muted hover:bg-panel-2 hover:text-brand"
                         >
-                          {t(`menu.${item.key}`)}
+                          {item.label}
                         </Link>
                       ))}
                     </div>
@@ -193,11 +152,11 @@ export function Navbar() {
                 <ThemeToggle />
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
-                <Link href={clientTradeUrl("/login")} className="rounded border border-border px-4 py-3 text-center text-sm font-semibold text-text hover:border-brand">
-                  {t("login")}
+                <Link href={content.loginHref} className="rounded border border-border px-4 py-3 text-center text-sm font-semibold text-text hover:border-brand">
+                  {content.loginLabel}
                 </Link>
-                <Link href={clientTradeUrl("/register")} className="rounded bg-brand px-4 py-3 text-center text-sm font-semibold text-white hover:brightness-110">
-                  {t("openAccount")}
+                <Link href={content.registerHref} className="rounded bg-brand px-4 py-3 text-center text-sm font-semibold text-white hover:brightness-110">
+                  {content.registerLabel}
                 </Link>
               </div>
             </div>

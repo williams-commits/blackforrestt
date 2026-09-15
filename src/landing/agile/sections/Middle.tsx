@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { ArrowRight } from "lucide-react";
-import { InstrumentLogo } from "../InstrumentLogo";
+import { InstrumentLogo } from "@/components/landing/InstrumentLogo";
 import { Sparkline } from "../Sparkline";
 import { useInstruments } from "@/components/landing/useInstruments";
+import type { MoversContent } from "@/content/contracts";
 import type { InstrumentView } from "@/lib/types";
 
 /**
@@ -16,10 +17,10 @@ import type { InstrumentView } from "@/lib/types";
  */
 export function MoversSection({
   initial,
-  labels,
+  content,
 }: {
   initial: InstrumentView[];
-  labels: { eyebrow: string; title: string; subtitle: string; metric: string; last: string; cta: string };
+  content: MoversContent;
 }) {
   const instruments = useInstruments(initial, 4_000);
 
@@ -36,12 +37,12 @@ export function MoversSection({
       <div className="ag-container">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="max-w-2xl">
-            <span className="ag-eyebrow">{labels.eyebrow}</span>
-            <h2 className="ag-h2 mt-4 text-balance">{labels.title}</h2>
-            <p className="ag-sub mt-4">{labels.subtitle}</p>
+            <span className="ag-eyebrow">{content.eyebrow}</span>
+            <h2 className="ag-h2 mt-4 text-balance">{content.title}</h2>
+            <p className="ag-sub mt-4">{content.subtitle}</p>
           </div>
           <Link href="/tools/informers" className="ag-btn ag-btn-ghost">
-            {labels.cta} <ArrowRight size={15} strokeWidth={2} aria-hidden />
+            {content.ctaLabel} <ArrowRight size={15} strokeWidth={2} aria-hidden />
           </Link>
         </div>
 
@@ -83,7 +84,7 @@ export function MoversSection({
                       {instrument.changePct.toFixed(2)}%
                     </div>
                     <div className="mt-1.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">
-                      {labels.metric}
+                      {content.metric}
                     </div>
                   </div>
                   <div className="text-right">
@@ -91,7 +92,7 @@ export function MoversSection({
                       {instrument.mid.toFixed(instrument.digits)}
                     </div>
                     <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">
-                      {labels.last}
+                      {content.last}
                     </div>
                   </div>
                 </div>

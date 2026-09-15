@@ -1,42 +1,35 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
-
-const FEATURE_KEYS = ["execution", "charting", "risk", "security", "devices", "data"] as const;
-const BULLET_KEYS = ["b1", "b2", "b3", "b4"] as const;
-const CARD_KEYS = ["guides", "vod", "analysis", "calendar"] as const;
+import type { ConfidenceContent } from "@/content/contracts";
 
 /**
  * "Everything you need to trade with confidence" — platform capabilities +
  * education, unified. Serif prose intros paired with mono labels and data.
+ * ALL copy arrives as the typed ConfidenceContent contract.
  */
-export async function ConfidenceSection() {
-  const t = await getTranslations("confidence");
-  const tFeat = await getTranslations("confidence.features");
-  const tEdu = await getTranslations("confidence.education");
-
+export function ConfidenceSection({ content }: { content: ConfidenceContent }) {
   return (
     <section id="confidence" className="scroll-mt-24 py-16 lg:py-24 border-t border-border-soft bg-panel">
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         <div className="max-w-2xl">
           <span className="text-[11px] font-semibold uppercase tracking-widest text-brand">
-            {t("eyebrow")}
+            {content.eyebrow}
           </span>
           <h2 className="mt-2 text-3xl lg:text-4xl font-bold tracking-tight">
-            {t("title")}
+            {content.title}
           </h2>
           <p className="font-prose mt-4 text-lg leading-relaxed text-text-muted">
-            {t("subtitle")}
+            {content.subtitle}
           </p>
         </div>
 
         <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {FEATURE_KEYS.map((key) => (
-            <div key={key} className="rounded-xl border border-border bg-canvas p-6">
+          {content.features.map((feature) => (
+            <div key={feature.title} className="rounded-xl border border-border bg-canvas p-6">
               <div className="text-[10px] font-mono uppercase tracking-widest text-text-faint">
-                {tFeat(`${key}.label`)}
+                {feature.label}
               </div>
-              <h3 className="mt-1.5 font-semibold text-lg">{tFeat(`${key}.title`)}</h3>
-              <p className="font-prose mt-2 text-sm leading-relaxed text-text-muted">{tFeat(`${key}.desc`)}</p>
+              <h3 className="mt-1.5 font-semibold text-lg">{feature.title}</h3>
+              <p className="font-prose mt-2 text-sm leading-relaxed text-text-muted">{feature.desc}</p>
             </div>
           ))}
         </div>
@@ -45,21 +38,21 @@ export async function ConfidenceSection() {
         <div className="mt-12 grid lg:grid-cols-2 gap-10 items-center">
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-widest text-brand">
-              {tEdu("eyebrow")}
+              {content.education.eyebrow}
             </span>
             <h3 className="mt-2 text-2xl font-bold tracking-tight">
-              {tEdu("title")}
+              {content.education.title}
             </h3>
             <p className="font-prose mt-3 text-text-muted leading-relaxed">
-              {tEdu("subtitle")}
+              {content.education.subtitle}
             </p>
             <ul className="mt-6 space-y-2.5 text-sm">
-              {BULLET_KEYS.map((key) => (
-                <li key={key} className="flex items-center gap-2.5">
+              {content.education.bullets.map((bullet) => (
+                <li key={bullet} className="flex items-center gap-2.5">
                   <span className="h-5 w-5 rounded-full bg-up/15 text-up flex items-center justify-center text-[10px] font-mono">
                     ✓
                   </span>
-                  <span className="text-text">{tEdu(`bullets.${key}`)}</span>
+                  <span className="text-text">{bullet}</span>
                 </li>
               ))}
             </ul>
@@ -67,13 +60,13 @@ export async function ConfidenceSection() {
               href="/education/beginners"
               className="inline-block mt-8 px-5 py-2.5 rounded-lg bg-brand text-white text-sm font-semibold hover:brightness-110 transition"
             >
-              {tEdu("start")}
+              {content.education.ctaLabel}
             </Link>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {CARD_KEYS.map((key) => (
-              <EduCard key={key} tag={tEdu(`cards.${key}.tag`)} title={tEdu(`cards.${key}.title`)} desc={tEdu(`cards.${key}.desc`)} />
+            {content.education.cards.map((card) => (
+              <EduCard key={card.title} tag={card.tag} title={card.title} desc={card.desc} />
             ))}
           </div>
         </div>

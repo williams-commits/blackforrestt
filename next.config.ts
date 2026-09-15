@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+// Zero-dependency domain registry — safe to load at build/boot time. This is
+// the SAME module the middleware and src/lib/branding.ts use, so the CSP
+// origin list can never drift from actual request routing again.
+import { brandDomainList, familyTradeHost } from "./src/domains/registry";
 
 // Wire next-intl's message-loading + locale resolver (src/i18n/request.ts) into
 // the build. This is the non-routing (cookie-based) mode — no [locale] segment.
@@ -21,25 +25,9 @@ const isProduction = process.env.NODE_ENV === "production";
 // first, which blocked RSC prefetches on gbfxs.com (CSP connect-src
 // violation → "Failed to fetch RSC payload" console spam + full-page
 // fallback navigation).
-const brandDomains = (process.env.BRAND_DOMAINS || process.env.BRAND_DOMAIN || "blackforrestt.com")
-  .split(",")
-  .map((domain) => domain.trim().toLowerCase())
-  .filter(Boolean);
-const tradeSubdomain = (process.env.TRADE_SUBDOMAIN || "trade").trim().toLowerCase();
-const tradeHostFor = (domain: string): string => {
-  const pairs: Array<[string | undefined, string | undefined]> = [
-    [process.env.DOMAIN, process.env.TRADE_DOMAIN],
-    [process.env.DOMAIN_2, process.env.TRADE_DOMAIN_2],
-    [process.env.DOMAIN_3, process.env.TRADE_DOMAIN_3],
-  ];
-  for (const [apex, trade] of pairs) {
-    if ((apex ?? "").trim().toLowerCase() === domain && trade?.trim()) return trade.trim().toLowerCase();
-  }
-  return `${tradeSubdomain}.${domain}`;
-};
 const connectOrigins = new Set<string>();
-for (const domain of brandDomains) {
-  const tradeHost = tradeHostFor(domain);
+for (const domain of brandDomainList()) {
+  const tradeHost = familyTradeHost(domain);
   connectOrigins.add(`https://${domain}`);
   connectOrigins.add(`https://${tradeHost}`);
   connectOrigins.add(`wss://${tradeHost}`);

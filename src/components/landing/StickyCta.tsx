@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
-import { clientTradeUrl } from "@/lib/branding";
+import type { StickyCtaContent } from "@/content/contracts";
 
 /**
  * Fixed registration bar that appears once the reader scrolls past the hero and
@@ -14,8 +13,7 @@ import { clientTradeUrl } from "@/lib/branding";
  * the useScrollSpy approach, which is reliable across browsers and embedded
  * web-views where window 'scroll' events alone can be unreliable.
  */
-export function StickyCta({ heroId = "hero", finalId = "final-cta" }: { heroId?: string; finalId?: string }) {
-  const t = useTranslations("stickyCta");
+export function StickyCta({ content, heroId = "hero", finalId = "final-cta" }: { content: StickyCtaContent; heroId?: string; finalId?: string }) {
   const [pastHero, setPastHero] = useState(false);
   const [atFinal, setAtFinal] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -66,19 +64,19 @@ export function StickyCta({ heroId = "hero", finalId = "final-cta" }: { heroId?:
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-text">{t("title")}</div>
-          <div className="text-xs text-text-muted truncate">{t("subtitle")}</div>
+          <div className="text-sm font-semibold text-text">{content.title}</div>
+          <div className="text-xs text-text-muted truncate">{content.subtitle}</div>
         </div>
         <a
-          href={clientTradeUrl("/register")}
+          href="/register"
           className="shrink-0 px-4 py-2 rounded-lg bg-brand text-white text-sm font-semibold hover:brightness-110 transition"
         >
-          {t("button")}
+          {content.buttonLabel}
         </a>
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          aria-label={t("dismiss")}
+          aria-label={content.dismissLabel}
           className="shrink-0 h-8 w-8 inline-flex items-center justify-center rounded-md text-text-faint hover:text-text hover:bg-panel transition"
         >
           ✕

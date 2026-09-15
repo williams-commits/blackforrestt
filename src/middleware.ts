@@ -3,6 +3,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { mutationOriginAllowed } from "@/server/security/origin";
+import {
+  brandDomainList,
+  familyTradeHost,
+  isLocalHost,
+  normalizeHost,
+} from "@/domains/registry";
 
 // Duplicated from @/i18n/config (importing that module here changes how the
 // middleware bundle is compiled — node: imports in the auth chain then fail
@@ -11,56 +17,10 @@ const LOCALES = ["en", "fr", "de", "es", "ja", "zh", "ru", "ar", "ko"] as const;
 const DEFAULT_LOCALE = "en";
 const LOCALE_COOKIE = "NEXT_LOCALE";
 
-// Duplicated from @/lib/branding (same bundling concern as LOCALES above —
-// keep this list logic in sync with brandDomains()/brandDomain() there).
-// BRAND_DOMAINS is a comma-separated list of apex domains serving the same
-// files; the FIRST entry is canonical (redirect targets, cookies' dot-domain,
-// emails, SEO). BRAND_DOMAIN alone still works as a single-entry list.
-function brandDomainList(): string[] {
-  const raw = (process.env.BRAND_DOMAINS || process.env.BRAND_DOMAIN || "").trim().toLowerCase();
-  const list = raw.split(",").map((entry) => entry.trim()).filter((entry) => entry.includes(".") && !entry.includes("://"));
-  return list.length > 0 ? [...new Set(list)] : [];
-}
-
-// "tradeEnabled": true in BRAND_OVERRIDES — minimal duplicate of the
-// BRAND_OVERRIDES read in src/lib/branding.ts (same bundling concern as
-// brandDomainList above). Invalid JSON safely means "not enabled".
-function familyTradeEnabled(domain: string): boolean {
-  const raw = (process.env.BRAND_OVERRIDES || "").trim();
-  if (!raw) return false;
-  try {
-    const parsed = JSON.parse(raw) as Record<string, { tradeEnabled?: boolean }>;
-    return parsed[domain]?.tradeEnabled === true;
-  } catch {
-    return false;
-  }
-}
-
-// Trade host serving a brand family's app, or null when the family has none.
-// Resolution order — the DEPLOYMENT'S OWN declaration wins:
-//   1. The DOMAIN_N / TRADE_DOMAIN_N env pairs (exactly what Caddy serves —
-//      set in .env.production). This is the primary signal: if you stood up
-//      TRADE_DOMAIN_2, routing follows automatically.
-//   2. "tradeEnabled": true in BRAND_OVERRIDES (operator asserts the
-//      subdomain's DNS + TLS exist even without a TRADE_DOMAIN_N pair).
-//   3. Neither → the family's app traffic uses the canonical trade host.
-// Reading only BRAND_OVERRIDES caused a silent cross-brand leak: forgetting
-// the JSON flag sent gbfxs.com/logins to trade.blackforrestt.com while
-// Caddy was happily serving trade.gbfxs.com.
-function familyTradeHost(domain: string): string | null {
-  const pairs: Array<[string | undefined, string | undefined]> = [
-    [process.env.DOMAIN, process.env.TRADE_DOMAIN],
-    [process.env.DOMAIN_2, process.env.TRADE_DOMAIN_2],
-    [process.env.DOMAIN_3, process.env.TRADE_DOMAIN_3],
-  ];
-  for (const [apexVar, tradeVar] of pairs) {
-    const apex = (apexVar ?? "").trim().toLowerCase();
-    const trade = (tradeVar ?? "").trim().toLowerCase();
-    if (apex === domain && trade) return trade;
-  }
-  if (familyTradeEnabled(domain)) return `${(process.env.TRADE_SUBDOMAIN ?? "trade").trim()}.${domain}`;
-  return null;
-}
+// Domain/host resolution (brand domain list, trade-host pairs, tradeEnabled)
+// lives in ONE place: src/domains/registry.ts — a zero-dependency module, so
+// importing it here cannot disturb the middleware bundle (the historical
+// reason this logic was duplicated).
 
 const PROTECTED_PAGES = ["/trade", "/account", "/reports"];
 const PROTECTED_APIS = [
@@ -179,12 +139,12 @@ function domainRedirect(req: Request): NextResponse | null {
   const tradeHosts = new Set(domains.map((domain) => `${tradeSubdomain}.${domain}`));
   const tradeSub = tradeHosts.values().next().value as string; // canonical trade host
 
-  const host = bareHost(req);
-  // Strip a leading "www." so www.blackforrestt.com is treated as the apex.
-  const apex = host.startsWith("www.") ? host.slice(4) : host;
+  // Routing host: honor the proxy's forwarded host first, then strip port +
+  // "www." (registry normalizeHost).
+  const apex = normalizeHost(requestHost(req));
 
   // Local development: don't redirect localhost / 127.0.0.1 / IP literals.
-  if (host === "localhost" || host.startsWith("127.0.0.1") || /^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+  if (isLocalHost(apex)) {
     return null;
   }
 
@@ -210,12 +170,12 @@ function domainRedirect(req: Request): NextResponse | null {
   // belong on the apex domain. Without this, clicking the logo on
   // trade.blackforrestt.com stays on the trade subdomain instead of going
   // to the marketing site.
-  if (tradeHosts.has(host)) {
+  if (tradeHosts.has(apex)) {
     const isMarketing =
       pathname === "/" ||
       MARKETING_DOMAIN_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
     if (isMarketing) {
-      const family = domains.find((domain) => host === `${tradeSubdomain}.${domain}`) ?? brandDomain;
+      const family = domains.find((domain) => apex === `${tradeSubdomain}.${domain}`) ?? brandDomain;
       url.hostname = family;
       return NextResponse.redirect(url, 307);
     }
@@ -227,8 +187,7 @@ function domainRedirect(req: Request): NextResponse | null {
 /** The configured brand domain that owns this host (apex or subdomain of it),
  *  or null for unknown hosts (e.g. localhost or an unconfigured alias). */
 function cookieDomainForHost(hostWithPort: string): string | null {
-  const host = hostWithPort.replace(/:\d+$/, "");
-  const stripped = host.startsWith("www.") ? host.slice(4) : host;
+  const stripped = normalizeHost(hostWithPort);
   for (const domain of brandDomainList()) {
     if (stripped === domain || stripped.endsWith(`.${domain}`)) return domain;
   }

@@ -57,7 +57,7 @@ export function ProgressChecklist({ items }: ProgressChecklistProps) {
               </span>
               <span className={`font-mono text-[10px] text-text-faint w-4`}>{i + 1}</span>
               <span className={isRead ? "text-text" : "text-text-muted"}>
-                {tSections(item.labelKey)}
+                {item.label ?? (item.labelKey ? tSections(item.labelKey) : item.id)}
               </span>
             </li>
           );

@@ -323,59 +323,6 @@ export function AgileStyles() {
         .ag-bento-global { grid-column: auto; }
       }
 
-      /* Live ticker marquee — infinite horizontal scroll. */
-      .ag-ticker {
-        position: relative;
-        overflow: hidden;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        background: #0a0a0b;
-      }
-      .ag-ticker::before,
-      .ag-ticker::after {
-        content: "";
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        width: 72px;
-        z-index: 1;
-        pointer-events: none;
-      }
-      .ag-ticker::before { left: 0; background: linear-gradient(90deg, #0a0a0b, transparent); }
-      .ag-ticker::after { right: 0; background: linear-gradient(270deg, #0a0a0b, transparent); }
-      .ag-ticker-track {
-        display: flex;
-        width: max-content;
-        animation: ag-marquee 46s linear infinite;
-      }
-      .ag-ticker:hover .ag-ticker-track { animation-play-state: paused; }
-      .ag-ticker-row {
-        display: flex;
-        align-items: center;
-        padding-block: 0.8rem;
-      }
-      .ag-ticker-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.55rem;
-        padding-inline: 1.4rem;
-        font-family: var(--font-agile-inter), Inter, sans-serif;
-        font-size: 13px;
-        font-variant-numeric: tabular-nums;
-        color: #f1f3ef;
-        border-right: 1px solid rgba(255, 255, 255, 0.07);
-        transition: color 150ms ease;
-      }
-      .ag-ticker-item:hover { color: #f0b90b; }
-      .ag-ticker-item .tnum { color: #a9a9ae; }
-      @keyframes ag-marquee {
-        from { transform: translateX(0); }
-        to { transform: translateX(-50%); }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .ag-ticker-track { animation: none; }
-      }
-
       /* Numbered editorial steps — 01 / 02 / 03. */
       .ag-stepnum {
         font-size: 12px;

@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useTranslations } from "next-intl";
-import { clientTradeUrl } from "@/lib/branding";
+import { useArticleCta } from "@/components/landing/ArticleCta";
 import { areaPath, smoothPath } from "../smoothPath";
 
 interface Props {
@@ -34,7 +33,9 @@ const DESK_LINE = smoothPath(DESK_SERIES);
 const DESK_AREA = areaPath(DESK_SERIES, 80);
 
 export function AgileArticleLayout({ eyebrow, title, description, children, sidebar }: Props) {
-  const t = useTranslations("finalCta");
+  // Closing-CTA copy comes from the shell-provided content context — this
+  // design component never fetches translations.
+  const closingCta = useArticleCta();
 
   return (
     <div>
@@ -85,7 +86,9 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
       </div>
 
       {/* Closing CTA — the landing's yellow band, ending every interior
-          page in the product's voice. Same honest copy as the landing. */}
+          page in the product's voice. Skipped only when the shell provided
+          no content (never rendered with placeholder copy). */}
+      {closingCta && (
       <aside className="ag-page-cta ag-cell-yellow relative overflow-hidden">
         <div
           aria-hidden="true"
@@ -94,22 +97,23 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
         />
         <div className="ag-container relative flex flex-col items-start justify-between gap-6 py-12 lg:flex-row lg:items-center lg:py-14">
           <div>
-            <h2 className="text-2xl font-bold tracking-[-0.02em] text-[#0d0d0f] lg:text-3xl">{t("title")}</h2>
-            <p className="mt-2 max-w-md text-sm leading-relaxed text-[#0d0d0f]/72">{t("subtitle")}</p>
+            <h2 className="text-2xl font-bold tracking-[-0.02em] text-[#0d0d0f] lg:text-3xl">{closingCta.title}</h2>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-[#0d0d0f]/72">{closingCta.subtitle}</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href={clientTradeUrl("/register")} className="ag-btn ag-btn-ink">
-              {t("primary")}
+            <Link href="/register" className="ag-btn ag-btn-ink">
+              {closingCta.primaryLabel}
             </Link>
             <Link
-              href={clientTradeUrl("/login")}
+              href="/login"
               className="ag-btn ag-btn-ghost border-[#0d0d0f]/30! text-[#0d0d0f]! hover:bg-[#0d0d0f]/8!"
             >
-              {t("secondary")}
+              {closingCta.secondaryLabel}
             </Link>
           </div>
         </div>
       </aside>
+      )}
     </div>
   );
 }

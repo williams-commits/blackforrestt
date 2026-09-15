@@ -1,77 +1,85 @@
-# Per-brand landing trees
-
-Each brand family owns its landing page **outright** in its own folder — its
-own sections, components, styles and visual system — as if it were a separate
-site hosted on the same server. Brands never import each other's files.
+# Per-design landing trees + the design registry
 
 ```
-src/app/page.tsx                ← thin host dispatcher (landingTemplate switch)
-src/app/(content)/layout.tsx    ← thin host dispatcher for interior page chrome
+src/app/page.tsx                ← thin host dispatcher (design registry)
+src/app/(content)/layout.tsx    ← thin host dispatcher for public shells
 src/landing/
-  composition.tsx               ← host dispatcher for interior page ARCHITECTURE
-                                    (ArticleLayout/Section → brand-owned layout)
-  blackforest/                  ← Black Forest Digital (blackforrestt.com)
-    BlackForestLanding.tsx      ← composition only — sections come from the
-                                    shared library in src/components/landing/*
-  agile/                        ← Global Forex Services (gbfxs.com)
-    AgileLanding.tsx            ← composition
-    AgileContentShell.tsx       ← interior-page chrome (navbar+footer+scope)
-    content/AgileArticleLayout  ← interior-page architecture (header band +
-                                    section grammar from the landing system)
-    AgileNavbar / AgileFooter / AgileStyles / LivePricePanel /
-    SectionBackdrop / sections/ ← fully brand-owned dark-institutional system
+  designKeys.ts                 ← design key registry (pure data, test-safe)
+  designs.ts                    ← key → component mappings (landing + public
+                                   shells); TypeScript enforces key coverage
+  composition.tsx               ← client-side public-design dispatcher
+                                   (ArticleLayout/Section architecture)
+  blackforest/                  ← DEFAULT design (Black Forest Digital)
+    BlackForestLanding.tsx      ← composition; sections from the shared
+                                   library in src/components/landing/*
+    DefaultPublicShell.tsx      ← Navbar+Footer shell for (content) routes
+  agile/                        ← CUSTOM design exemplar (Global Forex
+                                   Services): brand-owned dark-institutional
+                                   system that consumes the agile domain's
+                                   typed content contracts
+src/domains/<key>/              ← domain configs + typed content assembly
+src/content/contracts.ts        ← the typed content models both consume
 ```
 
-## What is shared (the "library")
+A landing page is CONTENT + DESIGN + PAGE COMPOSITION:
 
-Anything that is not a landing's visual identity stays shared and brand-aware:
+- **Content** — typed contracts (`src/content/contracts.ts`), assembled per
+  domain by `src/domains/<key>/content.ts` from the i18n catalogs + brand
+  profile. Locale-aware, presentation-free.
+- **Design** — the trees in this folder. The agile tree receives typed
+  content as props and never calls next-intl itself (enforced by
+  `npm run test:domains`). The default tree's shared-library sections still
+  resolve catalogs directly (documented incremental debt — see
+  `src/content/README.md`).
+- **Composition** — each design owns its section ordering and architecture;
+  designs are never required to render every section a contract describes.
 
-- `src/components/**` — shared UI + the landing library
-  (`Navbar`, `Footer`, `Hero`, `Markets`, `TradingPlayground`, …) used by the
-  Black Forest landing, plus the brand-neutral primitives every tree consumes:
-  - `useInstruments.ts` — the one live-instruments polling hook (all landing
-    islands get their feed through it; brand trees never re-implement polling)
-  - `Reveal.tsx` — scroll-reveal motion primitive (CSS lives in globals.css
-    as `.reveal` / `.reveal-in`, reduced-motion safe)
+## What is shared (the platform library)
+
+Anything that is not a landing's visual identity stays shared and design-aware:
+
+- `src/components/**` — shared UI + the landing section library used by the
+  default design, plus the brand-neutral primitives every tree consumes:
+  - `useInstruments.ts` — the one live-instruments polling hook
+  - `Reveal.tsx` — scroll-reveal motion primitive (`.reveal` / `.reveal-in`)
   - `MarketIcons`, `ContactForm`, `ArticleLayout`, `InformersWidget`, …
-- `src/lib/**`, `src/server/**` — branding, i18n, engine, payments, ledger…
-- `src/messages/**` — catalogs (`agile.*` namespace serves the Agile landing)
+- `src/lib/**`, `src/server/**`, `src/domains/registry.ts` — branding, host
+  resolution, engine, payments, ledger…
+- `src/messages/**` — the i18n catalogs (content STORAGE; access flows
+  through the domain content packages)
 - Backend resources — one database, Redis, dashboard (`/account`, `/trade`),
   admin console, APIs
 
-## Interior (content) pages
+## Interior (public) pages
 
 The `(content)` routes (about, contact, tools, analytics, education, legal)
-have **shared page bodies** (content/data components built on the global design
-tokens) but **brand-owned presentation at two layers**:
+have **shared page bodies** with **design-owned presentation at two layers**:
 
-1. **Chrome** — the `(content)` layout dispatches on `landingTemplate`: the
-   primary brand keeps the light editorial `Navbar` + `Footer`; Agile gets
-   `AgileContentShell` (own navbar, footer, Inter typography).
+1. **Shell** — the `(content)` layout resolves the domain's `publicDesign`
+   and renders the registered shell (default: light editorial Navbar+Footer;
+   agile: `AgileContentShell` — own navbar/footer, Inter, scoped tokens).
 2. **Architecture** — pages compose through `src/landing/composition.tsx`
-   (`ArticleLayout` / `Section`), which renders the brand-owned page layout:
-   the primary brand's editorial article layout, or Agile's header-band +
-   section grammar from the landing design system. Page files import from the
-   dispatcher, never from a specific brand's layout.
+   (`ArticleLayout` / `Section`), which dispatches on the brand context's
+   `publicDesign`. Page files import from the dispatcher, never a design.
 
-Agile's reskin works by token scope, not duplication: `AgileStyles` defines an
-`.ag-scope` class that remaps the global `--color-*` / `--font-*` variables to
-Agile's dark-institutional palette inside its subtree (plus the Agile card
-grammar for the shared token-card patterns). Every shared component underneath
-re-skins automatically — no product conditionals in page bodies, and the
-primary brand's root (light) tokens are untouched.
+The agile reskin works by token scope, not duplication: `AgileStyles` defines
+an `.ag-scope` class remapping the global `--color-*` / `--font-*` variables
+inside its subtree, so shared components re-skin automatically.
 
-## Rules
+## Rules (enforced by tests/domains.test.ts)
 
-1. **No cross-brand imports.** `src/landing/agile/**` must not import from
+1. **No cross-design imports.** `src/landing/agile/**` must not import from
    `src/landing/blackforest/**` and vice versa.
-2. **Landing folders import shared code, never the reverse.** App routes and
-   shared components must not import from `src/landing/**` — only the host
-   dispatchers (`src/app/page.tsx` and `src/app/(content)/layout.tsx`) do.
-3. **Adding a brand** = new folder under `src/landing/<brand>/` + a
-   `landingTemplate` key in `BRAND_OVERRIDES` + a case in both dispatchers.
-4. **Shared visuals** live in `public/brands/<brand>/` — each brand's assets
-   (e.g. `public/brands/gbfxs/backgrounds/`) belong to that brand only.
-5. **Shared components stay generic.** A component in `src/components/**`
-   must never branch on brand/product. Brand identity enters through tokens
-   (scoped CSS variables), the brand profile, and brand-owned composition.
+2. **Route through the registry.** App routes import `@/landing/designs`
+   (host dispatchers) or `@/landing/composition` — never a design tree
+   directly. (Embeddable surfaces use the shared, self-styled
+   `@/components/landing/TickerStrip`.)
+3. **Adding a design** = new folder under `src/landing/<design>/` + key in
+   `designKeys.ts` + components in `designs.ts`.
+4. **Adding a domain** = copy `src/domains/_template/`, register in
+   `src/domains/registry.ts`, select existing or new designs. See
+   `.platform/workflows/new-domain.md`.
+5. **Design assets** live in `public/brands/<domain>/`.
+6. **Shared components stay generic.** A component in `src/components/**`
+   must never branch on brand/product — identity enters through tokens, the
+   brand profile, and design-owned composition.

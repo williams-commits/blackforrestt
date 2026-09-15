@@ -4,6 +4,12 @@
  * configured in one place. Server components call these directly; client
  * components read NEXT_PUBLIC_BRAND_NAME (the only value the client needs).
  *
+ * Host/domain/trade-host resolution lives in ONE place —
+ * src/domains/registry.ts (the domain registry) — which this module and the
+ * middleware both consume. This file now only layers the primary env defaults
+ * (BRAND_NAME, COMPANY_*, …) on top of the registry's per-domain brand
+ * defaults, with BRAND_OVERRIDES[apex] always winning.
+ *
  * The email subsystem (src/server/email/templates.ts) keeps its own EMAIL_*
  * vars but defaults EMAIL_BRAND_NAME to brandName() so the two stay consistent.
  *
@@ -14,6 +20,15 @@
  * empty strings as falsy, so the fallback always applies when no real value is
  * present.
  */
+import {
+  brandDomainList,
+  brandOverrides,
+  domainForHost,
+  defaultDomain,
+  familyTradeHost as registryFamilyTradeHost,
+  resolveHostContext,
+  type DomainBrandDefaults,
+} from "@/domains/registry";
 
 /** Public brand name shown in the UI (e.g. "Black Forest Digital"). Client-safe via NEXT_PUBLIC_. */
 export function brandName(): string {
@@ -37,22 +52,14 @@ export function supportEmail(): string {
 
 /**
  * Every apex domain the platform answers on (e.g.
- * ["blackforrestt.com", "gbfxs.com"]). Mirror/alias domains serve the
- * SAME files as the primary until they get their own landing page.
- *
- * Configure via BRAND_DOMAINS (comma-separated); BRAND_DOMAIN alone still
- * works and yields a single-entry list. The FIRST entry is canonical —
- * authenticated routes on any apex redirect to the primary trade subdomain,
- * so sessions and cookies live on exactly one host.
+ * ["blackforrestt.com", "gbfxs.com"]). Delegates to the domain registry:
+ * BRAND_DOMAINS/BRAND_DOMAIN env first (mirrors + runtime families), then the
+ * code-declared registry hosts. The FIRST entry is canonical — authenticated
+ * routes on any apex redirect to the primary trade subdomain, so sessions and
+ * cookies live on exactly one host.
  */
 export function brandDomains(): string[] {
-  const raw = (process.env.BRAND_DOMAINS || process.env.BRAND_DOMAIN || "").trim().toLowerCase();
-  const list = raw
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.includes(".") && !entry.includes("://"));
-  if (list.length > 0) return [...new Set(list)];
-  return ["blackforrestt.com"];
+  return brandDomainList();
 }
 
 /**
@@ -128,12 +135,20 @@ export interface BrandProfile {
    */
   depositWallets: string;
   /**
-   * Landing-page template key ("default" | "agile" | …). Selects which
-   * brand-owned tree under src/landing/ renders the apex `/` for this brand
-   * family ("default" → src/landing/blackforest/). Unknown keys fall back
-   * to "default".
+   * Landing design key ("default" | "agile" | …). Selects which design in the
+   * src/landing/designs.ts registry renders the apex `/` for this brand
+   * family ("default" → src/landing/blackforest/). Resolution:
+   * BRAND_OVERRIDES.landingTemplate → registry domain's landingDesign →
+   * "default". Unknown keys fall back to "default".
    */
   landingTemplate: string;
+  /**
+   * Public (interior) page design key — selects the shell + page architecture
+   * from the same design registry (see src/landing/composition.tsx and the
+   * (content) layout). Mirrors landingTemplate unless a domain explicitly
+   * splits its landing and public designs.
+   */
+  publicDesign: string;
 }
 
 /** SVG glyph rendered by the Logo component and the generated favicon. */
@@ -154,135 +169,100 @@ export interface BrandGlyph {
   letter?: { text: string; size: number };
 }
 
-/** BRAND_OVERRIDES entry shape (all fields optional; missing = primary default). */
-interface BrandOverride {
-  name?: string;
-  shortName?: string;
-  legalName?: string;
-  supportEmail?: string;
-  address?: string;
-  trademark?: string;
-  wordmark?: [string, string];
-  companyRegistrationNumber?: string;
-  companyJurisdiction?: string;
-  companyRegulator?: string;
-  companyLicenseNumber?: string;
-  investorCompensationScheme?: string;
-  tradeEnabled?: boolean;
-  emailFrom?: string;
-  emailReplyTo?: string;
-  emailColor?: string;
-  emailLogoUrl?: string;
-  ogImage?: string;
-  accentColor?: string;
-  markColor?: string;
-  glyph?: BrandGlyph | null;
-  heroBadge?: string;
-  heroSubtitle?: string;
-  metaDescription?: string;
-  logoLockup?: string;
-  logoWord?: string;
-  depositWallets?: string;
-  landingTemplate?: string;
-}
-
 /**
  * Per-domain brand overrides, keyed by apex domain, from the BRAND_OVERRIDES
- * JSON env var. Example:
- *
- *   BRAND_OVERRIDES='{"gbfxs.com":{"name":"Global Forex Services","shortName":"Global Forex Services",
- *     "legalName":"Global Forex Services Ltd","supportEmail":"support@gbfxs.com",
- *     "address":"…","trademark":"Global Forex Services™","wordmark":["Agile","FGS"],
- *     "tradeEnabled":true}}'
- *
- * Parsed lazily; invalid JSON is ignored (primary branding everywhere) rather
- * than taking the site down.
+ * JSON env var (parsed defensively by the registry). Entries are merged over
+ * the registry's code-declared brand defaults — env is the operational
+ * override layer, code is the shipped default.
  */
-function brandOverrides(): Record<string, BrandOverride> {
-  const raw = (process.env.BRAND_OVERRIDES || "").trim();
-  if (!raw) return {};
-  try {
-    const parsed = JSON.parse(raw) as Record<string, BrandOverride>;
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    console.error("BRAND_OVERRIDES is not valid JSON — using primary branding for every domain.");
-    return {};
-  }
+function brandOverridesMap(): Record<string, DomainBrandDefaults> {
+  return brandOverrides();
 }
 
-/** Resolve the brand profile for one apex domain (primary defaults + overrides).
+/** Resolve the brand profile for one apex domain. Layering (highest wins):
+ *  1. BRAND_OVERRIDES[apex] — per-deployment values
+ *  2. the registry domain's brand defaults (src/domains/registry.ts)
+ *  3. the primary env defaults (BRAND_NAME, COMPANY_*, …) / built-ins
  *  Null/undefined resolves to the primary brand — every user created before
  *  multi-branding, and unknown hosts. */
 export function brandProfileForDomain(domain?: string | null): BrandProfile {
   const key = domain?.trim().toLowerCase() || brandDomains()[0];
-  const override = brandOverrides()[key] ?? {};
+  const override = brandOverridesMap()[key] ?? {};
+  // Registry domain claiming this apex; unknown apices (env-declared mirrors,
+  // localhost aliases) inherit the default domain's (empty) code defaults.
+  const claimed = domainForHost(key);
+  const registryDefaults = (claimed ?? defaultDomain()).brand;
+  const registryTradeEnabled = (claimed ?? defaultDomain()).tradeEnabled;
+  // Does BRAND_OVERRIDES carry an entry for this apex at all? (Entry-level
+  // authority for tradeEnabled — see registry.familyTradeEnabled.)
+  const overrideEntryExists = brandOverridesMap()[key] !== undefined;
+
+  const layered = <T>(envOverride: T | undefined, codeDefault: T | undefined, primary: () => T): T =>
+    envOverride !== undefined ? envOverride : codeDefault !== undefined ? codeDefault : primary();
+
   return {
     domain: key,
-    name: override.name ?? brandName(),
-    shortName: override.shortName ?? brandShortName(),
-    legalName: override.legalName ?? companyLegalName(),
-    supportEmail: override.supportEmail ?? supportEmail(),
-    address: override.address ?? companyAddress(),
-    trademark: override.trademark ?? brandTrademark(),
-    wordmark: override.wordmark ?? ["Black", "Forest"],
-    companyRegistrationNumber: override.companyRegistrationNumber ?? companyRegistrationNumber(),
-    companyJurisdiction: override.companyJurisdiction ?? companyJurisdiction(),
-    companyRegulator: override.companyRegulator ?? companyRegulator(),
-    companyLicenseNumber: override.companyLicenseNumber ?? companyLicenseNumber(),
-    investorCompensationScheme: override.investorCompensationScheme ?? investorCompensationScheme(),
-    tradeEnabled: override.tradeEnabled === true,
-    emailFrom: override.emailFrom ?? "",
-    emailReplyTo: override.emailReplyTo ?? "",
-    emailColor: override.emailColor ?? "",
-    emailLogoUrl: override.emailLogoUrl ?? "",
-    ogImage: override.ogImage ?? "",
-    accentColor: override.accentColor ?? "",
-    markColor: override.markColor ?? "",
-    glyph: override.glyph ?? null,
-    heroBadge: override.heroBadge ?? "",
-    heroSubtitle: override.heroSubtitle ?? "",
-    metaDescription: override.metaDescription ?? "",
-    logoLockup: override.logoLockup ?? "wordmark",
-    logoWord: override.logoWord ?? "",
-    depositWallets: override.depositWallets ?? "",
-    landingTemplate: override.landingTemplate ?? "default",
+    name: layered(override.name, registryDefaults.name, brandName),
+    shortName: layered(override.shortName, registryDefaults.shortName, brandShortName),
+    legalName: layered(override.legalName, registryDefaults.legalName, companyLegalName),
+    supportEmail: layered(override.supportEmail, registryDefaults.supportEmail, supportEmail),
+    address: layered(override.address, registryDefaults.address, companyAddress),
+    trademark: layered(override.trademark, registryDefaults.trademark, brandTrademark),
+    wordmark: layered(override.wordmark, registryDefaults.wordmark, () => ["Black", "Forest"]),
+    companyRegistrationNumber: layered(
+      override.companyRegistrationNumber,
+      registryDefaults.companyRegistrationNumber,
+      companyRegistrationNumber,
+    ),
+    companyJurisdiction: layered(
+      override.companyJurisdiction,
+      registryDefaults.companyJurisdiction,
+      companyJurisdiction,
+    ),
+    companyRegulator: layered(override.companyRegulator, registryDefaults.companyRegulator, companyRegulator),
+    companyLicenseNumber: layered(override.companyLicenseNumber, registryDefaults.companyLicenseNumber, companyLicenseNumber),
+    investorCompensationScheme: layered(
+      override.investorCompensationScheme,
+      registryDefaults.investorCompensationScheme,
+      investorCompensationScheme,
+    ),
+    // Same precedence as registry.familyTradeEnabled: an existing override
+    // ENTRY is authoritative (absent flag = not enabled); no entry → the
+    // registry domain's code default.
+    tradeEnabled: overrideEntryExists
+      ? override.tradeEnabled === true
+      : registryTradeEnabled,
+    emailFrom: override.emailFrom ?? registryDefaults.emailFrom ?? "",
+    emailReplyTo: override.emailReplyTo ?? registryDefaults.emailReplyTo ?? "",
+    emailColor: override.emailColor ?? registryDefaults.emailColor ?? "",
+    emailLogoUrl: override.emailLogoUrl ?? registryDefaults.emailLogoUrl ?? "",
+    ogImage: override.ogImage ?? registryDefaults.ogImage ?? "",
+    accentColor: override.accentColor ?? registryDefaults.accentColor ?? "",
+    markColor: override.markColor ?? registryDefaults.markColor ?? "",
+    glyph: override.glyph !== undefined ? override.glyph : (registryDefaults.glyph ?? null),
+    heroBadge: override.heroBadge ?? registryDefaults.heroBadge ?? "",
+    heroSubtitle: override.heroSubtitle ?? registryDefaults.heroSubtitle ?? "",
+    metaDescription: override.metaDescription ?? registryDefaults.metaDescription ?? "",
+    logoLockup: override.logoLockup ?? registryDefaults.logoLockup ?? "wordmark",
+    logoWord: override.logoWord ?? registryDefaults.logoWord ?? "",
+    depositWallets: override.depositWallets ?? registryDefaults.depositWallets ?? "",
+    landingTemplate: override.landingTemplate ?? defaultDomainFor(key).landingDesign,
+    publicDesign: override.publicDesign ?? override.landingTemplate ?? defaultDomainFor(key).publicDesign,
   };
 }
 
-/** "tradeEnabled": true for a domain in BRAND_OVERRIDES (invalid JSON = no). */
-function familyTradeEnabled(domain: string): boolean {
-  const raw = (process.env.BRAND_OVERRIDES || "").trim();
-  if (!raw) return false;
-  try {
-    const parsed = JSON.parse(raw) as Record<string, { tradeEnabled?: boolean }>;
-    return parsed[domain]?.tradeEnabled === true;
-  } catch {
-    return false;
-  }
+/** Registry domain for an apex (never null — unknown apices get the default). */
+function defaultDomainFor(apex: string) {
+  return domainForHost(apex) ?? defaultDomain();
 }
 
 /**
  * The trade host serving a brand family's authenticated app
- * (e.g. "trade.gbfxs.com"). Resolution mirrors the middleware: the
- * DOMAIN_N/TRADE_DOMAIN_N deployment pairs first, then "tradeEnabled" in
- * BRAND_OVERRIDES, else the canonical trade host. Keep in sync with
- * familyTradeHost() in src/middleware.ts.
+ * (e.g. "trade.gbfxs.com"). Delegates to the domain registry — the ONE
+ * implementation shared with the middleware and next.config.ts.
  */
 export function tradeHostForDomain(domain?: string | null): string {
-  const family = domain?.trim().toLowerCase() || brandDomains()[0];
-  const pairs: Array<[string | undefined, string | undefined]> = [
-    [process.env.DOMAIN, process.env.TRADE_DOMAIN],
-    [process.env.DOMAIN_2, process.env.TRADE_DOMAIN_2],
-    [process.env.DOMAIN_3, process.env.TRADE_DOMAIN_3],
-  ];
-  for (const [apexVar, tradeVar] of pairs) {
-    const apex = (apexVar ?? "").trim().toLowerCase();
-    const trade = (tradeVar ?? "").trim().toLowerCase();
-    if (apex === family && trade) return trade;
-  }
-  const sub = (process.env.TRADE_SUBDOMAIN || "trade").trim();
-  if (familyTradeEnabled(family)) return `${sub}.${family}`;
-  return `${sub}.${brandDomains()[0]}`;
+  return registryFamilyTradeHost(domain) ?? tradeOrigin().replace(/^https:\/\//, "");
 }
 
 /** Valid 3–8 digit hex color (with #), or null. Guards the CSS injection. */
@@ -332,9 +312,10 @@ export async function currentBrandProfile(): Promise<BrandProfile> {
     .trim()
     .toLowerCase()
     .replace(/:\d+$/, "");
-  const stripped = host.startsWith("www.") ? host.slice(4) : host;
-  const family = brandDomains().find((domain) => stripped === domain || stripped.endsWith(`.${domain}`));
-  return brandProfileForDomain(family ?? brandDomains()[0]);
+  // Host → apex resolution is owned by the domain registry (env list first,
+  // then code-declared hosts; unknown hosts fall back to the canonical apex).
+  const apex = resolveHostContext(host).apex;
+  return brandProfileForDomain(apex);
 }
 
 /** Public domain (e.g. "blackforrestt.com"). Always the canonical FIRST entry

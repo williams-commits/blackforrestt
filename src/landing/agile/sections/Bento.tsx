@@ -1,18 +1,18 @@
-import { getTranslations } from "next-intl/server";
 import { Zap, ShieldCheck, LineChart } from "lucide-react";
 import { Reveal } from "@/components/landing/Reveal";
 import { GlobeArcs } from "../GlobeArcs";
-import { InstrumentLogo } from "../InstrumentLogo";
+import { InstrumentLogo } from "@/components/landing/InstrumentLogo";
 import { areaPath, smoothPath } from "../smoothPath";
 import { MarketIcon } from "@/components/landing/MarketIcons";
 import { CATEGORY_ORDER } from "@/lib/landingUi";
+import type { PillarsContent } from "@/content/contracts";
 import type { InstrumentCategory } from "@/lib/types";
 
 /**
  * Platform bento — the "why this desk" grid: an asymmetric card field where
  * each cell is one platform capability, anchored by the terminal cell and
  * closed by the global-markets cell with the GlobeArcs illustration. Content
- * reuses the platform's truthful pillar copy; the composition is entirely
+ * arrives as the typed PillarsContent contract; the composition is entirely
  * the Agile architecture (nothing like the primary brand's feature rows).
  */
 /** Terminal-cell chart series (hand-plotted) → smoothed Catmull-Rom paths. */
@@ -22,19 +22,21 @@ const TERMINAL_FAINT: Array<[number, number]> = [[0, 52], [20, 48], [40, 50], [6
 const TERMINAL_LINE = smoothPath(TERMINAL_LEAD);
 const TERMINAL_AREA = areaPath(TERMINAL_LEAD, 84);
 
-export async function BentoSection({ categoryCounts }: { categoryCounts: Record<string, number> }) {
-  const t = await getTranslations("agile.pillars");
-  const tA = await getTranslations("agile");
-  const tM = await getTranslations("agile.markets");
-
+export function BentoSection({
+  content,
+  categoryCounts,
+}: {
+  content: PillarsContent;
+  categoryCounts: Record<string, number>;
+}) {
   return (
     <section id="platform" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
       {/* <div className="pointer-events-none absolute inset-0 ag-mesh opacity-70" aria-hidden="true" /> */}
       <div className="ag-container relative">
         <Reveal>
-          <span className="ag-eyebrow">{t("eyebrow")}</span>
-          <h2 className="ag-h2 mt-4 max-w-2xl text-balance">{t("title")}</h2>
-          <p className="ag-sub mt-4 max-w-2xl">{t("subtitle")}</p>
+          <span className="ag-eyebrow">{content.eyebrow}</span>
+          <h2 className="ag-h2 mt-4 max-w-2xl text-balance">{content.title}</h2>
+          <p className="ag-sub mt-4 max-w-2xl">{content.subtitle}</p>
         </Reveal>
 
         <div className="ag-bento mt-14">
@@ -43,8 +45,8 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
             <article className="ag-bento-cell flex h-full min-h-52 flex-col justify-between p-8">
               <div>
                 <span className="ag-stepnum">01</span>
-                <h3 className="mt-3 text-xl font-bold tracking-[-0.015em] text-[#f1f3ef]">{t("all.title")}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[#a9a9ae]">{t("all.desc")}</p>
+                <h3 className="mt-3 text-xl font-bold tracking-[-0.015em] text-[#f1f3ef]">{content.all.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-[#a9a9ae]">{content.all.desc}</p>
               </div>
               {/* Multi-market chart — the desk's signature motif: smooth
                   Catmull-Rom curves in the brand theme (thin gold lead with
@@ -83,13 +85,13 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
                 <span className="ag-float-b absolute top-1.5 right-12 z-10 flex h-9 w-9 scale-95 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_10px_22px_-12px_rgba(0,0,0,0.8)] backdrop-blur" style={{ animationDelay: "1.1s" }}>
                   <InstrumentLogo symbol="BTCUSD" base="BTC" quote="USD" category="CRYPTO" className="h-6" />
                 </span>
-                <span className="ag-float-b absolute top-1/3 -left-1 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_12px_28px_-12px_rgba(0,0,0,0.85)] backdrop-blur" style={{ animationDelay: "2s" }}>
+                <span className="ag-float-b absolute top-1/3 -left-1 z-10 flex h-9 w-9 scale-95 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_12px_28px_-12px_rgba(0,0,0,0.85)] backdrop-blur" style={{ animationDelay: "2s" }}>
                   <InstrumentLogo symbol="XAUUSD" base="XAU" quote="USD" category="COMMODITY" className="h-6" />
                 </span>
                 <span className="ag-float-a absolute bottom-1 left-1/4 z-10 flex h-9 w-9 scale-95 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_10px_22px_-12px_rgba(0,0,0,0.8)] backdrop-blur" style={{ animationDelay: "2.9s" }}>
                   <InstrumentLogo symbol="US30" base="US30" quote="USD" category="INDEX" className="h-6" />
                 </span>
-                <span className="ag-float-b absolute -bottom-2 right-4 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_12px_28px_-12px_rgba(0,0,0,0.85)] backdrop-blur" style={{ animationDelay: "3.7s" }}>
+                <span className="ag-float-b absolute -bottom-2 right-4 z-10 flex h-9 w-9 scale-95 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_10px_22px_-12px_rgba(0,0,0,0.8)] backdrop-blur" style={{ animationDelay: "3.7s" }}>
                   <InstrumentLogo symbol="AAPL" base="AAPL" quote="USD" category="STOCK" className="h-6" />
                 </span>
               </div>
@@ -101,9 +103,11 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
             <article className="ag-bento-cell flex h-full flex-col p-7">
               <span className="ag-stepnum">02</span>
               <Zap size={20} strokeWidth={1.75} className="mt-4 text-[#f0b90b]" aria-hidden />
-              <h3 className="mt-4 text-base font-bold text-[#f1f3ef]">{t("speed.title")}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#a9a9ae]">{t("speed.desc")}</p>
-              <div className="mt-auto pt-5 tnum text-4xl font-extrabold tracking-[-0.03em] text-[#f0b90b]">&lt;1s</div>
+              <h3 className="mt-4 text-base font-bold text-[#f1f3ef]">{content.speed.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[#a9a9ae]">{content.speed.desc}</p>
+              <div className="mt-auto pt-5 tnum text-4xl font-extrabold tracking-[-0.03em] text-[#f0b90b]">
+                {content.speed.value}
+              </div>
             </article>
           </Reveal>
 
@@ -112,8 +116,8 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
             <article className="ag-bento-cell flex h-full flex-col p-7">
               <span className="ag-stepnum">03</span>
               <ShieldCheck size={20} strokeWidth={1.75} className="mt-4 text-[#f0b90b]" aria-hidden />
-              <h3 className="mt-4 text-base font-bold text-[#f1f3ef]">{t("security.title")}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#a9a9ae]">{t("security.desc")}</p>
+              <h3 className="mt-4 text-base font-bold text-[#f1f3ef]">{content.security.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[#a9a9ae]">{content.security.desc}</p>
             </article>
           </Reveal>
 
@@ -121,8 +125,8 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
           <Reveal delay={80} className="ag-bento-assets">
             <article className="ag-bento-cell h-full p-8">
               <span className="ag-stepnum">04</span>
-              <h3 className="mt-3 text-xl font-bold tracking-[-0.015em] text-[#f1f3ef]">{t("pricing.title")}</h3>
-              <p className="mt-2 max-w-md text-sm leading-relaxed text-[#a9a9ae]">{t("pricing.desc")}</p>
+              <h3 className="mt-3 text-xl font-bold tracking-[-0.015em] text-[#f1f3ef]">{content.pricing.title}</h3>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-[#a9a9ae]">{content.pricing.desc}</p>
               <div className="mt-6 flex flex-wrap gap-2.5">
                 {CATEGORY_ORDER.map((category: InstrumentCategory) => (
                   <span
@@ -132,7 +136,7 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
                     <span className="text-[#f0b90b]" aria-hidden>
                       <MarketIcon category={category} className="h-6 w-6" />
                     </span>
-                    {tM(`categories.${category.toLowerCase()}`)}
+                    {content.categories[category.toLowerCase()]}
                     <span className="tnum font-semibold text-[#f1f3ef]">{categoryCounts[category] ?? 0}</span>
                   </span>
                 ))}
@@ -148,10 +152,10 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
               <GlobeArcs ink className="w-28 shrink-0 sm:w-44 lg:w-52" />
               <div className="relative">
                 <span className="ag-stepnum ag-stepnum-ink">05</span>
-                <h3 className="mt-3 text-base font-bold tracking-[-0.015em] text-[#0d0d0f]">{tA("globalTitle")}</h3>
+                <h3 className="mt-3 text-base font-bold tracking-[-0.015em] text-[#0d0d0f]">{content.global.title}</h3>
                 <p className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-[#0d0d0f]/78">
                   <LineChart size={15} strokeWidth={1.75} className="mt-0.5 shrink-0 text-[#0d0d0f]" aria-hidden />
-                  {t("all.desc")}
+                  {content.global.desc}
                 </p>
               </div>
             </article>

@@ -5,8 +5,10 @@ import { useScrollSpy } from "@/hooks/useScrollSpy";
 
 export interface TocItem {
   id: string;
-  /** Translation key under `toc.sections`. */
-  labelKey: string;
+  /** Translation key under `toc.sections` (used when `label` is absent). */
+  labelKey?: string;
+  /** Pre-resolved label from a domain content package (wins over labelKey). */
+  label?: string;
 }
 
 interface TableOfContentsProps {
@@ -62,7 +64,7 @@ export function TableOfContents({ items }: TableOfContentsProps) {
                   <span className="font-mono text-[10px] text-text-faint mt-0.5">
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span>{tSections(item.labelKey)}</span>
+                  <span>{item.label ?? (item.labelKey ? tSections(item.labelKey) : item.id)}</span>
                 </a>
               </li>
             );
@@ -87,7 +89,7 @@ export function TableOfContents({ items }: TableOfContentsProps) {
                   }`}
                 >
                   <span className="font-mono text-[10px]">{i + 1}</span>
-                  {tSections(item.labelKey)}
+                  {item.label ?? (item.labelKey ? tSections(item.labelKey) : item.id)}
                 </a>
               </li>
             );

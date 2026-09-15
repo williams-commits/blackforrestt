@@ -12,15 +12,16 @@ import {
 } from "@/landing/agile/content/AgileArticleLayout";
 
 /**
- * Host-level brand dispatcher for interior-page composition — the same
- * dispatch pattern as src/app/page.tsx and the (content) layout, expressed as
+ * PUBLIC DESIGN dispatcher for interior-page ARCHITECTURE — the client-side
+ * mirror of the server dispatch in src/app/(content)/layout.tsx. Expressed as
  * a client component so it works inside both server and client pages (the
- * active brand comes from the Providers brand context, resolved per request
+ * active design comes from the Providers brand context, resolved per request
  * on the server — no hydration mismatch).
  *
- * The primary brand keeps its editorial article layout; the Agile family gets
- * the landing's design system (AgileArticleLayout). Page bodies stay shared —
- * only the composition layer is brand-owned.
+ * The default design keeps its editorial article layout; the agile design
+ * gets the landing's page architecture (AgileArticleLayout). Page bodies stay
+ * shared — only the composition layer is design-owned. New public designs add
+ * a case here AND a shell in src/landing/designs.ts (one key, both layers).
  */
 export function ArticleLayout(props: {
   eyebrow: string;
@@ -30,12 +31,12 @@ export function ArticleLayout(props: {
   sidebar?: ReactNode;
 }) {
   const brand = useBrand();
-  if (brand.landingTemplate === "agile") return <AgileArticleLayout {...props} />;
+  if (brand.publicDesign === "agile") return <AgileArticleLayout {...props} />;
   return <BlackForestArticleLayout {...props} />;
 }
 
 export function Section(props: { title?: string; children: ReactNode }) {
   const brand = useBrand();
-  if (brand.landingTemplate === "agile") return <AgileSection {...props} />;
+  if (brand.publicDesign === "agile") return <AgileSection {...props} />;
   return <BlackForestSection {...props} />;
 }

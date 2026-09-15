@@ -2,71 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
 import { Menu, X, ChevronDown, LogIn, UserPlus } from "lucide-react";
 import { AgileMark } from "./AgileMark";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
-import { clientTradeUrl } from "@/lib/branding";
+import type { NavigationContent } from "@/content/contracts";
 
 /**
  * Agile enterprise navigation — the primary brand's navbar STRUCTURE (grouped
  * dropdown menus over the shared content routes, mobile accordion sheet)
  * dressed in the Agile dark-institutional system: deep translucent bar,
  * hairline dropdown panels, mint hover accents, Inter voice. The same bar
- * serves the landing and every interior page; `anchorPrefix` adapts the
- * landing section anchors for interior context.
+ * serves the landing and every interior page; the content package bakes the
+ * quick-link anchors per context (`onLanding`).
+ *
+ * ALL labels arrive as the typed NavigationContent contract from the agile
+ * domain content package — this component no longer fetches translations.
  */
-
-interface MenuGroup {
-  /** Translation key under `nav` for the group label. */
-  key: string;
-  /** Landing-section anchors (prefixed per context) — landing only group. */
-  anchors?: Array<{ href: string; labelKey: string }>;
-  /** Translation keys under `nav.menu`. */
-  items?: Array<{ key: string; href: string }>;
-}
-
-const PAGE_GROUPS: MenuGroup[] = [
-  {
-    key: "company",
-    items: [
-      { key: "about", href: "/about" },
-      { key: "contact", href: "/contact" },
-    ],
-  },
-  {
-    key: "tools",
-    items: [
-      { key: "informers", href: "/tools/informers" },
-      { key: "calendars", href: "/tools/calendars" },
-      { key: "calculators", href: "/tools/calculators" },
-      { key: "signals", href: "/tools/signals" },
-    ],
-  },
-  {
-    key: "analytics",
-    items: [
-      { key: "news", href: "/analytics/news" },
-      { key: "technical", href: "/analytics/technical" },
-      { key: "fundamental", href: "/analytics/fundamental" },
-      { key: "trend", href: "/analytics/trend" },
-    ],
-  },
-  {
-    key: "education",
-    items: [
-      { key: "beginners", href: "/education/beginners" },
-      { key: "advanced", href: "/education/advanced" },
-      { key: "beginnersVods", href: "/education/beginners-vods" },
-      { key: "advancedVods", href: "/education/advanced-vods" },
-      { key: "cryptoVods", href: "/education/crypto-vods" },
-    ],
-  },
-];
-
-export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
-  const t = useTranslations("nav");
-  const tA = useTranslations("agile.nav");
+export function AgileNavbar({ content }: { content: NavigationContent }) {
   const [open, setOpen] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileGroup, setMobileGroup] = useState<string | null>(null);
@@ -100,8 +52,6 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
     };
   }, [mobileOpen]);
 
-  const anchor = (id: string) => `${anchorPrefix}#${id}`;
-
   return (
     <header
       className={`sticky top-0 z-50 border-b transition-colors duration-300 ${
@@ -111,26 +61,23 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
       }`}
       onMouseLeave={() => setOpen(null)}
     >
-      <nav className="ag-container flex h-16 items-center gap-6" aria-label={tA("primary")}>
+      <nav className="ag-container flex h-16 items-center gap-6" aria-label={content.ariaLabel}>
         {/* The mark renders its own home link — never wrap it in another. */}
         <AgileMark className="shrink-0" />
 
         {/* Landing-section quick links + grouped content menus */}
         <div className="hidden min-w-0 items-center gap-1 lg:flex">
-          <Link
-            href={anchor("markets")}
-            className="rounded-md px-3 py-2 text-[13px] font-medium text-[#a9a9ae] transition-colors hover:text-[#f1f3ef]"
-          >
-            {tA("markets")}
-          </Link>
-          <Link
-            href={anchor("platform")}
-            className="rounded-md px-3 py-2 text-[13px] font-medium text-[#a9a9ae] transition-colors hover:text-[#f1f3ef]"
-          >
-            {tA("platform")}
-          </Link>
+          {content.quickLinks.map((link) => (
+            <Link
+              key={link.anchor}
+              href={link.anchor}
+              className="rounded-md px-3 py-2 text-[13px] font-medium text-[#a9a9ae] transition-colors hover:text-[#f1f3ef]"
+            >
+              {link.label}
+            </Link>
+          ))}
 
-          {PAGE_GROUPS.map((group) => (
+          {content.groups.map((group) => (
             <div key={group.key} className="relative" onMouseEnter={() => setOpen(group.key)}>
               <button
                 type="button"
@@ -138,7 +85,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
                 onClick={() => setOpen((value) => (value === group.key ? null : group.key))}
                 className="flex items-center gap-1.5 rounded-md px-3 py-2 text-[13px] font-medium text-[#a9a9ae] transition-colors hover:text-[#f1f3ef]"
               >
-                {t(group.key)}
+                {group.label}
                 <ChevronDown
                   size={12}
                   strokeWidth={2.5}
@@ -146,17 +93,17 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
                   className={`text-[#75757b] transition-transform duration-200 ${open === group.key ? "rotate-180" : ""}`}
                 />
               </button>
-              {open === group.key && group.items && (
+              {open === group.key && (
                 <div className="absolute left-0 top-full pt-2">
                   <div className="min-w-52 rounded-xl border border-white/10 bg-[#141417] py-2 shadow-[0_28px_70px_-24px_rgba(0,0,0,0.9)]">
-                    {group.items.map((item) => (
+                    {group.links.map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
                         onClick={() => setOpen(null)}
                         className="block px-4 py-2.5 text-[13px] text-[#a9a9ae] transition-colors hover:bg-white/5 hover:text-[#f0b90b]"
                       >
-                        {t(`menu.${item.key}`)}
+                        {item.label}
                       </Link>
                     ))}
                   </div>
@@ -172,39 +119,39 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
           </span>
           <div className="hidden lg:inline-flex items-center gap-3">
             <Link
-              href={clientTradeUrl("/login")}
+              href={content.loginHref}
               className="ag-btn ag-btn-ghost hidden min-h-0! px-4 py-2.5 text-[13px] lg:inline-flex"
             >
-              {tA("login")}
+              {content.loginLabel}
             </Link>
             <Link
-              href={clientTradeUrl("/register")}
+              href={content.registerHref}
               className="ag-btn ag-btn-primary hidden min-h-0! px-4 py-2.5 text-[13px] lg:inline-flex"
             >
-              {tA("cta")}
+              {content.registerLabel}
             </Link>
           </div>
           {/* Mobile actions are icon-only (below lg); the text pills are a
               desktop-only treatment, matching the language switcher. */}
           <Link
-            href={clientTradeUrl("/login")}
-            aria-label={tA("login")}
-            title={tA("login")}
+            href={content.loginHref}
+            aria-label={content.loginLabel}
+            title={content.loginLabel}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 text-[#a9a9ae] transition-colors hover:border-[#f0b90b]/50 hover:text-[#f0b90b] lg:hidden"
           >
             <LogIn size={17} strokeWidth={1.75} aria-hidden />
           </Link>
           <Link
-            href={clientTradeUrl("/register")}
-            aria-label={tA("cta")}
-            title={tA("cta")}
+            href={content.registerHref}
+            aria-label={content.registerLabel}
+            title={content.registerLabel}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f0b90b] text-[#0d0d0f] transition-transform hover:scale-105 motion-reduce:transition-none lg:hidden"
           >
             <UserPlus size={16} strokeWidth={2} aria-hidden />
           </Link>
           <button
             type="button"
-            aria-label={mobileOpen ? tA("closeMenu") : tA("openMenu")}
+            aria-label={mobileOpen ? content.menuToggle.close : content.menuToggle.open}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((value) => !value)}
             className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 text-[#f1f3ef] transition-colors hover:border-white/25 lg:hidden"
@@ -217,20 +164,24 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
       {/* Mobile accordion sheet */}
       {mobileOpen && (
         <div className="fixed inset-x-0 top-16 z-50 h-[calc(100dvh-4rem)] overflow-y-auto border-t border-white/10 bg-[#0d0d0f] lg:hidden">
-          <nav className="ag-container flex min-h-full flex-col pt-3" aria-label={tA("primary")}>
+          <nav className="ag-container flex min-h-full flex-col pt-3" aria-label={content.ariaLabel}>
             {/* Landing sections — only meaningful from the landing itself */}
-            {!anchorPrefix && (
+            {content.onLanding && (
               <div className="flex gap-3 border-b border-white/8 pb-4">
-                <Link href="#markets" onClick={() => setMobileOpen(false)} className="ag-btn ag-btn-ghost min-h-0! flex-1 py-2.5 text-[13px]">
-                  {tA("markets")}
-                </Link>
-                <Link href="#platform" onClick={() => setMobileOpen(false)} className="ag-btn ag-btn-ghost min-h-0! flex-1 py-2.5 text-[13px]">
-                  {tA("platform")}
-                </Link>
+                {content.quickLinks.map((link) => (
+                  <Link
+                    key={link.anchor}
+                    href={link.anchor}
+                    onClick={() => setMobileOpen(false)}
+                    className="ag-btn ag-btn-ghost min-h-0! flex-1 py-2.5 text-[13px]"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
               </div>
             )}
 
-            {PAGE_GROUPS.map((group) => {
+            {content.groups.map((group) => {
               const expanded = mobileGroup === group.key;
               return (
                 <section key={group.key} className="border-b border-white/8">
@@ -240,7 +191,7 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
                     onClick={() => setMobileGroup((value) => (value === group.key ? null : group.key))}
                     className="flex w-full items-center justify-between py-4 text-left text-[14px] font-semibold text-[#f1f3ef]"
                   >
-                    {t(group.key)}
+                    {group.label}
                     <ChevronDown
                       size={14}
                       strokeWidth={2.5}
@@ -248,16 +199,16 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
                       className={`text-[#75757b] transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
                     />
                   </button>
-                  {expanded && group.items && (
+                  {expanded && (
                     <div className="grid gap-0.5 pb-3">
-                      {group.items.map((item) => (
+                      {group.links.map((item) => (
                         <Link
                           key={item.href}
                           href={item.href}
                           onClick={() => setMobileOpen(false)}
                           className="rounded-md px-3 py-2.5 text-[13.5px] text-[#a9a9ae] transition-colors hover:bg-white/5 hover:text-[#f0b90b]"
                         >
-                          {t(`menu.${item.key}`)}
+                          {item.label}
                         </Link>
                       ))}
                     </div>
@@ -271,11 +222,11 @@ export function AgileNavbar({ anchorPrefix = "" }: { anchorPrefix?: string }) {
                 <LanguageSwitcher />
               </div>
               <div className="flex gap-3">
-                <Link href={clientTradeUrl("/login")} onClick={() => setMobileOpen(false)} className="ag-btn ag-btn-ghost flex-1">
-                  {tA("login")}
+                <Link href={content.loginHref} onClick={() => setMobileOpen(false)} className="ag-btn ag-btn-ghost flex-1">
+                  {content.loginLabel}
                 </Link>
-                <Link href={clientTradeUrl("/register")} onClick={() => setMobileOpen(false)} className="ag-btn ag-btn-primary flex-1">
-                  {tA("cta")}
+                <Link href={content.registerHref} onClick={() => setMobileOpen(false)} className="ag-btn ag-btn-primary flex-1">
+                  {content.registerLabel}
                 </Link>
               </div>
             </div>

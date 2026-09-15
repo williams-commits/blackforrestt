@@ -1,43 +1,19 @@
 import Link from "next/link";
 import { CreditCard, Landmark, Lock, Shield, ShieldCheck, Umbrella } from "lucide-react";
-import { getTranslations } from "next-intl/server";
 import { Logo } from "@/components/trade/Logo";
-import { currentBrandProfile, brandRegistrationSummary, clientTradeUrl } from "@/lib/branding";
 import Image from "next/image";
+import type { FooterContent } from "@/content/contracts";
 
-interface PaymentLogo {
-  src: string;
-  alt: string;
-  /** Natural aspect ratio (width / height) used to avoid distortion. */
-  aspect: number;
-}
-
-// Payment method logos. width is fixed at 38px; height is derived from the
-// natural aspect ratio so icons aren't squashed. All source images are in
-// public/payments/.
-const logos: PaymentLogo[] = [
-  { src: "/payments/visa.png", alt: "Visa", aspect: 1200 / 762 },
-  { src: "/payments/mastercard.png", alt: "Mastercard", aspect: 1280 / 995 },
-  { src: "/payments/maestro.png", alt: "Maestro", aspect: 2000 / 1227 },
-  { src: "/payments/amex.jpg", alt: "American Express", aspect: 1790 / 1106 },
-  { src: "/payments/bitcoin.png", alt: "Bitcoin", aspect: 849 / 255 },
-];
-
-/** Marketing footer: contact, risk disclaimers, payment icons, legal. */
-export async function Footer() {
-  const t = await getTranslations("footer");
-  const tA = await getTranslations("footer.assurance");
-  const tLinks = await getTranslations("footer.links");
-  const tCols = await getTranslations("footer.columns");
+/**
+ * Marketing footer: contact, risk disclaimers, payment icons, legal. ALL
+ * copy (including the per-domain brand facts and assurance labels) arrives
+ * as the typed FooterContent contract — assembled by the domain content
+ * package, never fetched here.
+ */
+export function Footer({ content }: { content: FooterContent }) {
   const iconW = 38;
-  // Per-domain brand (mirror domains like gbfxs.com show their own name,
-  // contact email, address, legal entity, and registration identity).
-  const brand = await currentBrandProfile();
-  const company = brand.legalName;
-  const tm = brand.trademark;
-  // Populated from the brand profile — empty until configured, in which case
-  // the generic translated note is shown instead.
-  const registrationSummary = brandRegistrationSummary(brand);
+  const logos = content.paymentMethods ?? [];
+  const assurance = content.assurance;
 
   return (
     <footer className="bg-surface-dark text-white/80">
@@ -49,62 +25,46 @@ export async function Footer() {
               <Logo inverted />
             </div>
             <p className="mt-4 text-sm text-white/60 max-w-xs">
-              {t("tagline", { company })}
+              {content.tagline}
             </p>
             <address className="mt-5 not-italic text-sm text-white/70 leading-relaxed">
-              {brand.address && <>{brand.address}<br /></>}
-              <span className="text-white/50">{brand.supportEmail}</span>
+              {content.contact.address && <>{content.contact.address}<br /></>}
+              <span className="text-white/50">{content.contact.supportEmail}</span>
             </address>
           </div>
 
-          {/* Company */}
-          <FooterCol title={tCols("company")} linkLabels={{
-            about: tLinks("about"), contact: tLinks("contact"),
-            openAccount: tLinks("openAccount"), login: tLinks("login"),
-          }} links={[
-            ["about", "/about"],
-            ["contact", "/contact"],
-            ["openAccount", clientTradeUrl("/register")],
-            ["login", clientTradeUrl("/login")],
-          ]} />
-
-          {/* Tools */}
-          <FooterCol title={tCols("tools")} linkLabels={{
-            informers: tLinks("informers"), calendars: tLinks("calendars"),
-            calculators: tLinks("calculators"), signals: tLinks("signals"),
-          }} links={[
-            ["informers", "/tools/informers"],
-            ["calendars", "/tools/calendars"],
-            ["calculators", "/tools/calculators"],
-            ["signals", "/tools/signals"],
-          ]} />
-
-          {/* Legal */}
-          <FooterCol title={tCols("legal")} linkLabels={{
-            privacy: tLinks("privacy"), aml: tLinks("aml"),
-            kyc: tLinks("kyc"), terms: tLinks("terms"),
-          }} links={[
-            ["privacy", "/legal/privacy"],
-            ["aml", "/legal/aml"],
-            ["kyc", "/legal/kyc"],
-            ["terms", "/legal/terms"],
-          ]} />
+          {content.columns.map((column) => (
+            <div key={column.key}>
+              <h4 className="text-white font-semibold text-sm mb-4">{column.label}</h4>
+              <ul className="space-y-2.5">
+                {column.links.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="text-sm text-white/60 hover:text-white transition-colors">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
         {/* Trading assurance — broker registration & investor protections */}
-        <div className="mt-10 pt-8 border-t border-white/10 flex flex-wrap items-center gap-2.5">
-          <span className="text-xs text-white/40 mr-2">{tA("title")}</span>
-          <AssuranceBadge icon={<ShieldCheckIcon />} label={tA("registration")} note={registrationSummary || tA("registrationNote")} emphasized />
-          <AssuranceBadge icon={<BankIcon />} label={tA("segregated")} />
-          <AssuranceBadge icon={<UmbrellaIcon />} label={tA("compensation")} />
-          <AssuranceBadge icon={<ShieldIcon />} label={tA("protection")} />
-          <AssuranceBadge icon={<LockIcon />} label={tA("security")} />
-          <AssuranceBadge icon={<CardIcon />} label={tA("payments")} />
-        </div>
+        {assurance && (
+          <div className="mt-10 pt-8 border-t border-white/10 flex flex-wrap items-center gap-2.5">
+            <span className="text-xs text-white/40 mr-2">{assurance.title}</span>
+            <AssuranceBadge icon={<ShieldCheckIcon />} label={assurance.registration} note={content.registrationSummary || assurance.registrationNote} emphasized />
+            <AssuranceBadge icon={<BankIcon />} label={assurance.segregated} />
+            <AssuranceBadge icon={<UmbrellaIcon />} label={assurance.compensation} />
+            <AssuranceBadge icon={<ShieldIcon />} label={assurance.protection} />
+            <AssuranceBadge icon={<LockIcon />} label={assurance.security} />
+            <AssuranceBadge icon={<CardIcon />} label={assurance.payments} />
+          </div>
+        )}
 
         {/* Payment icons */}
         <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center gap-3">
-          <span className="text-xs text-white/40 mr-2">{t("weAccept")}</span>
+          {content.weAccept && <span className="text-xs text-white/40 mr-2">{content.weAccept}</span>}
           {logos.map((logo) => (
             <Image
               key={logo.src}
@@ -121,38 +81,22 @@ export async function Footer() {
         {/* Risk warning */}
         <div className="mt-8 text-xs text-white/45 leading-relaxed space-y-3 font-prose">
           <p>
-            <strong className="text-white/70">{t("riskWarning")}</strong> {t("risk1")}
+            <strong className="text-white/70">{content.risk.heading}</strong> {content.risk.paragraphs[0]}
           </p>
-          <p>{t("risk2")}</p>
-          <p>{t("risk3")}</p>
+          {content.risk.paragraphs.slice(1).map((paragraph) => (
+            <p key={paragraph.slice(0, 24)}>{paragraph}</p>
+          ))}
         </div>
 
         {/* Bottom bar */}
         <div className="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/40">
-          <span>{t("copyright", { company })}</span>
+          <span>{content.copyright}</span>
           <div className="flex items-center gap-4">
-            <span>{t("trademark", { tm, company })}</span>
+            <span>{content.trademarkLine}</span>
           </div>
         </div>
       </div>
     </footer>
-  );
-}
-
-function FooterCol({ title, linkLabels, links }: { title: string; linkLabels: Record<string, string>; links: [string, string][] }) {
-  return (
-    <div>
-      <h4 className="text-white font-semibold text-sm mb-4">{title}</h4>
-      <ul className="space-y-2.5">
-        {links.map(([key, href]) => (
-          <li key={href}>
-            <Link href={href} className="text-sm text-white/60 hover:text-white transition-colors">
-              {linkLabels[key]}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
 

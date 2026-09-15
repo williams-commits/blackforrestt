@@ -1,24 +1,18 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
 import { LivePrice } from "@/components/landing/LivePrice";
 import { getFeaturedInstrument } from "@/lib/landingData";
-import { currentBrandProfile } from "@/lib/branding";
+import type { HeroContent } from "@/content/contracts";
 
 /**
  * Hero — headline, dual CTA, and two cards: a live featured market and a
  * "new this week" education chapter strip. The featured card hydrates into a
  * LivePrice client island that polls /api/instruments; the chapter card is
- * static editorial prose.
+ * static editorial prose. ALL copy arrives as the typed HeroContent contract
+ * (including the brand-override badge/subtitle resolution, done by the
+ * domain content package).
  */
-export async function Hero() {
-  const t = await getTranslations("hero");
+export function Hero({ content }: { content: HeroContent }) {
   const featured = getFeaturedInstrument();
-  // Per-brand landing copy: a brand profile may override the hero badge and
-  // subtitle (BRAND_OVERRIDES heroBadge / heroSubtitle) so mirror domains get
-  // their own voice without separate translation files.
-  const brand = await currentBrandProfile();
-  const badge = brand.heroBadge || t("badge");
-  const subtitle = brand.heroSubtitle || t("subtitle");
 
   return (
     <section id="hero" className="relative overflow-hidden bg-linear-to-b from-panel to-canvas scroll-mt-24">
@@ -28,34 +22,40 @@ export async function Hero() {
           <div>
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-soft text-brand text-xs font-semibold mb-6">
               <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-              {badge}
+              {content.badge}
             </span>
             <h1 className="text-4xl lg:text-5xl font-extrabold leading-[1.05] tracking-tight">
-              {t.rich("title", {
-                accent: (chunks) => <span className="text-brand">{chunks}</span>,
-              })}
+              {(content.titleSegments ?? []).map((segment, index) =>
+                segment.accent ? (
+                  <span key={index} className="text-brand">{segment.text}</span>
+                ) : (
+                  // Bare text for plain segments — same DOM as the ICU rich
+                  // renderer this replaced.
+                  segment.text
+                ),
+              )}
             </h1>
             <p className="font-prose mt-5 text-lg leading-relaxed text-text-muted max-w-xl">
-              {subtitle}
+              {content.subtitle}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/register"
                 className="px-6 py-3 rounded-lg bg-brand text-white font-semibold hover:brightness-110 transition shadow-card"
               >
-                {t("ctaPrimary")}
+                {content.ctaPrimaryLabel}
               </Link>
               <Link
                 href="/trade/XAUUSD"
                 className="px-6 py-3 rounded-lg bg-canvas border border-border font-semibold hover:bg-panel transition font-mono text-sm"
               >
-                {t("ctaSecondary")}
+                {content.ctaSecondaryLabel}
               </Link>
             </div>
             <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-text-muted">
-              <Stat value="24/7" label={t("stats.support")} />
-              <Stat value="45+" label={t("stats.markets")} />
-              <Stat value="0.0s" label={t("stats.execution")} />
+              {(content.stats ?? []).map((stat) => (
+                <Stat key={stat.label} value={stat.value} label={stat.label} />
+              ))}
             </div>
           </div>
 
@@ -65,11 +65,11 @@ export async function Hero() {
               <LivePrice initial={featured} />
             ) : (
               <div className="rounded-xl border border-border bg-panel p-5 text-sm text-text-muted">
-                {t("loadingMarkets")}
+                {content.loadingMarkets}
               </div>
             )}
 
-            <NewThisWeekCard />
+            {content.newThisWeek && <NewThisWeekCard content={content.newThisWeek} />}
           </div>
         </div>
       </div>
@@ -77,39 +77,37 @@ export async function Hero() {
   );
 }
 
-async function NewThisWeekCard() {
-  const t = await getTranslations("hero.newThisWeek");
-  const chapterKeys = ["c1", "c2", "c3"] as const;
+function NewThisWeekCard({ content }: { content: NonNullable<HeroContent["newThisWeek"]> }) {
   return (
     <div className="rounded-xl border border-border bg-panel p-5 flex flex-col">
       <div className="flex items-center justify-between">
         <div className="text-[11px] uppercase tracking-widest text-brand font-semibold">
-          {t("label")}
+          {content.label}
         </div>
-        <span className="text-[10px] font-mono text-text-faint">{t("series")}</span>
+        <span className="text-[10px] font-mono text-text-faint">{content.series}</span>
       </div>
       <p className="font-prose mt-2 text-sm leading-snug text-text">
-        {t("blurb")}
+        {content.blurb}
       </p>
       <ul className="mt-4 space-y-3 flex-1">
-        {chapterKeys.map((c) => (
-          <li key={c} className="group">
+        {content.chapters.map((chapter) => (
+          <li key={chapter.title} className="group">
             <a href="#confidence" className="block">
               <div className="flex items-center gap-2 text-[10px]">
                 <span className="px-1.5 py-0.5 rounded bg-brand-soft text-brand font-semibold uppercase tracking-wider">
-                  {t(`chapters.${c}.tag`)}
+                  {chapter.tag}
                 </span>
-                <span className="text-text-faint font-mono">{t(`chapters.${c}.meta`)}</span>
+                <span className="text-text-faint font-mono">{chapter.meta}</span>
               </div>
               <div className="font-prose mt-1 text-sm text-text group-hover:text-brand transition">
-                {t(`chapters.${c}.title`)}
+                {chapter.title}
               </div>
             </a>
           </li>
         ))}
       </ul>
       <a href="#confidence" className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:gap-2 transition-all">
-        {t("viewAll")}
+        {content.viewAll}
       </a>
     </div>
   );

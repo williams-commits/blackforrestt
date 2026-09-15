@@ -1,29 +1,20 @@
-import { currentBrandProfile } from "@/lib/branding";
-import { Navbar } from "@/components/landing/Navbar";
-import { Footer } from "@/components/landing/Footer";
-import { AgileContentShell } from "@/landing/agile/AgileContentShell";
+import { resolveCurrentDomain } from "@/domains/resolve";
+import { publicShellFor } from "@/landing/designs";
 
 /**
  * Shared layout for the marketing content pages (About, Tools, Analytics,
  * Education, Legal) — a thin brand dispatcher, mirroring src/app/page.tsx.
  *
- * Each brand family gets its own chrome for these routes: the primary brand
- * keeps the light editorial navbar + footer, Global Forex Services renders its
+ *   request host → resolveCurrentDomain() → domain's publicDesign key
+ *     → design registry (src/landing/designs.ts) → public-page shell
+ *
+ * Each design family owns its chrome for these routes: the default design
+ * keeps the light editorial navbar + footer; the agile design renders its
  * dark-institutional shell (own navbar, footer, scoped tokens). Page bodies
- * stay shared; identity stays brand-owned.
+ * stay shared; identity stays design-owned.
  */
 export default async function ContentLayout({ children }: { children: React.ReactNode }) {
-  const brand = await currentBrandProfile();
-  if (brand.landingTemplate === "agile") {
-    return <AgileContentShell>{children}</AgileContentShell>;
-  }
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-
-      <main id="main-content" tabIndex={-1} className="flex-1">{children}</main>
-
-      <Footer />
-    </div>
-  );
+  const { host } = await resolveCurrentDomain();
+  const Shell = publicShellFor(host.publicDesign);
+  return <Shell>{children}</Shell>;
 }

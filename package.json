@@ -30,7 +30,7 @@
     "test:payments": "node --import tsx --test tests/payments.integration.test.ts",
     "test:reconciliation": "node --import tsx --test tests/reconciliation.integration.test.ts",
     "test:integration": "npm run test:accounting && npm run test:security && npm run test:kyc && npm run test:payments && npm run test:reconciliation && npm run test:admin && npm run test:admin-balance && npm run test:messaging && npm run test:multibrand",
-    "test:unit": "npm run test:engine && npm run test:ws-protocol && npm run test:auth-client && npm run test:enterprise-ui-admin && npm run test:payment-methods && npm run test:email-templates",
+    "test:unit": "npm run test:domains && npm run test:engine && npm run test:ws-protocol && npm run test:auth-client && npm run test:enterprise-ui-admin && npm run test:payment-methods && npm run test:email-templates",
     "test:ws-protocol": "node --import tsx --test tests/wsProtocol.test.ts",
     "test:auth-client": "node --import tsx --test tests/authClient.test.ts",
     "test:release": "node scripts/phase8/build-release-archive.mjs && node scripts/phase8/verify-release-archive.mjs artifacts/phase8/blckforest-release.zip",
@@ -65,7 +65,8 @@
     "test:email-templates": "node --import tsx --test tests/emailTemplates.test.ts",
     "quality:verify:source": "node scripts/quality/verify-source.mjs .",
     "test:admin-balance": "node --import tsx --test tests/adminBalance.integration.test.ts",
-    "feature-admin-balance:verify": "node scripts/admin-balance/verify-source.mjs ."
+    "feature-admin-balance:verify": "node scripts/admin-balance/verify-source.mjs .",
+    "test:domains": "node --import tsx --test tests/domains.test.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",

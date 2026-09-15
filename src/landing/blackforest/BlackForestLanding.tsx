@@ -1,48 +1,48 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { currentBrandProfile } from "@/lib/branding";
+import { blackforestLandingContent, blackforestFooterContent, blackforestNavigationContent, blackforestLandingSections } from "@/domains/blackforrest/content";
 import { Navbar } from "@/components/landing/Navbar";
 import { Hero } from "@/components/landing/Hero";
 import { Markets } from "@/components/landing/Markets";
 import { TradingPlayground } from "@/components/landing/TradingPlayground";
 import { ConfidenceSection } from "@/components/landing/ConfidenceSection";
-import { TableOfContents, type TocItem } from "@/components/landing/TableOfContents";
+import { TableOfContents } from "@/components/landing/TableOfContents";
 import { ProgressChecklist } from "@/components/landing/ProgressChecklist";
 import { StickyCta } from "@/components/landing/StickyCta";
 import { Footer } from "@/components/landing/Footer";
 import { getLandingInstruments } from "@/lib/landingData";
+import type { FinalCtaContent } from "@/content/contracts";
 
 // Dynamic rendering is forced by src/app/page.tsx (the host dispatcher) —
 // branding values are read from env at request time, not build time.
 
-/** Section manifest — single source of truth for TOC + progress checklist.
- *  The hero is intentionally omitted: it's always visible at the top, so it
- *  would be marked "read" instantly and add noise to the list. */
-const SECTIONS: TocItem[] = [
-  { id: "playground", labelKey: "playground" },
-  { id: "market-forex", labelKey: "forex" },
-  { id: "market-crypto", labelKey: "crypto" },
-  { id: "market-commodity", labelKey: "commodity" },
-  { id: "market-index", labelKey: "index" },
-  { id: "confidence", labelKey: "confidence" },
-  { id: "final-cta", labelKey: "finalCta" },
-];
-
 /**
- * Black Forest Digital landing — the primary brand's editorial design: serif
- * hero, sticky TOC rail, progress checklist, playground + markets, confidence
- * section. Composed entirely from the shared landing library
- * (@/components/landing/*); this folder owns composition only. Selected
- * whenever BrandProfile.landingTemplate is "default" or unknown.
+ * Black Forest Digital landing — the DEFAULT design: serif hero, sticky TOC
+ * rail, progress checklist, playground + markets, confidence section.
+ * Composed from the shared landing library (@/components/landing/*); this
+ * folder owns composition only. ALL copy is assembled ONCE from the
+ * blackforest domain content package and flows down as typed contracts.
+ * Selected whenever a domain's landingDesign is "default" or unknown.
  */
 export async function BlackForestLanding() {
-  const instruments = getLandingInstruments();
-  const tPlay = await getTranslations("playground");
+  const brand = await currentBrandProfile();
+  const [content, navigation, footer, instruments] = await Promise.all([
+    blackforestLandingContent(brand),
+    blackforestNavigationContent(),
+    blackforestFooterContent(brand),
+    Promise.resolve(getLandingInstruments()),
+  ]);
+  // Section manifest — single source of truth for TOC + progress checklist
+  // (labels resolved by the domain content package).
+  const SECTIONS = await blackforestLandingSections();
+  // The hero is intentionally omitted from the manifest: it's always visible
+  // at the top, so it would be marked "read" instantly and add noise.
 
   return (
     <>
-      <Navbar />
+      <Navbar content={navigation} />
       <main id="main-content" tabIndex={-1}>
-        <Hero />
+        <Hero content={content.hero} />
 
         {/* Sticky-rail layout: TOC on the left, content centre, progress right. */}
         <div className="relative">
@@ -62,19 +62,19 @@ export async function BlackForestLanding() {
               <section id="playground" className="scroll-mt-24 mb-16 lg:mb-24">
                 <div className="max-w-2xl mb-6">
                   <span className="text-[11px] font-semibold uppercase tracking-widest text-brand">
-                    {tPlay("eyebrow")}
+                    {content.playground!.eyebrow}
                   </span>
                   <h2 className="mt-2 text-3xl lg:text-4xl font-bold tracking-tight">
-                    {tPlay("title")}
+                    {content.playground!.title}
                   </h2>
                   <p className="font-prose mt-3 text-lg leading-relaxed text-text-muted">
-                    {tPlay("subtitle")}
+                    {content.playground!.subtitle}
                   </p>
                 </div>
-                <TradingPlayground initial={instruments} />
+                <TradingPlayground initial={instruments} content={content.playground!} />
               </section>
 
-              <Markets />
+              <Markets content={content.markets.editorial!} />
             </div>
 
             {/* Right rail: progress checklist (sticky, desktop) */}
@@ -87,44 +87,43 @@ export async function BlackForestLanding() {
         </div>
 
         {/* Confidence (features + education) — full width */}
-        <ConfidenceSection />
+        <ConfidenceSection content={content.confidence!} />
 
         {/* Final CTA — also the hide-anchor for StickyCta */}
-        <FinalCta />
+        <FinalCta content={content.finalCta} />
       </main>
 
-      <Footer />
-      <StickyCta />
+      <Footer content={footer} />
+      <StickyCta content={content.stickyCta!} />
     </>
   );
 }
 
-async function FinalCta() {
-  const t = await getTranslations("finalCta");
+function FinalCta({ content }: { content: FinalCtaContent }) {
   return (
     <section id="final-cta" className="scroll-mt-24 py-20 bg-canvas border-t border-border-soft">
       <div className="max-w-4xl mx-auto px-4 lg:px-8 text-center">
         <span className="text-[11px] font-semibold uppercase tracking-widest text-brand">
-          {t("eyebrow")}
+          {content.eyebrow}
         </span>
         <h2 className="mt-2 text-3xl lg:text-4xl font-bold tracking-tight">
-          {t("title")}
+          {content.title}
         </h2>
         <p className="font-prose mt-4 text-lg leading-relaxed text-text-muted max-w-xl mx-auto">
-          {t("subtitle")}
+          {content.subtitle}
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link
             href="/register"
             className="px-6 py-3 rounded-lg bg-brand text-white font-semibold hover:brightness-110 transition shadow-card"
           >
-            {t("primary")}
+            {content.ctaPrimaryLabel}
           </Link>
           <Link
             href="/login"
             className="px-6 py-3 rounded-lg bg-canvas border border-border font-semibold hover:bg-panel transition"
           >
-            {t("secondary")}
+            {content.ctaSecondaryLabel}
           </Link>
         </div>
       </div>

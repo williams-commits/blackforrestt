@@ -154,6 +154,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   ]);
   const messages = deepMergeMessages(defaultMsgs.default as Record<string, unknown>, localeMsgs.default as Record<string, unknown>);
 
+  // Per-host payload hygiene: the merged catalog above includes EVERY
+  // design's copy (the agile namespace), which would ship GFX strings inside
+  // the RSC payload of every other family's pages. No CLIENT component reads
+  // design-specific namespaces (designs consume typed content props; the
+  // agile tree is next-intl-free), so the namespace is stripped for hosts
+  // not using that design. Server-side getTranslations loads messages
+  // independently (src/i18n/request.ts) and is unaffected.
+  const usesAgileDesign = brand.landingTemplate === "agile" || brand.publicDesign === "agile";
+  const clientMessages = usesAgileDesign
+    ? messages
+    : Object.fromEntries(Object.entries(messages).filter(([namespace]) => namespace !== "agile"));
+
   // Organization + WebSite structured data. Regulatory identifiers are only
   // included when configured via the COMPANY_* env placeholders — never
   // publish invented claims.
@@ -193,7 +205,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <TopProgressBar />
         <ThemeProvider>
-          <NextIntlClientProvider locale={locale} messages={messages}>
+          <NextIntlClientProvider locale={locale} messages={clientMessages}>
             <FormatLocaleBridge />
             <Providers brand={brand}>{children}</Providers>
           </NextIntlClientProvider>

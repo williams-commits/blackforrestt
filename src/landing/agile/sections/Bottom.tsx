@@ -1,20 +1,21 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
 import {
   ArrowRight,
   Check,
   Landmark,
   Lock,
   Umbrella,
-  CandlestickChart,
-  ShieldCheck,
-  Gauge,
-  type LucideIcon,
 } from "lucide-react";
 import { Reveal } from "@/components/landing/Reveal";
 import { SectionBackdrop } from "../SectionBackdrop";
-import { currentBrandProfile, tradeHostForDomain } from "@/lib/branding";
 import { areaPath, smoothPath } from "../smoothPath";
+import type {
+  FinalCtaContent,
+  IntelligenceContent,
+  ShowcaseContent,
+  StepsContent,
+  TrustContent,
+} from "@/content/contracts";
 
 /** Signal-card + terminal-mock chart series → smoothed Catmull-Rom paths. */
 const SIGNAL_SERIES: Array<[number, number]> = [[0, 96], [24, 88], [48, 92], [72, 70], [96, 77], [120, 54], [144, 61], [168, 40], [192, 47], [216, 30], [240, 37], [264, 22], [288, 29], [320, 16]];
@@ -35,9 +36,7 @@ const PHONE_AREA = areaPath(PHONE_SERIES, 130);
  * terminal-on-brand device. Abstract and honest: interface grammar,
  * no fabricated levels.
  */
-export async function IntelligenceSection() {
-  const t = await getTranslations("agile.intelligence");
-  const bullets = [t("b1"), t("b2"), t("b3"), t("b4")];
+export function IntelligenceSection({ content }: { content: IntelligenceContent }) {
   return (
     <section id="intelligence" className="ag-cell-yellow relative scroll-mt-24 overflow-hidden">
       <div
@@ -48,11 +47,11 @@ export async function IntelligenceSection() {
       <div className="ag-container relative grid items-center gap-10 py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:py-34">
         {/* Narrative + checklist */}
         <Reveal>
-          <span className="ag-eyebrow ag-eyebrow-ink">{t("eyebrow")}</span>
-          <h2 className="ag-h2 ag-ink-h2 mt-4 text-balance">{t("title")}</h2>
-          <p className="ag-sub ag-ink-sub mt-4 max-w-lg">{t("subtitle")}</p>
+          <span className="ag-eyebrow ag-eyebrow-ink">{content.eyebrow}</span>
+          <h2 className="ag-h2 ag-ink-h2 mt-4 text-balance">{content.title}</h2>
+          <p className="ag-sub ag-ink-sub mt-4 max-w-lg">{content.subtitle}</p>
           <ul className="mt-8 space-y-3.5">
-            {bullets.map((bullet) => (
+            {content.bullets.map((bullet) => (
               <li key={bullet} className="flex items-start gap-3 text-[14.5px] leading-relaxed text-[#0d0d0f]/84">
                 <Check size={16} strokeWidth={2.5} className="mt-0.5 shrink-0 text-[#0d0d0f]" aria-hidden />
                 {bullet}
@@ -60,7 +59,7 @@ export async function IntelligenceSection() {
             ))}
           </ul>
           <Link href="/analytics/technical" className="ag-btn ag-btn-ink mt-9">
-            {t("cta")} <ArrowRight size={15} strokeWidth={2} aria-hidden />
+            {content.ctaLabel} <ArrowRight size={15} strokeWidth={2} aria-hidden />
           </Link>
         </Reveal>
 
@@ -151,22 +150,18 @@ export async function IntelligenceSection() {
  * ambience. Numbered feature list beside it. All CSS/SVG, abstract and
  * honest (blank price tags).
  */
-export async function ShowcaseSection() {
-  const t = await getTranslations("agile.showcase");
-  const showcaseBrand = await currentBrandProfile();
-  const bullets = [t("b1"), t("b2"), t("b3")];
-
+export function ShowcaseSection({ content }: { content: ShowcaseContent }) {
   return (
     <section id="terminal" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
       {/* <div className="pointer-events-none absolute inset-0 ag-mesh opacity-80" aria-hidden="true" /> */}
       <div className="ag-container relative grid items-center gap-16 lg:grid-cols-[0.9fr_1.1fr]">
         {/* Narrative + capabilities */}
         <Reveal>
-          <span className="ag-eyebrow">{t("label")}</span>
-          <h2 className="ag-h2 mt-4 text-balance">{t("title")}</h2>
-          <p className="ag-sub mt-5 max-w-md">{t("subtitle")}</p>
+          <span className="ag-eyebrow">{content.label}</span>
+          <h2 className="ag-h2 mt-4 text-balance">{content.title}</h2>
+          <p className="ag-sub mt-5 max-w-md">{content.subtitle}</p>
           <ul className="mt-9 space-y-4">
-            {bullets.map((bullet, index) => (
+            {content.bullets.map((bullet, index) => (
               <li key={bullet} className="flex items-start gap-4">
                 <span className="ag-stepnum shrink-0 pt-1">{String(index + 1).padStart(2, "0")}</span>
                 <span className="text-[15px] leading-relaxed text-[#a9a9ae]">{bullet}</span>
@@ -175,7 +170,7 @@ export async function ShowcaseSection() {
           </ul>
           <div className="mt-9 flex flex-wrap gap-3">
             <Link href="/trade/XAUUSD" className="ag-btn ag-btn-primary">
-              {t("cta")}
+              {content.ctaLabel}
             </Link>
           </div>
         </Reveal>
@@ -200,7 +195,7 @@ export async function ShowcaseSection() {
                 <span className="h-1.5 w-1.5 rounded-full bg-[#ff6b6b]/60" />
                 <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
                 <span className="h-1.5 w-1.5 rounded-full bg-[#f0b90b]/70" />
-                <span className="ml-1.5 flex-1 rounded bg-white/5 px-2 py-0.5 font-mono text-[6.5px] tracking-widest text-[#75757b]">{tradeHostForDomain(showcaseBrand.domain)}</span>
+                <span className="ml-1.5 flex-1 rounded bg-white/5 px-2 py-0.5 font-mono text-[6.5px] tracking-widest text-[#75757b]">{content.hostLabel}</span>
               </div>
               {/* AccountBar — the real metrics strip */}
               <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">
@@ -301,85 +296,58 @@ export async function ShowcaseSection() {
   );
 }
 
+/** Trust card icons — positional (registry, custody, protection). */
+const TRUST_ICONS = [Landmark, Lock, Umbrella];
+
 /**
  * Trust & security — a registry ledger: the real company facts as labelled
  * entries in framed cards, headed by the registration summary line. Only
  * configured facts render; fallbacks stay generic and truthful.
  */
-export async function TrustSection() {
-  const t = await getTranslations("agile.trust");
-  const brand = await currentBrandProfile();
-  const companyDesc = [
-    brand.legalName,
-    brand.companyJurisdiction ? `— registered in ${brand.companyJurisdiction}` : null,
-    brand.companyRegistrationNumber ? `(reg. ${brand.companyRegistrationNumber})` : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-  const cards: Array<{ icon: LucideIcon; title: string; desc: string; meta: string | null; tags: string[] }> = [
-    {
-      icon: Landmark,
-      title: t("company.title"),
-      desc: companyDesc || t("company.fallback"),
-      meta: brand.companyRegulator,
-      tags: t.raw("company.tags") as string[],
-    },
-    {
-      icon: Lock,
-      title: t("segregated.title"),
-      desc: t("segregated.desc"),
-      meta: null,
-      tags: t.raw("segregated.tags") as string[],
-    },
-    {
-      icon: Umbrella,
-      title: t("protection.title"),
-      desc: brand.investorCompensationScheme || t("protection.fallback"),
-      meta: null,
-      tags: t.raw("protection.tags") as string[],
-    },
-  ];
-
+export function TrustSection({ content }: { content: TrustContent }) {
   return (
     <section id="trust" className="ag-section scroll-mt-24 bg-[#111113]">
       <div className="ag-container">
         <Reveal>
-          <span className="ag-eyebrow">{t("eyebrow")}</span>
-          <h2 className="ag-h2 mt-4 max-w-2xl text-balance">{t("title")}</h2>
-          <p className="ag-sub mt-4">{t("subtitle")}</p>
+          <span className="ag-eyebrow">{content.eyebrow}</span>
+          <h2 className="ag-h2 mt-4 max-w-2xl text-balance">{content.title}</h2>
+          <p className="ag-sub mt-4">{content.subtitle}</p>
         </Reveal>
         <div className="mt-14 grid gap-4 md:grid-cols-3">
-          {cards.map(({ icon: Icon, title, desc, meta, tags }, index) => (
-            <Reveal key={title} delay={index * 90}>
-              <article className="ag-bento-cell flex h-full flex-col p-8">
-                <div className="flex items-center justify-between">
-                  <Icon size={20} strokeWidth={1.75} className="text-[#f0b90b]" aria-hidden />
-                  <span className="ag-stepnum">{String(index + 1).padStart(2, "0")}</span>
-                </div>
-                <h3 className="mt-6 text-base font-bold text-[#f1f3ef]">{title}</h3>
-                <p className="mt-2.5 text-sm leading-relaxed text-[#a9a9ae]">{desc}</p>
-                {meta && (
-                  <p className="mt-5 text-[11px] font-medium uppercase tracking-[0.16em] text-[#75757b]">
-                    {meta}
-                  </p>
-                )}
-                {/* Institution pills — regulators, custody banks, protection
-                    schemes (content-managed in the agile.trust namespace). */}
-                {tags.length > 0 && (
-                  <div className="mt-auto flex flex-wrap gap-2 pt-5">
-                    {tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full border border-white/12 bg-white/5 px-3.5 py-1 text-[11px] font-semibold tracking-wide text-[#a9a9ae]"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+          {content.cards.map((card, index) => {
+            const Icon = TRUST_ICONS[index] ?? Landmark;
+            return (
+              <Reveal key={card.title} delay={index * 90}>
+                <article className="ag-bento-cell flex h-full flex-col p-8">
+                  <div className="flex items-center justify-between">
+                    <Icon size={20} strokeWidth={1.75} className="text-[#f0b90b]" aria-hidden />
+                    <span className="ag-stepnum">{String(index + 1).padStart(2, "0")}</span>
                   </div>
-                )}
-              </article>
-            </Reveal>
-          ))}
+                  <h3 className="mt-6 text-base font-bold text-[#f1f3ef]">{card.title}</h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-[#a9a9ae]">{card.desc}</p>
+                  {card.meta && (
+                    <p className="mt-5 text-[11px] font-medium uppercase tracking-[0.16em] text-[#75757b]">
+                      {card.meta}
+                    </p>
+                  )}
+                  {/* Institution pills — regulators, custody banks, protection
+                      schemes (content-managed in the domain content package). */}
+                  {card.tags.length > 0 && (
+                    <div className="mt-auto flex flex-wrap gap-2 pt-5">
+                      {card.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full border border-white/12 bg-white/5 px-3.5 py-1 text-[11px] font-semibold tracking-wide text-[#a9a9ae]"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </article>
+              </Reveal>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -390,28 +358,22 @@ export async function TrustSection() {
  * Steps — numbered editorial onboarding: a vertical rule connecting three
  * indexed entries (01 / 02 / 03), no cards — calm, institutional.
  */
-export async function StepsBand() {
-  const t = await getTranslations("agile.steps");
-  const steps = [
-    { n: 1, title: t("s1.title"), desc: t("s1.desc"), icon: Gauge },
-    { n: 2, title: t("s2.title"), desc: t("s2.desc"), icon: ShieldCheck },
-    { n: 3, title: t("s3.title"), desc: t("s3.desc"), icon: CandlestickChart },
-  ];
+export function StepsBand({ content }: { content: StepsContent }) {
   return (
     <section id="get-started" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
       {/* <div className="pointer-events-none absolute inset-0 ag-mesh opacity-60" aria-hidden="true" /> */}
       <div className="ag-container relative">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <span className="ag-eyebrow">{t("eyebrow")}</span>
-            <h2 className="ag-h2 mt-4 text-balance">{t("title")}</h2>
+            <span className="ag-eyebrow">{content.eyebrow}</span>
+            <h2 className="ag-h2 mt-4 text-balance">{content.title}</h2>
           </div>
-          <p className="ag-sub max-w-sm! text-sm!">{t("subtitle")}</p>
+          <p className="ag-sub max-w-sm! text-sm!">{content.subtitle}</p>
         </div>
 
         <ol className="mt-16 grid gap-12 lg:grid-cols-3 lg:gap-12">
-          {steps.map(({ n, title, desc }) => (
-            <li key={n} className="relative flex gap-6 lg:flex-col lg:gap-0">
+          {content.steps.map((step, index) => (
+            <li key={step.title} className="relative flex gap-6 lg:flex-col lg:gap-0">
               {/* Connector — horizontal through the circles (desktop) */}
               <span
                 aria-hidden="true"
@@ -424,11 +386,11 @@ export async function StepsBand() {
                 className="absolute left-7 top-14 h-[calc(100%-2.5rem)] w-px bg-linear-to-b from-[#f0b90b]/40 to-transparent lg:hidden"
               />
               <span className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#f0b90b]/40 bg-[#111113] tnum text-[15px] font-bold text-[#f0b90b] shadow-[0_0_24px_-8px_rgba(240,185,11,0.45)]">
-                {String(n).padStart(2, "0")}
+                {String(index + 1).padStart(2, "0")}
               </span>
               <div className="lg:mt-8">
-                <h3 className="text-lg font-bold tracking-[-0.015em] text-[#f1f3ef]">{title}</h3>
-                <p className="mt-2.5 max-w-sm text-sm leading-relaxed text-[#a9a9ae]">{desc}</p>
+                <h3 className="text-lg font-bold tracking-[-0.015em] text-[#f1f3ef]">{step.title}</h3>
+                <p className="mt-2.5 max-w-sm text-sm leading-relaxed text-[#a9a9ae]">{step.desc}</p>
               </div>
             </li>
           ))}
@@ -443,9 +405,7 @@ export async function StepsBand() {
  * near-solid scrim, display headline, dual CTA and the platform's real
  * numbers as a closing ledger row.
  */
-export async function FinalCta() {
-  const t = await getTranslations("agile");
-  const tCta = await getTranslations("finalCta");
+export function FinalCta({ content }: { content: FinalCtaContent }) {
   return (
     <section id="final-cta" className="relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
       <SectionBackdrop
@@ -464,15 +424,15 @@ export async function FinalCta() {
       <div className="ag-container relative py-28 lg:py-36">
         <Reveal>
           <div className="mx-auto max-w-3xl text-center">
-            <span className="ag-eyebrow">{tCta("eyebrow")}</span>
-            <h2 className="ag-display mt-6 text-[clamp(2.5rem,5vw,4.25rem)]!">{t("ctaTitle")}</h2>
-            <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[#a9a9ae]">{t("ctaSubtitle")}</p>
+            <span className="ag-eyebrow">{content.eyebrow}</span>
+            <h2 className="ag-display mt-6 text-[clamp(2.5rem,5vw,4.25rem)]!">{content.title}</h2>
+            <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[#a9a9ae]">{content.subtitle}</p>
             <div className="mt-11 flex flex-wrap justify-center gap-3">
               <Link href="/register" className="ag-btn ag-btn-primary px-9">
-                {tCta("primary")}
+                {content.ctaPrimaryLabel}
               </Link>
               <Link href="/login" className="ag-btn ag-btn-ghost">
-                {tCta("secondary")}
+                {content.ctaSecondaryLabel}
               </Link>
             </div>
           </div>

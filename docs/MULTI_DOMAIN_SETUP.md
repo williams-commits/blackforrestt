@@ -22,7 +22,20 @@ customer signed up under — even for queued jobs with no request context.
 
 ## Where brand configuration lives
 
-Everything is environment-driven (no code changes to add a brand):
+Two layers (see `docs/ARCHITECTURE.md`):
+
+1. **Code layer** — the domain registry `src/domains/registry.ts`, one
+   explicit `domain.config.ts` per family (`src/domains/<key>/`). Carries
+   hosts, design selections (`landingDesign` / `publicDesign`), brand
+   identity defaults, and features. `npm run test:domains` validates it.
+2. **Env layer** — the operational override surface below. Production can
+   add mirror hosts or override any code default WITHOUT a rebuild (the
+   custom server reads env at boot). Note: when a `BRAND_OVERRIDES` entry
+   EXISTS for an apex, its `tradeEnabled` flag is authoritative even when
+   absent (absent = not enabled → canonical trade host); the registry's code
+   default applies only when no entry exists.
+
+Env variables:
 
 | Variable | Purpose |
 | --- | --- |
@@ -96,9 +109,14 @@ directives). Use `BRAND_DOMAINS` for the list.
 
 ## Runbook: add brand #3 (e.g. `newbrand.com`)
 
-No code changes, no Caddyfile edits — the renderer generates site blocks
-(plus `www.` → apex redirects) from the env.
+Recommended path: a domain package + env (no Caddyfile edits — the renderer
+generates site blocks plus `www.` → apex redirects from the env). Env-only
+still works for mirror domains that reuse the default design: copy
+`src/domains/_template/` when the family needs its own identity/design, then:
 
+0. **Domain package (recommended)**: `cp -r src/domains/_template
+   src/domains/newbrand`, fill `domain.config.ts` + `content.ts`, register in
+   `src/domains/registry.ts` — see `.platform/workflows/new-domain.md`.
 1. **DNS**: point `newbrand.com` (and `trade.newbrand.com`) at the server.
 2. **`.env.production`**:
    ```bash

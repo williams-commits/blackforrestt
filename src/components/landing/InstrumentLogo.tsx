@@ -3,7 +3,7 @@ import { ASSET_DIR, currencyFlag, instrumentImage } from "@/components/icons/ins
 import type { InstrumentCategory } from "@/lib/types";
 
 /**
- * InstrumentLogo — the Agile landing's instrument token, rendered from the
+ * InstrumentLogo — an instrument token rendered from the
  * SAME real-imagery map as the shared InstrumentIcon (one source of truth in
  * instrumentAssets). Sized by HEIGHT only: currency pairs are wider than
  * square (two overlapped flags) and must never sit inside a fixed-width

@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Clock } from "lucide-react";
-import { InstrumentLogo } from "../InstrumentLogo";
+import { InstrumentLogo } from "@/components/landing/InstrumentLogo";
 import { useInstruments } from "@/components/landing/useInstruments";
+import type { MarketsBoardContent } from "@/content/contracts";
 import type { InstrumentCategory, InstrumentView } from "@/lib/types";
 
 /** Instruments shown per category tab (and for the default view). */
@@ -13,12 +14,6 @@ const VISIBLE = 3;
 /** Fixed category order for the pills — Stocks first, then the natural
  *  discovery flow. Categories absent from the feed drop out automatically. */
 const TAB_ORDER: InstrumentCategory[] = ["STOCK", "CRYPTO", "FOREX", "COMMODITY", "INDEX"];
-
-interface MarketPanel {
-  title: string;
-  bullets: string[];
-  cta: string;
-}
 
 /**
  * Markets — category-led composition: the left panel carries the selected
@@ -30,20 +25,10 @@ interface MarketPanel {
  */
 export function MarketsSection({
   initial,
-  labels,
+  content,
 }: {
   initial: InstrumentView[];
-  labels: {
-    eyebrow: string;
-    title: string;
-    subtitle: string;
-    cta: string;
-    categories: Record<string, string>;
-    empty: string;
-    today: string;
-    updated: string;
-    panels: Record<string, MarketPanel>;
-  };
+  content: MarketsBoardContent;
 }) {
   const instruments = useInstruments(initial, 3_000);
   const [selected, setSelected] = useState<InstrumentCategory | null>(null);
@@ -61,7 +46,7 @@ export function MarketsSection({
     () => instruments.filter((i) => i.category === active).slice(0, VISIBLE),
     [instruments, active],
   );
-  const panel = labels.panels[active.toLowerCase()] ?? Object.values(labels.panels)[0];
+  const panel = content.panels[active.toLowerCase()] ?? Object.values(content.panels)[0];
 
   // Stamp the caption each time the feed delivers a fresh snapshot (client
   // only — starts null so server and client markup agree).
@@ -81,17 +66,17 @@ export function MarketsSection({
         {/* Section header — the general pitch, with the explore CTA right */}
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="max-w-2xl">
-            <span className="ag-eyebrow">{labels.eyebrow}</span>
-            <h2 className="ag-h2 mt-4 text-balance">{labels.title}</h2>
-            <p className="ag-sub mt-4">{labels.subtitle}</p>
+            <span className="ag-eyebrow">{content.eyebrow}</span>
+            <h2 className="ag-h2 mt-4 text-balance">{content.title}</h2>
+            <p className="ag-sub mt-4">{content.subtitle}</p>
           </div>
           <Link href="/tools/informers" className="ag-btn ag-btn-ghost shrink-0">
-            {labels.cta} <ArrowRight size={15} strokeWidth={2} aria-hidden />
+            {content.ctaLabel} <ArrowRight size={15} strokeWidth={2} aria-hidden />
           </Link>
         </div>
 
         {/* Category pills — one per asset class in the feed */}
-        <div className="mt-10 flex flex-wrap gap-2" role="tablist" aria-label={labels.eyebrow}>
+        <div className="mt-10 flex flex-wrap gap-2" role="tablist" aria-label={content.eyebrow}>
           {available.map((tab) => (
             <button
               key={tab}
@@ -105,7 +90,7 @@ export function MarketsSection({
                   : "border-white/10 text-[#a9a9ae] hover:border-white/25 hover:text-[#f1f3ef]"
               }`}
             >
-              {labels.categories[tab.toLowerCase()] ?? tab}
+              {content.categories[tab.toLowerCase()] ?? tab}
             </button>
           ))}
         </div>
@@ -136,7 +121,7 @@ export function MarketsSection({
               </ul>
               <div className="mt-auto pt-6 sm:pt-8">
                 <Link href="/register" className="ag-btn ag-btn-ink">
-                  {panel.cta} <ArrowRight size={15} strokeWidth={2} aria-hidden />
+                  {panel.ctaLabel} <ArrowRight size={15} strokeWidth={2} aria-hidden />
                 </Link>
               </div>
             </div>
@@ -172,7 +157,7 @@ export function MarketsSection({
                       {instrument.mid.toFixed(instrument.digits)}
                     </span>
                     <span className="mt-0.5 flex items-center justify-end gap-1.5 text-[11px]">
-                      <span className="text-[#75757b]">{labels.today}</span>
+                      <span className="text-[#75757b]">{content.today}</span>
                       <span className={`font-semibold tnum ${up ? "ag-up" : "ag-down"}`}>
                         {up ? "+" : ""}
                         {instrument.changePct.toFixed(2)}%
@@ -184,12 +169,12 @@ export function MarketsSection({
             })}
             {filtered.length === 0 && (
               <p className="flex flex-1 items-center justify-center rounded-2xl border border-white/10 px-6 py-10 text-center text-sm text-[#75757b]">
-                {labels.empty}
+                {content.empty}
               </p>
             )}
             {updatedAt && (
               <p className="flex items-center justify-end gap-1.5 mt-1 text-right text-[14px] text-[#75757b]">
-                {labels.updated}: <Clock size={14} /> <span className="tnum text-[#a9a9ae]">{updatedAt}</span>
+                {content.updated}: <Clock size={14} /> <span className="tnum text-[#a9a9ae]">{updatedAt}</span>
               </p>
             )}
           </div>

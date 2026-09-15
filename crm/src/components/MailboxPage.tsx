@@ -218,7 +218,7 @@ export function MailboxPage() {
               </button>
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             {filteredUserId ? (
               <span className="flex items-center gap-1 rounded-full bg-(--bg-selected) px-3 py-1 text-xs font-medium text-(--brand)">
                 Mail of {filteredUserName}
@@ -231,7 +231,7 @@ export function MailboxPage() {
                 checked={mineOnly}
                 onChange={(event) => { setMineOnly(event.target.checked); setPage(1); }}
               />
-              Mine only
+              Me
             </label>
             <label htmlFor="mailbox-search" className="sr-only">Search emails</label>
             <input

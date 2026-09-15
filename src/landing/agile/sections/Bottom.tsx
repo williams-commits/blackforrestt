@@ -14,6 +14,18 @@ import {
 import { Reveal } from "@/components/landing/Reveal";
 import { SectionBackdrop } from "../SectionBackdrop";
 import { currentBrandProfile, tradeHostForDomain } from "@/lib/branding";
+import { areaPath, smoothPath } from "../smoothPath";
+
+/** Signal-card + terminal-mock chart series → smoothed Catmull-Rom paths. */
+const SIGNAL_SERIES: Array<[number, number]> = [[0, 96], [24, 88], [48, 92], [72, 70], [96, 77], [120, 54], [144, 61], [168, 40], [192, 47], [216, 30], [240, 37], [264, 22], [288, 29], [320, 16]];
+const SIGNAL_LINE = smoothPath(SIGNAL_SERIES);
+const SIGNAL_AREA = areaPath(SIGNAL_SERIES, 132);
+const DESK_SERIES: Array<[number, number]> = [[0, 96], [20, 88], [40, 92], [60, 72], [80, 78], [100, 56], [120, 63], [140, 42], [160, 49], [180, 30], [200, 38], [220, 22], [240, 29], [260, 16], [280, 24], [300, 12]];
+const DESK_LINE = smoothPath(DESK_SERIES);
+const DESK_AREA = areaPath(DESK_SERIES, 120);
+const PHONE_SERIES: Array<[number, number]> = [[0, 116], [12, 106], [24, 110], [36, 88], [48, 96], [60, 72], [72, 80], [84, 56], [96, 64], [108, 44], [120, 52]];
+const PHONE_LINE = smoothPath(PHONE_SERIES);
+const PHONE_AREA = areaPath(PHONE_SERIES, 130);
 
 /**
  * Intelligence — the analysis pitch on the GBFXS statement yellow. Left carries the
@@ -81,20 +93,13 @@ export async function IntelligenceSection() {
                 <rect x="0" y="100" width="320" height="16" fill="rgba(240,185,11,0.08)" />
                 <line x1="0" y1="22" x2="320" y2="22" stroke="rgba(255,107,107,0.4)" strokeDasharray="3 4" strokeWidth="1" />
                 <line x1="0" y1="108" x2="320" y2="108" stroke="rgba(240,185,11,0.45)" strokeDasharray="3 4" strokeWidth="1" />
-                <path
-                  d="M0 96 L24 88 L48 92 L72 70 L96 77 L120 54 L144 61 L168 40 L192 47 L216 30 L240 37 L264 22 L288 29 L320 16 L320 132 L0 132 Z"
-                  fill="url(#ag-int-fill)"
-                />
-                <path
-                  d="M0 96 L24 88 L48 92 L72 70 L96 77 L120 54 L144 61 L168 40 L192 47 L216 30 L240 37 L264 22 L288 29 L320 16"
-                  fill="none"
-                  stroke="#f0b90b"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
+                <path d={SIGNAL_AREA} fill="url(#ag-int-fill)" />
+                <path d={SIGNAL_LINE} fill="none" stroke="#f0b90b" strokeWidth="0.6" strokeLinecap="round" />
+                {/* Traveling shimmer — the signal reads as live analysis. */}
+                <path d={SIGNAL_LINE} fill="none" className="ag-chart-live" stroke="#f8d56a" strokeWidth="0.8" strokeLinecap="round" />
                 {/* Entry marker on the line */}
                 <circle cx="168" cy="40" r="3" fill="#f0b90b" />
-                <circle cx="168" cy="40" r="6" fill="none" stroke="rgba(240,185,11,0.5)" strokeWidth="1" />
+                <circle cx="168" cy="40" r="6" fill="none" stroke="rgba(240,185,11,0.5)" strokeWidth="0.6" className="ag-chart-pulse" />
               </svg>
 
               {/* Level chips — the signal card's footer, values blank. */}
@@ -220,17 +225,10 @@ export async function ShowcaseSection() {
                       </linearGradient>
                     </defs>
                     <rect width="300" height="120" fill="url(#ag-show-grid)" />
-                    <path
-                      d="M0 96 L20 88 L40 92 L60 72 L80 78 L100 56 L120 63 L140 42 L160 49 L180 30 L200 38 L220 22 L240 29 L260 16 L280 24 L300 12 L300 120 L0 120 Z"
-                      fill="url(#ag-show-fill)"
-                    />
-                    <path
-                      d="M0 96 L20 88 L40 92 L60 72 L80 78 L100 56 L120 63 L140 42 L160 49 L180 30 L200 38 L220 22 L240 29 L260 16 L280 24 L300 12"
-                      fill="none"
-                      stroke="#f0b90b"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                    />
+                    <path d={DESK_AREA} fill="url(#ag-show-fill)" />
+                    <path d={DESK_LINE} fill="none" stroke="#f0b90b" strokeWidth="0.6" strokeLinecap="round" />
+                    <path d={DESK_LINE} fill="none" className="ag-chart-live" stroke="#f8d56a" strokeWidth="0.6" strokeLinecap="round" />
+                    <circle cx="300" cy="12" r="1.8" fill="#f8d56a" className="ag-chart-pulse" />
                   </svg>
                   {/* blank last-price hairline */}
                   <div className="pointer-events-none absolute inset-x-6 top-[32%] border-t border-dashed border-[#f0b90b]/45" />
@@ -280,8 +278,9 @@ export async function ShowcaseSection() {
                 {/* chart — stretches so the phone stands tall */}
                 <div className="flex-1 px-1 pt-1">
                   <svg viewBox="0 0 120 130" className="h-full w-full" preserveAspectRatio="none">
-                    <path d="M0 116 L12 106 L24 110 L36 88 L48 96 L60 72 L72 80 L84 56 L96 64 L108 44 L120 52 L120 130 L0 130 Z" fill="rgba(240,185,11,0.13)" />
-                    <path d="M0 116 L12 106 L24 110 L36 88 L48 96 L60 72 L72 80 L84 56 L96 64 L108 44 L120 52" fill="none" stroke="#f0b90b" strokeWidth="1.6" />
+                    <path d={PHONE_AREA} fill="rgba(240,185,11,0.13)" />
+                    <path d={PHONE_LINE} fill="none" stroke="#f0b90b" strokeWidth="0.6" strokeLinecap="round" />
+                    <path d={PHONE_LINE} fill="none" className="ag-chart-live" stroke="#f8d56a" strokeWidth="0.6" strokeLinecap="round" />
                   </svg>
                 </div>
                 {/* order boxes — SELL over BUY, like the sheet */}

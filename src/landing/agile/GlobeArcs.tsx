@@ -19,16 +19,34 @@ export function GlobeArcs({ className = "", ink = false }: { className?: string;
   const arcColor = ink ? "13,13,15" : "240,185,11";
   const glowColor = ink ? "13,13,15" : "240,185,11";
   const ids = ink ? { glow: "ag-globe-glow-ink", arc: "ag-arc-ink" } : { glow: "ag-globe-glow", arc: "ag-arc" };
+  // Nodes at CONTINENT positions on the sphere face (viewBox 260×200,
+  // centre 130,100 r74) — each pulsing point marks a real landmass:
+  // North America, South America, Europe, Africa, Middle East,
+  // South Asia, East Asia, Australia.
   const nodes: Array<[number, number, number]> = [
-    // [x, y, r] — financial centres scattered across the sphere face.
-    [73, 62, 2.6], [152, 48, 2.2], [205, 86, 2.8], [128, 118, 2.2], [52, 132, 2.4],
-    [180, 152, 2.0], [96, 44, 2.0], [222, 132, 2.2],
+    [86, 56, 2.6],   // North America
+    [104, 122, 2.2], // South America
+    [117, 44, 2.4],  // Europe
+    [129, 86, 2.0],  // Africa
+    [150, 72, 2.2],  // Middle East
+    [161, 79, 2.0],  // South Asia
+    [184, 54, 2.6],  // East Asia
+    [176, 134, 2.2], // Australia
   ];
   const arcs: Array<[number, number, number, number]> = [
-    // Great-circle-ish quadratic curves between node pairs.
-    [73, 62, 152, 48], [152, 48, 205, 86], [205, 86, 128, 118], [128, 118, 52, 132],
-    [52, 132, 73, 62], [180, 152, 205, 86], [96, 44, 128, 118], [222, 132, 180, 152],
+    // Trade routes between the continents above.
+    [86, 56, 117, 44],    // NA ↔ Europe
+    [117, 44, 129, 86],   // Europe ↔ Africa
+    [117, 44, 150, 72],   // Europe ↔ Middle East
+    [150, 72, 184, 54],   // ME ↔ East Asia
+    [161, 79, 176, 134],  // South Asia ↔ Australia
+    [86, 56, 104, 122],   // NA ↔ South America
+    [129, 86, 161, 79],   // Africa ↔ South Asia
+    [184, 54, 176, 134],  // East Asia ↔ Australia
   ];
+  // Abstract landmass silhouettes under the nodes — soft rounded masses at
+  // whisper opacity so the continental placement reads at a glance.
+  const landmassFill = ink ? "rgba(13,13,15,0.10)" : "rgba(255,255,255,0.07)";
   const midX = (x1: number, x2: number) => (x1 + x2) / 2;
   const midY = (y1: number, y2: number) => (y1 + y2) / 2 - 26;
 
@@ -82,6 +100,17 @@ export function GlobeArcs({ className = "", ink = false }: { className?: string;
         />
       ))}
       <line x1="130" y1="26" x2="130" y2="174" stroke={wireMid} strokeWidth="1" />
+
+      {/* Continent silhouettes — abstract, decorative. */}
+      <g fill={landmassFill}>
+        <ellipse cx="88" cy="58" rx="21" ry="16" transform="rotate(-18 88 58)" />
+        <ellipse cx="106" cy="120" rx="10" ry="17" transform="rotate(12 106 120)" />
+        <ellipse cx="119" cy="46" rx="11" ry="8" />
+        <ellipse cx="131" cy="88" rx="13" ry="17" />
+        <ellipse cx="156" cy="73" rx="12" ry="8" transform="rotate(-24 156 73)" />
+        <ellipse cx="172" cy="72" rx="17" ry="12" transform="rotate(14 172 72)" />
+        <ellipse cx="177" cy="134" rx="12" ry="8" transform="rotate(18 177 134)" />
+      </g>
 
       {/* Arcs — data flow along the network. */}
       {arcs.map(([x1, y1, x2, y2], i) => (

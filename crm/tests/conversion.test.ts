@@ -65,7 +65,7 @@ test("lead merge copies timeline and snapshots the merged record", async () => {
   await prisma.activityEvent.create({
     data: { subjectType: "LEAD", subjectId: merged, kind: "created", actorUserId: rep.userId },
   });
-  const result = await mergeLeads(rep, { primaryId: primary, mergedId: merged });
+  const result = await mergeLeads(rep, { primaryId: primary, mergedIds: [merged] });
   assert.ok(result.copiedEvents >= 1, "events copied");
   const snapshot = await prisma.mergeRecord.findFirstOrThrow({ where: { primaryId: primary } });
   assert.ok(snapshot.snapshot, "snapshot stored");
@@ -77,6 +77,30 @@ test("lead merge copies timeline and snapshots the merged record", async () => {
   await prisma.activityEvent.deleteMany({ where: { subjectId: merged } });
 });
 
+/** N-way merge: one survivor folds in several records at once. */
+test("lead merge folds THREE records into one survivor", async () => {
+  const rep = await managerContext();
+  const primary = await makeLead(rep, "nway-primary");
+  const second = await makeLead(rep, "nway-second");
+  const third = await makeLead(rep, "nway-third");
+  for (const id of [second, third]) {
+    await prisma.note.create({ data: { body: `note ${id}`, authorUserId: rep.userId, subjectType: "LEAD", subjectId: id } });
+  }
+  const result = await mergeLeads(rep, { primaryId: primary, mergedIds: [second, third] });
+  assert.equal(result.mergedCount, 2, "both records folded in");
+  const survivorNotes = await prisma.note.findMany({ where: { subjectType: "LEAD", subjectId: primary } });
+  assert.equal(survivorNotes.length, 2, "notes from both merged leads moved");
+  const snapshots = await prisma.mergeRecord.findMany({ where: { primaryId: primary } });
+  assert.equal(snapshots.length, 2, "one recovery snapshot per merged record");
+  for (const id of [second, third]) {
+    const row = await prisma.lead.findUniqueOrThrow({ where: { id } });
+    assert.ok(row.deletedAt, `lead ${id} soft-deleted`);
+  }
+  await prisma.note.deleteMany({ where: { subjectType: "LEAD", subjectId: primary } });
+  await prisma.lead.deleteMany({ where: { id: { in: [primary, second, third] } } });
+  await prisma.mergeRecord.deleteMany({ where: { primaryId: primary } });
+});
+
 test("contact merge moves notes and soft-deletes the merged contact", async () => {
   const rep = await managerContext();
   const primary = await createContact(rep, { firstName: "Merge", lastName: "Keep" });
@@ -84,7 +108,7 @@ test("contact merge moves notes and soft-deletes the merged contact", async () =
   await prisma.note.create({
     data: { body: "moves with merge", authorUserId: rep.userId, subjectType: "CONTACT", subjectId: merged.id },
   });
-  await mergeRecords(rep, { objectType: "CONTACT", primaryId: primary.id, mergedId: merged.id });
+  await mergeRecords(rep, { objectType: "CONTACT", primaryId: primary.id, mergedIds: [merged.id] });
   const moved = await prisma.note.findFirstOrThrow({ where: { subjectType: "CONTACT", subjectId: primary.id } });
   assert.equal(moved.body, "moves with merge");
   const mergedRow = await prisma.contact.findUniqueOrThrow({ where: { id: merged.id } });

@@ -2,6 +2,8 @@ import { getTranslations } from "next-intl/server";
 import { Zap, ShieldCheck, LineChart } from "lucide-react";
 import { Reveal } from "@/components/landing/Reveal";
 import { GlobeArcs } from "../GlobeArcs";
+import { InstrumentLogo } from "../InstrumentLogo";
+import { areaPath, smoothPath } from "../smoothPath";
 import { MarketIcon } from "@/components/landing/MarketIcons";
 import { CATEGORY_ORDER } from "@/lib/landingUi";
 import type { InstrumentCategory } from "@/lib/types";
@@ -13,6 +15,13 @@ import type { InstrumentCategory } from "@/lib/types";
  * reuses the platform's truthful pillar copy; the composition is entirely
  * the Agile architecture (nothing like the primary brand's feature rows).
  */
+/** Terminal-cell chart series (hand-plotted) → smoothed Catmull-Rom paths. */
+const TERMINAL_LEAD: Array<[number, number]> = [[0, 62], [20, 55], [40, 58], [60, 44], [80, 49], [100, 34], [120, 39], [140, 24], [160, 29], [180, 16], [200, 20], [220, 10]];
+const TERMINAL_SOFT: Array<[number, number]> = [[0, 70], [20, 66], [40, 69], [60, 60], [80, 63], [100, 52], [120, 56], [140, 46], [160, 50], [180, 41], [200, 44], [220, 36]];
+const TERMINAL_FAINT: Array<[number, number]> = [[0, 52], [20, 48], [40, 50], [60, 40], [80, 42], [100, 30], [120, 33], [140, 22], [160, 25], [180, 14], [200, 17], [220, 8]];
+const TERMINAL_LINE = smoothPath(TERMINAL_LEAD);
+const TERMINAL_AREA = areaPath(TERMINAL_LEAD, 84);
+
 export async function BentoSection({ categoryCounts }: { categoryCounts: Record<string, number> }) {
   const t = await getTranslations("agile.pillars");
   const tA = await getTranslations("agile");
@@ -37,29 +46,53 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
                 <h3 className="mt-3 text-xl font-bold tracking-[-0.015em] text-[#f1f3ef]">{t("all.title")}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-[#a9a9ae]">{t("all.desc")}</p>
               </div>
-              {/* Abstract chart mark — the desk's signature motif. */}
-              <svg viewBox="0 0 220 64" className="mt-6 w-full" aria-hidden="true" focusable="false">
-                <defs>
-                  <linearGradient id="ag-bento-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgba(240,185,11,0.25)" />
-                    <stop offset="100%" stopColor="rgba(240,185,11,0)" />
-                  </linearGradient>
-                </defs>
-                <path
-                  d="M0 52 L22 44 L44 48 L66 34 L88 40 L110 26 L132 31 L154 18 L176 24 L198 12 L220 16 L220 64 L0 64 Z"
-                  fill="url(#ag-bento-fill)"
-                />
-                <path
-                  d="M0 52 L22 44 L44 48 L66 34 L88 40 L110 26 L132 31 L154 18 L176 24 L198 12 L220 16"
-                  fill="none"
-                  stroke="#f0b90b"
-                  strokeWidth="1"
-                  strokeLinecap="round"
-                />
-                {[34, 88, 154].map((x) => (
-                  <circle key={x} cx={x + 22} cy={x === 34 ? 34 : x === 88 ? 26 : 18} r="2.4" fill="#f0b90b" />
-                ))}
-              </svg>
+              {/* Multi-market chart — the desk's signature motif: smooth
+                  Catmull-Rom curves in the brand theme (thin gold lead with
+                  a soft area wash, faint gold hairline companions), a
+                  traveling shimmer that keeps the line alive, and the REAL
+                  instrument tokens emerging from inside the chart plane. */}
+              <div className="relative mt-6">
+                <svg viewBox="0 0 220 84" className="w-full" aria-hidden="true" focusable="false">
+                  <defs>
+                    <linearGradient id="ag-bento-fill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="rgba(240,185,11,0.16)" />
+                      <stop offset="100%" stopColor="rgba(240,185,11,0)" />
+                    </linearGradient>
+                  </defs>
+                  {/* Hairline baseline grid. */}
+                  {[14, 34, 54, 74].map((y) => (
+                    <line key={y} x1="0" y1={y} x2="220" y2={y} stroke="rgba(255,255,255,0.045)" strokeWidth="0.6" />
+                  ))}
+                  {/* Faint theme companions — tiny dashed gold hairlines. */}
+                  <path d={smoothPath(TERMINAL_SOFT)} fill="none" stroke="rgba(240,185,11,0.32)" strokeWidth="0.6" strokeDasharray="2 5" strokeLinecap="round" />
+                  <path d={smoothPath(TERMINAL_FAINT)} fill="none" stroke="rgba(240,185,11,0.18)" strokeWidth="0.6" strokeLinecap="round" />
+                  {/* Lead series — the theme line, smooth and thin. */}
+                  <path d={TERMINAL_AREA} fill="url(#ag-bento-fill)" />
+                  <path d={TERMINAL_LINE} fill="none" stroke="#f0b90b" strokeWidth="0.6" strokeLinecap="round" strokeLinejoin="round" />
+                  {/* Traveling shimmer — the line reads as live data. */}
+                  <path d={TERMINAL_LINE} fill="none" className="ag-chart-live" stroke="#f8d56a" strokeWidth="0.6" strokeLinecap="round" />
+                  {/* Breathing close marker at the live edge. */}
+                  <circle cx="220" cy="10" r="1.8" fill="#f8d56a" className="ag-chart-pulse" />
+                </svg>
+                {/* Real instrument tokens EMERGING from the chart plane —
+                    staggered depths and rise phases so the field reads as
+                    products floating up out of the markets. */}
+                <span className="ag-float-a absolute top-0 left-3 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_12px_28px_-12px_rgba(0,0,0,0.85)] backdrop-blur" style={{ animationDelay: "0.2s" }}>
+                  <InstrumentLogo symbol="EURUSD" base="EUR" quote="USD" category="FOREX" className="h-6" />
+                </span>
+                <span className="ag-float-b absolute top-1.5 right-12 z-10 flex h-9 w-9 scale-95 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_10px_22px_-12px_rgba(0,0,0,0.8)] backdrop-blur" style={{ animationDelay: "1.1s" }}>
+                  <InstrumentLogo symbol="BTCUSD" base="BTC" quote="USD" category="CRYPTO" className="h-6" />
+                </span>
+                <span className="ag-float-b absolute top-1/3 -left-1 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_12px_28px_-12px_rgba(0,0,0,0.85)] backdrop-blur" style={{ animationDelay: "2s" }}>
+                  <InstrumentLogo symbol="XAUUSD" base="XAU" quote="USD" category="COMMODITY" className="h-6" />
+                </span>
+                <span className="ag-float-a absolute bottom-1 left-1/4 z-10 flex h-9 w-9 scale-95 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_10px_22px_-12px_rgba(0,0,0,0.8)] backdrop-blur" style={{ animationDelay: "2.9s" }}>
+                  <InstrumentLogo symbol="US30" base="US30" quote="USD" category="INDEX" className="h-6" />
+                </span>
+                <span className="ag-float-b absolute -bottom-2 right-4 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_12px_28px_-12px_rgba(0,0,0,0.85)] backdrop-blur" style={{ animationDelay: "3.7s" }}>
+                  <InstrumentLogo symbol="AAPL" base="AAPL" quote="USD" category="STOCK" className="h-6" />
+                </span>
+              </div>
             </article>
           </Reveal>
 

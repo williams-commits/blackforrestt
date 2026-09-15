@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { clientTradeUrl } from "@/lib/branding";
+import { areaPath, smoothPath } from "../smoothPath";
 
 interface Props {
   eyebrow: string;
@@ -28,6 +29,10 @@ interface Props {
  * layout; selection happens in @/landing/composition (the host dispatcher),
  * never inside the components.
  */
+const DESK_SERIES: Array<[number, number]> = [[0, 64], [20, 56], [40, 60], [60, 44], [80, 50], [100, 34], [120, 40], [140, 26], [160, 32], [180, 18], [200, 24], [220, 12]];
+const DESK_LINE = smoothPath(DESK_SERIES);
+const DESK_AREA = areaPath(DESK_SERIES, 80);
+
 export function AgileArticleLayout({ eyebrow, title, description, children, sidebar }: Props) {
   const t = useTranslations("finalCta");
 
@@ -58,18 +63,10 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
               {[16, 32, 48, 64].map((y) => (
                 <line key={y} x1="0" y1={y} x2="220" y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
               ))}
-              <path
-                d="M0 64 L20 56 L40 60 L60 44 L80 50 L100 34 L120 40 L140 26 L160 32 L180 18 L200 24 L220 12 L220 80 L0 80 Z"
-                fill="url(#ag-page-fill)"
-              />
-              <path
-                d="M0 64 L20 56 L40 60 L60 44 L80 50 L100 34 L120 40 L140 26 L160 32 L180 18 L200 24 L220 12"
-                fill="none"
-                stroke="#f0b90b"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-              <circle cx="220" cy="12" r="2.6" fill="#f0b90b" />
+              <path d={DESK_AREA} fill="url(#ag-page-fill)" />
+              <path d={DESK_LINE} fill="none" stroke="#f0b90b" strokeWidth="0.6" strokeLinecap="round" />
+              <path d={DESK_LINE} fill="none" className="ag-chart-live" stroke="#f8d56a" strokeWidth="0.6" strokeLinecap="round" />
+              <circle cx="220" cy="12" r="2.2" fill="#f8d56a" className="ag-chart-pulse" />
             </svg>
           </div>
         </div>

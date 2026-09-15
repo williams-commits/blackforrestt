@@ -407,18 +407,29 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   }
 
   const mergeCandidates = rows.filter((row) => selected.has(row.id));
+  // N-way merge is wired for every merge-capable module (leads via the lead
+  // flow; contacts/accounts/customers via the generic records merge). Pick
+  // 2..10 rows, choose the survivor, everything else folds in.
+  const MERGEABLE = new Set(["leads", "contacts", "accounts", "customers"]);
+  const mergeableObject = MERGEABLE.has(object);
+  const mergeEndpoint = object === "leads" ? "/api/leads/merge" : "/api/records/merge";
+  const mergeObjectType = object === "leads" ? null : object.slice(0, -1).toUpperCase();
 
   async function runMerge() {
     if (!mergePrimary) return;
     setMergeBusy(true);
     setMergeError(null);
     try {
-      const mergedId = mergeCandidates.find((row) => row.id !== mergePrimary)?.id;
-      if (!mergedId) return;
-      const response = await fetch("/api/leads/merge", {
+      const mergedIds = mergeCandidates.filter((row) => row.id !== mergePrimary).map((row) => row.id);
+      if (mergedIds.length === 0) return;
+      const response = await fetch(mergeEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ primaryId: mergePrimary, mergedId }),
+        body: JSON.stringify(
+          mergeObjectType
+            ? { objectType: mergeObjectType, primaryId: mergePrimary, mergedIds }
+            : { primaryId: mergePrimary, mergedIds },
+        ),
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -723,7 +734,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               Create task…
             </button>
           ) : null}
-          {object === "leads" && can.delete && selected.size === 2 ? (
+          {mergeableObject && can.delete && selected.size >= 2 && selected.size <= 10 ? (
             <button
               type="button"
               onClick={() => {
@@ -739,13 +750,14 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         </div>
       ) : null}
 
-      {mergeOpen && mergeCandidates.length === 2 ? (
+      {mergeOpen && mergeCandidates.length >= 2 ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-md space-y-4 rounded-lg border border-(--border-default) bg-(--bg-surface) text-(--text-primary) p-6 shadow-xl">
-            <h2 className="text-base font-semibold">Merge leads</h2>
+            <h2 className="text-base font-semibold">Merge {config.title.toLowerCase()}</h2>
             <p className="text-sm text-(--text-secondary)">
-              Choose the surviving record. The other lead is deleted; its timeline, notes, and
-              open tasks move to the survivor.
+              Choose the surviving record. The other {mergeCandidates.length - 1}{" "}
+              {mergeCandidates.length - 1 === 1 ? "record is" : "records are"} deleted; their timelines, notes,
+              emails, and open tasks move to the survivor.
             </p>
             {mergeError ? (
               <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">

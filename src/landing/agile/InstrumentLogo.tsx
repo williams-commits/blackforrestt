@@ -29,7 +29,7 @@ export function InstrumentLogo({
   if (single) {
     return (
       <span className={`inline-flex shrink-0 ${className}`}>
-        <span className="inline-flex h-full aspect-square items-center justify-center rounded-xl boder border-white/10 bg-white/5">
+        <span className="inline-flex h-full aspect-square items-center justify-center rounded-xl bg-white/5">
           {/* eslint-disable-next-line @next/next/no-img-element -- decorative instrument mark; the symbol sits adjacent */}
           <img src={ASSET_DIR + single} alt="" loading="lazy" decoding="async" className="h-[62%] w-[62%] object-contain rounded-xl" />
         </span>

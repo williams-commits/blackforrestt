@@ -17,124 +17,137 @@ import type { ScopedContext } from "@/server/records/leads";
 
 export const MergeLeads = z.object({
   primaryId: z.string().min(5),
-  mergedId: z.string().min(5),
+  /** Every record folded into the survivor — N-way (2..10 per merge). */
+  mergedIds: z.array(z.string().min(5)).min(1).max(10),
 });
 
 export async function mergeLeads(ctx: ScopedContext, input: z.infer<typeof MergeLeads>) {
   if (!ctx.permissions.includes("LEADS_DELETE")) {
     throw new CrmError("Forbidden — LEADS_DELETE permission required to merge", 403);
   }
-  if (input.primaryId === input.mergedId) {
-    throw new CrmError("Cannot merge a lead into itself.", 400);
+  if (new Set(input.mergedIds).size !== input.mergedIds.length || input.mergedIds.includes(input.primaryId)) {
+    throw new CrmError("Merged leads must be distinct from each other and from the survivor.", 400);
   }
 
   const scope = assignedScopeWhere(ctx.userId, ctx.scope, ctx.teamIds);
-  const [primary, merged] = await Promise.all([
-    prisma.lead.findFirst({ where: { id: input.primaryId, deletedAt: null, ...scope } }),
-    prisma.lead.findFirst({ where: { id: input.mergedId, deletedAt: null, ...scope } }),
-  ]);
-  if (!primary || !merged) throw new CrmError("Both leads must exist and be in your scope.", 404);
+  const primary = await prisma.lead.findFirst({ where: { id: input.primaryId, deletedAt: null, ...scope } });
+  if (!primary) throw new CrmError("The surviving lead must exist and be in your scope.", 404);
   // Guard: never merge into a converted lead.
   if (primary.convertedAt) throw new CrmError("Surviving lead is already converted.", 400);
 
-  const [events, taskCount, noteCount] = await Promise.all([
-    prisma.activityEvent.findMany({
-      where: { subjectType: "LEAD", subjectId: merged.id },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.task.count({
-      where: { subjectType: "LEAD", subjectId: merged.id, status: { in: ["OPEN", "IN_PROGRESS"] } },
-    }),
-    prisma.note.count({ where: { subjectType: "LEAD", subjectId: merged.id } }),
-  ]);
+  const mergedList = await Promise.all(
+    input.mergedIds.map((id) => prisma.lead.findFirst({ where: { id, deletedAt: null, ...scope } })),
+  );
+  if (mergedList.some((lead) => !lead)) {
+    throw new CrmError("Every merged lead must exist and be in your scope.", 404);
+  }
 
+  const totals = { copiedEvents: 0, movedTasks: 0, movedNotes: 0, mergedCount: mergedList.length };
+
+  // ONE transaction for the whole N-way merge — either every record folds in
+  // or nothing changes.
   await prisma.$transaction(async (tx) => {
-    // Full pre-merge snapshot for administrative reversal.
-    await tx.mergeRecord.create({
-      data: {
-        objectType: "LEAD",
-        primaryId: primary.id,
-        mergedId: merged.id,
-        snapshot: {
-          lead: JSON.parse(
-            JSON.stringify({
-              ...merged,
-              // Dates serialize to strings in the snapshot only.
-              createdAt: merged.createdAt.toISOString(),
-              updatedAt: merged.updatedAt.toISOString(),
-            }),
-          ),
-          eventCount: events.length,
-          taskCount,
-          noteCount,
-        },
-        actorUserId: ctx.userId,
-      },
-    });
+    for (const mergedOrNull of mergedList) {
+      // Narrow for TS; the 404 check above guarantees non-null.
+      if (!mergedOrNull) continue;
+      const merged = mergedOrNull;
+      const [events, taskCount, noteCount] = await Promise.all([
+        tx.activityEvent.findMany({
+          where: { subjectType: "LEAD", subjectId: merged.id },
+          orderBy: { createdAt: "asc" },
+        }),
+        tx.task.count({
+          where: { subjectType: "LEAD", subjectId: merged.id, status: { in: ["OPEN", "IN_PROGRESS"] } },
+        }),
+        tx.note.count({ where: { subjectType: "LEAD", subjectId: merged.id } }),
+      ]);
 
-    // Live work and notes follow the surviving lead.
-    await tx.task.updateMany({
-      where: { subjectType: "LEAD", subjectId: merged.id, status: { in: ["OPEN", "IN_PROGRESS"] } },
-      data: { subjectType: "LEAD", subjectId: primary.id },
-    });
-    await tx.note.updateMany({
-      where: { subjectType: "LEAD", subjectId: merged.id },
-      data: { subjectType: "LEAD", subjectId: primary.id },
-    });
-    // Email history + appointments follow the survivor too — leaving them
-    // pointed at the soft-deleted lead orphaned the correspondence and 404'd
-    // the mailbox's "View lead" chip.
-    await tx.emailMessage.updateMany({
-      where: { subjectType: "LEAD", subjectId: merged.id },
-      data: { subjectType: "LEAD", subjectId: primary.id },
-    });
-    await tx.appointment.updateMany({
-      where: { subjectType: "LEAD", subjectId: merged.id },
-      data: { subjectType: "LEAD", subjectId: primary.id },
-    });
-
-    // Copy timeline events onto the survivor — original timestamps, actors,
-    // and payloads preserved; only the subject reference is new.
-    for (const event of events) {
-      await tx.activityEvent.create({
+      // Full pre-merge snapshot for administrative reversal.
+      await tx.mergeRecord.create({
         data: {
-          subjectType: "LEAD",
-          subjectId: primary.id,
-          kind: event.kind,
-          actorUserId: event.actorUserId,
-          payload: (event.payload ?? undefined) as Prisma.InputJsonValue | undefined,
-          createdAt: event.createdAt,
+          objectType: "LEAD",
+          primaryId: primary.id,
+          mergedId: merged.id,
+          snapshot: {
+            lead: JSON.parse(
+              JSON.stringify({
+                ...merged,
+                // Dates serialize to strings in the snapshot only.
+                createdAt: merged.createdAt.toISOString(),
+                updatedAt: merged.updatedAt.toISOString(),
+              }),
+            ),
+            eventCount: events.length,
+            taskCount,
+            noteCount,
+          },
+          actorUserId: ctx.userId,
         },
       });
+
+      // Live work and notes follow the surviving lead.
+      await tx.task.updateMany({
+        where: { subjectType: "LEAD", subjectId: merged.id, status: { in: ["OPEN", "IN_PROGRESS"] } },
+        data: { subjectType: "LEAD", subjectId: primary.id },
+      });
+      await tx.note.updateMany({
+        where: { subjectType: "LEAD", subjectId: merged.id },
+        data: { subjectType: "LEAD", subjectId: primary.id },
+      });
+      // Email history + appointments follow the survivor too — leaving them
+      // pointed at the soft-deleted lead orphaned the correspondence and 404'd
+      // the mailbox's "View lead" chip.
+      await tx.emailMessage.updateMany({
+        where: { subjectType: "LEAD", subjectId: merged.id },
+        data: { subjectType: "LEAD", subjectId: primary.id },
+      });
+      await tx.appointment.updateMany({
+        where: { subjectType: "LEAD", subjectId: merged.id },
+        data: { subjectType: "LEAD", subjectId: primary.id },
+      });
+
+      // Copy timeline events onto the survivor — original timestamps, actors,
+      // and payloads preserved; only the subject reference is new.
+      for (const event of events) {
+        await tx.activityEvent.create({
+          data: {
+            subjectType: "LEAD",
+            subjectId: primary.id,
+            kind: event.kind,
+            actorUserId: event.actorUserId,
+            payload: (event.payload ?? undefined) as Prisma.InputJsonValue | undefined,
+            createdAt: event.createdAt,
+          },
+        });
+      }
+
+      await appendActivity(tx, {
+        subjectType: "LEAD",
+        subjectId: primary.id,
+        kind: "merged",
+        actorUserId: ctx.userId,
+        payload: { mergedLeadName: `${merged.firstName} ${merged.lastName}`, mergedId: merged.id },
+      });
+
+      await tx.lead.update({ where: { id: merged.id }, data: { deletedAt: new Date() } });
+
+      await appendAudit(tx, {
+        actorId: ctx.userId,
+        ip: ctx.ip,
+        action: "LEAD_MERGED",
+        objectType: "Lead",
+        objectId: primary.id,
+        before: { mergedId: merged.id, mergedName: `${merged.firstName} ${merged.lastName}` },
+        after: { copiedEvents: events.length, movedTasks: taskCount, movedNotes: noteCount },
+      });
+
+      totals.copiedEvents += events.length;
+      totals.movedTasks += taskCount;
+      totals.movedNotes += noteCount;
     }
-
-    await appendActivity(tx, {
-      subjectType: "LEAD",
-      subjectId: primary.id,
-      kind: "merged",
-      actorUserId: ctx.userId,
-      payload: { mergedLeadName: `${merged.firstName} ${merged.lastName}`, mergedId: merged.id },
-    });
-
-    await tx.lead.update({ where: { id: merged.id }, data: { deletedAt: new Date() } });
-
-    await appendAudit(tx, {
-      actorId: ctx.userId,
-      ip: ctx.ip,
-      action: "LEAD_MERGED",
-      objectType: "Lead",
-      objectId: primary.id,
-      before: { mergedId: merged.id, mergedName: `${merged.firstName} ${merged.lastName}` },
-      after: { copiedEvents: events.length, movedTasks: taskCount, movedNotes: noteCount },
-    });
   });
 
-  return {
-    primaryId: primary.id,
-    copiedEvents: events.length,
-    movedTasks: taskCount,
-    movedNotes: noteCount,
-  };
+  return { primaryId: primary.id, ...totals };
 }
 
 
@@ -143,7 +156,8 @@ export async function mergeLeads(ctx: ScopedContext, input: z.infer<typeof Merge
 export const MergeRecords = z.object({
   objectType: z.enum(["CONTACT", "ACCOUNT", "CUSTOMER"]),
   primaryId: z.string().min(5),
-  mergedId: z.string().min(5),
+  /** Every record folded into the survivor — N-way (2..10 per merge). */
+  mergedIds: z.array(z.string().min(5)).min(1).max(10),
 });
 
 const OWNER_DELETE_PERMISSION = {
@@ -163,8 +177,8 @@ export async function mergeRecords(ctx: ScopedContext, input: z.infer<typeof Mer
   if (!ctx.permissions.includes(permission)) {
     throw new CrmError(`Forbidden — ${permission} permission required to merge`, 403);
   }
-  if (input.primaryId === input.mergedId) {
-    throw new CrmError("Cannot merge a record into itself.", 400);
+  if (new Set(input.mergedIds).size !== input.mergedIds.length || input.mergedIds.includes(input.primaryId)) {
+    throw new CrmError("Merged records must be distinct from each other and from the survivor.", 400);
   }
   const scope = ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds);
   const fetch = async (id: string) => {
@@ -176,99 +190,109 @@ export async function mergeRecords(ctx: ScopedContext, input: z.infer<typeof Mer
     }
     return prisma.customer.findFirst({ where: { id, deletedAt: null, ...scope } });
   };
-  const [primary, merged] = await Promise.all([fetch(input.primaryId), fetch(input.mergedId)]);
-  if (!primary || !merged) throw new CrmError("Both records must exist and be in your scope.", 404);
+  const primary = await fetch(input.primaryId);
+  if (!primary) throw new CrmError("The surviving record must exist and be in your scope.", 404);
+  const mergedList = await Promise.all(input.mergedIds.map((id) => fetch(id)));
+  if (mergedList.some((record) => !record)) {
+    throw new CrmError("Every merged record must exist and be in your scope.", 404);
+  }
 
-  const events = await prisma.activityEvent.findMany({
-    where: { subjectType: input.objectType, subjectId: merged.id },
-    orderBy: { createdAt: "asc" },
-  });
-
+  // ONE transaction for the whole N-way merge — all-or-nothing.
   await prisma.$transaction(async (tx) => {
-    await tx.mergeRecord.create({
-      data: {
-        objectType: input.objectType,
-        primaryId: primary.id,
-        mergedId: merged.id,
-        snapshot: { record: JSON.parse(JSON.stringify(merged)), eventCount: events.length },
-        actorUserId: ctx.userId,
-      },
-    });
+    for (const mergedOrNull of mergedList) {
+      // Narrow for TS; the 404 check above guarantees non-null.
+      if (!mergedOrNull) continue;
+      const merged = mergedOrNull;
+      const events = await tx.activityEvent.findMany({
+        where: { subjectType: input.objectType, subjectId: merged.id },
+        orderBy: { createdAt: "asc" },
+      });
 
-    // Live work and notes follow the survivor.
-    await tx.task.updateMany({
-      where: { subjectType: input.objectType, subjectId: merged.id, status: { in: ["OPEN", "IN_PROGRESS"] } },
-      data: { subjectType: input.objectType, subjectId: primary.id },
-    });
-    await tx.note.updateMany({
-      where: { subjectType: input.objectType, subjectId: merged.id },
-      data: { subjectType: input.objectType, subjectId: primary.id },
-    });
-    // Email history + appointments follow the survivor too (same orphaning
-    // the lead merge had).
-    await tx.emailMessage.updateMany({
-      where: { subjectType: input.objectType, subjectId: merged.id },
-      data: { subjectType: input.objectType, subjectId: primary.id },
-    });
-    await tx.appointment.updateMany({
-      where: { subjectType: input.objectType, subjectId: merged.id },
-      data: { subjectType: input.objectType, subjectId: primary.id },
-    });
-
-    // Child references move where uniqueness allows.
-    if (input.objectType === "ACCOUNT") {
-      await tx.contact.updateMany({ where: { accountId: merged.id }, data: { accountId: primary.id } });
-      await tx.opportunity.updateMany({ where: { accountId: merged.id }, data: { accountId: primary.id } });
-    } else if (input.objectType === "CONTACT") {
-      // Customer↔Contact is 1:1: move only when the survivor has none.
-      const blocker = await tx.customer.findFirst({ where: { contactId: primary.id } });
-      if (!blocker) {
-        await tx.customer.updateMany({ where: { contactId: merged.id }, data: { contactId: primary.id } });
-      }
-      await tx.opportunity.updateMany({ where: { contactId: merged.id }, data: { contactId: primary.id } });
-    } else {
-      await tx.opportunity.updateMany({ where: { customerId: merged.id }, data: { customerId: primary.id } });
-    }
-
-    // Copy timeline events onto the survivor (original timestamps kept).
-    for (const event of events) {
-      await tx.activityEvent.create({
+      await tx.mergeRecord.create({
         data: {
-          subjectType: input.objectType,
-          subjectId: primary.id,
-          kind: event.kind,
-          actorUserId: event.actorUserId,
-          payload: (event.payload ?? undefined) as Prisma.InputJsonValue | undefined,
-          createdAt: event.createdAt,
+          objectType: input.objectType,
+          primaryId: primary.id,
+          mergedId: merged.id,
+          snapshot: { record: JSON.parse(JSON.stringify(merged)), eventCount: events.length },
+          actorUserId: ctx.userId,
         },
       });
-    }
-    await appendActivity(tx, {
-      subjectType: input.objectType,
-      subjectId: primary.id,
-      kind: "merged",
-      actorUserId: ctx.userId,
-      payload: { mergedId: merged.id },
-    });
 
-    if (input.objectType === "CONTACT") {
-      await tx.contact.update({ where: { id: merged.id }, data: { deletedAt: new Date() } });
-    } else if (input.objectType === "ACCOUNT") {
-      await tx.account.update({ where: { id: merged.id }, data: { deletedAt: new Date() } });
-    } else {
-      await tx.customer.update({ where: { id: merged.id }, data: { deletedAt: new Date() } });
-    }
+      // Live work and notes follow the survivor.
+      await tx.task.updateMany({
+        where: { subjectType: input.objectType, subjectId: merged.id, status: { in: ["OPEN", "IN_PROGRESS"] } },
+        data: { subjectType: input.objectType, subjectId: primary.id },
+      });
+      await tx.note.updateMany({
+        where: { subjectType: input.objectType, subjectId: merged.id },
+        data: { subjectType: input.objectType, subjectId: primary.id },
+      });
+      // Email history + appointments follow the survivor too (same orphaning
+      // the lead merge had).
+      await tx.emailMessage.updateMany({
+        where: { subjectType: input.objectType, subjectId: merged.id },
+        data: { subjectType: input.objectType, subjectId: primary.id },
+      });
+      await tx.appointment.updateMany({
+        where: { subjectType: input.objectType, subjectId: merged.id },
+        data: { subjectType: input.objectType, subjectId: primary.id },
+      });
 
-    await appendAudit(tx, {
-      actorId: ctx.userId,
-      ip: ctx.ip,
-      action: `${input.objectType}_MERGED`,
-      objectType: input.objectType === "CONTACT" ? "Contact" : input.objectType === "ACCOUNT" ? "Account" : "Customer",
-      objectId: primary.id,
-      before: { mergedId: merged.id },
-      after: { copiedEvents: events.length },
-    });
+      // Child references move where uniqueness allows.
+      if (input.objectType === "ACCOUNT") {
+        await tx.contact.updateMany({ where: { accountId: merged.id }, data: { accountId: primary.id } });
+        await tx.opportunity.updateMany({ where: { accountId: merged.id }, data: { accountId: primary.id } });
+      } else if (input.objectType === "CONTACT") {
+        // Customer↔Contact is 1:1: move only when the survivor has none.
+        const blocker = await tx.customer.findFirst({ where: { contactId: primary.id } });
+        if (!blocker) {
+          await tx.customer.updateMany({ where: { contactId: merged.id }, data: { contactId: primary.id } });
+        }
+        await tx.opportunity.updateMany({ where: { contactId: merged.id }, data: { contactId: primary.id } });
+      } else {
+        await tx.opportunity.updateMany({ where: { customerId: merged.id }, data: { customerId: primary.id } });
+      }
+
+      // Copy timeline events onto the survivor (original timestamps kept).
+      for (const event of events) {
+        await tx.activityEvent.create({
+          data: {
+            subjectType: input.objectType,
+            subjectId: primary.id,
+            kind: event.kind,
+            actorUserId: event.actorUserId,
+            payload: (event.payload ?? undefined) as Prisma.InputJsonValue | undefined,
+            createdAt: event.createdAt,
+          },
+        });
+      }
+      await appendActivity(tx, {
+        subjectType: input.objectType,
+        subjectId: primary.id,
+        kind: "merged",
+        actorUserId: ctx.userId,
+        payload: { mergedId: merged.id },
+      });
+
+      if (input.objectType === "CONTACT") {
+        await tx.contact.update({ where: { id: merged.id }, data: { deletedAt: new Date() } });
+      } else if (input.objectType === "ACCOUNT") {
+        await tx.account.update({ where: { id: merged.id }, data: { deletedAt: new Date() } });
+      } else {
+        await tx.customer.update({ where: { id: merged.id }, data: { deletedAt: new Date() } });
+      }
+
+      await appendAudit(tx, {
+        actorId: ctx.userId,
+        ip: ctx.ip,
+        action: `${input.objectType}_MERGED`,
+        objectType: input.objectType === "CONTACT" ? "Contact" : input.objectType === "ACCOUNT" ? "Account" : "Customer",
+        objectId: primary.id,
+        before: { mergedId: merged.id },
+        after: { copiedEvents: events.length },
+      });
+    }
   });
 
-  return { primaryId: primary.id, copiedEvents: events.length };
+  return { primaryId: primary.id, mergedCount: mergedList.length };
 }

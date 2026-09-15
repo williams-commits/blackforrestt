@@ -424,6 +424,49 @@ export function AgileStyles() {
          border for an ink hairline. */
       .ag-bento-cell.ag-cell-yellow:hover { border-color: rgba(13, 13, 15, 0.24); }
 
+      /* Living charts — a short bright segment travels along the smooth
+         line (layered as a duplicate of the base path), and the close
+         marker breathes. Both are decorative motion only. */
+      .ag-chart-live {
+        stroke-dasharray: 26 340;
+        animation: ag-chart-drift 5.2s linear infinite;
+      }
+      @keyframes ag-chart-drift {
+        from { stroke-dashoffset: 366; }
+        to { stroke-dashoffset: 0; }
+      }
+      .ag-chart-pulse {
+        animation: ag-dot-pulse 2.6s ease-in-out infinite;
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+      @keyframes ag-dot-pulse {
+        0%, 100% { opacity: 0.55; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.5); }
+      }
+
+      /* Floating product chips — the real instrument tokens drift over the
+         bento terminal chart on organic multi-axis paths (vertical bob +
+         lateral sway + a whisper of rotation). Two phase variants with
+         different durations keep the field from moving in lockstep; per-chip
+         animation-delay staggers entry. */
+      .ag-float-a { animation: ag-float-a 6s ease-in-out infinite; }
+      .ag-float-b { animation: ag-float-b 7.4s ease-in-out infinite; }
+      @keyframes ag-float-a {
+        0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+        28% { transform: translate3d(2.5px, -9px, 0) rotate(1.6deg); }
+        55% { transform: translate3d(-1.5px, -4px, 0) rotate(-0.6deg); }
+        80% { transform: translate3d(1px, -7px, 0) rotate(0.9deg); }
+      }
+      @keyframes ag-float-b {
+        0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+        32% { transform: translate3d(-3px, -6px, 0) rotate(-1.8deg); }
+        60% { transform: translate3d(2px, -11px, 0) rotate(0.7deg); }
+        85% { transform: translate3d(-1px, -3px, 0) rotate(-0.4deg); }
+      }
+      /* Chip entrance —fade+rise once on mount, then the drift loop runs. */
+      .ag-float-a, .ag-float-b { will-change: transform; }
+
       /* Globe animation — data flows along the arcs while the trading-centre
          nodes pulse on staggered beats. Fully disabled for reduced motion. */
       .ag-globe-arc {
@@ -466,6 +509,9 @@ export function AgileStyles() {
       @media (prefers-reduced-motion: reduce) {
         .ag-card-hover:hover { transform: none; }
         .ag-btn-primary:hover { transform: none; }
+        .ag-float-a, .ag-float-b { animation: none; }
+        .ag-chart-live, .ag-chart-pulse { animation: none; }
+        .ag-chart-live { stroke-dasharray: none; }
       }
     `}</style>
   );

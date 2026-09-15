@@ -309,7 +309,7 @@ export function AgileStyles() {
       .ag-bento-cell {
         background:
           linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0) 44%),
-          #1a1a1e;
+          #21201d;
         /* border: 1px solid rgba(255, 255, 255, 0.08); */
         border-radius: 14px;
         transition: border-color 220ms ease, transform 220ms ease;

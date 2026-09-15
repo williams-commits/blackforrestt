@@ -448,8 +448,6 @@ export async function StepsBand() {
 export async function FinalCta() {
   const t = await getTranslations("agile");
   const tCta = await getTranslations("finalCta");
-  const tV = await getTranslations("agile.value");
-  const stats = (["c1", "c2", "c3"] as const).map((key) => ({ v: tV(`${key}.v`), l: tV(`${key}.l`) }));
   return (
     <section id="final-cta" className="relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
       <SectionBackdrop
@@ -479,14 +477,6 @@ export async function FinalCta() {
                 {tCta("secondary")}
               </Link>
             </div>
-            <dl className="mx-auto mt-14 flex max-w-2xl flex-wrap items-center justify-center gap-x-12 gap-y-5 border-t border-white/10 pt-9">
-              {stats.map(({ v, l }) => (
-                <div key={l} className="text-center">
-                  <dd className="font-mono text-2xl font-bold tnum text-[#f0b90b]">{v}</dd>
-                  <dt className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">{l}</dt>
-                </div>
-              ))}
-            </dl>
           </div>
         </Reveal>
       </div>

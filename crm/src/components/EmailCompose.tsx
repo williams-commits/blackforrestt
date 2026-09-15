@@ -180,12 +180,57 @@ export function EmailCompose({
     setBodyHtml(sanitizeClient(editor.innerHTML));
   }, []);
 
+  // Last selection INSIDE the editor. Toolbar buttons must apply formatting
+  // to the user's text even when focus has moved elsewhere (subject field,
+  // a dialog) — without this, execCommand silently targeted a detached or
+  // reset caret and the buttons appeared to do nothing.
+  const savedRangeRef = useRef<Range | null>(null);
+  const saveSelection = useCallback(() => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0 && editorRef.current?.contains(selection.anchorNode)) {
+      savedRangeRef.current = selection.getRangeAt(0).cloneRange();
+    }
+  }, []);
+
+  // Active formatting state — drives the toolbar's pressed highlight.
+  const [activeCmds, setActiveCmds] = useState<Record<string, boolean>>({});
+  const refreshToolbarState = useCallback(() => {
+    try {
+      setActiveCmds({
+        bold: document.queryCommandState("bold"),
+        italic: document.queryCommandState("italic"),
+        underline: document.queryCommandState("underline"),
+        strikeThrough: document.queryCommandState("strikeThrough"),
+        insertUnorderedList: document.queryCommandState("insertUnorderedList"),
+        insertOrderedList: document.queryCommandState("insertOrderedList"),
+      });
+    } catch { /* queryCommandState unavailable — highlight simply stays off */ }
+  }, []);
+
+  useEffect(() => {
+    const onSelectionChange = () => { saveSelection(); refreshToolbarState(); };
+    document.addEventListener("selectionchange", onSelectionChange);
+    return () => document.removeEventListener("selectionchange", onSelectionChange);
+  }, [saveSelection, refreshToolbarState]);
+
   const exec = useCallback((command: string, value?: string) => {
     const editor = editorRef.current;
-    editor?.focus();
+    if (!editor) return;
+    // Restore the saved editor selection BEFORE focusing — focus() itself
+    // resets the caret when the selection sits elsewhere, which would
+    // defeat the restore and silently retarget the command.
+    const selection = window.getSelection();
+    const inside = selection != null && selection.rangeCount > 0 && editor.contains(selection.anchorNode);
+    if (!inside && savedRangeRef.current) {
+      selection?.removeAllRanges();
+      selection?.addRange(savedRangeRef.current);
+    }
+    editor.focus();
     document.execCommand(command, false, value);
+    saveSelection();
     syncFromEditor();
-  }, [syncFromEditor]);
+    refreshToolbarState();
+  }, [syncFromEditor, saveSelection, refreshToolbarState]);
 
   const send = useCallback(async () => {
     setError(null);
@@ -388,20 +433,28 @@ export function EmailCompose({
 
             {/* Formatting toolbar */}
             <div className="flex flex-wrap items-center gap-1 rounded-lg border border-(--border-default) bg-(--bg-subtle) p-1" role="toolbar" aria-label="Formatting">
-              {toolbarButtons.map((button) => (
-                <button
-                  key={button.cmd}
-                  type="button"
-                  title={button.title}
-                  aria-label={button.title}
-                  disabled={busy}
-                  onMouseDown={(event) => { event.preventDefault(); }}
-                  onClick={() => exec(button.cmd, button.value)}
-                  className="min-w-8 rounded px-2 py-1 text-xs font-semibold text-(--text-secondary) hover:bg-(--bg-hover) hover:text-(--text-primary) disabled:opacity-50"
-                >
-                  {button.label}
-                </button>
-              ))}
+              {toolbarButtons.map((button) => {
+                const active = Boolean(activeCmds[button.cmd]);
+                return (
+                  <button
+                    key={button.cmd}
+                    type="button"
+                    title={button.title}
+                    aria-label={button.title}
+                    aria-pressed={active}
+                    disabled={busy}
+                    onMouseDown={(event) => { event.preventDefault(); }}
+                    onClick={() => exec(button.cmd, button.value)}
+                    className={`min-w-8 rounded px-2 py-1 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                      active
+                        ? "bg-(--brand)/15 text-(--brand) ring-1 ring-(--brand)/40"
+                        : "text-(--text-secondary) hover:bg-(--bg-hover) hover:text-(--text-primary)"
+                    }`}
+                  >
+                    {button.label}
+                  </button>
+                );
+              })}
               <span className="mx-1 h-4 w-px bg-(--border-strong)" aria-hidden />
               <button
                 type="button" title="Insert link" aria-label="Insert link" disabled={busy}

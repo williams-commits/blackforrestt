@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Clock } from "lucide-react";
 import { InstrumentLogo } from "../InstrumentLogo";
 import { useInstruments } from "@/components/landing/useInstruments";
 import type { InstrumentCategory, InstrumentView } from "@/lib/types";
@@ -188,8 +188,8 @@ export function MarketsSection({
               </p>
             )}
             {updatedAt && (
-              <p className="mt-1 text-right text-[11px] text-[#75757b]">
-                {labels.updated}: <span className="tnum text-[#a9a9ae]">{updatedAt}</span>
+              <p className="flex items-center justify-end gap-1.5 mt-1 text-right text-[14px] text-[#75757b]">
+                {labels.updated}: <Clock size={14} /> <span className="tnum text-[#a9a9ae]">{updatedAt}</span>
               </p>
             )}
           </div>

@@ -99,10 +99,10 @@ export function AgileStyles() {
 
       .ag-btn {
         display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-        border-radius: 8px; padding: 0.75rem 1.75rem;
-        font-size: 15px; font-weight: 600; line-height: 1; cursor: pointer;
+        border-radius: 6px; padding: 0.75rem 1.75rem;
+        /* font-size: 15px; */ font-weight: 600; line-height: 1; cursor: pointer;
         transition: filter 200ms ease, transform 200ms ease, background-color 200ms ease;
-        min-height: 44px;
+        /* min-height: 44px; */
       }
       .ag-btn-primary { background: var(--ag-accent); color: #0d0d0f; }
       .ag-btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }

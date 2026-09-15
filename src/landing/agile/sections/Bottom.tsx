@@ -230,8 +230,6 @@ export async function ShowcaseSection() {
                     <path d={DESK_LINE} fill="none" className="ag-chart-live" stroke="#f8d56a" strokeWidth="0.6" strokeLinecap="round" />
                     <circle cx="300" cy="12" r="1.8" fill="#f8d56a" className="ag-chart-pulse" />
                   </svg>
-                  {/* blank last-price hairline */}
-                  <div className="pointer-events-none absolute inset-x-6 top-[32%] border-t border-dashed border-[#f0b90b]/45" />
                 </div>
                 {/* Order rail — the real TradePanel grammar */}
                 <div className="flex flex-col gap-1.5">
@@ -372,7 +370,7 @@ export async function TrustSection() {
                     {tags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full border border-white/12 bg-white/5 px-3.5 py-1.5 text-[11px] font-semibold tracking-wide text-[#a9a9ae]"
+                        className="rounded-full border border-white/12 bg-white/5 px-3.5 py-1 text-[11px] font-semibold tracking-wide text-[#a9a9ae]"
                       >
                         {tag}
                       </span>

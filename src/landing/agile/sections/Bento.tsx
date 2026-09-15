@@ -127,10 +127,10 @@ export async function BentoSection({ categoryCounts }: { categoryCounts: Record<
                 {CATEGORY_ORDER.map((category: InstrumentCategory) => (
                   <span
                     key={category}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-[#a9a9ae]"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1 text-xs font-medium text-[#a9a9ae]"
                   >
                     <span className="text-[#f0b90b]" aria-hidden>
-                      <MarketIcon category={category} className="h-3.5 w-3.5" />
+                      <MarketIcon category={category} className="h-6 w-6" />
                     </span>
                     {tM(`categories.${category.toLowerCase()}`)}
                     <span className="tnum font-semibold text-[#f1f3ef]">{categoryCounts[category] ?? 0}</span>

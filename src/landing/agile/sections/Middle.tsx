@@ -78,11 +78,11 @@ export function MoversSection({
                 </div>
                 <div className="mt-6 flex items-end justify-between border-t border-white/8 pt-5">
                   <div>
-                    <div className={`text-4xl font-extrabold tracking-[-0.03em] tnum ${up ? "ag-up" : "ag-down"}`}>
+                    <div className={`text-3xl font-semibold tracking-[-0.03em] tnum ${up ? "ag-up" : "ag-down"}`}>
                       {up ? "+" : ""}
                       {instrument.changePct.toFixed(2)}%
                     </div>
-                    <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">
+                    <div className="mt-1.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">
                       {labels.metric}
                     </div>
                   </div>
@@ -90,7 +90,7 @@ export function MoversSection({
                     <div className="font-mono text-sm font-semibold tnum text-[#f1f3ef]">
                       {instrument.mid.toFixed(instrument.digits)}
                     </div>
-                    <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">
+                    <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">
                       {labels.last}
                     </div>
                   </div>

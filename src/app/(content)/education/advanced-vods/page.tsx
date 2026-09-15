@@ -13,25 +13,25 @@ const MODULES: Module[] = [
   {
     titleKey: "m1Title",
     lessons: [
-      { n: 1, key: "l1", duration: "11:20", youtubeId: "GWelSpdKwCw" },
-      { n: 2, key: "l2", duration: "13:45", youtubeId: "Ily1gN-yrfI" },
-      { n: 3, key: "l3", duration: "10:08", youtubeId: "ZwL11tUfeXg" },
+      { n: 1, key: "l1", duration: "11:20", youtubeId: "" },
+      { n: 2, key: "l2", duration: "13:45", youtubeId: "" },
+      { n: 3, key: "l3", duration: "10:08", youtubeId: "" },
     ],
   },
   {
     titleKey: "m2Title",
     lessons: [
-      { n: 4, key: "l4", duration: "12:30", youtubeId: "Ily1gN-yrfI" },
-      { n: 5, key: "l5", duration: "9:52", youtubeId: "GWelSpdKwCw" },
-      { n: 6, key: "l6", duration: "8:15", youtubeId: "ZwL11tUfeXg" },
+      { n: 4, key: "l4", duration: "12:30", youtubeId: "" },
+      { n: 5, key: "l5", duration: "9:52", youtubeId: "" },
+      { n: 6, key: "l6", duration: "8:15", youtubeId: "" },
     ],
   },
   {
     titleKey: "m3Title",
     lessons: [
-      { n: 7, key: "l7", duration: "10:40", youtubeId: "ZwL11tUfeXg" },
-      { n: 8, key: "l8", duration: "11:55", youtubeId: "Ily1gN-yrfI" },
-      { n: 9, key: "l9", duration: "9:18", youtubeId: "GWelSpdKwCw" },
+      { n: 7, key: "l7", duration: "10:40", youtubeId: "" },
+      { n: 8, key: "l8", duration: "11:55", youtubeId: "" },
+      { n: 9, key: "l9", duration: "9:18", youtubeId: "" },
     ],
   },
 ];

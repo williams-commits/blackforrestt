@@ -14,6 +14,7 @@ export type Permission = CorePermission |
   "TASKS_VIEW" | "TASKS_CREATE" | "TASKS_EDIT" | "TASKS_DELETE" | "TASKS_ASSIGN" | "TASKS_EXPORT" |
   "APPOINTMENTS_VIEW" | "APPOINTMENTS_CREATE" | "APPOINTMENTS_EDIT" | "APPOINTMENTS_DELETE" | "APPOINTMENTS_ASSIGN" |
   "NOTES_VIEW" | "NOTES_CREATE" | "NOTES_EDIT" | "NOTES_DELETE" |
+  "COMMENTS_CREATE" | "COMMENTS_MANAGE" |
   "TAGS_VIEW" | "TAGS_CREATE" | "TAGS_EDIT" | "TAGS_DELETE" | "TAGS_ASSIGN" |
   "RECORD_STATUS_VIEW" | "RECORD_STATUS_CREATE" | "RECORD_STATUS_EDIT" | "RECORD_STATUS_DELETE" | "RECORD_STATUS_ASSIGN" |
   "POTENTIAL_STATUS_VIEW" | "POTENTIAL_STATUS_CREATE" | "POTENTIAL_STATUS_EDIT" | "POTENTIAL_STATUS_DELETE" | "POTENTIAL_STATUS_ASSIGN" |
@@ -60,6 +61,7 @@ export const PERMISSION_CATEGORIES: readonly PermissionCategory[] = [
   category("TASKS", "Tasks", ["VIEW", "CREATE", "EDIT", "DELETE", "ASSIGN", "EXPORT"]),
   category("APPOINTMENTS", "Appointments", ["VIEW", "CREATE", "EDIT", "DELETE", "ASSIGN"]),
   category("NOTES", "Notes", ["VIEW", "CREATE", "EDIT", "DELETE"]),
+  category("COMMENTS", "Comments", ["CREATE", "MANAGE"]),
   { key: "TAGS", label: "Tags", permissions: labels(["VIEW", "CREATE", "EDIT", "DELETE", "ASSIGN"]).map(({ key, label }) => ({ key: `TAGS_${key}` as Permission, label: key === "ASSIGN" ? "Assign to Records" : label })) },
   { key: "RECORD_STATUS", label: "Record Statuses", permissions: labels(["VIEW", "CREATE", "EDIT", "DELETE", "ASSIGN"]).map(({ key, label }) => ({ key: `RECORD_STATUS_${key}` as Permission, label: key === "ASSIGN" ? "Assign / Change" : label })) },
   { key: "POTENTIAL_STATUS", label: "Potential Statuses", permissions: labels(["VIEW", "CREATE", "EDIT", "DELETE", "ASSIGN"]).map(({ key, label }) => ({ key: `POTENTIAL_STATUS_${key}` as Permission, label: key === "ASSIGN" ? "Assign / Change" : label })) },
@@ -110,8 +112,8 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
 const coreManage = CORE_OBJECTS.flatMap((object) => ["VIEW", "CREATE", "EDIT", "DELETE", "ASSIGN", "EXPORT"].map((action) => `${object}_${action}` as CorePermission));
 const coreWrite = CORE_OBJECTS.flatMap((object) => ["VIEW", "CREATE", "EDIT"].map((action) => `${object}_${action}` as CorePermission));
 const activity: Permission[] = ["LEADS_ADD_NOTE", "LEADS_CREATE_TASK", "LEADS_SCHEDULE_APPOINTMENT", "LEADS_CONVERT"];
-const activityCreate: Permission[] = ["TASKS_VIEW", "TASKS_CREATE", "APPOINTMENTS_VIEW", "APPOINTMENTS_CREATE", "NOTES_VIEW", "NOTES_CREATE", "TAGS_VIEW", "TAGS_ASSIGN"];
-const activityManage: Permission[] = ["TASKS_VIEW", "TASKS_CREATE", "TASKS_EDIT", "TASKS_DELETE", "TASKS_ASSIGN", "TASKS_EXPORT", "APPOINTMENTS_VIEW", "APPOINTMENTS_CREATE", "APPOINTMENTS_EDIT", "APPOINTMENTS_DELETE", "APPOINTMENTS_ASSIGN", "NOTES_VIEW", "NOTES_CREATE", "NOTES_EDIT", "NOTES_DELETE", "TAGS_VIEW", "TAGS_CREATE", "TAGS_EDIT", "TAGS_DELETE", "TAGS_ASSIGN"];
+const activityCreate: Permission[] = ["TASKS_VIEW", "TASKS_CREATE", "APPOINTMENTS_VIEW", "APPOINTMENTS_CREATE", "NOTES_VIEW", "NOTES_CREATE", "COMMENTS_CREATE", "TAGS_VIEW", "TAGS_ASSIGN"];
+const activityManage: Permission[] = ["TASKS_VIEW", "TASKS_CREATE", "TASKS_EDIT", "TASKS_DELETE", "TASKS_ASSIGN", "TASKS_EXPORT", "APPOINTMENTS_VIEW", "APPOINTMENTS_CREATE", "APPOINTMENTS_EDIT", "APPOINTMENTS_DELETE", "APPOINTMENTS_ASSIGN", "NOTES_VIEW", "NOTES_CREATE", "NOTES_EDIT", "NOTES_DELETE", "COMMENTS_CREATE", "COMMENTS_MANAGE", "TAGS_VIEW", "TAGS_CREATE", "TAGS_EDIT", "TAGS_DELETE", "TAGS_ASSIGN"];
 const leadControls: Permission[] = ["LEADS_CHANGE_STATUS", "LEADS_CHANGE_POTENTIAL_STATUS", "LEADS_MANAGE_TAGS"];
 
 export type DataScopeName = "OWN" | "TEAM" | "HIERARCHY" | "ORG";

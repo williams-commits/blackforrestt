@@ -36,6 +36,8 @@ enum SubjectType {
   OPPORTUNITY
   CAMPAIGN
   TASK
+  NOTE
+  APPOINTMENT
 }
 
 // Categories drive pipeline behavior: OPEN records count as working set,
@@ -147,6 +149,7 @@ enum NotificationType {
   PLATFORM_USER_ONLINE
   SYSTEM
   TASK_REMINDER
+  COMMENT_ADDED
 }
 
 // ──────────────────────── Identity & structure ────────────────────────
@@ -173,6 +176,7 @@ model User {
   ownedCampaigns  Campaign[]           @relation("CampaignOwner")
   ownedTasks      Task[]               @relation("TaskOwner")
   authoredNotes   Note[]               @relation("NoteAuthor")
+  authoredComments Comment[]           @relation("CommentAuthor")
   ownedAppts      Appointment[]        @relation("AppointmentOwner")
   activityBy      ActivityEvent[]      @relation("ActivityActor")
   emailsSent      EmailMessage[]       @relation("EmailSender")
@@ -689,6 +693,23 @@ model Note {
   subjectType  SubjectType
   subjectId    String
   createdAt    DateTime    @default(now())
+
+  @@index([subjectType, subjectId, createdAt])
+  @@index([authorUserId])
+}
+
+// Privileged-user comment attached to a work item (task, note, appointment).
+// Flat list (no threading); edits mark editedAt, deletes are real deletes
+// (audit + activity keep the history).
+model Comment {
+  id           String      @id @default(cuid())
+  body         String
+  authorUserId String
+  author       User        @relation("CommentAuthor", fields: [authorUserId], references: [id])
+  subjectType  SubjectType
+  subjectId    String
+  createdAt    DateTime    @default(now())
+  editedAt     DateTime?
 
   @@index([subjectType, subjectId, createdAt])
   @@index([authorUserId])

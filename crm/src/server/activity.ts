@@ -7,7 +7,7 @@ import { prisma } from "@/server/db";
  * indexed query. There is deliberately no update or delete path.
  */
 export interface ActivityEntry {
-  subjectType: "LEAD" | "CONTACT" | "CUSTOMER" | "ACCOUNT" | "OPPORTUNITY" | "CAMPAIGN" | "TASK";
+  subjectType: "LEAD" | "CONTACT" | "CUSTOMER" | "ACCOUNT" | "OPPORTUNITY" | "CAMPAIGN" | "TASK" | "NOTE" | "APPOINTMENT";
   subjectId: string;
   kind:
     | "created"
@@ -30,7 +30,8 @@ export interface ActivityEntry {
     | "converted"
     | "merged"
     | "email_sent"
-    | "imported";
+    | "imported"
+    | "comment";
   actorUserId?: string | null;
   payload?: Prisma.InputJsonValue;
 }

@@ -24,6 +24,7 @@ const KIND_META: Record<string, { label: string; dot: string }> = {
   merged: { label: "Merged into this record", dot: "timeline-dot-neutral" },
   email_sent: { label: "Email sent", dot: "timeline-dot-warning" },
   imported: { label: "Imported", dot: "timeline-dot-neutral" },
+  comment: { label: "Comment", dot: "timeline-dot-brand" },
 };
 
 /** Relative time ("2 hours ago", "3 days ago") */
@@ -51,6 +52,7 @@ function payloadSummary(payload: Prisma.JsonValue | null): string | null {
   if (typeof record.label === "string") parts.push(record.label);
   if (typeof record.mergedLeadName === "string") parts.push(`from ${record.mergedLeadName}`);
   if (typeof record.excerpt === "string") parts.push(record.excerpt);
+  if (typeof record.comment === "string") parts.push(record.comment);
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 

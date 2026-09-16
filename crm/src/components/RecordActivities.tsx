@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
+import { CommentsSection } from "@/components/CommentsSection";
 
 export interface SubjectNote {
   id: string;
@@ -70,6 +71,35 @@ export function RecordActivities({
   const [apptTitle, setApptTitle] = useState(`Meeting: ${subjectLabel}`);
   const [apptStart, setApptStart] = useState("");
   const [apptLocation, setApptLocation] = useState("");
+  // Comment capabilities resolve per user (client fetch — same as RecordListPage).
+  const [me, setMe] = useState<{ userId: string; canComment: boolean; canManage: boolean } | null>(null);
+  const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/me");
+        const body = (await response.json().catch(() => null)) as {
+          data?: { userId: string; permissions?: string[] };
+        } | null;
+        if (cancelled || !response.ok || !body?.data) return;
+        const permissions = body.data.permissions ?? [];
+        setMe({
+          userId: body.data.userId,
+          canComment: permissions.includes("COMMENTS_CREATE"),
+          canManage: permissions.includes("COMMENTS_MANAGE"),
+        });
+      } catch {
+        // Comment affordance stays hidden — the server still enforces authz.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const toggleComments = useCallback((id: string) => {
+    setOpenComments((previous) => ({ ...previous, [id]: !previous[id] }));
+  }, []);
 
   const inputClass =
     "w-full rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
@@ -297,9 +327,37 @@ export function RecordActivities({
           {[{ key: "notes" as const, label: "Notes", count: notes.length }, { key: "tasks" as const, label: "Tasks", count: tasks.length }, { key: "appointments" as const, label: "Schedule", count: appointments.length }].map((tab) => <button key={tab.key} type="button" role="tab" aria-selected={activeTab === tab.key} onClick={() => { setActiveTab(tab.key); if (tab.key === "tasks" && tasks.length === 0) void loadTasks(); }} className={`flex-1 px-3 py-2 text-xs font-semibold ${activeTab === tab.key ? "bg-(--bg-surface) text-(--text-brand) shadow-sm" : "text-(--text-secondary) hover:bg-(--bg-hover)"}`}>{tab.label} <span className="ml-1 text-(--text-tertiary)">{tab.count}</span></button>)}
         </div>
         <div className="p-3">
-          {activeTab === "notes" ? notes.length === 0 ? <p className="text-sm text-(--text-tertiary)">No notes yet.</p> : <ul className="space-y-2">{notes.map((note) => <li key={note.id} className="rounded-md border border-(--border-default) bg-(--bg-hover) p-3 text-sm"><p className="whitespace-pre-wrap">{note.body}</p><p className="mt-1 text-xs text-(--text-tertiary)">{note.author.name} · {new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p></li>)}</ul> : null}
-          {activeTab === "tasks" ? tasksLoading ? <div className="skeleton h-12" /> : tasks.length === 0 ? <p className="text-sm text-(--text-tertiary)">No related tasks yet.</p> : <ul className="space-y-2">{tasks.map((task) => <li key={task.id} className="flex items-center justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><Link href={`/tasks?subjectType=${subjectType}&subjectId=${subjectId}`} className="min-w-0 truncate font-medium text-(--text-brand) hover:underline">{task.title}</Link><span className="shrink-0 text-xs text-(--text-tertiary)">{task.dueAt ? new Date(task.dueAt).toLocaleDateString() : "No due date"} · {task.status.toLowerCase()}</span></li>)}</ul> : null}
-          {activeTab === "appointments" ? appointments.length === 0 ? <p className="text-sm text-(--text-tertiary)">No appointments yet.</p> : <ul className="space-y-2">{appointments.map((appointment) => <li key={appointment.id} className="flex items-center justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><span className="font-medium">{appointment.title}</span><span className="text-xs text-(--text-secondary)">{new Date(appointment.startAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} · {appointment.status.toLowerCase()}</span></li>)}</ul> : null}
+          {activeTab === "notes" ? notes.length === 0 ? <p className="text-sm text-(--text-tertiary)">No notes yet.</p> : <ul className="space-y-2">{notes.map((note) => <li key={note.id} className="rounded-md border border-(--border-default) bg-(--bg-hover) p-3 text-sm">
+  <p className="whitespace-pre-wrap">{note.body}</p>
+  <div className="mt-1 flex items-center justify-between gap-2">
+    <p className="text-xs text-(--text-tertiary)">{note.author.name} · {new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p>
+    <button type="button" onClick={() => toggleComments(note.id)} className="text-xs text-(--text-secondary) hover:text-(--text-brand) hover:underline">
+      💬 {openComments[note.id] ? "Hide comments" : "Comments"}
+    </button>
+  </div>
+  {openComments[note.id] && me ? (
+    <div className="mt-2 border-t border-(--border-default) pt-2">
+      <CommentsSection subjectType="NOTE" subjectId={note.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount />
+    </div>
+  ) : null}
+</li>)}</ul> : null}
+          {activeTab === "tasks" ? tasksLoading ? <div className="skeleton h-12" /> : tasks.length === 0 ? <p className="text-sm text-(--text-tertiary)">No related tasks yet.</p> : <ul className="space-y-2">{tasks.map((task) => <li key={task.id} className="flex items-center justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><Link href={`/tasks/${task.id}`} className="min-w-0 truncate font-medium text-(--text-brand) hover:underline">{task.title}</Link><span className="shrink-0 text-xs text-(--text-tertiary)">{task.dueAt ? new Date(task.dueAt).toLocaleDateString() : "No due date"} · {task.status.toLowerCase()}</span></li>)}</ul> : null}
+          {activeTab === "appointments" ? appointments.length === 0 ? <p className="text-sm text-(--text-tertiary)">No appointments yet.</p> : <ul className="space-y-2">{appointments.map((appointment) => <li key={appointment.id} className="rounded-md border border-(--border-default) px-3 py-2 text-sm">
+  <div className="flex items-center justify-between gap-3">
+    <span className="font-medium">{appointment.title}</span>
+    <span className="flex shrink-0 items-center gap-3">
+      <span className="text-xs text-(--text-secondary)">{new Date(appointment.startAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} · {appointment.status.toLowerCase()}</span>
+      <button type="button" onClick={() => toggleComments(appointment.id)} className="text-xs text-(--text-secondary) hover:text-(--text-brand) hover:underline">
+        💬 {openComments[appointment.id] ? "Hide" : "Comments"}
+      </button>
+    </span>
+  </div>
+  {openComments[appointment.id] && me ? (
+    <div className="mt-2 border-t border-(--border-default) pt-2">
+      <CommentsSection subjectType="APPOINTMENT" subjectId={appointment.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount />
+    </div>
+  ) : null}
+</li>)}</ul> : null}
         </div>
       </div>
     </div>

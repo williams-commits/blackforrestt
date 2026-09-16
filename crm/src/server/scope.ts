@@ -70,3 +70,19 @@ export function ownerScopeWhere(
   if (scope === "OWN") return { ownerUserId: userId };
   return { OR: [{ ownerUserId: userId }, { teamId: { in: teamIds } }] };
 }
+
+/** Owner-visible user set for an actor's scope (tasks & appointments):
+ *  null = no filter (ORG), otherwise self + members of visible teams.
+ *  Shared by the task/appointment/comment services — keep one implementation. */
+export async function visibleOwnerIds(
+  ctx: { userId: string; scope: ScopeName; teamIds: string[] },
+): Promise<string[] | null> {
+  if (ctx.scope === "ORG") return null;
+  if (ctx.scope === "OWN") return [ctx.userId];
+  if (ctx.teamIds.length === 0) return [ctx.userId];
+  const memberships = await prisma.teamMembership.findMany({
+    where: { teamId: { in: ctx.teamIds } },
+    select: { userId: true },
+  });
+  return [...new Set([ctx.userId, ...memberships.map((m) => m.userId)])];
+}

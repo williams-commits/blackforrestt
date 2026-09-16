@@ -5,6 +5,7 @@ import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { notify, subjectNotificationContext } from "@/server/notifications";
 import { resolveSubject, subjectPermission } from "@/server/records/subjects";
+import { visibleOwnerIds } from "@/server/scope";
 import type { ScopedContext } from "@/server/records/leads";
 
 /** Appointments: scheduled interactions tied to a record. */
@@ -97,18 +98,6 @@ export function upcomingAppointmentsForUser(userId: string, take = 10) {
     orderBy: { startAt: "asc" },
     take,
   });
-}
-
-/** Owner-visible user set for the actor's scope: self + members of visible teams. */
-async function visibleOwnerIds(ctx: ScopedContext): Promise<string[] | null> {
-  if (ctx.scope === "ORG") return null; // no filter
-  if (ctx.scope === "OWN") return [ctx.userId];
-  if (ctx.teamIds.length === 0) return [ctx.userId];
-  const memberships = await prisma.teamMembership.findMany({
-    where: { teamId: { in: ctx.teamIds } },
-    select: { userId: true },
-  });
-  return [...new Set([ctx.userId, ...memberships.map((m) => m.userId)])];
 }
 
 export async function updateAppointment(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
@@ -97,6 +97,7 @@ export function TasksPage() {
   const [ownerUserId, setOwnerUserId] = useState("");
   const [users, setUsers] = useState<UserOption[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
+  const editConsumed = useRef(false);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -177,7 +178,7 @@ export function TasksPage() {
     void fetchTasks();
   }
 
-  function openEdit(task: TaskRow) {
+  const openEdit = useCallback((task: TaskRow) => {
     setEditingTask(task);
     setShowForm(true);
     setFormError(null);
@@ -190,7 +191,18 @@ export function TasksPage() {
     setReminderAt(task.reminderAt ? toLocalInputValue(task.reminderAt) : "");
     setPriority(task.priority);
     setOwnerUserId(task.owner?.id ?? "");
-  }
+  }, []);
+  // Deep link from the task detail page: ?edit=<id> opens the inline editor
+  // prefilled with that row (one-shot; later loads are normal).
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId || editConsumed.current) return;
+    const target = rows.find((row) => row.id === editId);
+    if (target) {
+      editConsumed.current = true;
+      openEdit(target);
+    }
+  }, [rows, searchParams, openEdit]);
 
 /** UTC instant → local datetime-local value (YYYY-MM-DDTHH:mm). */
 function toLocalInputValue(instant: string | Date): string {
@@ -382,7 +394,9 @@ const inputClass =
               rows.map((task) => (
                 <tr key={task.id} className={task.status === "COMPLETED" ? "opacity-50" : ""}>
                   <td className="px-3 py-2">
-                    <p className="font-medium">{task.title}</p>
+                    <Link href={`/tasks/${task.id}`} className="font-medium text-(--text-primary) hover:text-(--text-brand) hover:underline">
+                      {task.title}
+                    </Link>
                     {task.subjectType && task.subjectId ? (
                       <p className="text-xs text-(--text-tertiary)">
                         linked to {SUBJECT_PATH[task.subjectType] ? <Link href={`/${SUBJECT_PATH[task.subjectType]}/${task.subjectId}`} className="text-(--text-brand) hover:underline">{task.subjectType.toLowerCase()} …{task.subjectId.slice(-6)}</Link> : `${task.subjectType.toLowerCase()} …${task.subjectId.slice(-6)}`}

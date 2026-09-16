@@ -24,7 +24,7 @@ export function notificationHref(notification: NotificationLinkRow): string {
     : undefined;
   if (collection && typeof recordId === "string") return `/${collection}/${recordId}`;
   if (typeof notification.payload.jobId === "string") return "/imports";
-  if (typeof notification.payload.taskId === "string") return "/tasks";
+  if (typeof notification.payload.taskId === "string") return `/tasks/${notification.payload.taskId}`;
 
   // SYSTEM and older malformed notifications still open a meaningful inbox.
   return "/";

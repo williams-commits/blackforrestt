@@ -23,7 +23,8 @@ export type NotifiableType =
   | "PLATFORM_USER_ONLINE"
   | "TASK_DUE"
   | "TASK_OVERDUE"
-  | "TASK_REMINDER";
+  | "TASK_REMINDER"
+  | "COMMENT_ADDED";
 
 export const NotificationQuery = z.object({
   read: z.enum(["all", "unread", "read"]).default("all"),
@@ -182,7 +183,7 @@ export async function sweepOverdueTasks(userId: string): Promise<void> {
       },
       context: task.subjectType && task.subjectId && isNotificationSubjectType(task.subjectType)
         ? subjectNotificationContext(task.subjectType, task.subjectId)
-        : { href: "/tasks" },
+        : { href: `/tasks/${task.id}` },
     });
     await prisma.task.update({
       where: { id: task.id },

@@ -6,6 +6,7 @@ import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { isNotificationSubjectType, notify, subjectNotificationContext } from "@/server/notifications";
 import { resolveSubject, subjectPermission } from "@/server/records/subjects";
+import { visibleOwnerIds } from "@/server/scope";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
@@ -36,18 +37,6 @@ export const UpdateTask = z.object({
   status: z.enum(["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
   ownerUserId: z.string().trim().min(5).optional(),
 });
-
-/** Owner-visible user set for the actor's scope: self + members of visible teams. */
-async function visibleOwnerIds(ctx: ScopedContext): Promise<string[] | null> {
-  if (ctx.scope === "ORG") return null; // no filter
-  if (ctx.scope === "OWN") return [ctx.userId];
-  if (ctx.teamIds.length === 0) return [ctx.userId];
-  const memberships = await prisma.teamMembership.findMany({
-    where: { teamId: { in: ctx.teamIds } },
-    select: { userId: true },
-  });
-  return [...new Set([ctx.userId, ...memberships.map((m) => m.userId)])];
-}
 
 export const TaskFilters = z.object({
   q: z.string().trim().max(120).optional(),
@@ -258,4 +247,33 @@ export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<
     });
   }
   return updated;
+}
+
+export interface TaskDetail {
+  id: string;
+  title: string;
+  description: string | null;
+  ownerUserId: string;
+  owner: { id: string; name: string; email: string };
+  dueAt: Date | null;
+  priority: string;
+  status: string;
+  recurrence: string;
+  reminderAt: Date | null;
+  completedAt: Date | null;
+  subjectType: string | null;
+  subjectId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Fetch one task inside the actor's owner-based scope (404 otherwise). */
+export async function getTask(ctx: ScopedContext, id: string): Promise<TaskDetail> {
+  const ownerIds = await visibleOwnerIds(ctx);
+  const task = await prisma.task.findFirst({
+    where: { id, ...(ownerIds ? { ownerUserId: { in: ownerIds } } : {}) },
+    include: { owner: { select: { id: true, name: true, email: true } } },
+  });
+  if (!task) throw new CrmError("Task not found.", 404);
+  return task;
 }

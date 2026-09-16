@@ -53,6 +53,7 @@ function payloadSummary(payload: Prisma.JsonValue | null): string | null {
   if (typeof record.mergedLeadName === "string") parts.push(`from ${record.mergedLeadName}`);
   if (typeof record.excerpt === "string") parts.push(record.excerpt);
   if (typeof record.comment === "string") parts.push(record.comment);
+  if (record.state === "edited" || record.state === "deleted") parts.push(`(${record.state})`);
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 

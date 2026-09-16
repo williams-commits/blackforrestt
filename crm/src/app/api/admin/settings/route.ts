@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requirePermission } from "@/server/guard";
+import { requireAnyPermission, requirePermission } from "@/server/guard";
 import { UpdateSetting, listSettings, updateSetting } from "@/server/records/adminManage";
 import { handleRouteError, parseJsonBody } from "@/lib/api";
 
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    await requirePermission("SETTINGS_MANAGE");
+    await requireAnyPermission("ADMIN_ACCESS", "SETTINGS_MANAGE");
     return NextResponse.json({ data: await listSettings() });
   } catch (error) {
     return handleRouteError(error, "Unable to load settings.");

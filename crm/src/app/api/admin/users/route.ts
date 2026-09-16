@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requirePermission } from "@/server/guard";
+import { requireAnyPermission, requirePermission } from "@/server/guard";
 import {
   CreateUser,
   UpdateUser,
@@ -21,7 +21,7 @@ const IdQuery = z.object({ id: z.string().min(5) });
 
 export async function GET(request: Request) {
   try {
-    await requirePermission("USERS_MANAGE");
+    await requireAnyPermission("ADMIN_ACCESS", "USERS_MANAGE");
     const id = new URL(request.url).searchParams.get("id");
     if (id) return NextResponse.json({ data: await listUserActivity(id) });
     return NextResponse.json({ data: await listUsers() });

@@ -14,7 +14,9 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const query = parseListQuery(params);
     const filters = TaskFilters.parse({
+      q: params.get("q") ?? undefined,
       status: params.get("status") ?? undefined,
+      priority: params.get("priority") ?? undefined,
       due: params.get("due") ?? "all",
       mine: params.get("mine") ?? "1",
       subjectType: params.get("subjectType") ?? undefined,

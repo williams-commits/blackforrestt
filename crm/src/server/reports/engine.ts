@@ -142,13 +142,16 @@ function scopeSql(ctx: ScopedContext, object: ReportObject): Prisma.Sql {
   const table = Prisma.raw(OBJECTS[object].table);
   if (ctx.scope === "OWN") return Prisma.sql`${table}."ownerUserId" = ${userId}`;
   if (ctx.teamIds.length === 0) return Prisma.sql`${table}."ownerUserId" = ${userId}`;
-  // Tasks are deliberately personal records: unlike core records they do
-  // not carry a teamId. Team/HIERARCHY visibility resolves through
-  // TeamMembership, exactly as the task list service does.
+  // Tasks: owner ∪ explicitly tagged viewer users ∪ tagged viewer-team
+  // members. "Everyone" visibility exists ONLY for ADMIN/SUPER_ADMIN — this
+  // SQL mirrors taskVisibleWhere() in the task service; keep them in sync.
   if (object === "TASK") {
-    return Prisma.sql`(${table}."ownerUserId" = ${userId} OR ${table}."ownerUserId" IN (
-      SELECT "userId" FROM "TeamMembership" WHERE "teamId" IN (${Prisma.join(ctx.teamIds)})
-    ))`;
+    if (ctx.roleKey === "SUPER_ADMIN" || ctx.roleKey === "ADMIN") return Prisma.sql`TRUE`;
+    return Prisma.sql`(${table}."ownerUserId" = ${userId}
+      OR EXISTS (SELECT 1 FROM "TaskViewer" tv WHERE tv."taskId" = ${table}."id" AND tv."userId" = ${userId})
+      OR EXISTS (SELECT 1 FROM "TaskTeamViewer" ttv
+        JOIN "TeamMembership" tm ON tm."teamId" = ttv."teamId"
+        WHERE ttv."taskId" = ${table}."id" AND tm."userId" = ${userId}))`;
   }
   return Prisma.sql`(${table}."ownerUserId" = ${userId} OR ${table}."teamId" IN (${Prisma.join(ctx.teamIds)}))`;
 }

@@ -12,6 +12,7 @@ import { RecordPageTabs } from "@/components/RecordPageTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { CommentsSection } from "@/components/CommentsSection";
 import { TaskDetailActions } from "@/components/TaskDetailActions";
+import { TaskViewersPanel } from "@/components/TaskViewersPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,7 @@ export default async function TaskDetailPage({ params }: PageProps) {
   let canComment = false;
   let canManageComments = false;
   let canEdit = false;
+  let managesViewers = false;
   try {
     const ctx = await scopedContext("TASKS_VIEW");
     currentUserId = ctx.userId;
@@ -64,6 +66,7 @@ export default async function TaskDetailPage({ params }: PageProps) {
     canManageComments = ctx.permissions.includes("COMMENTS_MANAGE");
     canEdit = ctx.permissions.includes("TASKS_EDIT");
     task = await getTask(ctx, id);
+    managesViewers = task.ownerUserId === ctx.userId || ctx.roleKey === "ADMIN" || ctx.roleKey === "SUPER_ADMIN";
     events = await listTimeline("TASK", id);
     comments = await listComments(ctx, "TASK", id);
   } catch (error) {
@@ -124,10 +127,21 @@ export default async function TaskDetailPage({ params }: PageProps) {
                 <Field label="Owner email" value={task.owner.email} />
                 <Field label="Task ID" value={task.id} />
               </dl>
+              <div className="mt-4">
+                <dt className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Viewers (view-only access)</dt>
+                <div className="mt-1.5">
+                  <TaskViewersPanel
+                    taskId={task.id}
+                    initialUsers={task.viewerUsers.map((entry) => entry.user)}
+                    initialTeams={task.viewerTeams.map((entry) => entry.team)}
+                    canManage={managesViewers}
+                  />
+                </div>
+              </div>
               {task.description ? (
                 <div className="mt-4">
                   <dt className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Description</dt>
-                  <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                  <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed font-medium" style={{ color: task.description ? "var(--text-primary)" : "var(--text-tertiary)" }}>
                     {task.description}
                   </p>
                 </div>

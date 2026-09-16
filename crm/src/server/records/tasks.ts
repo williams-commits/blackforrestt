@@ -6,7 +6,41 @@ import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { isNotificationSubjectType, notify, subjectNotificationContext } from "@/server/notifications";
 import { resolveSubject, subjectPermission } from "@/server/records/subjects";
-import { visibleOwnerIds } from "@/server/scope";
+
+/**
+ * Task visibility model (replaces the old owner-scope ladder for reads):
+ *
+ *   visible = owner ∪ explicitly tagged viewer users ∪ members of tagged
+ *   viewer teams, plus — for ADMIN/SUPER_ADMIN only — everything.
+ *
+ * "Everyone" visibility exists ONLY for admins; managers/team leads no
+ * longer see colleagues' tasks through scope alone — they must be tagged.
+ */
+export function canSeeAllTasks(ctx: ScopedContext): boolean {
+  return ctx.roleKey === "SUPER_ADMIN" || ctx.roleKey === "ADMIN";
+}
+
+/** Where-fragment for READS (list, detail, commenting). */
+export function taskVisibleWhere(ctx: ScopedContext): Prisma.TaskWhereInput {
+  if (canSeeAllTasks(ctx)) return {};
+  return {
+    OR: [
+      { ownerUserId: ctx.userId },
+      { viewerUsers: { some: { userId: ctx.userId } } },
+      ...(ctx.teamIds.length > 0
+        ? [{ viewerTeams: { some: { teamId: { in: ctx.teamIds } } } }]
+        : []),
+    ],
+  };
+}
+
+/** Where-fragment for EDITS: the owner or an admin — tagged viewers are
+ *  view-only by design ("users that view the task, not as owners"). */
+export function taskEditableWhere(ctx: ScopedContext): Prisma.TaskWhereInput {
+  if (canSeeAllTasks(ctx)) return {};
+  return { ownerUserId: ctx.userId };
+}
+
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
@@ -25,6 +59,8 @@ export const CreateTask = z.object({
   ownerUserId: z.string().trim().min(5).optional(),
   subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"]).optional(),
   subjectId: z.string().trim().min(5).optional(),
+  viewerUserIds: z.array(z.string().trim().min(5)).max(50).optional(),
+  viewerTeamIds: z.array(z.string().trim().min(5)).max(50).optional(),
 });
 
 export const UpdateTask = z.object({
@@ -36,6 +72,8 @@ export const UpdateTask = z.object({
   reminderAt: z.coerce.date().optional().nullable(),
   status: z.enum(["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
   ownerUserId: z.string().trim().min(5).optional(),
+  viewerUserIds: z.array(z.string().trim().min(5)).max(50).optional(),
+  viewerTeamIds: z.array(z.string().trim().min(5)).max(50).optional(),
 });
 
 export const TaskFilters = z.object({
@@ -53,17 +91,23 @@ export async function listTasks(
   query: { page: number; pageSize: number },
   filters: z.infer<typeof TaskFilters>,
 ) {
-  const ownerIds = await visibleOwnerIds(ctx);
   const now = new Date();
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
   const weekAhead = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
+  // Visibility: owner ∪ tagged viewers (users/teams) — admins additionally
+  // see everything via mine=0 ("Everyone"). For non-admins, mine=0 and
+  // mine=1 return the same visible set (the UI hides "Everyone" for them).
+  const visibility = taskVisibleWhere(ctx);
+  const mineWhere: Prisma.TaskWhereInput = canSeeAllTasks(ctx) && filters.mine === "0"
+    ? {}
+    : visibility;
+
   const where: Prisma.TaskWhereInput = {
-    ...(ownerIds ? { ownerUserId: { in: ownerIds } } : {}),
+    ...mineWhere,
     ...(filters.status ? { status: filters.status } : { status: { in: ["OPEN", "IN_PROGRESS"] } }),
     ...(filters.priority ? { priority: filters.priority } : {}),
     ...(filters.q ? { OR: [{ title: { contains: filters.q, mode: "insensitive" } }, { description: { contains: filters.q, mode: "insensitive" } }] } : {}),
-    ...(filters.mine === "1" ? { ownerUserId: ctx.userId } : {}),
     ...(filters.subjectType ? { subjectType: filters.subjectType } : {}),
     ...(filters.subjectId ? { subjectId: filters.subjectId } : {}),
     ...(filters.due === "overdue"
@@ -81,7 +125,11 @@ export async function listTasks(
     prisma.task.count({ where }),
     prisma.task.findMany({
       where,
-      include: { owner: { select: { id: true, name: true } } },
+      include: {
+        owner: { select: { id: true, name: true } },
+        viewerUsers: { include: { user: { select: { id: true, name: true } } } },
+        viewerTeams: { include: { team: { select: { id: true, name: true } } } },
+      },
       orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
@@ -121,6 +169,24 @@ export async function createTask(ctx: ScopedContext, input: z.infer<typeof Creat
         subjectId: subject?.id,
       },
     });
+    const viewerUserIds = [...new Set(input.viewerUserIds ?? [])].filter((id) => id !== ownerUserId);
+    const viewerTeamIds = [...new Set(input.viewerTeamIds ?? [])];
+    if (viewerUserIds.length > 0) {
+      const users = await tx.user.count({ where: { id: { in: viewerUserIds }, status: "ACTIVE" } });
+      if (users !== viewerUserIds.length) throw new CrmError("Unknown user in viewerUserIds.", 400);
+      await tx.taskViewer.createMany({
+        data: viewerUserIds.map((userId) => ({ taskId: created.id, userId })),
+        skipDuplicates: true,
+      });
+    }
+    if (viewerTeamIds.length > 0) {
+      const teams = await tx.team.count({ where: { id: { in: viewerTeamIds } } });
+      if (teams !== viewerTeamIds.length) throw new CrmError("Unknown team in viewerTeamIds.", 400);
+      await tx.taskTeamViewer.createMany({
+        data: viewerTeamIds.map((teamId) => ({ taskId: created.id, teamId })),
+        skipDuplicates: true,
+      });
+    }
     if (subject) {
       await appendActivity(tx, {
         subjectType: subject.type,
@@ -148,7 +214,16 @@ export async function createTask(ctx: ScopedContext, input: z.infer<typeof Creat
       payload: { taskId: task.id, title: task.title, byName: ctx.name, subject: subject?.label },
       context: subject
         ? subjectNotificationContext(subject.type, subject.id)
-        : { href: "/tasks" },
+        : { href: `/tasks/${task.id}` },
+    });
+  }
+  for (const viewerId of input.viewerUserIds ?? []) {
+    if (viewerId === ownerUserId || viewerId === ctx.userId) continue;
+    await notify({
+      recipientUserId: viewerId,
+      type: "TASK_CREATED",
+      payload: { taskId: task.id, title: task.title, byName: ctx.name, shared: true },
+      context: { href: `/tasks/${task.id}` },
     });
   }
   return task;
@@ -156,11 +231,20 @@ export async function createTask(ctx: ScopedContext, input: z.infer<typeof Creat
 
 export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<typeof UpdateTask>) {
   requireCapability(ctx, "TASKS_EDIT");
-  const ownerIds = await visibleOwnerIds(ctx);
-  const existing = await prisma.task.findFirst({
-    where: { id, ...(ownerIds ? { ownerUserId: { in: ownerIds } } : {}) },
-  });
+  // Editing stays with the owner or an admin. Tagged viewers are view-only
+  // by design; team/hierarchy scope alone no longer grants task editing.
+  const existing = await prisma.task.findFirst({ where: { id, ...taskEditableWhere(ctx) } });
   if (!existing) throw new CrmError("Task not found.", 404);
+  // Viewer management is an owner/admin capability on top of TASKS_EDIT.
+  const managesViewers = existing.ownerUserId === ctx.userId || canSeeAllTasks(ctx);
+  if ((input.viewerUserIds !== undefined || input.viewerTeamIds !== undefined) && !managesViewers) {
+    throw new CrmError("Forbidden — only the task owner or an admin may change task viewers", 403);
+  }
+  const existingViewers = await prisma.taskViewer.findMany({
+    where: { taskId: id },
+    select: { userId: true },
+  });
+  const previousViewerIds = new Set(existingViewers.map((row) => row.userId));
 
   if (
     input.ownerUserId !== undefined &&
@@ -224,6 +308,34 @@ export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<
         },
       });
     }
+    if (input.viewerUserIds !== undefined) {
+      const nextUserIds = [...new Set(input.viewerUserIds)].filter((userId) => userId !== saved.ownerUserId);
+      if (nextUserIds.length > 0) {
+        const users = await tx.user.count({ where: { id: { in: nextUserIds }, status: "ACTIVE" } });
+        if (users !== nextUserIds.length) throw new CrmError("Unknown user in viewerUserIds.", 400);
+      }
+      await tx.taskViewer.deleteMany({ where: { taskId: id } });
+      if (nextUserIds.length > 0) {
+        await tx.taskViewer.createMany({
+          data: nextUserIds.map((userId) => ({ taskId: id, userId })),
+          skipDuplicates: true,
+        });
+      }
+    }
+    if (input.viewerTeamIds !== undefined) {
+      const nextTeamIds = [...new Set(input.viewerTeamIds)];
+      if (nextTeamIds.length > 0) {
+        const teams = await tx.team.count({ where: { id: { in: nextTeamIds } } });
+        if (teams !== nextTeamIds.length) throw new CrmError("Unknown team in viewerTeamIds.", 400);
+      }
+      await tx.taskTeamViewer.deleteMany({ where: { taskId: id } });
+      if (nextTeamIds.length > 0) {
+        await tx.taskTeamViewer.createMany({
+          data: nextTeamIds.map((teamId) => ({ taskId: id, teamId })),
+          skipDuplicates: true,
+        });
+      }
+    }
     await appendAudit(tx, {
       actorId: ctx.userId,
       ip: ctx.ip,
@@ -231,10 +343,24 @@ export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<
       objectType: "Task",
       objectId: id,
       before: { status: existing.status, dueAt: existing.dueAt },
-      after: { status: saved.status, dueAt: saved.dueAt },
+      after: { status: saved.status, dueAt: saved.dueAt, ...(input.viewerUserIds !== undefined || input.viewerTeamIds !== undefined ? { viewers: true } : {}) },
     });
     return saved;
   });
+
+  // Notify newly tagged viewers (never the actor or the owner).
+  if (input.viewerUserIds !== undefined) {
+    for (const viewerId of input.viewerUserIds) {
+      if (previousViewerIds.has(viewerId)) continue;
+      if (viewerId === updated.ownerUserId || viewerId === ctx.userId) continue;
+      await notify({
+        recipientUserId: viewerId,
+        type: "TASK_CREATED",
+        payload: { taskId: updated.id, title: updated.title, byName: ctx.name, shared: true },
+        context: { href: `/tasks/${updated.id}` },
+      });
+    }
+  }
 
   if (input.ownerUserId !== undefined && input.ownerUserId !== existing.ownerUserId) {
     await notify({
@@ -243,7 +369,7 @@ export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<
       payload: { taskId: updated.id, title: updated.title, byName: ctx.name, reassigned: true },
       context: existing.subjectType && existing.subjectId && isNotificationSubjectType(existing.subjectType)
         ? subjectNotificationContext(existing.subjectType, existing.subjectId)
-        : { href: "/tasks" },
+        : { href: `/tasks/${updated.id}` },
     });
   }
   return updated;
@@ -265,14 +391,20 @@ export interface TaskDetail {
   subjectId: string | null;
   createdAt: Date;
   updatedAt: Date;
+  viewerUsers: Array<{ user: { id: string; name: string } }>;
+  viewerTeams: Array<{ team: { id: string; name: string } }>;
 }
 
-/** Fetch one task inside the actor's owner-based scope (404 otherwise). */
+/** Fetch one task inside the actor's VISIBILITY (owner ∪ tagged viewers ∪
+ *  admin) — 404 otherwise. */
 export async function getTask(ctx: ScopedContext, id: string): Promise<TaskDetail> {
-  const ownerIds = await visibleOwnerIds(ctx);
   const task = await prisma.task.findFirst({
-    where: { id, ...(ownerIds ? { ownerUserId: { in: ownerIds } } : {}) },
-    include: { owner: { select: { id: true, name: true, email: true } } },
+    where: { id, ...taskVisibleWhere(ctx) },
+    include: {
+      owner: { select: { id: true, name: true, email: true } },
+      viewerUsers: { include: { user: { select: { id: true, name: true } } } },
+      viewerTeams: { include: { team: { select: { id: true, name: true } } } },
+    },
   });
   if (!task) throw new CrmError("Task not found.", 404);
   return task;

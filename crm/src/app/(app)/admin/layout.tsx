@@ -15,7 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     select: { role: { select: { permissions: { select: { permission: true } } } } },
   });
   const hasAdminAccess = user?.role.permissions.some(
-    (entry) => entry.permission === "SETTINGS_MANAGE" || entry.permission === "AUDIT_VIEW"
+    (entry) => ["ADMIN_ACCESS", "SETTINGS_MANAGE", "AUDIT_VIEW"].includes(entry.permission)
   );
   if (!hasAdminAccess) redirect("/");
 

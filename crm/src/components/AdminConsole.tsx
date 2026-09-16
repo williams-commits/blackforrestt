@@ -955,7 +955,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
   );
 }
 
-export function RolesTab() {
+export function RolesTab({ canManage = false }: { canManage?: boolean }) {
   const branding = useCrmBranding();
   const [roles, setRoles] = useState<Array<{
     id: string; key: string; name: string; description: string | null; isSystem: boolean;
@@ -1043,7 +1043,7 @@ export function RolesTab() {
           {visibleCategories.map((category) => {
             const enabledCount = category.permissions.filter(({ key }) => selectedRole.permissions.some((entry) => entry.permission === key)).length;
             const isExpanded = expanded.includes(category.key);
-            const locked = selectedRole.key === "SUPER_ADMIN";
+            const locked = selectedRole.key === "SUPER_ADMIN" || !canManage;
             return <div key={category.key}>
               <div className="flex items-center gap-3 px-4 py-3 hover:bg-(--bg-hover)">
                 <button type="button" aria-expanded={isExpanded} onClick={() => setExpanded((current) => current.includes(category.key) ? current.filter((key) => key !== category.key) : [...current, category.key])} className="w-5 text-left text-(--text-secondary)">{isExpanded ? "▾" : "▸"}</button>

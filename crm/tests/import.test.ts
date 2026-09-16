@@ -10,9 +10,13 @@ const MATCH = { email: true, phone: false, externalId: true };
 
 test("validation flags bad emails, missing required fields, and duplicates", async () => {
   const rep = await repContext();
-  // Find a lead in the REP's scope so duplicate matching can see it
+  // Find a lead in the REP's scope so duplicate matching can see it.
+  // Deterministic fixture: require a non-null email (several seeded rep
+  // leads have none — an unordered findFirst could pick one and the
+  // duplicate row would silently match nothing).
   const existing = await prisma.lead.findFirstOrThrow({
-    where: { deletedAt: null, assignedUserId: rep.userId },
+    where: { deletedAt: null, assignedUserId: rep.userId, email: { not: null } },
+    orderBy: { createdAt: "asc" },
   });
   const result = await validateImport(rep, {
     objectType: "LEAD",

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requirePermission } from "@/server/guard";
+import { requireAnyPermission } from "@/server/guard";
 import { emailConfigured } from "@/server/email";
 import { handleRouteError } from "@/lib/api";
 
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /** Integration status (read-only — configuration is env-based). */
 export async function GET() {
   try {
-    await requirePermission("SETTINGS_MANAGE");
+    await requireAnyPermission("ADMIN_ACCESS", "SETTINGS_MANAGE");
     return NextResponse.json({
       data: {
         platformBridge: {

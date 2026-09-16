@@ -14,7 +14,7 @@ export type Permission = CorePermission |
   "TASKS_VIEW" | "TASKS_CREATE" | "TASKS_EDIT" | "TASKS_DELETE" | "TASKS_ASSIGN" | "TASKS_EXPORT" |
   "APPOINTMENTS_VIEW" | "APPOINTMENTS_CREATE" | "APPOINTMENTS_EDIT" | "APPOINTMENTS_DELETE" | "APPOINTMENTS_ASSIGN" |
   "NOTES_VIEW" | "NOTES_CREATE" | "NOTES_EDIT" | "NOTES_DELETE" |
-  "COMMENTS_CREATE" | "COMMENTS_MANAGE" |
+  "COMMENTS_CREATE" | "COMMENTS_MANAGE" | "ADMIN_ACCESS" |
   "TAGS_VIEW" | "TAGS_CREATE" | "TAGS_EDIT" | "TAGS_DELETE" | "TAGS_ASSIGN" |
   "RECORD_STATUS_VIEW" | "RECORD_STATUS_CREATE" | "RECORD_STATUS_EDIT" | "RECORD_STATUS_DELETE" | "RECORD_STATUS_ASSIGN" |
   "POTENTIAL_STATUS_VIEW" | "POTENTIAL_STATUS_CREATE" | "POTENTIAL_STATUS_EDIT" | "POTENTIAL_STATUS_DELETE" | "POTENTIAL_STATUS_ASSIGN" |
@@ -81,6 +81,11 @@ export const PERMISSION_CATEGORIES: readonly PermissionCategory[] = [
   },
   { key: "SETTINGS", label: "Settings", permissions: [{ key: "SETTINGS_MANAGE", label: "Manage" }] },
   {
+    key: "ADMIN",
+    label: "Admin",
+    permissions: [{ key: "ADMIN_ACCESS", label: "Admin console: view" }],
+  },
+  {
     // Platform-level permissions referenced by the code but previously listed
     // ONLY in the flat ALL_PERMISSIONS tail — invisible and untogglable in the
     // roles editor even while granted, so "Disable all" silently kept them.
@@ -120,7 +125,7 @@ export type DataScopeName = "OWN" | "TEAM" | "HIERARCHY" | "ORG";
 export interface RoleDefinition { key: RoleKey; name: string; description: string; scope: DataScopeName; permissions: readonly Permission[]; }
 export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
   { key: "SUPER_ADMIN", name: "Super Admin", description: "Full control, including role and permission administration.", scope: "ORG", permissions: [...ALL_PERMISSIONS] },
-  { key: "ADMIN", name: "Admin", description: "Manages users, teams, configuration, imports, and audit.", scope: "ORG", permissions: ALL_PERMISSIONS.filter((permission) => permission !== "ROLES_MANAGE") },
+  { key: "ADMIN", name: "Admin", description: "Manages users, teams, configuration, imports, and audit.", scope: "ORG", permissions: ["ADMIN_ACCESS", ...ALL_PERMISSIONS.filter((permission) => permission !== "ROLES_MANAGE")] },
   { key: "MANAGER", name: "Manager", description: "Org-wide record management, imports, and reporting.", scope: "HIERARCHY", permissions: [...coreManage, ...activity, ...activityManage, ...leadControls, "LEADS_IMPORT", "FILES_READ", "FILES_UPLOAD", "FILES_DELETE", "IMPORTS_MANAGE", "REPORTS_VIEW", "DASHBOARDS_VIEW", "EMAILS_VIEW", "EMAILS_SEND"] },
   { key: "TEAM_LEAD", name: "Team Lead", description: "Manages the team's records, assignments, and exports.", scope: "TEAM", permissions: [...coreManage, ...activity, ...activityManage, ...leadControls, "FILES_READ", "FILES_UPLOAD", "REPORTS_VIEW", "DASHBOARDS_VIEW", "EMAILS_VIEW", "EMAILS_SEND"] },
   { key: "REP", name: "Rep", description: "Works their own records; cannot delete or import.", scope: "OWN", permissions: [...coreWrite, ...activity, ...activityCreate, "LEADS_EXPORT", "TASKS_EXPORT", "FILES_READ", "FILES_UPLOAD", "REPORTS_VIEW", "DASHBOARDS_VIEW", "EMAILS_VIEW", "EMAILS_SEND"] },

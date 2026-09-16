@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requirePermission } from "@/server/guard";
+import { requireAnyPermission, requirePermission } from "@/server/guard";
 import {
   UpdateRolePermissions,
   listRoles,
@@ -17,7 +17,7 @@ const IdQuery = z.object({ id: z.string().min(5) });
 /** Role list is readable to any admin viewer; edits need ROLES_MANAGE. */
 export async function GET() {
   try {
-    await requirePermission("USERS_MANAGE");
+    await requireAnyPermission("ADMIN_ACCESS", "USERS_MANAGE");
     return NextResponse.json({
       data: await listRoles(),
       meta: { allPermissions: ALL_PERMISSIONS },

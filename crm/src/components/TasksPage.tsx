@@ -19,6 +19,9 @@ interface TaskRow {
   owner: { id: string; name: string } | null;
   subjectType: string | null;
   subjectId: string | null;
+  _count?: { viewerUsers: number; viewerTeams: number };
+  viewerUsers?: Array<{ user: { id: string; name: string } }>;
+  viewerTeams?: Array<{ team: { id: string; name: string } }>;
 }
 
 interface TasksResponse {
@@ -84,6 +87,7 @@ export function TasksPage() {
   const [query, setQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [due, setDue] = useState("all");
+  const [page, setPage] = useState(1);
   const [mine, setMine] = useState("1");
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskRow | null>(null);
@@ -96,14 +100,20 @@ export function TasksPage() {
   const [priority, setPriority] = useState("NORMAL");
   const [ownerUserId, setOwnerUserId] = useState("");
   const [users, setUsers] = useState<UserOption[]>([]);
+  const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [viewerUserIds, setViewerUserIds] = useState<string[]>([]);
+  const [viewerTeamIds, setViewerTeamIds] = useState<string[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
   const editConsumed = useRef(false);
 
+  const effectiveMine = isAdmin ? mine : "1";
+  const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const params = new URLSearchParams({ due, mine, pageSize: "25" });
+      const params = new URLSearchParams({ due, mine: effectiveMine, pageSize: "25", page: String(page) });
       if (query.trim()) params.set("q", query.trim());
       if (status) params.set("status", status);
       if (priorityFilter) params.set("priority", priorityFilter);
@@ -119,7 +129,7 @@ export function TasksPage() {
     } finally {
       setLoading(false);
     }
-  }, [status, due, mine, subjectType, subjectId, query, priorityFilter]);
+  }, [status, due, effectiveMine, subjectType, subjectId, query, priorityFilter, page]);
 
   useEffect(() => {
     void fetchTasks();
@@ -127,6 +137,11 @@ export function TasksPage() {
 
   useEffect(() => {
     void fetch("/api/users").then((response) => response.ok ? response.json() : null).then((body) => setUsers((body?.data ?? []).map((user: UserOption) => ({ id: user.id, name: user.name })))).catch(() => setUsers([]));
+    void fetch("/api/teams").then((response) => response.ok ? response.json() : null).then((body) => setTeams((body?.data ?? []).map((team: { id: string; name: string }) => ({ id: team.id, name: team.name })))).catch(() => setTeams([]));
+    void fetch("/api/me").then((response) => response.ok ? response.json() : null).then((body) => {
+      const role = (body?.data?.roleKey ?? "") as string;
+      setIsAdmin(role === "SUPER_ADMIN" || role === "ADMIN");
+    }).catch(() => setIsAdmin(false));
   }, []);
 
   async function createTask(event: React.FormEvent) {
@@ -144,6 +159,8 @@ export function TasksPage() {
         reminderAt: reminderAt || null,
         ...(ownerUserId ? { ownerUserId } : {}),
         ...(subjectType && subjectId ? { subjectType, subjectId } : {}),
+        viewerUserIds,
+        viewerTeamIds,
       }),
     });
     if (!response.ok) {
@@ -160,6 +177,8 @@ export function TasksPage() {
     setReminderAt("");
     setPriority("NORMAL");
     setOwnerUserId("");
+    setViewerUserIds([]);
+    setViewerTeamIds([]);
     void fetchTasks();
   }
 
@@ -191,6 +210,8 @@ export function TasksPage() {
     setReminderAt(task.reminderAt ? toLocalInputValue(task.reminderAt) : "");
     setPriority(task.priority);
     setOwnerUserId(task.owner?.id ?? "");
+    setViewerUserIds((task.viewerUsers ?? []).map((entry) => entry.user.id));
+    setViewerTeamIds((task.viewerTeams ?? []).map((entry) => entry.team.id));
   }, []);
   // Deep link from the task detail page: ?edit=<id> opens the inline editor
   // prefilled with that row (one-shot; later loads are normal).
@@ -304,6 +325,57 @@ const inputClass =
               <option value="URGENT">Urgent</option>
             </select>
           </div>
+          <fieldset className="sm:col-span-4">
+            <legend className="form-label">Viewers (can view, not edit)</legend>
+            <div className="flex flex-wrap items-center gap-2">
+              {viewerUserIds.map((id) => {
+                const user = users.find((entry) => entry.id === id);
+                return (
+                  <span key={`u-${id}`} className="badge badge-neutral">
+                    {user?.name ?? id.slice(-6)}
+                    <button type="button" aria-label={`Remove viewer ${user?.name ?? id}`} onClick={() => setViewerUserIds((current) => current.filter((entry) => entry !== id))} className="ml-1 text-(--text-tertiary) hover:text-(--error)">×</button>
+                  </span>
+                );
+              })}
+              {viewerTeamIds.map((id) => {
+                const team = teams.find((entry) => entry.id === id);
+                return (
+                  <span key={`t-${id}`} className="badge badge-neutral">
+                    {team ? `${team.name} (team)` : `team …${id.slice(-6)}`}
+                    <button type="button" aria-label={`Remove team viewer ${team?.name ?? id}`} onClick={() => setViewerTeamIds((current) => current.filter((entry) => entry !== id))} className="ml-1 text-(--text-tertiary) hover:text-(--error)">×</button>
+                  </span>
+                );
+              })}
+              <select
+                aria-label="Add user viewer"
+                value=""
+                onChange={(event) => {
+                  if (event.target.value) setViewerUserIds((current) => [...new Set([...current, event.target.value])]);
+                  event.target.value = "";
+                }}
+                className="input w-44"
+              >
+                <option value="">+ User…</option>
+                {users.filter((user) => !viewerUserIds.includes(user.id)).map((user) => (
+                  <option key={user.id} value={user.id}>{user.name}</option>
+                ))}
+              </select>
+              <select
+                aria-label="Add team viewer"
+                value=""
+                onChange={(event) => {
+                  if (event.target.value) setViewerTeamIds((current) => [...new Set([...current, event.target.value])]);
+                  event.target.value = "";
+                }}
+                className="input w-44"
+              >
+                <option value="">+ Team…</option>
+                {teams.filter((team) => !viewerTeamIds.includes(team.id)).map((team) => (
+                  <option key={team.id} value={team.id}>{team.name}</option>
+                ))}
+              </select>
+            </div>
+          </fieldset>
           <div className="form-actions sm:col-span-4">
             <button
               type="submit"
@@ -319,11 +391,11 @@ const inputClass =
       {actionError ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{actionError}</p> : null}
       <div className="flex flex-col gap-2 rounded-lg border border-(--border-default) bg-(--bg-surface) p-3 md:flex-row">
         <label htmlFor="task-search" className="sr-only">Search tasks</label>
-        <input id="task-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tasks" className="input md:w-64" />
+        <input id="task-search" value={query} onChange={(event) => { setPage(1); setQuery(event.target.value); }} placeholder="Search tasks" className="input md:w-64" />
         <select
           aria-label="Status filter"
           value={status}
-          onChange={(event) => setStatus(event.target.value)}
+          onChange={(event) => { setPage(1); setStatus(event.target.value); }}
           className="input"
         >
           {STATUS_OPTIONS.map((option) => (
@@ -332,7 +404,7 @@ const inputClass =
             </option>
           ))}
         </select>
-        <select aria-label="Priority filter" value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)} className="input">
+        <select aria-label="Priority filter" value={priorityFilter} onChange={(event) => { setPage(1); setPriorityFilter(event.target.value); }} className="input">
           <option value="">Priority: any</option>
           <option value="URGENT">Urgent</option>
           <option value="HIGH">High</option>
@@ -342,7 +414,7 @@ const inputClass =
         <select
           aria-label="Due filter"
           value={due}
-          onChange={(event) => setDue(event.target.value)}
+          onChange={(event) => { setPage(1); setDue(event.target.value); }}
           className="input"
         >
           {DUE_OPTIONS.map((option) => (
@@ -351,15 +423,17 @@ const inputClass =
             </option>
           ))}
         </select>
-        <select
-          aria-label="Ownership filter"
-          value={mine}
-          onChange={(event) => setMine(event.target.value)}
-          className="input"
-        >
-          <option value="1">My tasks</option>
-          <option value="0">Everyone (in my scope)</option>
-        </select>
+        {isAdmin ? (
+          <select
+            aria-label="Ownership filter"
+            value={mine}
+            onChange={(event) => { setPage(1); setMine(event.target.value); }}
+            className="input"
+          >
+            <option value="1">My & shared tasks</option>
+            <option value="0">Everyone (admins only)</option>
+          </select>
+        ) : null}
       </div>
 
       <div className="card overflow-hidden">
@@ -397,6 +471,11 @@ const inputClass =
                     <Link href={`/tasks/${task.id}`} className="font-medium text-(--text-primary) hover:text-(--text-brand) hover:underline">
                       {task.title}
                     </Link>
+                    {(task._count && (task._count.viewerUsers > 0 || task._count.viewerTeams > 0)) ? (
+                      <p className="text-xs text-(--text-tertiary)">
+                        shared with {task._count.viewerUsers + task._count.viewerTeams} viewer{task._count.viewerUsers + task._count.viewerTeams === 1 ? "" : "s"}
+                      </p>
+                    ) : null}
                     {task.subjectType && task.subjectId ? (
                       <p className="text-xs text-(--text-tertiary)">
                         linked to {SUBJECT_PATH[task.subjectType] ? <Link href={`/${SUBJECT_PATH[task.subjectType]}/${task.subjectId}`} className="text-(--text-brand) hover:underline">{task.subjectType.toLowerCase()} …{task.subjectId.slice(-6)}</Link> : `${task.subjectType.toLowerCase()} …${task.subjectId.slice(-6)}`}
@@ -445,6 +524,33 @@ const inputClass =
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex items-center justify-between" style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)" }}>
+        <span>
+          Page <strong style={{ color: "var(--text-primary)" }}>{meta.page}</strong> of {totalPages}
+          {meta.total > 0 ? <span style={{ marginLeft: "8px" }}>({meta.total} total)</span> : null}
+        </span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={meta.page <= 1 || loading}
+            onClick={() => setPage((value) => Math.max(1, value - 1))}
+            className="btn btn-secondary"
+            style={{ height: "28px" }}
+          >
+            ← Prev
+          </button>
+          <button
+            type="button"
+            disabled={meta.page >= totalPages || loading}
+            onClick={() => setPage((value) => value + 1)}
+            className="btn btn-secondary"
+            style={{ height: "28px" }}
+          >
+            Next →
+          </button>
+        </div>
       </div>
     </div>
   );

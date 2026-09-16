@@ -253,11 +253,15 @@ export async function deleteUser(ctx: CrmContext, userId: string): Promise<void>
     });
 
     // Every remaining REQUIRED User FK with Restrict onDelete — a user who
-    // authored a note, ran an import, uploaded a file, owned a campaign/
-    // appointment/custom record, or acted on a merge would otherwise P2003
+    // authored a note or comment, ran an import, uploaded a file, owned a
+    // campaign/appointment/custom record, or acted on a merge would P2003
     // and roll the whole deletion back with a generic 500. Authorship
     // transfers to the deleting admin (history stays intact).
     await tx.note.updateMany({
+      where: { authorUserId: userId },
+      data: { authorUserId: ctx.userId },
+    });
+    await tx.comment.updateMany({
       where: { authorUserId: userId },
       data: { authorUserId: ctx.userId },
     });

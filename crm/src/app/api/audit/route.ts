@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requirePermission } from "@/server/guard";
+import { requireAnyPermission } from "@/server/guard";
 import { countAudit, listAudit } from "@/server/records/audit";
 import { handleRouteError } from "@/lib/api";
 
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /** Append-only audit trail (AUDIT_VIEW permission). */
 export async function GET(request: Request) {
   try {
-    await requirePermission("AUDIT_VIEW");
+    await requireAnyPermission("ADMIN_ACCESS", "AUDIT_VIEW");
     const params = new URL(request.url).searchParams;
     const page = Math.max(1, Number(params.get("page") ?? 1) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(params.get("pageSize") ?? 25) || 25));

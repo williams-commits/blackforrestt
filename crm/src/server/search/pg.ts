@@ -93,9 +93,21 @@ export const pgSearch: SearchProvider = {
       }),
       prisma.task.findMany({
         where: {
-          ownerUserId: ctx.userId,
+          // Same visibility rule as the task service: owner ∪ tagged viewers
+          // (users/teams); admins additionally see everything.
+          ...(ctx.roleKey === "SUPER_ADMIN" || ctx.roleKey === "ADMIN"
+            ? {}
+            : {
+                OR: [
+                  { ownerUserId: ctx.userId },
+                  { viewerUsers: { some: { userId: ctx.userId } } },
+                  ...(ctx.teamIds.length > 0
+                    ? [{ viewerTeams: { some: { teamId: { in: ctx.teamIds } } } }]
+                    : []),
+                ],
+              }),
           status: { in: ["OPEN", "IN_PROGRESS"] },
-          OR: [{ title: contains(q) }, { description: contains(q) }],
+          AND: { OR: [{ title: contains(q) }, { description: contains(q) }] },
         },
         select: { id: true, title: true, dueAt: true },
         take: perType,

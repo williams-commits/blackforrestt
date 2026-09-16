@@ -73,9 +73,9 @@ async function resolveParent(ctx: ScopedContext, subjectType: CommentSubject, su
       subjectId,
       timeline: { subjectType: "TASK", subjectId },
       notifyUserId: task.ownerUserId !== ctx.userId ? task.ownerUserId : null,
-      href: task.subjectType && task.subjectId && subjectHref(task.subjectType, task.subjectId)
-        ? subjectHref(task.subjectType, task.subjectId)!
-        : `/tasks/${task.id}`,
+      // The comment thread lives on the task detail page — always deep-link
+      // there (a record-page link wouldn't show the comment).
+      href: `/tasks/${task.id}`,
       label: task.title,
     };
   }
@@ -158,7 +158,7 @@ export async function listComments(
 export async function createComment(ctx: ScopedContext, input: z.infer<typeof CreateComment>): Promise<CommentRow> {
   requireCapability(ctx, "COMMENTS_CREATE");
   const parent = await resolveParent(ctx, input.subjectType, input.subjectId);
-  const excerpt = input.body.length > 80 ? `${input.body.slice(0, 77)}…` : input.body;
+  const excerpt = excerptOf(input.body);
 
   const comment = await prisma.$transaction(async (tx) => {
     const created = await tx.comment.create({
@@ -202,16 +202,28 @@ export async function createComment(ctx: ScopedContext, input: z.infer<typeof Cr
 async function loadOwnedComment(ctx: ScopedContext, id: string) {
   const comment = await prisma.comment.findUnique({ where: { id } });
   if (!comment) throw new CrmError("Comment not found.", 404);
+  // Parent scope FIRST: without this, a COMMENTS_MANAGE holder could edit or
+  // delete comments on work items outside their data scope, and an author
+  // could keep editing a comment on a task they can no longer see.
+  if (!(COMMENT_SUBJECTS as readonly string[]).includes(comment.subjectType)) {
+    throw new CrmError("Comment has an unsupported subject.", 400);
+  }
+  const parent = await resolveParent(ctx, comment.subjectType as CommentSubject, comment.subjectId);
   const mayManage = ctx.permissions.includes("COMMENTS_MANAGE");
   if (comment.authorUserId !== ctx.userId && !mayManage) {
     throw new CrmError("Forbidden — only the author or COMMENTS_MANAGE may modify a comment", 403);
   }
-  return comment;
+  return { comment, parent };
+}
+
+/** 80-char excerpt for timeline payloads. */
+function excerptOf(body: string): string {
+  return body.length > 80 ? `${body.slice(0, 77)}…` : body;
 }
 
 /** Edit a comment (author or COMMENTS_MANAGE); marks editedAt. */
 export async function updateComment(ctx: ScopedContext, id: string, input: z.infer<typeof UpdateComment>): Promise<CommentRow> {
-  await loadOwnedComment(ctx, id);
+  const { parent } = await loadOwnedComment(ctx, id);
   const updated = await prisma.$transaction(async (tx) => {
     const saved = await tx.comment.update({
       where: { id },
@@ -226,6 +238,13 @@ export async function updateComment(ctx: ScopedContext, id: string, input: z.inf
       objectId: id,
       after: { body: input.body },
     });
+    await appendActivity(tx, {
+      subjectType: parent.timeline.subjectType,
+      subjectId: parent.timeline.subjectId,
+      kind: "comment",
+      actorUserId: ctx.userId,
+      payload: { comment: excerptOf(input.body), on: parent.label, state: "edited" },
+    });
     return saved;
   });
   return toRow(updated);
@@ -233,7 +252,7 @@ export async function updateComment(ctx: ScopedContext, id: string, input: z.inf
 
 /** Delete a comment (author or COMMENTS_MANAGE). History lives in audit. */
 export async function deleteComment(ctx: ScopedContext, id: string): Promise<void> {
-  const existing = await loadOwnedComment(ctx, id);
+  const { comment: existing, parent } = await loadOwnedComment(ctx, id);
   await prisma.$transaction(async (tx) => {
     await tx.comment.delete({ where: { id } });
     await appendAudit(tx, {
@@ -243,6 +262,13 @@ export async function deleteComment(ctx: ScopedContext, id: string): Promise<voi
       objectType: "Comment",
       objectId: id,
       before: { body: existing.body, subjectType: existing.subjectType, subjectId: existing.subjectId },
+    });
+    await appendActivity(tx, {
+      subjectType: parent.timeline.subjectType,
+      subjectId: parent.timeline.subjectId,
+      kind: "comment",
+      actorUserId: ctx.userId,
+      payload: { comment: excerptOf(existing.body), on: parent.label, state: "deleted" },
     });
   });
 }

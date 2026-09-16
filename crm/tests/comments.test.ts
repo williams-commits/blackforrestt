@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { prisma, repContext, rep2Context, managerContext, viewerContext, makeLead, assertThrows } from "./helpers";
+import { prisma, repContext, rep2Context, managerContext, viewerContext, adminContext, makeLead, assertThrows } from "./helpers";
 import { createTask } from "../src/server/records/tasks";
 import { createNote } from "../src/server/records/notes";
 import { createComment, listComments, updateComment, deleteComment } from "../src/server/records/comments";
@@ -49,7 +49,9 @@ test("task comments follow the owner scope: another rep's task is invisible (404
 test("manager comments on a rep's task: row + audit + activity + owner notification (not actor)", async () => {
   const rep = await repContext();
   const manager = await managerContext();
-  const task = await createTask(rep, { title: "Comments: happy path" });
+  // Managers no longer see colleagues' tasks through scope alone — tag the
+  // manager as a viewer (the new intended sharing model).
+  const task = await createTask(rep, { title: "Comments: happy path", viewerUserIds: [manager.userId] });
   let commentId = "";
 
   try {
@@ -91,7 +93,7 @@ test("comment CRUD authorization: author edits; non-author without MANAGE reject
   const rep = await repContext();
   const rep2 = await rep2Context();
   const manager = await managerContext();
-  const task = await createTask(rep, { title: "Comments: crud authz" });
+  const task = await createTask(rep, { title: "Comments: crud authz", viewerUserIds: [rep2.userId, manager.userId] });
   let commentId = "";
 
   try {
@@ -103,8 +105,8 @@ test("comment CRUD authorization: author edits; non-author without MANAGE reject
     assert.equal(edited.body, "original (typos fixed)");
     assert.ok(edited.editedAt, "editedAt set");
 
-    // A different rep (no COMMENTS_MANAGE, not the author) may neither edit
-    // nor delete.
+    // A different VISIBLE user (tagged viewer, no COMMENTS_MANAGE, not the
+    // author) may neither edit nor delete.
     await assertThrows(() => updateComment(rep2, commentId, { body: "hijack" }), 403, "non-author edit");
     await assertThrows(() => deleteComment(rep2, commentId), 403, "non-author delete");
 
@@ -151,4 +153,46 @@ test("note comments follow the note's subject scope", async () => {
     await prisma.activityEvent.deleteMany({ where: { subjectId: leadId, kind: "comment" } }).catch(() => undefined);
     await prisma.lead.delete({ where: { id: leadId } }).catch(() => undefined);
   }
+});
+
+test("regression: COMMENTS_MANAGE cannot reach comments on out-of-scope tasks", async () => {
+  const rep = await repContext();
+  const manager = await managerContext();
+  // rep's task, NOT shared with the manager, with rep's own comment.
+  const task = await createTask(rep, { title: "Comments: scope bypass guard" });
+  const comment = await createComment(rep, { body: "private thread", subjectType: "TASK", subjectId: task.id });
+
+  try {
+    await assertThrows(() => deleteComment(manager, comment.id), 404, "manager on unshared task's comment");
+    const stillThere = await prisma.comment.findUnique({ where: { id: comment.id } });
+    assert.ok(stillThere, "comment untouched");
+  } finally {
+    await prisma.comment.delete({ where: { id: comment.id } }).catch(() => undefined);
+    await prisma.task.delete({ where: { id: task.id } }).catch(() => undefined);
+  }
+});
+
+test("regression: deleting a user who authored comments no longer FK-crashes", async () => {
+  const admin = await adminContext();
+  const role = await prisma.role.findFirstOrThrow({ where: { key: "REP" } });
+  const throwaway = await prisma.user.create({
+    data: {
+      email: `comment-author-${Date.now()}@local.test`,
+      passwordHash: "x",
+      name: "Comment Author",
+      roleId: role.id,
+    },
+  });
+  const task = await createTask(admin, { title: "Comments: deletion FK guard" });
+  await prisma.comment.create({
+    data: { body: "will be reassigned", authorUserId: throwaway.id, subjectType: "TASK", subjectId: task.id },
+  });
+
+  const { deleteUser } = await import("../src/server/records/adminManage");
+  await deleteUser(admin, throwaway.id); // must NOT throw P2003
+
+  const reassigned = await prisma.comment.findFirst({ where: { subjectType: "TASK", subjectId: task.id } });
+  assert.equal(reassigned?.authorUserId, admin.userId, "comment reassigned to the deleting admin");
+  await prisma.comment.deleteMany({ where: { subjectId: task.id } });
+  await prisma.task.delete({ where: { id: task.id } });
 });

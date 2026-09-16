@@ -348,7 +348,7 @@ export function RecordActivities({
     <span className="flex shrink-0 items-center gap-3">
       <span className="text-xs text-(--text-secondary)">{new Date(appointment.startAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} · {appointment.status.toLowerCase()}</span>
       <button type="button" onClick={() => toggleComments(appointment.id)} className="text-xs text-(--text-secondary) hover:text-(--text-brand) hover:underline">
-        💬 {openComments[appointment.id] ? "Hide" : "Comments"}
+        💬 {openComments[appointment.id] ? "Hide comments" : "Comments"}
       </button>
     </span>
   </div>

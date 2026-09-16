@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/server/db";
-import { requirePermission } from "@/server/guard";
+import { requireAnyPermission, requirePermission } from "@/server/guard";
 import {
   CreateTeam,
   UpdateTeam,
@@ -18,7 +18,7 @@ const IdQuery = z.object({ id: z.string().min(5) });
 
 export async function GET() {
   try {
-    await requirePermission("TEAMS_MANAGE");
+    await requireAnyPermission("ADMIN_ACCESS", "TEAMS_MANAGE");
     const teams = await prisma.team.findMany({
       orderBy: { name: "asc" },
       include: {

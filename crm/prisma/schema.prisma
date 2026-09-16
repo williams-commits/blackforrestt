@@ -165,31 +165,32 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  role            Role                 @relation(fields: [roleId], references: [id])
-  memberships     TeamMembership[]
-  ledTeams        Team[]               @relation("TeamLeader")
-  assignedLeads   Lead[]               @relation("LeadAssignee")
-  ownedAccounts   Account[]            @relation("AccountOwner")
-  ownedContacts   Contact[]            @relation("ContactOwner")
-  ownedCustomers  Customer[]           @relation("CustomerOwner")
-  ownedOpps       Opportunity[]        @relation("OpportunityOwner")
-  ownedCampaigns  Campaign[]           @relation("CampaignOwner")
-  ownedTasks      Task[]               @relation("TaskOwner")
-  authoredNotes   Note[]               @relation("NoteAuthor")
-  authoredComments Comment[]           @relation("CommentAuthor")
-  ownedAppts      Appointment[]        @relation("AppointmentOwner")
-  activityBy      ActivityEvent[]      @relation("ActivityActor")
-  emailsSent      EmailMessage[]       @relation("EmailSender")
-  emailsOwned     EmailMessage[]       @relation("EmailOwner")
-  smtpConfig      UserSmtp?            @relation("UserSmtp")
-  notifications   Notification[]
-  importsCreated  ImportJob[]          @relation("ImportCreator")
-  filesUploaded   Attachment[]         @relation("FileUploader")
-  mergesBy        MergeRecord[]        @relation("MergeActor")
-  settingsUpdated SystemSetting[]      @relation("SettingUpdater")
-  views           SavedView[]
-  auditLogs       AuditLog[]
-  customRecords   CustomObjectRecord[] @relation("CustomRecordOwner")
+  role             Role                 @relation(fields: [roleId], references: [id])
+  memberships      TeamMembership[]
+  ledTeams         Team[]               @relation("TeamLeader")
+  assignedLeads    Lead[]               @relation("LeadAssignee")
+  ownedAccounts    Account[]            @relation("AccountOwner")
+  ownedContacts    Contact[]            @relation("ContactOwner")
+  ownedCustomers   Customer[]           @relation("CustomerOwner")
+  ownedOpps        Opportunity[]        @relation("OpportunityOwner")
+  ownedCampaigns   Campaign[]           @relation("CampaignOwner")
+  ownedTasks       Task[]               @relation("TaskOwner")
+  authoredNotes    Note[]               @relation("NoteAuthor")
+  authoredComments Comment[]            @relation("CommentAuthor")
+  taskViews        TaskViewer[]         @relation("TaskViewerUser")
+  ownedAppts       Appointment[]        @relation("AppointmentOwner")
+  activityBy       ActivityEvent[]      @relation("ActivityActor")
+  emailsSent       EmailMessage[]       @relation("EmailSender")
+  emailsOwned      EmailMessage[]       @relation("EmailOwner")
+  smtpConfig       UserSmtp?            @relation("UserSmtp")
+  notifications    Notification[]
+  importsCreated   ImportJob[]          @relation("ImportCreator")
+  filesUploaded    Attachment[]         @relation("FileUploader")
+  mergesBy         MergeRecord[]        @relation("MergeActor")
+  settingsUpdated  SystemSetting[]      @relation("SettingUpdater")
+  views            SavedView[]
+  auditLogs        AuditLog[]
+  customRecords    CustomObjectRecord[] @relation("CustomRecordOwner")
 
   @@index([status])
 }
@@ -227,6 +228,7 @@ model Team {
   updatedAt DateTime @updatedAt
 
   memberships    TeamMembership[]
+  taskTeamViews  TaskTeamViewer[] @relation("TaskTeamViewers")
   assignedLeads  Lead[]           @relation("LeadTeam")
   contacts       Contact[]        @relation("ContactTeam")
   ownedAccounts  Account[]        @relation("AccountTeam")
@@ -663,26 +665,56 @@ model CustomFieldDef {
 // ────────────────────── Activities & timeline ──────────────────────
 
 model Task {
-  id                String       @id @default(cuid())
-  title             String
-  description       String?
-  ownerUserId       String
-  owner             User         @relation("TaskOwner", fields: [ownerUserId], references: [id])
-  dueAt             DateTime?
-  priority          Priority     @default(NORMAL)
-  status            TaskStatus   @default(OPEN)
-  recurrence        TaskRecurrence @default(NONE)
-  reminderAt        DateTime?
+  id                 String         @id @default(cuid())
+  title              String
+  description        String?
+  ownerUserId        String
+  owner              User           @relation("TaskOwner", fields: [ownerUserId], references: [id])
+  dueAt              DateTime?
+  priority           Priority       @default(NORMAL)
+  status             TaskStatus     @default(OPEN)
+  recurrence         TaskRecurrence @default(NONE)
+  reminderAt         DateTime?
   reminderNotifiedAt DateTime?
-  completedAt       DateTime?
-  overdueNotifiedAt DateTime?
-  subjectType       SubjectType?
-  subjectId         String?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  completedAt        DateTime?
+  overdueNotifiedAt  DateTime?
+  subjectType        SubjectType?
+  subjectId          String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  viewerUsers TaskViewer[]     @relation("TaskViewers")
+  viewerTeams TaskTeamViewer[] @relation("TaskTeamViewers")
 
   @@index([ownerUserId, dueAt, status])
   @@index([subjectType, subjectId])
+}
+
+// Explicit per-task viewer grants. Visibility rule: owner ∪ viewer users ∪
+// viewer-team members ∪ (ADMIN/SUPER_ADMIN see everything). Rows cascade
+// away when the task, user, or team is deleted.
+model TaskViewer {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation("TaskViewers", fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("TaskViewerUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([taskId, userId])
+  @@index([userId])
+}
+
+model TaskTeamViewer {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation("TaskTeamViewers", fields: [taskId], references: [id], onDelete: Cascade)
+  teamId    String
+  team      Team     @relation("TaskTeamViewers", fields: [teamId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([taskId, teamId])
+  @@index([teamId])
 }
 
 model Note {

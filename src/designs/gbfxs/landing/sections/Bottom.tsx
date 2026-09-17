@@ -7,8 +7,8 @@ import {
   Umbrella,
 } from "lucide-react";
 import { Reveal } from "@/components/landing/Reveal";
-import { SectionBackdrop } from "../SectionBackdrop";
-import { areaPath, smoothPath } from "../smoothPath";
+import { SectionBackdrop } from "../visuals/SectionBackdrop";
+import { areaPath, smoothPath } from "../visuals/smoothPath";
 import type {
   FinalCtaContent,
   IntelligenceContent,
@@ -129,7 +129,7 @@ export function IntelligenceSection({ content }: { content: IntelligenceContent 
               </div>
               <div className="mt-2.5 space-y-1.5">
                 {[0, 1, 2].map((row) => (
-                  <span key={row} className="flex items-center gap-2 rounded-md border border-white/8 bg-white/5 px-2 py-1.5">
+                  <span key={row} className="flex items-center gap-2 rounded-md border border-white/5 bg-white/5 px-2 py-1.5">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-xs bg-[#f0b90b]/70" />
                     <span className="h-1.5 flex-1 rounded-full bg-white/12" />
                     <span className="h-1.5 w-4 rounded-full bg-white/8" />
@@ -191,14 +191,14 @@ export function ShowcaseSection({ content }: { content: ShowcaseContent }) {
             {/* Desktop — the workspace plate */}
             <div className="ag-frame relative z-10 w-[86%] overflow-hidden p-2 transform-[rotateY(-5deg)_rotateX(1.5deg)] transition-transform duration-500 ease-out hover:transform-[rotateY(-1.5deg)_rotateX(0.5deg)] motion-reduce:transition-none">
               {/* Browser chrome — the navbar, as before */}
-              <div className="flex items-center gap-1.5 border-b border-white/8 px-1 pb-1.5">
+              <div className="flex items-center gap-1.5 border-b border-white/5 px-1 pb-1.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#ff6b6b]/60" />
                 <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
                 <span className="h-1.5 w-1.5 rounded-full bg-[#f0b90b]/70" />
                 <span className="ml-1.5 flex-1 rounded bg-white/5 px-2 py-0.5 font-mono text-[6.5px] tracking-widest text-[#75757b]">{content.hostLabel}</span>
               </div>
               {/* AccountBar — the real metrics strip */}
-              <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">
+              <div className="flex items-center justify-between border-b border-white/5 px-3 py-2">
                 {["ACCOUNT", "BALANCE", "EQUITY", "P/L"].map((metric) => (
                   <span key={metric} className="flex flex-col gap-1">
                     <span className="font-mono text-[6.5px] tracking-[0.16em] text-[#75757b]">{metric}</span>
@@ -230,7 +230,7 @@ export function ShowcaseSection({ content }: { content: ShowcaseContent }) {
                 <div className="flex flex-col gap-1.5">
                   <span className="rounded-md border border-[#ff6b6b]/25 bg-[#ff6b6b]/10 py-1.5 text-center font-mono text-[8px] font-bold tracking-widest text-[#ff6b6b]">SELL</span>
                   <span className="rounded-md border border-[#f0b90b]/25 bg-[#f0b90b]/10 py-1.5 text-center font-mono text-[8px] font-bold tracking-widest text-[#f0b90b]">BUY</span>
-                  <div className="grid grid-cols-4 gap-1 rounded-md border border-white/8 p-1.5">
+                  <div className="grid grid-cols-4 gap-1 rounded-md border border-white/5 p-1.5">
                     {Array.from({ length: 8 }).map((_, i) => (
                       <span key={i} className="h-2 rounded-sm bg-white/10" />
                     ))}
@@ -239,7 +239,7 @@ export function ShowcaseSection({ content }: { content: ShowcaseContent }) {
                 </div>
               </div>
               {/* Positions dock */}
-              <div className="flex items-center gap-2 border-t border-white/8 px-3 py-2">
+              <div className="flex items-center gap-2 border-t border-white/5 px-3 py-2">
                 <span className="font-mono text-[6.5px] tracking-[0.16em] text-[#75757b]">POSITIONS</span>
                 {Array.from({ length: 3 }).map((_, i) => (
                   <span key={i} className="h-1.5 flex-1 rounded-sm bg-white/8" />
@@ -253,7 +253,7 @@ export function ShowcaseSection({ content }: { content: ShowcaseContent }) {
             <div className="relative z-0 -my-10 flex w-[33%] shrink-0 flex-col rounded-[18px] border border-white/10 bg-[#111113] p-1.5 shadow-[0_30px_70px_-30px_rgba(0,0,0,0.9)] transform-[rotateY(10deg)_rotateX(2deg)]">
               <div className="flex h-full flex-col overflow-hidden rounded-[13px] bg-[#0a0a0b]">
                 {/* App navbar — logo mark, section pills, account dot */}
-                <div className="flex items-center justify-between border-b border-white/8 px-2 py-1.5">
+                <div className="flex items-center justify-between border-b border-white/5 px-2 py-1.5">
                   <span className="flex items-center gap-1">
                     <span className="h-2 w-2 rounded-[3px] bg-[#f0b90b]" />
                     <span className="h-1 w-4 rounded-full bg-white/20" />
@@ -264,7 +264,7 @@ export function ShowcaseSection({ content }: { content: ShowcaseContent }) {
                   </span>
                 </div>
                 {/* Instrument chip strip */}
-                <div className="flex items-center justify-between border-b border-white/8 px-2 py-1.5">
+                <div className="flex items-center justify-between border-b border-white/5 px-2 py-1.5">
                   <span className="rounded bg-[#f0b90b]/12 px-1.5 py-0.5 font-mono text-[7px] font-bold tracking-widest text-[#f0b90b]">XAUUSD</span>
                   <span className="h-1 w-5 rounded-full bg-white/12" />
                 </div>
@@ -337,7 +337,7 @@ export function TrustSection({ content }: { content: TrustContent }) {
                       {card.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="rounded-full border border-white/12 bg-white/5 px-3.5 py-1 text-[11px] font-semibold tracking-wide text-[#a9a9ae]"
+                          className="rounded-full border border-white/5 bg-white/5 px-3.5 py-1 text-[11px] font-semibold tracking-wide text-[#a9a9ae]"
                         >
                           {tag}
                         </span>

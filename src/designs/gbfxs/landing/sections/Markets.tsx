@@ -84,7 +84,7 @@ export function MarketsSection({
               role="tab"
               aria-selected={active === tab}
               onClick={() => setSelected(tab)}
-              className={`rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${
+              className={`rounded-xl border px-4 py-1.5 text-xs font-semibold transition-colors ${
                 active === tab
                   ? "border-[#f0b90b]/60 bg-[#f0b90b]/15 text-[#f0b90b]"
                   : "border-white/10 text-[#a9a9ae] hover:border-white/25 hover:text-[#f1f3ef]"

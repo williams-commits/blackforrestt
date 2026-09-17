@@ -179,8 +179,8 @@ npm run dev
 | `BRAND_DOMAINS` | Server | Comma-separated apex domains serving the same files. The FIRST entry is canonical (redirect targets, cookie domain, email links, SEO). `BRAND_DOMAIN` alone still works as a single-entry list. |
 | `BRAND_OVERRIDES` | Server | JSON object keyed by apex domain with per-brand overrides, e.g. `{"gbfxs.com":{"tradeEnabled":true}}`. `tradeEnabled: true` asserts the family's trade subdomain DNS + TLS exist. |
 | `BRAND_TM` | Server | Trademark line shown in the UI footer. Default: `Black Forest™`. |
-| `DOMAIN` / `DOMAIN_2` / `DOMAIN_3` | Production proxy | Apex domains N that this deployment serves (mirrors `BRAND_DOMAINS` for the reverse proxy and domain routing). |
-| `TRADE_DOMAIN` / `TRADE_DOMAIN_2` / `TRADE_DOMAIN_3` | Production proxy | The trade subdomain serving each `DOMAIN_N` family's authenticated app. |
+| `DEPLOY_DOMAINS` | Production proxy | Optional comma list of registry domain keys this deployment servesrves (mirrors `BRAND_DOMAINS` for the reverse proxy and domain routing). |
+| (removed) | Numbered trade-host slots are gone — trade hosts derive from domain manifests | serving each `DOMAIN_N` family's authenticated app. |
 | `TRADE_SUBDOMAIN` | Server | Subdomain label for trade hosts. Default: `trade`. |
 
 ## Market data feeds

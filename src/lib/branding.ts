@@ -26,9 +26,10 @@ import {
   domainForHost,
   defaultDomain,
   familyTradeHost as registryFamilyTradeHost,
+  aliasDesignKey,
   resolveHostContext,
   type DomainBrandDefaults,
-} from "@/domains/registry";
+} from "@/platform/registry";
 
 /** Public brand name shown in the UI (e.g. "Black Forest Digital"). Client-safe via NEXT_PUBLIC_. */
 export function brandName(): string {
@@ -82,7 +83,7 @@ export interface BrandProfile {
   address: string;
   /** Trademark wordmark (e.g. "Global Forex Services™"). */
   trademark: string;
-  /** Two-tone logo wordmark parts — [plain, accent] (["Agile", "FGS"]). */
+  /** Two-tone logo wordmark parts — [plain, accent] (["Agile", "FGS"] example). */
   wordmark: [string, string];
   companyRegistrationNumber: string;
   companyJurisdiction: string;
@@ -110,7 +111,7 @@ export interface BrandProfile {
   accentColor: string;
   /**
    * Dedicated color for brand marks (favicon glyph). Empty = accentColor.
-   * Lets a brand's identity mark differ from its UI accent — e.g. Agile's
+   * Lets a brand's identity mark differ from its UI accent — e.g. the gbfxs
    * bright green mark (#63e891) over its darker UI accent (#188050).
    */
   markColor: string;
@@ -123,9 +124,9 @@ export interface BrandProfile {
   /** Meta description override for SEO/social (empty = translated default). */
   metaDescription: string;
   /** App-logo rendering mode: "wordmark" (glyph + wordmark) or "brackets"
-   *  (glyph path pair flanking a lowercase word — the agile lockup). */
+   *  (glyph path pair flanking a lowercase word — the gbfxs lockup). */
   logoLockup: string;
-  /** Word rendered inside the "brackets" app-logo lockup ("agile"). */
+  /** Word rendered inside the "brackets" app-logo lockup ("gbfxs"). */
   logoWord: string;
   /**
    * Per-brand crypto deposit wallets, env format
@@ -135,16 +136,16 @@ export interface BrandProfile {
    */
   depositWallets: string;
   /**
-   * Landing design key ("default" | "agile" | …). Selects which design in the
-   * src/landing/designs.ts registry renders the apex `/` for this brand
-   * family ("default" → src/landing/blackforest/). Resolution:
+   * Landing design key ("default" | "gbfxs" | …). Selects which design in the
+   * src/designs/ registry renders the apex `/` for this brand
+   * family ("default" → src/designs/default/). Resolution:
    * BRAND_OVERRIDES.landingTemplate → registry domain's landingDesign →
    * "default". Unknown keys fall back to "default".
    */
   landingTemplate: string;
   /**
    * Public (interior) page design key — selects the shell + page architecture
-   * from the same design registry (see src/landing/composition.tsx and the
+   * from the same design registry (see src/platform/composition.tsx and the
    * (content) layout). Mirrors landingTemplate unless a domain explicitly
    * splits its landing and public designs.
    */
@@ -246,8 +247,8 @@ export function brandProfileForDomain(domain?: string | null): BrandProfile {
     logoLockup: override.logoLockup ?? registryDefaults.logoLockup ?? "wordmark",
     logoWord: override.logoWord ?? registryDefaults.logoWord ?? "",
     depositWallets: override.depositWallets ?? registryDefaults.depositWallets ?? "",
-    landingTemplate: override.landingTemplate ?? defaultDomainFor(key).landingDesign,
-    publicDesign: override.publicDesign ?? override.landingTemplate ?? defaultDomainFor(key).publicDesign,
+    landingTemplate: aliasDesignKey(override.landingTemplate ?? defaultDomainFor(key).landingDesign),
+    publicDesign: aliasDesignKey(override.publicDesign ?? override.landingTemplate ?? defaultDomainFor(key).publicDesign),
   };
 }
 

@@ -13,7 +13,7 @@
  * - Domain content packages (src/domains/<domain>/content.ts) ASSEMBLE these
  *   objects from the i18n catalogs + brand profile + domain config. They are
  *   the only modules that know which catalog namespace feeds which field.
- * - Designs (src/landing/<design>/) RENDER these objects. They must not
+ * - Designs (src/designs/<key>/) RENDER these objects. They must not
  *   import next-intl for landing copy.
  *
  * Sections are intentionally optional on LandingPageContent: a domain may use
@@ -126,7 +126,7 @@ export interface MarketPanelContent {
   ctaLabel: string;
 }
 
-/** Agile-style institutional quote board (category pills + panel + list). */
+/** gbfxs-style institutional quote board (category pills + panel + list). */
 export interface MarketsBoardContent {
   eyebrow: string;
   title: string;
@@ -151,7 +151,7 @@ export interface MarketsEditorialContent {
 }
 
 export interface MarketsContent {
-  /** Agile-style quote board labels. */
+  /** gbfxs-style quote board labels. */
   board?: MarketsBoardContent;
   /** Editorial per-category section copy. */
   editorial?: MarketsEditorialContent;
@@ -306,7 +306,7 @@ export interface StickyCtaContent {
  * design renders its own manifest of sections (never required to use all).
  */
 export interface LandingPageContent {
-  /** Owning domain key ("agile"). */
+  /** Owning domain key ("gbfxs"). */
   domain: string;
   hero: HeroContent;
   stats?: StatsContent;
@@ -323,6 +323,8 @@ export interface LandingPageContent {
   confidence?: ConfidenceContent;
   playground?: PlaygroundContent;
   stickyCta?: StickyCtaContent;
+  /** Section manifest (TOC/anchors) when the design renders one. */
+  sections?: PageSectionItem[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -389,4 +391,28 @@ export interface ArticleClosingCta {
   subtitle: string;
   primaryLabel: string;
   secondaryLabel: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Domain content loader contract (implemented by every domain package)
+// ─────────────────────────────────────────────────────────────────────────────
+
+import type { BrandProfile } from "@/lib/branding";
+
+/** Everything a domain provides to the platform renderer. Each domain
+ *  package's index.ts implements this interface; the generated content
+ *  registry maps domain keys to these loaders. */
+export interface DomainContentLoaders {
+  /** Landing bundle: landing content (locale-resolved) + landing chrome. */
+  landing(brand: BrandProfile): Promise<{
+    landing: LandingPageContent;
+    navigation: NavigationContent;
+    footer: FooterContent;
+  }>;
+  /** Public (interior-page) chrome: navigation + footer + closing CTA. */
+  publicChrome(brand: BrandProfile): Promise<{
+    navigation: NavigationContent;
+    footer: FooterContent;
+    articleCta: ArticleClosingCta;
+  }>;
 }

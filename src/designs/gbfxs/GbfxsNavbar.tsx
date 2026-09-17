@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Menu, X, ChevronDown, LogIn, UserPlus } from "lucide-react";
-import { AgileMark } from "./AgileMark";
+import { GbfxsMark } from "./GbfxsMark";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import type { NavigationContent } from "@/content/contracts";
 
@@ -15,10 +15,10 @@ import type { NavigationContent } from "@/content/contracts";
  * serves the landing and every interior page; the content package bakes the
  * quick-link anchors per context (`onLanding`).
  *
- * ALL labels arrive as the typed NavigationContent contract from the agile
+ * ALL labels arrive as the typed NavigationContent contract from the gbfxs
  * domain content package — this component no longer fetches translations.
  */
-export function AgileNavbar({ content }: { content: NavigationContent }) {
+export function GbfxsNavbar({ content }: { content: NavigationContent }) {
   const [open, setOpen] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileGroup, setMobileGroup] = useState<string | null>(null);
@@ -63,7 +63,7 @@ export function AgileNavbar({ content }: { content: NavigationContent }) {
     >
       <nav className="ag-container flex h-16 items-center gap-6" aria-label={content.ariaLabel}>
         {/* The mark renders its own home link — never wrap it in another. */}
-        <AgileMark className="shrink-0" />
+        <GbfxsMark className="shrink-0" />
 
         {/* Landing-section quick links + grouped content menus */}
         <div className="hidden min-w-0 items-center gap-1 lg:flex">
@@ -167,7 +167,7 @@ export function AgileNavbar({ content }: { content: NavigationContent }) {
           <nav className="ag-container flex min-h-full flex-col pt-3" aria-label={content.ariaLabel}>
             {/* Landing sections — only meaningful from the landing itself */}
             {content.onLanding && (
-              <div className="flex gap-3 border-b border-white/8 pb-4">
+              <div className="flex gap-3 border-b border-white/5 pb-4">
                 {content.quickLinks.map((link) => (
                   <Link
                     key={link.anchor}
@@ -184,7 +184,7 @@ export function AgileNavbar({ content }: { content: NavigationContent }) {
             {content.groups.map((group) => {
               const expanded = mobileGroup === group.key;
               return (
-                <section key={group.key} className="border-b border-white/8">
+                <section key={group.key} className="border-b border-white/5">
                   <button
                     type="button"
                     aria-expanded={expanded}

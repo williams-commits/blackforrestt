@@ -5,7 +5,7 @@
  * the abstract grammar of a global execution network.
  *
  * Animated: arcs carry a flowing dash and nodes pulse (see the .ag-globe-*
- * keyframes in AgileStyles — disabled entirely under reduced motion).
+ * keyframes in GbfxsStyles — disabled entirely under reduced motion).
  *
  * `ink` swaps the palette to near-black strokes/nodes for yellow surfaces,
  * where the default white wireframe and yellow nodes would wash out.

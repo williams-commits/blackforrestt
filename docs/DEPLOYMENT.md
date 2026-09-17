@@ -221,19 +221,18 @@ a live feed later).
 **Dual domain only — add the second brand (Option B):**
 
 ```env
-DOMAIN_2=theseconddomain.com
-TRADE_DOMAIN_2=trade.theseconddomain.com
+# (no numbered slots — domains come from the registry manifests)
 BRAND_DOMAINS=yourdomain.com,theseconddomain.com
 APP_ORIGIN=https://yourdomain.com,https://trade.yourdomain.com,https://theseconddomain.com,https://trade.theseconddomain.com
 # Optional per-brand identity (logo, support email, wallets…):
 BRAND_OVERRIDES={"theseconddomain.com":{"name":"Second Brand","tradeEnabled":true}}
 ```
 
-Leaving `DOMAIN_2`/`TRADE_DOMAIN_2` **empty (or absent)** disables the second
+Domains are data-driven (`src/domains/<key>/domain.config.ts`); deploy only the domains you want with `DEPLOY_DOMAINS`. The second
 brand — the render step and middleware skip it cleanly. That is the entire
 single ↔ dual switch: the `DOMAIN_N`/`TRADE_DOMAIN_N` pairs + `BRAND_DOMAINS`
 + appending the new origins to `APP_ORIGIN`. Add a third brand the same way
-with `DOMAIN_3`/`TRADE_DOMAIN_3`.
+by adding its manifest and redeploying — or `npm run domain:deploy -- <key>`.
 
 **CRM module (both shapes):**
 

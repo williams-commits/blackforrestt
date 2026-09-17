@@ -7,9 +7,9 @@ import {
   Section as BlackForestSection,
 } from "@/components/landing/ArticleLayout";
 import {
-  AgileArticleLayout,
-  AgileSection,
-} from "@/landing/agile/content/AgileArticleLayout";
+  GbfxsArticleLayout,
+  GbfxsSection,
+} from "@/designs/gbfxs/public/content/GbfxsArticleLayout";
 
 /**
  * PUBLIC DESIGN dispatcher for interior-page ARCHITECTURE — the client-side
@@ -18,10 +18,10 @@ import {
  * active design comes from the Providers brand context, resolved per request
  * on the server — no hydration mismatch).
  *
- * The default design keeps its editorial article layout; the agile design
- * gets the landing's page architecture (AgileArticleLayout). Page bodies stay
+ * The default design keeps its editorial article layout; the gbfxs design
+ * gets the landing's page architecture (GbfxsArticleLayout). Page bodies stay
  * shared — only the composition layer is design-owned. New public designs add
- * a case here AND a shell in src/landing/designs.ts (one key, both layers).
+ * a case here AND a shell in src/designs/ registry (one key, both layers).
  */
 export function ArticleLayout(props: {
   eyebrow: string;
@@ -31,12 +31,12 @@ export function ArticleLayout(props: {
   sidebar?: ReactNode;
 }) {
   const brand = useBrand();
-  if (brand.publicDesign === "agile") return <AgileArticleLayout {...props} />;
+  if (brand.publicDesign === "gbfxs") return <GbfxsArticleLayout {...props} />;
   return <BlackForestArticleLayout {...props} />;
 }
 
 export function Section(props: { title?: string; children: ReactNode }) {
   const brand = useBrand();
-  if (brand.publicDesign === "agile") return <AgileSection {...props} />;
+  if (brand.publicDesign === "gbfxs") return <GbfxsSection {...props} />;
   return <BlackForestSection {...props} />;
 }

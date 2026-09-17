@@ -29,3 +29,7 @@ fixes.md
 updates.md
 AGENTS.md
 .platform/
+# Generated deployment artifacts (rendered per deployment — never source of truth)
+deploy/caddy/render/
+deploy/profiles/*/
+!deploy/profiles/_template/

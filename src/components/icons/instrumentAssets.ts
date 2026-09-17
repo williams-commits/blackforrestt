@@ -5,7 +5,7 @@
  * flagcdn, crypto coins, exchange/index marks, stock logos, and authored
  * emblems for unbranded commodities). Both ends consume this one map: the
  * shared InstrumentIcon (terminal, account portal, primary-brand landing)
- * and the Agile landing's InstrumentLogo. Anything unmapped falls back to
+ * and the gbfxs landing's InstrumentLogo. Anything unmapped falls back to
  * the inline SVG badges, so no instrument ever renders an empty slot.
  */
 

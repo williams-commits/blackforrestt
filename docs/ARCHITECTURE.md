@@ -1,90 +1,103 @@
 # Platform Architecture
 
-The repository is ONE platform serving MULTIPLE brand domains. Everything
-below is enforced by `npm run test:domains` (`tests/domains.test.ts`).
+ONE repository → MANY domains → ONE shared platform. Everything below is
+enforced by tests (`npm run test:domains`, `tests/platform-deploy.test.ts`,
+`tests/registry-freshness.test.ts`).
 
 ```
-                    ONE REPOSITORY — SHARED PLATFORM
+                ONE REPOSITORY — SHARED PLATFORM
                                  │
-            ┌────────────────────┴────────────────────┐
-            │                                         │
-       PLATFORM CORE                              DOMAIN LAYER
-            │                                         │
-   src/server/**  (engine, ws, email)         src/domains/<key>/
-   src/app/api/** (APIs)                        ├── domain.config.ts
-   prisma/         (ONE database)               └── content.ts
-   src/auth.ts     (ONE auth)                 src/content/ (contracts)
-   src/components  (shared UI)                src/landing/<design>/ (designs)
-   crm/            (CRM app, own DB)
-            │
-      ┌─────┴─────┐
-   Trading      CRM … every domain shares both + the same backend
+        ┌────────────────────────┼────────────────────────┐
+        │                        │                        │
+   PLATFORM CORE            CONTENT SYSTEM           DESIGN SYSTEM
+   src/server/**            src/content/contracts/   src/designs/<key>/
+   src/app/api/**           (typed, WHAT)            (landing/ + public/, HOW)
+   prisma/ (ONE db)              │                        │
+   src/auth.ts                   └──────────┬─────────────┘
+   src/components/**                        │
+   src/platform/ ◄── RENDERING/RESOLUTION LAYER
+   (registry: host→domain; render: domain+content+design = page)
+        │                        │
+   ┌────┴─────┐            src/domains/<key>/  ◄── DOMAIN LAYER
+   Trading      CRM           domain.config.ts (WHICH — manifest, selectors only)
+   (shared)   (crm/, own     content/ navigation/ seo/ assets/
+              database)      .generated/ (read-only registries)
 ```
 
-## The four layers
+## The five concerns (strictly separated)
 
-| Layer | Location | Rule |
-|---|---|---|
-| **Platform core** | `src/server/**`, `src/app/api/**`, `prisma/`, `src/auth.ts`, `src/lib/**`, `src/components/ui/**`, `crm/` | Domain-neutral. Never imports designs or domain packages. |
-| **Content library** | `src/content/contracts.ts` | Presentation-free typed content models. No JSX, no i18n imports. |
-| **Domain layer** | `src/domains/<key>/` | ONE explicit configuration per brand family (`domain.config.ts`: hosts, designs, brand defaults, features) + its typed content assembly (`content.ts`). |
-| **Design layer** | `src/landing/<design>/` + `src/landing/designs.ts` | Renders typed content contracts. Composable per-section; never fetches translations itself (agile tree is the enforced exemplar). |
+| Concern | Location | Rule |
+| --- | --- | --- |
+| **DOMAIN CONFIG** | `src/domains/<key>/domain.config.ts` | Selects content, landing design, public design, navigation, SEO, assets. NEVER contains implementations. |
+| **CONTENT** | `src/domains/<key>/content*/` + `src/content/contracts/` | WHAT is shown. Typed contracts; no JSX in the content layer. |
+| **DESIGN** | `src/designs/<key>/{landing,public}/` | HOW it is shown. Receives content via typed props; NEVER imports domain implementations. |
+| **PUBLIC DESIGN** | `src/designs/<key>/public/` | Independent from landing — a domain may mix `landingDesign: "gbfxs", publicDesign: "default"`. |
+| **RENDERING** | `src/platform/` | The only runtime glue: `registry.ts` (host→domain), `render/landing.tsx`, `render/public.tsx`, `composition.tsx`. |
 
 ## Host resolution — ONE authoritative module
 
-`src/domains/registry.ts` (zero-dependency) answers every
-"which domain/brand/design is this host?" question:
+`src/platform/registry.ts` (`resolveHostContext`) answers every
+"which domain/brand/design is this host?" question. Consumers: middleware,
+branding, next.config CSP. Domain manifests come from the GENERATED registry
+(`src/domains/.generated/domains.ts` — a read-only scan of
+`src/domains/<key>/domain.config.ts`).
+
+**Layering (env wins):** `BRAND_OVERRIDES[apex]` → manifest defaults → primary env.
+
+## Generated registries (read-only artifacts)
 
 ```
-resolveHostContext(host, env) → { apex, domain, landingDesign, publicDesign }
+src/domains/.generated/domains.ts    domain manifest list (middleware/CSP-safe)
+src/domains/.generated/content.ts    domain key → lazy content loaders
+src/designs/.generated/designs.ts    design key → lazy design manifests
 ```
 
-Consumers: `src/middleware.ts` (domain routing + cookies),
-`src/lib/branding.ts` (brand profiles), `next.config.ts` (CSP origins),
-`src/domains/resolve.ts` (server request entry). Never re-implement host
-matching — extend the registry.
+Every file carries `GENERATED FILE — DO NOT EDIT / SOURCE / REGENERATE`
+headers. `npm run registry:generate` owns them; CI freshness tests fail on
+drift. Adding a domain or design requires ZERO manual registry edits.
 
-**Configuration layering (env wins):**
+## Domain CLI (canonical onboarding)
 
-1. `BRAND_OVERRIDES[apex]` — per-deployment values (operational surface)
-2. Registry code defaults — `src/domains/<key>/domain.config.ts`
-3. Primary env defaults (`BRAND_NAME`, `COMPANY_*`, …)
+```bash
+npm run platform -- domain create|validate|doctor|dev|test|deploy|remove
+```
 
-Special case: when a `BRAND_OVERRIDES` entry EXISTS for an apex, its
-`tradeEnabled` flag is authoritative even when absent (absent = not enabled —
-conservative routing; see `.platform/lessons/`).
+See **docs/domains/ADDING_A_DOMAIN.md** for the complete lifecycle.
+`create` is transactional; `deploy` writes ONLY the selected domain's Caddy
+site file (others preserved — acceptance-tested); `remove` is safe
+(dependency graph + `--confirm`).
 
-**Trade-host resolution order:** `DOMAIN_N/TRADE_DOMAIN_N` env pairs (what
-Caddy serves) → `tradeEnabled` (env flag, else registry default) → canonical
-trade host of the first domain.
+## Dependency direction (enforced)
 
-## Design system
+```
+Domain   → shared platform, shared contracts, selected design/content
+Design   → shared contracts ONLY (content via typed props)
+Platform → resolves domain + content + design (never imports designs' internals
+           beyond manifests)
+Shared   → NEVER imports domain-specific code
+Domain A → NEVER imports Domain B
+Backend  → NEVER imports landing/public implementations
+```
 
-- Design keys live in `src/landing/designKeys.ts`; component mappings in
-  `src/landing/designs.ts` (TypeScript enforces every key has a component).
-- `landingDesign` renders the apex `/` page; `publicDesign` renders the
-  `(content)` route-group shell + interior architecture
-  (`src/landing/composition.tsx` is its client-side mirror).
-- A design consumes its domain's typed content (`src/domains/<key>/content.ts`
-  assembles `src/content/contracts.ts` objects from the i18n catalogs + brand
-  profile). Same content model, different visual implementation.
-- Default design: `src/landing/blackforest/` (shared library composition).
-  Custom design exemplar: `src/landing/agile/`.
+## Deployment model
 
-## Adding a domain (summary)
+- Manifests are the source of truth for hosts + trade hosts — no numbered
+  env slots (repo-wide grep gate).
+- `deploy/caddy/render/sites/<key>.caddy` = per-domain deployment state;
+  `Caddyfile` (merged, gitignored) is generated.
+- `domain deploy <key>` touches only that domain's file.
+- Optional `DEPLOY_DOMAINS` scopes a deployment to selected registry domains.
 
-Copy `src/domains/_template/` → implement config + content → select/register
-designs → register in `src/domains/registry.ts` → assets under
-`public/brands/<key>/` → deployment env (`DOMAIN_N`, `TRADE_DOMAIN_N`,
-`BRAND_DOMAINS`, optional `BRAND_OVERRIDES`) → `npm run test:domains` →
-browser-verify host isolation. Full walkthrough:
-`.platform/workflows/new-domain.md`. No new backend, database, auth, CRM, or
-trading copy is ever created.
+## CRM boundary (verified, not assumed)
 
-## Deployment model (unchanged operationally)
+CRM (`crm/`) is a separate Next.js application with its own Prisma schema and
+its own database (`blckforest_crm`). The trading platform uses `blackforrestt`.
+They share only the same Postgres server and an HTTP bridge
+(`/api/internal/crm/*`, read-only). CRM was NOT touched by this migration.
 
-Caddy (rendered from env by `deploy/render-caddy.sh`) routes each family's
-apex + trade host to the SAME app container; CRM on `CRM_DOMAIN`. Adding a
-domain is env + registry — no Docker/Caddy duplication. The custom server
-loads `next.config.ts` (and thus the registry) at boot, so brand env changes
-need only a restart (`make update`).
+## AI onboarding
+
+READ `.platform/README.md` → relevant rules/skills/lessons → inspect actual
+code → trace dependencies → **USE THE PLATFORM CLI** → implement → validate
+(`domain validate` + `doctor`) → test → update the harness when architecture
+changes. Never invent a parallel architecture.

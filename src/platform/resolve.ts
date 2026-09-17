@@ -12,7 +12,7 @@
 import { headers } from "next/headers";
 import type { BrandProfile } from "@/lib/branding";
 import { brandProfileForDomain } from "@/lib/branding";
-import { resolveHostContext, type HostContext } from "@/domains/registry";
+import { resolveHostContext, type HostContext } from "@/platform/registry";
 
 /** Everything the dispatchers (landing page, content layout, composition)
  *  need about the current request's domain. */

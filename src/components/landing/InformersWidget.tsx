@@ -24,7 +24,7 @@ interface InformersWidgetProps {
  * Embeddable live-rate widgets (ticker + rate table + embed code).
  *
  * Frameless by design: the page supplies the brand-owned article layout
- * (@/landing/composition) so this widget renders identically inside either
+ * (@/platform/composition) so this widget renders identically inside either
  * brand's page architecture. Uses the site-wide light/dim theme via
  * useTheme() and renders entirely with design tokens (bg-canvas / bg-panel /
  * text-text / border-border / text-up / text-down) so it reskins under any

@@ -7,13 +7,13 @@ import type { InstrumentView } from "@/lib/types";
 
 /**
  * Live ticker strip — the trading-desk marquee, SELF-CONTAINED for any
- * surface (the agile landing's floor ticker AND the embeddable /widgets/ticker
+ * surface (the gbfxs landing's floor ticker AND the embeddable /widgets/ticker
  * iframe). Real instruments from the shared feed scroll horizontally in an
  * infinite CSS loop; the list is duplicated for the wrap-around with the
  * duplicate aria-hidden so screen readers hear each quote once. Scrolling
  * pauses on hover and is disabled entirely under prefers-reduced-motion.
  *
- * Carries its own scoped styles (extracted verbatim from the agile design
+ * Carries its own scoped styles (extracted verbatim from the gbfxs design
  * sheet) so mounting it never requires a design's stylesheet.
  */
 export function TickerStrip({

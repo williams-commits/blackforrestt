@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AgileMark } from "./AgileMark";
+import { GbfxsMark } from "./GbfxsMark";
 import type { FooterContent } from "@/content/contracts";
 
 /**
@@ -10,14 +10,14 @@ import type { FooterContent } from "@/content/contracts";
  * the domain content package) — this footer always names THIS brand, never
  * the primary.
  */
-export function AgileFooter({ content }: { content: FooterContent }) {
+export function GbfxsFooter({ content }: { content: FooterContent }) {
   return (
     <footer className="bg-[#151517] text-[#a9a9ae]">
       <div className="ag-container py-14">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
             {/* The mark renders its own home link — never wrap it in another. */}
-            <AgileMark size="lg" />
+            <GbfxsMark size="lg" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-[#75757b]">
               {content.tagline}
             </p>

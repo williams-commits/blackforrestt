@@ -3,7 +3,7 @@ import createNextIntlPlugin from "next-intl/plugin";
 // Zero-dependency domain registry — safe to load at build/boot time. This is
 // the SAME module the middleware and src/lib/branding.ts use, so the CSP
 // origin list can never drift from actual request routing again.
-import { brandDomainList, familyTradeHost } from "./src/domains/registry";
+import { brandDomainList, familyTradeHost } from "./src/platform/registry";
 
 // Wire next-intl's message-loading + locale resolver (src/i18n/request.ts) into
 // the build. This is the non-routing (cookie-based) mode — no [locale] segment.

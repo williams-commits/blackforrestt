@@ -5,7 +5,7 @@
  * one place. Deliberately does NOT touch the global token system (the light
  * theme serves the primary brand and all shared shells).
  */
-export function AgileStyles() {
+export function GbfxsStyles() {
   return (
     <style>{`
       html:has(.ag-shell),
@@ -249,7 +249,7 @@ export function AgileStyles() {
       }
 
       /* Interior page furniture — header band + closing CTA (see
-         AgileArticleLayout / AgileContentShell). */
+         GbfxsArticleLayout / GbfxsPublicShell). */
       .ag-page-band { position: relative; overflow: hidden; }
       .ag-page-cta { border-top: 1px solid rgba(255, 255, 255, 0.1); }
 

@@ -11,7 +11,7 @@
  * MUST stay a pure data module (type-only imports): it is composed into
  * registry.ts, which next.config.ts and the middleware also load.
  */
-import type { DomainDefinition } from "../registry";
+import type { DomainDefinition } from "@/platform/registry";
 
 /** Primary brand identity defaults mirror the env fallbacks in
  *  src/lib/branding.ts (which already defaults every field), so this entry
@@ -22,6 +22,9 @@ export const BLACKFOREST_DOMAIN: DomainDefinition = {
   landingDesign: "default",
   publicDesign: "default",
   tradeEnabled: true,
-  brand: {},
+  brand: {
+    // Explicit per C6: key ≠ brand.name ≠ hosts — never inferred.
+    name: "Black Forest Digital",
+  },
   features: { trading: true, informers: true },
 };

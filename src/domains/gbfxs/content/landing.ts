@@ -1,10 +1,10 @@
 /**
  * AGILE domain content package (Global Forex Services / gbfxs.com).
  *
- * THE content source of truth for the agile domain: assembles the typed
+ * THE content source of truth for the gbfxs domain: assembles the typed
  * contracts from src/content/contracts.ts out of the i18n catalogs
  * (agile.*, hero, finalCta, nav, footer namespaces) + the brand profile +
- * the domain registry. Any design that wants to render the agile landing
+ * the domain registry. Any design that wants to render the gbfxs landing
  * consumes THESE objects — content acquisition never happens inside design
  * components, so a future design can reuse every word without touching a
  * catalog.
@@ -16,16 +16,13 @@
  */
 import { getTranslations } from "next-intl/server";
 import type { BrandProfile } from "@/lib/branding";
-import { brandRegistrationSummary, tradeHostForDomain } from "@/lib/branding";
+import { tradeHostForDomain } from "@/lib/branding";
 import type {
-  ArticleClosingCta,
-  FooterContent,
   HeroContent,
   IntelligenceContent,
   LandingPageContent,
   MarketsBoardContent,
   MoversContent,
-  NavigationContent,
   PillarsContent,
   ShowcaseContent,
   StatsContent,
@@ -37,7 +34,7 @@ import type {
 
 /** The assembled agile landing — this design's required sections narrowed to
  *  non-optional so section components get complete contracts. */
-export type AgileLandingPageContent = LandingPageContent & {
+export type GbfxsLandingPageContent = LandingPageContent & {
   hero: HeroContent & Required<Pick<HeroContent, "titleA" | "titleB" | "trustLine" | "panel">>;
   stats: StatsContent;
   pillars: PillarsContent;
@@ -63,61 +60,22 @@ const TESTIMONIAL_AVATARS = [2, 3, 1, 4, 5].map(
   (n) => `/brands/gbfxs/testimonials/feedback__avatar-${n}.svg`,
 );
 
-/** The agile landing's navigation groups (structure = content, styling = design). */
-const NAV_GROUPS: Array<{ key: string; items: Array<{ key: string; href: string }> }> = [
-  {
-    key: "company",
-    items: [
-      { key: "about", href: "/about" },
-      { key: "contact", href: "/contact" },
-    ],
-  },
-  {
-    key: "tools",
-    items: [
-      { key: "informers", href: "/tools/informers" },
-      { key: "calendars", href: "/tools/calendars" },
-      { key: "calculators", href: "/tools/calculators" },
-      { key: "signals", href: "/tools/signals" },
-    ],
-  },
-  {
-    key: "analytics",
-    items: [
-      { key: "news", href: "/analytics/news" },
-      { key: "technical", href: "/analytics/technical" },
-      { key: "fundamental", href: "/analytics/fundamental" },
-      { key: "trend", href: "/analytics/trend" },
-    ],
-  },
-  {
-    key: "education",
-    items: [
-      { key: "beginners", href: "/education/beginners" },
-      { key: "advanced", href: "/education/advanced" },
-      { key: "beginnersVods", href: "/education/beginners-vods" },
-      { key: "advancedVods", href: "/education/advanced-vods" },
-      { key: "cryptoVods", href: "/education/crypto-vods" },
-    ],
-  },
-];
-
 /** The landing's full typed content (hero → final CTA), for the requesting
  *  locale, resolved against THIS brand family's profile. */
-export async function agileLandingContent(brand: BrandProfile): Promise<AgileLandingPageContent> {
-  const t = await getTranslations("agile");
+export async function gbfxsLandingContent(brand: BrandProfile): Promise<GbfxsLandingPageContent> {
+  const t = await getTranslations("gbfxs");
   const tHero = await getTranslations("hero");
   const tCta = await getTranslations("finalCta");
-  const tPanel = await getTranslations("agile.panel");
-  const tMarkets = await getTranslations("agile.markets");
-  const tMovers = await getTranslations("agile.movers");
-  const tValue = await getTranslations("agile.value");
-  const tPillars = await getTranslations("agile.pillars");
-  const tIntelligence = await getTranslations("agile.intelligence");
-  const tShowcase = await getTranslations("agile.showcase");
-  const tTrust = await getTranslations("agile.trust");
-  const tSteps = await getTranslations("agile.steps");
-  const tTestimonials = await getTranslations("agile.testimonials");
+  const tPanel = await getTranslations("gbfxs.panel");
+  const tMarkets = await getTranslations("gbfxs.markets");
+  const tMovers = await getTranslations("gbfxs.movers");
+  const tValue = await getTranslations("gbfxs.value");
+  const tPillars = await getTranslations("gbfxs.pillars");
+  const tIntelligence = await getTranslations("gbfxs.intelligence");
+  const tShowcase = await getTranslations("gbfxs.showcase");
+  const tTrust = await getTranslations("gbfxs.trust");
+  const tSteps = await getTranslations("gbfxs.steps");
+  const tTestimonials = await getTranslations("gbfxs.testimonials");
 
   const categories = {
     forex: tMarkets("categories.forex"),
@@ -142,7 +100,7 @@ export async function agileLandingContent(brand: BrandProfile): Promise<AgileLan
   }));
 
   return {
-    domain: "agile",
+    domain: "gbfxs",
     hero: {
       badge: brand.heroBadge || tHero("badge"),
       titleA: t("heroTitleA"),
@@ -266,94 +224,5 @@ export async function agileLandingContent(brand: BrandProfile): Promise<AgileLan
       ctaPrimaryLabel: tCta("primary"),
       ctaSecondaryLabel: tCta("secondary"),
     },
-  };
-}
-
-/** The agile navigation bar's typed content. `landing` picks the quick links'
- *  anchor form (landing: "#markets"; interior pages: "/#markets"). */
-export async function agileNavigationContent(landing: boolean): Promise<NavigationContent> {
-  const t = await getTranslations("nav");
-  const tA = await getTranslations("agile.nav");
-  const prefix = landing ? "" : "/";
-  return {
-    ariaLabel: tA("primary"),
-    onLanding: landing,
-    quickLinks: [
-      { label: tA("markets"), anchor: `${prefix}#markets` },
-      { label: tA("platform"), anchor: `${prefix}#platform` },
-    ],
-    groups: NAV_GROUPS.map((group) => ({
-      key: group.key,
-      label: t(group.key),
-      links: group.items.map((item) => ({ label: t(`menu.${item.key}`), href: item.href })),
-    })),
-    loginLabel: tA("login"),
-    registerLabel: tA("cta"),
-    loginHref: "/login",
-    registerHref: "/register",
-    menuToggle: { open: tA("openMenu"), close: tA("closeMenu") },
-  };
-}
-
-/** The interior-page closing CTA band (finalCta namespace). */
-export async function agileArticleCta(): Promise<ArticleClosingCta> {
-  const t = await getTranslations("finalCta");
-  return {
-    title: t("title"),
-    subtitle: t("subtitle"),
-    primaryLabel: t("primary"),
-    secondaryLabel: t("secondary"),
-  };
-}
-
-/** The agile footer's typed content (brand facts resolved here, not in design). */
-export async function agileFooterContent(brand: BrandProfile): Promise<FooterContent> {
-  const t = await getTranslations("footer");
-  const tLinks = await getTranslations("footer.links");
-  const tCols = await getTranslations("footer.columns");
-  const company = brand.legalName;
-
-  return {
-    tagline: t("tagline", { company }),
-    contact: { address: brand.address, supportEmail: brand.supportEmail },
-    registrationSummary: brandRegistrationSummary(brand),
-    columns: [
-      {
-        key: "company",
-        label: tCols("company"),
-        links: [
-          { label: tLinks("about"), href: "/about" },
-          { label: tLinks("contact"), href: "/contact" },
-          { label: tLinks("openAccount"), href: "/register" },
-          { label: tLinks("login"), href: "/login" },
-        ],
-      },
-      {
-        key: "tools",
-        label: tCols("tools"),
-        links: [
-          { label: tLinks("informers"), href: "/tools/informers" },
-          { label: tLinks("calendars"), href: "/tools/calendars" },
-          { label: tLinks("calculators"), href: "/tools/calculators" },
-          { label: tLinks("signals"), href: "/tools/signals" },
-        ],
-      },
-      {
-        key: "legal",
-        label: tCols("legal"),
-        links: [
-          { label: tLinks("privacy"), href: "/legal/privacy" },
-          { label: tLinks("aml"), href: "/legal/aml" },
-          { label: tLinks("kyc"), href: "/legal/kyc" },
-          { label: tLinks("terms"), href: "/legal/terms" },
-        ],
-      },
-    ],
-    risk: {
-      heading: t("riskWarning"),
-      paragraphs: [t("risk1"), t("risk2"), t("risk3")],
-    },
-    copyright: t("copyright", { company }),
-    trademarkLine: t("trademark", { tm: brand.trademark, company }),
   };
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ArticleLayout } from "@/landing/composition";
+import { ArticleLayout } from "@/platform/composition";
 import { VodBanner } from "@/components/landing/VodBanner";
 import { VideoPlayer } from "@/components/education/VideoPlayer";
 

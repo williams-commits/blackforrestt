@@ -1,5 +1,5 @@
 import { InformersWidget } from "@/components/landing/InformersWidget";
-import { ArticleLayout } from "@/landing/composition";
+import { ArticleLayout } from "@/platform/composition";
 import { getTranslations } from "next-intl/server";
 import { contentMetadata } from "@/lib/seo";
 import { currentBrandProfile } from "@/lib/branding";

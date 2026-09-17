@@ -59,7 +59,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // describes itself under its own brand. Canonical/SEO URLs stay on the
   // primary domain so mirror content consolidates search indexing — but
   // og:image must be ABSOLUTE, and resolving it against metadataBase (the
-  // primary) would serve Agile's share card from blackforrestt.com. Build it
+  // primary) would serve the gbfxs family's share card from blackforrestt.com. Build it
   // on the REQUEST origin instead.
   const brand = await currentBrandProfile();
   const name = brand.name;
@@ -155,16 +155,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const messages = deepMergeMessages(defaultMsgs.default as Record<string, unknown>, localeMsgs.default as Record<string, unknown>);
 
   // Per-host payload hygiene: the merged catalog above includes EVERY
-  // design's copy (the agile namespace), which would ship GFX strings inside
+  // design's copy (the gbfxs namespace), which would ship GFX strings inside
   // the RSC payload of every other family's pages. No CLIENT component reads
   // design-specific namespaces (designs consume typed content props; the
-  // agile tree is next-intl-free), so the namespace is stripped for hosts
+  // gbfxs tree is next-intl-free), so the namespace is stripped for hosts
   // not using that design. Server-side getTranslations loads messages
   // independently (src/i18n/request.ts) and is unaffected.
-  const usesAgileDesign = brand.landingTemplate === "agile" || brand.publicDesign === "agile";
-  const clientMessages = usesAgileDesign
+  const usesGbfxsDesign = brand.landingTemplate === "gbfxs" || brand.publicDesign === "gbfxs";
+  const clientMessages = usesGbfxsDesign
     ? messages
-    : Object.fromEntries(Object.entries(messages).filter(([namespace]) => namespace !== "agile"));
+    : Object.fromEntries(Object.entries(messages).filter(([namespace]) => namespace !== "gbfxs"));
 
   // Organization + WebSite structured data. Regulatory identifiers are only
   // included when configured via the COMPANY_* env placeholders — never
@@ -201,7 +201,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {brandThemeCss && <style id="brand-accent" dangerouslySetInnerHTML={{ __html: brandThemeCss }} />}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       </head>
-      <body className={`bg-canvas text-text antialiased ${brand.landingTemplate === "agile" ? "agile-app" : ""}`}>
+      <body className={`bg-canvas text-text antialiased ${brand.landingTemplate === "gbfxs" ? "gbfxs-app" : ""}`}>
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <TopProgressBar />
         <ThemeProvider>

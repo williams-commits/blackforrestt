@@ -39,9 +39,7 @@ Env variables:
 
 | Variable | Purpose |
 | --- | --- |
-| `DOMAIN` / `TRADE_DOMAIN` | Brand 1 apex + trade host (Caddy site blocks). |
-| `DOMAIN_2` / `TRADE_DOMAIN_2` | Brand 2, same. Empty = family disabled. |
-| `DOMAIN_3` / `TRADE_DOMAIN_3` | Brand 3 — pre-wired empty slots. |
+| `DEPLOY_DOMAINS` | Optional comma list of registry domain keys this deployment serves (default: all). Routing derives from the domain manifests — there are NO numbered slots. |
 | `BRAND_DOMAIN` | ONE domain — the canonical primary. Never a list. |
 | `BRAND_DOMAINS` | Comma-separated apex list, canonical first. |
 | `BRAND_OVERRIDES` | JSON map: apex → brand profile (see below). |
@@ -120,8 +118,6 @@ still works for mirror domains that reuse the default design: copy
 1. **DNS**: point `newbrand.com` (and `trade.newbrand.com`) at the server.
 2. **`.env.production`**:
    ```bash
-   DOMAIN_3=newbrand.com
-   TRADE_DOMAIN_3=trade.newbrand.com
    BRAND_DOMAINS=blackforrestt.com,gbfxs.com,newbrand.com
    # append to APP_ORIGIN:
    #   https://newbrand.com,https://trade.newbrand.com

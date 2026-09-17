@@ -12,10 +12,8 @@ const GLOBAL_TRON = `TG1oba1Test${randomBase58(23)}`;
 const BRAND_WALLETS = `USDT:TRON (TRC20):${BRAND_TRON}; BTC:Bitcoin:${BRAND_BTC}`;
 process.env.BRAND_DOMAINS = "blackforrestt.com,gbfxs.com";
 process.env.BRAND_DOMAIN = "blackforrestt.com";
-process.env.DOMAIN = "blackforrestt.com";
-process.env.TRADE_DOMAIN = "trade.blackforrestt.com";
-process.env.DOMAIN_2 = "gbfxs.com";
-process.env.TRADE_DOMAIN_2 = "trade.gbfxs.com";
+// Manifest-driven model: no numbered slots. gbfxs routing comes from
+// src/domains/gbfxs/domain.config.ts; only identity/wallet overrides in env.
 process.env.BRAND_OVERRIDES = JSON.stringify({
   "gbfxs.com": { name: "Global Forex Services", depositWallets: BRAND_WALLETS },
 });
@@ -44,7 +42,7 @@ assert.match(BRAND_BTC, /^bc1[a-z0-9]{39,59}$/);
 test("deposit wallets resolve per brand family (global → brand → group)", async () => {
   const { resolveUserSettings } = await import("../src/server/userSettings.js");
   const suffix = randomUUID().slice(0, 8);
-  const [primary, agile, grouped] = await Promise.all([
+  const [primary, gbfxs, grouped] = await Promise.all([
     prisma.user.create({ data: { email: `mb-p-${suffix}@example.invalid`, accountNo: `p${suffix}` } }),
     prisma.user.create({ data: { email: `mb-a-${suffix}@example.invalid`, accountNo: `a${suffix}`, brandDomain: "gbfxs.com" } }),
     prisma.user.create({ data: { email: `mb-g-${suffix}@example.invalid`, accountNo: `g${suffix}`, brandDomain: "gbfxs.com" } }),
@@ -55,11 +53,11 @@ test("deposit wallets resolve per brand family (global → brand → group)", as
   assert.equal(primarySettings.deposits.walletAddresses.length, 1);
   assert.equal(primarySettings.deposits.walletAddresses[0]!.address, GLOBAL_TRON);
 
-  // Agile-family users get the BRAND wallets instead.
-  const agileSettings = await resolveUserSettings(agile.id);
-  assert.equal(agileSettings.deposits.walletAddresses.length, 2);
-  assert.ok(agileSettings.deposits.walletAddresses.some((w) => w.asset === "USDT" && w.address === BRAND_TRON));
-  assert.ok(agileSettings.deposits.walletAddresses.some((w) => w.asset === "BTC" && w.address === BRAND_BTC));
+  // gbfxs-family users get the BRAND wallets instead.
+  const gbfxsSettings = await resolveUserSettings(gbfxs.id);
+  assert.equal(gbfxsSettings.deposits.walletAddresses.length, 2);
+  assert.ok(gbfxsSettings.deposits.walletAddresses.some((w) => w.asset === "USDT" && w.address === BRAND_TRON));
+  assert.ok(gbfxsSettings.deposits.walletAddresses.some((w) => w.asset === "BTC" && w.address === BRAND_BTC));
 
   // A group override still beats the brand layer.
   const group = await prisma.userGroup.create({
@@ -72,10 +70,10 @@ test("deposit wallets resolve per brand family (global → brand → group)", as
   const groupedSettings = await resolveUserSettings(grouped.id);
   assert.equal(groupedSettings.deposits.walletAddresses.length, 1);
   assert.ok(groupedSettings.deposits.walletAddresses[0]!.address.startsWith("T"));
-  assert.notEqual(groupedSettings.deposits.walletAddresses[0]!.address, agileSettings.deposits.walletAddresses.find((w) => w.asset === "USDT")!.address);
+  assert.notEqual(groupedSettings.deposits.walletAddresses[0]!.address, gbfxsSettings.deposits.walletAddresses.find((w) => w.asset === "USDT")!.address);
 
   await prisma.user.delete({ where: { id: primary.id } });
-  await prisma.user.delete({ where: { id: agile.id } });
+  await prisma.user.delete({ where: { id: gbfxs.id } });
   await prisma.user.delete({ where: { id: grouped.id } });
   await prisma.userGroup.delete({ where: { id: group.id } });
 });
@@ -83,13 +81,13 @@ test("deposit wallets resolve per brand family (global → brand → group)", as
 test("referral links stay in the referrer's brand family", async () => {
   const { getReferralStats } = await import("../src/server/referrals.js");
   const suffix = randomUUID().slice(0, 8);
-  const [primary, agile] = await Promise.all([
+  const [primary, gbfxs] = await Promise.all([
     prisma.user.create({ data: { email: `mb-rp-${suffix}@example.invalid`, accountNo: `rp${suffix}` } }),
     prisma.user.create({ data: { email: `mb-ra-${suffix}@example.invalid`, accountNo: `ra${suffix}`, brandDomain: "gbfxs.com" } }),
   ]);
 
-  const agileStats = await getReferralStats(agile.id);
-  assert.match(agileStats.link, /^trade\.gbfxs\.com\/register\?ref=/);
+  const gbfxsStats = await getReferralStats(gbfxs.id);
+  assert.match(gbfxsStats.link, /^trade\.gbfxs\.com\/register\?ref=/);
 
   const primaryStats = await getReferralStats(primary.id);
   assert.match(primaryStats.link, /^trade\.blackforrestt\.com\/register\?ref=/);
@@ -102,7 +100,7 @@ test("referral links stay in the referrer's brand family", async () => {
   await prisma.user.delete({ where: { id: legacy.id } });
 
   await prisma.user.delete({ where: { id: primary.id } });
-  await prisma.user.delete({ where: { id: agile.id } });
+  await prisma.user.delete({ where: { id: gbfxs.id } });
 });
 
 test("tradeHostForDomain follows deployment pairs, then tradeEnabled, then canonical", async () => {
@@ -119,17 +117,21 @@ test("tradeHostForDomain follows deployment pairs, then tradeEnabled, then canon
   assert.equal(agileProfile.depositWallets, BRAND_WALLETS);
   assert.equal(brandProfileForDomain("blackforrestt.com").depositWallets, "");
 
-  // tradeEnabled fallback: no env pair, but the override asserts the host.
-  const savedDomain2 = process.env.DOMAIN_2;
-  const savedTrade2 = process.env.TRADE_DOMAIN_2;
-  process.env.DOMAIN_2 = "";
-  process.env.TRADE_DOMAIN_2 = "";
+  // tradeEnabled via an EXISTING override entry (entry-authority: an absent
+  // flag inside an entry means NOT enabled — the manifest default is ignored).
+  const savedOverrides = process.env.BRAND_OVERRIDES;
   process.env.BRAND_OVERRIDES = JSON.stringify({ "gbfxs.com": { tradeEnabled: true } });
   assert.equal(tradeHostForDomain("gbfxs.com"), "trade.gbfxs.com");
   process.env.BRAND_OVERRIDES = JSON.stringify({ "gbfxs.com": {} });
+  // An entry WITHOUT the flag falls through to the manifest (tradeEnabled=true).
+  assert.equal(tradeHostForDomain("gbfxs.com"), "trade.gbfxs.com");
+  // An entry that EXPLICITLY disables the family's trade host:
+  process.env.BRAND_OVERRIDES = JSON.stringify({ "gbfxs.com": { tradeEnabled: false } });
   assert.equal(tradeHostForDomain("gbfxs.com"), "trade.blackforrestt.com");
-  process.env.DOMAIN_2 = savedDomain2;
-  process.env.TRADE_DOMAIN_2 = savedTrade2;
+  // With NO entry at all, the manifest default (gbfxs tradeEnabled=true) wins.
+  process.env.BRAND_OVERRIDES = "";
+  assert.equal(tradeHostForDomain("gbfxs.com"), "trade.gbfxs.com");
+  process.env.BRAND_OVERRIDES = savedOverrides;
 });
 
 test("shared support inbox reports each customer's brand family", async () => {
@@ -143,7 +145,7 @@ test("shared support inbox reports each customer's brand family", async () => {
   await sendDirectMessage({ senderId: agileCustomer.id, recipientId: admin.id, body: "Which brand is this?", notify: false });
   const { threads } = await adminMessageThreads();
   const thread = threads.find((t) => t.userId === agileCustomer.id);
-  assert.ok(thread, "expected a thread for the agile customer");
+  assert.ok(thread, "expected a thread for the gbfxs customer");
   assert.equal(thread.brandDomain, "gbfxs.com");
 
   await prisma.user.delete({ where: { id: admin.id } });

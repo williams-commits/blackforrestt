@@ -7,7 +7,7 @@
  *
  * Sizing/stroke is normalized here so every surface (admin sidebar, account
  * tabs, kebab menus) stays visually consistent, and icons inherit
- * `currentColor` — brand theming (Agile green / Black Forest orange) and
+ * `currentColor` — brand theming (gbfxs green / Black Forest orange) and
  * tone classes (destructive red, muted) apply automatically.
  */
 

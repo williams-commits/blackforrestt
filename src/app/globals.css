@@ -90,7 +90,7 @@ html.dim {
   (--color-brand). Scoped by the host class set in the root layout — the
   primary brand never matches these rules.
 */
-.agile-app .bg-brand {
+.gbfxs-app .bg-brand {
   background-color: #f0b90b;
   color: #181a20;
 }

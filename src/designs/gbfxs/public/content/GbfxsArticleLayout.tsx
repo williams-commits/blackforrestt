@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useArticleCta } from "@/components/landing/ArticleCta";
-import { areaPath, smoothPath } from "../smoothPath";
+import { areaPath, smoothPath } from "@/designs/gbfxs/landing/visuals/smoothPath";
 
 interface Props {
   eyebrow: string;
@@ -25,14 +25,14 @@ interface Props {
  *                  page ends in the product's voice
  *
  * This is the Agile replacement for the primary brand's editorial article
- * layout; selection happens in @/landing/composition (the host dispatcher),
+ * layout; selection happens in @/platform/composition (the host dispatcher),
  * never inside the components.
  */
 const DESK_SERIES: Array<[number, number]> = [[0, 64], [20, 56], [40, 60], [60, 44], [80, 50], [100, 34], [120, 40], [140, 26], [160, 32], [180, 18], [200, 24], [220, 12]];
 const DESK_LINE = smoothPath(DESK_SERIES);
 const DESK_AREA = areaPath(DESK_SERIES, 80);
 
-export function AgileArticleLayout({ eyebrow, title, description, children, sidebar }: Props) {
+export function GbfxsArticleLayout({ eyebrow, title, description, children, sidebar }: Props) {
   // Closing-CTA copy comes from the shell-provided content context — this
   // design component never fetches translations.
   const closingCta = useArticleCta();
@@ -123,7 +123,7 @@ export function AgileArticleLayout({ eyebrow, title, description, children, side
  * voice, hairline-underlined, generous body spacing. The shared token scope
  * keeps any nested token-styled markup on the Agile palette.
  */
-export function AgileSection({ title, children }: { title?: string; children: ReactNode }) {
+export function GbfxsSection({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <section>
       {title && (

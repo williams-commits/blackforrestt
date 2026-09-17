@@ -13,7 +13,7 @@
  *  4. IMPORT BOUNDARIES — content has no JSX/i18n imports; registry chain is
  *     dependency-free; no cross-design imports; shared components never
  *     import design trees or domain packages; designs never fetch i18n for
- *     landing copy (the agile tree is the enforced exemplar).
+ *     landing copy (the gbfxs tree is the enforced exemplar).
  *
  * Run: npm run test:domains
  */
@@ -31,12 +31,13 @@ import {
   resolveHostContext,
   normalizeHost,
   type EnvLike,
-} from "../src/domains/registry.js";
+} from "../src/platform/registry.js";
 import { brandProfileForDomain } from "../src/lib/branding.js";
-import { LANDING_DESIGN_KEYS, PUBLIC_DESIGN_KEYS } from "../src/landing/designKeys.js";
+import { landingDesignKeys } from "../src/designs/registry.js";
 
 const ROOT = join(import.meta.dirname, "..");
 const SRC = join(ROOT, "src");
+const DESIGNS = join(SRC, "designs");
 
 /** Recursively list files under a directory (filtered by extension). */
 function walk(dir: string, filter: (name: string) => boolean): string[] {
@@ -89,8 +90,8 @@ test("registry: first entry is the default domain", () => {
 });
 
 test("registry: every domain's design selections resolve to a registered design", () => {
-  const landing: string[] = [...LANDING_DESIGN_KEYS];
-  const publicDesigns: string[] = [...PUBLIC_DESIGN_KEYS];
+  const landing: string[] = [...landingDesignKeys()];
+  const publicDesigns: string[] = [...landingDesignKeys()];
   for (const domain of DOMAINS) {
     assert.ok(
       landing.includes(domain.landingDesign),
@@ -123,12 +124,12 @@ test("resolution: BRAND_DOMAINS env wins and keeps order (canonical first)", () 
 
 test("resolution: host → domain identity + designs (code defaults)", () => {
   const gbfxs = resolveHostContext("gbfxs.com", NO_DOMAIN_ENV);
-  assert.equal(gbfxs.domain.key, "agile");
-  assert.equal(gbfxs.landingDesign, "agile");
-  assert.equal(gbfxs.publicDesign, "agile");
+  assert.equal(gbfxs.domain.key, "gbfxs");
+  assert.equal(gbfxs.landingDesign, "gbfxs");
+  assert.equal(gbfxs.publicDesign, "gbfxs");
 
   const trade = resolveHostContext("trade.gbfxs.com", NO_DOMAIN_ENV);
-  assert.equal(trade.domain.key, "agile");
+  assert.equal(trade.domain.key, "gbfxs");
   assert.equal(trade.apex, "gbfxs.com");
 
   const primary = resolveHostContext("blackforrestt.com", NO_DOMAIN_ENV);
@@ -152,22 +153,22 @@ test("resolution: env mirror list + BRAND_OVERRIDES design override win over cod
     BRAND_DOMAINS: "blackforrestt.com,gbfxs.com,mirror.example",
     BRAND_OVERRIDES: JSON.stringify({
       "gbfxs.com": { landingTemplate: "default" }, // force primary design on agile host
-      "mirror.example": { landingTemplate: "agile" }, // agile design on a mirror
+      "mirror.example": { landingTemplate: "gbfxs" }, // agile design on a mirror
     }),
   };
   assert.equal(resolveHostContext("gbfxs.com", env).landingDesign, "default");
   const mirror = resolveHostContext("mirror.example", env);
   assert.equal(mirror.domain.key, DEFAULT_DOMAIN_KEY); // mirrors → default domain
-  assert.equal(mirror.landingDesign, "agile"); // …but env-selected design
-  assert.deepEqual(brandOverrides(env)["mirror.example"], { landingTemplate: "agile" });
+  assert.equal(mirror.landingDesign, "gbfxs"); // …but env-selected design
+  assert.deepEqual(brandOverrides(env)["mirror.example"], { landingTemplate: "gbfxs" });
 });
 
-test("resolution: trade host — env pairs > tradeEnabled > canonical", () => {
+test("resolution: trade host — override > tradeEnabled > canonical (no numbered slots)", () => {
   assert.equal(
-    familyTradeHost("gbfxs.com", { DOMAIN_2: "gbfxs.com", TRADE_DOMAIN_2: "app.gbfxs.com" }),
+    familyTradeHost("gbfxs.com", { BRAND_OVERRIDES: JSON.stringify({ "gbfxs.com": { tradeHost: "app.gbfxs.com" } }) }),
     "app.gbfxs.com",
   );
-  // Registry default (agile.tradeEnabled=true) without env:
+  // Registry default (gbfxs.tradeEnabled=true) without env:
   assert.equal(familyTradeHost("gbfxs.com", NO_DOMAIN_ENV), "trade.gbfxs.com");
   // Family with no trade host of its own → canonical trade host:
   assert.equal(familyTradeHost("mirror.example", NO_DOMAIN_ENV), "trade.blackforrestt.com");
@@ -176,17 +177,17 @@ test("resolution: trade host — env pairs > tradeEnabled > canonical", () => {
 test("resolution: invalid BRAND_OVERRIDES JSON degrades safely", () => {
   assert.deepEqual(brandOverrides({ BRAND_OVERRIDES: "{not json" }), {});
   const ctx = resolveHostContext("gbfxs.com", { BRAND_OVERRIDES: "{not json" });
-  assert.equal(ctx.landingDesign, "agile"); // code default survives bad env
+  assert.equal(ctx.landingDesign, "gbfxs"); // code default survives bad env
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. Brand layering + domain isolation
 // ─────────────────────────────────────────────────────────────────────────────
 
-test("brand: registry code defaults apply without env (agile names GFX)", () => {
+test("brand: registry code defaults apply without env (gbfxs names GFX)", () => {
   const profile = brandProfileForDomain("gbfxs.com");
   assert.equal(profile.name, "Global Forex Services");
-  assert.equal(profile.landingTemplate, "agile");
+  assert.equal(profile.landingTemplate, "gbfxs");
   assert.equal(profile.wordmark[0], "Global Forex");
 });
 
@@ -210,13 +211,13 @@ test("brand: primary env defaults flow to the default domain", () => {
 });
 
 test("isolation: a registered domain never renders another domain's identity", () => {
-  const agile = brandProfileForDomain("gbfxs.com");
+  const gbfxs = brandProfileForDomain("gbfxs.com");
   const primary = brandProfileForDomain("blackforrestt.com");
-  assert.notEqual(agile.name, primary.name);
-  assert.notEqual(agile.supportEmail, primary.supportEmail);
-  assert.notEqual(agile.landingTemplate, primary.landingTemplate);
-  // The agile wordmark/assets never leak the primary brand:
-  assert.ok(!agile.name.includes("Black Forest"));
+  assert.notEqual(gbfxs.name, primary.name);
+  assert.notEqual(gbfxs.supportEmail, primary.supportEmail);
+  assert.notEqual(gbfxs.landingTemplate, primary.landingTemplate);
+  // The gbfxs wordmark/assets never leak the primary brand:
+  assert.ok(!gbfxs.name.includes("Black Forest"));
   assert.ok(!primary.name.includes("Global Forex"));
 });
 
@@ -237,31 +238,33 @@ test("boundaries: the content library is presentation-free", () => {
 
 test("boundaries: the registry chain (registry + domain configs) is dependency-free", () => {
   const chain = [
-    join(SRC, "domains/registry.ts"),
+    join(SRC, "platform/registry.ts"),
+    join(SRC, "domains/.generated/domains.ts"),
     ...DOMAINS.flatMap((d) => [join(SRC, `domains/${d.key}/domain.config.ts`)]),
   ];
   for (const file of chain) {
     const source = readFileSync(file, "utf8");
     for (const imp of importsOf(source)) {
       if (imp.typeOnly) continue;
-      // registry.ts may compose the domain configs (pure data); domain
-      // configs may import NOTHING at runtime.
-      if (file.endsWith("registry.ts") && imp.raw.includes("domain.config")) continue;
+      // registry.ts composes the GENERATED manifest list, which imports the
+      // domain configs (pure data); domain configs import nothing at runtime.
+      if (file.endsWith("registry.ts") && (imp.raw.includes("domain.config") || imp.raw.includes("generated-domains"))) continue;
+      if (file.endsWith(".generated/domains.ts") && imp.raw.includes("domain.config")) continue;
       assert.fail(`${relative(SRC, file)}: runtime import "${imp.raw}" breaks the zero-dependency chain`);
     }
   }
 });
 
 test("boundaries: design trees never import each other", () => {
-  const agileFiles = TS_FILES(join(SRC, "landing/agile"));
-  const blackforestFiles = TS_FILES(join(SRC, "landing/blackforest"));
-  for (const file of [...agileFiles, ...blackforestFiles]) {
+  const gbfxsFiles = TS_FILES(join(DESIGNS, "gbfxs"));
+  const blackforestFiles = TS_FILES(join(DESIGNS, "default"));
+  for (const file of [...gbfxsFiles, ...blackforestFiles]) {
     const source = readFileSync(file, "utf8");
     for (const imp of importsOf(source)) {
-      if (imp.raw.includes("landing/agile") && !file.includes("/agile/")) {
-        assert.fail(`${relative(SRC, file)}: imports the agile design tree`);
+      if (imp.raw.includes("designs/gbfxs") && !file.includes("/gbfxs/")) {
+        assert.fail(`${relative(SRC, file)}: imports the gbfxs design tree`);
       }
-      if (imp.raw.includes("landing/blackforest") && !file.includes("/blackforest/")) {
+      if (imp.raw.includes("designs/default") && !file.includes("designs/default")) {
         assert.fail(`${relative(SRC, file)}: imports the blackforest design tree`);
       }
     }
@@ -281,13 +284,13 @@ test("boundaries: shared components never import design trees or domain packages
   }
 });
 
-test("boundaries: the agile design consumes contracts, not i18n catalogs", () => {
-  for (const file of TS_FILES(join(SRC, "landing/agile"))) {
+test("boundaries: the gbfxs design consumes contracts, not i18n catalogs", () => {
+  for (const file of TS_FILES(join(DESIGNS, "gbfxs"))) {
     const rel = relative(SRC, file);
     const source = readFileSync(file, "utf8");
     assert.ok(
       !source.includes('from "next-intl"') && !source.includes('from "next-intl/server"'),
-      `${rel}: fetches translations — content arrives via typed contracts from src/domains/agile/content.ts`,
+      `${rel}: fetches translations — content arrives via typed contracts from src/domains/gbfxs/content.ts`,
     );
   }
 });
@@ -303,7 +306,7 @@ test("boundaries: app routes reach designs only through the dispatchers", () => 
     if (!rel.endsWith(".tsx") || rel.startsWith("api/")) continue;
     const source = readFileSync(file, "utf8");
     for (const imp of importsOf(source)) {
-      const isDesignImport = imp.raw.includes("@/landing/") && !imp.raw.includes("@/landing/composition");
+      const isDesignImport = imp.raw.includes("@/landing/") && !imp.raw.includes("@/platform/composition");
       if (!isDesignImport) continue;
       const allowed = dispatchers.has(rel) || exceptions.has(rel) || imp.raw.includes("landing/designs");
       assert.ok(

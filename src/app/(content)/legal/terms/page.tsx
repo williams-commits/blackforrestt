@@ -1,4 +1,4 @@
-import { ArticleLayout, Section } from "@/landing/composition";
+import { ArticleLayout, Section } from "@/platform/composition";
 import { getTranslations } from "next-intl/server";
 import { contentMetadata } from "@/lib/seo";
 import { currentBrandProfile } from "@/lib/branding";

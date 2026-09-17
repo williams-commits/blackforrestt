@@ -28,7 +28,7 @@ export default async function TickerWidgetPage({
 }: {
   searchParams: Promise<{ theme?: string | string[] }>;
 }) {
-  const [params, t] = await Promise.all([searchParams, getTranslations("agile.markets")]);
+  const [params, t] = await Promise.all([searchParams, getTranslations("gbfxs.markets")]);
   const raw = Array.isArray(params.theme) ? params.theme[0] : params.theme;
   const light = (raw ?? "").toLowerCase() === "light";
   const instruments = getLandingInstruments();

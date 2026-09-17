@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
-import { ArticleLayout, Section } from "@/landing/composition";
+import { ArticleLayout, Section } from "@/platform/composition";
 
 type Bias = "bullish" | "bearish" | "neutral";
 

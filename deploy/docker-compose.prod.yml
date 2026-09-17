@@ -8,20 +8,14 @@ services:
       app:
         condition: service_healthy
     environment:
-      DOMAIN: ${DOMAIN:?Set DOMAIN}
       # Optional: authenticated application subdomain (e.g. trade.blackforrestt.com).
       # When empty, Caddy runs in single-domain mode (backward compatible).
-      TRADE_DOMAIN: ${TRADE_DOMAIN:-}
       # Optional mirror/alias apex domain serving the same files (e.g.
       # blackforest.com). Also add it to BRAND_DOMAINS and APP_ORIGIN in the
       # app environment so the middleware and origin gate recognize it.
-      DOMAIN_2: ${DOMAIN_2:-}
       # Optional trade subdomain for the mirror domain (tradeEnabled brands).
-      TRADE_DOMAIN_2: ${TRADE_DOMAIN_2:-}
       # Brand 3 slots — activate purely from .env.production (see the env
       # example's "add a brand" recipe); Caddy skips empty blocks.
-      DOMAIN_3: ${DOMAIN_3:-}
-      TRADE_DOMAIN_3: ${TRADE_DOMAIN_3:-}
       CADDY_EMAIL: ${CADDY_EMAIL:?Set CADDY_EMAIL}
     ports:
       - "80:80"
@@ -30,7 +24,7 @@ services:
     volumes:
       # Rendered from .env.production by deploy/render-caddy.sh (deploy.sh
       # regenerates it before compose runs) — one site block per active brand.
-      - ./Caddyfile.rendered:/etc/caddy/Caddyfile:ro
+      - ./caddy/render/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     networks: [edge, backend]

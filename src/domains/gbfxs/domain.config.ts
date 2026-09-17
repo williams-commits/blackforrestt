@@ -9,7 +9,7 @@
  * MUST stay a pure data module (type-only imports): it is composed into
  * registry.ts, which next.config.ts and the middleware also load.
  */
-import type { BrandGlyphConfig, DomainDefinition } from "../registry";
+import type { BrandGlyphConfig, DomainDefinition } from "@/platform/registry";
 
 /** Glyph lockup for gbfxs — bracket pair around a "G", on brand yellow. */
 const GBFXS_GLYPH: BrandGlyphConfig = {
@@ -31,11 +31,11 @@ const GBFXS_GLYPH: BrandGlyphConfig = {
 };
 
 /** GFX brand identity defaults (production values; BRAND_OVERRIDES wins). */
-export const AGILE_DOMAIN: DomainDefinition = {
-  key: "agile",
+export const GBFXS_DOMAIN: DomainDefinition = {
+  key: "gbfxs",
   hosts: ["gbfxs.com", "gbfxs.localhost"],
-  landingDesign: "agile",
-  publicDesign: "agile",
+  landingDesign: "gbfxs",
+  publicDesign: "gbfxs",
   tradeEnabled: true,
   brand: {
     name: "Global Forex Services",
@@ -58,7 +58,7 @@ export const AGILE_DOMAIN: DomainDefinition = {
     logoWord: "gbfxs",
     metaDescription:
       "Trade forex, indices, commodities and crypto on GBFXS — one multi-asset platform with live quotes, transparent pricing and segregated client funds.",
-    landingTemplate: "agile",
+    landingTemplate: "gbfxs",
   },
   features: { trading: true, informers: true },
 };

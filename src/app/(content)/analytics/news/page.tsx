@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
-import { ArticleLayout } from "@/landing/composition";
+import { ArticleLayout } from "@/platform/composition";
 
 interface NewsItem {
   id: number;

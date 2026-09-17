@@ -1,8 +1,7 @@
 import { Zap, ShieldCheck, LineChart } from "lucide-react";
 import { Reveal } from "@/components/landing/Reveal";
-import { GlobeArcs } from "../GlobeArcs";
-import { InstrumentLogo } from "@/components/landing/InstrumentLogo";
-import { areaPath, smoothPath } from "../smoothPath";
+import { GlobeArcs } from "../visuals/GlobeArcs";
+import { areaPath, smoothPath } from "../visuals/smoothPath";
 import { MarketIcon } from "@/components/landing/MarketIcons";
 import { CATEGORY_ORDER } from "@/lib/landingUi";
 import type { PillarsContent } from "@/content/contracts";
@@ -76,24 +75,6 @@ export function BentoSection({
                   {/* Breathing close marker at the live edge. */}
                   <circle cx="220" cy="10" r="1.8" fill="#f8d56a" className="ag-chart-pulse" />
                 </svg>
-                {/* Real instrument tokens EMERGING from the chart plane —
-                    staggered depths and rise phases so the field reads as
-                    products floating up out of the markets. */}
-                <span className="ag-float-a absolute top-0 left-3 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_12px_28px_-12px_rgba(0,0,0,0.85)] backdrop-blur" style={{ animationDelay: "0.2s" }}>
-                  <InstrumentLogo symbol="EURUSD" base="EUR" quote="USD" category="FOREX" className="h-6" />
-                </span>
-                <span className="ag-float-b absolute top-1.5 right-12 z-10 flex h-9 w-9 scale-95 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_10px_22px_-12px_rgba(0,0,0,0.8)] backdrop-blur" style={{ animationDelay: "1.1s" }}>
-                  <InstrumentLogo symbol="BTCUSD" base="BTC" quote="USD" category="CRYPTO" className="h-6" />
-                </span>
-                <span className="ag-float-b absolute top-1/3 -left-1 z-10 flex h-9 w-9 scale-95 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_12px_28px_-12px_rgba(0,0,0,0.85)] backdrop-blur" style={{ animationDelay: "2s" }}>
-                  <InstrumentLogo symbol="XAUUSD" base="XAU" quote="USD" category="COMMODITY" className="h-6" />
-                </span>
-                <span className="ag-float-a absolute bottom-1 left-1/4 z-10 flex h-9 w-9 scale-95 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_10px_22px_-12px_rgba(0,0,0,0.8)] backdrop-blur" style={{ animationDelay: "2.9s" }}>
-                  <InstrumentLogo symbol="US30" base="US30" quote="USD" category="INDEX" className="h-6" />
-                </span>
-                <span className="ag-float-b absolute -bottom-2 right-4 z-10 flex h-9 w-9 scale-95 items-center justify-center rounded-lg border border-white/10 bg-[#1b1b1e]/90 shadow-[0_10px_22px_-12px_rgba(0,0,0,0.8)] backdrop-blur" style={{ animationDelay: "3.7s" }}>
-                  <InstrumentLogo symbol="AAPL" base="AAPL" quote="USD" category="STOCK" className="h-6" />
-                </span>
               </div>
             </article>
           </Reveal>
@@ -131,7 +112,7 @@ export function BentoSection({
                 {CATEGORY_ORDER.map((category: InstrumentCategory) => (
                   <span
                     key={category}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1 text-xs font-medium text-[#a9a9ae]"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/5 px-3.5 py-1 text-xs font-medium text-[#a9a9ae]"
                   >
                     <span className="text-[#f0b90b]" aria-hidden>
                       <MarketIcon category={category} className="h-6 w-6" />

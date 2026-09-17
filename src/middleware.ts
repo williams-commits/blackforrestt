@@ -8,7 +8,7 @@ import {
   familyTradeHost,
   isLocalHost,
   normalizeHost,
-} from "@/domains/registry";
+} from "@/platform/registry";
 
 // Duplicated from @/i18n/config (importing that module here changes how the
 // middleware bundle is compiled — node: imports in the auth chain then fail

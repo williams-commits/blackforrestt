@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { ArrowRight } from "lucide-react";
 import { InstrumentLogo } from "@/components/landing/InstrumentLogo";
-import { Sparkline } from "../Sparkline";
+import { Sparkline } from "../visuals/Sparkline";
 import { useInstruments } from "@/components/landing/useInstruments";
 import type { MoversContent } from "@/content/contracts";
 import type { InstrumentView } from "@/lib/types";
@@ -28,7 +28,7 @@ export function MoversSection({
     () =>
       [...instruments]
         .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))
-        .slice(0, 6),
+        .slice(0, 8),
     [instruments],
   );
 
@@ -46,7 +46,7 @@ export function MoversSection({
           </Link>
         </div>
 
-        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-14 lg:max-w-5xl lg:mx-auto grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {movers.map((instrument) => {
             const up = instrument.changePct >= 0;
             return (
@@ -65,8 +65,8 @@ export function MoversSection({
                       className="h-10 shrink-0"
                     />
                     <div>
-                      <div className="font-mono text-sm font-bold text-[#f1f3ef]">{instrument.symbol}</div>
-                      <div className="text-[11px] text-[#75757b]">{instrument.name}</div>
+                      <div className="font-mono text-xs font-extrabold text-[#f1f3ef]">{instrument.symbol}</div>
+                      <div className="text-[8px] font-semibold text-[#75757b]">{instrument.name}</div>
                     </div>
                   </div>
                   <Sparkline
@@ -77,9 +77,9 @@ export function MoversSection({
                     className="opacity-80 transition-opacity group-hover:opacity-100"
                   />
                 </div>
-                <div className="mt-6 flex items-end justify-between border-t border-white/8 pt-5">
+                <div className="mt-6 flex items-end justify-between border-t border-white/5 pt-5">
                   <div>
-                    <div className={`text-3xl font-semibold tracking-[-0.03em] tnum ${up ? "ag-up" : "ag-down"}`}>
+                    <div className={`text-xl font-semibold tracking-[-0.03em] tnum ${up ? "ag-up" : "ag-down"}`}>
                       {up ? "+" : ""}
                       {instrument.changePct.toFixed(2)}%
                     </div>
@@ -88,7 +88,7 @@ export function MoversSection({
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-mono text-sm font-semibold tnum text-[#f1f3ef]">
+                    <div className="font-mono text-xs font-semibold tnum text-[#f1f3ef]">
                       {instrument.mid.toFixed(instrument.digits)}
                     </div>
                     <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#75757b]">

@@ -51,7 +51,7 @@ export function Logo({
   }
   const glyph = brand.glyph;
   // Bracket lockup (logoLockup: "brackets"): the glyph's two bracket paths
-  // flank a lowercase word — the config-driven agile app mark. The brackets
+  // flank a lowercase word — the config-driven gbfxs app mark. The brackets
   // crop to their own bounding boxes (path.box) so they sit tight against
   // the word; color follows the same ink/accent rule as the glyph.
   const lockupPaths = glyph?.paths ?? [];

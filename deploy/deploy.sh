@@ -14,9 +14,10 @@ cd "$ROOT"
 # container for bind-mount CONTENT changes — a re-rendered Caddyfile would
 # silently never load. Remember whether the render changed the file so the
 # final step can force-recreate Caddy when it did.
-CADDYFILE="$ROOT/deploy/Caddyfile.rendered"
+CADDYFILE="$ROOT/deploy/caddy/render/Caddyfile"
 CADDY_HASH_BEFORE="$(sha256sum "$CADDYFILE" 2>/dev/null | cut -d' ' -f1 || :)"
-"$ROOT/deploy/render-caddy.sh" "$ROOT/.env.production"
+# Seed per-domain site files for every registry domain on FIRST deploy
+node "$ROOT/scripts/platform.mjs" caddy render --env-file "$ROOT/.env.production" --out "$CADDYFILE"
 CADDY_HASH_AFTER="$(sha256sum "$CADDYFILE" | cut -d' ' -f1)"
 CADDY_CHANGED=false
 if [[ "$CADDY_HASH_BEFORE" != "$CADDY_HASH_AFTER" ]]; then

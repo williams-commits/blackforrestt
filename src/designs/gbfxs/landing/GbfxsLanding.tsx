@@ -1,10 +1,8 @@
 import { Inter } from "next/font/google";
-import { currentBrandProfile } from "@/lib/branding";
-import { agileFooterContent, agileLandingContent, agileNavigationContent } from "@/domains/agile/content";
 import { getLandingInstruments } from "@/lib/landingData";
-import { AgileStyles } from "./AgileStyles";
-import { AgileNavbar } from "./AgileNavbar";
-import { AgileFooter } from "./AgileFooter";
+import { GbfxsStyles } from "../GbfxsStyles";
+import { GbfxsNavbar } from "../GbfxsNavbar";
+import { GbfxsFooter } from "../GbfxsFooter";
 import { Hero, StatBar } from "./sections/Top";
 import { BentoSection } from "./sections/Bento";
 import { MarketsSection } from "./sections/Markets";
@@ -20,9 +18,9 @@ import { TestimonialsSection } from "./sections/Testimonials";
 
 /**
  * Global Forex Services landing — the global trading desk. The AGILE design:
- * a fully custom visual system that consumes the agile domain's typed content
+ * a fully custom visual system that consumes the gbfxs domain's typed content
  * contracts (src/content/contracts.ts, assembled in
- * src/domains/agile/content.ts) — no section here fetches translations or
+ * src/domains/gbfxs/content.ts) — no section here fetches translations or
  * branding itself. A future design can render the same content objects with
  * a completely different composition.
  *
@@ -32,8 +30,8 @@ import { TestimonialsSection } from "./sections/Testimonials";
  * intelligence → the terminal showcase (device composition) → the trust
  * registry → numbered onboarding → client voices → the closing frame.
  *
- * Architecture: one section per component under landing/agile/, a scoped
- * token sheet (AgileStyles) instead of long utility chains, scroll reveals
+ * Architecture: one section per component under landing/gbfxs/, a scoped
+ * token sheet (GbfxsStyles) instead of long utility chains, scroll reveals
  * via the shared Reveal primitive (reduced-motion safe). All live data comes
  * from the real /api/instruments feed; all trust copy comes from the real
  * brand profile.
@@ -47,14 +45,22 @@ const inter = Inter({
   variable: "--font-agile-inter",
 });
 
-export async function AgileLanding() {
-  const brand = await currentBrandProfile();
-  const [content, navigation, footer, instruments] = await Promise.all([
-    agileLandingContent(brand),
-    agileNavigationContent(true),
-    agileFooterContent(brand),
-    Promise.resolve(getLandingInstruments()),
-  ]);
+import type { LandingDesignProps } from "@/designs/contracts";
+import type { HeroContent, LandingPageContent } from "@/content/contracts";
+
+/** The gbfxs design requires the full landing contract (all sections). */
+type GbfxsLandingPageContent = LandingPageContent & Required<
+  Pick<LandingPageContent, "stats" | "pillars" | "movers" | "intelligence" | "showcase" | "trust" | "steps" | "testimonials">
+> & {
+  markets: { board: NonNullable<LandingPageContent["markets"]["board"]> };
+  hero: HeroContent & Required<Pick<HeroContent, "titleA" | "titleB" | "trustLine" | "panel">>;
+};
+
+export async function GbfxsLanding({ content }: LandingDesignProps) {
+  const navigation = content.navigation;
+  const footer = content.footer;
+  const narrowed = content.landing as GbfxsLandingPageContent;
+  const instruments = getLandingInstruments();
 
   // Live counts per asset class for the bento's asset strip.
   const categoryCounts: Record<string, number> = {};
@@ -64,22 +70,22 @@ export async function AgileLanding() {
 
   return (
     <div className={`ag-shell ag-scope ${inter.className}`}>
-      <AgileStyles />
-      <AgileNavbar content={navigation} />
+      <GbfxsStyles />
+      <GbfxsNavbar content={navigation} />
       <main id="main-content" tabIndex={-1}>
-        <Hero content={content.hero} instruments={instruments} />
-        <StatBar content={content.stats} />
-        <BentoSection content={content.pillars} categoryCounts={categoryCounts} />
-        <MarketsSection initial={instruments} content={content.markets.board} />
-        <MoversSection initial={instruments} content={content.movers} />
-        <IntelligenceSection content={content.intelligence} />
-        <ShowcaseSection content={content.showcase} />
-        <TrustSection content={content.trust} />
-        <StepsBand content={content.steps} />
-        <TestimonialsSection content={content.testimonials} />
-        <FinalCta content={content.finalCta} />
+        <Hero content={narrowed.hero} instruments={instruments} />
+        <StatBar content={narrowed.stats} />
+        <BentoSection content={narrowed.pillars} categoryCounts={categoryCounts} />
+        <MarketsSection initial={instruments} content={narrowed.markets.board} />
+        <MoversSection initial={instruments} content={narrowed.movers} />
+        <IntelligenceSection content={narrowed.intelligence} />
+        <ShowcaseSection content={narrowed.showcase} />
+        <TrustSection content={narrowed.trust} />
+        <StepsBand content={narrowed.steps} />
+        <TestimonialsSection content={narrowed.testimonials} />
+        <FinalCta content={narrowed.finalCta} />
       </main>
-      <AgileFooter content={footer} />
+      <GbfxsFooter content={footer} />
     </div>
   );
 }

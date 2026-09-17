@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { currentBrandProfile } from "@/lib/branding";
-import { blackforestLandingContent, blackforestFooterContent, blackforestNavigationContent, blackforestLandingSections } from "@/domains/blackforrest/content";
+import type { LandingDesignProps } from "@/designs/contracts";
 import { Navbar } from "@/components/landing/Navbar";
 import { Hero } from "@/components/landing/Hero";
 import { Markets } from "@/components/landing/Markets";
@@ -17,24 +16,17 @@ import type { FinalCtaContent } from "@/content/contracts";
 // branding values are read from env at request time, not build time.
 
 /**
- * Black Forest Digital landing — the DEFAULT design: serif hero, sticky TOC
+ * The DEFAULT landing design (Black Forest editorial architecture): serif hero, sticky TOC
  * rail, progress checklist, playground + markets, confidence section.
  * Composed from the shared landing library (@/components/landing/*); this
  * folder owns composition only. ALL copy is assembled ONCE from the
  * blackforest domain content package and flows down as typed contracts.
  * Selected whenever a domain's landingDesign is "default" or unknown.
  */
-export async function BlackForestLanding() {
-  const brand = await currentBrandProfile();
-  const [content, navigation, footer, instruments] = await Promise.all([
-    blackforestLandingContent(brand),
-    blackforestNavigationContent(),
-    blackforestFooterContent(brand),
-    Promise.resolve(getLandingInstruments()),
-  ]);
-  // Section manifest — single source of truth for TOC + progress checklist
-  // (labels resolved by the domain content package).
-  const SECTIONS = await blackforestLandingSections();
+export async function DefaultLanding({ content }: LandingDesignProps) {
+  const { landing, navigation, footer } = content;
+  const instruments = getLandingInstruments();
+  const SECTIONS = landing.sections ?? [];
   // The hero is intentionally omitted from the manifest: it's always visible
   // at the top, so it would be marked "read" instantly and add noise.
 
@@ -42,7 +34,7 @@ export async function BlackForestLanding() {
     <>
       <Navbar content={navigation} />
       <main id="main-content" tabIndex={-1}>
-        <Hero content={content.hero} />
+        <Hero content={landing.hero} />
 
         {/* Sticky-rail layout: TOC on the left, content centre, progress right. */}
         <div className="relative">
@@ -62,19 +54,19 @@ export async function BlackForestLanding() {
               <section id="playground" className="scroll-mt-24 mb-16 lg:mb-24">
                 <div className="max-w-2xl mb-6">
                   <span className="text-[11px] font-semibold uppercase tracking-widest text-brand">
-                    {content.playground!.eyebrow}
+                    {landing.playground!.eyebrow}
                   </span>
                   <h2 className="mt-2 text-3xl lg:text-4xl font-bold tracking-tight">
-                    {content.playground!.title}
+                    {landing.playground!.title}
                   </h2>
                   <p className="font-prose mt-3 text-lg leading-relaxed text-text-muted">
-                    {content.playground!.subtitle}
+                    {landing.playground!.subtitle}
                   </p>
                 </div>
-                <TradingPlayground initial={instruments} content={content.playground!} />
+                <TradingPlayground initial={instruments} content={landing.playground!} />
               </section>
 
-              <Markets content={content.markets.editorial!} />
+              <Markets content={landing.markets.editorial!} />
             </div>
 
             {/* Right rail: progress checklist (sticky, desktop) */}
@@ -87,14 +79,14 @@ export async function BlackForestLanding() {
         </div>
 
         {/* Confidence (features + education) — full width */}
-        <ConfidenceSection content={content.confidence!} />
+        <ConfidenceSection content={landing.confidence!} />
 
         {/* Final CTA — also the hide-anchor for StickyCta */}
-        <FinalCta content={content.finalCta} />
+        <FinalCta content={landing.finalCta} />
       </main>
 
       <Footer content={footer} />
-      <StickyCta content={content.stickyCta!} />
+      <StickyCta content={landing.stickyCta!} />
     </>
   );
 }

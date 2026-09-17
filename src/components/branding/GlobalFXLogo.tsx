@@ -39,7 +39,7 @@ export function GlobalFXLogo({
   );
 
   // Brand-aware accessible name — the component is brand-agnostic, so a
-  // second Agile family must not announce itself as GlobalFX.
+  // second gbfxs family must not announce itself as GlobalFX.
   const label = ariaLabel ?? "Global Forex Services";
   if (!href) return content;
   if (external) return <a href={href} aria-label={label}>{content}</a>;

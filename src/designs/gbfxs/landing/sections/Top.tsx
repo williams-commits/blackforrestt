@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Reveal } from "@/components/landing/Reveal";
-import { SectionBackdrop } from "../SectionBackdrop";
-import { LivePricePanel } from "../LivePricePanel";
+import { SectionBackdrop } from "../visuals/SectionBackdrop";
+import { LivePricePanel } from "../visuals/LivePricePanel";
 import { TickerStrip } from "@/components/landing/TickerStrip";
 import type { HeroContent, StatsContent } from "@/content/contracts";
 
-/** The agile hero requires the display-title variant members. */
-type AgileHeroContent = HeroContent &
+/** The gbfxs hero requires the display-title variant members. */
+type GbfxsHeroContent = HeroContent &
   Required<Pick<HeroContent, "titleA" | "titleB" | "trustLine" | "panel">>;
 import type { InstrumentView } from "@/lib/types";
 
@@ -16,10 +16,10 @@ import type { InstrumentView } from "@/lib/types";
  * the live terminal panel framed like a desk module. The band closes with
  * the live ticker marquee — the trading-floor signature.
  *
- * Design-only component: ALL copy arrives as typed content from the agile
+ * Design-only component: ALL copy arrives as typed content from the gbfxs
  * domain content package; live instruments arrive as data props.
  */
-export function Hero({ content, instruments }: { content: AgileHeroContent; instruments: InstrumentView[] }) {
+export function Hero({ content, instruments }: { content: GbfxsHeroContent; instruments: InstrumentView[] }) {
   return (
     <section id="hero" className="relative scroll-mt-24 overflow-hidden bg-[#0a0a0b]">
       <SectionBackdrop

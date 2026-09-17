@@ -17,6 +17,7 @@ const GENERATED = [
   "src/domains/.generated/domains.ts",
   "src/domains/.generated/content.ts",
   "src/designs/.generated/designs.ts",
+  "src/platform/.generated/composition-map.ts",
 ];
 
 test("generated registries are fresh (no manual edits, no drift)", () => {

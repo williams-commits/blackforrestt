@@ -85,7 +85,7 @@ export function renderDomainSite(domain, envFile) {
 /** Assemble the complete Caddyfile: header + snippets + every deployed site
  *  file + CRM. Per-domain site files are the deployment state — writing one
  *  never touches the others (deploy-preservation guarantee). */
-/** @param {{ envFile?: string, sitesDir?: string, snippetsPath?: string, outPath?: string, email?: string }} args */
+/** @param {{ envFile?: string, sitesDir?: string, snippetsPath?: string, outPath?: string, email?: string, domains?: Array<{key:string}> }} args */
 export function renderCaddyfile({ envFile, sitesDir, snippetsPath, outPath, email: emailOverride, domains: domainsOverride } = {}) {
   const email = emailOverride ?? envValue(envFile, "CADDY_EMAIL");
   if (!email) throw new Error("CADDY_EMAIL is not set in the environment file.");

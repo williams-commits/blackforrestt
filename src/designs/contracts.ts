@@ -48,4 +48,6 @@ export interface DesignManifest {
   landing: () => Promise<ComponentType<LandingDesignProps>>;
   /** Async server shell for the (content) route group. */
   publicShell: () => Promise<ComponentType<PublicDesignProps>>;
+  /** Client-safe article layout ref for the (content) composition layer. */
+  articleLayout?: () => Promise<{ GbfxsArticleLayout?: unknown; DefaultArticleLayout?: unknown; [key: string]: unknown }>;
 }

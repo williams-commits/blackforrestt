@@ -287,6 +287,9 @@ export async function deploy({ positional, flags }, { ROOT, fail }) {
   const siteFile = join(sitesDir, `${key}.caddy`);
 
   // Write ONLY this domain's site file; every other site file is untouched.
+  // Capture pre-write state for validation-failure rollback.
+  const siteExisted = existsSync(siteFile);
+  const siteFileBackup = siteExisted ? readFileSync(siteFile, "utf8") : null;
   mkdirSync(sitesDir, { recursive: true });
   const siteBlock = renderDomainSite(domain, envFile);
   if (flags["dry-run"]) {
@@ -336,6 +339,11 @@ export async function deploy({ positional, flags }, { ROOT, fail }) {
     } else if ((composeCheck.status ?? 1) !== 0) {
       console.error("✗ Docker compose config validation FAILED:");
       if (composeCheck.stderr) console.error(composeCheck.stderr.split("\n").slice(-5).join("\n"));
+      // Symmetric rollback with the Caddy-validation path
+      if (!siteExisted) rmSync(siteFile, { force: true });
+      else writeFileSync(siteFile, siteFileBackup);
+      renderCaddyfile({ envFile, sitesDir, snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"), outPath: caddyfilePath, email: flags.email ?? "deploy@localhost" });
+      console.error("  Deployment NOT committed — site file rolled back, Caddyfile restored.");
       return 2;
     } else {
       console.log("✓ Docker compose config validated");

@@ -11,7 +11,7 @@
  * Generated files are READ-ONLY artifacts: never edit by hand. CI verifies
  * freshness (tests/registry-freshness) and FAILS on drift.
  */
-import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -91,9 +91,34 @@ for (const dir of designDirs) {
 }
 designLines.push("};");
 
+// ── client-safe composition map ─────────────────────────────────────────────
+// Maps design keys → article layout module dynamic imports. CLIENT-SAFE:
+// only references article layout files, NOT the landing/public shell
+// components (which may transitively import server-only modules).
+const PLATFORM_GEN = join(ROOT, "src", "platform", ".generated");
+const compLines = [HEADER("src/designs/<key>/public/content/ (article layout files)", REGEN)];
+compLines.push("// Client-safe: only article layout components — no landing/shell refs.");
+compLines.push("// The composition dispatcher (src/platform/composition.tsx) uses lazy()");
+compLines.push("// wrappers from these imports; Suspense handles the async boundary.");
+compLines.push("");
+compLines.push("export const ARTICLE_MODULE_IMPORTS: Record<string, () => Promise<Record<string, unknown>>> = {");
+for (const dir of designDirs) {
+  const articlePath = join(DESIGNS_DIR, dir, "public", "content");
+  if (existsSync(articlePath)) {
+    // Design with custom article layout — use its path
+    compLines.push(`  ${dir}: () => import("@/designs/${dir}/public/content/GbfxsArticleLayout"),`);
+  } else {
+    // Design using the default article layout from shared components
+    compLines.push(`  ${dir}: () => import("@/components/landing/ArticleLayout"),`);
+  }
+}
+compLines.push("};");
+
 mkdirSync(join(DOMAINS_DIR, ".generated"), { recursive: true });
 mkdirSync(join(DESIGNS_DIR, ".generated"), { recursive: true });
+mkdirSync(PLATFORM_GEN, { recursive: true });
 writeFileSync(join(DOMAINS_DIR, ".generated", "domains.ts"), domainsLines.join("\n") + "\n");
 writeFileSync(join(DOMAINS_DIR, ".generated", "content.ts"), contentLines.join("\n") + "\n");
 writeFileSync(join(DESIGNS_DIR, ".generated", "designs.ts"), designLines.join("\n") + "\n");
+writeFileSync(join(PLATFORM_GEN, "composition-map.ts"), compLines.join("\n") + "\n");
 console.log(`✓ Generated registries: ${domainKeys.length} domain(s) [${domainKeys.join(", ")}], ${designDirs.length} design(s) [${designDirs.join(", ")}]`);

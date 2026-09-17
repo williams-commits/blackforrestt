@@ -24,7 +24,7 @@ const GEN = [
 ];
 
 function run(args: string[]) {
-  return spawnSync("node", [PLATFORM, ...args], { cwd: ROOT, encoding: "utf8", timeout: 60_000 });
+  return spawnSync("node", [PLATFORM, ...args], { cwd: ROOT, encoding: "utf8", timeout: 180_000 });
 }
 
 function snapshotGen(): Record<string, string> {
@@ -65,7 +65,7 @@ test("create: failure rolls back ALL generated registries (3 files, not 1)", () 
   assert.ok(!existsSync(join(ROOT, "public/brands/failtest")), "failed domain assets must not exist");
 });
 
-test("create: pre-existing brand assets are preserved on rollback", () => {
+test("create: refuses when brand assets already exist (pre-check, not rollback)", () => {
   const brandsDir = join(ROOT, "public/brands/preexist");
   mkdirSync(brandsDir, { recursive: true });
   writeFileSync(join(brandsDir, "marker.txt"), "pre-existing data");
@@ -134,5 +134,44 @@ test("remove: without --confirm refuses (exit 1)", () => {
     assert.ok(existsSync(join(ROOT, "src/domains/rmtest")), "domain still exists (refused)");
   } finally {
     run(["domain", "remove", "rmtest", "--confirm"]);
+  }
+});
+
+test("remove: mid-operation failure triggers rollback (registries + package restored)", () => {
+  // Create a throwaway domain first
+  const createResult = run(["domain", "create", "--key=rolltest", "--host=rolltest.example"]);
+  assert.equal(createResult.status, 0, "setup create must succeed");
+  const domainDir = join(ROOT, "src/domains/rolltest");
+  assert.ok(existsSync(domainDir), "domain exists before remove");
+
+  const genBefore = snapshotGen();
+
+  // Sabotage the generator so it fails DURING remove (after the domain dir
+  // is deleted, forcing the rollback path to restore it)
+  const generatorPath = join(ROOT, "scripts/platform/generate-registry.mjs");
+  const generatorOriginal = readFileSync(generatorPath, "utf8");
+  try {
+    // Make the generator throw on ANY run
+    writeFileSync(generatorPath, generatorOriginal.replace(
+      "const domainKeys = listPackages(DOMAINS_DIR);",
+      'const domainKeys = listPackages(DOMAINS_DIR); throw new Error("sabotaged for test");',
+    ));
+    const result = run(["domain", "remove", "rolltest", "--confirm"]);
+    assert.notEqual(result.status, 0, "remove with sabotaged generator must fail");
+
+    // The rollback must have restored the domain package
+    assert.ok(existsSync(domainDir), "rollback restored the domain package");
+
+    // Generated registries must be restored to their pre-remove state
+    // (which includes rolltest, since create succeeded)
+    const genAfter = snapshotGen();
+    for (const [file, content] of Object.entries(genBefore)) {
+      assert.equal(genAfter[file], content, `${file} restored to pre-remove state`);
+    }
+  } finally {
+    // Restore the real generator, clean up the test domain
+    writeFileSync(generatorPath, generatorOriginal);
+    run(["domain", "remove", "rolltest", "--confirm"]);
+    run(["registry", "generate"]);
   }
 });

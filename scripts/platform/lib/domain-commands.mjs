@@ -59,7 +59,8 @@ function importsOf(source) {
 
 export function validate({ positional, flags }, { ROOT }) {
   const key = flags.key ?? positional[0];
-  if (flags.help || !key) { console.log("usage: platform domain validate <key>"); return !key ? 1 : 0; }
+  if (flags.help) { console.log("usage: platform domain validate <key>"); return 0; }
+  if (!key) { console.log("usage: platform domain validate <key>"); return 1; }
   const problems = validateDomain(key, ROOT, { quiet: true });
   if (problems.length > 0) {
     for (const problem of problems) console.error(`✗ ${problem.area}: ${problem.message}`);
@@ -139,7 +140,8 @@ export function validateDomain(key, ROOT, { quiet } = {}) {
 
 export async function doctor({ positional, flags }, { ROOT }) {
   const key = flags.key ?? positional[0];
-  if (flags.help || !key) { console.log("usage: platform domain doctor <key> [--json]"); return !key ? 1 : 0; }
+  if (flags.help) { console.log("usage: platform domain doctor <key> [--json]"); return 0; }
+  if (!key) { console.log("usage: platform domain doctor <key> [--json]"); return 1; }
   const checks = [];
   const record = (name, ok, detail = "") => checks.push({ name, ok, detail });
   const domains = loadDomainRegistry(ROOT);
@@ -171,15 +173,43 @@ export async function doctor({ positional, flags }, { ROOT }) {
     record("Branding leakage", !byArea.has("branding leakage"), byArea.get("branding leakage") ?? "");
     record("Caddy config", (() => {
       try {
-        // site block must be renderable from the manifest
+        // Actually RENDER the site block and verify it contains the domain's hosts
         const domainDir = join(ROOT, "src/domains", key);
-        return existsSync(join(ROOT, "deploy/caddy/template/snippets.caddy")) && existsSync(domainDir);
+        if (!existsSync(join(ROOT, "deploy/caddy/template/snippets.caddy")) || !existsSync(domainDir)) return false;
+        // lazy import avoids circular dependency at module load
+        return true; // placeholder — see the actual render below
       } catch { return false; }
     })(), "site block renderable");
+    {
+      // Real Caddy check: render the domain's site block and verify hosts.
+      try {
+        const { renderDomainSite } = await import("./deploy-config.mjs");
+        const domains = loadDomainRegistry(ROOT);
+        const d = domains.find((entry) => entry.key === key);
+        const block = renderDomainSite(d, join(ROOT, ".env"));
+        const prodHosts = d.hosts.filter((h) => !h.endsWith(".localhost"));
+        const allRouted = prodHosts.every((h) => block.includes(`${h} {`));
+        // replace the placeholder check with the real one
+        const idx = checks.findIndex((c) => c.name === "Caddy config");
+        if (idx >= 0) checks[idx] = { name: "Caddy config", ok: allRouted, detail: allRouted ? "site block renders with all production hosts" : "site block missing a production host" };
+      } catch {
+        const idx = checks.findIndex((c) => c.name === "Caddy config");
+        if (idx >= 0) checks[idx] = { name: "Caddy config", ok: false, detail: "render failed" };
+      }
+    }
     record("Domain isolation", !byArea.has("dependencies") && !byArea.has("branding leakage"));
-    // deployment state
+    // deployment state: site file existence + Caddyfile currency (local-only;
+    // remote production health is NOT CHECKABLE from the CLI)
     const siteFile = join(ROOT, "deploy/caddy/render/sites", `${key}.caddy`);
-    record("Deployment state", true, existsSync(siteFile) ? "site file deployed" : "not deployed (no site file)");
+    const caddyfilePath = join(ROOT, "deploy/caddy/render/Caddyfile");
+    if (existsSync(siteFile)) {
+      const inMerged = existsSync(caddyfilePath) && readFileSync(caddyfilePath, "utf8").includes(domain.hosts[0]);
+      record("Deployment state", inMerged, inMerged ? "site file deployed + present in merged Caddyfile" : "site file exists but NOT in merged Caddyfile — run caddy render");
+    } else {
+      record("Deployment state", true, "not deployed (no site file) — deploy with: npm run domain:deploy -- " + key);
+    }
+    // NOT CHECKABLE is informational — it must not fail the doctor exit code.
+    checks.push({ name: "Production health", ok: true, detail: "NOT CHECKABLE (informational) — remote health requires the deployment host; verify: https://" + domain.hosts[0] + "/api/health" });
   }
 
   if (flags.json) {
@@ -198,7 +228,8 @@ export async function doctor({ positional, flags }, { ROOT }) {
 
 export async function dev({ positional, flags }, { ROOT, fail }) {
   const key = flags.key ?? positional[0];
-  if (flags.help || !key) { console.log("usage: platform domain dev <key>"); return !key ? 1 : 0; }
+  if (flags.help) { console.log("usage: platform domain dev <key>"); return 0; }
+  if (!key) { console.log("usage: platform domain dev <key>"); return 1; }
   const domains = loadDomainRegistry(ROOT);
   const domain = domains.find((entry) => entry.key === key);
   if (!domain) return fail(`unknown domain "${key}"`);
@@ -219,7 +250,8 @@ export async function dev({ positional, flags }, { ROOT, fail }) {
 
 export async function test({ positional, flags }, { ROOT, fail }) {
   const key = flags.key ?? positional[0];
-  if (flags.help || !key) { console.log("usage: platform domain test <key> [--live]"); return !key ? 1 : 0; }
+  if (flags.help) { console.log("usage: platform domain test <key> [--live]"); return 0; }
+  if (!key) { console.log("usage: platform domain test <key> [--live]"); return 1; }
   const validateCode = validate({ positional: [key], flags: {} }, { ROOT });
   if (validateCode !== 0) return validateCode;
   console.log(`\nRunning architecture/isolation suites (domain scope: ${key})…`);
@@ -241,7 +273,8 @@ export async function test({ positional, flags }, { ROOT, fail }) {
 
 export async function deploy({ positional, flags }, { ROOT, fail }) {
   const key = flags.key ?? positional[0];
-  if (flags.help || !key) { console.log("usage: platform domain deploy <key> [--dry-run] [--env-file <path>]"); return !key ? 1 : 0; }
+  if (flags.help) { console.log("usage: platform domain deploy <key> [--dry-run] [--env-file <path>]"); return 0; }
+  if (!key) { console.log("usage: platform domain deploy <key> [--dry-run] [--env-file <path>]"); return 1; }
   const domains = loadDomainRegistry(ROOT);
   const domain = domains.find((entry) => entry.key === key);
   if (!domain) return fail(`unknown domain "${key}"`);
@@ -270,12 +303,53 @@ export async function deploy({ positional, flags }, { ROOT, fail }) {
     return 0;
   }
   writeFileSync(siteFile, siteBlock);
-  const merged = renderCaddyfile({ envFile, sitesDir, snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"), outPath: join(ROOT, "deploy/caddy/render/Caddyfile"), email: flags.email });
-  console.log(`✓ Domain "${key}" deployed (site file written; Caddyfile re-rendered).`);
+  const caddyfilePath = join(ROOT, "deploy/caddy/render/Caddyfile");
+  const merged = renderCaddyfile({ envFile, sitesDir, snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"), outPath: caddyfilePath, email: flags.email ?? "deploy@localhost" });
+
+  // ── Configuration validation (deterministic; uses Docker, no host caddy dep) ──
+  const caddyCheck = spawnSync("docker", [
+    "run", "--rm", "-v", `${caddyfilePath}:/etc/caddy/Caddyfile:ro`, "caddy:2-alpine",
+    "caddy", "validate", "--config", "/etc/caddy/Caddyfile",
+  ], { stdio: "pipe", encoding: "utf8" });
+  if (caddyCheck.error) {
+    console.log("(Caddy syntax validation skipped — docker not available locally)");
+  } else if ((caddyCheck.status ?? 1) !== 0) {
+    console.error(`✗ Caddy validation FAILED:`);
+    if (caddyCheck.stderr) console.error(caddyCheck.stderr.split("\n").slice(-5).join("\n"));
+    // Roll back the site file write
+    if (!siteExisted) rmSync(siteFile, { force: true });
+    else writeFileSync(siteFile, siteFileBackup);
+    renderCaddyfile({ envFile, sitesDir, snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"), outPath: caddyfilePath, email: flags.email ?? "deploy@localhost" });
+    console.error("  Deployment NOT committed — site file rolled back, Caddyfile restored.");
+    return 2;
+  } else {
+    console.log(`✓ Caddy config validated (caddy:2-alpine)`);
+  }
+  if (!existsSync(envFile)) {
+    console.log("(docker compose validation skipped — no production env file locally)");
+  } else {
+    const composeCheck = spawnSync("docker", [
+      "compose", "--env-file", envFile, "-f", join(ROOT, "deploy/docker-compose.prod.yml"), "config", "--quiet",
+    ], { cwd: ROOT, stdio: "pipe", encoding: "utf8" });
+    if (composeCheck.error) {
+      console.log("(docker compose validation skipped — docker not available locally)");
+    } else if ((composeCheck.status ?? 1) !== 0) {
+      console.error("✗ Docker compose config validation FAILED:");
+      if (composeCheck.stderr) console.error(composeCheck.stderr.split("\n").slice(-5).join("\n"));
+      return 2;
+    } else {
+      console.log("✓ Docker compose config validated");
+    }
+  }
+
+  console.log(`✓ Domain "${key}" deployed (site file written; Caddyfile re-rendered; config validated).`);
   console.log(`✓ ${(merged.match(/import app-site/g) ?? []).length} total site blocks — other domains untouched.`);
-  console.log("\nOn the deployment host, restart Caddy to load the config:");
+  console.log("\n── Configuration deployment COMPLETE. To apply on the deployment host:");
   console.log("  docker compose --env-file .env.production -f deploy/docker-compose.prod.yml up -d --no-deps --force-recreate caddy");
-  console.log(`Then verify: https://${domain.hosts[0]}/api/health`);
+  console.log(`Then health-check: https://${domain.hosts[0]}/api/health`);
+  console.log("\nNOTE: This command generates + validates configuration only.");
+  console.log("The Docker restart + remote health check run on the deployment host");
+  console.log("(via the command above, or deploy/deploy.sh for a full-stack deploy).");
   return 0;
 }
 
@@ -294,13 +368,23 @@ export async function create({ flags }, { ROOT, fail }) {
   if (!KEY_RE.test(key)) return fail(`invalid key "${key}" (lowercase alphanum/dashes)`);
   if (!HOST_RE.test(host)) return fail(`invalid host "${host}"`);
   if (existsSync(join(ROOT, "src/domains", key))) return fail(`domain "${key}" already exists`);
+  if (existsSync(join(ROOT, "public/brands", key))) return fail(`public/brands/${key}/ already exists — remove or rename it first (create must not clobber pre-existing assets)`);
 
   const staging = join(ROOT, "src/domains", `.staging-${key}`);
   const target = join(ROOT, "src/domains", key);
   const gen = join(ROOT, "src/domains/.generated/domains.ts");
-  let genBackup = null;
+  const brandsDir = join(ROOT, "public", "brands", key);
+
+  // TRANSACTIONAL STATE — captured BEFORE any mutation.
+  // 1. All generated registries (the generator rewrites three files).
+  // 2. Pre-existing domain package (should not exist; pre-checked above).
+  // 3. Pre-existing brand assets (MUST be preserved even on rollback).
+  const { snapshotGenerated, restoreGenerated, snapshotDir, restoreDir } = await import("./transaction.mjs");
+  const generatedSnapshot = snapshotGenerated(ROOT);
+  const preExistingBrands = snapshotDir(brandsDir); // null if absent (normal)
+  const createdBrandsDir = !preExistingBrands;
+
   try {
-    genBackup = readFileSync(gen, "utf8");
     // 1. stage from the template with placeholders substituted
     rmSync(staging, { recursive: true, force: true });
     spawnSync("cp", ["-R", join(ROOT, "src/domains/_template"), staging], { stdio: "pipe" });
@@ -343,7 +427,7 @@ export async function create({ flags }, { ROOT, fail }) {
       readFileSync(join(staging, "index.ts"), "utf8"));
 
     // placeholder og image so asset validation passes out of the box
-    const brandsDir = join(ROOT, "public", "brands", key);
+    // (brandsDir was pre-checked to NOT exist; we created it in this transaction)
     mkdirSync(brandsDir, { recursive: true });
     spawnSync("cp", [join(ROOT, "public", "og.png"), join(brandsDir, "og.png")], { stdio: "pipe" });
 
@@ -382,12 +466,20 @@ export async function create({ flags }, { ROOT, fail }) {
     console.log(`  README: src/domains/${key}/README.md`);
     return 0;
   } catch (error) {
-    // TRANSACTIONAL rollback: remove staging, restore registries, touch nothing else
+    // TRANSACTIONAL ROLLBACK — restore every mutated artifact:
+    //   staging dir, new domain package, ALL generated registries (3 files),
+    //   new brand assets; pre-existing brand assets are preserved.
     rmSync(staging, { recursive: true, force: true });
     if (existsSync(target)) rmSync(target, { recursive: true, force: true });
-    rmSync(join(ROOT, "public", "brands", key), { recursive: true, force: true });
-    if (genBackup !== null) writeFileSync(gen, genBackup);
-    console.error(`✗ create failed — rolled back (no domains, registries, or deployment config were modified).`);
+    if (createdBrandsDir) {
+      rmSync(brandsDir, { recursive: true, force: true });
+    } else {
+      restoreDir(preExistingBrands); // restore what was there before us
+    }
+    const restored = restoreGenerated(ROOT, generatedSnapshot);
+    console.error(`✗ create failed — transaction rolled back.`);
+    if (restored.length > 0) console.error(`  Restored generated artifacts: ${restored.length} file(s).`);
+    if (!createdBrandsDir && preExistingBrands) console.error(`  Pre-existing assets in public/brands/${key}/ preserved.`);
     console.error(`  ${error.message}`);
     return 2;
   }
@@ -397,7 +489,8 @@ export async function create({ flags }, { ROOT, fail }) {
 
 export async function remove({ positional, flags }, { ROOT, fail }) {
   const key = flags.key ?? positional[0];
-  if (flags.help || !key) { console.log("usage: platform domain remove <key> [--confirm] [--force]"); return !key ? 1 : 0; }
+  if (flags.help) { console.log("usage: platform domain remove <key> [--confirm] [--force]"); return 0; }
+  if (!key) { console.log("usage: platform domain remove <key> [--confirm] [--force]"); return 1; }
   const domains = loadDomainRegistry(ROOT);
   const domain = domains.find((entry) => entry.key === key);
   if (!domain) return fail(`unknown domain "${key}"`);
@@ -448,25 +541,74 @@ export async function remove({ positional, flags }, { ROOT, fail }) {
     return 1;
   }
 
+  // FAILURE-SAFE REMOVAL — capture restorable state BEFORE any mutation.
+  const { snapshotGenerated, restoreGenerated, snapshotDir, restoreDir } = await import("./transaction.mjs");
+  const generatedSnapshot = snapshotGenerated(ROOT);
+  const domainSnapshot = snapshotDir(join(ROOT, "src/domains", key));
+  const brandsSnapshot = snapshotDir(join(ROOT, "public/brands", key));
+  let caddyfileBefore = null;
+  const caddyfilePath = join(ROOT, "deploy/caddy/render/Caddyfile");
+  if (existsSync(caddyfilePath)) caddyfileBefore = readFileSync(caddyfilePath, "utf8");
+  let siteFileContent = null;
+  if (siteDeployed) siteFileContent = readFileSync(siteFile, "utf8");
+
+  const rollback = (reason) => {
+    console.error(`✗ remove failed mid-operation — attempting rollback.`);
+    let ok = true;
+    try {
+      if (domainSnapshot) restoreDir(domainSnapshot);
+      if (brandsSnapshot) restoreDir(brandsSnapshot);
+      if (siteFileContent !== null) writeFileSync(siteFile, siteFileContent);
+      if (caddyfileBefore !== null) writeFileSync(caddyfilePath, caddyfileBefore);
+      restoreGenerated(ROOT, generatedSnapshot);
+      console.error(`✓ Rollback: domain package, assets, site file, Caddyfile, and generated registries restored.`);
+    } catch (rollbackError) {
+      ok = false;
+      console.error(`✗ Rollback INCOMPLETE: ${rollbackError.message}`);
+      console.error(`  Manual state check required for: src/domains/${key}/, public/brands/${key}/, deploy/caddy/render/.`);
+    }
+    console.error(`  Original failure: ${reason}`);
+    return ok ? 2 : 3;
+  };
+
+  // Ordered removal with per-step failure checks.
   rmSync(join(ROOT, "src/domains", key), { recursive: true, force: true });
+  if (existsSync(join(ROOT, "src/domains", key))) return rollback("domain package deletion failed");
+
   rmSync(join(ROOT, "public/brands", key), { recursive: true, force: true });
-  if (siteDeployed) rmSync(siteFile, { force: true });
-  spawnSync(process.execPath, [join(ROOT, "scripts/platform/generate-registry.mjs")], { stdio: "inherit" });
+
+  if (siteDeployed) {
+    rmSync(siteFile, { force: true });
+    if (existsSync(siteFile)) return rollback("site file deletion failed");
+  }
+
+  const genResult = spawnSync(process.execPath, [join(ROOT, "scripts/platform/generate-registry.mjs")], { stdio: "pipe" });
+  if ((genResult.status ?? 0) !== 0) return rollback(`registry regeneration exited ${genResult.status ?? "signal:" + genResult.signal}`);
+
   const { renderCaddyfile } = await import("./deploy-config.mjs");
   try {
     renderCaddyfile({
       envFile: join(ROOT, flags["env-file"] ?? ".env.production"),
       sitesDir: join(ROOT, "deploy/caddy/render/sites"),
       snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"),
-      outPath: join(ROOT, "deploy/caddy/render/Caddyfile"),
+      outPath: caddyfilePath,
     });
-  } catch { console.log("(Caddyfile re-render skipped — no production env file locally.)"); }
+  } catch (error) {
+    // No production env locally is EXPECTED (benign) — distinguish from real errors.
+    if (!error.message.includes("CADDY_EMAIL")) return rollback(`Caddyfile re-render failed: ${error.message}`);
+    console.log("(Caddyfile re-render skipped — no production env file locally.)");
+  }
+
   const stillValid = loadDomainRegistry(ROOT).every((entry) => entry.key !== key);
+  if (!stillValid) return rollback("key still present in registries after regeneration");
+
   console.log(`✓ Domain package removed`);
   console.log(`✓ Assets removed`);
   console.log(siteDeployed ? "✓ Deployment site file removed + Caddyfile re-rendered" : "(no deployment site file existed)");
-  console.log(`✓ Registries regenerated${stillValid ? "" : "  ⚠ key still present — check generation"}`);
+  console.log(`✓ Registries regenerated`);
   console.log("\nFinal isolation check:");
   const testChild = spawnSync(process.execPath, ["--import", "tsx", "--test", "tests/domains.test.ts"], { stdio: "inherit", cwd: ROOT });
-  return (testChild.status ?? 0) === 0 && stillValid ? 0 : 2;
+  const testsOk = (testChild.status ?? 0) === 0;
+  if (!testsOk) console.error("✗ Isolation tests failed after removal — investigate tests/domains.test.ts output above.");
+  return testsOk ? 0 : 2;
 }

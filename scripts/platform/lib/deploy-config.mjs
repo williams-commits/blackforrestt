@@ -86,17 +86,25 @@ export function renderDomainSite(domain, envFile) {
  *  file + CRM. Per-domain site files are the deployment state — writing one
  *  never touches the others (deploy-preservation guarantee). */
 /** @param {{ envFile?: string, sitesDir?: string, snippetsPath?: string, outPath?: string, email?: string }} args */
-export function renderCaddyfile({ envFile, sitesDir, snippetsPath, outPath, email: emailOverride } = {}) {
+export function renderCaddyfile({ envFile, sitesDir, snippetsPath, outPath, email: emailOverride, domains: domainsOverride } = {}) {
   const email = emailOverride ?? envValue(envFile, "CADDY_EMAIL");
   if (!email) throw new Error("CADDY_EMAIL is not set in the environment file.");
   const crmDomain = envValue(envFile, "CRM_DOMAIN");
   const snippets = readFileSync(snippetsPath, "utf-8");
+  // DEPLOY_DOMAINS scoping: when provided, only the selected domains' site
+  // files join the merged output; others are PRESERVED on disk.
+  const scoped = domainsOverride ?? null;
   const parts = [
     `# GENERATED FILE — DO NOT EDIT. SOURCE: domain manifests + deployed site files\n# REGENERATE: npm run platform -- registry generate && deploy rendering\n`,
     `{\n  email ${email}\n  admin off\n}\n\n`,
     snippets + "\n",
   ];
-  for (const file of readdirSync(sitesDir).filter((f) => f.endsWith(".caddy")).sort()) {
+  let siteFiles = readdirSync(sitesDir).filter((f) => f.endsWith(".caddy")).sort();
+  if (scoped) {
+    const allowed = new Set(scoped.map((d) => `${d.key}.caddy`));
+    siteFiles = siteFiles.filter((f) => allowed.has(f));
+  }
+  for (const file of siteFiles) {
     parts.push(readFileSync(join(sitesDir, file), "utf-8"));
   }
   if (crmDomain) {

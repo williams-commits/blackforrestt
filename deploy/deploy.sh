@@ -7,8 +7,8 @@ COMPOSE=(docker compose --env-file "$ROOT/.env.production" -f "$ROOT/deploy/dock
 command -v docker >/dev/null || { echo "Docker is required." >&2; exit 1; }
 
 cd "$ROOT"
-# Render the Caddy config from the env (one site block per non-empty domain).
-# Compose mounts the rendered file; see render-caddy.sh for why.
+# Render the Caddy config from the domain manifests via the platform CLI.
+# Compose mounts the rendered file; regeneration is manifest-driven.
 #
 # Caddy reads its config ONLY at startup, and compose does not recreate a
 # container for bind-mount CONTENT changes — a re-rendered Caddyfile would

@@ -6,7 +6,7 @@
  * code layer knows about the family: its apex hosts, design selections, and
  * brand identity defaults. The operational env layer (BRAND_DOMAINS,
  * BRAND_OVERRIDES, DOMAIN_N/TRADE_DOMAIN_N) still overrides every value at
- * runtime — see src/domains/registry.ts for the precedence rules.
+ * runtime — see src/platform/registry.ts for the precedence rules.
  *
  * MUST stay a pure data module (type-only imports): it is composed into
  * registry.ts, which next.config.ts and the middleware also load.

@@ -17,7 +17,7 @@ const isProduction = process.env.NODE_ENV === "production";
 // middleware 307s /trade/*, /login, /register on tradeEnabled families),
 // Auth.js session fetches, and the live WebSocket.
 //
-// Computed from the MULTI-BRAND env (BRAND_DOMAINS + DOMAIN_N/TRADE_DOMAIN_N
+// Computed from the domain registry (BRAND_DOMAINS env + manifest trade hosts
 // pairs, falling back to <sub>.<domain>): the custom server (server.ts)
 // loads this config at BOOT with the container's runtime env, so adding a
 // brand via .env.production needs only a restart — no rebuild. The old

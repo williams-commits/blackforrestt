@@ -306,7 +306,9 @@ test("boundaries: app routes reach designs only through the dispatchers", () => 
     if (!rel.endsWith(".tsx") || rel.startsWith("api/")) continue;
     const source = readFileSync(file, "utf8");
     for (const imp of importsOf(source)) {
-      const isDesignImport = imp.raw.includes("@/landing/") && !imp.raw.includes("@/platform/composition");
+      // Direct design imports from app routes are forbidden EXCEPT through
+      // the platform layer (composition lives in @/platform/, not @/designs/).
+      const isDesignImport = imp.raw.includes("@/designs/") && !imp.raw.includes("@/designs/contracts");
       if (!isDesignImport) continue;
       const allowed = dispatchers.has(rel) || exceptions.has(rel) || imp.raw.includes("landing/designs");
       assert.ok(

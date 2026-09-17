@@ -113,8 +113,8 @@ test("tradeHostForDomain follows deployment pairs, then tradeEnabled, then canon
   assert.equal(tradeHostForDomain("unknown.example"), "trade.blackforrestt.com");
 
   // The brand profile carries the per-family deposit wallet config.
-  const agileProfile = brandProfileForDomain("gbfxs.com");
-  assert.equal(agileProfile.depositWallets, BRAND_WALLETS);
+  const gbfxsProfile = brandProfileForDomain("gbfxs.com");
+  assert.equal(gbfxsProfile.depositWallets, BRAND_WALLETS);
   assert.equal(brandProfileForDomain("blackforrestt.com").depositWallets, "");
 
   // tradeEnabled via an EXISTING override entry (entry-authority: an absent
@@ -137,19 +137,19 @@ test("tradeHostForDomain follows deployment pairs, then tradeEnabled, then canon
 test("shared support inbox reports each customer's brand family", async () => {
   const { sendDirectMessage, adminMessageThreads } = await import("../src/server/adminUserManagement.js");
   const suffix = randomUUID().slice(0, 8);
-  const [admin, agileCustomer] = await Promise.all([
+  const [admin, gbfxsCustomer] = await Promise.all([
     prisma.user.create({ data: { email: `mb-admin-${suffix}@example.invalid`, accountNo: `ad${suffix}`, isAdmin: true } }),
     prisma.user.create({ data: { email: `mb-cust-${suffix}@example.invalid`, accountNo: `cu${suffix}`, brandDomain: "gbfxs.com" } }),
   ]);
 
-  await sendDirectMessage({ senderId: agileCustomer.id, recipientId: admin.id, body: "Which brand is this?", notify: false });
+  await sendDirectMessage({ senderId: gbfxsCustomer.id, recipientId: admin.id, body: "Which brand is this?", notify: false });
   const { threads } = await adminMessageThreads();
-  const thread = threads.find((t) => t.userId === agileCustomer.id);
+  const thread = threads.find((t) => t.userId === gbfxsCustomer.id);
   assert.ok(thread, "expected a thread for the gbfxs customer");
   assert.equal(thread.brandDomain, "gbfxs.com");
 
   await prisma.user.delete({ where: { id: admin.id } });
-  await prisma.user.delete({ where: { id: agileCustomer.id } });
+  await prisma.user.delete({ where: { id: gbfxsCustomer.id } });
 });
 
 test.after(async () => {

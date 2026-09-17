@@ -58,8 +58,9 @@ async function main() {
 
   if (group === "registry") {
     if (command === "generate") {
-      spawnSync(process.execPath, [join(ROOT, "scripts/platform/generate-registry.mjs")], { stdio: "inherit" });
-      return process.exitCode ?? 0;
+      const result = spawnSync(process.execPath, [join(ROOT, "scripts/platform/generate-registry.mjs")], { stdio: "inherit" });
+      if (result.error) { console.error(`platform: registry generate failed to spawn: ${result.error.message}`); return 2; }
+      return result.status ?? 2; // 0 on success; non-zero on generator failure/crash
     }
     return fail(`unknown registry command: ${command ?? "(none)"}`);
   }
@@ -70,12 +71,32 @@ async function main() {
       const { renderCaddyfile } = await import("./platform/lib/deploy-config.mjs");
       const envFile = join(ROOT, flags["env-file"] ?? ".env.production");
       const out = flags.out ?? join(ROOT, "deploy/caddy/render/Caddyfile");
+      // DEPLOY_DOMAINS scoping: read from the env file (or --domains flag).
+      let domainsScope = null;
+      const domainsFlag = flags.domains;
+      if (domainsFlag && domainsFlag !== true) {
+        // explicit comma list: resolve keys against the registry (via tsx)
+        const { execFileSync } = await import("node:child_process");
+        const keys = String(domainsFlag).split(",").map((k) => k.trim()).filter(Boolean);
+        const all = JSON.parse(execFileSync(process.execPath,
+          ["--import", "tsx", "--eval",
+           `import { DOMAINS } from ${JSON.stringify(join(ROOT, "src/domains/.generated/domains.ts"))};console.log(JSON.stringify(DOMAINS));`],
+          { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }));
+        const resolved = keys.map((k) => all.find((d) => d.key === k)).filter(Boolean);
+        if (resolved.length === 0) { console.error(`platform: --domains lists no known keys: ${keys.join(", ")}`); return 1; }
+        domainsScope = resolved;
+      } else {
+        // DEPLOY_DOMAINS from the env file (default: all registry domains)
+        const { deploymentDomains } = await import("./platform/lib/deploy-config.mjs");
+        try { domainsScope = deploymentDomains(envFile); } catch { domainsScope = null; }
+      }
       const output = renderCaddyfile({
         envFile,
         sitesDir: join(ROOT, "deploy/caddy/render/sites"),
         snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"),
         outPath: out,
         email: flags.email,
+        domains: domainsScope,
       });
       const sites = (output.match(/import app-site/g) ?? []).length;
       console.log(`✓ Rendered ${out} — ${sites} active site block(s).`);

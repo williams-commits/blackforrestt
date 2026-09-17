@@ -14,7 +14,7 @@ services:
       # blackforest.com). Also add it to BRAND_DOMAINS and APP_ORIGIN in the
       # app environment so the middleware and origin gate recognize it.
       # Optional trade subdomain for the mirror domain (tradeEnabled brands).
-      # Brand 3 slots — activate purely from .env.production (see the env
+      # Domain routing — manifests under src/domains/<key>/domain.config.ts (see the env
       # example's "add a brand" recipe); Caddy skips empty blocks.
       CADDY_EMAIL: ${CADDY_EMAIL:?Set CADDY_EMAIL}
     ports:

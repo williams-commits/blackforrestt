@@ -66,7 +66,7 @@
     "quality:verify:source": "node scripts/quality/verify-source.mjs .",
     "test:admin-balance": "node --import tsx --test tests/adminBalance.integration.test.ts",
     "feature-admin-balance:verify": "node scripts/admin-balance/verify-source.mjs .",
-    "test:domains": "node --import tsx --test tests/domains.test.ts tests/registry-freshness.test.ts",
+    "test:domains": "node --import tsx --test tests/domains.test.ts tests/registry-freshness.test.ts tests/platform-deploy.test.ts && node --import tsx --test tests/domain-cli.test.ts",
     "platform": "node scripts/platform.mjs",
     "registry:generate": "node scripts/platform/generate-registry.mjs",
     "domain:create": "node scripts/platform.mjs domain create",

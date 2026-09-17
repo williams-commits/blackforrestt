@@ -7,7 +7,7 @@ import type { ArticleClosingCta } from "@/content/contracts";
  * Interior-page closing-CTA content channel. The public shell (a server
  * component) resolves the domain's typed ArticleClosingCta ONCE and provides
  * it here; the design-owned article layouts (client components dispatched by
- * src/landing/composition.tsx) consume it without touching the i18n runtime.
+ * src/platform/composition.tsx) consume it without touching the i18n runtime.
  *
  * Kept in the shared landing library (not src/content) because it is a
  * React context — presentation plumbing, not a content model.

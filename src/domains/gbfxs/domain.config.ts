@@ -1,5 +1,5 @@
 /**
- * AGILE domain configuration — Global Forex Services (gbfxs.com).
+ * GBFXS domain configuration — Global Forex Services (gbfxs.com).
  *
  * One domain = one explicit configuration. The brand identity defaults below
  * mirror the production BRAND_OVERRIDES entry so the repository self-describes

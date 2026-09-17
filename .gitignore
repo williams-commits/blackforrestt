@@ -23,7 +23,6 @@ node_modules/
 bugs.md
 .next-prod-test
 # Generated per-deploy by deploy/render-caddy.sh (never edit/track):
-deploy/Caddyfile.rendered
 fixes.md
 -copy.env
 updates.md

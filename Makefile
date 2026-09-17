@@ -179,11 +179,9 @@ caddy-render: ## Re-render deploy/caddy/render/Caddyfile from the domain manifes
 	node $(ROOT)/scripts/platform.mjs caddy render --env-file $(ROOT)/.env.production
 
 caddy-validate: ## Validate the rendered Caddy config with the official image
-	docker run --rm -v $(ROOT)/deploy/Caddyfile.rendered:/etc/caddy/Caddyfile:ro \
+	docker run --rm -v $(ROOT)/deploy/caddy/render/Caddyfile:/etc/caddy/Caddyfile:ro \
 		caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
 
 # Simple nano 
 clear-env-production:
 	: > .env.production
-
-# Git 

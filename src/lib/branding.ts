@@ -5,7 +5,7 @@
  * components read NEXT_PUBLIC_BRAND_NAME (the only value the client needs).
  *
  * Host/domain/trade-host resolution lives in ONE place —
- * src/domains/registry.ts (the domain registry) — which this module and the
+ * src/platform/registry.ts (the domain registry) — which this module and the
  * middleware both consume. This file now only layers the primary env defaults
  * (BRAND_NAME, COMPANY_*, …) on top of the registry's per-domain brand
  * defaults, with BRAND_OVERRIDES[apex] always winning.
@@ -182,7 +182,7 @@ function brandOverridesMap(): Record<string, DomainBrandDefaults> {
 
 /** Resolve the brand profile for one apex domain. Layering (highest wins):
  *  1. BRAND_OVERRIDES[apex] — per-deployment values
- *  2. the registry domain's brand defaults (src/domains/registry.ts)
+ *  2. the registry domain's brand defaults (src/platform/registry.ts)
  *  3. the primary env defaults (BRAND_NAME, COMPANY_*, …) / built-ins
  *  Null/undefined resolves to the primary brand — every user created before
  *  multi-branding, and unknown hosts. */

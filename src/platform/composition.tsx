@@ -43,11 +43,17 @@ function pick(mod: Record<string, unknown>): {
   Layout: ComponentType<ArticleLayoutProps>;
   SectionCmp: ComponentType<SectionProps>;
 } {
-  // Custom designs export named components (GbfxsArticleLayout pattern);
-  // the default re-exports from the shared ArticleLayout.
-  const customLayout = mod.GbfxsArticleLayout as ComponentType<ArticleLayoutProps> | undefined;
-  const customSection = mod.GbfxsSection as ComponentType<SectionProps> | undefined;
-  if (customLayout && customSection) return { Layout: customLayout, SectionCmp: customSection };
+  // Generic detection: find the first exported component matching *ArticleLayout
+  // and *Section (works for GbfxsArticleLayout, ConvertioArticleLayout, etc.).
+  const layoutKey = Object.keys(mod).find((k) => /ArticleLayout/.test(k));
+  const sectionKey = Object.keys(mod).find((k) => /^\w*Section$/.test(k) && k !== "DefaultSection");
+  if (layoutKey && sectionKey) {
+    return {
+      Layout: mod[layoutKey] as ComponentType<ArticleLayoutProps>,
+      SectionCmp: mod[sectionKey] as ComponentType<SectionProps>,
+    };
+  }
+  // Default fallback from the shared ArticleLayout module.
   const defaultLayout = (mod.ArticleLayout ?? mod.DefaultArticleLayout) as ComponentType<ArticleLayoutProps> | undefined;
   const defaultSection = (mod.Section ?? mod.DefaultSection) as ComponentType<SectionProps> | undefined;
   return {

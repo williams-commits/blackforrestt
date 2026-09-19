@@ -1,4 +1,4 @@
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import type { PublicDesignProps } from "@/designs/contracts";
 import { ArticleCtaProvider } from "@/components/landing/ArticleCta";
 import { GbfxsStyles } from "@/designs/gbfxs/GbfxsStyles";
@@ -10,7 +10,13 @@ import { GbfxsFooter } from "@/designs/gbfxs/GbfxsFooter";
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-agile-inter",
+  variable: "--cv-inter",
+});
+
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--cv-mono",
 });
 
 /**
@@ -29,7 +35,7 @@ const inter = Inter({
  */
 export async function GbfxsPublicShell({ children, navigation, footer, articleCta }: PublicDesignProps) {
   return (
-    <div className={`ag-shell ag-scope flex min-h-screen flex-col ${inter.className}`}>
+    <div className={`ag-shell ag-scope flex min-h-screen flex-col ${inter.variable} ${mono.variable}`}>
       <GbfxsStyles />
       <GbfxsNavbar content={navigation} />
       <ArticleCtaProvider value={articleCta}>

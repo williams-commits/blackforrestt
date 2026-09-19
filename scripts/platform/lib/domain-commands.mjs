@@ -314,7 +314,11 @@ export async function deploy({ positional, flags }, { ROOT, fail }) {
     "run", "--rm", "-v", `${caddyfilePath}:/etc/caddy/Caddyfile:ro`, "caddy:2-alpine",
     "caddy", "validate", "--config", "/etc/caddy/Caddyfile",
   ], { stdio: "pipe", encoding: "utf8" });
-  if (caddyCheck.error) {
+  const dockerUnavailable = caddyCheck.error
+    || (caddyCheck.stderr ?? "").includes("docker daemon")
+    || (caddyCheck.stderr ?? "").includes("docker.sock")
+    || (caddyCheck.stderr ?? "").includes("Is the docker daemon running");
+  if (dockerUnavailable) {
     console.log("(Caddy syntax validation skipped — docker not available locally)");
   } else if ((caddyCheck.status ?? 1) !== 0) {
     console.error(`✗ Caddy validation FAILED:`);
@@ -452,7 +456,11 @@ export async function create({ flags }, { ROOT, fail }) {
     const staged = domains.find((entry) => entry.key === key);
     if (!staged) throw new Error("new domain not loadable from the generated registry");
     const profile = renderDomainSite(staged, join(ROOT, ".env.production"));
-    if (!profile.includes(host)) throw new Error("deployment profile did not include the host");
+    // .localhost hosts are dev-only and excluded from production Caddy blocks
+    // (by design in renderDomainSite) — skip the profile check for them.
+    if (!host.endsWith(".localhost") && !profile.includes(host)) {
+      throw new Error("deployment profile did not include the host");
+    }
     const problems = validateDomain(key, ROOT);
     if (problems.length > 0) throw new Error(`validation failed:\n${problems.map((p) => `  ✗ ${p.area}: ${p.message}`).join("\n")}`);
 

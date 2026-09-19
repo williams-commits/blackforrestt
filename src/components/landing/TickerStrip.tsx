@@ -103,7 +103,7 @@ function TickerStripStyles() {
         align-items: center;
         gap: 0.55rem;
         padding-inline: 1.4rem;
-        font-family: var(--font-agile-inter), Inter, sans-serif;
+        font-family: var(--cv-inter), -apple-system, system-ui, "Segoe UI", sans-serif;
         font-size: 13px;
         font-variant-numeric: tabular-nums;
         color: #f1f3ef;

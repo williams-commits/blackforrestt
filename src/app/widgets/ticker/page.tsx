@@ -6,7 +6,7 @@ import { getLandingInstruments } from "@/lib/landingData";
 
 // The widget strip is a standalone surface — its font must not depend on a
 // brand shell mounting the variable first.
-const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-agile-inter" });
+const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--cv-inter" });
 
 export const dynamic = "force-dynamic";
 

@@ -5,11 +5,13 @@
 
 
 import type { DesignManifest } from "../../designs/contracts";
+import { design as convertioDesign } from "../convertio/design";
 import { design as defaultDesign } from "../default/design";
 import { design as gbfxsDesign } from "../gbfxs/design";
 
 /** Every registered design manifest. */
 export const DESIGN_MANIFESTS: Record<string, DesignManifest> = {
+  [convertioDesign.key]: convertioDesign,
   [defaultDesign.key]: defaultDesign,
   [gbfxsDesign.key]: gbfxsDesign,
 };

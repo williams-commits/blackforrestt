@@ -106,7 +106,18 @@ for (const dir of designDirs) {
   const articlePath = join(DESIGNS_DIR, dir, "public", "content");
   if (existsSync(articlePath)) {
     // Design with custom article layout — use its path
-    compLines.push(`  ${dir}: () => import("@/designs/${dir}/public/content/GbfxsArticleLayout"),`);
+    const articleDir = join(DESIGNS_DIR, dir, "public", "content");
+    if (existsSync(articleDir)) {
+      const files = readdirSync(articleDir).filter((f) => f.endsWith(".tsx")).sort();
+      if (files.length > 0) {
+        const fileName = files[0].replace(/\.tsx$/, "");
+        compLines.push(`  ${dir}: () => import("@/designs/${dir}/public/content/${fileName}"),`);
+      } else {
+        compLines.push(`  ${dir}: () => import("@/components/landing/ArticleLayout"),`);
+      }
+    } else {
+      compLines.push(`  ${dir}: () => import("@/components/landing/ArticleLayout"),`);
+    }
   } else {
     // Design using the default article layout from shared components
     compLines.push(`  ${dir}: () => import("@/components/landing/ArticleLayout"),`);

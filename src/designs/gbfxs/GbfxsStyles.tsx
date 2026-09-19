@@ -33,7 +33,7 @@ export function GbfxsStyles() {
         --ag-negative: #f6465d;
         background: var(--ag-bg);
         color: var(--ag-text);
-        font-family: var(--font-agile-inter), Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-family: var(--cv-inter), -apple-system, system-ui, "Segoe UI", sans-serif;
       }
       .ag-container { margin-inline: auto; width: 100%; max-width: 1280px; padding-inline: 1.25rem; }
       @media (min-width: 1024px) { .ag-container { padding-inline: 2.5rem; } }
@@ -162,6 +162,7 @@ export function GbfxsStyles() {
         leak light-theme values onto the dark canvas.
       */
       .ag-scope {
+        --font-mono: var(--cv-mono), "SF Mono", monospace;
         --color-canvas: #0d0d0f;
         --color-panel: #151517;
         --color-panel-2: #1b1b1e;
@@ -180,9 +181,9 @@ export function GbfxsStyles() {
         --shadow-card: 0 18px 44px rgba(0, 0, 0, 0.55);
         /* Agile's typographic voice: geometric sans everywhere — the serif
            editorial voice belongs to the primary brand. */
-        --font-sans: var(--font-agile-inter), Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
-        --font-serif: var(--font-agile-inter), Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
-        font-family: var(--font-agile-inter), Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
+        --font-sans: var(--cv-inter), -apple-system, system-ui, "Segoe UI", sans-serif;
+        --font-serif: var(--cv-inter), -apple-system, system-ui, "Segoe UI", sans-serif;
+        font-family: var(--cv-inter), -apple-system, system-ui, "Segoe UI", sans-serif;
       }
       /* Direct scoped utility rules — the guaranteed palette layer. */
       .ag-scope .bg-canvas { background-color: #0d0d0f; }
@@ -230,7 +231,7 @@ export function GbfxsStyles() {
       /* Long-form prose in the Agile voice: Inter at a comfortable measure,
          softer body tone than headings for dark-canvas readability. */
       .ag-scope .prose-content {
-        font-family: var(--font-agile-inter), Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-family: var(--cv-inter), -apple-system, system-ui, "Segoe UI", sans-serif;
         font-size: 15.5px;
         line-height: 1.75;
         color: #c3c9c4;

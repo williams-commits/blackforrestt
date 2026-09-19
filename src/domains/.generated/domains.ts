@@ -7,9 +7,11 @@
 import type { DomainDefinition } from "../../platform/registry-types";
 import { BLACKFOREST_DOMAIN } from "../blackforrest/domain.config";
 import { GBFXS_DOMAIN } from "../gbfxs/domain.config";
+import { VISTEST_DOMAIN } from "../vistest/domain.config";
 
 /** Every registered domain manifest, priority order (first = default). */
 export const DOMAINS: readonly DomainDefinition[] = [
   BLACKFOREST_DOMAIN,
   GBFXS_DOMAIN,
+  VISTEST_DOMAIN,
 ];

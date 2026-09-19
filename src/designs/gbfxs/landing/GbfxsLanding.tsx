@@ -1,4 +1,4 @@
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { getLandingInstruments } from "@/lib/landingData";
 import { GbfxsStyles } from "../GbfxsStyles";
 import { GbfxsNavbar } from "../GbfxsNavbar";
@@ -42,7 +42,13 @@ import { TestimonialsSection } from "./sections/Testimonials";
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-agile-inter",
+  variable: "--cv-inter",
+});
+
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--cv-mono",
 });
 
 import type { LandingDesignProps } from "@/designs/contracts";
@@ -69,7 +75,7 @@ export async function GbfxsLanding({ content }: LandingDesignProps) {
   }
 
   return (
-    <div className={`ag-shell ag-scope ${inter.className}`}>
+    <div className={`ag-shell ag-scope ${inter.variable} ${mono.variable}`}>
       <GbfxsStyles />
       <GbfxsNavbar content={navigation} />
       <main id="main-content" tabIndex={-1}>

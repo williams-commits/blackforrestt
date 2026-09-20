@@ -53,14 +53,31 @@ export interface DomainDefinition {
   /** Stable key ("blackforrest", "gbfxs"). Used in logs, tests, and content
    *  packages — never for routing (hosts do that). */
   key: string;
-  /** Apex hosts this family answers on. */
+  /** Apex hosts this family answers on. FIRST-CLASS hosts — first entry is
+   *  the canonical apex. Entries ending in ".localhost" are dev mirrors
+   *  (local development only; excluded from production routing/deploys). */
   hosts: string[];
+  /** Optional mirror/alias apexes that serve the SAME family (e.g. a ccTLD
+   *  variant). Distinct from `hosts`: aliases are additional names, never
+   *  the canonical identity, and are excluded from key/brand/SEO checks. */
+  aliases?: string[];
   /** Landing design key → design registry ("default" | "gbfxs" | …). */
   landingDesign: string;
   /** Public (interior) page design key → design registry. */
   publicDesign: string;
   /** True when this family runs its own trade subdomain (DNS + TLS exist). */
   tradeEnabled: boolean;
+  /** Explicit package refs (validated by `platform domain validate`) — the
+   *  manifest self-describes where its content lives, inside
+   *  src/domains/<key>/. Paths are relative to the package root, no
+   *  extension. Selectors only; the referenced files are implementations. */
+  content?: {
+    landing: string;
+    public: string;
+  };
+  navigation?: string;
+  seo?: string;
+  assets?: string;
   /** Brand identity defaults; BRAND_OVERRIDES[host] entries override these. */
   brand: DomainBrandDefaults;
   /** Platform features this family exposes on its marketing surface. */

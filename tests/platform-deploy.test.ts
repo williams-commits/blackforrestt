@@ -8,14 +8,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SITE_MARKER = /([a-z0-9.-]+)\s*\{\s*\n\s*import app-site/g;
 
-function loadDomains() {
+function loadDomains(): TestDomain[] {
   const script = `import { DOMAINS } from ${JSON.stringify(join(ROOT, "src/domains/.generated/domains.ts"))};console.log(JSON.stringify(DOMAINS));`;
   return JSON.parse(execFileSync(process.execPath, ["--import", "tsx", "--eval", script], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }));
 }
@@ -24,7 +24,9 @@ async function lib(): Promise<typeof import("../scripts/platform/lib/deploy-conf
   return import(join(ROOT, "scripts/platform/lib/deploy-config.mjs"));
 }
 
-function setupTempSites(dir: string, domains: Array<{ key: string }>, { renderDomainSite }: { renderDomainSite: (d: any, e: string) => string }, envFile: string) {
+interface TestDomain { key: string; hosts: string[]; tradeEnabled: boolean }
+
+function setupTempSites(dir: string, domains: Array<{ key: string }>, { renderDomainSite }: { renderDomainSite: (d: TestDomain, e: string) => string }, envFile: string) {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   for (const domain of domains) {
@@ -100,7 +102,7 @@ test("per-domain site files are the ONLY deployment state (no other domain conte
   const { renderDomainSite } = await lib();
   const domains: Array<{ key: string; hosts: string[] }> = loadDomains();
   for (const domain of domains) {
-    const block = renderDomainSite(domain as any, join(ROOT, ".env"));
+    const block = renderDomainSite(domain, join(ROOT, ".env"));
     for (const other of domains.filter((d: { key: string }) => d.key !== domain.key)) {
       for (const host of other.hosts) {
         assert.ok(!block.includes(`${host} {`), `${domain.key} site file must not route ${other.key}'s ${host}`);
@@ -118,10 +120,10 @@ test("no numbered domain slots anywhere in source or CI", () => {
       // pattern when explaining what NOT to do
       "src", "scripts", "deploy", "next.config.ts", "Makefile", ".github",
     ], { cwd: ROOT, encoding: "utf8" });
-  } catch (error: any) {
+  } catch (error) {
     // grep exits 1 when nothing matches — the GOOD case here.
-    if (error?.status !== 1) throw error;
-    result = error?.stdout?.toString() ?? "";
+    if ((error as { status?: number }).status !== 1) throw error;
+    result = String((error as { stdout?: string }).stdout ?? "");
   }
   assert.equal(result.trim(), "", "numbered domain slots must not exist:\n" + result);
 });

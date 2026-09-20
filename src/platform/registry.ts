@@ -56,7 +56,10 @@ export function brandDomainList(env: EnvLike = process.env): string[] {
     .map((entry) => entry.trim())
     .filter((entry) => entry.includes(".") && !entry.includes("://"));
   if (list.length > 0) return [...new Set(list)];
-  const registryHosts = DOMAINS.flatMap((domain) => domain.hosts.map((host) => host.toLowerCase()));
+  const registryHosts = DOMAINS.flatMap((domain) => [
+    ...domain.hosts,
+    ...(domain.aliases ?? []),
+  ].map((host) => host.toLowerCase()));
   return registryHosts.length > 0 ? registryHosts : ["blackforrestt.com"];
 }
 
@@ -72,12 +75,13 @@ export function hostWithinApex(host: string, apex: string): boolean {
 }
 
 /** The registry domain that owns a host (apex or any subdomain), or null for
- *  hosts no entry claims (localhost, IP literals, env-declared mirrors). */
+ *  hosts no entry claims (localhost, IP literals, env-declared mirrors).
+ *  Aliases claim hosts exactly like first-class apexes do. */
 export function domainForHost(host: string | null | undefined): DomainDefinition | null {
   const normalized = normalizeHost(host);
   if (!normalized) return null;
   for (const domain of DOMAINS) {
-    for (const apex of domain.hosts) {
+    for (const apex of [...domain.hosts, ...(domain.aliases ?? [])]) {
       if (hostWithinApex(normalized, apex.toLowerCase())) return domain;
     }
   }
@@ -119,7 +123,10 @@ export function resolveHostContext(host: string | null | undefined, env: EnvLike
   const envMatch = domains.find((apex) => hostWithinApex(normalized, apex));
   const claimed = domainForHost(normalized);
 
-  const apex = envMatch ?? claimed?.hosts.find((host) => hostWithinApex(normalized, host.toLowerCase())) ?? domains[0]!;
+  const claimedApex = claimed
+    ? [...claimed.hosts, ...(claimed.aliases ?? [])].find((host) => hostWithinApex(normalized, host.toLowerCase()))
+    : undefined;
+  const apex = envMatch ?? claimedApex ?? domains[0]!;
   const domain = claimed ?? defaultDomain();
   const override = brandOverrides(env)[apex] ?? {};
 

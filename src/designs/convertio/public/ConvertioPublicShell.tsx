@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 import type { PublicDesignProps } from "@/designs/contracts";
 import { ConvertioStyles, convertioFonts } from "../ConvertioStyles";

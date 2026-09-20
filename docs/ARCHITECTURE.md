@@ -10,7 +10,7 @@ enforced by tests (`npm run test:domains`, `tests/platform-deploy.test.ts`,
         ┌────────────────────────┼────────────────────────┐
         │                        │                        │
    PLATFORM CORE            CONTENT SYSTEM           DESIGN SYSTEM
-   src/server/**            src/content/contracts/   src/designs/<key>/
+   src/server/**            src/content/contracts.ts src/designs/<key>/
    src/app/api/**           (typed, WHAT)            (landing/ + public/, HOW)
    prisma/ (ONE db)              │                        │
    src/auth.ts                   └──────────┬─────────────┘
@@ -29,7 +29,7 @@ enforced by tests (`npm run test:domains`, `tests/platform-deploy.test.ts`,
 | Concern | Location | Rule |
 | --- | --- | --- |
 | **DOMAIN CONFIG** | `src/domains/<key>/domain.config.ts` | Selects content, landing design, public design, navigation, SEO, assets. NEVER contains implementations. |
-| **CONTENT** | `src/domains/<key>/content*/` + `src/content/contracts/` | WHAT is shown. Typed contracts; no JSX in the content layer. |
+| **CONTENT** | `src/domains/<key>/content*/` + `src/content/contracts.ts` | WHAT is shown. Typed contracts; no JSX in the content layer. |
 | **DESIGN** | `src/designs/<key>/{landing,public}/` | HOW it is shown. Receives content via typed props; NEVER imports domain implementations. |
 | **PUBLIC DESIGN** | `src/designs/<key>/public/` | Independent from landing — a domain may mix `landingDesign: "gbfxs", publicDesign: "default"`. |
 | **RENDERING** | `src/platform/` | The only runtime glue: `registry.ts` (host→domain), `render/landing.tsx`, `render/public.tsx`, `composition.tsx`. |

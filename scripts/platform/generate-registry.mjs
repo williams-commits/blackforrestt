@@ -10,6 +10,10 @@
  *
  * Generated files are READ-ONLY artifacts: never edit by hand. CI verifies
  * freshness (tests/registry-freshness) and FAILS on drift.
+ *
+ * --check : READ-ONLY freshness check — compare the in-memory output to the
+ * on-disk artifacts WITHOUT writing anything. Exit 0 = fresh, 1 = stale.
+ * Used by `domain doctor` (which must never mutate the tree).
  */
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -125,11 +129,29 @@ for (const dir of designDirs) {
 }
 compLines.push("};");
 
+const outputs = [
+  { path: join(DOMAINS_DIR, ".generated", "domains.ts"), content: domainsLines.join("\n") + "\n" },
+  { path: join(DOMAINS_DIR, ".generated", "content.ts"), content: contentLines.join("\n") + "\n" },
+  { path: join(DESIGNS_DIR, ".generated", "designs.ts"), content: designLines.join("\n") + "\n" },
+  { path: join(PLATFORM_GEN, "composition-map.ts"), content: compLines.join("\n") + "\n" },
+];
+
+if (process.argv.includes("--check")) {
+  let fresh = true;
+  for (const { path, content } of outputs) {
+    if (!existsSync(path)) { console.error(`✗ STALE ${rel(ROOT, path)} — missing (run: ${REGEN})`); fresh = false; continue; }
+    if (readFileSync(path, "utf8") !== content) { console.error(`✗ STALE ${rel(ROOT, path)} — differs from sources (run: ${REGEN})`); fresh = false; }
+  }
+  if (fresh) console.log(`✓ Registries fresh: ${domainKeys.length} domain(s) [${domainKeys.join(", ")}], ${designDirs.length} design(s) — all ${outputs.length} artifacts match sources.`);
+  process.exit(fresh ? 0 : 1);
+}
+
 mkdirSync(join(DOMAINS_DIR, ".generated"), { recursive: true });
 mkdirSync(join(DESIGNS_DIR, ".generated"), { recursive: true });
 mkdirSync(PLATFORM_GEN, { recursive: true });
-writeFileSync(join(DOMAINS_DIR, ".generated", "domains.ts"), domainsLines.join("\n") + "\n");
-writeFileSync(join(DOMAINS_DIR, ".generated", "content.ts"), contentLines.join("\n") + "\n");
-writeFileSync(join(DESIGNS_DIR, ".generated", "designs.ts"), designLines.join("\n") + "\n");
-writeFileSync(join(PLATFORM_GEN, "composition-map.ts"), compLines.join("\n") + "\n");
+for (const { path, content } of outputs) writeFileSync(path, content);
 console.log(`✓ Generated registries: ${domainKeys.length} domain(s) [${domainKeys.join(", ")}], ${designDirs.length} design(s) [${designDirs.join(", ")}]`);
+
+function rel(base, path) {
+  return path.startsWith(base + "/") ? path.slice(base.length + 1) : path;
+}

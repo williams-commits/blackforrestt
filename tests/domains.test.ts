@@ -255,17 +255,32 @@ test("boundaries: the registry chain (registry + domain configs) is dependency-f
   }
 });
 
-test("boundaries: design trees never import each other", () => {
-  const gbfxsFiles = TS_FILES(join(DESIGNS, "gbfxs"));
-  const blackforestFiles = TS_FILES(join(DESIGNS, "default"));
-  for (const file of [...gbfxsFiles, ...blackforestFiles]) {
-    const source = readFileSync(file, "utf8");
-    for (const imp of importsOf(source)) {
-      if (imp.raw.includes("designs/gbfxs") && !file.includes("/gbfxs/")) {
-        assert.fail(`${relative(SRC, file)}: imports the gbfxs design tree`);
-      }
-      if (imp.raw.includes("designs/default") && !file.includes("designs/default")) {
-        assert.fail(`${relative(SRC, file)}: imports the blackforest design tree`);
+/** Every design package (same discovery rule as the registry generator —
+ *  no hardcoded design list; a new design is covered automatically). */
+const DESIGN_DIRS = readdirSync(DESIGNS, { withFileTypes: true })
+  .filter((e) => e.isDirectory() && !e.name.startsWith("_") && !e.name.startsWith("."))
+  .map((e) => e.name);
+
+test("boundaries: design trees never import each other or domain implementations", () => {
+  assert.ok(DESIGN_DIRS.length >= 2, `expected multiple design packages, found ${DESIGN_DIRS.length}`);
+  for (const dir of DESIGN_DIRS) {
+    for (const file of TS_FILES(join(DESIGNS, dir))) {
+      const source = readFileSync(file, "utf8");
+      for (const imp of importsOf(source)) {
+        for (const other of DESIGN_DIRS) {
+          if (other === dir) continue;
+          assert.ok(
+            !imp.raw.includes(`designs/${other}`),
+            `${relative(SRC, file)}: imports the "${other}" design tree`,
+          );
+        }
+        // Shared primitives (@/components, @/lib, @/content/contracts) are
+        // ALLOWED design inputs; domain packages are NOT — content reaches
+        // designs as typed props, never as imports.
+        assert.ok(
+          !imp.raw.includes("domains/") || imp.raw.includes("content/contracts"),
+          `${relative(SRC, file)}: imports a domain package ("${imp.raw}") — designs receive content via typed props`,
+        );
       }
     }
   }
@@ -284,14 +299,16 @@ test("boundaries: shared components never import design trees or domain packages
   }
 });
 
-test("boundaries: the gbfxs design consumes contracts, not i18n catalogs", () => {
-  for (const file of TS_FILES(join(DESIGNS, "gbfxs"))) {
-    const rel = relative(SRC, file);
-    const source = readFileSync(file, "utf8");
-    assert.ok(
-      !source.includes('from "next-intl"') && !source.includes('from "next-intl/server"'),
-      `${rel}: fetches translations — content arrives via typed contracts from src/domains/gbfxs/content.ts`,
-    );
+test("boundaries: designs consume contracts, not i18n catalogs", () => {
+  for (const dir of DESIGN_DIRS) {
+    for (const file of TS_FILES(join(DESIGNS, dir))) {
+      const rel = relative(SRC, file);
+      const source = readFileSync(file, "utf8");
+      assert.ok(
+        !source.includes('from "next-intl"') && !source.includes('from "next-intl/server"'),
+        `${rel}: fetches translations — content arrives via typed contracts (domain content loaders)`,
+      );
+    }
   }
 });
 
@@ -313,7 +330,7 @@ test("boundaries: app routes reach designs only through the dispatchers", () => 
       const allowed = dispatchers.has(rel) || exceptions.has(rel) || imp.raw.includes("landing/designs");
       assert.ok(
         allowed,
-        `src/app/${rel}: imports "${imp.raw}" directly — route through the design registry (src/landing/designs.ts)`,
+        `src/app/${rel}: imports "${imp.raw}" directly — route through the platform render layer (src/platform/render/)`,
       );
     }
   }

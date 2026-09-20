@@ -18,10 +18,16 @@ import type { DomainDefinition } from "@/platform/registry";
  *  intentionally carries only what code should assert: designs + trade host. */
 export const BLACKFOREST_DOMAIN: DomainDefinition = {
   key: "blackforrest",
+  // First-class host: blackforrestt.com (canonical; also the platform default).
   hosts: ["blackforrestt.com"],
   landingDesign: "default",
   publicDesign: "default",
   tradeEnabled: true,
+  // Explicit package refs (validated by `platform domain validate`).
+  content: { landing: "content/landing", public: "content/public" },
+  navigation: "navigation",
+  seo: "seo",
+  assets: "assets",
   brand: {
     // Explicit per C6: key ≠ brand.name ≠ hosts — never inferred.
     name: "Black Forest Digital",

@@ -11,6 +11,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import {
   readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, readdirSync, statSync,
+  cpSync, renameSync, copyFileSync,
 } from "node:fs";
 import { join } from "node:path";
 
@@ -55,13 +56,33 @@ function importsOf(source) {
     .map((m) => ({ raw: m[2], typeOnly: Boolean(m[1]) }));
 }
 
+/** Run a subprocess and THROW on failure. Unchecked spawnSync is a rollback
+ *  hole: a failed child that goes unnoticed lets the transaction continue
+ *  and commit half-built state. Every mutating step must use this (or a
+ *  node:fs op, which throws natively). */
+function runChecked(cmd, args, { cwd, env } = {}) {
+  const result = spawnSync(cmd, args, { stdio: "pipe", encoding: "utf8", cwd, env });
+  if (result.error) throw new Error(`could not run "${cmd}": ${result.error.message}`);
+  if ((result.status ?? 1) !== 0) {
+    const tail = (result.stderr ?? "").split("\n").filter(Boolean).slice(-3).join("\n");
+    throw new Error(`"${cmd} ${args.join(" ")}" exited ${result.status ?? `signal ${result.signal}`}${tail ? `\n  ${tail}` : ""}`);
+  }
+  return result;
+}
+
+/** Portable synchronous sleep (no `sleep` binary — Atomics.wait blocks the
+ *  thread without a subprocess; used only between health-check retries). */
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
 // ── validate ────────────────────────────────────────────────────────────────
 
 export function validate({ positional, flags }, { ROOT }) {
   const key = flags.key ?? positional[0];
   if (flags.help) { console.log("usage: platform domain validate <key>"); return 0; }
   if (!key) { console.log("usage: platform domain validate <key>"); return 1; }
-  const problems = validateDomain(key, ROOT, { quiet: true });
+  const problems = validateDomain(key, ROOT);
   if (problems.length > 0) {
     for (const problem of problems) console.error(`✗ ${problem.area}: ${problem.message}`);
     console.error(`\nDomain "${key}" is INVALID (${problems.length} problem${problems.length === 1 ? "" : "s"}).`);
@@ -71,7 +92,7 @@ export function validate({ positional, flags }, { ROOT }) {
   return 0;
 }
 
-export function validateDomain(key, ROOT, { quiet } = {}) {
+export function validateDomain(key, ROOT) {
   const problems = [];
   const add = (area, message) => problems.push({ area, message });
   const domains = loadDomainRegistry(ROOT);
@@ -86,6 +107,36 @@ export function validateDomain(key, ROOT, { quiet } = {}) {
   if (!Array.isArray(domain.hosts) || domain.hosts.length === 0) add("hosts", "no hosts declared");
   for (const host of domain.hosts) if (!HOST_RE.test(host)) add("hosts", `"${host}" is not a valid hostname`);
   if (domain.hosts.includes(domain.key)) add("hosts", "hosts must not equal the domain key");
+  // first-class vs dev-mirror vs alias (P1-13): the canonical host (first
+  // entry) must be a production host; .localhost entries are dev mirrors and
+  // belong AFTER it; aliases are production mirrors of the same family.
+  const prodHosts = domain.hosts.filter((h) => !h.endsWith(".localhost"));
+  if (prodHosts.length === 0) add("hosts", "no first-class production host — .localhost entries are dev mirrors only");
+  if (domain.hosts[0]?.endsWith(".localhost")) add("hosts", "the canonical host (first entry) must be a production host, not a dev mirror");
+  for (const alias of domain.aliases ?? []) {
+    if (!HOST_RE.test(alias)) add("hosts", `alias "${alias}" is not a valid hostname`);
+    if (alias.endsWith(".localhost")) add("hosts", `alias "${alias}" — dev mirrors belong in hosts[], aliases are production mirrors`);
+    const owner = domains.find((other) => other !== domain && (other.hosts.includes(alias) || (other.aliases ?? []).includes(alias)));
+    if (owner) add("hosts", `alias "${alias}" already claimed by domain "${owner.key}"`);
+  }
+
+  // explicit content/nav/seo/assets refs (P1-5): when the manifest declares
+  // them, the referenced package files must exist — self-describing manifests.
+  const refChecks = [
+    ["content.landing", domain.content?.landing],
+    ["content.public", domain.content?.public],
+    ["navigation", domain.navigation],
+    ["seo", domain.seo],
+    ["assets", domain.assets],
+  ];
+  for (const [field, ref] of refChecks) {
+    if (ref === undefined) continue; // optional: conventional layout still works
+    if (typeof ref !== "string" || ref.includes("..") || ref.startsWith("/")) {
+      add("content", `${field} ref "${ref}" must be a package-relative path (no leading /, no ..)`);
+      continue;
+    }
+    if (!existsSync(join(domainDir, `${ref}.ts`))) add("content", `${field} ref "${ref}" → src/domains/${key}/${ref}.ts does not exist`);
+  }
 
   // designs
   const designs = loadDesignKeys(ROOT);
@@ -154,7 +205,10 @@ export async function doctor({ positional, flags }, { ROOT }) {
     record("Manifest", !byArea.has("manifest"), byArea.get("manifest") ?? "");
     record("Domain key", KEY_RE.test(domain.key), KEY_RE.test(domain.key) ? "" : "invalid key syntax");
     record("Brand name", Boolean(domain.brand?.name) && domain.brand.name !== domain.key, "explicit and distinct from key");
-    record("Hostname", domain.hosts.every((h) => HOST_RE.test(h)), domain.hosts.join(", "));
+    const prodHostList = domain.hosts.filter((h) => !h.endsWith(".localhost"));
+    const devMirrors = domain.hosts.filter((h) => h.endsWith(".localhost"));
+    const hostDetail = [prodHostList.join(", "), devMirrors.length ? `dev mirrors: ${devMirrors.join(", ")}` : "", (domain.aliases ?? []).length ? `aliases: ${(domain.aliases ?? []).join(", ")}` : ""].filter(Boolean).join(" · ");
+    record("Hostname", domain.hosts.every((h) => HOST_RE.test(h)), hostDetail);
     record("Trade host", domain.tradeEnabled ? `${(domain.brand?.tradeHost ?? "trade." + domain.hosts[0])}` : "(not enabled)");
     record("Content", !byArea.has("content"), byArea.get("content") ?? "");
     record("Landing design", !byArea.has("landing design"), domain.landingDesign);
@@ -163,12 +217,17 @@ export async function doctor({ positional, flags }, { ROOT }) {
     record("SEO", existsSync(join(ROOT, "src/domains", key, "seo.ts")));
     record("Assets", !byArea.has("assets"), byArea.get("assets") ?? "");
     record("Registry", !byArea.has("registry"), byArea.get("registry") ?? "");
-    // freshness
-    try {
-      const before = readFileSync(join(ROOT, "src/domains/.generated/domains.ts"), "utf8");
-      execFileSync(process.execPath, [join(ROOT, "scripts/platform/generate-registry.mjs")], { stdio: "pipe" });
-      record("Registry freshness", readFileSync(join(ROOT, "src/domains/.generated/domains.ts"), "utf8") === before);
-    } catch { record("Registry freshness", false, "generator failed"); }
+    // READ-ONLY freshness — byte-exact: the generator's --check mode derives
+    // all four artifacts in memory and diffs them against disk WITHOUT
+    // writing (doctor must never mutate the tree).
+    {
+      const check = spawnSync(process.execPath,
+        [join(ROOT, "scripts/platform/generate-registry.mjs"), "--check"],
+        { encoding: "utf8", cwd: ROOT });
+      const fresh = (check.status ?? 1) === 0;
+      const reason = (check.stdout ?? check.stderr ?? "").trim().split("\n").filter(Boolean).pop() ?? "";
+      record("Registry freshness", fresh, fresh ? "all 4 generated artifacts byte-identical to sources" : (reason || "generated artifacts stale — run: npm run registry:generate"));
+    }
     record("Dependencies", !byArea.has("dependencies"), byArea.get("dependencies") ?? "");
     record("Branding leakage", !byArea.has("branding leakage"), byArea.get("branding leakage") ?? "");
     record("Caddy config", (() => {
@@ -248,7 +307,7 @@ export async function dev({ positional, flags }, { ROOT, fail }) {
 
 // ── test ────────────────────────────────────────────────────────────────────
 
-export async function test({ positional, flags }, { ROOT, fail }) {
+export async function test({ positional, flags }, { ROOT }) {
   const key = flags.key ?? positional[0];
   if (flags.help) { console.log("usage: platform domain test <key> [--live]"); return 0; }
   if (!key) { console.log("usage: platform domain test <key> [--live]"); return 1; }
@@ -260,10 +319,38 @@ export async function test({ positional, flags }, { ROOT, fail }) {
     { stdio: "inherit", cwd: ROOT, env: { ...process.env, DOMAIN_UNDER_TEST: key } });
   if ((child.status ?? 0) !== 0) return 1;
   if (flags.live) {
-    console.log("\n--live: probing dev server (start it first: npm run platform -- domain dev " + key + ")");
-    const health = spawnSync("curl", ["-s", "-o", "/dev/null", "-w", "%{http_code}", "http://localhost:3000/api/health"], { encoding: "utf8" });
-    console.log(health.stdout.trim() === "200" ? "✓ dev server healthy" : "✗ dev server not reachable on :3000");
-    return health.stdout.trim() === "200" ? 0 : 1;
+    // Probe REAL pages on this domain's local dev host (not just /api/health):
+    // the landing page, an interior content page, and the health endpoint.
+    // Start the dev server first: npm run platform -- domain dev <key>
+    const domain = loadDomainRegistry(ROOT).find((entry) => entry.key === key);
+    if (!domain) return 1;
+    const devHosts = domain.hosts.map((host) => host.endsWith(".localhost") ? host : `${host.split(".")[0]}.localhost`);
+    const base = `http://${devHosts[0]}:3000`;
+    console.log(`\n--live: probing real pages on ${base} (start it first: npm run platform -- domain dev ${key})`);
+    const get = (path) => spawnSync("curl", ["-s", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", "10", `${base}${path}`], { encoding: "utf8" });
+    const getBody = (path) => spawnSync("curl", ["-s", "--max-time", "10", `${base}${path}`], { encoding: "utf8" });
+    let ok = true;
+    const healthCode = (get("/api/health").stdout ?? "").trim();
+    console.log(`${healthCode === "200" ? "✓" : "✗"} GET /api/health → ${healthCode || "unreachable"}`);
+    ok &&= healthCode === "200";
+    const landingCode = (get("/").stdout ?? "").trim();
+    console.log(`${landingCode === "200" ? "✓" : "✗"} GET / (landing) → ${landingCode || "unreachable"}`);
+    ok &&= landingCode === "200";
+    const aboutCode = (get("/about").stdout ?? "").trim();
+    const aboutOk = aboutCode === "200" || aboutCode === "207";
+    console.log(`${aboutOk ? "✓" : "✗"} GET /about (public interior) → ${aboutCode || "unreachable"}`);
+    ok &&= aboutOk;
+    if (landingCode === "200") {
+      const body = getBody("/").stdout ?? "";
+      const hasBrand = domain.brand?.name ? body.includes(domain.brand.name) : true;
+      // Informational — a custom landing design may legitimately stylize the
+      // brand name; only a MISSING name on the DEFAULT design is suspicious.
+      console.log(hasBrand || domain.landingDesign !== "default"
+        ? `  (landing serves brand "${domain.brand?.name}"${hasBrand ? "" : " — stylized/not literal (ok for custom designs)"})`
+        : `  ✗ landing HTML does not contain brand "${domain.brand?.name}" — check design selection`);
+    }
+    console.log(ok ? `✓ --live checks pass for "${key}".` : `✗ --live checks FAILED for "${key}".`);
+    return ok ? 0 : 1;
   }
   console.log(`\n✓ Domain "${key}" tests pass.`);
   return 0;
@@ -273,8 +360,8 @@ export async function test({ positional, flags }, { ROOT, fail }) {
 
 export async function deploy({ positional, flags }, { ROOT, fail }) {
   const key = flags.key ?? positional[0];
-  if (flags.help) { console.log("usage: platform domain deploy <key> [--dry-run] [--env-file <path>]"); return 0; }
-  if (!key) { console.log("usage: platform domain deploy <key> [--dry-run] [--env-file <path>]"); return 1; }
+  if (flags.help) { console.log("usage: platform domain deploy <key> [--dry-run] [--apply] [--env-file <path>]"); return 0; }
+  if (!key) { console.log("usage: platform domain deploy <key> [--dry-run] [--apply] [--env-file <path>]"); return 1; }
   const domains = loadDomainRegistry(ROOT);
   const domain = domains.find((entry) => entry.key === key);
   if (!domain) return fail(`unknown domain "${key}"`);
@@ -354,15 +441,57 @@ export async function deploy({ positional, flags }, { ROOT, fail }) {
     }
   }
 
+  const siteCount = (merged.match(/import app-site/g) ?? []).length;
   console.log(`✓ Domain "${key}" deployed (site file written; Caddyfile re-rendered; config validated).`);
-  console.log(`✓ ${(merged.match(/import app-site/g) ?? []).length} total site blocks — other domains untouched.`);
-  console.log("\n── Configuration deployment COMPLETE. To apply on the deployment host:");
-  console.log("  docker compose --env-file .env.production -f deploy/docker-compose.prod.yml up -d --no-deps --force-recreate caddy");
-  console.log(`Then health-check: https://${domain.hosts[0]}/api/health`);
-  console.log("\nNOTE: This command generates + validates configuration only.");
-  console.log("The Docker restart + remote health check run on the deployment host");
-  console.log("(via the command above, or deploy/deploy.sh for a full-stack deploy).");
-  return 0;
+  console.log(`✓ ${siteCount} total site blocks — other domains untouched.`);
+
+  // ── Apply phase (true deployment): recreate caddy + live health check ──
+  // Default (no flag) = validated configuration deployment only — safe to run
+  // anywhere (CI, a laptop). --apply EXECUTES on the deployment host.
+  if (!flags.apply) {
+    console.log("\n── Configuration deployment COMPLETE (no containers were touched).");
+    console.log("To execute on the deployment host, re-run with --apply, or manually:");
+    console.log("  docker compose --env-file .env.production -f deploy/docker-compose.prod.yml up -d --no-deps --force-recreate caddy");
+    console.log(`Then health-check: https://${domain.hosts[0]}/api/health`);
+    return 0;
+  }
+  const composeFile = join(ROOT, "deploy/docker-compose.prod.yml");
+  const dockerProbe = spawnSync("docker", ["info"], { stdio: "pipe", encoding: "utf8" });
+  if ((dockerProbe.status ?? 1) !== 0) {
+    console.error("✗ --apply requested but docker is not reachable on this host.");
+    console.error("  The configuration deployment above remains valid and on disk.");
+    return 2;
+  }
+  try {
+    console.log(`\n── Applying: recreating the caddy service (scoped — no other services touched)…`);
+    runChecked("docker", ["compose", "--env-file", envFile, "-f", composeFile, "up", "-d", "--no-deps", "--force-recreate", "caddy"], { cwd: ROOT });
+    console.log("✓ caddy recreated with the updated Caddyfile.");
+  } catch (error) {
+    console.error(`✗ compose apply FAILED:\n${error.message}`);
+    console.error("  Site file + Caddyfile remain deployed on disk; the running container was NOT updated.");
+    return 2;
+  }
+  // Live health check on every production apex of THIS domain. First-time TLS
+  // provisioning + container restart take a moment — poll with retries.
+  const prodHosts = domain.hosts.filter((h) => !h.endsWith(".localhost"));
+  process.stdout.write(`── Health check https://<apex>/api/health: `);
+  let healthyHost = null;
+  for (let attempt = 1; attempt <= 12 && !healthyHost; attempt++) {
+    for (const host of prodHosts) {
+      const probe = spawnSync("curl", ["-s", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", "10", `https://${host}/api/health`], { encoding: "utf8" });
+      if ((probe.stdout ?? "").trim() === "200") { healthyHost = host; break; }
+    }
+    if (!healthyHost) { process.stdout.write("."); sleepSync(5000); }
+  }
+  if (healthyHost) {
+    console.log(` ✓ 200 OK (https://${healthyHost}/api/health)`);
+    console.log(`\n✓ Domain "${key}" DEPLOYED and HEALTHY.`);
+    return 0;
+  }
+  console.log(" no 200 within timeout");
+  console.error(`✗ Health not confirmed. The deployment is applied but https://${prodHosts[0]}/api/health did not return 200.`);
+  console.error("  Possible causes: DNS not pointing here yet, TLS still provisioning, or the app container unhealthy (docker compose ps / logs).");
+  return 4;
 }
 
 // ── create (TRANSACTIONAL) ──────────────────────────────────────────────────
@@ -398,8 +527,10 @@ export async function create({ flags }, { ROOT, fail }) {
 
   try {
     // 1. stage from the template with placeholders substituted
+    // (node:fs ops, not shell cp/mv — they throw on failure, are portable,
+    // and a throw is exactly what the rollback below needs)
     rmSync(staging, { recursive: true, force: true });
-    spawnSync("cp", ["-R", join(ROOT, "src/domains/_template"), staging], { stdio: "pipe" });
+    cpSync(join(ROOT, "src/domains/_template"), staging, { recursive: true });
     const fill = (file, replacements) => writeFileSync(
       join(staging, file),
       Object.entries(replacements).reduce((text, [from, to]) => text.replaceAll(from, to), readFileSync(join(staging, file), "utf8")),
@@ -432,6 +563,15 @@ export async function create({ flags }, { ROOT, fail }) {
       let text = readFileSync(path, "utf8");
       text = text.replace('landingDesign: "default"', `landingDesign: "${design}"`);
       text = text.replace('publicDesign: "default"', `publicDesign: "${publicDesign}"`);
+      // Scaffold a DEV MIRROR host so `domain dev <key>` serves this domain on
+      // a valid local hostname from day one (*.localhost resolves without
+      // /etc/hosts edits). Formula matches the dev command's host derivation.
+      // NOTE: substitute() above already resolved __DOMAIN_HOST__, so match
+      // the substituted literal.
+      const devMirror = host.endsWith(".localhost") ? host : `${host.split(".")[0]}.localhost`;
+      if (devMirror !== host) {
+        text = text.replace(`hosts: ["${host}"]`, `hosts: ["${host}", "${devMirror}"]`);
+      }
       writeFileSync(path, text);
     }
     fill("README.md", { __DOMAIN_KEY__: key, __DOMAIN_HOST__: host, __TRADE_HOST__: tradeHost, __LANDING_DESIGN__: design, __PUBLIC_DESIGN__: publicDesign });
@@ -441,13 +581,14 @@ export async function create({ flags }, { ROOT, fail }) {
     // placeholder og image so asset validation passes out of the box
     // (brandsDir was pre-checked to NOT exist; we created it in this transaction)
     mkdirSync(brandsDir, { recursive: true });
-    spawnSync("cp", [join(ROOT, "public", "og.png"), join(brandsDir, "og.png")], { stdio: "pipe" });
+    copyFileSync(join(ROOT, "public", "og.png"), join(brandsDir, "og.png"));
 
     // 2. move staging into place (rollback below restores everything on failure)
-    spawnSync("mv", [staging, target], { stdio: "pipe" });
+    renameSync(staging, target);
 
-    // 3. regenerate registries with the new package in place
-    spawnSync(process.execPath, [join(ROOT, "scripts/platform/generate-registry.mjs")], { stdio: "pipe" });
+    // 3. regenerate registries with the new package in place — CHECKED: a
+    // failed generator must abort the transaction, not leave stale registries
+    runChecked(process.execPath, [join(ROOT, "scripts/platform/generate-registry.mjs")], { cwd: ROOT });
     if (!readFileSync(gen, "utf8").includes(key)) throw new Error("registry generation did not include the new domain");
 
     // 4. verify the deployment profile renders + full domain validation
@@ -469,7 +610,7 @@ export async function create({ flags }, { ROOT, fail }) {
     console.log(`✓ Content directories   content/ navigation/ seo/ assets/`);
     console.log(`✓ Landing config        landingDesign="${design}"`);
     console.log(`✓ Public config         publicDesign="${publicDesign}"`);
-    console.log(`✓ Registries regenerated (domains + designs + content)`);
+    console.log(`✓ Registries regenerated (domains + content + designs + composition-map)`);
     console.log(`✓ Deployment profile    renders for ${host} / ${tradeHost}`);
     console.log(`✓ Domain validated`);
     console.log(`\nNext steps:`);
@@ -483,7 +624,7 @@ export async function create({ flags }, { ROOT, fail }) {
     return 0;
   } catch (error) {
     // TRANSACTIONAL ROLLBACK — restore every mutated artifact:
-    //   staging dir, new domain package, ALL generated registries (3 files),
+    //   staging dir, new domain package, ALL generated registries (4 files),
     //   new brand assets; pre-existing brand assets are preserved.
     rmSync(staging, { recursive: true, force: true });
     if (existsSync(target)) rmSync(target, { recursive: true, force: true });

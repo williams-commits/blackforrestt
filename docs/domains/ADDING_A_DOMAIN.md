@@ -40,6 +40,8 @@ npm run domain:test -- example
 
 # 9. Deploy ONLY this domain
 npm run domain:deploy -- example          # --dry-run to preview first
+npm run domain:deploy -- example --apply  # ON the deployment host: recreates
+#                                          caddy + live health-checks the apex
 
 # 10. Remove (safe — refuses while references remain; --confirm required)
 npm run domain:remove -- example --confirm
@@ -55,6 +57,22 @@ npm run domain:remove -- example --confirm
   manifest (per-domain site files under `deploy/caddy/render/sites/`).
 - No copying the application, CRM, backend, or trading stack.
 - No cross-domain imports (`example` must never import `gbfxs`).
+
+## Reusable designs (shipped)
+
+Designs are platform-level and reusable by ANY domain — selecting one is a
+manifest line, not a fork:
+
+| Design | Look | Fonts | Accent |
+| --- | --- | --- | --- |
+| `default` | Black Forest trading platform baseline | Inter + JetBrains Mono | platform default |
+| `gbfxs` | Global Forex Services — dark, dense, market-first | Inter + JetBrains Mono (shared with convertio) | `#f0b90b` |
+| `convertio` | Coinbase-inspired: dark hero with floating product-UI mockups, editorial bands, pill CTAs, high-conversion light interior pages | Inter (display + body) + JetBrains Mono (numbers) | `#0052ff` |
+
+Use one: `npm run platform -- domain create --key=acme --host=acme.com
+--design=convertio --public-design=convertio` — or set
+`landingDesign`/`publicDesign` in an existing manifest and regenerate. Mix
+freely (`landingDesign: "convertio", publicDesign: "default"`).
 
 ## Custom designs (optional)
 

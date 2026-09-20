@@ -32,3 +32,5 @@ AGENTS.md
 deploy/caddy/render/
 deploy/profiles/*/
 !deploy/profiles/_template/
+# Transient domain-create staging dirs (CLI-owned, never commit)
+src/domains/.staging-*/

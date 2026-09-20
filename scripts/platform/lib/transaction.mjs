@@ -14,6 +14,7 @@ export function generatedArtifactPaths(ROOT) {
     join(ROOT, "src/domains/.generated/domains.ts"),
     join(ROOT, "src/domains/.generated/content.ts"),
     join(ROOT, "src/designs/.generated/designs.ts"),
+    join(ROOT, "src/platform/.generated/composition-map.ts"),
   ];
 }
 

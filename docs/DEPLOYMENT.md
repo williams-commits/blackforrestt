@@ -74,7 +74,7 @@ directory (the Makefile resolves its own root).
 
 | Command | What it does |
 |---|---|
-| `make caddy-render` | Re-render `deploy/Caddyfile.rendered` from `.env.production` — one site block per non-empty domain var. Run after any domain change, then `make update`. |
+| `make caddy-render` | Re-render `deploy/caddy/render/Caddyfile` from the domain manifests (one site file per deployed domain in `deploy/caddy/render/sites/`). Prefer the CLI per domain: `npm run domain:deploy -- <key>` (validated, preserves other domains; `--apply` recreates caddy + health-checks). |
 | `make caddy-validate` | Validate the rendered config with the official Caddy image. |
 
 ### Local development

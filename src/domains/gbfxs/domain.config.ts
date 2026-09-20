@@ -33,10 +33,17 @@ const GBFXS_GLYPH: BrandGlyphConfig = {
 /** GFX brand identity defaults (production values; BRAND_OVERRIDES wins). */
 export const GBFXS_DOMAIN: DomainDefinition = {
   key: "gbfxs",
+  // First-class host: gbfxs.com (canonical). gbfxs.localhost is a DEV MIRROR
+  // (local development only — excluded from production routing/deploys).
   hosts: ["gbfxs.com", "gbfxs.localhost"],
   landingDesign: "gbfxs",
   publicDesign: "gbfxs",
   tradeEnabled: true,
+  // Explicit package refs (validated by `platform domain validate`).
+  content: { landing: "content/landing", public: "content/public" },
+  navigation: "navigation",
+  seo: "seo",
+  assets: "assets",
   brand: {
     name: "Global Forex Services",
     shortName: "GFX",

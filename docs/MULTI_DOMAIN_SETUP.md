@@ -97,7 +97,7 @@ directives). Use `BRAND_DOMAINS` for the list.
 | Theme (buttons/links/badges) | `accentColor` injected per host in the root layout. |
 | Logo / favicon / QR mark | `wordmark` + `glyph` via the brand context and `/brand/icon.svg`. |
 | Landing hero | `heroBadge` / `heroSubtitle` override the translated defaults. |
-| Landing design | `landingTemplate` picks the brand's own landing tree under `src/landing/`: `"default"` → `src/landing/blackforest/` (editorial layout composed from the shared landing library) or `"agile"` → `src/landing/agile/` (dark-institutional fintech system with live terminal, markets tabs and photo backdrops). Unknown values fall back to `default`. Brands share everything except their landing — see `src/landing/README.md` for the boundary rules. |
+| Landing design | `landingDesign` in the domain manifest picks the design package under `src/designs/`: `"default"`, `"gbfxs"` (dark-institutional fintech with live terminal, markets tabs, photo backdrops) or `"convertio"` (Coinbase-inspired: dark hero + product mockups, light editorial interior). `BRAND_OVERRIDES[host].landingTemplate` overrides per host at runtime (legacy value `"agile"` aliases to `gbfxs`). Brands share everything except their selected designs. |
 | PWA manifest | `/manifest.webmanifest` resolves per host. |
 | Emails | Rendered under the **user's stored family** (header brand, support address, button color, sender via `emailFrom`). |
 | Referral links | Built on the **referrer's** family trade host. |

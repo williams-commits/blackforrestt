@@ -127,12 +127,12 @@ export function GbfxsStyles() {
       /* Hero display scale — the one place the type gets genuinely large. */
       .ag-display {
         font-size: clamp(2.75rem, 5.6vw, 4.75rem);
-        font-weight: 800; letter-spacing: -0.032em; line-height: 1.03;
+        font-weight: 400; letter-spacing: -0.032em; line-height: 1.03;
         color: var(--ag-text);
       }
       .ag-h2 {
         font-size: clamp(2rem, 3.3vw, 2.9rem);
-        font-weight: 700; letter-spacing: -0.024em; line-height: 1.08; color: var(--ag-text);
+        font-weight: 400; letter-spacing: -0.024em; line-height: 1.08; color: var(--ag-text);
       }
       .ag-sub { color: var(--ag-text-2); font-size: 1.125rem; line-height: 1.65; }
       /* Ink-on-yellow text ramp — overrides for the ag-* voice classes on

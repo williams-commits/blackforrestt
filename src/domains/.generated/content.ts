@@ -10,5 +10,4 @@ import type { DomainContentLoaders } from "../../content/contracts";
 export const DOMAIN_CONTENT: Record<string, () => Promise<DomainContentLoaders>> = {
   blackforrest: async () => (await import("../blackforrest")).contentLoaders,
   gbfxs: async () => (await import("../gbfxs")).contentLoaders,
-  vistest: async () => (await import("../vistest")).contentLoaders,
 };

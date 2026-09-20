@@ -17,6 +17,9 @@ export const __DOMAIN_KEY___DOMAIN: DomainDefinition = {
   tradeEnabled: false,
   brand: {
     name: "__DOMAIN_NAME__",
+    // Accent color drives the root layout's brand theme injection
+    // (--color-brand, progress bar, focus rings) — pick your brand blue.
+    accentColor: "#0052ff",
   },
   features: { trading: true, informers: false },
 };

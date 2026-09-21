@@ -487,6 +487,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                   <input
                     id="import-file"
                     type="file"
+                    hidden
                     accept=".csv,text/csv"
                     onChange={(event) => {
                       const file = event.target.files?.[0];

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { SmartTips } from "@/components/SmartTips";
+import { useTableSession, writeTableSession } from "@/components/useTableSession";
 
 interface TaskRow {
   id: string;
@@ -89,6 +90,8 @@ export function TasksPage() {
   const [due, setDue] = useState("all");
   const [page, setPage] = useState(1);
   const [mine, setMine] = useState("1");
+  const [pageSize, setPageSize] = useState(25);
+  const [hydrated, setHydrated] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskRow | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -109,12 +112,56 @@ export function TasksPage() {
 
   const effectiveMine = isAdmin ? mine : "1";
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
+
+  // Debounce the search box (mirrors RecordListPage) — one request per
+  // keystroke otherwise.
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Restore the saved table session (search/filters/page) after mount —
+  // skipped for subject deep-links (?subjectType=…), where the linking
+  // context decides the view.
+  const { session, ready } = useTableSession("tasks");
+  useEffect(() => {
+    if (!ready) return;
+    if (session && !subjectType && !subjectId) {
+      if (typeof session.search === "string") {
+        setQuery(session.search);
+        setDebouncedQuery(session.search);
+      }
+      if (session.filters) {
+        if (typeof session.filters.status === "string") setStatus(session.filters.status);
+        if (typeof session.filters.priority === "string") setPriorityFilter(session.filters.priority);
+        if (session.filters.due === "all" || session.filters.due === "overdue" || session.filters.due === "today" || session.filters.due === "week" || session.filters.due === "upcoming") setDue(session.filters.due);
+        if (session.filters.mine === "0" || session.filters.mine === "1") setMine(session.filters.mine);
+      }
+      if (session.page !== undefined) setPage(session.page);
+      if (session.pageSize !== undefined) setPageSize(session.pageSize);
+    }
+    setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, session]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    writeTableSession("tasks", {
+      page,
+      pageSize,
+      search: query,
+      filters: { status, priority: priorityFilter, due, mine },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, page, pageSize, query, status, priorityFilter, due, mine]);
+
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const params = new URLSearchParams({ due, mine: effectiveMine, pageSize: "25", page: String(page) });
-      if (query.trim()) params.set("q", query.trim());
+      const params = new URLSearchParams({ due, mine: effectiveMine, pageSize: String(pageSize), page: String(page) });
+      if (debouncedQuery.trim()) params.set("q", debouncedQuery.trim());
       if (status) params.set("status", status);
       if (priorityFilter) params.set("priority", priorityFilter);
       if (subjectType) params.set("subjectType", subjectType);
@@ -129,11 +176,19 @@ export function TasksPage() {
     } finally {
       setLoading(false);
     }
-  }, [status, due, effectiveMine, subjectType, subjectId, query, priorityFilter, page]);
+  }, [status, due, effectiveMine, subjectType, subjectId, debouncedQuery, priorityFilter, page, pageSize]);
 
   useEffect(() => {
+    if (!hydrated) return;
     void fetchTasks();
-  }, [fetchTasks]);
+  }, [fetchTasks, hydrated]);
+
+  // A restored page can outrun the result set — clamp to the last real
+  // page instead of showing an empty one.
+  useEffect(() => {
+    if (!hydrated || loading) return;
+    if (page > totalPages) setPage(totalPages);
+  }, [hydrated, loading, page, totalPages]);
 
   useEffect(() => {
     void fetch("/api/users").then((response) => response.ok ? response.json() : null).then((body) => setUsers((body?.data ?? []).map((user: UserOption) => ({ id: user.id, name: user.name })))).catch(() => setUsers([]));
@@ -526,18 +581,50 @@ const inputClass =
         </table>
       </div>
 
-      <div className="flex items-center justify-between" style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)" }}>
+      <div className="flex flex-wrap items-center justify-between gap-2" style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)" }}>
         <span>
-          Page <strong style={{ color: "var(--text-primary)" }}>{meta.page}</strong> of {totalPages}
-          {meta.total > 0 ? <span style={{ marginLeft: "8px" }}>({meta.total} total)</span> : null}
+          {meta.total > 0 ? (
+            <>
+              Showing{" "}
+              <strong style={{ color: "var(--text-primary)" }}>
+                {(meta.page - 1) * meta.pageSize + 1}–{Math.min(meta.page * meta.pageSize, meta.total)}
+              </strong>{" "}
+              of {meta.total}
+              <span style={{ marginLeft: "8px" }}>
+                · Page <strong style={{ color: "var(--text-primary)" }}>{meta.page}</strong> of {totalPages}
+              </span>
+            </>
+          ) : (
+            <>
+              Page <strong style={{ color: "var(--text-primary)" }}>{meta.page}</strong> of {totalPages}
+            </>
+          )}
         </span>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1">
+            Rows
+            <select
+              aria-label="Rows per page"
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+              className="btn btn-secondary btn-sm"
+              style={{ width: "auto" }}
+            >
+              {[10, 25, 50, 100].map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
             disabled={meta.page <= 1 || loading}
             onClick={() => setPage((value) => Math.max(1, value - 1))}
-            className="btn btn-secondary"
-            style={{ height: "28px" }}
+            className="btn btn-secondary btn-sm"
           >
             ← Prev
           </button>
@@ -545,8 +632,7 @@ const inputClass =
             type="button"
             disabled={meta.page >= totalPages || loading}
             onClick={() => setPage((value) => value + 1)}
-            className="btn btn-secondary"
-            style={{ height: "28px" }}
+            className="btn btn-secondary btn-sm"
           >
             Next →
           </button>

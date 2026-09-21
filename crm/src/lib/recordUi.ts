@@ -43,6 +43,12 @@ export interface ColumnConfig {
   type?: "text" | "badge" | "date" | "datetime" | "number" | "email" | "record";
   /** For type "record": which object the row links into for the name column. */
   object?: ObjectKey;
+  /**
+   * Only columns backed by a server sort whitelist render a sort control —
+   * every other header used to look clickable but silently fell back to
+   * the default sort. Date/number columns default to descending first.
+   */
+  sortable?: boolean;
 }
 
 export interface FilterConfig {
@@ -72,16 +78,16 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
     singular: "Lead",
     can: { create: "LEADS_CREATE", edit: "LEADS_EDIT", delete: "LEADS_DELETE" },
     columns: [
-      { key: "firstName lastName", label: "Name", type: "record", object: "leads" },
+      { key: "firstName lastName", label: "Name", type: "record", object: "leads", sortable: true },
       { key: "company", label: "Company" },
       { key: "email", label: "Email", type: "email" },
       { key: "phone", label: "Phone" },
       { key: "status.name", label: "Status", type: "badge" },
       { key: "potentialStatus.name", label: "Potential", type: "badge" },
       { key: "priority", label: "Priority" },
-      { key: "score", label: "Score", type: "number" },
+      { key: "score", label: "Score", type: "number", sortable: true },
       { key: "assignedUser.name", label: "Assignee" },
-      { key: "createdAt", label: "Created", type: "date" },
+      { key: "createdAt", label: "Created", type: "date", sortable: true },
     ],
     filters: [{ name: "statusId", label: "Status", type: "select", optionsFrom: "leadStatuses" }],
     fields: [
@@ -111,7 +117,7 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
       { name: "assignedUserId", label: "Assignee", type: "select", optionsFrom: "users" },
       { name: "campaignId", label: "Campaign", type: "select", optionsFrom: "campaigns" },
     ],
-    searchPlaceholder: "Search name, email, phone, company…",
+    searchPlaceholder: "Search all fields — name, email, phone, company, country, source…",
   },
   contacts: {
     object: "contacts",
@@ -119,14 +125,14 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
     singular: "Contact",
     can: { create: "CONTACTS_CREATE", edit: "CONTACTS_EDIT", delete: "CONTACTS_DELETE" },
     columns: [
-      { key: "firstName lastName", label: "Name", type: "record", object: "contacts" },
+      { key: "firstName lastName", label: "Name", type: "record", object: "contacts", sortable: true },
       { key: "jobTitle", label: "Title" },
-      { key: "email", label: "Email", type: "email" },
+      { key: "email", label: "Email", type: "email", sortable: true },
       { key: "phone", label: "Phone" },
       { key: "account.name", label: "Account", type: "record", object: "accounts" },
       { key: "status.name", label: "Status", type: "badge" },
       { key: "owner.name", label: "Owner" },
-      { key: "createdAt", label: "Created", type: "date" },
+      { key: "createdAt", label: "Created", type: "date", sortable: true },
     ],
     filters: [{ name: "statusId", label: "Status", type: "select", optionsFrom: "contactStatuses" }],
     fields: [
@@ -142,7 +148,7 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
       { name: "ownerUserId", label: "Owner", type: "select", optionsFrom: "users" },
       { name: "campaignId", label: "Campaign", type: "select", optionsFrom: "campaigns" },
     ],
-    searchPlaceholder: "Search name, email, phone, title…",
+    searchPlaceholder: "Search all fields — name, email, phone, title, source, external ID…",
   },
   accounts: {
     object: "accounts",
@@ -150,14 +156,14 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
     singular: "Account",
     can: { create: "ACCOUNTS_CREATE", edit: "ACCOUNTS_EDIT", delete: "ACCOUNTS_DELETE" },
     columns: [
-      { key: "name", label: "Account", type: "record", object: "accounts" },
+      { key: "name", label: "Account", type: "record", object: "accounts", sortable: true },
       { key: "industry", label: "Industry" },
       { key: "companySize", label: "Size" },
       { key: "country", label: "Country" },
       { key: "status.name", label: "Status", type: "badge" },
       { key: "_count.contacts", label: "Contacts", type: "number" },
       { key: "owner.name", label: "Owner" },
-      { key: "createdAt", label: "Created", type: "date" },
+      { key: "createdAt", label: "Created", type: "date", sortable: true },
     ],
     filters: [{ name: "statusId", label: "Status", type: "select", optionsFrom: "accountStatuses" }],
     fields: [
@@ -173,7 +179,7 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
       { name: "statusId", label: "Status", type: "select", optionsFrom: "accountStatuses" },
       { name: "ownerUserId", label: "Owner", type: "select", optionsFrom: "users" },
     ],
-    searchPlaceholder: "Search name, industry, city…",
+    searchPlaceholder: "Search all fields — name, industry, size, city, country, website…",
   },
   customers: {
     object: "customers",
@@ -181,14 +187,14 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
     singular: "Customer",
     can: { create: "CUSTOMERS_CREATE", edit: "CUSTOMERS_EDIT", delete: "CUSTOMERS_DELETE" },
     columns: [
-      { key: "firstName lastName", label: "Name", type: "record", object: "customers" },
+      { key: "firstName lastName", label: "Name", type: "record", object: "customers", sortable: true },
       { key: "email", label: "Email", type: "email" },
       { key: "phone", label: "Phone" },
       { key: "status.name", label: "Status", type: "badge" },
       { key: "source", label: "Source" },
       { key: "contact.firstName lastName", label: "Linked contact" },
       { key: "owner.name", label: "Owner" },
-      { key: "createdAt", label: "Created", type: "date" },
+      { key: "createdAt", label: "Created", type: "date", sortable: true },
     ],
     filters: [{ name: "statusId", label: "Status", type: "select", optionsFrom: "customerStatuses" }],
     fields: [
@@ -202,6 +208,6 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
       { name: "ownerUserId", label: "Owner", type: "select", optionsFrom: "users" },
       { name: "campaignId", label: "Campaign", type: "select", optionsFrom: "campaigns" },
     ],
-    searchPlaceholder: "Search name, email, phone…",
+    searchPlaceholder: "Search all fields — name, email, phone, source…",
   },
 };

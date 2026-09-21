@@ -10,8 +10,10 @@ import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { SmartTips } from "@/components/SmartTips";
 import { rememberRecentRecord } from "@/components/RecentRecords";
+import { Icon } from "@/components/Icon";
 import { RowActions } from "@/components/RowActions";
 import { InlineEdit } from "@/components/InlineEdit";
+import { useTableSession, writeTableSession } from "@/components/useTableSession";
 import { useConfirmDialog, usePromptDialog } from "@/components/Dialogs";
 
 interface MeContext {
@@ -135,6 +137,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   const [viewName, setViewName] = useState("");
   const [activeView, setActiveView] = useState("all");
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
+  const [pageSize, setPageSize] = useState(25);
+  const [hydrated, setHydrated] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { prompt, dialog: promptDialog } = usePromptDialog();
@@ -192,28 +197,37 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     ...views.map((v) => ({ key: `saved:${v.id}`, label: v.name, isSaved: true })),
   ];
 
+  /** Set the search AND flush the debounce — for view switches, chips, and
+   * Enter, where waiting 300ms for a value the user already committed feels
+   * sluggish. Live typing keeps the debounced path. */
+  function applySearch(value: string) {
+    setSearch(value);
+    setDebouncedSearch(value);
+  }
+
   function handleViewChange(key: string) {
     setActiveView(key);
     setPage(1);
     setSelected(new Set());
     if (key === "all") {
       setFilters({});
-      setSearch("");
+      applySearch("");
       setSort("");
     } else if (key === "mine") {
       setFilters(object === "leads" ? { assignment: "mine" } : { mine: "1" });
-      setSearch("");
+      applySearch("");
     } else if (key === "recent") {
       setFilters({});
-      setSearch("");
+      applySearch("");
       setSort("createdAt");
+      setOrder("desc");
     } else if (key === "unassigned") {
       setFilters(object === "leads" ? { assignment: "unassigned" } : {});
-      setSearch("");
+      applySearch("");
     } else if (key.startsWith("saved:")) {
       const view = views.find((v) => `saved:${v.id}` === key);
       if (view) {
-        setSearch(view.config.q ?? "");
+        applySearch(view.config.q ?? "");
         setFilters(view.config.filters ?? {});
       }
     }
@@ -291,13 +305,64 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // ---- table session (refresh-proof page/search/sort/filters/selection) ----
+  // Restore once after mount (post-hydration: these pages are
+  // server-rendered, so state can't be initialized from sessionStorage
+  // without mismatching the server markup). `hydrated` gates the first
+  // fetch and all writes so the snapshot is applied before anything else.
+  const { session, ready } = useTableSession(`records:${object}`);
+  useEffect(() => {
+    if (!ready) return;
+    if (session) {
+      if (typeof session.search === "string") {
+        setSearch(session.search);
+        setDebouncedSearch(session.search);
+      }
+      if (session.sort !== undefined) setSort(session.sort);
+      if (session.order) setOrder(session.order);
+      if (session.page !== undefined) setPage(session.page);
+      if (session.pageSize !== undefined) setPageSize(session.pageSize);
+      if (session.filters) setFilters(session.filters);
+      if (session.hiddenColumns) {
+        const known = session.hiddenColumns.filter((key) =>
+          config.columns.some((column) => column.key === key),
+        );
+        // Never restore a snapshot that would hide every column.
+        setHiddenColumns(known.length < config.columns.length ? known : []);
+      }
+      if (session.density) setDensity(session.density);
+      if (session.activeView) setActiveView(session.activeView);
+      if (session.selected) setSelected(new Set(session.selected));
+    }
+    setHydrated(true);
+  }, [ready, session, config]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    writeTableSession(`records:${object}`, {
+      page,
+      pageSize,
+      search,
+      sort,
+      order,
+      filters,
+      hiddenColumns,
+      density,
+      activeView,
+      selected: [...selected],
+    });
+  }, [hydrated, object, page, pageSize, search, sort, order, filters, hiddenColumns, density, activeView, selected]);
+
   const fetchRows = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const params = new URLSearchParams({ page: String(page), pageSize: "25" });
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
       if (debouncedSearch) params.set("q", debouncedSearch);
-      if (sort) params.set("sort", sort);
+      if (sort) {
+        params.set("sort", sort);
+        params.set("order", order);
+      }
       for (const [key, value] of Object.entries(filters)) {
         if (value) params.set(key, value);
       }
@@ -309,13 +374,14 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       const body = (await response.json()) as ListResponse;
       setRows(body.data);
       setMeta(body.meta);
-      setSelected(new Set());
+      // Selection deliberately survives fetches (it's a Set of ids, valid
+      // across pages) — bulk actions clear it once they complete.
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Unable to load records.");
     } finally {
       setLoading(false);
     }
-  }, [object, page, debouncedSearch, filters, sort]);
+  }, [object, page, pageSize, debouncedSearch, filters, sort, order]);
 
   useEffect(() => {
     void fetch("/api/me")
@@ -344,8 +410,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   }, [can.tags]);
 
   useEffect(() => {
+    if (!hydrated) return;
     void fetchRows();
-  }, [fetchRows]);
+  }, [fetchRows, hydrated]);
 
   useEffect(() => {
     const refresh = () => void fetchRows();
@@ -356,11 +423,31 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
   const allSelected = rows.length > 0 && rows.every((row) => selected.has(row.id));
 
+  // A restored page can outrun the result set (data changed since the last
+  // visit) — clamp to the last real page instead of showing an empty one.
+  useEffect(() => {
+    if (!hydrated || loading) return;
+    if (page > totalPages) setPage(totalPages);
+  }, [hydrated, loading, meta, page, totalPages]);
+
   function toggleRow(id: string) {
     setSelected((previous) => {
       const next = new Set(previous);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      return next;
+    });
+  }
+
+  /** Header checkbox toggles THIS page's rows on/off the persistent
+   * selection — rows picked on other pages stay selected. */
+  function toggleAllOnPage() {
+    setSelected((previous) => {
+      const next = new Set(previous);
+      for (const row of rows) {
+        if (allSelected) next.delete(row.id);
+        else next.add(row.id);
+      }
       return next;
     });
   }
@@ -378,6 +465,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
         throw new Error(body?.error ?? "Bulk action failed.");
       }
+      setSelected(new Set());
       await fetchRows();
     } catch (error) {
       setBulkError(error instanceof Error ? error.message : "Bulk action failed.");
@@ -436,6 +524,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         throw new Error(body?.error ?? "Merge failed.");
       }
       setMergeOpen(false);
+      setSelected(new Set());
       await fetchRows();
     } catch (error) {
       setMergeError(error instanceof Error ? error.message : "Merge failed.");
@@ -458,7 +547,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         actions={<>
           {can.create ? (
             <button type="button" className="btn btn-primary" onClick={() => { setEditRow(null); setFormMode("create"); }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <Icon name="plus" size={12} />
               New {config.singular}
             </button>
           ) : null}
@@ -495,32 +584,33 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           className="flex flex-1 items-center gap-2"
           onSubmit={(event) => {
             event.preventDefault();
+            // Enter commits the query immediately (no 300ms wait) and
+            // resets to page 1; the fetch effect picks up the change.
+            setDebouncedSearch(search);
             setPage(1);
-            void fetchRows();
           }}
         >
           <button
             type="button"
             onClick={() => setDensity(density === "comfortable" ? "compact" : "comfortable")}
-            className="btn btn-ghost"
-            style={{ height: "32px", padding: "0 6px" }}
+            className="icon-button"
             title={density === "comfortable" ? "Compact rows" : "Comfortable rows"}
+            aria-label={density === "comfortable" ? "Compact rows" : "Comfortable rows"}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              {density === "comfortable" ? (
-                <><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></>
-              ) : (
-                <><line x1="3" y1="8" x2="21" y2="8" /><line x1="3" y1="16" x2="21" y2="16" /></>
-              )}
-            </svg>
+            <Icon name={density === "comfortable" ? "sliders" : "grid"} size={14} />
           </button>
           <input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              // New query → the old page number is meaningless; drop to
+              // page 1 immediately (the fetch still waits for the debounce).
+              setPage(1);
+            }}
             placeholder={config.searchPlaceholder}
             aria-label="Search"
-            className="input" style={{ height: "32px" }}
+            className="input input-sm"
           />
           {config.filters.map((filter) => {
             const filterOptions = filter.optionsFrom ? options[filter.optionsFrom] : (filter.options ?? []);
@@ -533,7 +623,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                   setFilters((previous) => ({ ...previous, [filter.name]: event.target.value }));
                   setPage(1);
                 }}
-                className="input" style={{ height: "32px", width: "auto", display: "inline-block" }}
+                className="input input-sm" style={{ width: "auto", display: "inline-block" }}
               >
                 <option value="">{filter.label}: all</option>
                 {filterOptions.map((option) => (
@@ -553,11 +643,11 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               onChange={(event) => {
                 const view = views.find((entry) => entry.id === event.target.value);
                 if (!view) return;
-                setSearch(view.config.q ?? "");
+                applySearch(view.config.q ?? "");
                 setFilters(view.config.filters ?? {});
                 setPage(1);
               }}
-              className="input" style={{ height: "32px", width: "auto", display: "inline-block" }}
+              className="input input-sm" style={{ width: "auto", display: "inline-block" }}
             >
               <option value="">Saved views…</option>
               {views.map((view) => (
@@ -693,7 +783,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 });
                 if (ok) void runBulk("delete", {});
               }}
-              className="btn btn-destructive" style={{ height: "28px", fontSize: "12px" }}
+              className="btn btn-destructive btn-sm"
             >
               Delete
             </button>
@@ -746,6 +836,14 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               Merge selected…
             </button>
           ) : null}
+          <button
+            type="button"
+            disabled={bulkBusy}
+            onClick={() => setSelected(new Set())}
+            className="btn btn-secondary btn-sm"
+          >
+            Clear selection
+          </button>
           {bulkError ? <span className="text-(--error)">{bulkError}</span> : null}
         </div>
       ) : null}
@@ -806,7 +904,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           {search ? (
             <span className="chip">
               Search: {search}
-              <span className="chip-close" onClick={() => { setSearch(""); setPage(1); }}>×</span>
+              <span className="chip-close" onClick={() => { applySearch(""); setPage(1); }}>×</span>
             </span>
           ) : null}
           {Object.entries(filters).filter(([, value]) => value).map(([key, value]) => {
@@ -825,7 +923,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             type="button"
             className="btn btn-ghost"
             style={{ height: "24px", fontSize: "11px" }}
-            onClick={() => { setSearch(""); setFilters({}); setPage(1); }}
+            onClick={() => { applySearch(""); setFilters({}); setPage(1); }}
           >
             Clear all
           </button>
@@ -842,28 +940,47 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                     type="checkbox"
                     aria-label="Select all on page"
                     checked={allSelected}
-                    onChange={() =>
-                      setSelected(allSelected ? new Set() : new Set(rows.map((row) => row.id)))
-                    }
+                    onChange={toggleAllOnPage}
                   />
                 </th>
               ) : null}
-              {config.columns.filter((column) => !hiddenColumns.includes(column.key)).map((column) => (
-                <th key={column.key} className="px-3 py-2 font-medium">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const key = column.key === "firstName lastName" ? "name" : column.key.split(".")[0];
-                      setSort(sort === key ? "" : key);
-                      setPage(1);
-                    }}
-                    className="text-left hover:underline"
-                  >
-                    {column.label}
-                    {sort === (column.key === "firstName lastName" ? "name" : column.key.split(".")[0]) ? " ▾" : ""}
-                  </button>
-                </th>
-              ))}
+              {config.columns.filter((column) => !hiddenColumns.includes(column.key)).map((column) => {
+                const sortKey = column.key === "firstName lastName" ? "name" : column.key.split(".")[0];
+                const isSorted = sort === sortKey;
+                return (
+                  <th key={column.key} className="px-3 py-2 font-medium">
+                    {column.sortable ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Cycle: default direction → opposite → off. Dates
+                          // and numbers start descending; text starts ascending.
+                          const nextDefault = column.type === "date" || column.type === "datetime" || column.type === "number"
+                            ? "desc" as const
+                            : "asc" as const;
+                          if (!isSorted) {
+                            setSort(sortKey);
+                            setOrder(nextDefault);
+                          } else if (order === nextDefault) {
+                            setOrder(nextDefault === "asc" ? "desc" : "asc");
+                          } else {
+                            setSort("");
+                            setOrder("desc");
+                          }
+                          setPage(1);
+                        }}
+                        className="text-left hover:underline"
+                        aria-label={`Sort by ${column.label}`}
+                      >
+                        {column.label}
+                        {isSorted ? (order === "asc" ? " ▴" : " ▾") : ""}
+                      </button>
+                    ) : (
+                      column.label
+                    )}
+                  </th>
+                );
+              })}
               {hasRowActions ? (
                 <th className="px-3 py-2 text-right font-medium">Actions</th>
               ) : null}
@@ -893,9 +1010,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               <tr>
                 <td colSpan={tableColumnCount}>
                   <div className="empty-state">
-                    <svg className="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M21 15V6a2 2 0 00-2-2H5a2 2 0 00-2 2v9m18 0a2 2 0 01-2 2H5a2 2 0 01-2-2m18 0v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                    </svg>
+                    <span className="empty-state-icon"><Icon name="box" size={28} /></span>
                     <p className="empty-state-title">No {config.title.toLowerCase()} found</p>
                     <p className="empty-state-description">
                       {search || Object.values(filters).some(Boolean)
@@ -1088,18 +1203,50 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         </table>
       </div>
 
-      <div className="flex items-center justify-between" style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)" }}>
+      <div className="flex flex-wrap items-center justify-between gap-2" style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)" }}>
         <span>
-          Page <strong style={{ color: "var(--text-primary)" }}>{meta.page}</strong> of {totalPages}
-          {meta.total > 0 ? <span style={{ marginLeft: "8px" }}>({meta.total} total)</span> : null}
+          {meta.total > 0 ? (
+            <>
+              Showing{" "}
+              <strong style={{ color: "var(--text-primary)" }}>
+                {(meta.page - 1) * meta.pageSize + 1}–{Math.min(meta.page * meta.pageSize, meta.total)}
+              </strong>{" "}
+              of {meta.total}
+              <span style={{ marginLeft: "8px" }}>
+                · Page <strong style={{ color: "var(--text-primary)" }}>{meta.page}</strong> of {totalPages}
+              </span>
+            </>
+          ) : (
+            <>
+              Page <strong style={{ color: "var(--text-primary)" }}>{meta.page}</strong> of {totalPages}
+            </>
+          )}
         </span>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1">
+            Rows
+            <select
+              aria-label="Rows per page"
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+              className="btn btn-secondary btn-sm"
+              style={{ width: "auto" }}
+            >
+              {[10, 25, 50, 100].map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
             disabled={meta.page <= 1 || loading}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="btn btn-secondary"
-            style={{ height: "28px" }}
+            className="btn btn-secondary btn-sm"
           >
             ← Prev
           </button>
@@ -1107,8 +1254,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             type="button"
             disabled={meta.page >= totalPages || loading}
             onClick={() => setPage((p) => p + 1)}
-            className="btn btn-secondary"
-            style={{ height: "28px" }}
+            className="btn btn-secondary btn-sm"
           >
             Next →
           </button>

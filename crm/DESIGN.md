@@ -258,6 +258,25 @@ contact / task / note, schedule follow-up, import.
 i18n: English-first; strings centralized so next-intl can be adopted later if
 the CRM needs to match the platform's languages.
 
+Design-system rules (globals.css): buttons come from the `.btn` family
+(`.btn-sm` for toolbars/pagination — never inline height overrides), tables
+from `.table` (it styles th/td itself — components must not re-pad cells),
+segmented switches from `.tab-strip`, row text actions from
+`.link-danger`/`.link-muted`. Icons go through `<Icon name="…" />`
+(components/Icon.tsx, lucide-backed) — no hand-rolled inline SVGs.
+
+Table UX invariants: every list page restores its state (page, search, sort,
+filters) across refreshes via `useTableSession` (sessionStorage, per-table
+key); search is server-side and covers every text column plus to-one
+relation names (status/owner/account/campaign) — see `deepSearchWhere`.
+
+Admin area: route-based (`/admin/*`) with a shared server layout — a
+grouped, permission-gated left rail (`.admin-rail`/`.admin-nav-*`:
+Workspace / Records / System) and the Administration context header; each
+section page mounts its `*Tab` component from AdminConsole.tsx directly.
+The `AdminConsole` wrapper with internal tab state is intentionally NOT
+used by routes — do not resurrect it for new admin surfaces.
+
 ## 7. Build phases (call-center scope removed)
 
 1. **Foundation** — `crm/` scaffold, auth, roles/permissions/teams, audit,

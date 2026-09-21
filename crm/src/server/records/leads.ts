@@ -8,7 +8,7 @@ import {
   assignedScopeWhere,
   visibleTeamIds,
 } from "@/server/scope";
-import { customFieldWhere, orderByFor, searchWhere } from "@/server/listQuery";
+import { customFieldWhere, deepSearchWhere, orderByFor } from "@/server/listQuery";
 import { collectionNotificationContext, notify, subjectNotificationContext } from "@/server/notifications";
 import { findMatches } from "@/server/records/duplicates";
 import { sanitizeCustomFields } from "@/server/records/customFields";
@@ -90,7 +90,27 @@ const SORTS = {
   score: { score: "desc" as const },
   nextFollowUpAt: { nextFollowUpAt: "asc" as const },
 };
-const SEARCH_FIELDS = ["firstName", "lastName", "email", "phone", "company", "externalId"] as const;
+// Every text field on the model — table search covers all columns, not
+// just names (secondaryPhone, country, region, source included).
+const SEARCH_FIELDS = [
+  "firstName",
+  "lastName",
+  "email",
+  "phone",
+  "secondaryPhone",
+  "company",
+  "country",
+  "region",
+  "source",
+  "externalId",
+] as const;
+// To-one relation columns matched by table search (status/assignee/campaign names).
+const SEARCH_RELATIONS = {
+  status: ["name"],
+  potentialStatus: ["name"],
+  assignedUser: ["name"],
+  campaign: ["name"],
+} as const;
 
 const listInclude = {
   status: { select: { name: true, category: true } },
@@ -121,7 +141,7 @@ export const LeadFilters = z.object({
 
 export async function listLeads(
   ctx: ScopedContext,
-  query: { page: number; pageSize: number; sort?: string; order: "asc" | "desc"; q?: string },
+  query: { page: number; pageSize: number; sort?: string; order?: "asc" | "desc"; q?: string },
   filters: z.infer<typeof LeadFilters>,
   cfFilters?: Array<{ key: string; value: string }>,
 ) {
@@ -132,7 +152,7 @@ export async function listLeads(
     ...(filters.priority ? { priority: filters.priority } : {}),
     ...(filters.assignment === "mine" ? { assignedUserId: ctx.userId } : {}),
     ...(filters.assignment === "unassigned" ? { assignedUserId: null } : {}),
-    ...searchWhere(SEARCH_FIELDS, query.q ?? ""),
+    ...deepSearchWhere(SEARCH_FIELDS, SEARCH_RELATIONS, query.q ?? ""),
     ...customFieldWhere(cfFilters ?? []),
   };
   const [total, rows] = await Promise.all([
@@ -140,7 +160,7 @@ export async function listLeads(
     prisma.lead.findMany({
       where,
       include: listInclude,
-      orderBy: orderByFor(query.sort, SORTS, "createdAt"),
+      orderBy: orderByFor(query.sort, SORTS, "createdAt", query.order),
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
     }),

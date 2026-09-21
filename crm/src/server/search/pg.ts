@@ -1,5 +1,6 @@
 import { prisma } from "@/server/db";
 import { assignedScopeWhere, ownerScopeWhere } from "@/server/scope";
+import { listCampaignsPage } from "@/server/records/campaigns";
 import type { ScopedContext } from "@/server/records/leads";
 import type { SearchHit, SearchProvider } from "@/server/search/types";
 
@@ -8,6 +9,11 @@ import type { SearchHit, SearchProvider } from "@/server/search/types";
  * accelerated by pg_trgm GIN indexes (see the search_trgm migration).
  * Also matches record IDs for support workflows ("find by id suffix" is
  * not supported by design — exact/prefix id only).
+ *
+ * Column coverage mirrors the table search exactly: every text column of
+ * each entity plus its to-one relation names (status, assignee/owner,
+ * account, campaign, pipeline, stage) — global search is a superset of
+ * the per-table search, never behind it.
  */
 
 const contains = (q: string) => ({ contains: q, mode: "insensitive" as const });
@@ -20,7 +26,7 @@ export const pgSearch: SearchProvider = {
     const leadScope = assignedScopeWhere(ctx.userId, ctx.scope, ctx.teamIds);
     const ownerScope = ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds);
 
-    const [leads, contacts, accounts, customers, opportunities, tasks] = await Promise.all([
+    const [leads, contacts, accounts, customers, opportunities, tasks, campaigns] = await Promise.all([
       prisma.lead.findMany({
         where: {
           deletedAt: null,
@@ -31,8 +37,16 @@ export const pgSearch: SearchProvider = {
             { lastName: contains(q) },
             { email: contains(q) },
             { phone: contains(q) },
+            { secondaryPhone: contains(q) },
             { company: contains(q) },
+            { country: contains(q) },
+            { region: contains(q) },
+            { source: contains(q) },
             { externalId: contains(q) },
+            { status: { name: contains(q) } },
+            { potentialStatus: { name: contains(q) } },
+            { assignedUser: { name: contains(q) } },
+            { campaign: { name: contains(q) } },
             { id: { startsWith: q } },
           ],
         },
@@ -48,7 +62,13 @@ export const pgSearch: SearchProvider = {
             { firstName: contains(q) },
             { lastName: contains(q) },
             { email: contains(q) },
+            { phone: contains(q) },
             { jobTitle: contains(q) },
+            { leadSource: contains(q) },
+            { externalId: contains(q) },
+            { status: { name: contains(q) } },
+            { owner: { name: contains(q) } },
+            { account: { name: contains(q) } },
             { id: { startsWith: q } },
           ],
         },
@@ -60,7 +80,19 @@ export const pgSearch: SearchProvider = {
         where: {
           deletedAt: null,
           ...ownerScope,
-          OR: [{ name: contains(q) }, { industry: contains(q) }, { city: contains(q) }, { id: { startsWith: q } }],
+          OR: [
+            { name: contains(q) },
+            { industry: contains(q) },
+            { companySize: contains(q) },
+            { website: contains(q) },
+            { addressLine: contains(q) },
+            { city: contains(q) },
+            { country: contains(q) },
+            { externalId: contains(q) },
+            { status: { name: contains(q) } },
+            { owner: { name: contains(q) } },
+            { id: { startsWith: q } },
+          ],
         },
         select: { id: true, name: true, industry: true, city: true },
         take: perType,
@@ -74,6 +106,12 @@ export const pgSearch: SearchProvider = {
             { firstName: contains(q) },
             { lastName: contains(q) },
             { email: contains(q) },
+            { phone: contains(q) },
+            { source: contains(q) },
+            { platformUserId: contains(q) },
+            { status: { name: contains(q) } },
+            { owner: { name: contains(q) } },
+            { contact: { OR: [{ firstName: contains(q) }, { lastName: contains(q) }] } },
             { id: { startsWith: q } },
           ],
         },
@@ -85,7 +123,17 @@ export const pgSearch: SearchProvider = {
         where: {
           deletedAt: null,
           ...ownerScope,
-          OR: [{ name: contains(q) }, { source: contains(q) }, { id: { startsWith: q } }],
+          OR: [
+            { name: contains(q) },
+            { source: contains(q) },
+            { currency: contains(q) },
+            { owner: { name: contains(q) } },
+            { account: { name: contains(q) } },
+            { contact: { OR: [{ firstName: contains(q) }, { lastName: contains(q) }] } },
+            { pipeline: { name: contains(q) } },
+            { stage: { name: contains(q) } },
+            { id: { startsWith: q } },
+          ],
         },
         select: { id: true, name: true, stage: { select: { name: true } } },
         take: perType,
@@ -107,12 +155,21 @@ export const pgSearch: SearchProvider = {
                 ],
               }),
           status: { in: ["OPEN", "IN_PROGRESS"] },
-          AND: { OR: [{ title: contains(q) }, { description: contains(q) }] },
+          AND: {
+            OR: [
+              { title: contains(q) },
+              { description: contains(q) },
+              { owner: { name: contains(q) } },
+            ],
+          },
         },
         select: { id: true, title: true, dueAt: true },
         take: perType,
         orderBy: { updatedAt: "desc" },
       }),
+      // Campaigns reuse the campaign service's scope + search (owner-based
+      // visibility incl. team membership, name/description/source/owner).
+      listCampaignsPage(ctx, { page: 1, pageSize: perType, q }),
     ]);
 
     for (const lead of leads) {
@@ -166,7 +223,16 @@ export const pgSearch: SearchProvider = {
         id: task.id,
         label: task.title,
         subtitle: task.dueAt ? `due ${task.dueAt.toLocaleDateString()}` : null,
-        url: `/tasks`,
+        url: `/tasks/${task.id}`,
+      });
+    }
+    for (const campaign of campaigns.rows) {
+      hits.push({
+        objectType: "CAMPAIGN",
+        id: campaign.id,
+        label: campaign.name,
+        subtitle: campaign.owner?.name ?? campaign.source ?? null,
+        url: "/campaigns",
       });
     }
 

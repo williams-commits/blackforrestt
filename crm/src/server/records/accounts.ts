@@ -6,7 +6,7 @@ import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { normalizeCountry, normalizeText } from "@/server/normalize";
 import { ownerScopeWhere } from "@/server/scope";
-import { customFieldWhere, orderByFor, searchWhere } from "@/server/listQuery";
+import { customFieldWhere, deepSearchWhere, orderByFor } from "@/server/listQuery";
 import { sanitizeCustomFields } from "@/server/records/customFields";
 import { assertAssignableUser } from "@/server/records/assignment";
 import type { ScopedContext } from "@/server/records/leads";
@@ -39,7 +39,9 @@ const SORTS = {
   createdAt: { createdAt: "desc" as const },
   name: { name: "asc" as const },
 };
-const SEARCH_FIELDS = ["name", "industry", "website", "city", "country"] as const;
+// Every text field on the model — table search covers all columns.
+const SEARCH_FIELDS = ["name", "industry", "companySize", "website", "addressLine", "city", "country", "externalId"] as const;
+const SEARCH_RELATIONS = { status: ["name"], owner: ["name"] } as const;
 
 const include = {
   owner: { select: { id: true, name: true } },
@@ -54,7 +56,7 @@ function serialize(row: Prisma.AccountGetPayload<{ include: typeof include }>) {
 
 export async function listAccounts(
   ctx: ScopedContext,
-  query: { page: number; pageSize: number; sort?: string; q?: string },
+  query: { page: number; pageSize: number; sort?: string; order?: "asc" | "desc"; q?: string },
   filters: { statusId?: string; mine?: boolean } = {},
   cfFilters?: Array<{ key: string; value: string }>,
 ) {
@@ -63,7 +65,7 @@ export async function listAccounts(
     ...ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds),
     ...(filters.statusId ? { statusId: filters.statusId } : {}),
     ...(filters.mine ? { ownerUserId: ctx.userId } : {}),
-    ...searchWhere(SEARCH_FIELDS, query.q ?? ""),
+    ...deepSearchWhere(SEARCH_FIELDS, SEARCH_RELATIONS, query.q ?? ""),
     ...customFieldWhere(cfFilters ?? []),
   };
   const [total, rows] = await Promise.all([
@@ -71,7 +73,7 @@ export async function listAccounts(
     prisma.account.findMany({
       where,
       include,
-      orderBy: orderByFor(query.sort, SORTS, "createdAt"),
+      orderBy: orderByFor(query.sort, SORTS, "createdAt", query.order),
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
     }),

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/server/db";
 import { CrmError } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
+import { deepSearchWhere, orderByFor } from "@/server/listQuery";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
@@ -35,6 +36,22 @@ async function visibleOwnerIds(ctx: ScopedContext): Promise<string[] | null> {
   return [...new Set([ctx.userId, ...memberships.map((m) => m.userId)])];
 }
 
+const SORTS = {
+  createdAt: { createdAt: "desc" as const },
+  name: { name: "asc" as const },
+};
+const SEARCH_FIELDS = ["name", "description", "source"] as const;
+const SEARCH_RELATIONS = { owner: ["name"] } as const;
+
+export interface ListCampaignsQuery {
+  page: number;
+  pageSize: number;
+  sort?: string;
+  order?: "asc" | "desc";
+  q?: string;
+}
+
+/** Full in-scope campaign list (dropdown/option callers). */
 export async function listCampaigns(ctx: ScopedContext) {
   const ownerIds = await visibleOwnerIds(ctx);
   const campaigns = await prisma.campaign.findMany({
@@ -45,10 +62,33 @@ export async function listCampaigns(ctx: ScopedContext) {
       _count: { select: { members: true, leads: true, contacts: true, customers: true } },
     },
   });
-  return campaigns.map((campaign) => ({
-    ...campaign,
-    memberCount: campaign._count.members,
-  }));
+  return campaigns.map((campaign) => ({ ...campaign, memberCount: campaign._count.members }));
+}
+
+/** Standard paginated/sorted/searched list — the table contract. */
+export async function listCampaignsPage(ctx: ScopedContext, query: ListCampaignsQuery) {
+  const ownerIds = await visibleOwnerIds(ctx);
+  const where = {
+    ...(ownerIds ? { ownerUserId: { in: ownerIds } } : {}),
+    ...deepSearchWhere(SEARCH_FIELDS, SEARCH_RELATIONS, query.q ?? ""),
+  };
+  const [total, rows] = await Promise.all([
+    prisma.campaign.count({ where }),
+    prisma.campaign.findMany({
+      where,
+      include: {
+        owner: { select: { id: true, name: true } },
+        _count: { select: { members: true, leads: true, contacts: true, customers: true } },
+      },
+      orderBy: orderByFor(query.sort, SORTS, "createdAt", query.order),
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+    }),
+  ]);
+  return {
+    total,
+    rows: rows.map((campaign) => ({ ...campaign, memberCount: campaign._count.members })),
+  };
 }
 
 export async function getCampaign(ctx: ScopedContext, id: string) {

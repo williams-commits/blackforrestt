@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 
 /**
@@ -68,16 +69,12 @@ export function TaskDetailActions({
       ) : null}
       {active ? (
         <button type="button" className={className} disabled={busy} onClick={() => void setStatus("COMPLETED", "completed")}>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-          </svg>
+          <Icon name="check" size={16} strokeWidth={1.5} />
           Complete
         </button>
       ) : (
         <button type="button" className={className} disabled={busy} onClick={() => void setStatus("OPEN", "reopened")}>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
+          <Icon name="plus" size={16} strokeWidth={1.5} />
           Reopen
         </button>
       )}
@@ -88,16 +85,12 @@ export function TaskDetailActions({
           disabled={busy}
           onClick={() => void setStatus("CANCELLED", "cancelled")}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <Icon name="close" size={16} strokeWidth={1.5} />
           Cancel task
         </button>
       ) : null}
       <Link href={`/tasks?edit=${taskId}`} className={className}>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
+        <Icon name="edit" size={16} strokeWidth={1.5} />
         Edit
       </Link>
       {error ? <span role="alert" className="text-xs text-(--error)">{error}</span> : null}

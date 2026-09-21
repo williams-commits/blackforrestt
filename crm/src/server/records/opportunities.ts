@@ -6,7 +6,7 @@ import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { ownerScopeWhere } from "@/server/scope";
 import { assertAssignableUser } from "@/server/records/assignment";
-import { orderByFor, searchWhere } from "@/server/listQuery";
+import { deepSearchWhere, orderByFor } from "@/server/listQuery";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
@@ -39,7 +39,15 @@ const SORTS = {
   value: { value: "desc" as const },
   expectedCloseAt: { expectedCloseAt: "asc" as const },
 };
-const SEARCH_FIELDS = ["name", "source"] as const;
+// Every text field on the model — table search covers all columns.
+const SEARCH_FIELDS = ["name", "source", "currency"] as const;
+const SEARCH_RELATIONS = {
+  owner: ["name"],
+  account: ["name"],
+  contact: ["firstName", "lastName"],
+  pipeline: ["name"],
+  stage: ["name"],
+} as const;
 
 const listInclude = {
   owner: { select: { id: true, name: true } },
@@ -66,7 +74,7 @@ function scopeWhere(ctx: ScopedContext) {
 
 export async function listOpportunities(
   ctx: ScopedContext,
-  query: { page: number; pageSize: number; sort?: string; q?: string },
+  query: { page: number; pageSize: number; sort?: string; order?: "asc" | "desc"; q?: string },
   filters: z.infer<typeof OpportunityFilters>,
 ) {
   const where: Prisma.OpportunityWhereInput = {
@@ -75,14 +83,14 @@ export async function listOpportunities(
     ...(filters.pipelineId ? { pipelineId: filters.pipelineId } : {}),
     ...(filters.stageId ? { stageId: filters.stageId } : {}),
     ...(filters.status ? { status: filters.status } : {}),
-    ...searchWhere(SEARCH_FIELDS, query.q ?? ""),
+    ...deepSearchWhere(SEARCH_FIELDS, SEARCH_RELATIONS, query.q ?? ""),
   };
   const [total, rows] = await Promise.all([
     prisma.opportunity.count({ where }),
     prisma.opportunity.findMany({
       where,
       include: listInclude,
-      orderBy: orderByFor(query.sort, SORTS, "createdAt"),
+      orderBy: orderByFor(query.sort, SORTS, "createdAt", query.order),
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
     }),

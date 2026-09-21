@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 
 type SubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
@@ -135,10 +136,11 @@ export function ActivityComposer({
     }
   }
 
+
   const actions = [
-    { key: "note", label: "Note", icon: "M12 20h9", sub: "M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" },
-    { key: "task", label: "Task", icon: "M9 11l3 3L22 4", sub: "M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" },
-    { key: "appointment", label: "Schedule", icon: "M12 2v4m0 16v4M4.93 4.93l2.83 2.83m9.9 9.9l2.83 2.83M2 12h4m16 0h-4", sub: "" },
+    { key: "note", label: "Note", icon: "edit" },
+    { key: "task", label: "Task", icon: "check" },
+    { key: "appointment", label: "Schedule", icon: "calendar" },
   ];
 
   return (
@@ -166,10 +168,7 @@ export function ActivityComposer({
                 color: active ? "var(--text-inverse)" : "var(--text-secondary)",
               }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d={action.icon} />
-                {action.sub ? <path d={action.sub} /> : null}
-              </svg>
+              <Icon name={action.icon} size={13} />
               {action.label}
             </button>
           );

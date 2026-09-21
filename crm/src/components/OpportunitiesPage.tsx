@@ -7,6 +7,8 @@ import Link from "next/link";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { SmartTips } from "@/components/SmartTips";
+import { Icon } from "@/components/Icon";
+import { useTableSession, writeTableSession } from "@/components/useTableSession";
 
 export interface Stage {
   id: string;
@@ -137,6 +139,43 @@ export function OpportunitiesPage() {
   const [editRow, setEditRow] = useState<OpportunityRow | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Refresh-proof workspace state: view, pipeline, closed toggle, search.
+  const { session, ready } = useTableSession("opportunities");
+  useEffect(() => {
+    if (!ready) return;
+    if (session) {
+      if (session.search !== undefined) {
+        setSearch(session.search);
+        setDebouncedSearch(session.search);
+      }
+      if (session.activeView === "board" || session.activeView === "list") setView(session.activeView);
+      if (typeof session.filters?.pipelineId === "string") setPipelineId(session.filters.pipelineId);
+      if (typeof session.filters?.status === "string") setStatusFilter(session.filters.status);
+      if (typeof session.filters?.includeClosed === "string") setIncludeClosed(session.filters.includeClosed === "1");
+    }
+    setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, session]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    writeTableSession("opportunities", {
+      activeView: view,
+      search,
+      filters: { pipelineId, status: statusFilter, includeClosed: includeClosed ? "1" : "0" },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, view, search, pipelineId, statusFilter, includeClosed]);
 
   const can = {
     create: me?.permissions.includes("OPPORTUNITIES_CREATE") ?? false,
@@ -167,7 +206,10 @@ export function OpportunitiesPage() {
         if (!response.ok) throw new Error("Unable to load board.");
         setBoard((await response.json()).data);
       } else {
-        const response = await fetch(`/api/opportunities?pipelineId=${pipelineId}&pageSize=100`);
+        const listParams = new URLSearchParams({ pipelineId, pageSize: "100" });
+        if (debouncedSearch) listParams.set("q", debouncedSearch);
+        if (statusFilter) listParams.set("status", statusFilter);
+        const response = await fetch(`/api/opportunities?${listParams.toString()}`);
         if (!response.ok) throw new Error("Unable to load opportunities.");
         setRows((await response.json()).data);
       }
@@ -176,7 +218,7 @@ export function OpportunitiesPage() {
     } finally {
       setLoading(false);
     }
-  }, [pipelineId, view, includeClosed]);
+  }, [pipelineId, view, includeClosed, debouncedSearch, statusFilter]);
 
   useEffect(() => {
     void fetch("/api/me")
@@ -187,8 +229,9 @@ export function OpportunitiesPage() {
   }, [loadPipelines]);
 
   useEffect(() => {
+    if (!hydrated) return;
     void load();
-  }, [load]);
+  }, [load, hydrated]);
 
   async function moveStage(id: string, stageId: string) {
     const response = await fetch(`/api/opportunities/${id}`, {
@@ -228,29 +271,56 @@ export function OpportunitiesPage() {
           <select aria-label="Pipeline" value={pipelineId} onChange={(event) => setPipelineId(event.target.value)} className="input">
             {pipelines.map((pipeline) => <option key={pipeline.id} value={pipeline.id}>{pipeline.name}{pipeline.isDefault ? " ★" : ""}</option>)}
           </select>
-          {can.create ? <button type="button" onClick={() => { setEditRow(null); setShowForm(true); }} className="btn btn-primary"><span aria-hidden>+</span> New opportunity</button> : null}
+          {can.create ? <button type="button" onClick={() => { setEditRow(null); setShowForm(true); }} className="btn btn-primary"><Icon name="plus" size={14} /> New opportunity</button> : null}
         </>}
       />
       <WorkspaceQuickNav />
       <SmartTips context="records" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex overflow-hidden rounded-md border border-(--border-strong) text-sm">
+          <div className="tab-strip" role="group" aria-label="Opportunities view">
             <button
               type="button"
               onClick={() => setView("board")}
-              className={`px-3 py-1.5 ${view === "board" ? "bg-(--brand) text-white" : "bg-(--bg-surface)"}`}
+              aria-pressed={view === "board"}
+              className={`tab-strip-button ${view === "board" ? "active" : ""}`}
             >
               Board
             </button>
             <button
               type="button"
               onClick={() => setView("list")}
-              className={`px-3 py-1.5 ${view === "list" ? "bg-(--brand) text-white" : "bg-(--bg-surface)"}`}
+              aria-pressed={view === "list"}
+              className={`tab-strip-button ${view === "list" ? "active" : ""}`}
             >
               List
             </button>
           </div>
+          {view === "list" ? (
+            <>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search all fields — name, owner, account, stage…"
+                aria-label="Search opportunities"
+                className="input input-sm"
+                style={{ maxWidth: "300px" }}
+              />
+              <select
+                aria-label="Status filter"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+                className="input input-sm"
+                style={{ width: "auto" }}
+              >
+                <option value="">Status: all</option>
+                <option value="OPEN">Open</option>
+                <option value="WON">Won</option>
+                <option value="LOST">Lost</option>
+              </select>
+            </>
+          ) : null}
           {view === "board" ? (
             <label className="flex items-center gap-1 text-sm text-(--text-secondary)">
               <input

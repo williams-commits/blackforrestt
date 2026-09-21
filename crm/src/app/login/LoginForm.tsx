@@ -4,6 +4,7 @@ import { useCrmBranding } from "@/components/BrandingProvider";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { Icon } from "@/components/Icon";
 
 /**
  * Staff sign-in — enterprise split layout: brand panel on the left,
@@ -71,9 +72,7 @@ export function LoginForm() {
                 className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
                 style={{ background: "rgba(255,255,255,0.15)" }}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
+                <Icon name="check" size={12} strokeWidth={3} />
               </span>
               <div>
                 <p className="text-base font-semibold">{feature.title}</p>

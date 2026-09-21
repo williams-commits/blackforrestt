@@ -107,7 +107,13 @@ export async function listTasks(
     ...mineWhere,
     ...(filters.status ? { status: filters.status } : { status: { in: ["OPEN", "IN_PROGRESS"] } }),
     ...(filters.priority ? { priority: filters.priority } : {}),
-    ...(filters.q ? { OR: [{ title: { contains: filters.q, mode: "insensitive" } }, { description: { contains: filters.q, mode: "insensitive" } }] } : {}),
+    ...(filters.q ? {
+      OR: [
+        { title: { contains: filters.q, mode: "insensitive" } },
+        { description: { contains: filters.q, mode: "insensitive" } },
+        { owner: { name: { contains: filters.q, mode: "insensitive" } } },
+      ],
+    } : {}),
     ...(filters.subjectType ? { subjectType: filters.subjectType } : {}),
     ...(filters.subjectId ? { subjectId: filters.subjectId } : {}),
     ...(filters.due === "overdue"

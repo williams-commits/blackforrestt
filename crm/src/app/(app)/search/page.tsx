@@ -14,6 +14,7 @@ const TYPE_LABELS: Record<string, string> = {
   ACCOUNT: "Accounts",
   CUSTOMER: "Customers",
   OPPORTUNITY: "Opportunities",
+  CAMPAIGN: "Campaigns",
   TASK: "Tasks",
   NOTE: "Notes",
 };

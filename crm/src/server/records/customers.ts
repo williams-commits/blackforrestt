@@ -6,7 +6,7 @@ import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { normalizeEmail, normalizePhone, normalizeText } from "@/server/normalize";
 import { ownerScopeWhere } from "@/server/scope";
-import { customFieldWhere, orderByFor, searchWhere } from "@/server/listQuery";
+import { customFieldWhere, deepSearchWhere, orderByFor } from "@/server/listQuery";
 import { sanitizeCustomFields } from "@/server/records/customFields";
 import { assertAssignableUser } from "@/server/records/assignment";
 import type { ScopedContext } from "@/server/records/leads";
@@ -40,7 +40,9 @@ const SORTS = {
   createdAt: { createdAt: "desc" as const },
   name: { lastName: "asc" as const },
 };
-const SEARCH_FIELDS = ["firstName", "lastName", "email", "phone"] as const;
+// Every text field on the model — table search covers all columns.
+const SEARCH_FIELDS = ["firstName", "lastName", "email", "phone", "source", "platformUserId"] as const;
+const SEARCH_RELATIONS = { status: ["name"], owner: ["name"], contact: ["firstName", "lastName"] } as const;
 
 const include = {
   owner: { select: { id: true, name: true } },
@@ -50,7 +52,7 @@ const include = {
 
 export async function listCustomers(
   ctx: ScopedContext,
-  query: { page: number; pageSize: number; sort?: string; q?: string },
+  query: { page: number; pageSize: number; sort?: string; order?: "asc" | "desc"; q?: string },
   filters: { statusId?: string; mine?: boolean },
   cfFilters?: Array<{ key: string; value: string }>,
 ) {
@@ -59,7 +61,7 @@ export async function listCustomers(
     ...ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds),
     ...(filters.statusId ? { statusId: filters.statusId } : {}),
     ...(filters.mine ? { ownerUserId: ctx.userId } : {}),
-    ...searchWhere(SEARCH_FIELDS, query.q ?? ""),
+    ...deepSearchWhere(SEARCH_FIELDS, SEARCH_RELATIONS, query.q ?? ""),
     ...customFieldWhere(cfFilters ?? []),
   };
   const [total, rows] = await Promise.all([
@@ -67,7 +69,7 @@ export async function listCustomers(
     prisma.customer.findMany({
       where,
       include,
-      orderBy: orderByFor(query.sort, SORTS, "createdAt"),
+      orderBy: orderByFor(query.sort, SORTS, "createdAt", query.order),
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
     }),

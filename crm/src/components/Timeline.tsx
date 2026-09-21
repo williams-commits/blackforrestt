@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { Icon } from "@/components/Icon";
 
 type EventRow = Prisma.ActivityEventGetPayload<{ include: { actor: { select: { name: true } } } }>;
 
@@ -65,9 +66,7 @@ export function Timeline({ events }: { events: EventRow[] }) {
   if (events.length === 0) {
     return (
       <div className="empty-state">
-        <svg className="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-        </svg>
+        <Icon name="clock" size={48} strokeWidth={1.5} className="empty-state-icon" />
         <p className="empty-state-title">No activity yet</p>
         <p className="empty-state-description">Actions on this record will appear here.</p>
       </div>

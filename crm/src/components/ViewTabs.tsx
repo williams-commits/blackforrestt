@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Icon } from "@/components/Icon";
 
 /**
  * Object Home view tabs — the Salesforce-style preset view selector
@@ -63,7 +64,7 @@ export function ViewTabs({
           <div className="flex flex-wrap items-center gap-2">
             {canCreate && onNewClick ? (
               <button type="button" className="btn btn-primary" onClick={onNewClick}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <Icon name="plus" size={12} strokeWidth={3} />
                 New {title.endsWith("s") ? title.slice(0, -1) : title}
               </button>
             ) : null}
@@ -146,9 +147,7 @@ export function ViewTabs({
                   >
                     <span className="truncate">{view.label}</span>
                     {view.isPinned ? (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 17v5"/><path d="M9 10.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 004 15.24V16h16v-.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 002-2V3H6v1a2 2 0 002 2h1z"/>
-                      </svg>
+                      <Icon name="pin" size={12} />
                     ) : null}
                   </button>
                 ))}

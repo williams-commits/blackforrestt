@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
+import { useTableSession, writeTableSession } from "@/components/useTableSession";
 import { notificationHref } from "@/lib/notificationLink";
 
 type NotificationRow = { id: string; type: string; payload: Record<string, unknown>; readAt: string | null; createdAt: string };
@@ -34,6 +35,29 @@ export function NotificationCenter() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Refresh-proof state: read tab, type filter, page.
+  const { session, ready } = useTableSession("notifications");
+  useEffect(() => {
+    if (!ready) return;
+    if (session) {
+      if (session.filters) {
+        const savedRead = session.filters.read;
+        if (savedRead === "all" || savedRead === "unread" || savedRead === "read") setRead(savedRead);
+        if (typeof session.filters.type === "string") setType(session.filters.type);
+      }
+      if (session.page !== undefined) setPage(session.page);
+    }
+    setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, session]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    writeTableSession("notifications", { page, filters: { read, type } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, page, read, type]);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -49,7 +73,7 @@ export function NotificationCenter() {
     } finally { setLoading(false); }
   }, [page, read, type]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (!hydrated) return; void load(); }, [load, hydrated]);
   const rows = useMemo(() => data?.data ?? [], [data]);
   const types = useMemo(() => [...new Set(rows.map((row) => row.type))], [rows]);
   const groupedRows = useMemo(() => rows.reduce<Array<{ label: string; rows: NotificationRow[] }>>((groups, row) => {

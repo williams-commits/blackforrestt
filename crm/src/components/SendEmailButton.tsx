@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { EmailCompose } from "@/components/EmailCompose";
+import { Icon } from "@/components/Icon";
 
 /** "Send Email" trigger button — shown on record pages with an email. */
 export function SendEmailButton({
@@ -27,10 +28,7 @@ export function SendEmailButton({
         className="flex items-center gap-1.5 rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-(--brand) focus:ring-offset-2 cursor-pointer"
         title={`Send email to ${email}`}
       >
-        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-          <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-          <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-        </svg>
+        <Icon name="mail" size={16} />
         Email
       </button>
       {open ? (

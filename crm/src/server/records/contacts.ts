@@ -6,7 +6,7 @@ import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { normalizeEmail, normalizePhone, normalizeText } from "@/server/normalize";
 import { ownerScopeWhere } from "@/server/scope";
-import { customFieldWhere, orderByFor, searchWhere } from "@/server/listQuery";
+import { customFieldWhere, deepSearchWhere, orderByFor } from "@/server/listQuery";
 import { sanitizeCustomFields } from "@/server/records/customFields";
 import { assertAssignableUser } from "@/server/records/assignment";
 import type { ScopedContext } from "@/server/records/leads";
@@ -40,7 +40,9 @@ const SORTS = {
   name: { lastName: "asc" as const },
   email: { email: "asc" as const },
 };
-const SEARCH_FIELDS = ["firstName", "lastName", "email", "phone", "jobTitle"] as const;
+// Every text field on the model — table search covers all columns.
+const SEARCH_FIELDS = ["firstName", "lastName", "email", "phone", "jobTitle", "leadSource", "externalId"] as const;
+const SEARCH_RELATIONS = { status: ["name"], owner: ["name"], account: ["name"] } as const;
 
 const include = {
   account: { select: { id: true, name: true } },
@@ -50,7 +52,7 @@ const include = {
 
 export async function listContacts(
   ctx: ScopedContext,
-  query: { page: number; pageSize: number; sort?: string; q?: string },
+  query: { page: number; pageSize: number; sort?: string; order?: "asc" | "desc"; q?: string },
   filters: { accountId?: string; statusId?: string; mine?: boolean },
   cfFilters?: Array<{ key: string; value: string }>,
 ) {
@@ -60,7 +62,7 @@ export async function listContacts(
     ...(filters.accountId ? { accountId: filters.accountId } : {}),
     ...(filters.statusId ? { statusId: filters.statusId } : {}),
     ...(filters.mine ? { ownerUserId: ctx.userId } : {}),
-    ...searchWhere(SEARCH_FIELDS, query.q ?? ""),
+    ...deepSearchWhere(SEARCH_FIELDS, SEARCH_RELATIONS, query.q ?? ""),
     ...customFieldWhere(cfFilters ?? []),
   };
   const [total, rows] = await Promise.all([
@@ -68,7 +70,7 @@ export async function listContacts(
     prisma.contact.findMany({
       where,
       include,
-      orderBy: orderByFor(query.sort, SORTS, "createdAt"),
+      orderBy: orderByFor(query.sort, SORTS, "createdAt", query.order),
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
     }),

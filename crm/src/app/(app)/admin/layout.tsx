@@ -14,9 +14,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     where: { id: session.user.id },
     select: { role: { select: { permissions: { select: { permission: true } } } } },
   });
-  const hasAdminAccess = user?.role.permissions.some(
-    (entry) => ["ADMIN_ACCESS", "SETTINGS_MANAGE", "AUDIT_VIEW"].includes(entry.permission)
-  );
+  const permissions = user?.role.permissions.map((entry) => entry.permission) ?? [];
+  const canManage = permissions.includes("SETTINGS_MANAGE");
+  const canAudit = permissions.includes("AUDIT_VIEW");
+  const hasAdminAccess =
+    permissions.some((permission) => ["ADMIN_ACCESS", "SETTINGS_MANAGE", "AUDIT_VIEW"].includes(permission));
   if (!hasAdminAccess) redirect("/");
 
   return (
@@ -26,8 +28,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <h1 className="page-title">Administration</h1>
         <p className="page-subtitle">Configure your workspace, access, and operating rules.</p>
       </div>
-      <div className="grid gap-6 lg:grid-cols-[208px_1fr] lg:items-start">
-        <AdminNav />
+      <div className="admin-shell">
+        <AdminNav canManage={canManage} canAudit={canAudit} />
         <div className="min-w-0">{children}</div>
       </div>
     </div>

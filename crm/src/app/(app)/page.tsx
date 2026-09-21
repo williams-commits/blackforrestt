@@ -17,8 +17,18 @@ export default function HomePage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/tasks?mine=1" className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-(--brand-900) transition hover:bg-green-50">Open my tasks</Link>
-            <Link href="/leads" className="rounded-md border border-white/30 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10">View pipeline</Link>
+            <Link
+              href="/tasks?mine=1"
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-white px-3.5 text-sm font-semibold text-(--brand-900) shadow-sm transition hover:bg-green-50"
+            >
+              Open my tasks
+            </Link>
+            <Link
+              href="/leads"
+              className="inline-flex h-9 items-center gap-2 rounded-md border border-white/30 px-3.5 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/50"
+            >
+              View pipeline
+            </Link>
           </div>
         </div>
         <div className="absolute -right-12 -top-16 h-48 w-48 rounded-full border border-white/10" />

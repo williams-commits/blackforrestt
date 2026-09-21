@@ -225,7 +225,6 @@ export function ReportsPage() {
             onClick={() => void runCustomReport()}
             disabled={running}
             className="btn btn-primary"
-            style={{ background: "var(--brand)" }}
           >
             {running ? "Running…" : "Run report"}
           </button></div>
@@ -293,7 +292,6 @@ export function ReportsPage() {
                     onClick={() => void run()}
                     disabled={running}
                     className="btn btn-primary"
-                    style={{ background: "var(--brand)" }}
                   >
                     {running ? "Running…" : "Run"}
                   </button>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/components/Icon";
 
 interface Hit {
   objectType: string;
@@ -11,7 +12,17 @@ interface Hit {
   url: string;
 }
 
-const TYPE_ORDER = ["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY", "TASK", "NOTE"];
+const TYPE_ORDER = ["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY", "CAMPAIGN", "TASK", "NOTE"];
+const TYPE_LABELS: Record<string, string> = {
+  LEAD: "Leads",
+  CONTACT: "Contacts",
+  ACCOUNT: "Accounts",
+  CUSTOMER: "Customers",
+  OPPORTUNITY: "Opportunities",
+  CAMPAIGN: "Campaigns",
+  TASK: "Tasks",
+  NOTE: "Notes",
+};
 
 /** Global search: enterprise bar with `/` shortcut, grouped dropdown results. */
 export function GlobalSearch() {
@@ -79,9 +90,7 @@ export function GlobalSearch() {
           background: "var(--bg-surface)",
         }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-tertiary)", flexShrink: 0 }}>
-          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
+        <Icon name="search" size={14} className="text-(--text-tertiary)" />
         <input
           ref={inputRef}
           type="search"
@@ -125,7 +134,7 @@ export function GlobalSearch() {
                   className="border-b px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider"
                   style={{ color: "var(--text-tertiary)", borderColor: "var(--border-default)", background: "var(--bg-subtle)" }}
                 >
-                  {type.toLowerCase()}s ({list.length})
+                  {TYPE_LABELS[type] ?? type.toLowerCase()} ({list.length})
                 </p>
                 {list.map((hit) => (
                   <a

@@ -35,15 +35,44 @@ export function searchWhere(fields: readonly string[], q: string): Record<string
 }
 
 /**
+ * Case-insensitive contains across scalar fields AND to-one relation
+ * columns, so a table search on "New" also matches a status named New and
+ * a search on a person's name matches the assignee column. `relations`
+ * maps a Prisma relation name to the related-model columns to match.
+ */
+export function deepSearchWhere(
+  fields: readonly string[],
+  relations: Record<string, readonly string[]>,
+  q: string,
+): Record<string, unknown> | undefined {
+  if (!q) return undefined;
+  const scalar = fields.map((field) => ({ [field]: { contains: q, mode: "insensitive" } }));
+  const related = Object.entries(relations).map(([relation, columns]) => ({
+    [relation]:
+      columns.length === 1
+        ? { [columns[0]!]: { contains: q, mode: "insensitive" } }
+        : { OR: columns.map((column) => ({ [column]: { contains: q, mode: "insensitive" } })) },
+  }));
+  const or = [...scalar, ...related];
+  return or.length > 0 ? { OR: or } : undefined;
+}
+
+/**
  * Build a Prisma orderBy from a whitelisted sort key. `allowed` maps the
  * public sort name to an orderBy object; the fallback key must exist.
+ * `order` (the ?order= param) overrides the direction of the resolved
+ * mapping — every current SORTS entry is single-key, so flipping all its
+ * keys is exact. Legacy callers that pass no order keep the SORTS default.
  */
 export function orderByFor(
   requested: string | undefined,
   allowed: Record<string, Record<string, "asc" | "desc">>,
   fallbackKey: string,
+  order?: "asc" | "desc",
 ): Record<string, "asc" | "desc"> {
-  return (requested && allowed[requested]) || allowed[fallbackKey]!;
+  const resolved = (requested && allowed[requested]) || allowed[fallbackKey]!;
+  if (!order) return resolved;
+  return Object.fromEntries(Object.entries(resolved).map(([key]) => [key, order]));
 }
 
 /** Extract `cf_<key>=<value>` params for JSONB custom-field filtering. */

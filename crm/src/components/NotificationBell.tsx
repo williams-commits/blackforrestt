@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { notificationHref } from "@/lib/notificationLink";
+import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 
 interface NotificationRow {
@@ -125,10 +126,7 @@ export function NotificationBell() {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 01-3.46 0" />
-        </svg>
+        <Icon name="bell" size={16} />
         {unread > 0 ? <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-(--error) px-1 text-[9px] font-bold leading-4 text-white">{unread > 99 ? "99+" : unread}</span> : null}
       </button>
 

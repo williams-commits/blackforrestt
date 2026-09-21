@@ -23,12 +23,15 @@ import {
   Home,
   LayoutGrid,
   Lightbulb,
+  List,
   Mail,
   MapPin,
   Megaphone,
   Moon,
+  Menu,
   MoreHorizontal,
   Pencil,
+  Play,
   Pin,
   Plug,
   Plus,
@@ -37,6 +40,7 @@ import {
   Settings,
   Shield,
   SlidersHorizontal,
+  SquareCheck,
   StickyNote,
   Sun,
   Tag,
@@ -73,6 +77,8 @@ const ICONS: Record<string, LucideIcon> = {
 
   // Actions
   plus: Plus,
+  menu: Menu,
+  play: Play,
   edit: Pencil,
   trash: Trash2,
   mail: Mail,
@@ -106,6 +112,8 @@ const ICONS: Record<string, LucideIcon> = {
   sliders: SlidersHorizontal,
 
   // Misc
+  list: List,
+  square_check: SquareCheck,
   moon: Moon,
   sun: Sun,
   bell: Bell,

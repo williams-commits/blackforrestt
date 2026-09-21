@@ -95,7 +95,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
   const appointmentCount = appointments.length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <div className="mx-auto max-w-6xl space-y-4" data-module="leads">
       <nav className="breadcrumb no-print" aria-label="Breadcrumb">
         <Link href="/">Home</Link><span className="breadcrumb-sep">/</span>
         <Link href="/leads">Leads</Link><span className="breadcrumb-sep">/</span>

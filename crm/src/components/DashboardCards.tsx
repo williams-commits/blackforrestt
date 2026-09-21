@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Icon } from "@/components/Icon";
 
 interface DashboardData {
   scope: string;
@@ -43,9 +44,9 @@ export function DashboardCards() {
     return (
       <div className="space-y-3">
         {error ? <div role="alert" className="flex items-center justify-between rounded-md border border-(--error-border) bg-(--error-bg) px-3 py-2 text-sm text-(--error)"><span>Dashboard metrics are temporarily unavailable.</span><button type="button" onClick={() => window.location.reload()} className="font-semibold underline">Retry</button></div> : null}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {[0, 1, 2, 3, 4, 5, 6].map((index) => (
-          <div key={index} className="h-20 animate-pulse rounded-lg border border-(--border-default) bg-(--bg-surface)" />
+          <div key={index} className="skeleton h-24 rounded-lg" />
         ))}
         </div>
       </div>
@@ -53,44 +54,56 @@ export function DashboardCards() {
   }
 
   const cards = [
-    { label: "Open leads", value: String(data.openLeads), href: "/leads", tone: "brand" },
-    { label: "New leads · 30d", value: String(data.newLeads30d), href: "/leads", tone: "blue" },
-    { label: "Converted · 30d", value: String(data.convertedLeads30d), href: "/leads", tone: "amber" },
+    { label: "Open leads", value: String(data.openLeads), href: "/leads" },
+    { label: "New leads · 30d", value: String(data.newLeads30d), href: "/leads" },
+    { label: "Converted · 30d", value: String(data.convertedLeads30d), href: "/leads" },
     {
       label: `Open pipeline (${data.scope === "OWN" ? "mine" : "scope"})`,
       value: money(data.openPipelineValue),
       sub: `${data.openOpportunityCount} deal(s)`,
       href: "/opportunities",
-      tone: "brand",
     },
     {
       label: "Won this month",
       value: money(data.wonThisMonthValue),
       sub: `${data.wonThisMonthCount} deal(s)`,
       href: "/opportunities",
-      tone: "success",
     },
-    { label: "My open tasks", value: String(data.myOpenTasks), href: "/tasks", tone: "blue" },
-    { label: "Activity · 7d", value: String(data.activity7d), href: "/reports", tone: "slate" },
+    { label: "My open tasks", value: String(data.myOpenTasks), href: "/tasks" },
+    { label: "Activity · 7d", value: String(data.activity7d), href: "/reports" },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {cards.map((card) => (
         <Link
           key={card.label}
           href={card.href}
-          className="card card-interactive group min-w-0 p-4"
+          className="card card-interactive group flex min-w-0 flex-col gap-3 p-4"
         >
-          <div className="mb-4 flex items-center justify-between">
-            <span className={`h-2 w-2 rounded-full ${card.tone === "brand" ? "bg-(--brand-500)" : card.tone === "blue" ? "bg-blue-500" : card.tone === "amber" ? "bg-amber-500" : card.tone === "success" ? "bg-emerald-500" : "bg-slate-400"}`} />
-            <span className="text-(--text-tertiary) transition-transform group-hover:translate-x-0.5">↗</span>
-          </div>
-          <p className="truncate text-xl font-semibold tracking-tight">{card.value}</p>
-          <p className="mt-1 truncate text-xs text-(--text-secondary)">{card.label}</p>
-          {card.sub ? <p className="mt-0.5 truncate text-[10px] text-(--text-tertiary)">{card.sub}</p> : null}
+          <span className="card-title truncate">{card.label}</span>
+          <span className="flex items-end justify-between gap-2">
+            <span className="min-w-0">
+              <span className="block truncate text-xl font-semibold tracking-tight tabular-nums text-(--text-primary)">
+                {card.value}
+              </span>
+              {card.sub ? (
+                <span className="mt-0.5 block truncate text-[10px] text-(--text-tertiary) tabular-nums">
+                  {card.sub}
+                </span>
+              ) : null}
+            </span>
+            <Icon
+              name="external"
+              size={13}
+              className="shrink-0 text-(--text-tertiary) opacity-0 transition-opacity group-hover:opacity-100"
+            />
+          </span>
         </Link>
       ))}
+      {/* Ghost cell — keeps the final row at equal widths when the card
+          count is not a multiple of the column count. */}
+      <div aria-hidden className="hidden lg:block" />
     </div>
   );
 }

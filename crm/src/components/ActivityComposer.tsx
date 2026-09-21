@@ -139,7 +139,7 @@ export function ActivityComposer({
 
   const actions = [
     { key: "note", label: "Note", icon: "edit" },
-    { key: "task", label: "Task", icon: "check" },
+    { key: "task", label: "Task", icon: "square_check" },
     { key: "appointment", label: "Schedule", icon: "calendar" },
   ];
 

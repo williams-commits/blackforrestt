@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePromptDialog } from "@/components/Dialogs";
 import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui";
 
 type SubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
 
@@ -320,10 +321,10 @@ export function EmailCompose({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8" role="dialog" aria-modal="true" aria-label="Compose email">
-      <div className="w-full max-w-3xl overflow-hidden rounded-xl border border-(--border-default) bg-(--bg-surface) text-(--text-primary) shadow-2xl">
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Compose email">
+      <div className="modal modal-lg overflow-hidden">
         {/* Title bar */}
-        <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-subtle) px-5 py-3">
+        <div className="flex items-center justify-between border-b border-(--border-hairline) bg-(--bg-subtle) px-5 py-3">
           <div className="min-w-0">
             <h2 className="text-base font-semibold">{sent ? "Email sent" : "New email"}</h2>
             <p className="truncate text-xs text-(--text-tertiary)">
@@ -332,7 +333,9 @@ export function EmailCompose({
                 : "Unlinked send — visible in the shared mailbox to every EMAILS_VIEW holder."}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="text-xl leading-none text-(--text-tertiary) hover:text-(--text-secondary)" aria-label="Close composer">×</button>
+          <button type="button" onClick={onClose} className="icon-button" aria-label="Close composer">
+            <Icon name="close" size={16} />
+          </button>
         </div>
 
         {/* SMTP warning */}
@@ -355,8 +358,8 @@ export function EmailCompose({
               {linked && subjectType ? (
                 <Link href={`/${RECORD_PATH[subjectType]}/${subjectId}`} className="btn btn-secondary">View record</Link>
               ) : null}
-              <Link href="/emails" className="btn btn-primary" style={{ background: "var(--brand)" }}>Open mailbox →</Link>
-              <button type="button" onClick={onClose} className="btn btn-secondary ml-auto">Close</button>
+              <Link href="/emails" className="btn btn-primary">Open mailbox →</Link>
+              <Button variant="secondary" onClick={onClose} className="ml-auto">Close</Button>
             </div>
           </div>
         ) : (
@@ -369,7 +372,7 @@ export function EmailCompose({
             ) : null}
 
             {/* Recipients */}
-            <div className="divide-y divide-(--border-default) rounded-lg border border-(--border-default)">
+            <div className="divide-y divide-(--border-hairline) rounded-lg bg-(--bg-subtle)">
               <div className="flex items-center gap-3 px-4 py-2.5">
                 <label htmlFor="ec-to" className="w-14 shrink-0 text-sm font-medium text-(--text-secondary)">To</label>
                 <input
@@ -388,7 +391,7 @@ export function EmailCompose({
                 </div>
               </div>
               {ccVisible ? (
-                <div className="flex items-center gap-3 bg-(--bg-subtle) px-4 py-2">
+                <div className="flex items-center gap-3 px-4 py-2">
                   <label htmlFor="ec-cc" className="w-14 shrink-0 text-sm font-medium text-(--text-secondary)">Cc</label>
                   <input
                     id="ec-cc" type="email" value={cc} disabled={busy}
@@ -404,7 +407,7 @@ export function EmailCompose({
                 </div>
               ) : null}
               {bccVisible ? (
-                <div className="flex items-center gap-3 bg-(--bg-subtle) px-4 py-2">
+                <div className="flex items-center gap-3 px-4 py-2">
                   <label htmlFor="ec-bcc" className="w-14 shrink-0 text-sm font-medium text-(--text-secondary)">Bcc</label>
                   <input
                     id="ec-bcc" type="email" value={bcc} disabled={busy}
@@ -492,7 +495,7 @@ export function EmailCompose({
             </p>
 
             {linked ? (
-              <div className="flex flex-wrap items-center gap-3 rounded-md border border-(--border-default) bg-(--bg-hover) px-3 py-2.5">
+              <div className="flex flex-wrap items-center gap-3 rounded-md bg-(--bg-subtle) px-3 py-2.5">
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox" checked={createFollowUp} disabled={busy}
@@ -503,7 +506,7 @@ export function EmailCompose({
                 <select
                   aria-label="Follow-up days" value={followUpInDays}
                   onChange={(event) => setFollowUpInDays(parseInt(event.target.value, 10))}
-                  disabled={!createFollowUp || busy} className="input"
+                  disabled={!createFollowUp || busy} className="input input-sm"
                 >
                   {[1, 2, 3, 5, 7, 14, 30].map((days) => (
                     <option key={days} value={days}>{days} day{days > 1 ? "s" : ""}</option>
@@ -512,15 +515,15 @@ export function EmailCompose({
               </div>
             ) : null}
 
-            <div className="flex items-center justify-between gap-2 border-t border-(--border-default) pt-4">
+            <div className="flex items-center justify-between gap-2 border-t border-(--border-hairline) pt-4">
               <p className="text-xs text-(--text-tertiary)">
                 {linked ? "Archived to this record's email history." : "Archived to the shared mailbox."}
               </p>
               <div className="flex gap-2">
-                <button type="button" onClick={onClose} className="btn btn-secondary" disabled={busy}>Cancel</button>
-                <button type="submit" disabled={!canSend || smtpConfigured === false} className="btn btn-primary" style={{ background: "var(--brand)" }}>
-                  {busy ? "Sending…" : sent ? "✓ Sent" : "Send"}
-                </button>
+                <Button variant="secondary" onClick={onClose} disabled={busy}>Cancel</Button>
+                <Button variant="primary" icon="mail" type="submit" loading={busy} disabled={!canSend || smtpConfigured === false}>
+                  Send
+                </Button>
               </div>
             </div>
           </form>

@@ -235,6 +235,24 @@ export async function createTask(ctx: ScopedContext, input: z.infer<typeof Creat
   return task;
 }
 
+export const BulkTaskAction = z.object({
+  action: z.enum(["complete", "cancel", "reopen"]),
+  ids: z.array(z.string().trim().min(5)).min(1).max(500),
+});
+
+/** Bulk status changes on visible tasks — each row runs the full updateTask
+ * path (permission, visibility, notifications) so bulk never bypasses the
+ * single-row rules. Out-of-scope rows 404 and abort nothing before them. */
+export async function bulkTasks(ctx: ScopedContext, input: z.infer<typeof BulkTaskAction>) {
+  const statusByAction = { complete: "COMPLETED", cancel: "CANCELLED", reopen: "OPEN" } as const;
+  let updated = 0;
+  for (const id of input.ids) {
+    await updateTask(ctx, id, { status: statusByAction[input.action] });
+    updated += 1;
+  }
+  return { updated };
+}
+
 export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<typeof UpdateTask>) {
   requireCapability(ctx, "TASKS_EDIT");
   // Editing stays with the owner or an admin. Tagged viewers are view-only

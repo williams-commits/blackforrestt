@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
+import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
 import { prisma } from "@/server/db";
 import { permissionsForRoleKey } from "@/server/permissions";
 
@@ -709,11 +710,11 @@ export default async function DocsPage() {
       {/* ── Keyboard Shortcuts ── */}
       <Section id="shortcuts" title="Keyboard Shortcuts">
         <div className="overflow-x-auto">
-          <table className="table">
-            <thead>
-              <tr><th>Shortcut</th><th>Action</th><th>Context</th></tr>
-            </thead>
-            <tbody>
+          <Table>
+            <THead>
+              <TR><TH>Shortcut</TH><TH>Action</TH><TH>Context</TH></TR>
+            </THead>
+            <TBody>
               {[
                 { key: "/", action: "Focus global search", context: "Anywhere" },
                 { key: "Alt+N", action: "Open quick actions menu", context: "Anywhere" },
@@ -727,14 +728,14 @@ export default async function DocsPage() {
                 { key: "Tab", action: "Navigate between elements", context: "Anywhere" },
                 { key: "Escape", action: "Close modal/dialog", context: "Any dialog" },
               ].map((shortcut) => (
-                <tr key={shortcut.key}>
-                  <td><kbd className="rounded border px-2 py-0.5 text-[12px] font-mono" style={{ borderColor: "var(--border-strong)", background: "var(--bg-subtle)" }}>{shortcut.key}</kbd></td>
-                  <td>{shortcut.action}</td>
-                  <td style={{ color: "var(--text-tertiary)" }}>{shortcut.context}</td>
-                </tr>
+                <TR key={shortcut.key}>
+                  <TD><kbd className="rounded border px-2 py-0.5 text-[12px] font-mono" style={{ borderColor: "var(--border-strong)", background: "var(--bg-subtle)" }}>{shortcut.key}</kbd></TD>
+                  <TD>{shortcut.action}</TD>
+                  <TD style={{ color: "var(--text-tertiary)" }}>{shortcut.context}</TD>
+                </TR>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
       </Section>
 

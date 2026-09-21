@@ -270,6 +270,41 @@ filters) across refreshes via `useTableSession` (sessionStorage, per-table
 key); search is server-side and covers every text column plus to-one
 relation names (status/owner/account/campaign) — see `deepSearchWhere`.
 
+Design foundation (2026 enterprise revamp): Inter via next/font
+(`--font-inter`); tokens in globals.css define the full scale (type 10–28px
+on a 13px base, 4px spacing grid, radii 5/7/10/14, control heights 28/32/36,
+calm layered shadows, motion 120/180/250ms + 280ms panel ease). Light mode
+separates surfaces by tone + shadow — cards are BORDERLESS; dark mode swaps
+to hairline borders (shadows don't read). Tables own their own th/td styles;
+row separators use `--border-hairline`.
+
+Shared components live in `src/components/ui.tsx`: `Button` (variants
+primary/secondary/tertiary/destructive; sizes sm/md/lg; icon, loading
+spinner, href → anchor), `Drawer` (the ONE side panel: slides in from the
+right, exits with a leftward fade; header/body/footer; Esc + backdrop
+close; vetoable onClose for unsaved changes), `Section` (borderless
+grouping), `EmptyState` + `ModuleIllustration` (abstract line-art inked
+with the module accent). Record create/edit uses the Drawer (RecordForm).
+
+Module accents: page roots carry `data-module` → ambient `--accent`,
+`--accent-soft`, `--accent-border` variables (leads green, contacts blue,
+accounts indigo, customers teal, opportunities amber, tasks violet,
+campaigns pink, emails cyan, reports/admin slate). Used subtly: highlights
+band, selected rows, board drag states, illustration ink, sidebar active
+item (mirrored hex map in Sidebar.tsx). Never large color fields.
+
+Object-home engine: leads, contacts, accounts, customers, campaigns, AND
+tasks all render through `RecordListPage` + `RECORD_UI` (recordUi.ts). The
+four RECORD objects get the full surface (bulk, saved views, export, merge,
+inline status); campaigns/tasks get the same table/toolbar/footer/drawer
+experience gated to their permissions (no bulk/views/export — no API for
+them). Task semantics preserved: fixed due-date ordering (columns
+non-sortable), status/priority/due/ownership filters, Complete/Cancel/Reopen
+row actions, and record→tasks deep-links (?subjectType/…/edit=…) which
+override the restored session. Import-job history mirrors the same table
+experience (toolbar search, rows-per-page, showing-range footer, session
+persistence) via `listJobsPage`.
+
 Admin area: route-based (`/admin/*`) with a shared server layout — a
 grouped, permission-gated left rail (`.admin-rail`/`.admin-nav-*`:
 Workspace / Records / System) and the Administration context header; each

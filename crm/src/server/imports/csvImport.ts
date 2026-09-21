@@ -661,6 +661,62 @@ export async function listJobs(userId: string) {
   });
 }
 
+/** ImportStatus enum values (schema mirror) for name-matching in search. */
+const IMPORT_STATUSES = ["DRAFT", "MAPPING", "VALIDATING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"] as const;
+
+/** Paginated + searchable job history for the history table (the
+ *  standardized list-table pattern). Same scope and select as listJobs;
+ *  reaps stranded jobs first so paginated totals never count dead workers.
+ *  listJobs stays as-is for dropdown/back-compat consumers. Search is a
+ *  case-insensitive contains on fileKey; objectType/status are Prisma
+ *  enums, so they match by enum-value name via `in`. */
+export async function listJobsPage(
+  userId: string,
+  query: { page: number; pageSize: number; q?: string },
+): Promise<{ total: number; rows: Awaited<ReturnType<typeof listJobs>> }> {
+  await reapStrandedJobs(userId);
+  const search = query.q?.trim() ?? "";
+  const searchLower = search.toLowerCase();
+  const where = {
+    createdById: userId,
+    ...(search
+      ? {
+          OR: [
+            { fileKey: { contains: search, mode: "insensitive" as const } },
+            { objectType: { in: ImportObjectTypes.filter((value) => value.toLowerCase().includes(searchLower)) } },
+            { status: { in: IMPORT_STATUSES.filter((value) => value.toLowerCase().includes(searchLower)) } },
+          ],
+        }
+      : {}),
+  };
+  const [total, rows] = await Promise.all([
+    prisma.importJob.count({ where }),
+    prisma.importJob.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+      select: {
+        id: true,
+        objectType: true,
+        status: true,
+        strategy: true,
+        totalRows: true,
+        processedRows: true,
+        createdCount: true,
+        updatedCount: true,
+        skippedCount: true,
+        duplicateCount: true,
+        errorCount: true,
+        fileKey: true,
+        createdAt: true,
+        finishedAt: true,
+      },
+    }),
+  ]);
+  return { total, rows };
+}
+
 export function getJob(userId: string, jobId: string) {
   return prisma.importJob.findFirst({
     where: { id: jobId, createdById: userId },

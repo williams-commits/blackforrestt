@@ -26,7 +26,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6" data-module="campaigns">
       <nav className="breadcrumb no-print" aria-label="Breadcrumb">
         <Link href="/">Home</Link><span className="breadcrumb-sep">/</span>
         <Link href="/campaigns">Campaigns</Link><span className="breadcrumb-sep">/</span>

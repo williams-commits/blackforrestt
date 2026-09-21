@@ -66,8 +66,7 @@ export function RowActions({
           setOpen((p) => !p);
           window.requestAnimationFrame(positionMenu);
         }}
-        className="flex h-6 w-6 items-center justify-center rounded"
-        style={{ color: "var(--text-tertiary)" }}
+        className="flex h-6 w-6 items-center justify-center rounded-md text-(--text-tertiary) transition-colors hover:bg-(--bg-hover) hover:text-(--text-primary)"
         aria-label="Row actions"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -76,14 +75,9 @@ export function RowActions({
       </button>
       {open ? (
         <div
-          className="fixed z-50 rounded-lg border py-1"
+          className="fixed z-50 rounded-lg border border-(--border-default) bg-(--bg-surface) py-1 shadow-(--shadow-dropdown)"
           role="menu"
-          style={{
-            ...menuStyle,
-            background: "var(--bg-surface)",
-            borderColor: "var(--border-default)",
-            boxShadow: "var(--shadow-dropdown)",
-          }}
+          style={menuStyle}
         >
           {actions.map((action) => (
             <button
@@ -94,10 +88,9 @@ export function RowActions({
                 setOpen(false);
                 action.onClick();
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] transition-colors hover:bg-(--bg-hover)"
-              style={{
-                color: action.destructive ? "var(--error)" : "var(--text-primary)",
-              }}
+              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] transition-colors hover:bg-(--bg-hover) ${
+                action.destructive ? "text-(--error)" : "text-(--text-primary)"
+              }`}
             >
               {action.icon ? <Icon name={action.icon} size={14} /> : null}
               {action.label}

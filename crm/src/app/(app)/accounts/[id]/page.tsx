@@ -89,7 +89,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <div className="mx-auto max-w-6xl space-y-4" data-module="accounts">
       <nav className="breadcrumb no-print" aria-label="Breadcrumb">
         <Link href="/">Home</Link><span className="breadcrumb-sep">/</span>
         <Link href="/accounts">Accounts</Link><span className="breadcrumb-sep">/</span>

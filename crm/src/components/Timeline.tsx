@@ -74,7 +74,9 @@ export function Timeline({ events }: { events: EventRow[] }) {
   }
 
   return (
-    <div className="timeline">
+    // Local rail (same geometry as the `.timeline` class) drawn with the
+    // hairline token — quieter than the class's default border color.
+    <div className="relative pl-5 before:absolute before:left-1.75 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-(--border-hairline)">
       {events.map((event) => {
         const meta = KIND_META[event.kind] ?? { label: event.kind, dot: "timeline-dot-neutral" };
         const summary = payloadSummary(event.payload);
@@ -83,16 +85,16 @@ export function Timeline({ events }: { events: EventRow[] }) {
             <span className={`timeline-dot ${meta.dot}`} aria-hidden />
             <div className="min-w-0">
               <div className="flex items-baseline gap-2">
-                <span className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>
+                <span className="text-[13px] font-semibold text-(--text-primary)">
                   {meta.label}
                 </span>
-                <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+                <span className="font-mono text-xs text-(--text-tertiary)">
                   {relativeTime(event.createdAt)}
                 </span>
               </div>
-              <p className="text-[12px]" style={{ color: "var(--text-secondary)" }}>
+              <p className="text-[12px] text-(--text-secondary)">
                 {event.actor?.name ?? "System"}
-                {summary ? <span style={{ color: "var(--text-tertiary)" }}> · {summary}</span> : null}
+                {summary ? <span className="text-(--text-tertiary)"> · {summary}</span> : null}
               </p>
             </div>
           </div>

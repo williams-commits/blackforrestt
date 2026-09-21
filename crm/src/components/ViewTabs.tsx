@@ -118,9 +118,7 @@ export function ViewTabs({
                 color: savedViews.some((v) => v.key === activeView) ? "var(--text-brand)" : "var(--text-secondary)",
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 6h18M3 12h12M3 18h6" />
-              </svg>
+              <Icon name="list" size={14} />
               Saved Views
             </button>
             {showSaved ? (

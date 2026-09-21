@@ -92,16 +92,16 @@ export function SmartTips({ context = "dashboard" }: { context?: keyof typeof TI
         <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-(--text-brand)" style={{ background: "var(--bg-surface)" }} aria-hidden><Icon name="lightbulb" size={15} /></span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-(--brand-700)">{tip.label}</p>
-            <div className="flex items-center gap-3">
+            <p className="text-[11px] font-semibold uppercase tracking-(--tracking-caps) text-(--text-brand)">{tip.label}</p>
+            <div className="flex items-center gap-1">
+              <span className="mr-1 text-xs tabular-nums text-(--text-tertiary)" aria-hidden>{tips.findIndex((entry) => entry.id === tip.id) + 1}/{tips.length}</span>
               <button type="button" onClick={rotate} className="icon-button h-7 w-7 text-(--text-secondary) hover:text-(--text-primary)" aria-label="Show another tip" title="Show another tip"><Icon name="refresh" size={14} /></button>
+              <button type="button" onClick={() => setCollapsed(true)} className="icon-button h-7 w-7 text-(--text-secondary) hover:text-(--text-primary)" aria-label="Collapse smart tips" title="Collapse smart tips"><Icon name="chevron_up" size={14} /></button>
               <button type="button" onClick={dismiss} className="icon-button h-7 w-7 text-(--text-secondary) hover:text-(--text-primary)" aria-label="Dismiss tips" title="Dismiss tips"><Icon name="close" size={14} /></button>
             </div>
           </div>
-          <div className="mt-2 grid gap-3 md:grid-cols-3">
-            {tips.map((entry) => <div key={entry.id} className="rounded-md border p-3 transition-colors" style={{ borderColor: entry.id === tip.id ? "var(--brand-500)" : "var(--border-default)", background: entry.id === tip.id ? "var(--bg-selected)" : "var(--bg-surface)" }}><p className="text-xs font-semibold text-(--text-brand)">{entry.label}</p><p className="mt-1 text-xs leading-relaxed text-(--text-secondary)">{entry.text}</p>{entry.href ? <Link href={entry.href} className="mt-2 inline-block text-xs font-semibold text-(--text-brand) hover:underline">{entry.action} -&gt;</Link> : null}</div>)}
-          </div>
-          <button type="button" onClick={() => setCollapsed(true)} className="icon-button mt-3 h-7 w-7 text-(--text-secondary) hover:text-(--text-primary)" aria-label="Collapse smart tips" title="Collapse smart tips"><Icon name="chevron_up" size={14} /></button>
+          <p className="mt-1 text-sm leading-relaxed text-(--text-secondary)">{tip.text}</p>
+          {tip.href ? <Link href={tip.href} className="mt-1 inline-block text-xs font-semibold text-(--text-brand) hover:underline">{tip.action ?? "Open"} →</Link> : null}
         </div>
       </div>
       )}

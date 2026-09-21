@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/server/db";
-import { CrmError } from "@/server/guard";
+import { CrmError, requireCapability } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { deepSearchWhere, orderByFor } from "@/server/listQuery";
 import type { ScopedContext } from "@/server/records/leads";
@@ -210,6 +210,35 @@ export async function updateCampaign(
     });
     return saved;
   });
+}
+
+export const BulkCampaignAction = z.object({
+  action: z.enum(["status", "delete"]),
+  ids: z.array(z.string().trim().min(5)).min(1).max(500),
+  status: z.enum(CampaignStatuses).optional(),
+});
+
+/** Bulk status/delete on in-scope campaigns — each row runs the full
+ * single-row path (scope via visibleOwnerIds, audit, referential checks
+ * on delete) so bulk never bypasses the per-row rules. */
+export async function bulkCampaigns(ctx: ScopedContext, input: z.infer<typeof BulkCampaignAction>) {
+  if (input.action === "status") {
+    requireCapability(ctx, "CAMPAIGNS_EDIT");
+    if (!input.status) throw new CrmError("A target status is required.", 400);
+    let updated = 0;
+    for (const id of input.ids) {
+      await updateCampaign(ctx, id, { status: input.status });
+      updated += 1;
+    }
+    return { updated };
+  }
+  requireCapability(ctx, "CAMPAIGNS_DELETE");
+  let deleted = 0;
+  for (const id of input.ids) {
+    await deleteCampaign(ctx, id);
+    deleted += 1;
+  }
+  return { deleted };
 }
 
 export async function deleteCampaign(ctx: ScopedContext, id: string) {

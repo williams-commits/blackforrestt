@@ -79,7 +79,7 @@ export default async function TaskDetailPage({ params }: PageProps) {
   const overdue = task.dueAt && task.dueAt < new Date() && (task.status === "OPEN" || task.status === "IN_PROGRESS");
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <div className="mx-auto max-w-6xl space-y-4" data-module="tasks">
       <nav className="breadcrumb no-print" aria-label="Breadcrumb">
         <Link href="/">Home</Link><span className="breadcrumb-sep">/</span>
         <Link href="/tasks">Tasks</Link><span className="breadcrumb-sep">/</span>

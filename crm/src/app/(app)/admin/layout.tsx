@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!hasAdminAccess) redirect("/");
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-6xl" data-module="admin">
       <div className="mb-6 border-b border-(--border-default) pb-5">
         <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-(--text-tertiary)">{branding.short} setup</p>
         <h1 className="page-title">Administration</h1>

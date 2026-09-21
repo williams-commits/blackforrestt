@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Papa from "papaparse";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
+import { Button, EmptyState } from "@/components/ui";
+import { Icon } from "@/components/Icon";
+import { useTableSession, writeTableSession } from "@/components/useTableSession";
+import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
 
 interface FieldDef {
   key: string;
@@ -26,6 +30,11 @@ interface JobSummary {
   fileKey: string | null;
   createdAt: string;
   finishedAt: string | null;
+}
+
+interface JobsPageResponse {
+  data: JobSummary[];
+  meta: { page: number; pageSize: number; total: number };
 }
 
 interface ValidationResponse {
@@ -114,29 +123,86 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [job, setJob] = useState<JobSummary | null>(null);
   const [jobs, setJobs] = useState<JobSummary[]>([]);
+  // Job-history table state (standardized list-table pattern).
+  const [jobsMeta, setJobsMeta] = useState<JobsPageResponse["meta"]>({ page: 1, pageSize: 10, total: 0 });
+  const [jobsSearch, setJobsSearch] = useState("");
+  const [jobsDebouncedSearch, setJobsDebouncedSearch] = useState("");
+  const [jobsPage, setJobsPage] = useState(1);
+  const [jobsPageSize, setJobsPageSize] = useState(10);
+  const [jobsHydrated, setJobsHydrated] = useState(false);
   const [savedMappings, setSavedMappings] = useState<Array<{ id: string; name: string; objectType: string; mapping: Record<string, string> }>>([]);
   const [mappingName, setMappingName] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const jobsTotalPages = Math.max(1, Math.ceil(jobsMeta.total / jobsMeta.pageSize));
+
   const refreshJobs = useCallback(async () => {
-    const response = await fetch("/api/imports");
-    if (response.ok) setJobs((await response.json()).data);
-  }, []);
+    const params = new URLSearchParams({ page: String(jobsPage), pageSize: String(jobsPageSize) });
+    if (jobsDebouncedSearch) params.set("q", jobsDebouncedSearch);
+    const response = await fetch(`/api/imports?${params.toString()}`);
+    if (!response.ok) return;
+    const body = (await response.json()) as JobsPageResponse;
+    setJobs(body.data);
+    setJobsMeta(body.meta);
+  }, [jobsPage, jobsPageSize, jobsDebouncedSearch]);
 
   const refreshMappings = useCallback(async () => {
     const response = await fetch("/api/imports/mappings");
     if (response.ok) setSavedMappings((await response.json()).data);
   }, []);
 
+  // ---- job-history table session (refresh-proof page/pageSize/search) ----
+  // Restore once after mount, gated by a hydrated flag so the first fetch
+  // already carries the saved page/search (same pattern as RecordListPage).
+  const { session: jobsSession, ready: jobsSessionReady } = useTableSession("imports");
+  useEffect(() => {
+    if (!jobsSessionReady) return;
+    if (jobsSession) {
+      if (typeof jobsSession.search === "string") {
+        setJobsSearch(jobsSession.search);
+        setJobsDebouncedSearch(jobsSession.search);
+      }
+      if (jobsSession.page !== undefined) setJobsPage(jobsSession.page);
+      if (jobsSession.pageSize !== undefined) setJobsPageSize(Math.min(50, jobsSession.pageSize));
+    }
+    setJobsHydrated(true);
+  }, [jobsSessionReady, jobsSession]);
+
+  useEffect(() => {
+    if (!jobsHydrated) return;
+    writeTableSession("imports", { page: jobsPage, pageSize: jobsPageSize, search: jobsSearch });
+  }, [jobsHydrated, jobsPage, jobsPageSize, jobsSearch]);
+
+  // Debounce the search box (300ms, mirrors RecordListPage) — typing a
+  // query fired one API request per keystroke otherwise.
+  useEffect(() => {
+    const timer = setTimeout(() => setJobsDebouncedSearch(jobsSearch), 300);
+    return () => clearTimeout(timer);
+  }, [jobsSearch]);
+
   useEffect(() => {
     if (hasPermission) {
-      void refreshJobs();
       void refreshMappings();
     }
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [hasPermission, refreshJobs, refreshMappings]);
+  }, [hasPermission, refreshMappings]);
+
+  // Job history fetch — hits the paginated endpoint when the section mounts
+  // (after session restore) and whenever page/pageSize/debouncedSearch move.
+  // Imports and retries re-invoke the same refreshJobs callback.
+  useEffect(() => {
+    if (!hasPermission || !jobsHydrated) return;
+    void refreshJobs();
+  }, [hasPermission, jobsHydrated, refreshJobs]);
+
+  // A restored page can outrun the result set (jobs pruned since the last
+  // visit) — clamp to the last real page instead of showing an empty one.
+  useEffect(() => {
+    if (!jobsHydrated) return;
+    if (jobsPage > jobsTotalPages) setJobsPage(jobsTotalPages);
+  }, [jobsHydrated, jobsPage, jobsTotalPages]);
 
   function handleFile(file: File) {
     setError(null);
@@ -300,22 +366,24 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
 
         <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
           <div className="card overflow-hidden">
-            <div className="border-b border-(--border-default) bg-(--bg-hover) px-6 py-5">
-              <p className="text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">Import access</p>
-              <h2 className="mt-2 text-2xl font-semibold text-(--text-primary)">Ask an admin to enable imports</h2>
-              <p className="mt-2 max-w-2xl text-sm text-(--text-secondary)">
-                Your current role cannot upload CSV files or Google Sheets into the CRM. This keeps leads, contacts,
-                accounts, and customers safe from accidental bulk changes.
-              </p>
+            <div className="card-header items-start">
+              <div>
+                <p className="card-title">Import access</p>
+                <h2 className="mt-2 text-2xl font-semibold text-(--text-primary)">Ask an admin to enable imports</h2>
+                <p className="mt-2 max-w-2xl text-sm text-(--text-secondary)">
+                  Your current role cannot upload CSV files or Google Sheets into the CRM. This keeps leads, contacts,
+                  accounts, and customers safe from accidental bulk changes.
+                </p>
+              </div>
             </div>
-            <div className="grid gap-3 p-6 sm:grid-cols-3">
+            <div className="grid gap-5 p-6 sm:grid-cols-3">
               {[
                 ["1", "Prepare your file", "Clean the spreadsheet and keep a header row."],
                 ["2", "Request permission", "Ask for the LEADS_IMPORT role permission."],
                 ["3", "Import safely", "Map, validate, and review duplicates before records are written."],
               ].map(([stepNumber, title, description]) => (
-                <div key={stepNumber} className="rounded-xl border border-(--border-default) bg-(--bg-surface) p-4">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-(--bg-selected) text-sm font-semibold text-(--text-brand)">
+                <div key={stepNumber}>
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-(--accent-soft) text-sm font-semibold text-(--accent)">
                     {stepNumber}
                   </span>
                   <p className="mt-3 font-medium text-(--text-primary)">{title}</p>
@@ -326,12 +394,12 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           </div>
 
           <aside className="card p-5">
-            <p className="text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">What admins unlock</p>
-            <ul className="mt-4 space-y-3 text-sm text-(--text-secondary)">
-              <li className="rounded-lg bg-(--bg-subtle) p-3">CSV and Google Sheets import wizard</li>
-              <li className="rounded-lg bg-(--bg-subtle) p-3">Column mapping and saved mappings</li>
-              <li className="rounded-lg bg-(--bg-subtle) p-3">Duplicate checks before import</li>
-              <li className="rounded-lg bg-(--bg-subtle) p-3">Import history, retries, and error CSV downloads</li>
+            <p className="card-title">What admins unlock</p>
+            <ul className="mt-2 divide-y divide-(--border-hairline) text-sm text-(--text-secondary)">
+              <li className="py-3">CSV and Google Sheets import wizard</li>
+              <li className="py-3">Column mapping and saved mappings</li>
+              <li className="py-3">Duplicate checks before import</li>
+              <li className="py-3">Import history, retries, and error CSV downloads</li>
             </ul>
             <Link href="/docs#imports" className="btn btn-secondary mt-5 w-full justify-center">
               Read import guide
@@ -354,38 +422,36 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
         eyebrow="Data operations"
         title="Import center"
         subtitle={fileName ? `${fileName} · ${IMPORT_STEPS[step - 1].help}` : "Bring clean, trusted data into your workspace with preview, mapping, duplicate checks, and safe execution."}
-        actions={step > 1 ? <button type="button" onClick={reset} className="btn btn-secondary">Start over</button> : undefined}
+        actions={step > 1 ? <Button variant="secondary" onClick={reset}>Start over</Button> : undefined}
         metrics={[
           { label: "Step", value: `${step}/4`, tone: "brand" },
-          { label: "Recent jobs", value: jobs.length, tone: "info" },
+          { label: "Recent jobs", value: jobsMeta.total, tone: "info" },
           { label: "Destination", value: selectedObjectLabel, tone: "success" },
         ]}
       />
-      <div className="grid gap-2 rounded-2xl border border-(--border-default) bg-(--bg-surface) p-2 md:grid-cols-4">
+      <div className="grid gap-x-6 gap-y-4 md:grid-cols-4">
         {IMPORT_STEPS.map((entry, index) => {
           const stepNumber = index + 1;
           const active = step === stepNumber;
           const complete = step > stepNumber;
           return (
-            <div
-              key={entry.label}
-              className={`rounded-xl border p-3 transition ${
-                active
-                  ? "border-(--brand) bg-(--bg-selected)"
-                  : complete
-                    ? "border-(--success) bg-(--success-bg)"
-                    : "border-transparent bg-(--bg-subtle)"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
-                  active ? "bg-(--brand) text-white" : complete ? "bg-(--success) text-white" : "bg-(--bg-surface) text-(--text-tertiary)"
-                }`}>
-                  {complete ? "✓" : stepNumber}
-                </span>
-                <p className={`text-sm font-semibold ${active ? "text-(--text-brand)" : "text-(--text-primary)"}`}>{entry.label}</p>
+            <div key={entry.label} className="flex items-start gap-3">
+              <span
+                aria-hidden
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                  complete
+                    ? "bg-(--accent) text-(--text-inverse)"
+                    : active
+                      ? "border border-(--accent) bg-(--accent-soft) text-(--accent)"
+                      : "border border-(--border-hairline) text-(--text-tertiary)"
+                }`}
+              >
+                {complete ? <Icon name="check" size={13} /> : stepNumber}
+              </span>
+              <div className="min-w-0 pt-0.5">
+                <p className={`text-sm font-semibold ${active ? "text-(--text-primary)" : "text-(--text-secondary)"}`}>{entry.label}</p>
+                <p className="mt-0.5 text-xs text-(--text-tertiary)">{entry.help}</p>
               </div>
-              <p className="mt-2 text-xs text-(--text-secondary)">{entry.help}</p>
             </div>
           );
         })}
@@ -399,16 +465,16 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
 
       {step === 1 ? (
         <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="card space-y-5" style={{ padding: "var(--space-6)" }}>
+          <div className="card space-y-5 p-6">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">Start import</p>
+              <p className="card-title">Start import</p>
               <h2 className="mt-1 text-xl font-semibold text-(--text-primary)">Choose where this data belongs</h2>
               <p className="mt-1 text-sm text-(--text-secondary)">
                 Select the CRM object first so the wizard can suggest the right fields and validation rules.
               </p>
             </div>
             <div>
-              <label htmlFor="import-object" className="mb-1 block text-sm font-medium">
+              <label htmlFor="import-object" className="input-label">
                 Import destination
               </label>
               <select
@@ -425,7 +491,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               </select>
             </div>
             <div>
-              <p className="mb-2 text-sm font-medium">Data source</p>
+              <p className="input-label">Data source</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
                   ["csv", "CSV file", "Upload a spreadsheet export from your computer."],
@@ -436,7 +502,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                     <label
                       key={value}
                       className={`cursor-pointer rounded-xl border p-4 transition ${
-                        active ? "border-(--brand) bg-(--bg-selected)" : "border-(--border-default) bg-(--bg-surface) hover:bg-(--bg-hover)"
+                        active ? "border-(--accent) bg-(--accent-soft)" : "border-(--border-default) bg-(--bg-surface) hover:bg-(--bg-hover)"
                       }`}
                     >
                       <input
@@ -455,7 +521,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             </div>
             {source === "sheets" ? (
               <div>
-                <label htmlFor="sheet-url" className="mb-1 block text-sm font-medium">
+                <label htmlFor="sheet-url" className="input-label">
                   Published sheet CSV link
                 </label>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -466,14 +532,9 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                     placeholder="https://docs.google.com/spreadsheets/d/…"
                     className="input flex-1"
                   />
-                  <button
-                    type="button"
-                    onClick={() => void loadSheet()}
-                    className="btn btn-primary"
-                    style={{ background: "var(--brand)" }}
-                  >
-                    {validating ? "Loading…" : "Load sheet"}
-                  </button>
+                  <Button variant="primary" loading={validating} onClick={() => void loadSheet()}>
+                    Load sheet
+                  </Button>
                 </div>
                 <p className="mt-2 text-xs text-(--text-tertiary)">In Google Sheets, publish to web as CSV first.</p>
               </div>
@@ -501,20 +562,20 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           </div>
 
           <aside className="card p-5">
-            <p className="text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">Safety checks</p>
-            <div className="mt-4 space-y-3">
+            <p className="card-title">Safety checks</p>
+            <ul className="mt-2 divide-y divide-(--border-hairline)">
               {[
                 ["Preview first", "You see sample rows before mapping."],
                 ["Required fields", "The wizard blocks import until required fields are mapped."],
                 ["Duplicate matching", "Email, phone, and external ID can protect existing records."],
                 ["No silent writes", "Nothing is created until you validate and confirm."],
               ].map(([title, description]) => (
-                <div key={title} className="rounded-xl bg-(--bg-subtle) p-3">
+                <li key={title} className="py-3">
                   <p className="text-sm font-medium text-(--text-primary)">{title}</p>
-                  <p className="text-xs text-(--text-secondary)">{description}</p>
-                </div>
+                  <p className="mt-0.5 text-xs text-(--text-secondary)">{description}</p>
+                </li>
               ))}
-            </div>
+            </ul>
             <Link href="/docs#imports" className="btn btn-secondary mt-5 w-full justify-center">
               Import guide
             </Link>
@@ -526,33 +587,35 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
         <div className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="card overflow-hidden">
-            <div className="border-b border-(--border-default) bg-(--bg-hover) px-4 py-3">
-              <p className="text-sm font-semibold text-(--text-primary)">Preview</p>
-              <p className="text-xs text-(--text-secondary)">First 3 rows from {fileName || "your source"}</p>
+            <div className="card-header">
+              <div className="min-w-0">
+                <p className="card-title">Preview</p>
+                <p className="mt-0.5 text-xs normal-case tracking-normal text-(--text-secondary)">First 3 rows from {fileName || "your source"}</p>
+              </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left text-(--text-secondary) uppercase tracking-wide">
+              <Table>
+                <THead>
+                  <TR>
                     {columns.map((column) => (
-                      <th key={column} className="px-2 py-1 font-medium">{column}</th>
+                      <TH key={column}>{column}</TH>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
+                  </TR>
+                </THead>
+                <TBody>
                   {rows.slice(0, 3).map((row, index) => (
-                    <tr key={index} className="border-t border-(--border-default)">
+                    <TR key={index}>
                       {columns.map((column) => (
-                        <td key={column} className="px-2 py-1">{row[column]}</td>
+                        <TD key={column}>{row[column]}</TD>
                       ))}
-                    </tr>
+                    </TR>
                   ))}
-                </tbody>
-              </table>
+                </TBody>
+              </Table>
             </div>
           </div>
 
-          <div className="card" style={{ padding: "var(--space-4)" }}>
+          <div className="card p-4">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-(--text-primary)">Map columns to {objectType.toLowerCase()} fields</p>
@@ -578,7 +641,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                     onChange={(event) =>
                       setMapping((previous) => ({ ...previous, [column]: event.target.value }))
                     }
-                    className="input flex-1" style={{ height: "32px" }}
+                    className="input input-sm flex-1"
                   >
                     <option value="">— skip —</option>
                     {fields.map((field) => (
@@ -594,7 +657,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           </div>
           </div>
 
-          <div className="card grid gap-5 sm:grid-cols-2" style={{ padding: "var(--space-4)" }}>
+          <div className="card grid gap-5 p-4 sm:grid-cols-2">
             {(() => {
               const sourceField = fields.find((f) => f.key === "source" || f.key === "leadSource");
               if (!sourceField) return null;
@@ -654,7 +717,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             </div>
           </div>
 
-          <div className="card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" style={{ padding: "var(--space-4)" }}>
+          <div className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <select
               aria-label="Saved mappings"
               defaultValue=""
@@ -680,26 +743,20 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               onChange={(event) => setMappingName(event.target.value)}
               className="input"
             />
-            <button
-              type="button"
-              onClick={() => void saveMapping()}
-              disabled={!mappingName}
-              className="btn btn-secondary"
-            >
+            <Button variant="secondary" onClick={() => void saveMapping()} disabled={!mappingName}>
               Save mapping
-            </button>
+            </Button>
           </div>
 
           <div className="flex justify-end">
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              loading={validating}
+              disabled={missingRequired.length > 0}
               onClick={() => void runValidation()}
-              disabled={validating || missingRequired.length > 0}
-              className="btn btn-primary"
-              style={{ background: "var(--brand)" }}
             >
-              {validating ? "Validating…" : "Validate rows"}
-            </button>
+              Validate rows
+            </Button>
           </div>
         </div>
       ) : null}
@@ -713,14 +770,14 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               ["Row errors", validation.summary.errorRows, "warning"],
               ["Duplicates", validation.summary.duplicateRows, "info"],
             ].map(([label, value, tone]) => (
-              <div key={String(label)} className="card" style={{ padding: "var(--space-4)" }}>
-                <p className={`text-2xl font-semibold ${tone === "success" ? "text-(--success)" : tone === "warning" ? "text-(--warning)" : tone === "info" ? "text-(--text-brand)" : "text-(--text-primary)"}`}>{value as number}</p>
+              <div key={String(label)} className="card p-4">
+                <p className={`text-2xl font-semibold tabular-nums ${tone === "success" ? "text-(--success)" : tone === "warning" ? "text-(--warning)" : tone === "info" ? "text-(--text-brand)" : "text-(--text-primary)"}`}>{value as number}</p>
                 <p className="text-sm text-(--text-secondary)">{label as string}</p>
               </div>
             ))}
           </div>
 
-          <div className="card border-(--border-default)" style={{ padding: "var(--space-5)" }}>
+          <div className="card p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-lg font-semibold text-(--text-primary)">Validation review</p>
@@ -756,13 +813,13 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           ) : null}
 
           {validation.duplicates.length > 0 ? (
-            <div className="card overflow-hidden" style={{ borderColor: "var(--warning-border)" }}>
-              <div className="border-b px-4 py-3" style={{ borderColor: "var(--warning-border)", background: "var(--warning-bg)" }}>
+            <div className="card overflow-hidden">
+              <div className="border-b border-(--warning-border) bg-(--warning-bg) px-4 py-3">
                 <p className="text-sm font-semibold text-(--warning)">Possible duplicates</p>
                 <p className="text-xs text-(--warning)">Strategy: {strategy.toLowerCase()}</p>
               </div>
               <div className="p-4">
-              <ul className="max-h-40 space-y-1 overflow-y-auto text-sm text-amber-900">
+              <ul className="max-h-40 space-y-1 overflow-y-auto text-sm text-(--text-primary)">
                 {validation.duplicates.slice(0, 100).map((duplicate, index) => (
                   <li key={index}>
                     Row {duplicate.row}: “{duplicate.label}” (matched on {duplicate.matchOn})
@@ -778,17 +835,12 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           ) : null}
 
           <div className="flex flex-wrap justify-end gap-2">
-            <button type="button" onClick={() => setStep(2)} className="btn btn-secondary">
+            <Button variant="secondary" onClick={() => setStep(2)}>
               Back to mapping
-            </button>
-            <button
-              type="button"
-              onClick={() => void runImport()}
-              className="btn btn-primary"
-              style={{ background: "var(--brand)" }}
-            >
+            </Button>
+            <Button variant="primary" onClick={() => void runImport()}>
               Import {validation.summary.valid + validation.summary.duplicateRows} row(s)
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
@@ -796,24 +848,25 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
       {step === 4 && job ? (
         <div className="space-y-4">
           <div className="card overflow-hidden">
-            <div className="border-b border-(--border-default) bg-(--bg-hover) px-6 py-5">
-              <p className="text-sm font-semibold uppercase tracking-wide text-(--text-secondary)">Import run</p>
-              <h2 className="mt-1 text-xl font-semibold text-(--text-primary)">
-                {job.status === "RUNNING"
-                  ? `Importing ${job.processedRows}/${job.totalRows} rows`
-                  : job.status === "COMPLETED"
-                    ? "Import completed"
-                    : `Import ${job.status.toLowerCase()}`}
-              </h2>
+            <div className="card-header">
+              <div className="min-w-0">
+                <p className="card-title">Import run</p>
+                <h2 className="mt-1 text-xl font-semibold text-(--text-primary)">
+                  {job.status === "RUNNING"
+                    ? `Importing ${job.processedRows}/${job.totalRows} rows`
+                    : job.status === "COMPLETED"
+                      ? "Import completed"
+                      : `Import ${job.status.toLowerCase()}`}
+                </h2>
+              </div>
             </div>
             <div className="p-6">
             {job.status === "RUNNING" ? (
               <div className="mt-2 h-2 overflow-hidden rounded bg-(--bg-subtle)">
                 <div
-                  className="h-full"
+                  className="h-full bg-(--accent)"
                   style={{
                     width: `${job.totalRows === 0 ? 0 : Math.round((job.processedRows / job.totalRows) * 100)}%`,
-                    background: "var(--brand)",
                   }}
                 />
               </div>
@@ -826,64 +879,94 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 ["Duplicates", job.duplicateCount],
                 ["Errors", job.errorCount],
               ].map(([label, value]) => (
-                <div key={String(label)} className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
-                  <p className="text-xl font-semibold">{value as number}</p>
+                <div key={String(label)} className="rounded-lg bg-(--bg-subtle) p-3">
+                  <p className="text-xl font-semibold tabular-nums">{value as number}</p>
                   <p className="text-xs text-(--text-secondary)">{label as string}</p>
                 </div>
               ))}
             </div>
             {job.errorCount > 0 ? (
-              <a
-                href={`/api/imports/${job.id}/errors`}
-                className="btn btn-secondary" style={{ marginTop: "var(--space-4)" }}
-              >
+              <a href={`/api/imports/${job.id}/errors`} className="btn btn-secondary mt-4">
+                <Icon name="download" size={13} />
                 Download error report (CSV)
               </a>
             ) : null}
             </div>
           </div>
           <div className="flex justify-end">
-            <button type="button" onClick={reset} className="btn btn-secondary">
+            <Button variant="secondary" onClick={reset}>
               Import another file
-            </button>
+            </Button>
           </div>
         </div>
       ) : step === 4 ? (
         <p className="p-6 text-center text-sm text-(--text-tertiary)">Starting import…</p>
       ) : null}
 
+      <div className="flex flex-wrap items-center gap-2 border-b border-(--border-hairline) pb-3">
+        <form
+          className="flex min-w-0 flex-1 items-center gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            // Enter commits the query immediately (no 300ms wait) and
+            // resets to page 1; the fetch effect picks up the change.
+            setJobsDebouncedSearch(jobsSearch);
+            setJobsPage(1);
+          }}
+        >
+          <input
+            type="search"
+            value={jobsSearch}
+            onChange={(event) => {
+              setJobsSearch(event.target.value);
+              // New query → the old page number is meaningless; drop to
+              // page 1 immediately (the fetch still waits for the debounce).
+              setJobsPage(1);
+            }}
+            placeholder="Search imports — file, object, status…"
+            aria-label="Search imports"
+            className="input input-sm"
+          />
+        </form>
+      </div>
+
       <div className="card table-responsive overflow-hidden">
-        <div className="border-b border-(--border-default) bg-(--bg-hover) px-4 py-3">
-          <p className="text-sm font-semibold text-(--text-primary)">Recent imports</p>
-          <p className="text-xs text-(--text-secondary)">Audit recent jobs, retries, and outcomes.</p>
+        <div className="card-header">
+          <div className="min-w-0">
+            <p className="card-title">Recent imports</p>
+            <p className="mt-0.5 text-xs normal-case tracking-normal text-(--text-secondary)">Audit recent jobs, retries, and outcomes.</p>
+          </div>
         </div>
         {jobs.length === 0 ? (
-          <p className="p-6 text-center text-sm text-(--text-tertiary)">No imports yet.</p>
+          <EmptyState
+            title="No imports yet"
+            description={jobsDebouncedSearch ? "Try a different search — file, object, or status." : undefined}
+          />
         ) : (
-          <table className="table">
-            <thead>
-              <tr className="border-b border-(--border-default) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
-                <th className="px-2 py-1 font-medium">File</th>
-                <th className="px-2 py-1 font-medium">Object</th>
-                <th className="px-2 py-1 font-medium">Strategy</th>
-                <th className="px-2 py-1 font-medium">Rows</th>
-                <th className="px-2 py-1 font-medium">Created / Updated / Dup / Err</th>
-                <th className="px-2 py-1 font-medium">Status</th>
-                <th className="px-2 py-1 font-medium">When</th>
-                <th className="px-2 py-1 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <THead>
+              <TR>
+                <TH>File</TH>
+                <TH>Object</TH>
+                <TH>Strategy</TH>
+                <TH>Rows</TH>
+                <TH>Created / Updated / Dup / Err</TH>
+                <TH>Status</TH>
+                <TH>When</TH>
+                <TH></TH>
+              </TR>
+            </THead>
+            <TBody>
               {jobs.map((entry) => (
-                <tr key={entry.id} className="border-b border-(--border-default)">
-                  <td className="px-2 py-1">{entry.fileKey ?? "—"}</td>
-                  <td className="px-2 py-1">{entry.objectType.toLowerCase()}</td>
-                  <td className="px-2 py-1">{entry.strategy.toLowerCase()}</td>
-                  <td className="px-2 py-1">{entry.processedRows}/{entry.totalRows}</td>
-                  <td className="px-2 py-1">
+                <TR key={entry.id}>
+                  <TD>{entry.fileKey ?? "—"}</TD>
+                  <TD>{entry.objectType.toLowerCase()}</TD>
+                  <TD>{entry.strategy.toLowerCase()}</TD>
+                  <TD className="tabular-nums">{entry.processedRows}/{entry.totalRows}</TD>
+                  <TD className="tabular-nums">
                     {entry.createdCount} / {entry.updatedCount} / {entry.duplicateCount} / {entry.errorCount}
-                  </td>
-                  <td className="px-2 py-1">
+                  </TD>
+                  <TD>
                     <span className={`badge ${
                       entry.status === "COMPLETED"
                         ? "badge-success"
@@ -893,9 +976,9 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                     }`}>
                       {entry.status.toLowerCase()}
                     </span>
-                  </td>
-                  <td className="px-2 py-1">{new Date(entry.createdAt).toLocaleString()}</td>
-                  <td className="px-2 py-1">
+                  </TD>
+                  <TD>{new Date(entry.createdAt).toLocaleString()}</TD>
+                  <TD>
                     <button
                       type="button"
                       className="text-xs text-(--brand) hover:underline"
@@ -906,12 +989,70 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                     >
                       retry
                     </button>
-                  </td>
-                </tr>
+                  </TD>
+                </TR>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         )}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-(--text-tertiary)">
+        <span>
+          {jobsMeta.total > 0 ? (
+            <>
+              Showing{" "}
+              <strong className="text-(--text-primary)">
+                {(jobsMeta.page - 1) * jobsMeta.pageSize + 1}–{Math.min(jobsMeta.page * jobsMeta.pageSize, jobsMeta.total)}
+              </strong>{" "}
+              of {jobsMeta.total}
+              <span className="ml-2">
+                · Page <strong className="text-(--text-primary)">{jobsMeta.page}</strong> of {jobsTotalPages}
+              </span>
+            </>
+          ) : (
+            <>
+              Page <strong className="text-(--text-primary)">{jobsMeta.page}</strong> of {jobsTotalPages}
+            </>
+          )}
+        </span>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1">
+            Rows
+            <select
+              aria-label="Rows per page"
+              value={jobsPageSize}
+              onChange={(event) => {
+                setJobsPageSize(Number(event.target.value));
+                setJobsPage(1);
+              }}
+              className="input input-sm"
+              style={{ width: "auto", display: "inline-block" }}
+            >
+              {[10, 25, 50].map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={jobsPage <= 1}
+            onClick={() => setJobsPage((page) => Math.max(1, page - 1))}
+          >
+            ← Prev
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={jobsPage >= jobsTotalPages}
+            onClick={() => setJobsPage((page) => page + 1)}
+          >
+            Next →
+          </Button>
+        </div>
       </div>
     </div>
   );

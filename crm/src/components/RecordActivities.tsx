@@ -278,7 +278,6 @@ export function RecordActivities({
               <button
                 type="submit"
                 className="btn btn-primary"
-                style={{ background: "var(--brand)" }}
               >
                 Create
               </button>
@@ -313,7 +312,6 @@ export function RecordActivities({
               <button
                 type="submit"
                 className="btn btn-primary"
-                style={{ background: "var(--brand)" }}
               >
                 Schedule
               </button>

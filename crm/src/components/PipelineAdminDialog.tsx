@@ -180,7 +180,7 @@ export function PipelineAdmin({
             onChange={(event) => setPipelineName(event.target.value)}
             className={`${inputClass} flex-1`}
           />
-          <button type="submit" className="btn btn-primary" style={{ background: "var(--brand)" }}>
+          <button type="submit" className="btn btn-primary">
             Add pipeline
           </button>
         </form>

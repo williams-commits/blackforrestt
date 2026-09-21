@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { FieldConfig, ObjectKey } from "@/lib/recordUi";
+import { Button, Drawer } from "@/components/ui";
+import type { FieldConfig, ObjectKey, RecordObjectKey } from "@/lib/recordUi";
 
 export interface OptionSource {
   leadStatuses: Array<{ value: string; label: string }>;
@@ -91,7 +92,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
   });
 
   // Admin-defined custom fields for this object drive extra form inputs.
-  const objectSubject: Record<ObjectKey, string> = {
+  const objectSubject: Record<RecordObjectKey, string> = {
     leads: "LEAD",
     contacts: "CONTACT",
     accounts: "ACCOUNT",
@@ -105,7 +106,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
         if (cancelled || !body?.data) return;
         setCustomDefs(
           (body.data as Array<CustomFieldDefLite & { objectType: string }>)
-            .filter((def) => def.objectType === objectSubject[object])
+            .filter((def) => def.objectType === objectSubject[object as RecordObjectKey])
             .map((def) => ({ ...def, options: Array.isArray(def.options) ? (def.options as string[]) : null })),
         );
       })
@@ -152,8 +153,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
     return true;
   });
 
-  const inputClass =
-    "w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none focus:ring-2 focus:ring-(--brand)/20";
+  const inputClass = "input";
 
   async function submitPayload(payload: Record<string, unknown>): Promise<boolean> {
     setError(null);
@@ -239,25 +239,25 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8"
-      role="dialog"
-      aria-modal="true"
+    <Drawer
+      open
+      onClose={onClose}
+      title={editing ? `Edit ${object.replace(/s$/, "")}` : `New ${object.replace(/s$/, "")}`}
+      subtitle={editing ? "Update record — required fields are marked with an asterisk." : "Create record — required fields are marked with an asterisk."}
+      width="lg"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" type="submit" form="record-form" loading={submitting}>Save</Button>
+        </>
+      }
     >
       <form
+        id="record-form"
         method="post"
         onSubmit={handleSubmit}
-        className="form-dialog w-full max-w-2xl space-y-4 border border-(--border-default) bg-(--bg-surface) p-6 text-(--text-primary) shadow-xl"
+        className="space-y-5"
       >
-        <div className="form-dialog-header">
-          <div>
-            <p className="form-dialog-eyebrow">{editing ? "Update record" : "Create record"}</p>
-            <h2 className="form-dialog-title">{editing ? `Edit ${object.replace(/s$/, "")}` : `New ${object.replace(/s$/, "")}`}</h2>
-            <p className="form-help">Required fields are marked with an asterisk.</p>
-          </div>
-          <button type="button" onClick={onClose} className="icon-button" aria-label="Close form">×</button>
-        </div>
-
         {error ? (
           <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
             {error}
@@ -274,7 +274,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
                 <li key={`${match.objectType}-${match.id}`} className="flex items-center justify-between gap-2">
                   <a
                     href={`/${match.objectType.toLowerCase()}s/${match.id}`}
-                    className="font-medium text-amber-900 underline decoration-amber-400"
+                    className="font-medium text-(--text-primary) underline decoration-(--warning)"
                   >
                     {match.label}
                   </a>
@@ -289,7 +289,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
                 type="button"
                 onClick={() => void createAnyway()}
                 disabled={submitting}
-                className="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                className="btn btn-sm" style={{ background: "var(--warning)", color: "var(--text-inverse)" }}
               >
                 Create anyway
               </button>
@@ -298,7 +298,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
           </div>
         ) : null}
 
-        <div className="form-dialog-body max-h-[60vh] space-y-5">
+        <div>
           <div className="form-section grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2"><p className="form-section-title">Record details</p><p className="form-section-help">Keep the essentials easy to find and update.</p></div>
           {visibleFields.map((field) => {
@@ -423,24 +423,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
             : null}
         </div>
 
-        <div className="form-actions">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="btn btn-primary"
-            style={{ background: "var(--brand)" }}
-          >
-            {submitting ? "Saving…" : "Save"}
-          </button>
-        </div>
       </form>
-    </div>
+    </Drawer>
   );
 }

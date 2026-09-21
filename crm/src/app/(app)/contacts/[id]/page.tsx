@@ -115,7 +115,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <div className="mx-auto max-w-6xl space-y-4" data-module="contacts">
       <nav className="breadcrumb no-print" aria-label="Breadcrumb">
         <Link href="/">Home</Link><span className="breadcrumb-sep">/</span>
         <Link href="/contacts">Contacts</Link><span className="breadcrumb-sep">/</span>

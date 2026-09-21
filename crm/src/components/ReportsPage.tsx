@@ -5,6 +5,8 @@ import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { Modal } from "@/components/Modal";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { SmartTips } from "@/components/SmartTips";
+import { Button, EmptyState, Section } from "@/components/ui";
+import { Icon } from "@/components/Icon";
 import Link from "next/link";
 
 interface ReportMeta {
@@ -28,15 +30,17 @@ function money(minor: number | null): string {
   });
 }
 
+/* Restrained categorical ramp for the donut + legend: module accent hues
+   (slate, cyan, sage…) flattened toward a common mid gray so every slice
+   stays legible on white surfaces AND dark surfaces. Same S/L band, spread
+   hues — harmonized by construction, not by luck. */
 const PIE_COLORS = [
-  "#2563eb",
-  "#16a34a",
-  "#f59e0b",
-  "#dc2626",
-  "#7c3aed",
-  "#0891b2",
-  "#db2777",
-  "#64748b",
+  "#64748b", // slate — the reports accent family
+  "#5c8494", // steel cyan (emails accent, desaturated)
+  "#5f8a74", // sage green
+  "#a98a6b", // muted bronze
+  "#8a82ac", // dusty violet
+  "#a57a85", // dusty rose
 ];
 
 const OBJECTS = ["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY", "TASK"] as const;
@@ -178,12 +182,12 @@ export function ReportsPage() {
   const meta = library.find((report) => report.id === selected);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-module="reports">
       <WorkspaceHeader
         eyebrow="Insights"
         title="Reports"
         subtitle="Turn your scoped CRM data into a decision you can act on."
-        actions={<button type="button" onClick={() => setBuilderOpen((previous) => !previous)} className="btn btn-secondary">{builderOpen ? "Back to library" : "Build a report"}</button>}
+        actions={<Button variant="secondary" onClick={() => setBuilderOpen((previous) => !previous)}>{builderOpen ? "Back to library" : "Build a report"}</Button>}
         metrics={[{ label: "Saved reports", value: library.length, tone: "brand" }, { label: "Scope", value: "Your access", tone: "success" }]}
       />
       <WorkspaceQuickNav />
@@ -194,25 +198,25 @@ export function ReportsPage() {
         <div className="space-y-4 p-5">
           <div><p className="form-section-title">Report definition</p><p className="form-section-help">Choose the object, time field, grouping, and bucket for your analysis.</p></div>
           <div>
-            <label htmlFor="b-object" className="mb-1 block text-xs font-medium">Object</label>
+            <label htmlFor="b-object" className="form-label">Object</label>
             <select id="b-object" value={bObject} onChange={(e) => { setBObject(e.target.value); setBDateField(DATE_FIELDS[e.target.value][0]); setBGroup(GROUP_KEYS[e.target.value][0]); }} className="input">
               {OBJECTS.map((object) => <option key={object} value={object}>{object.toLowerCase()}</option>)}
             </select>
           </div>
           <div>
-            <label htmlFor="b-date" className="mb-1 block text-xs font-medium">Date field</label>
+            <label htmlFor="b-date" className="form-label">Date field</label>
             <select id="b-date" value={bDateField} onChange={(e) => setBDateField(e.target.value)} className="input">
               {DATE_FIELDS[bObject].map((field) => <option key={field} value={field}>{field}</option>)}
             </select>
           </div>
           <div>
-            <label htmlFor="b-group" className="mb-1 block text-xs font-medium">Group by</label>
+            <label htmlFor="b-group" className="form-label">Group by</label>
             <select id="b-group" value={bGroup} onChange={(e) => setBGroup(e.target.value)} className="input">
               {GROUP_KEYS[bObject].map((key) => <option key={key} value={key}>{key}</option>)}
             </select>
           </div>
           <div>
-            <label htmlFor="b-unit" className="mb-1 block text-xs font-medium">Bucket</label>
+            <label htmlFor="b-unit" className="form-label">Bucket</label>
             <select id="b-unit" value={bTimeUnit} onChange={(e) => setBTimeUnit(e.target.value as never)} className="input">
               <option value="">field value</option>
               <option value="day">by day</option>
@@ -220,14 +224,14 @@ export function ReportsPage() {
               <option value="month">by month</option>
             </select>
           </div>
-          <div className="form-actions"><button type="button" onClick={() => setBuilderOpen(false)} className="btn btn-secondary">Cancel</button><button
-            type="button"
+          <div className="form-actions"><Button variant="secondary" onClick={() => setBuilderOpen(false)}>Cancel</Button><Button
+            variant="primary"
+            icon="chart"
+            loading={running}
             onClick={() => void runCustomReport()}
-            disabled={running}
-            className="btn btn-primary"
           >
-            {running ? "Running…" : "Run report"}
-          </button></div>
+            Run report
+          </Button></div>
         </div>
         </Modal>
       ) : null}
@@ -248,8 +252,10 @@ export function ReportsPage() {
                 key={report.id}
                 type="button"
                 onClick={() => setSelected(report.id)}
-                className={`block w-full rounded-md px-3 py-2 text-left text-sm ${
-                  selected === report.id ? "bg-(--brand)/10 font-medium text-(--brand)" : "hover:bg-(--bg-hover)"
+                className={`block w-full rounded-md px-3 py-2 text-left text-sm transition ${
+                  selected === report.id
+                    ? "bg-(--accent-soft) font-semibold text-(--accent)"
+                    : "text-(--text-secondary) hover:bg-(--bg-hover) hover:text-(--text-primary)"
                 }`}
               >
                 {report.name}
@@ -261,49 +267,51 @@ export function ReportsPage() {
 
         <div className="space-y-4">
           {meta ? (
-            <div className="card" style={{ padding: "var(--space-4)" }}>
-              <div className="flex-1">
-                <p className="font-medium">{meta.name}</p>
-                <p className="text-sm text-(--text-secondary)">{meta.description}</p>
-                {OBJECT_PATH[meta.object] ? <Link href={`/${OBJECT_PATH[meta.object]}`} className="mt-2 inline-block text-xs font-semibold text-(--text-brand) hover:underline">Open {meta.object.toLowerCase()} records →</Link> : null}
-              </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-(--border-default) pt-3">
-                <div className="flex items-center gap-2">
-                  <label htmlFor="r-from" className="mb-1 block text-xs font-medium">From</label>
-                  <input
-                    id="r-from"
-                    type="date"
-                    value={from}
-                    onChange={(event) => setFrom(event.target.value)}
-                    className="input"
-                  />
-                  <label htmlFor="r-to" className="mb-1 block text-xs font-medium">To</label>
-                  <input
-                    id="r-to"
-                    type="date"
-                    value={to}
-                    onChange={(event) => setTo(event.target.value)}
-                    className="input"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void run()}
-                    disabled={running}
-                    className="btn btn-primary"
-                  >
-                    {running ? "Running…" : "Run"}
-                  </button>
-                  <a
-                    href={`/api/reports/${selected}/export?${new URLSearchParams({
-                      ...(from ? { from } : {}),
-                      ...(to ? { to } : {}),
-                    }).toString()}`}
-                    className="btn btn-secondary"
-                  >
-                    Export CSV
-                  </a>
+            <div className="card">
+              <div className="card-body">
+                <Section title={meta.name} description={meta.description}>
+                  {OBJECT_PATH[meta.object] ? <Link href={`/${OBJECT_PATH[meta.object]}`} className="text-xs font-semibold text-(--text-brand) hover:underline">Open {meta.object.toLowerCase()} records →</Link> : null}
+                </Section>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-(--border-hairline) pt-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label htmlFor="r-from" className="text-xs font-medium text-(--text-secondary)">From</label>
+                    <input
+                      id="r-from"
+                      type="date"
+                      value={from}
+                      onChange={(event) => setFrom(event.target.value)}
+                      className="input input-sm"
+                    />
+                    <label htmlFor="r-to" className="text-xs font-medium text-(--text-secondary)">To</label>
+                    <input
+                      id="r-to"
+                      type="date"
+                      value={to}
+                      onChange={(event) => setTo(event.target.value)}
+                      className="input input-sm"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon="chart"
+                      loading={running}
+                      onClick={() => void run()}
+                    >
+                      Run
+                    </Button>
+                    <a
+                      href={`/api/reports/${selected}/export?${new URLSearchParams({
+                        ...(from ? { from } : {}),
+                        ...(to ? { to } : {}),
+                      }).toString()}`}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      <Icon name="download" size={13} />
+                      Export CSV
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
@@ -315,16 +323,17 @@ export function ReportsPage() {
             </p>
           ) : null}
 
-          <div className="card" style={{ padding: "var(--space-4)" }}>
+          <div className="card">
+            <div className="card-body">
             {!result ? (
-              <div className="empty-state"><p className="empty-state-title">Pick a report to run</p><p className="empty-state-description">Select a report from the library or build a custom one.</p></div>
+              <EmptyState illustration="reports" title="Pick a report to run" description="Select a report from the library or build a custom one." />
             ) : result.rows.length === 0 ? (
-              <p className="text-center text-sm text-(--text-tertiary)">No rows in range (within your scope).</p>
+              <p className="py-8 text-center text-sm text-(--text-tertiary)">No rows in range (within your scope).</p>
             ) : (
               <div className="grid gap-6 xl:grid-cols-[22rem_1fr]">
-                <div className="rounded-2xl border border-(--border-default) bg-(--bg-subtle) p-5">
-                  <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-full shadow-inner" style={{ background: pieGradient }}>
-                    <div className="flex h-28 w-28 flex-col items-center justify-center rounded-full border border-(--border-default) bg-(--bg-surface) text-center shadow-sm">
+                <div className="rounded-xl bg-(--bg-subtle) p-5">
+                  <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-full" style={{ background: pieGradient }}>
+                    <div className="flex h-28 w-28 flex-col items-center justify-center rounded-full border border-(--border-hairline) bg-(--bg-surface) text-center">
                       <span className="text-3xl font-semibold text-(--text-primary)">{totalCount}</span>
                       <span className="text-xs uppercase tracking-wide text-(--text-secondary)">records</span>
                     </div>
@@ -348,10 +357,10 @@ export function ReportsPage() {
                   </div>
                 </div>
 
-                <ul className="space-y-4">
+                <ul className="divide-y divide-(--border-hairline)">
                   {result.rows.map((row, index) => (
-                    <li key={`${row.key ?? "none"}-${index}`} className="text-sm">
-                      <div className="mb-0.5 flex items-baseline justify-between gap-2">
+                    <li key={`${row.key ?? "none"}-${index}`} className="py-2.5 text-sm first:pt-0 last:pb-0">
+                      <div className="mb-1 flex items-baseline justify-between gap-2">
                         <span className="truncate font-medium">{row.key ?? "(none)"}</span>
                         <span className="whitespace-nowrap text-(--text-secondary)">
                           {row.count}
@@ -360,12 +369,11 @@ export function ReportsPage() {
                             : result.report.sums.map((field) => ` · ${field}: ${row.sums[field] ?? 0}`).join("")}
                         </span>
                       </div>
-                      <div className="h-1.5 overflow-hidden rounded bg-(--bg-subtle)">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-(--bg-subtle)">
                         <div
-                          className="h-full"
+                          className="h-full rounded-full bg-(--accent)/60"
                           style={{
                             width: `${Math.max(2, Math.round((row.count / maxCount) * 100))}%`,
-                            background: PIE_COLORS[index % PIE_COLORS.length],
                           }}
                         />
                       </div>
@@ -374,6 +382,7 @@ export function ReportsPage() {
                 </ul>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

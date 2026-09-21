@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { RECORD_UI, type ObjectKey } from "@/lib/recordUi";
+import { RECORD_UI, type ObjectKey, type RecordObjectKey } from "@/lib/recordUi";
 import { getRecordCapabilities } from "@/lib/recordCapabilities";
 import { RecordForm, type OptionSource } from "@/components/RecordForm";
 import { ViewTabs, type ViewOption } from "@/components/ViewTabs";
@@ -11,10 +11,12 @@ import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { SmartTips } from "@/components/SmartTips";
 import { rememberRecentRecord } from "@/components/RecentRecords";
 import { Icon } from "@/components/Icon";
+import { EmptyState } from "@/components/ui";
 import { RowActions } from "@/components/RowActions";
 import { InlineEdit } from "@/components/InlineEdit";
 import { useTableSession, writeTableSession } from "@/components/useTableSession";
 import { useConfirmDialog, usePromptDialog } from "@/components/Dialogs";
+import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
 
 interface MeContext {
   userId: string;
@@ -148,18 +150,32 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     setMounted(true);
   }, []);
 
+  // The four RECORD objects share the record-capability resolver (the same
+  // one the detail pages use). Campaigns and tasks run the same table
+  // experience with their own permission mapping and without the
+  // record-only surfaces (bulk, saved views, export, merge, inline status).
+  const isRecordObject = object === "leads" || object === "contacts" || object === "accounts" || object === "customers";
+
   const can = useMemo(() => {
-    // Single source of truth — the SAME capability resolver the record detail
-    // pages use. The previous hand-rolled mapping only knew edit/delete/
-    // assign/classify, so the bulk bar showed tag actions to users without
-    // tag permissions and hid the whole bar from task-only users.
-    const subjectType: Record<ObjectKey, "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER"> = {
+    const permissions = me?.permissions ?? [];
+    if (object === "campaigns") {
+      const create = permissions.includes("CAMPAIGNS_CREATE");
+      const edit = permissions.includes("CAMPAIGNS_EDIT");
+      const remove = permissions.includes("CAMPAIGNS_DELETE");
+      return { create, edit, delete: remove, assign: false, classify: false, potential: false, tags: false, task: false, export: false, bulk: edit || remove };
+    }
+    if (object === "tasks") {
+      const create = permissions.includes("TASKS_CREATE");
+      const edit = permissions.includes("TASKS_EDIT");
+      return { create, edit, delete: false, assign: false, classify: false, potential: false, tags: false, task: false, export: false, bulk: edit };
+    }
+    const subjectType: Record<RecordObjectKey, "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER"> = {
       leads: "LEAD",
       contacts: "CONTACT",
       accounts: "ACCOUNT",
       customers: "CUSTOMER",
     };
-    const caps = getRecordCapabilities(subjectType[object], me?.permissions ?? []);
+    const caps = getRecordCapabilities(subjectType[object as RecordObjectKey], permissions);
     return {
       create: caps.canCreate,
       edit: caps.canEdit,
@@ -191,7 +207,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
 
   const presetViews: ViewOption[] = [
     { key: "all", label: `All ${config.title}` },
-    { key: "mine", label: `My ${config.title}` },
+    ...(isRecordObject ? [{ key: "mine", label: `My ${config.title}` }] : []),
     { key: "recent", label: "Recently Added" },
     ...(object === "leads" ? [{ key: "unassigned", label: "Unassigned" }] : []),
     ...views.map((v) => ({ key: `saved:${v.id}`, label: v.name, isSaved: true })),
@@ -235,17 +251,18 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
 
   const fetchOptions = useCallback(async () => {
     try {
-      const subjectTypeMap: Record<ObjectKey, string> = {
+      const subjectTypeMap: Record<RecordObjectKey, string> = {
         leads: "LEAD",
         contacts: "CONTACT",
         accounts: "ACCOUNT",
         customers: "CUSTOMER",
       };
-      const subjectType = subjectTypeMap[object];
-      const statusUrl = subjectType ? `/api/record-statuses?subjectType=${subjectType}` : "/api/record-statuses";
+      const subjectType = isRecordObject ? subjectTypeMap[object as RecordObjectKey] : undefined;
       const [me, statuses, users] = await Promise.all([
         fetch("/api/me").then((r) => (r.ok ? r.json() : { data: { permissions: [] } })),
-        fetch(statusUrl).then((r) => (r.ok ? r.json() : { data: [] })),
+        subjectType
+          ? fetch(`/api/record-statuses?subjectType=${subjectType}`).then((r) => (r.ok ? r.json() : { data: [] }))
+          : Promise.resolve({ data: [] }),
         fetch("/api/users").then((r) => (r.ok ? r.json() : { data: [] })),
       ]);
       const potentialStatuses = object === "leads"
@@ -295,7 +312,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     } catch {
       // Options are enhancement-only; the form still works without them.
     }
-  }, [object]);
+}, [object, isRecordObject]);
 
   // Debounce the search box (300ms, mirrors MailboxPage) — typing a
   // 10-char query fired one API request per keystroke otherwise.
@@ -305,6 +322,31 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // ---- subject deep-links (?subjectType=…&subjectId=…&label=…, ?edit=…, ?mine=1) ----
+  // Read once from the URL (not useSearchParams — this component renders on
+  // dynamic pages without a Suspense boundary). A deep-linked context wins
+  // over the restored session.
+  const [subjectFilter, setSubjectFilter] = useState<{ type: string; id: string; label: string } | null>(null);
+  const pendingEditIdRef = useRef<string | null>(null);
+  const deepLinkedRef = useRef(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const type = params.get("subjectType");
+    const id = params.get("subjectId");
+    if (type && id) {
+      deepLinkedRef.current = true;
+      setSubjectFilter({ type, id, label: params.get("label") ?? "" });
+    }
+    if (params.get("edit")) {
+      deepLinkedRef.current = true;
+      pendingEditIdRef.current = params.get("edit");
+    }
+    if (params.get("mine") === "1") {
+      setFilters((previous) => (object === "tasks" ? { ...previous, mine: "1" } : previous));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ---- table session (refresh-proof page/search/sort/filters/selection) ----
   // Restore once after mount (post-hydration: these pages are
   // server-rendered, so state can't be initialized from sessionStorage
@@ -313,7 +355,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   const { session, ready } = useTableSession(`records:${object}`);
   useEffect(() => {
     if (!ready) return;
-    if (session) {
+    if (session && !deepLinkedRef.current) {
       if (typeof session.search === "string") {
         setSearch(session.search);
         setDebouncedSearch(session.search);
@@ -366,6 +408,10 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       for (const [key, value] of Object.entries(filters)) {
         if (value) params.set(key, value);
       }
+      if (subjectFilter) {
+        params.set("subjectType", subjectFilter.type);
+        params.set("subjectId", subjectFilter.id);
+      }
       const response = await fetch(`/api/${object}?${params.toString()}`);
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -381,7 +427,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     } finally {
       setLoading(false);
     }
-  }, [object, page, pageSize, debouncedSearch, filters, sort, order]);
+  }, [object, page, pageSize, debouncedSearch, filters, sort, order, subjectFilter]);
 
   useEffect(() => {
     void fetch("/api/me")
@@ -389,10 +435,12 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       .then((body) => setMe(body?.data ?? null))
       .catch(() => setMe(null));
     void fetchOptions();
-    void fetch(`/api/views?objectType=${object.toUpperCase().slice(0, -1)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((body) => setViews(body?.data ?? []))
-      .catch(() => setViews([]));
+    if (isRecordObject) {
+      void fetch(`/api/views?objectType=${object.toUpperCase().slice(0, -1)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((body) => setViews(body?.data ?? []))
+        .catch(() => setViews([]));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchOptions, object]);
 
@@ -420,6 +468,17 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     return () => window.removeEventListener("crm:realtime-refresh", refresh);
   }, [fetchRows]);
 
+  // One-shot: a ?edit=<id> deep link opens the edit drawer once its row loads.
+  useEffect(() => {
+    if (!pendingEditIdRef.current || formMode !== "closed" || rows.length === 0) return;
+    const target = rows.find((row) => row.id === pendingEditIdRef.current);
+    pendingEditIdRef.current = null;
+    if (target) {
+      setEditRow(target);
+      setFormMode("edit");
+    }
+  }, [rows, formMode]);
+
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
   const allSelected = rows.length > 0 && rows.every((row) => selected.has(row.id));
 
@@ -429,6 +488,14 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     if (!hydrated || loading) return;
     if (page > totalPages) setPage(totalPages);
   }, [hydrated, loading, meta, page, totalPages]);
+
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const element = selectAllRef.current;
+    if (element) {
+      element.indeterminate = !allSelected && rows.some((row) => selected.has(row.id));
+    }
+  }, [allSelected, rows, selected]);
 
   function toggleRow(id: string) {
     setSelected((previous) => {
@@ -534,7 +601,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-module={object}>
       <WorkspaceHeader
         eyebrow="Record workspace"
         title={config.title}
@@ -579,7 +646,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         <div className="h-9 border-b border-(--border-default)" />
       )}
 
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-(--border-default) bg-(--bg-surface) p-3">
+      <div className="flex flex-wrap items-center gap-2">
         <form
           className="flex flex-1 items-center gap-2"
           onSubmit={(event) => {
@@ -625,7 +692,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 }}
                 className="input input-sm" style={{ width: "auto", display: "inline-block" }}
               >
-                <option value="">{filter.label}: all</option>
+                <option value="">{filter.label}: {filter.emptyLabel ?? "all"}</option>
                 {filterOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -636,7 +703,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           })}
         </form>
         <div className="flex items-center gap-2 border-l border-(--border-default) pl-2">
-          {views.length > 0 ? (
+          {isRecordObject && views.length > 0 ? (
             <select
               aria-label="Saved views"
               defaultValue=""
@@ -695,45 +762,77 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               </div>
             </div>
           </details>
-          <input
-            aria-label="View name"
-            placeholder="Name this view"
-            value={viewName}
-            onChange={(event) => setViewName(event.target.value)}
-            className="w-32 rounded-md border border-(--border-strong) px-2 py-1.5 text-sm"
-          />
-          <button
-            type="button"
-            disabled={!viewName}
-            onClick={async () => {
-              const response = await fetch("/api/views", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  objectType: object.toUpperCase().slice(0, -1),
-                  name: viewName,
-                  config: { q: search, filters },
-                  shared: false,
-                }),
-              });
-              if (response.ok) {
-                setViewName("");
-                const refreshed = await fetch(
-                  `/api/views?objectType=${object.toUpperCase().slice(0, -1)}`,
-                ).then((r) => (r.ok ? r.json() : { data: [] }));
-                setViews(refreshed.data);
-              }
-            }}
-            className="rounded-md border border-(--border-strong) px-2 py-1.5 text-sm font-medium hover:bg-(--bg-hover) disabled:opacity-50"
-          >
-            Save view
-          </button>
+          {isRecordObject ? (
+            <>
+              <input
+                aria-label="View name"
+                placeholder="Name this view"
+                value={viewName}
+                onChange={(event) => setViewName(event.target.value)}
+                className="w-32 rounded-md border border-(--border-strong) px-2 py-1.5 text-sm"
+              />
+              <button
+                type="button"
+                disabled={!viewName}
+                onClick={async () => {
+                  const response = await fetch("/api/views", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      objectType: object.toUpperCase().slice(0, -1),
+                      name: viewName,
+                      config: { q: search, filters },
+                      shared: false,
+                    }),
+                  });
+                  if (response.ok) {
+                    setViewName("");
+                    const refreshed = await fetch(
+                      `/api/views?objectType=${object.toUpperCase().slice(0, -1)}`,
+                    ).then((r) => (r.ok ? r.json() : { data: [] }));
+                    setViews(refreshed.data);
+                  }
+                }}
+                className="rounded-md border border-(--border-strong) px-2 py-1.5 text-sm font-medium hover:bg-(--bg-hover) disabled:opacity-50"
+              >
+                Save view
+              </button>
+            </>
+          ) : null}
         </div>
       </div>
 
       {selected.size > 0 && can.bulk ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border p-3" style={{ borderColor: "var(--brand-200)", background: "var(--bg-selected)", fontSize: "var(--text-sm)" }}>
+        <div className="flex flex-wrap items-center gap-2 rounded-lg p-3" style={{ background: "var(--accent-soft)", fontSize: "var(--text-sm)" }}>
           <span className="font-medium">{selected.size} selected</span>
+          {object === "tasks" && can.edit ? (
+            <>
+              <button type="button" disabled={bulkBusy} onClick={() => void runBulk("complete", {})} className="btn btn-secondary btn-sm">
+                <Icon name="check" size={13} /> Complete
+              </button>
+              <button type="button" disabled={bulkBusy} onClick={() => void runBulk("cancel", {})} className="btn btn-secondary btn-sm">
+                <Icon name="close" size={13} /> Cancel
+              </button>
+            </>
+          ) : null}
+          {object === "campaigns" && can.edit ? (
+            <select
+              aria-label="Change status"
+              defaultValue=""
+              disabled={bulkBusy}
+              onChange={(event) => {
+                if (event.target.value) void runBulk("status", { status: event.target.value });
+              }}
+              className="input input-sm"
+              style={{ width: "auto" }}
+            >
+              <option value="">Change status…</option>
+              <option value="DRAFT">Draft</option>
+              <option value="ACTIVE">Active</option>
+              <option value="PAUSED">Paused</option>
+              <option value="COMPLETED">Completed</option>
+            </select>
+          ) : null}
           {can.assign ? (
             <select
               aria-label="Assign to"
@@ -889,7 +988,6 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 onClick={() => void runMerge()}
                 disabled={mergeBusy || !mergePrimary}
                 className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
-                style={{ background: "var(--brand)" }}
               >
                 {mergeBusy ? "Merging…" : "Merge"}
               </button>
@@ -899,6 +997,14 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       ) : null}
 
       
+      {subjectFilter ? (
+        <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: "var(--space-2)" }}>
+          <span className="chip">
+            Linked to {subjectFilter.label || subjectFilter.type.toLowerCase()} …{subjectFilter.id.slice(-6)}
+            <span className="chip-close" onClick={() => { setSubjectFilter(null); setPage(1); }}>×</span>
+          </span>
+        </div>
+      ) : null}
       {Object.entries(filters).filter(([, value]) => value).length > 0 || search ? (
         <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: "var(--space-2)" }}>
           {search ? (
@@ -930,25 +1036,26 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         </div>
       ) : null}
 
-      <div className="card table-responsive overflow-hidden p-2 lg:p-0">
-        <table className={`table ${density === "compact" ? "table-compact" : ""}`}>
-          <thead>
-            <tr className="border-b border-(--border-default) bg-(--bg-hover) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
+      <div className="card table-responsive overflow-x-auto p-2 lg:p-0">
+        <Table compact={density === "compact"}>
+          <THead>
+            <TR className="border-b border-(--border-default) bg-(--bg-hover) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
               {can.bulk ? (
-                <th className="w-8 px-3 py-2">
+                <TH className="w-8 px-3 py-2">
                   <input
+                    ref={selectAllRef}
                     type="checkbox"
                     aria-label="Select all on page"
                     checked={allSelected}
                     onChange={toggleAllOnPage}
                   />
-                </th>
+                </TH>
               ) : null}
               {config.columns.filter((column) => !hiddenColumns.includes(column.key)).map((column) => {
                 const sortKey = column.key === "firstName lastName" ? "name" : column.key.split(".")[0];
                 const isSorted = sort === sortKey;
                 return (
-                  <th key={column.key} className="px-3 py-2 font-medium">
+                  <TH key={column.key} className="px-3 py-2 font-medium">
                     {column.sortable ? (
                       <button
                         type="button"
@@ -978,60 +1085,61 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                     ) : (
                       column.label
                     )}
-                  </th>
+                  </TH>
                 );
               })}
               {hasRowActions ? (
-                <th className="px-3 py-2 text-right font-medium">Actions</th>
+                <TH className="px-3 py-2 text-right font-medium">Actions</TH>
               ) : null}
-            </tr>
-          </thead>
-          <tbody>
+            </TR>
+          </THead>
+          <TBody>
             {loading ? (
               [...Array(6)].map((_, index) => (
-                <tr key={`skeleton-${index}`}>
-                  <td colSpan={tableColumnCount} style={{ padding: "10px 12px" }}>
+                <TR key={`skeleton-${index}`}>
+                  <TD colSpan={tableColumnCount} style={{ padding: "10px 12px" }}>
                     <div className="skeleton" style={{ height: "16px", width: `${70 - index * 8}%` }} />
-                  </td>
-                </tr>
+                  </TD>
+                </TR>
               ))
             ) : loadError ? (
-              <tr>
-                <td colSpan={tableColumnCount}>
+              <TR>
+                <TD colSpan={tableColumnCount}>
                   <div className="empty-state" style={{ padding: "var(--space-8)" }}>
                     <p className="empty-state-title" style={{ color: "var(--error)" }}>{loadError}</p>
                     <button type="button" onClick={() => void fetchRows()} className="btn btn-secondary" style={{ marginTop: "var(--space-3)" }}>
                       Retry
                     </button>
                   </div>
-                </td>
-              </tr>
+                </TD>
+              </TR>
             ) : rows.length === 0 ? (
-              <tr>
-                <td colSpan={tableColumnCount}>
-                  <div className="empty-state">
-                    <span className="empty-state-icon"><Icon name="box" size={28} /></span>
-                    <p className="empty-state-title">No {config.title.toLowerCase()} found</p>
-                    <p className="empty-state-description">
-                      {search || Object.values(filters).some(Boolean)
+              <TR>
+                <TD colSpan={tableColumnCount}>
+                  <EmptyState
+                    illustration={object}
+                    title={`No ${config.title.toLowerCase()} found`}
+                    description={
+                      search || Object.values(filters).some(Boolean)
                         ? "Try adjusting your search or filters."
-                        : `Get started by creating your first ${config.singular.toLowerCase()}.`}
-                    </p>
-                    {can.create && !search && !Object.values(filters).some(Boolean) ? (
+                        : `Get started by creating your first ${config.singular.toLowerCase()}.`
+                    }
+                    action={can.create && !search && !Object.values(filters).some(Boolean) ? (
                       <button type="button" className="btn btn-primary" onClick={() => { setEditRow(null); setFormMode("create"); }}>
+                        <Icon name="plus" size={12} />
                         New {config.singular}
                       </button>
-                    ) : null}
-                  </div>
-                </td>
-              </tr>
+                    ) : undefined}
+                  />
+                </TD>
+              </TR>
             ) : (
               rows.map((row) => {
                 const isSelected = selected.has(row.id);
                 return (
-                  <tr
+                  <TR
                   key={row.id}
-                  className={isSelected ? "bg-(--brand)/5" : ""}
+                  className={isSelected ? "selected" : ""}
                   tabIndex={0}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
@@ -1042,14 +1150,14 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                   style={{ cursor: "pointer" }}
                 >
                     {can.bulk ? (
-                      <td className="px-3 py-2">
+                      <TD className="px-3 py-2">
                         <input
                           type="checkbox"
                           aria-label="Select row"
                           checked={isSelected}
                           onChange={() => toggleRow(row.id)}
                         />
-                      </td>
+                      </TD>
                     ) : null}
                     {config.columns.map((column, index) => {
                       if (hiddenColumns.includes(column.key)) return null;
@@ -1147,15 +1255,35 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                         return raw;
                       })();
                       return (
-                        <td key={column.key} className="px-3 py-2 whitespace-nowrap">
+                        <TD key={column.key} className="px-3 py-2 whitespace-nowrap">
                           {content}
-                        </td>
+                        </TD>
                       );
                     })}
                     {hasRowActions ? (
-                      <td className="px-3 py-2 text-right whitespace-nowrap">
+                      <TD className="px-3 py-2 text-right whitespace-nowrap">
                         <RowActions
                           actions={[
+                            ...(object === "tasks" && can.edit
+                              ? (() => {
+                                  const status = String(row.status ?? "OPEN");
+                                  const setTaskStatus = async (next: string) => {
+                                    const response = await fetch(`/api/tasks/${row.id}`, {
+                                      method: "PATCH",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ status: next }),
+                                    });
+                                    if (!response.ok) setLoadError("Could not update the task.");
+                                    void fetchRows();
+                                  };
+                                  return status === "COMPLETED" || status === "CANCELLED"
+                                    ? [{ label: "Reopen", icon: "refresh", onClick: () => void setTaskStatus("OPEN") }]
+                                    : [
+                                        { label: "Complete", icon: "check", onClick: () => void setTaskStatus("COMPLETED") },
+                                        { label: "Cancel", icon: "close", onClick: () => void setTaskStatus("CANCELLED") },
+                                      ];
+                                })()
+                              : []),
                             ...(can.edit
                               ? [{
                                   label: "Edit",
@@ -1193,14 +1321,14 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                               : []),
                           ]}
                         />
-                      </td>
+                      </TD>
                     ) : null}
-                  </tr>
+                  </TR>
                 );
               })
             )}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2" style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)" }}>

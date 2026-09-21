@@ -1,9 +1,19 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { crmBranding } from "@/lib/branding";
 import { BrandingProvider } from "@/components/BrandingProvider";
 
 const branding = crmBranding();
+
+/** Single product typeface — a modern professional sans, variable-loaded so
+ * design tokens can reference it (never `.className`, which skips the CSS
+ * custom property). Falls back to the system stack when unavailable. */
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -15,7 +25,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
       <head>
         <script
           dangerouslySetInnerHTML={{

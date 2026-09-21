@@ -4,7 +4,14 @@
  * business rules live in the server service layer.
  */
 
-export type ObjectKey = "leads" | "contacts" | "accounts" | "customers";
+/**
+ * Objects rendered by the shared RecordListPage engine. The four RECORD
+ * objects have full record capabilities (bulk, views, export, merge);
+ * campaigns and tasks run the same table experience with object-specific
+ * gating (see RecordListPage's capability resolution).
+ */
+export type RecordObjectKey = "leads" | "contacts" | "accounts" | "customers";
+export type ObjectKey = RecordObjectKey | "campaigns" | "tasks";
 
 export type FieldType =
   | "text"
@@ -57,6 +64,8 @@ export interface FilterConfig {
   type: "select";
   optionsFrom?: "leadStatuses" | "accountStatuses" | "contactStatuses" | "customerStatuses";
   options?: Array<{ value: string; label: string }>;
+  /** Label for the empty option — defaults to "all". */
+  emptyLabel?: string;
 }
 
 export interface RecordUiConfig {
@@ -209,5 +218,142 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
       { name: "campaignId", label: "Campaign", type: "select", optionsFrom: "campaigns" },
     ],
     searchPlaceholder: "Search all fields — name, email, phone, source…",
+  },
+  campaigns: {
+    object: "campaigns",
+    title: "Campaigns",
+    singular: "Campaign",
+    can: { create: "CAMPAIGNS_CREATE", edit: "CAMPAIGNS_EDIT", delete: "CAMPAIGNS_DELETE" },
+    columns: [
+      { key: "name", label: "Campaign", type: "record", object: "campaigns", sortable: true },
+      { key: "status", label: "Status", type: "badge" },
+      { key: "source", label: "Source" },
+      { key: "memberCount", label: "Members", type: "number" },
+      { key: "owner.name", label: "Owner" },
+      { key: "startsAt", label: "Starts", type: "date" },
+      { key: "createdAt", label: "Created", type: "date", sortable: true },
+    ],
+    filters: [
+      {
+        name: "status",
+        label: "Status",
+        type: "select",
+        options: [
+          { value: "DRAFT", label: "Draft" },
+          { value: "ACTIVE", label: "Active" },
+          { value: "PAUSED", label: "Paused" },
+          { value: "COMPLETED", label: "Completed" },
+        ],
+      },
+    ],
+    fields: [
+      { name: "name", label: "Name", type: "text", required: true },
+      { name: "description", label: "Description", type: "textarea" },
+      { name: "source", label: "Source", type: "text" },
+      {
+        name: "status",
+        label: "Status",
+        type: "select",
+        options: [
+          { value: "DRAFT", label: "Draft" },
+          { value: "ACTIVE", label: "Active" },
+          { value: "PAUSED", label: "Paused" },
+          { value: "COMPLETED", label: "Completed" },
+        ],
+      },
+      { name: "startsAt", label: "Starts", type: "datetime-local" },
+      { name: "endsAt", label: "Ends", type: "datetime-local" },
+    ],
+    searchPlaceholder: "Search all fields — name, description, source, owner…",
+  },
+  tasks: {
+    object: "tasks",
+    title: "Tasks",
+    singular: "Task",
+    can: { create: "TASKS_CREATE", edit: "TASKS_EDIT", delete: "TASKS_DELETE" },
+    columns: [
+      { key: "title", label: "Task", type: "record", object: "tasks" },
+      { key: "dueAt", label: "Due", type: "datetime" },
+      { key: "priority", label: "Priority", type: "badge" },
+      { key: "owner.name", label: "Owner" },
+      { key: "status", label: "Status", type: "badge" },
+      { key: "createdAt", label: "Created", type: "date" },
+    ],
+    filters: [
+      {
+        name: "status",
+        label: "Status",
+        type: "select",
+        emptyLabel: "active",
+        options: [
+          { value: "OPEN", label: "Open" },
+          { value: "IN_PROGRESS", label: "In progress" },
+          { value: "COMPLETED", label: "Completed" },
+          { value: "CANCELLED", label: "Cancelled" },
+        ],
+      },
+      {
+        name: "priority",
+        label: "Priority",
+        type: "select",
+        options: [
+          { value: "URGENT", label: "Urgent" },
+          { value: "HIGH", label: "High" },
+          { value: "NORMAL", label: "Normal" },
+          { value: "LOW", label: "Low" },
+        ],
+      },
+      {
+        name: "due",
+        label: "Due",
+        type: "select",
+        options: [
+          { value: "overdue", label: "Overdue" },
+          { value: "today", label: "Today" },
+          { value: "week", label: "Next 7 days" },
+          { value: "upcoming", label: "Upcoming" },
+          { value: "all", label: "Any time" },
+        ],
+      },
+      {
+        name: "mine",
+        label: "Ownership",
+        type: "select",
+        options: [
+          { value: "1", label: "My & shared" },
+          { value: "0", label: "Everyone (admins)" },
+        ],
+      },
+    ],
+    fields: [
+      { name: "title", label: "Title", type: "text", required: true },
+      { name: "description", label: "Description", type: "textarea" },
+      { name: "dueAt", label: "Due", type: "datetime-local" },
+      {
+        name: "priority",
+        label: "Priority",
+        type: "select",
+        options: [
+          { value: "LOW", label: "Low" },
+          { value: "NORMAL", label: "Normal" },
+          { value: "HIGH", label: "High" },
+          { value: "URGENT", label: "Urgent" },
+        ],
+      },
+      {
+        name: "recurrence",
+        label: "Repeat",
+        type: "select",
+        options: [
+          { value: "NONE", label: "Does not repeat" },
+          { value: "DAILY", label: "Daily" },
+          { value: "WEEKLY", label: "Weekly" },
+          { value: "MONTHLY", label: "Monthly" },
+        ],
+      },
+      { name: "reminderAt", label: "Reminder", type: "datetime-local" },
+      { name: "ownerUserId", label: "Owner", type: "select", optionsFrom: "users" },
+    ],
+    searchPlaceholder: "Search all fields — title, description, owner…",
   },
 };

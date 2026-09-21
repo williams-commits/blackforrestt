@@ -1,14 +1,10 @@
-import { Suspense } from "react";
-import { TasksPage } from "@/components/TasksPage";
+import { RecordListPage } from "@/components/RecordListPage";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Tasks" };
 
+/** Tasks run on the shared object-home table (same engine as leads). */
 export default function TasksRoutePage() {
-  return (
-    <Suspense fallback={<p className="text-sm text-(--text-tertiary)">Loading tasks…</p>}>
-      <TasksPage />
-    </Suspense>
-  );
+  return <RecordListPage object="tasks" />;
 }

@@ -51,7 +51,6 @@ export function LeadConvertControls({
         type="button"
         onClick={() => setOpen(true)}
         className="btn btn-primary"
-        style={{ background: "var(--brand)" }}
       >
         Convert
       </button>

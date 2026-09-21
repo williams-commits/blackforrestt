@@ -135,7 +135,6 @@ export function PlatformLinkPanel({
             onClick={() => void link()}
             disabled={busy}
             className="btn btn-primary"
-            style={{ background: "var(--brand)" }}
           >
             Link this platform user
           </button>

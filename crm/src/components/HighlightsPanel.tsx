@@ -18,7 +18,7 @@ export function HighlightsPanel({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-sm font-bold text-white">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold" style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)", color: "var(--accent)" }}>
               {title.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase()}
             </span>
             <h1 className="highlights-title truncate">{title}</h1>
@@ -40,8 +40,8 @@ export function HighlightsPanel({
           </div>
           {fields.length > 0 ? (
             <div
-              className="mt-4 grid gap-x-6 gap-y-3 border-t border-white/15 pt-3"
-              style={{ gridTemplateColumns: `repeat(auto-fit, minmax(140px, 1fr))` }}
+              className="mt-4 grid gap-x-6 gap-y-3 border-t pt-3"
+              style={{ borderColor: "var(--accent-border)", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}
             >
               {fields.map((field) => (
                 <div key={field.label} className="highlights-field">

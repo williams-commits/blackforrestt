@@ -115,7 +115,7 @@ export function RecordWorkspaceTabs({
   }
 
   return (
-    <section className="record-workspace-tabs no-print" aria-label={`${typeLabel} workspace tabs`}>
+    <section className="no-print flex w-full flex-col gap-2" aria-label={`${typeLabel} workspace tabs`}>
       <div className="record-workspace-tabs-header">
         <div className="min-w-0">
           <p className="record-workspace-tabs-eyebrow">Open {typeLabel}</p>
@@ -163,18 +163,19 @@ export function RecordWorkspaceTabs({
         </div>
       </div>
 
-      <div className="record-workspace-tabs-list" role="list">
+      {/* tab-strip wraps by default; quick tabs stay on one scrolling row */}
+      <div className="tab-strip w-full overflow-x-auto" style={{ flexWrap: "nowrap" }} role="list">
         {tabs.map((tab) => {
           const active = tab.id === id;
           return (
-            <div key={tab.id} className={`record-workspace-tab ${active ? "active" : ""}`} role="listitem">
-              <Link href={tab.href} className="record-workspace-tab-link" aria-current={active ? "page" : undefined}>
+            <div key={tab.id} className="flex min-w-42.5 max-w-60 items-center" role="listitem">
+              <Link href={tab.href} className={`tab-strip-button min-w-0 flex-1 text-left ${active ? "active" : ""}`} aria-current={active ? "page" : undefined}>
                 <span className="record-workspace-tab-title">{tab.label}</span>
                 {tab.subtitle ? <span className="record-workspace-tab-subtitle">{tab.subtitle}</span> : null}
               </Link>
               <button
                 type="button"
-                className="record-workspace-tab-close"
+                className="icon-button shrink-0 self-center"
                 onClick={(event) => {
                   event.preventDefault();
                   removeTab(tab.id);
@@ -182,7 +183,7 @@ export function RecordWorkspaceTabs({
                 aria-label={`Close ${tab.label}`}
                 title={`Close ${tab.label}`}
               >
-                <Icon name="close" size={12} />
+                <Icon name="close" size={14} />
               </button>
             </div>
           );

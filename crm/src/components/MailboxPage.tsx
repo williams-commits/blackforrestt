@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { EmailCompose } from "@/components/EmailCompose";
-import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui";
 
 /**
  * Mailbox — inbox / unread / sent folders, a reading pane, search, and
@@ -156,21 +156,15 @@ export function MailboxPage() {
   const rows = useMemo(() => data?.rows ?? [], [data]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-module="emails">
       <WorkspaceHeader
         eyebrow="Mail"
         title="Emails"
         subtitle="Correspondence history — inbound replies arrive here automatically; every send is archived against its record."
         actions={
-          <button
-            type="button"
-            onClick={() => setCompose({})}
-            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold text-(--text-inverse)"
-            style={{ background: "var(--brand)" }}
-          >
-            <Icon name="edit" size={14} />
+          <Button variant="primary" icon="edit" onClick={() => setCompose({})}>
             Compose
-          </button>
+          </Button>
         }
         metrics={[
           { label: "Unread", value: data?.unreadCount ?? 0, tone: data?.unreadCount ? "warning" : "brand" },
@@ -192,60 +186,63 @@ export function MailboxPage() {
         </div>
       ) : null}
 
-      <div className="card overflow-hidden">
-        {/* Toolbar: folders + search */}
-        <div className="flex flex-col gap-3 border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-          <div role="tablist" aria-label="Mailbox folders" className="flex gap-1">
+      {/* Toolbar: search + filters */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-(--border-hairline) pb-3">
+        {filteredUserId ? (
+          <span className="flex items-center gap-1 rounded-full bg-(--accent-soft) px-3 py-1 text-xs font-medium text-(--accent)">
+            Mail of {filteredUserName}
+            <Link href="/emails" aria-label="Clear user filter" className="text-(--text-secondary) hover:text-(--text-primary)">×</Link>
+          </span>
+        ) : null}
+        <label className="flex items-center gap-1.5 text-xs text-(--text-secondary)">
+          <input
+            type="checkbox"
+            checked={mineOnly}
+            onChange={(event) => { setMineOnly(event.target.checked); setPage(1); }}
+          />
+          Me
+        </label>
+        <label htmlFor="mailbox-search" className="sr-only">Search emails</label>
+        <input
+          id="mailbox-search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search subject, body, addresses…"
+          className="input input-sm lg:w-72"
+        />
+      </div>
+
+      <div className="grid items-start gap-4 lg:grid-cols-[13rem_minmax(0,1fr)]">
+        {/* Folder rail — quiet rows, active row carries the module accent */}
+        <div className="card p-2">
+          <div role="tablist" aria-label="Mailbox folders" className="flex gap-1 overflow-x-auto lg:flex-col">
             {FOLDERS.map((entry) => (
               <button
                 key={entry.key}
                 role="tab"
                 aria-selected={folder === entry.key}
                 onClick={() => { setFolder(entry.key); setPage(1); setSelected(null); }}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                className={`flex shrink-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition ${
                   folder === entry.key
-                    ? "bg-(--bg-surface) text-(--text-primary) shadow-sm"
-                    : "text-(--text-secondary) hover:bg-(--bg-hover)"
+                    ? "bg-(--accent-soft) font-semibold text-(--accent)"
+                    : "text-(--text-secondary) hover:bg-(--bg-hover) hover:text-(--text-primary)"
                 }`}
               >
-                {entry.label}
+                <span>{entry.label}</span>
                 {entry.key === "inbox" && data && data.unreadCount > 0 ? (
-                  <span className="ml-1.5 rounded-full bg-(--brand) px-1.5 py-0.5 text-[10px] font-bold text-(--text-inverse)">
+                  <span className="rounded-full bg-(--accent) px-1.5 py-0.5 text-[10px] font-bold text-(--text-inverse)">
                     {data.unreadCount}
                   </span>
                 ) : null}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2">
-            {filteredUserId ? (
-              <span className="flex items-center gap-1 rounded-full bg-(--bg-selected) px-3 py-1 text-xs font-medium text-(--brand)">
-                Mail of {filteredUserName}
-                <Link href="/emails" aria-label="Clear user filter" className="ml-1 text-(--text-secondary) hover:text-(--text-primary)">×</Link>
-              </span>
-            ) : null}
-            <label className="flex items-center gap-1.5 text-xs text-(--text-secondary)">
-              <input
-                type="checkbox"
-                checked={mineOnly}
-                onChange={(event) => { setMineOnly(event.target.checked); setPage(1); }}
-              />
-              Me
-            </label>
-            <label htmlFor="mailbox-search" className="sr-only">Search emails</label>
-            <input
-              id="mailbox-search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search subject, body, addresses…"
-              className="input lg:w-72"
-            />
-          </div>
         </div>
 
-        <div className="grid lg:grid-cols-[380px_1fr]">
+        <div className="card overflow-hidden">
+          <div className="grid lg:grid-cols-[360px_1fr]">
           {/* List */}
-          <div className="max-h-[70vh] divide-y divide-(--border-default) overflow-y-auto border-b border-(--border-default) lg:border-b-0 lg:border-r">
+          <div className="max-h-[70vh] divide-y divide-(--border-hairline) overflow-y-auto border-b border-(--border-hairline) lg:border-b-0 lg:border-r">
             {loading && rows.length === 0 ? (
               <p className="px-4 py-10 text-center text-sm text-(--text-tertiary)">Loading mailbox…</p>
             ) : rows.length === 0 ? (
@@ -259,7 +256,7 @@ export function MailboxPage() {
                   onClick={() => void open(row)}
                   aria-current={selected?.id === row.id}
                   className={`block w-full px-4 py-3 text-left transition hover:bg-(--bg-hover) ${
-                    selected?.id === row.id ? "bg-(--bg-selected)" : ""
+                    selected?.id === row.id ? "bg-(--accent-soft)" : ""
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -270,7 +267,7 @@ export function MailboxPage() {
                   </div>
                   <div className="mt-0.5 flex items-center gap-2">
                     {!row.read && row.direction === "INBOUND" ? (
-                      <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-(--brand)" />
+                      <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-(--accent)" />
                     ) : (
                       <span aria-hidden className="h-2 w-2 shrink-0 rounded-full border border-(--border-strong)" />
                     )}
@@ -284,23 +281,23 @@ export function MailboxPage() {
             )}
             {data && (data.page > 1 || data.hasMore) ? (
               <div className="flex items-center justify-between px-4 py-2 text-xs text-(--text-secondary)">
-                <button
-                  type="button"
+                <Button
+                  size="sm"
+                  variant="secondary"
                   disabled={data.page <= 1 || loading}
                   onClick={() => setPage((current) => Math.max(1, current - 1))}
-                  className="rounded border border-(--border-strong) px-2 py-1 disabled:opacity-40"
                 >
                   ← Prev
-                </button>
+                </Button>
                 <span>Page {data.page}</span>
-                <button
-                  type="button"
+                <Button
+                  size="sm"
+                  variant="secondary"
                   disabled={!data.hasMore || loading}
                   onClick={() => setPage((current) => current + 1)}
-                  className="rounded border border-(--border-strong) px-2 py-1 disabled:opacity-40"
                 >
                   Next →
-                </button>
+                </Button>
               </div>
             ) : null}
           </div>
@@ -309,7 +306,7 @@ export function MailboxPage() {
           <div className="max-h-[70vh] overflow-y-auto p-5">
             {selected ? (
               <article>
-                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-(--border-default) pb-4">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-(--border-hairline) pb-4">
                   <div className="min-w-0">
                     <h2 className="text-lg font-semibold text-(--text-primary)">{selected.subject}</h2>
                     <p className="mt-1 text-sm text-(--text-secondary)">
@@ -327,15 +324,17 @@ export function MailboxPage() {
                     {selected.subjectType && selected.subjectId && RECORD_PATH[selected.subjectType] ? (
                       <Link
                         href={`/${RECORD_PATH[selected.subjectType]}/${selected.subjectId}`}
-                        className="rounded-md border border-(--border-strong) px-2.5 py-1.5 text-xs font-medium hover:bg-(--bg-hover)"
+                        className="btn btn-secondary btn-sm"
                       >
                         View {selected.subjectType.toLowerCase()} →
                       </Link>
                     ) : null}
                     {selected.direction === "INBOUND" ? (
                       <>
-                        <button
-                          type="button"
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          icon="mail"
                           onClick={() => {
                             const escapeHtml = (text: string) => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
                             const quote = selected.body
@@ -349,17 +348,16 @@ export function MailboxPage() {
                               html: `<p><br></p><p>On ${new Date(selected.createdAt).toLocaleString()}, ${escapeHtml(selected.from)} wrote:</p><blockquote>${quote}</blockquote>`,
                             });
                           }}
-                          className="rounded-md border border-(--border-strong) px-2.5 py-1.5 text-xs font-medium hover:bg-(--bg-hover)"
                         >
                           Reply
-                        </button>
-                        <button
-                          type="button"
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
                           onClick={() => void markUnread(selected)}
-                          className="rounded-md border border-(--border-strong) px-2.5 py-1.5 text-xs font-medium hover:bg-(--bg-hover)"
                         >
                           Mark unread
-                        </button>
+                        </Button>
                       </>
                     ) : null}
                   </div>
@@ -380,6 +378,7 @@ export function MailboxPage() {
             )}
           </div>
         </div>
+      </div>
       </div>
       {compose ? (
         <EmailCompose

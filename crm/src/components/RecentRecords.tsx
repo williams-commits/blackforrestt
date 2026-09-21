@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui";
 
 type RecentRecord = { href: string; label: string; module: string; visitedAt: number };
 const STORAGE_KEY = "crm-recent-records";
@@ -35,12 +36,35 @@ export function RecentRecords() {
   if (records.length === 0) return null;
 
   return (
-    <section className="card p-5" aria-label="Recently visited records">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-(--text-tertiary)">Your shortcuts</p><h2 className="mt-1 text-lg font-semibold tracking-tight">Recently visited</h2></div>
-        <button type="button" onClick={() => { window.localStorage.removeItem(STORAGE_KEY); setRecords([]); }} className="text-xs font-medium text-(--text-secondary) hover:text-(--text-primary)">Clear</button>
+    <section className="section" aria-label="Recently visited records">
+      <div className="section-header">
+        <div className="min-w-0">
+          <h2 className="section-title">Recently visited</h2>
+          <p className="section-description">Your shortcuts</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              window.localStorage.removeItem(STORAGE_KEY);
+              setRecords([]);
+            }}
+          >
+            Clear
+          </Button>
+        </div>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{records.map((record) => <Link key={record.href} href={record.href} className="card-interactive rounded-md border border-(--border-default) px-3 py-2 hover:bg-(--bg-hover)"><p className="truncate text-sm font-medium">{record.label}</p><p className="mt-0.5 text-xs text-(--text-tertiary)">{record.module}</p></Link>)}</div>
+      <ul className="divide-y divide-(--border-hairline)">
+        {records.map((record) => (
+          <li key={record.href}>
+            <Link href={record.href} className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2.5 text-sm hover:bg-(--bg-hover)">
+              <span className="min-w-0 truncate font-medium">{record.label}</span>
+              <span className="shrink-0 text-xs text-(--text-tertiary)">{record.module}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

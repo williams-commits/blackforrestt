@@ -269,7 +269,6 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
                 onClick={() => void convert()}
                 disabled={busy}
                 className="btn btn-primary"
-                style={{ background: "var(--brand)" }}
               >
                 {busy ? "Converting…" : "Convert"}
               </button>

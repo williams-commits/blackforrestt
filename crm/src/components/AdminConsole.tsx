@@ -9,6 +9,7 @@ import { useConfirmDialog } from "@/components/Dialogs";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { Modal } from "@/components/Modal";
 import { useTableSession, writeTableSession } from "@/components/useTableSession";
+import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
 import { PERMISSION_CATEGORIES } from "@/server/permissions";
 
 
@@ -20,9 +21,9 @@ function AdminTableSkeleton({ rows = 6, columns = 5 }: { rows?: number; columns?
   return (
     <>
       {[...Array(rows)].map((_, rowIndex) => (
-        <tr key={`admin-skeleton-row-${rowIndex}`}>
+        <TR key={`admin-skeleton-row-${rowIndex}`}>
           {[...Array(columns)].map((__, columnIndex) => (
-            <td key={`admin-skeleton-cell-${rowIndex}-${columnIndex}`} className="px-3 py-3">
+            <TD key={`admin-skeleton-cell-${rowIndex}-${columnIndex}`} className="px-3 py-3">
               <div
                 className="skeleton"
                 style={{
@@ -30,9 +31,9 @@ function AdminTableSkeleton({ rows = 6, columns = 5 }: { rows?: number; columns?
                   width: `${columnIndex === 0 ? 80 : 58 - (columnIndex % 3) * 8}%`,
                 }}
               />
-            </td>
+            </TD>
           ))}
-        </tr>
+        </TR>
       ))}
     </>
   );
@@ -171,29 +172,29 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
         </SetupFormModal>
       ) : null}
       <div className="card overflow-hidden">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Object</th>
-              <th>Category</th>
-              <th>In use</th>
-              <th>Default</th>
-              {canManage ? <th className="text-right">Actions</th> : null}
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <THead>
+            <TR>
+              <TH>Name</TH>
+              <TH>Object</TH>
+              <TH>Category</TH>
+              <TH>In use</TH>
+              <TH>Default</TH>
+              {canManage ? <TH className="text-right">Actions</TH> : null}
+            </TR>
+          </THead>
+          <TBody>
             {loading ? (
               <AdminTableSkeleton rows={5} columns={canManage ? 6 : 5} />
             ) : rows.map((row) => (
-              <tr key={row.id}>
-                <td className="font-medium">{row.name}</td>
-                <td><span className="badge badge-neutral">{row.appliesTo.toLowerCase()}</span></td>
-                <td><span className={`badge ${row.category === "OPEN" ? "badge-success" : row.category === "CONVERTED" ? "badge-info" : row.category === "INVALID" ? "badge-error" : "badge-neutral"}`}>{row.category.toLowerCase()}</span></td>
-                <td className="tabular-nums text-(--text-secondary)">{row._count.leads + row._count.contacts + row._count.customers}</td>
-                <td>{row.isDefault ? <span className="badge badge-brand">Default</span> : <span className="text-xs text-(--text-tertiary)">—</span>}</td>
+              <TR key={row.id}>
+                <TD className="font-medium">{row.name}</TD>
+                <TD><span className="badge badge-neutral">{row.appliesTo.toLowerCase()}</span></TD>
+                <TD><span className={`badge ${row.category === "OPEN" ? "badge-success" : row.category === "CONVERTED" ? "badge-info" : row.category === "INVALID" ? "badge-error" : "badge-neutral"}`}>{row.category.toLowerCase()}</span></TD>
+                <TD className="tabular-nums text-(--text-secondary)">{row._count.leads + row._count.contacts + row._count.customers}</TD>
+                <TD>{row.isDefault ? <span className="badge badge-brand">Default</span> : <span className="text-xs text-(--text-tertiary)">—</span>}</TD>
                 {canManage ? (
-                  <td className="text-right whitespace-nowrap">
+                  <TD className="text-right whitespace-nowrap">
                     {!row.isDefault ? (
                       <button type="button" onClick={() => void makeDefault(row.id)} className="mr-2 text-xs text-(--brand) hover:underline">
                         make default
@@ -202,12 +203,12 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
                     <button type="button" onClick={() => void remove(row.id)} className="text-xs text-(--error) hover:underline">
                       delete
                     </button>
-                  </td>
+                  </TD>
                 ) : null}
-              </tr>
+              </TR>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </div>
 
       {confirmDialog}
@@ -487,51 +488,51 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
         </SetupFormModal>
       ) : null}
       <div className="card overflow-hidden">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Object</th>
-              <th>Label</th>
-              <th>Key</th>
-              <th>Type</th>
-              <th>Options</th>
-              <th>State</th>
-              {canManage ? <th className="text-right">Actions</th> : null}
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <THead>
+            <TR>
+              <TH>Object</TH>
+              <TH>Label</TH>
+              <TH>Key</TH>
+              <TH>Type</TH>
+              <TH>Options</TH>
+              <TH>State</TH>
+              {canManage ? <TH className="text-right">Actions</TH> : null}
+            </TR>
+          </THead>
+          <TBody>
             {loading ? (
               <AdminTableSkeleton rows={6} columns={canManage ? 7 : 6} />
             ) : rows.length === 0 ? (
-              <tr><td colSpan={7}><div className="empty-state"><p className="empty-state-title">No custom fields defined</p><p className="empty-state-description">Add a field above to capture business-specific details on records.</p></div></td></tr>
+              <TR><TD colSpan={7}><div className="empty-state"><p className="empty-state-title">No custom fields defined</p><p className="empty-state-description">Add a field above to capture business-specific details on records.</p></div></TD></TR>
             ) : (
               rows.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.objectType.toLowerCase()}</td>
-                  <td className="font-medium">{row.label}</td>
-                  <td className="font-mono text-xs">{row.key}</td>
-                  <td className="font-mono text-xs">{row.fieldType.replaceAll("_", " ").toLowerCase()}</td>
-                  <td>
+                <TR key={row.id}>
+                  <TD>{row.objectType.toLowerCase()}</TD>
+                  <TD className="font-medium">{row.label}</TD>
+                  <TD className="font-mono text-xs">{row.key}</TD>
+                  <TD className="font-mono text-xs">{row.fieldType.replaceAll("_", " ").toLowerCase()}</TD>
+                  <TD>
                     {row.options && row.options.length > 0 ? (
                       <span className="flex flex-wrap gap-1">
                         {row.options.slice(0, 3).map((option) => <span key={option} className="badge badge-neutral">{option}</span>)}
                         {row.options.length > 3 ? <span className="self-center text-xs text-(--text-tertiary)">+{row.options.length - 3} more</span> : null}
                       </span>
                     ) : "—"}
-                  </td>
-                  <td><span className={row.active ? "badge badge-success" : "badge badge-neutral"}>{row.active ? "active" : "hidden"}</span></td>
+                  </TD>
+                  <TD><span className={row.active ? "badge badge-success" : "badge badge-neutral"}>{row.active ? "active" : "hidden"}</span></TD>
                   {canManage ? (
-                    <td className="text-right">
+                    <TD className="text-right">
                       <button type="button" onClick={() => void remove(row.id)} className="text-xs text-(--error) hover:underline">
                         delete
                       </button>
-                    </td>
+                    </TD>
                   ) : null}
-                </tr>
+                </TR>
               ))
             )}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </div>
 
       {confirmDialog}
@@ -752,37 +753,37 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
           </div>
         </div>
         {canManage && selectedIds.length > 0 ? <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-selected) px-4 py-2 text-sm"><span>{selectedIds.length} selected</span><button type="button" onClick={() => void suspendSelected()} className="btn btn-destructive btn-sm">Suspend selected</button></div> : null}
-        <table className="table">
-          <thead>
-            <tr>
-              {canManage ? <th className="w-10"><input type="checkbox" aria-label="Select all visible users" checked={filteredUsers.length > 0 && filteredUsers.every((user) => selectedIds.includes(user.id))} onChange={(event) => setSelectedIds(event.target.checked ? filteredUsers.map((user) => user.id) : [])} /></th> : null}
-              <th>User</th>
-              <th>Role</th>
-              <th>Teams</th>
-              <th>Last login</th>
-              <th>Status</th>
-              {canManage ? <th className="text-right">Actions</th> : null}
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <THead>
+            <TR>
+              {canManage ? <TH className="w-10"><input type="checkbox" aria-label="Select all visible users" checked={filteredUsers.length > 0 && filteredUsers.every((user) => selectedIds.includes(user.id))} onChange={(event) => setSelectedIds(event.target.checked ? filteredUsers.map((user) => user.id) : [])} /></TH> : null}
+              <TH>User</TH>
+              <TH>Role</TH>
+              <TH>Teams</TH>
+              <TH>Last login</TH>
+              <TH>Status</TH>
+              {canManage ? <TH className="text-right">Actions</TH> : null}
+            </TR>
+          </THead>
+          <TBody>
             {loading ? (
               <AdminTableSkeleton rows={6} columns={canManage ? 6 : 5} />
             ) : filteredUsers.map((user) => (
-              <tr key={user.id} className={selectedUserId === user.id ? "bg-(--bg-selected)" : undefined}>
-                {canManage ? <td><input type="checkbox" aria-label={`Select ${user.name}`} checked={selectedIds.includes(user.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, user.id] : current.filter((id) => id !== user.id))} /></td> : null}
-                <td><button type="button" onClick={() => setSelectedUserId(user.id)} className="flex items-center gap-3 text-left"><span className="avatar avatar-sm" style={{ background: "var(--brand-100)", color: "var(--brand-800)" }}>{user.name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</span><span><span className="block font-medium hover:text-(--text-brand)">{user.name}</span><span className="block text-xs text-(--text-tertiary)">{user.email}</span></span></button></td>
-                <td>
+              <TR key={user.id} className={selectedUserId === user.id ? "bg-(--bg-selected)" : undefined}>
+                {canManage ? <TD><input type="checkbox" aria-label={`Select ${user.name}`} checked={selectedIds.includes(user.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, user.id] : current.filter((id) => id !== user.id))} /></TD> : null}
+                <TD><button type="button" onClick={() => setSelectedUserId(user.id)} className="flex items-center gap-3 text-left"><span className="avatar avatar-sm" style={{ background: "var(--brand-100)", color: "var(--brand-800)" }}>{user.name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</span><span><span className="block font-medium hover:text-(--text-brand)">{user.name}</span><span className="block text-xs text-(--text-tertiary)">{user.email}</span></span></button></TD>
+                <TD>
                   {canManage ? (
                     <select aria-label={`Role for ${user.name}`} value={user.role.key} onChange={(e) => void patchUser(user.id, { roleKey: e.target.value })} className="input">
                       {roles.map((role) => <option key={role.key} value={role.key}>{role.name}</option>)}
                     </select>
                   ) : user.role.name}
-                </td>
-                <td className="text-xs">{user.memberships.map((m) => m.team.name).join(", ") || "—"}</td>
-                <td className="text-xs">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "never"}</td>
-                <td><span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${user.status === "ACTIVE" ? "bg-(--success-bg) text-(--success)" : user.status === "SUSPENDED" ? "bg-(--warning-bg) text-(--warning)" : "bg-(--bg-subtle) text-(--text-secondary)"}`}><span aria-hidden className={`h-1.5 w-1.5 rounded-full ${user.status === "ACTIVE" ? "bg-(--success)" : user.status === "SUSPENDED" ? "bg-(--warning)" : "bg-(--text-tertiary)"}`} />{user.status.charAt(0) + user.status.slice(1).toLowerCase()}</span></td>
+                </TD>
+                <TD className="text-xs">{user.memberships.map((m) => m.team.name).join(", ") || "—"}</TD>
+                <TD className="text-xs">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "never"}</TD>
+                <TD><span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${user.status === "ACTIVE" ? "bg-(--success-bg) text-(--success)" : user.status === "SUSPENDED" ? "bg-(--warning-bg) text-(--warning)" : "bg-(--bg-subtle) text-(--text-secondary)"}`}><span aria-hidden className={`h-1.5 w-1.5 rounded-full ${user.status === "ACTIVE" ? "bg-(--success)" : user.status === "SUSPENDED" ? "bg-(--warning)" : "bg-(--text-tertiary)"}`} />{user.status.charAt(0) + user.status.slice(1).toLowerCase()}</span></TD>
                 {canManage ? (
-                  <td className="text-right whitespace-nowrap">
+                  <TD className="text-right whitespace-nowrap">
                     <button
                       type="button"
                       onClick={() => void patchUser(user.id, { status: user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" })}
@@ -812,22 +813,22 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                     >
                       delete
                     </button>
-                  </td>
+                  </TD>
                 ) : null}
-              </tr>
+              </TR>
             ))}
             {!loading && filteredUsers.length === 0 ? (
-              <tr>
-                <td colSpan={canManage ? 7 : 5}>
+              <TR>
+                <TD colSpan={canManage ? 7 : 5}>
                   <div className="empty-state">
                     <p className="empty-state-title">No users match this view</p>
                     <p className="empty-state-description">Adjust the search or status filter.</p>
                   </div>
-                </td>
-              </tr>
+                </TD>
+              </TR>
             ) : null}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </div>
 
       {selectedUser ? <div className="card border-(--brand-200) p-5" aria-label={`Profile for ${selectedUser.name}`}>
@@ -1195,36 +1196,36 @@ export function AuditTab() {
           <div><h2 className="text-sm font-semibold">Recent activity</h2><p className="mt-0.5 text-xs text-(--text-tertiary)">Append-only history of important changes.</p></div>
           <span className="badge badge-neutral">{total} entries</span>
         </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>When</th>
-              <th>Actor</th>
-              <th>Action</th>
-              <th>Object</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <THead>
+            <TR>
+              <TH>When</TH>
+              <TH>Actor</TH>
+              <TH>Action</TH>
+              <TH>Object</TH>
+            </TR>
+          </THead>
+          <TBody>
             {loading ? (
               <AdminTableSkeleton rows={8} columns={4} />
             ) : entries.map((entry) => (
-              <tr key={entry.id}>
-                <td className="whitespace-nowrap text-xs text-(--text-secondary)">
+              <TR key={entry.id}>
+                <TD className="whitespace-nowrap text-xs text-(--text-secondary)">
                   {new Date(entry.createdAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "medium" })}
-                </td>
-                <td><span className="font-medium">{entry.actor?.name ?? "System"}</span></td>
-                <td><span className={`badge ${entry.action.endsWith("_CREATED") ? "badge-success" : entry.action.endsWith("_UPDATED") ? "badge-info" : entry.action.endsWith("_DELETED") ? "badge-error" : "badge-neutral"}`}>{entry.action.replaceAll("_", " ").toLowerCase()}</span></td>
-                <td className="text-xs text-(--text-secondary)">
+                </TD>
+                <TD><span className="font-medium">{entry.actor?.name ?? "System"}</span></TD>
+                <TD><span className={`badge ${entry.action.endsWith("_CREATED") ? "badge-success" : entry.action.endsWith("_UPDATED") ? "badge-info" : entry.action.endsWith("_DELETED") ? "badge-error" : "badge-neutral"}`}>{entry.action.replaceAll("_", " ").toLowerCase()}</span></TD>
+                <TD className="text-xs text-(--text-secondary)">
                   <span className="font-medium text-(--text-primary)">{entry.objectType.toLowerCase()}</span>
                   {entry.objectId ? ` · …${entry.objectId.slice(-6)}` : ""}
-                </td>
-              </tr>
+                </TD>
+              </TR>
             ))}
             {!loading && entries.length === 0 ? (
-              <tr><td colSpan={4}><div className="empty-state"><p className="empty-state-title">No audit entries yet</p><p className="empty-state-description">Configuration and record changes will appear here as they happen.</p></div></td></tr>
+              <TR><TD colSpan={4}><div className="empty-state"><p className="empty-state-title">No audit entries yet</p><p className="empty-state-description">Configuration and record changes will appear here as they happen.</p></div></TD></TR>
             ) : null}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-(--text-secondary)">
         <span>

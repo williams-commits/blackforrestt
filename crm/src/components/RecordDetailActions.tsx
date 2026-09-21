@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { RECORD_UI, type ObjectKey } from "@/lib/recordUi";
+import { RECORD_UI, type ObjectKey, type RecordObjectKey } from "@/lib/recordUi";
 import { RecordForm, type OptionSource } from "@/components/RecordForm";
 import { useConfirmDialog } from "@/components/Dialogs";
 import { Icon } from "@/components/Icon";
@@ -42,14 +42,19 @@ export function useOptionSources(object: ObjectKey): OptionSource {
     let cancelled = false;
     void (async () => {
       try {
-        const subjectTypeMap: Record<ObjectKey, string> = {
+/** Record-status subject for the four record objects (campaigns/tasks have none). */
+function isRecordObjectKey(value: ObjectKey): value is RecordObjectKey {
+  return value === "leads" || value === "contacts" || value === "accounts" || value === "customers";
+}
+
+const subjectTypeMap: Record<RecordObjectKey, string> = {
           leads: "LEAD",
           contacts: "CONTACT",
           accounts: "ACCOUNT",
           customers: "CUSTOMER",
         };
-        const subjectType = subjectTypeMap[object];
-        const statusUrl = subjectType ? `/api/record-statuses?subjectType=${subjectType}` : "/api/record-statuses";
+        const subjectType = isRecordObjectKey(object) ? subjectTypeMap[object] : undefined;
+        const statusUrl = `/api/record-statuses${subjectType ? `?subjectType=${subjectType}` : ""}`;
         const [me, statuses, users] = await Promise.all([
           fetch("/api/me").then((r) => (r.ok ? r.json() : { data: { permissions: [] } })),
           fetch(statusUrl).then((r) => (r.ok ? r.json() : { data: [] })),

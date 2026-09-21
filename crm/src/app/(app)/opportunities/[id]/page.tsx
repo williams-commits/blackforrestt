@@ -75,7 +75,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <div className="mx-auto max-w-6xl space-y-4" data-module="opportunities">
       <nav className="breadcrumb no-print" aria-label="Breadcrumb">
         <Link href="/">Home</Link><span className="breadcrumb-sep">/</span>
         <Link href="/opportunities">Opportunities</Link><span className="breadcrumb-sep">/</span>

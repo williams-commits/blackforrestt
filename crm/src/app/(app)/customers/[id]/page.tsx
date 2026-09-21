@@ -24,6 +24,7 @@ import { SendEmailButton } from "@/components/SendEmailButton";
 import { PlatformLinkPanel, PlatformUnlinkButton } from "@/components/PlatformLinkPanel";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
+import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
 import { getRecordCapabilities } from "@/lib/recordCapabilities";
 
 export const dynamic = "force-dynamic";
@@ -87,7 +88,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <div className="mx-auto max-w-6xl space-y-4" data-module="customers">
       <nav className="breadcrumb no-print" aria-label="Breadcrumb">
         <Link href="/">Home</Link><span className="breadcrumb-sep">/</span>
         <Link href="/customers">Customers</Link><span className="breadcrumb-sep">/</span>
@@ -207,7 +208,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                     {platform.positions.length > 0 ? (
                       <div className="sm:col-span-3">
                         <div className="mb-1 flex items-center justify-between"><p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Live positions</p><span className="badge badge-success">{platform.positions.length} open</span></div>
-                        <div className="overflow-x-auto"><table className="table"><thead><tr><th>Symbol</th><th>Side</th><th>Volume</th><th>Open</th><th>Mark</th><th>Net P/L</th></tr></thead><tbody>{platform.positions.map((position) => <tr key={position.id}><td className="font-medium">{position.symbol}</td><td><span className={`badge ${position.side === "BUY" ? "badge-success" : "badge-error"}`}>{position.side}</span></td><td>{position.volume}</td><td>{position.openRate}</td><td>{position.currentRate}</td><td className={Number(position.netProfit) >= 0 ? "text-(--success)" : "text-(--error)"}>{Number(position.netProfit).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td></tr>)}</tbody></table></div>
+                        <div className="overflow-x-auto"><Table><THead><TR><TH>Symbol</TH><TH>Side</TH><TH>Volume</TH><TH>Open</TH><TH>Mark</TH><TH>Net P/L</TH></TR></THead><TBody>{platform.positions.map((position) => <TR key={position.id}><TD className="font-medium">{position.symbol}</TD><TD><span className={`badge ${position.side === "BUY" ? "badge-success" : "badge-error"}`}>{position.side}</span></TD><TD>{position.volume}</TD><TD>{position.openRate}</TD><TD>{position.currentRate}</TD><TD className={Number(position.netProfit) >= 0 ? "text-(--success)" : "text-(--error)"}>{Number(position.netProfit).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TD></TR>)}</TBody></Table></div>
                       </div>
                     ) : null}
                     <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
@@ -231,18 +232,18 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                     {platform.payments.length > 0 ? (
                       <div className="sm:col-span-3">
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Recent payments</p>
-                        <table className="table">
-                          <tbody>
+                        <Table>
+                          <TBody>
                             {platform.payments.map((payment) => (
-                              <tr key={payment.id}>
-                                <td>{new Date(payment.createdAt).toLocaleDateString()}</td>
-                                <td>{payment.type.toLowerCase()}</td>
-                                <td>{Number(payment.amount).toLocaleString()} {payment.asset}</td>
-                                <td style={{ color: "var(--text-secondary)" }}>{payment.status.toLowerCase()}</td>
-                              </tr>
+                              <TR key={payment.id}>
+                                <TD>{new Date(payment.createdAt).toLocaleDateString()}</TD>
+                                <TD>{payment.type.toLowerCase()}</TD>
+                                <TD>{Number(payment.amount).toLocaleString()} {payment.asset}</TD>
+                                <TD style={{ color: "var(--text-secondary)" }}>{payment.status.toLowerCase()}</TD>
+                              </TR>
                             ))}
-                          </tbody>
-                        </table>
+                          </TBody>
+                        </Table>
                       </div>
                     ) : null}
                   </div>

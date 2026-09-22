@@ -1,103 +1,74 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+export interface RowAction {
+  label: string;
+  onClick: () => void;
+  icon?: string;
+  destructive?: boolean;
+}
 
 /**
- * Row action dropdown — the ⋯ kebab menu on each table row.
- * Opens a small menu with Edit, Delete, and object-specific actions.
+ * Row action dropdown — the ⋯ kebab used on table rows and record headers.
+ * Destructive actions sink to the end behind a separator so the primary
+ * workflow stays visually separate from destructive ones.
  */
 export function RowActions({
   actions,
+  label,
 }: {
-  actions: Array<{
-    label: string;
-    onClick: () => void;
-    icon?: string;
-    destructive?: boolean;
-  }>;
+  actions: RowAction[];
+  /** Optional menu heading (defaults to none — the trigger is self-evident). */
+  label?: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
-  const ref = useRef<HTMLDivElement>(null);
-
-  function positionMenu() {
-    const anchor = ref.current;
-    if (!anchor) return;
-    const rect = anchor.getBoundingClientRect();
-    const width = 160;
-    const height = actions.length * 34 + 8;
-    const left = Math.min(Math.max(8, rect.right - width), window.innerWidth - width - 8);
-    const opensUp = rect.bottom + height + 8 > window.innerHeight && rect.top > height;
-    setMenuStyle({
-      left,
-      top: opensUp ? Math.max(8, rect.top - height - 4) : rect.bottom + 4,
-      width,
-    });
-  }
-
-  useEffect(() => {
-    function onClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    positionMenu();
-    window.addEventListener("resize", positionMenu);
-    window.addEventListener("scroll", positionMenu, true);
-    return () => {
-      window.removeEventListener("resize", positionMenu);
-      window.removeEventListener("scroll", positionMenu, true);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, actions.length]);
-
+  const primary = actions.filter((action) => !action.destructive);
+  const destructive = actions.filter((action) => action.destructive);
   return (
-    <div ref={ref} className="relative inline-block">
-      <button
-        type="button"
-        onClick={() => {
-          setOpen((p) => !p);
-          window.requestAnimationFrame(positionMenu);
-        }}
-        className="flex h-6 w-6 items-center justify-center rounded-md text-(--text-tertiary) transition-colors hover:bg-(--bg-hover) hover:text-(--text-primary)"
-        aria-label="Row actions"
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        <Icon name="more" size={16} />
-      </button>
-      {open ? (
-        <div
-          className="fixed z-50 rounded-lg border border-(--border-default) bg-(--bg-surface) py-1 shadow-(--shadow-dropdown)"
-          role="menu"
-          style={menuStyle}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="tertiary"
+          size="sm"
+          className="w-7 px-0"
+          aria-label="Row actions"
         >
-          {actions.map((action) => (
-            <button
-              key={action.label}
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                action.onClick();
-              }}
-              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] transition-colors hover:bg-(--bg-hover) ${
-                action.destructive ? "text-(--error)" : "text-(--text-primary)"
-              }`}
-            >
-              {action.icon ? <Icon name={action.icon} size={14} /> : null}
-              {action.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
+          <Icon name="more" size={16} />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        {label ? <DropdownMenuLabel>{label}</DropdownMenuLabel> : null}
+        {primary.map((action) => (
+          <DropdownMenuItem key={action.label} onSelect={() => action.onClick()}>
+            {action.icon ? <Icon name={action.icon} size={14} /> : null}
+            {action.label}
+          </DropdownMenuItem>
+        ))}
+        {destructive.length > 0 ? (
+          <>
+            <DropdownMenuSeparator />
+            {destructive.map((action) => (
+              <DropdownMenuItem
+                key={action.label}
+                variant="destructive"
+                onSelect={() => action.onClick()}
+              >
+                {action.icon ? <Icon name={action.icon} size={14} /> : null}
+                {action.label}
+              </DropdownMenuItem>
+            ))}
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RECORD_UI, type ObjectKey, type RecordObjectKey } from "@/lib/recordUi";
 import { RecordForm, type OptionSource } from "@/components/RecordForm";
 import { useConfirmDialog } from "@/components/Dialogs";
-import { Icon } from "@/components/Icon";
+import { RowActions } from "@/components/RowActions";
+import { EmailCompose } from "@/components/EmailCompose";
+import { ConvertDialog } from "@/components/ConvertDialog";
 
 const EMPTY: OptionSource = {
   leadStatuses: [],
@@ -128,6 +129,8 @@ export function RecordDetailActions({
   canAssign = false,
   canChangeStatus = false,
   canChangePotentialStatus = false,
+  email = null,
+  convert = false,
 }: {
   object: ObjectKey;
   row: Record<string, unknown>;
@@ -136,15 +139,32 @@ export function RecordDetailActions({
   canAssign?: boolean;
   canChangeStatus?: boolean;
   canChangePotentialStatus?: boolean;
+  /** Renders an "Email" action opening the compose modal (null hides it). */
+  email?: {
+    subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
+    subjectId: string;
+    to: string | null;
+    name: string;
+  } | null;
+  /** Leads only: renders a "Convert" action opening the conversion dialog. */
+  convert?: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [emailing, setEmailing] = useState(false);
+  const [converting, setConverting] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const options = useOptionSources(object);
 
   const canOpenActionForm = canEdit || canAssign || canChangeStatus || canChangePotentialStatus;
-  const subjectType = object === "leads" ? "LEAD" : object === "contacts" ? "CONTACT" : object === "accounts" ? "ACCOUNT" : "CUSTOMER";
+  // Only the four record objects are valid task subjects — campaigns/tasks
+  // must not link "Related tasks" with a bogus subject type.
+  const subjectType =
+    object === "leads" ? "LEAD"
+    : object === "contacts" ? "CONTACT"
+    : object === "accounts" ? "ACCOUNT"
+    : object === "customers" ? "CUSTOMER"
+    : undefined;
   const recordId = (row as { id: string }).id;
 
   async function handleDelete() {
@@ -156,41 +176,47 @@ export function RecordDetailActions({
       destructive: true,
     });
     if (!ok) return;
-    setBusy(true);
-    try {
+    {
       const response = await fetch(`/api/${object}/${(row as { id: string }).id}`, { method: "DELETE" });
       if (response.ok) router.push(`/${object}`);
-    } finally {
-      setBusy(false);
     }
   }
 
+  const actions = [
+    ...(canOpenActionForm
+      ? [{ label: canEdit ? "Edit" : "Manage actions", icon: "edit", onClick: () => setEditing(true) }]
+      : []),
+    ...(subjectType
+      ? [{ label: "Related tasks", icon: "square_check", onClick: () => router.push(`/tasks?subjectType=${subjectType}&subjectId=${recordId}`) }]
+      : []),
+    ...(email?.to
+      ? [{ label: "Email", icon: "mail", onClick: () => setEmailing(true) }]
+      : []),
+    ...(convert
+      ? [{ label: "Convert", icon: "target", onClick: () => setConverting(true) }]
+      : []),
+    ...(canDelete
+      ? [{ label: "Delete", icon: "trash", destructive: true, onClick: () => void handleDelete() }]
+      : []),
+  ];
+
   return (
     <div className="flex gap-2">
-      <Link href={`/tasks?subjectType=${subjectType}&subjectId=${recordId}`} className="flex items-center gap-1.5 rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary)">
-        Related tasks
-      </Link>
-      {canOpenActionForm ? (
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="flex items-center gap-1.5 rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-(--brand) focus:ring-offset-2 cursor-pointer"
-        >
-          <Icon name="edit" size={16} />
-          {canEdit ? "Edit" : "Manage actions"}
-        </button>
+      {actions.length > 0 ? <RowActions actions={actions} label="Record actions" /> : null}
+      {emailing && email?.to ? (
+        <EmailCompose
+          subjectType={email.subjectType}
+          subjectId={email.subjectId}
+          toEmail={email.to}
+          toName={email.name}
+          onClose={() => setEmailing(false)}
+        />
       ) : null}
-      {canDelete ? (
-        <button
-          type="button"
-          onClick={() => void handleDelete()}
-          disabled={busy}
-          className="flex items-center gap-1.5 rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-(--brand) focus:ring-offset-2 cursor-pointer"
-        >
-          <Icon name="trash" size={16} />
-          Delete
-        </button>
+
+      {converting ? (
+        <ConvertDialog leadId={recordId} onClose={() => setConverting(false)} />
       ) : null}
+
       {editing ? (
         <RecordForm
           object={object}

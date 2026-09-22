@@ -20,7 +20,6 @@ import { client360 } from "@/server/platformBridge";
 import { RecordActivities } from "@/components/RecordActivities";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
-import { SendEmailButton } from "@/components/SendEmailButton";
 import { PlatformLinkPanel, PlatformUnlinkButton } from "@/components/PlatformLinkPanel";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
@@ -116,11 +115,12 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           { label: "Platform", value: customer.platformUserId ? "Linked" : "Not linked" },
         ]}
       >
-        <SendEmailButton subjectType="CUSTOMER" subjectId={id} email={customer.email} name={`${customer.firstName} ${customer.lastName}`} />
-        <RecordDetailActions object="customers" row={customer as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} canAssign={canAssign} canChangeStatus={canChangeStatus} />
+        <RecordDetailActions object="customers" row={customer as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} canAssign={canAssign} canChangeStatus={canChangeStatus} 
+          email={{ subjectType: "CUSTOMER", subjectId: id, to: customer.email, name: `${customer.firstName} ${customer.lastName}` }}
+        />
       </HighlightsPanel>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0">
           <RecordPageTabs
             tabs={[
@@ -282,10 +282,10 @@ export default async function CustomerDetailPage({ params }: PageProps) {
               <AttachmentsPanel subjectType="CUSTOMER" subjectId={id} canUpload={canUpload} canDelete={canDeleteFiles} />
             </div>
           </section>
-                    {canViewEmails ? (
-            <RecordEmailHistory subjectType="CUSTOMER" subjectId={id} />
-          ) : null}
-        </RecordPageTabs>
+            {canViewEmails ? (
+              <RecordEmailHistory subjectType="CUSTOMER" subjectId={id} />
+            ) : null}
+          </RecordPageTabs>
         </div>
 
         {/* Timeline sidebar */}

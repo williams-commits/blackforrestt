@@ -2,16 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
+import { toast } from "sonner";
+import { Button } from "@/components/ui";
+import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Field, FormError, IconInput, IconSelectTrigger } from "@/components/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 
 type SubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
 
 /**
  * Activity Composer — the compact action bar that sits above the timeline
- * on every record page (Salesforce-style). Provides one-click access to
- * the five core activity actions: Log Call (future), New Task, New Note,
- * Schedule, and Send Email.
+ * on every record page (Salesforce-style). Provides one-click access to the
+ * core activity actions: Note, Task, and Schedule.
  */
 export function ActivityComposer({
   subjectType,
@@ -29,7 +37,6 @@ export function ActivityComposer({
   canScheduleAppointment: boolean;
 }) {
   const router = useRouter();
-  const toast = useToast();
   const [activeAction, setActiveAction] = useState<"none" | "note" | "task" | "appointment">("none");
   const [noteBody, setNoteBody] = useState("");
   const [taskTitle, setTaskTitle] = useState("");
@@ -46,218 +53,233 @@ export function ActivityComposer({
 
   if (!canAddNote && !canCreateTask && !canScheduleAppointment) return null;
 
-  async function submitNote(event: React.FormEvent) {
-    event.preventDefault();
+  async function post(url: string, payload: Record<string, unknown>, successTitle: string, successDescription: string, reset: () => void) {
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch("/api/notes", {
+      const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: noteBody, subjectType, subjectId }),
+        body: JSON.stringify(payload),
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        const message = body?.error ?? "Could not save note.";
+        const message = body?.error ?? "Something went wrong.";
         setError(message);
-        toast.error("Note not added", message);
+        toast.error(successTitle + " failed", { description: message });
         return;
       }
-      setNoteBody("");
+      reset();
       setActiveAction("none");
-      toast.success("Note added", `Note added to ${subjectLabel}.`);
+      toast.success(successTitle, { description: successDescription });
       refreshAfterToast();
     } catch {
-      setError("Could not save note.");
-      toast.error("Note not added", "Check your connection and try again.");
+      setError("Check your connection and try again.");
+      toast.error(successTitle + " failed", { description: "Check your connection and try again." });
     } finally {
       setBusy(false);
     }
   }
-
-  async function submitTask(event: React.FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: taskTitle, dueAt: taskDue || null, priority: taskPriority, subjectType, subjectId }),
-      });
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        const message = body?.error ?? "Could not create task.";
-        setError(message);
-        toast.error("Task not created", message);
-        return;
-      }
-      setTaskTitle("");
-      setTaskDue("");
-      setTaskPriority("NORMAL");
-      setActiveAction("none");
-      toast.success("Task created", `Follow-up task created for ${subjectLabel}.`);
-      refreshAfterToast();
-    } catch {
-      setError("Could not create task.");
-      toast.error("Task not created", "Check your connection and try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submitAppointment(event: React.FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/appointments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: apptTitle, startAt: apptStart, subjectType, subjectId }),
-      });
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        const message = body?.error ?? "Could not schedule.";
-        setError(message);
-        toast.error("Appointment not scheduled", message);
-        return;
-      }
-      setApptTitle("");
-      setApptStart("");
-      setActiveAction("none");
-      toast.success("Appointment scheduled", `Appointment scheduled with ${subjectLabel}.`);
-      refreshAfterToast();
-    } catch {
-      setError("Could not schedule appointment.");
-      toast.error("Appointment not scheduled", "Check your connection and try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
 
   const actions = [
-    { key: "note", label: "Note", icon: "edit" },
-    { key: "task", label: "Task", icon: "square_check" },
-    { key: "appointment", label: "Schedule", icon: "calendar" },
-  ];
+    { key: "note", label: "Note", icon: "edit", enabled: canAddNote },
+    { key: "task", label: "Task", icon: "square_check", enabled: canCreateTask },
+    { key: "appointment", label: "Schedule", icon: "calendar", enabled: canScheduleAppointment },
+  ].filter((action) => action.enabled);
 
   return (
-    <div className="card no-print" style={{ overflow: "hidden" }}>
-      {/* Action buttons row */}
+    <Card className="no-print gap-0 overflow-hidden py-0" style={{ overflow: "hidden" }}>
+      {/* Action bar */}
       <div
-        className="flex items-center gap-1 border-b px-2 py-1.5"
+        className="flex items-center gap-1 border-b px-2.5 py-2"
         style={{ borderColor: "var(--border-default)", background: "var(--bg-subtle)" }}
       >
         <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
           Log
         </span>
-        {actions.filter((action) =>
-          action.key === "note" ? canAddNote : action.key === "task" ? canCreateTask : canScheduleAppointment,
-        ).map((action) => {
+        {actions.map((action) => {
           const active = activeAction === action.key;
           return (
-            <button
+            <Button
               key={action.key}
-              type="button"
-              onClick={() => setActiveAction(active ? "none" : (action.key as never))}
-              className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] font-medium transition-colors"
-              style={{
-                background: active ? "var(--brand)" : "transparent",
-                color: active ? "var(--text-inverse)" : "var(--text-secondary)",
-              }}
+              variant={active ? "primary" : "tertiary"}
+              size="sm"
+              icon={action.icon}
+              aria-pressed={active}
+              onClick={() => { setError(null); setActiveAction(active ? "none" : (action.key as never)); }}
             >
-              <Icon name={action.icon} size={13} />
               {action.label}
-            </button>
+            </Button>
           );
         })}
       </div>
 
-      {/* Active composer */}
-      {error ? (
-        <p className="px-3 py-2 text-[12px]" style={{ color: "var(--error)" }}>{error}</p>
-      ) : null}
+      {activeAction !== "none" ? <FormError message={error} /> : null}
 
+      {/* Note composer */}
       {activeAction === "note" ? (
-        <form method="post" onSubmit={submitNote} className="p-3">
-          <textarea
+        <form
+          method="post"
+          className="space-y-2.5 p-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void post(
+              "/api/notes",
+              { body: noteBody, subjectType, subjectId },
+              "Note added",
+              `Note added to ${subjectLabel}.`,
+              () => setNoteBody(""),
+            );
+          }}
+        >
+          <div>
+            <p className="form-section-title">Note</p>
+            <p className="form-section-help">Context for everyone who works {subjectLabel} — visible on the timeline.</p>
+          </div>
+          <Textarea
             value={noteBody}
             onChange={(event) => setNoteBody(event.target.value)}
-            placeholder={`Write a note about ${subjectLabel}…`}
-            rows={2}
+            placeholder={`e.g. Spoke with ${subjectLabel} — discussed onboarding timeline.`}
+            rows={3}
             required
             maxLength={5000}
-            className="input"
-            style={{ resize: "vertical", width: "100%" }}
+            className="resize-y"
             autoFocus
+            onKeyDown={(event) => {
+              if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && event.currentTarget.form?.requestSubmit) {
+                event.currentTarget.form.requestSubmit();
+              }
+            }}
           />
-          <div className="mt-2 flex justify-end gap-2">
-            <button type="button" className="btn btn-ghost" onClick={() => setActiveAction("none")}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={busy || !noteBody.trim()}>
-              {busy ? "Saving…" : "Save note"}
-            </button>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] text-(--text-tertiary)">
+              {noteBody.length.toLocaleString()} / 5,000 · ⌘/Ctrl+Enter to save
+            </p>
+            <div className="flex gap-2">
+              <Button variant="tertiary" onClick={() => setActiveAction("none")}>Cancel</Button>
+              <Button variant="primary" icon="check" type="submit" loading={busy} disabled={!noteBody.trim()}>
+                Save note
+              </Button>
+            </div>
           </div>
         </form>
       ) : null}
 
+      {/* Task composer */}
       {activeAction === "task" ? (
-        <form method="post" onSubmit={submitTask} className="flex flex-col gap-2 p-3">
-          <input
-            value={taskTitle}
-            onChange={(event) => setTaskTitle(event.target.value)}
-            placeholder={`Follow up with ${subjectLabel}…`}
-            required
-            minLength={2}
-            className="input"
-            style={{ width: "100%" }}
-            autoFocus
-          />
-          <input
-            type="datetime-local"
-            value={taskDue}
-            onChange={(event) => setTaskDue(event.target.value)}
-            className="input"
-            style={{ width: "100%" }}
-          />
-          <select aria-label="Task priority" value={taskPriority} onChange={(event) => setTaskPriority(event.target.value)} className="input">
-            <option value="LOW">Low priority</option>
-            <option value="NORMAL">Normal priority</option>
-            <option value="HIGH">High priority</option>
-            <option value="URGENT">Urgent priority</option>
-          </select>
-          <button type="submit" className="btn btn-primary" disabled={busy || !taskTitle.trim()}>
-            {busy ? "…" : "Add task"}
-          </button>
+        <form
+          method="post"
+          className="space-y-3 p-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void post(
+              "/api/tasks",
+              { title: taskTitle, dueAt: taskDue || null, priority: taskPriority, subjectType, subjectId },
+              "Task created",
+              `Follow-up task created for ${subjectLabel}.`,
+              () => { setTaskTitle(""); setTaskDue(""); setTaskPriority("NORMAL"); },
+            );
+          }}
+        >
+          <div>
+            <p className="form-section-title">Follow-up task</p>
+            <p className="form-section-help">A task linked to {subjectLabel} — appears on their timeline and your queue.</p>
+          </div>
+          <Field label="What needs to happen" required id="ac-task-title">
+            <IconInput
+              id="ac-task-title"
+              icon="square_check"
+              value={taskTitle}
+              onChange={(event) => setTaskTitle(event.target.value)}
+              placeholder={`e.g. Send follow-up proposal to ${subjectLabel}`}
+              required
+              minLength={2}
+              autoFocus
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Due" help="Optional — leave empty for unscheduled." id="ac-task-due">
+              <IconInput
+                id="ac-task-due"
+                icon="calendar"
+                type="datetime-local"
+                value={taskDue}
+                onChange={(event) => setTaskDue(event.target.value)}
+              />
+            </Field>
+            <Field label="Priority" id="ac-task-priority">
+              <Select value={taskPriority} onValueChange={setTaskPriority}>
+                <IconSelectTrigger id="ac-task-priority" icon="sliders">
+                  <SelectValue />
+                </IconSelectTrigger>
+                <SelectContent position="popper">
+                  <SelectItem value="LOW">Low</SelectItem>
+                  <SelectItem value="NORMAL">Normal</SelectItem>
+                  <SelectItem value="HIGH">High</SelectItem>
+                  <SelectItem value="URGENT">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="tertiary" onClick={() => setActiveAction("none")}>Cancel</Button>
+            <Button variant="primary" icon="plus" type="submit" loading={busy} disabled={!taskTitle.trim()}>
+              Add task
+            </Button>
+          </div>
         </form>
       ) : null}
 
+      {/* Schedule composer */}
       {activeAction === "appointment" ? (
-        <form method="post" onSubmit={submitAppointment} className="flex flex-col gap-2 p-3">
-          <input
-            value={apptTitle}
-            onChange={(event) => setApptTitle(event.target.value)}
-            placeholder={`Meeting with ${subjectLabel}…`}
-            required
-            minLength={2}
-            className="input"
-            style={{ width: "100%" }}
-            autoFocus
-          />
-          <input
-            type="datetime-local"
-            value={apptStart}
-            onChange={(event) => setApptStart(event.target.value)}
-            required
-            className="input"
-            style={{ width: "100%" }}
-          />
-          <button type="submit" className="btn btn-primary" disabled={busy || !apptTitle.trim()}>
-            {busy ? "…" : "Schedule"}
-          </button>
+        <form
+          method="post"
+          className="space-y-3 p-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void post(
+              "/api/appointments",
+              { title: apptTitle, startAt: apptStart, subjectType, subjectId },
+              "Appointment scheduled",
+              `Appointment scheduled with ${subjectLabel}.`,
+              () => { setApptTitle(""); setApptStart(""); },
+            );
+          }}
+        >
+          <div>
+            <p className="form-section-title">Schedule</p>
+            <p className="form-section-help">An appointment with {subjectLabel} — logged on the activity timeline.</p>
+          </div>
+          <Field label="What" required id="ac-appt-title">
+            <IconInput
+              id="ac-appt-title"
+              icon="calendar"
+              value={apptTitle}
+              onChange={(event) => setApptTitle(event.target.value)}
+              placeholder={`e.g. Onboarding call with ${subjectLabel}`}
+              required
+              minLength={2}
+              autoFocus
+            />
+          </Field>
+          <Field label="Starts" required id="ac-appt-start" help="You'll find it in the timeline and your task list.">
+            <IconInput
+              id="ac-appt-start"
+              icon="calendar"
+              type="datetime-local"
+              value={apptStart}
+              onChange={(event) => setApptStart(event.target.value)}
+              required
+            />
+          </Field>
+          <div className="flex justify-end gap-2">
+            <Button variant="tertiary" onClick={() => setActiveAction("none")}>Cancel</Button>
+            <Button variant="primary" icon="calendar" type="submit" loading={busy} disabled={!apptTitle.trim() || !apptStart}>
+              Schedule
+            </Button>
+          </div>
         </form>
       ) : null}
-    </div>
+    </Card>
   );
 }

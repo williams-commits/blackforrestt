@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/Toast";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /**
  * Viewer management for one task (owner or admin only). Users and whole
@@ -22,7 +30,6 @@ export function TaskViewersPanel({
   canManage: boolean;
 }) {
   const router = useRouter();
-  const toast = useToast();
   const [viewerUserIds, setViewerUserIds] = useState(initialUsers.map((user) => user.id));
   const [viewerTeamIds, setViewerTeamIds] = useState(initialTeams.map((team) => team.id));
   const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
@@ -50,12 +57,12 @@ export function TaskViewersPanel({
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
         const message = payload?.error ?? "Could not save viewers.";
         setError(message);
-        toast.error("Viewers not saved", message);
+        toast.error("Viewers not saved", { description: message });
         return;
       }
       setViewerUserIds(nextUserIds);
       setViewerTeamIds(nextTeamIds);
-      toast.success("Viewers saved", "The task's viewer list is updated.");
+      toast.success("Viewers saved", { description: "The task's viewer list is updated." });
       window.setTimeout(() => router.refresh(), 150);
     } catch {
       setError("Could not save viewers.");
@@ -74,55 +81,59 @@ export function TaskViewersPanel({
           <p className="text-sm text-(--text-tertiary)">Only the owner and admins can see this task.</p>
         ) : (
           viewerUserIds.map((id) => (
-            <span key={`u-${id}`} className="badge badge-neutral">
+            <Badge key={`u-${id}`} className="badge badge-neutral">
               {userById.get(id) ?? initialUsers.find((user) => user.id === id)?.name ?? `user …${id.slice(-6)}`}
               {canManage ? (
                 <button type="button" aria-label="Remove viewer" disabled={busy} onClick={() => void save(viewerUserIds.filter((entry) => entry !== id), viewerTeamIds)} className="ml-1 text-(--text-tertiary) hover:text-(--error)">×</button>
               ) : null}
-            </span>
+            </Badge>
           ))
         )}
         {viewerTeamIds.map((id) => (
-          <span key={`t-${id}`} className="badge badge-neutral">
+          <Badge key={`t-${id}`} className="badge badge-neutral">
             {teamById.get(id) ?? initialTeams.find((team) => team.id === id)?.name ?? `team …${id.slice(-6)}`} (team)
             {canManage ? (
               <button type="button" aria-label="Remove team viewer" disabled={busy} onClick={() => void save(viewerUserIds, viewerTeamIds.filter((entry) => entry !== id))} className="ml-1 text-(--text-tertiary) hover:text-(--error)">×</button>
             ) : null}
-          </span>
+          </Badge>
         ))}
       </div>
       {canManage ? (
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            aria-label="Add user viewer"
-            value=""
+          <Select
+            value="__none__"
             disabled={busy}
-            onChange={(event) => {
-              if (event.target.value) void save([...new Set([...viewerUserIds, event.target.value])], viewerTeamIds);
-              event.target.value = "";
+            onValueChange={(value) => {
+              if (value !== "__none__") void save([...new Set([...viewerUserIds, value])], viewerTeamIds);
             }}
-            className="input w-44"
           >
-            <option value="">+ User…</option>
-            {users.filter((user) => !viewerUserIds.includes(user.id)).map((user) => (
-              <option key={user.id} value={user.id}>{user.name}</option>
-            ))}
-          </select>
-          <select
-            aria-label="Add team viewer"
-            value=""
+            <SelectTrigger size="sm" aria-label="Add user viewer" className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectItem value="__none__">+ User…</SelectItem>
+              {users.filter((user) => !viewerUserIds.includes(user.id)).map((user) => (
+                <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value="__none__"
             disabled={busy}
-            onChange={(event) => {
-              if (event.target.value) void save(viewerUserIds, [...new Set([...viewerTeamIds, event.target.value])]);
-              event.target.value = "";
+            onValueChange={(value) => {
+              if (value !== "__none__") void save(viewerUserIds, [...new Set([...viewerTeamIds, value])]);
             }}
-            className="input w-44"
           >
-            <option value="">+ Team…</option>
-            {teams.filter((team) => !viewerTeamIds.includes(team.id)).map((team) => (
-              <option key={team.id} value={team.id}>{team.name}</option>
-            ))}
-          </select>
+            <SelectTrigger size="sm" aria-label="Add team viewer" className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectItem value="__none__">+ Team…</SelectItem>
+              {teams.filter((team) => !viewerTeamIds.includes(team.id)).map((team) => (
+                <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       ) : null}
       {error ? <p role="alert" className="text-xs text-(--error)">{error}</p> : null}

@@ -116,7 +116,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
         <OpportunityDetailActions row={opportunity as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} canAssign={canAssign} canChangeStatus={canChangeStatus} />
       </HighlightsPanel>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0">
           <RecordPageTabs
             tabs={[
@@ -193,10 +193,10 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
               <AttachmentsPanel subjectType="OPPORTUNITY" subjectId={id} canUpload={canEdit} canDelete={canDelete} />
             </div>
           </section>
-                    {canViewEmails ? (
-            <RecordEmailHistory subjectType="OPPORTUNITY" subjectId={id} />
-          ) : null}
-        </RecordPageTabs>
+            {canViewEmails ? (
+              <RecordEmailHistory subjectType="OPPORTUNITY" subjectId={id} />
+            ) : null}
+          </RecordPageTabs>
         </div>
 
         {/* Timeline sidebar */}

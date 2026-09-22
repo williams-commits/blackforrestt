@@ -1,8 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
 
 interface Hit {
   objectType: string;
@@ -24,15 +34,14 @@ const TYPE_LABELS: Record<string, string> = {
   NOTE: "Notes",
 };
 
-/** Global search: enterprise bar with `/` shortcut, grouped dropdown results. */
+/** Global search: enterprise bar with `/` shortcut opening a shadcn command
+ *  palette; results are fetched server-side (debounced) and grouped by type. */
 export function GlobalSearch() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const boxRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (query.trim().length < 2) {
@@ -46,7 +55,6 @@ export function GlobalSearch() {
         const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
         if (response.ok) {
           setHits((await response.json()).data);
-          setOpen(true);
         }
       } finally {
         setLoading(false);
@@ -56,23 +64,15 @@ export function GlobalSearch() {
   }, [query]);
 
   useEffect(() => {
-    function onClickOutside(event: MouseEvent) {
-      if (boxRef.current && !boxRef.current.contains(event.target as Node)) setOpen(false);
-    }
     function onKey(event: KeyboardEvent) {
-      // `/` focuses the search bar (Salesforce-style shortcut)
+      // `/` opens the search palette (Salesforce-style shortcut)
       if (event.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement)?.tagName)) {
         event.preventDefault();
-        inputRef.current?.focus();
+        setOpen(true);
       }
-      if (event.key === "Escape") setOpen(false);
     }
-    document.addEventListener("mousedown", onClickOutside);
     document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClickOutside);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
 
   const grouped = new Map<string, Hit[]>();
@@ -81,88 +81,87 @@ export function GlobalSearch() {
     if (list.length > 0) grouped.set(type, list);
   }
 
-  return (
-    <div ref={boxRef} className="relative w-full max-w-md">
-      <div
-        className="flex items-center gap-2 rounded-md border px-3 py-1.5 transition-colors"
-        style={{
-          borderColor: open ? "var(--brand)" : "var(--border-strong)",
-          background: "var(--bg-surface)",
-        }}
-      >
-        <Icon name="search" size={14} className="text-(--text-tertiary)" />
-        <input
-          ref={inputRef}
-          type="search"
-          aria-label="Global search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          onFocus={() => hits.length > 0 && setOpen(true)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") setOpen(false);
-            if (event.key === "Enter" && query.trim().length >= 2) {
-              setOpen(false);
-              router.push(`/search?q=${encodeURIComponent(query.trim())}`);
-            }
-          }}
-          placeholder="Search… (press / )"
-          className="w-full bg-transparent text-[13px] outline-none"
-          style={{ color: "var(--text-primary)" }}
-        />
-        {loading ? (
-          <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>…</span>
-        ) : null}
-      </div>
+  function seeAllResults() {
+    setOpen(false);
+    router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+  }
 
-      {open && query.trim().length >= 2 ? (
-        <div
-          className="absolute left-0 right-0 top-full z-40 mt-1 max-h-95 overflow-y-auto rounded-lg border"
-          style={{
-            background: "var(--bg-surface)",
-            borderColor: "var(--border-default)",
-            boxShadow: "var(--shadow-dropdown)",
-          }}
-        >
-          {loading ? (
-            <p className="px-3 py-3 text-[13px]" style={{ color: "var(--text-tertiary)" }}>Searching…</p>
-          ) : hits.length === 0 ? (
-            <p className="px-3 py-3 text-[13px]" style={{ color: "var(--text-tertiary)" }}>No matches in your scope.</p>
-          ) : (
-            [...grouped.entries()].map(([type, list]) => (
-              <div key={type}>
-                <p
-                  className="border-b px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider"
-                  style={{ color: "var(--text-tertiary)", borderColor: "var(--border-default)", background: "var(--bg-subtle)" }}
+  return (
+    <div className="relative w-full max-w-md">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Global search"
+        className="flex h-8 w-full items-center gap-2 rounded-lg border border-input bg-transparent px-3 text-[13px] text-muted-foreground transition-colors outline-none select-none hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50"
+      >
+        <Icon name="search" size={14} className="shrink-0 opacity-50" />
+        <span className="truncate">Search…</span>
+        <kbd className="ml-auto rounded border border-border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground">/</kbd>
+      </button>
+
+      <CommandDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Global search"
+        description="Search records within your scope"
+      >
+        {/* Server is the filter: the API searches every column + relation
+            (ILIKE over emails, owners, subtitles…), so cmdk's local label
+            filter must be disabled entirely or it hides valid server hits. */}
+        <Command shouldFilter={false}>
+          <CommandInput
+            value={query}
+            onValueChange={setQuery}
+            placeholder="Search… (press / )"
+            onKeyDown={(event) => {
+              // Enter with no matching records falls through to the full
+              // search page (the original header-bar behavior).
+              if (event.key === "Enter" && query.trim().length >= 2 && hits.length === 0) {
+                seeAllResults();
+              }
+            }}
+          />
+          <CommandList>
+            {loading ? (
+              <p className="px-2 py-6 text-center text-sm text-muted-foreground">Searching…</p>
+            ) : query.trim().length >= 2 && hits.length === 0 ? (
+              <CommandEmpty>No matches in your scope.</CommandEmpty>
+            ) : (
+              [...grouped.entries()].map(([type, list]) => (
+                <CommandGroup
+                  key={type}
+                  heading={`${TYPE_LABELS[type] ?? type.toLowerCase()} (${list.length})`}
                 >
-                  {TYPE_LABELS[type] ?? type.toLowerCase()} ({list.length})
-                </p>
-                {list.map((hit) => (
-                  <a
-                    key={`${hit.objectType}-${hit.id}`}
-                    href={hit.url}
-                    onClick={() => setOpen(false)}
-                    className="flex items-center justify-between gap-2 px-3 py-2 text-[13px] transition-colors hover:bg-(--bg-hover)"
-                    style={{ textDecoration: "none", color: "var(--text-primary)" }}
-                  >
-                    <span className="truncate font-medium">{hit.label}</span>
-                    <span className="shrink-0 truncate text-[11px]" style={{ color: "var(--text-tertiary)" }}>
-                      {hit.subtitle}
-                    </span>
-                  </a>
-                ))}
-              </div>
-            ))
-          )}
-          <a
-            href={`/search?q=${encodeURIComponent(query.trim())}`}
-            onClick={() => setOpen(false)}
-            className="block border-t px-3 py-2 text-center text-[12px] font-medium transition-colors hover:bg-(--bg-hover)"
-            style={{ borderColor: "var(--border-default)", color: "var(--text-brand)" }}
-          >
-            See all results →
-          </a>
-        </div>
-      ) : null}
+                  {list.map((hit) => (
+                    <CommandItem
+                      key={`${hit.objectType}-${hit.id}`}
+                      onSelect={() => {
+                        setOpen(false);
+                        router.push(hit.url);
+                      }}
+                    >
+                      <span className="truncate font-medium">{hit.label}</span>
+                      <span className="ml-auto shrink-0 truncate text-[11px] text-muted-foreground">
+                        {hit.subtitle}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ))
+            )}
+            {query.trim().length >= 2 ? (
+              <>
+                <CommandSeparator />
+                <CommandGroup>
+                  <CommandItem onSelect={seeAllResults}>
+                    See all results →
+                  </CommandItem>
+                </CommandGroup>
+              </>
+            ) : null}
+          </CommandList>
+        </Command>
+      </CommandDialog>
     </div>
   );
 }

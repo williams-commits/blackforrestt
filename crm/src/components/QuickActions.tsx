@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /**
  * Global quick actions (spec §36): a keyboard-friendly "+" menu with
- * shortcuts — Alt+N opens it; then a letter (l/c/a/k/t/i) jumps straight to
+ * shortcuts — Alt+N opens it; then a letter (l/c/u/a/t/i) jumps straight to
  * the relevant create form or tool.
  */
 const ACTIONS: Array<{ key: string; label: string; href: string; hint: string }> = [
@@ -20,7 +29,6 @@ const ACTIONS: Array<{ key: string; label: string; href: string; hint: string }>
 export function QuickActions() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -41,48 +49,36 @@ export function QuickActions() {
         router.push(action.href);
       }
     }
-    function onClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
-    }
     document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onClickOutside);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onClickOutside);
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, [open, router]);
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((previous) => !previous)}
-        aria-label="Quick actions (Alt+N)"
-        className="rounded-md border border-(--border-strong) px-2.5 py-1.5 text-sm font-semibold hover:bg-(--bg-hover)"
-      >
-        +
-      </button>
-      {open ? (
-        <div className="absolute right-0 top-full z-40 mt-1 w-56 rounded-lg border border-(--border-default) bg-(--bg-surface) shadow-lg">
-          <p className="border-b border-(--border-default) px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-(--text-tertiary)">
-            Quick actions
-          </p>
-          {ACTIONS.map((action) => (
-            <button
-              key={action.key}
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                router.push(action.href);
-              }}
-              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-(--bg-hover)"
-            >
-              {action.label}
-              <kbd className="rounded border border-(--border-default) bg-(--bg-subtle) px-1 text-[10px] text-(--text-tertiary)">{action.hint}</kbd>
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="secondary" aria-label="Quick actions (Alt+N)">
+          +
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Quick actions
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {ACTIONS.map((action) => (
+          <DropdownMenuItem
+            key={action.key}
+            onClick={() => {
+              setOpen(false);
+              router.push(action.href);
+            }}
+            className="flex w-full items-center justify-between"
+          >
+            {action.label}
+            <kbd className="rounded border border-border bg-muted px-1 text-[10px] text-muted-foreground">{action.hint}</kbd>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

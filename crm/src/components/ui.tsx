@@ -9,10 +9,12 @@
  * the icon set can be re-skinned in one place.
  */
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { type ReactNode } from "react";
 import { LoaderCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Icon } from "@/components/Icon";
+import { buttonVariants } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 /* ════════════════════════════════════════════════════════════════
    Button — ONE global button. Variants cover the whole CRM; sizes are
@@ -21,7 +23,25 @@ import { Icon } from "@/components/Icon";
    ════════════════════════════════════════════════════════════════ */
 
 type ButtonVariant = "primary" | "secondary" | "tertiary" | "destructive";
-type ButtonSize = "sm" | "md" | "lg";
+type ButtonSize = "xs" | "sm" | "md" | "lg" | "icon" | "icon-xs" | "icon-sm" | "icon-lg";
+
+const SHADCN_VARIANT: Record<ButtonVariant, "default" | "outline" | "ghost" | "destructive"> = {
+  primary: "default",
+  secondary: "outline",
+  tertiary: "ghost",
+  destructive: "destructive",
+};
+
+const SHADCN_SIZE: Record<ButtonSize, "xs" | "sm" | "default" | "lg" | "icon" | "icon-xs" | "icon-sm" | "icon-lg"> = {
+  xs: "xs",
+  sm: "sm",
+  md: "default",
+  lg: "lg",
+  icon: "icon",
+  "icon-xs": "icon-xs",
+  "icon-sm": "icon-sm",
+  "icon-lg": "icon-lg",
+};
 
 export function Button({
   children,
@@ -50,13 +70,12 @@ export function Button({
   href?: string;
   className?: string;
 } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "className" | "children" | "type">) {
-  const sizeClass = size === "sm" ? "btn-sm" : size === "lg" ? "btn-lg" : "";
-  const iconSize = size === "sm" ? 13 : size === "lg" ? 16 : 14;
-  const classes = `btn btn-${variant} ${sizeClass} ${className}`;
+  const iconSize = size === "xs" || size === "sm" || size.startsWith("icon-") && size !== "icon-lg" ? 13 : 16;
+  const classes = cn(buttonVariants({ variant: SHADCN_VARIANT[variant], size: SHADCN_SIZE[size] }), className);
   const inner = (
     <>
       {loading ? (
-        <LoaderCircle size={iconSize} className="spin" aria-hidden />
+        <LoaderCircle size={iconSize} className="animate-spin" aria-hidden />
       ) : icon && iconPosition === "left" ? (
         <Icon name={icon} size={iconSize} />
       ) : null}
@@ -79,11 +98,9 @@ export function Button({
 }
 
 /* ════════════════════════════════════════════════════════════════
-   Drawer — the one side-panel for contextual editing. Slides in from
-   the RIGHT; the intentional exit motion is a restrained leftward
-   fade. Header/body/footer are always present; the caller owns form
-   state, validation, and unsaved-change handling (return false from
-   onRequestClose to veto).
+   Drawer — the one side panel, now backed by shadcn's Sheet (slides in
+   from the right). The caller owns form state, validation, and
+   unsaved-change handling (return false from onClose to veto).
    ════════════════════════════════════════════════════════════════ */
 
 export function Drawer({
@@ -99,7 +116,7 @@ export function Drawer({
   open: boolean;
   title: string;
   subtitle?: string | null;
-  /** Called on backdrop click and Esc — veto by returning false. */
+  /** Called on outside click, Esc, and the close button — veto by returning false. */
   onClose: () => boolean | void;
   children: ReactNode;
   /** Sticky footer; render Button(s) here (primary right-most). */
@@ -108,70 +125,28 @@ export function Drawer({
   /** Accessible name when title alone is ambiguous. */
   label?: string;
 }) {
-  const [mounted, setMounted] = useState(false);
-  const [closing, setClosing] = useState(false);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-    return () => {
-      if (closeTimer.current) clearTimeout(closeTimer.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (open) setClosing(false);
-  }, [open]);
-
-  const requestClose = useCallback(() => {
-    const vetoed = onClose() === false;
-    if (vetoed || !open) return;
-    setClosing(true);
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => setClosing(false), 220);
-  }, [onClose, open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        requestClose();
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [open, requestClose]);
-
-  if (!mounted || (!open && !closing)) return null;
-
-  return createPortal(
-    <div className={`drawer-root ${closing ? "drawer-closing" : ""}`} role="presentation">
-      <div className="drawer-backdrop" onClick={requestClose} />
-      <aside
-        className={`drawer-panel drawer-${width}`}
-        role="dialog"
-        aria-modal="true"
+  const panelWidth = width === "lg" ? "sm:max-w-2xl" : "sm:max-w-xl";
+  return (
+    <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <SheetContent
+        side="right"
         aria-label={label ?? title}
+        className={`flex w-full flex-col gap-0 p-0 ${panelWidth}`}
       >
-        <header className="drawer-header">
-          <div className="min-w-0">
-            <h2 className="drawer-title">{title}</h2>
-            {subtitle ? <p className="drawer-subtitle">{subtitle}</p> : null}
-          </div>
-          <button type="button" className="icon-button" onClick={requestClose} aria-label="Close panel">
-            <Icon name="close" size={16} />
-          </button>
-        </header>
-        <div className="drawer-body">{children}</div>
-        {footer ? <footer className="drawer-footer">{footer}</footer> : null}
-      </aside>
-    </div>,
-    document.body,
+        <SheetHeader className="border-b border-border px-5 py-4">
+          <SheetTitle className="text-sm font-semibold text-foreground">{title}</SheetTitle>
+          {subtitle ? (
+            <SheetDescription className="text-xs text-muted-foreground">{subtitle}</SheetDescription>
+          ) : null}
+        </SheetHeader>
+        <div className="flex-1 overflow-y-auto p-5">{children}</div>
+        {footer ? (
+          <SheetFooter className="flex-row justify-end gap-2 border-t border-border px-5 py-3">
+            {footer}
+          </SheetFooter>
+        ) : null}
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -262,7 +237,7 @@ export function ModuleIllustration({ kind, size = 96 }: { kind: ModuleIllustrati
     "aria-hidden": true,
     className: "module-illustration",
   };
-  const ink = { stroke: "var(--accent)", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  const ink = { stroke: "var(--primary)", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   const soft = { stroke: "var(--border-strong)", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 
   switch (kind) {
@@ -272,7 +247,7 @@ export function ModuleIllustration({ kind, size = 96 }: { kind: ModuleIllustrati
           <circle cx="20" cy="26" r="6" {...soft} />
           <path d="M28 30 C 44 40, 50 56, 66 60" strokeDasharray="1 7" {...ink} strokeWidth={2} />
           <circle cx="74" cy="62" r="9" {...ink} />
-          <circle cx="74" cy="62" r="3.5" fill="var(--accent)" stroke="none" />
+          <circle cx="74" cy="62" r="3.5" fill="var(--primary)" stroke="none" />
         </svg>
       );
     case "contacts": // connected people
@@ -300,7 +275,7 @@ export function ModuleIllustration({ kind, size = 96 }: { kind: ModuleIllustrati
           <path d="M18 52 C 28 36, 44 36, 50 48" {...ink} />
           <path d="M78 52 C 68 36, 52 36, 46 48" {...soft} />
           <path d="M22 58 H74" {...ink} />
-          <circle cx="48" cy="30" r="3" fill="var(--accent)" stroke="none" />
+          <circle cx="48" cy="30" r="3" fill="var(--primary)" stroke="none" />
         </svg>
       );
     case "opportunities": // pipeline progression

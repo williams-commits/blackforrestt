@@ -3,6 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Drawer } from "@/components/ui";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FormError, IconInput, IconSelectTrigger } from "@/components/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import type { FieldConfig, ObjectKey, RecordObjectKey } from "@/lib/recordUi";
 
 export interface OptionSource {
@@ -48,6 +58,9 @@ function toLocalInputValue(instant: string): string {
 /** Coerce a row value into a form-input value (dates → datetime-local). */
 function toInputValue(field: FieldConfig, raw: unknown): string {
   if (raw === null || raw === undefined) return "";
+  // Server components hand Date instances through the RSC payload —
+  // normalize to ISO first so String(raw) never mangles them.
+  if (raw instanceof Date) raw = raw.toISOString();
   // UTC ISO → LOCAL wall time: a raw slice(0,16) hands a UTC timestamp to a
   // local-time input, silently shifting the value on every edit-save cycle.
   if (field.type === "datetime-local" && typeof raw === "string") return toLocalInputValue(raw);
@@ -70,6 +83,92 @@ interface CustomFieldDefLite {
   required: boolean;
   options: string[] | null;
 }
+
+/**
+ * Presentation hints for the config-driven fields: every text control shows
+ * an EXAMPLE value (never a label echo) and recognized fields carry a
+ * leading icon. Config-declared placeholders (recordUi) take precedence.
+ */
+const PLACEHOLDER_BY_FIELD: Record<string, string> = {
+  firstName: "e.g. Ada",
+  lastName: "e.g. Lovelace",
+  email: "e.g. ada@company.com",
+  phone: "e.g. +49 30 555 0134",
+  company: "e.g. Acme Trading Ltd",
+  country: "e.g. Germany",
+  source: "e.g. WEB_FORM",
+  leadSource: "e.g. Referral",
+  jobTitle: "e.g. Head of Procurement",
+  industry: "e.g. Logistics",
+  addressLine: "e.g. Hauptstraße 12",
+  city: "e.g. Berlin",
+  externalId: "e.g. ERP-0042",
+  score: "e.g. 75",
+  revenue: "e.g. 2500000",
+  title: "e.g. Send renewal proposal",
+  description: "e.g. Context, next steps, and open questions…",
+};
+/** Same field name, different meaning per object. */
+const PLACEHOLDER_BY_OBJECT_FIELD: Record<string, Record<string, string>> = {
+  campaigns: { name: "e.g. Spring renewal push" },
+};
+/** Leading recognition icons for unambiguous field names. */
+const ICON_BY_FIELD: Record<string, string> = {
+  email: "mail",
+  phone: "phone",
+  mobile: "phone",
+  fax: "phone",
+  firstName: "users",
+  lastName: "users",
+  company: "building",
+  jobTitle: "tag",
+  title: "tag",
+  website: "external",
+  addressLine: "map_pin",
+  city: "map_pin",
+  country: "map_pin",
+  source: "megaphone",
+  leadSource: "megaphone",
+  industry: "building",
+  companySize: "users",
+  score: "chart",
+  revenue: "chart",
+  externalId: "tag",
+  nextFollowUpAt: "calendar",
+  dueAt: "calendar",
+  reminderAt: "calendar",
+  startsAt: "calendar",
+  endsAt: "calendar",
+};
+const ICON_BY_OBJECT_FIELD: Record<string, Record<string, string>> = {
+  accounts: { name: "building" },
+  campaigns: { name: "megaphone" },
+};
+/** Leading recognition icons for select fields; unrecognized pickers fall back to "list". */
+const SELECT_ICON_BY_FIELD: Record<string, string> = {
+  statusId: "tag",
+  potentialStatusId: "tag",
+  priority: "sliders",
+  assignedUserId: "users",
+  assignedTeamId: "users",
+  ownerUserId: "users",
+  teamId: "users",
+  accountId: "building",
+  contactId: "users",
+  campaignId: "megaphone",
+};
+/** One-line hints — only where the format or consequence is non-obvious. */
+const HELP_BY_FIELD: Record<string, string> = {
+  revenue: "Minor units — 2500000 displays as 25,000.00.",
+};
+/** Example placeholders for admin-defined custom fields, by field type. */
+const CUSTOM_PLACEHOLDER_BY_TYPE: Record<string, string> = {
+  TEXT: "e.g. text value",
+  NUMBER: "e.g. 100",
+  CURRENCY: "e.g. 1999",
+  EMAIL: "e.g. name@company.com",
+  URL: "https://example.com",
+};
 
 export function RecordForm({ object, fields, options, initial, onClose, onSaved, duplicateCheck, canEdit = true }: RecordFormProps) {
   const router = useRouter();
@@ -152,8 +251,6 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
     if (["assignedUserId", "assignedTeamId", "ownerUserId", "teamId"].includes(field.name)) return capabilities.assign;
     return true;
   });
-
-  const inputClass = "input";
 
   async function submitPayload(payload: Record<string, unknown>): Promise<boolean> {
     setError(null);
@@ -248,7 +345,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" type="submit" form="record-form" loading={submitting}>Save</Button>
+          <Button variant="primary" type="submit" form="record-form" icon="check" loading={submitting}>Save</Button>
         </>
       }
     >
@@ -258,11 +355,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
         onSubmit={handleSubmit}
         className="space-y-5"
       >
-        {error ? (
-          <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
-            {error}
-          </p>
-        ) : null}
+        <FormError message={error} />
 
         {dupMatches ? (
           <div className="rounded-md border border-(--warning-border) bg-(--warning-bg) p-3 text-sm text-(--warning)">
@@ -285,14 +378,16 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
               ))}
             </ul>
             <div className="mt-3 flex items-center gap-2">
-              <button
+              <Button
                 type="button"
+                size="sm"
+                icon="check"
                 onClick={() => void createAnyway()}
-                disabled={submitting}
-                className="btn btn-sm" style={{ background: "var(--warning)", color: "var(--text-inverse)" }}
+                loading={submitting}
+                className="bg-(--warning) text-(--text-inverse) hover:bg-(--warning)/80"
               >
                 Create anyway
-              </button>
+              </Button>
               <span className="text-xs text-(--warning)">or cancel and link the existing record instead.</span>
             </div>
           </div>
@@ -304,39 +399,72 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
           {visibleFields.map((field) => {
             const resolved =
               field.optionsFrom ? options[field.optionsFrom] : (field.options ?? []);
+            const placeholder =
+              field.placeholder ??
+              PLACEHOLDER_BY_OBJECT_FIELD[object]?.[field.name] ??
+              PLACEHOLDER_BY_FIELD[field.name];
+            const icon =
+              ICON_BY_OBJECT_FIELD[object]?.[field.name] ?? ICON_BY_FIELD[field.name];
             return (
-              <div key={field.name} className={field.type === "textarea" ? "sm:col-span-2" : ""}>
-                <label htmlFor={`f-${field.name}`} className="form-label">
-                  {field.label}
-                  {field.required ? <span className="form-required" aria-hidden> *</span> : null}
-                </label>
+              <Field
+                key={field.name}
+                id={`f-${field.name}`}
+                label={field.label}
+                required={field.required}
+                help={HELP_BY_FIELD[field.name]}
+                className={field.type === "textarea" ? "sm:col-span-2" : undefined}
+              >
                 {field.type === "select" ? (
-                  <select
+                  <Select
+                    required={field.required}
+                    value={values[field.name] ? values[field.name] : "__none__"}
+                    onValueChange={(value) =>
+                      setValues((v) => ({ ...v, [field.name]: value === "__none__" ? "" : value }))
+                    }
+                  >
+                    <IconSelectTrigger id={`f-${field.name}`} icon={SELECT_ICON_BY_FIELD[field.name] ?? "list"}>
+                      <SelectValue />
+                    </IconSelectTrigger>
+                    <SelectContent position="popper">
+                      <SelectItem value="__none__">— none —</SelectItem>
+                      {resolved.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : field.type === "textarea" ? (
+                  <Textarea
                     id={`f-${field.name}`}
                     value={values[field.name] ?? ""}
+                    placeholder={placeholder}
                     onChange={(event) => setValues((v) => ({ ...v, [field.name]: event.target.value }))}
-                    className={inputClass}
                     required={field.required}
-                  >
-                    <option value="">— none —</option>
-                    {resolved.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    rows={3}
+                    className="resize-y"
+                  />
+                ) : icon ? (
+                  <IconInput
+                    id={`f-${field.name}`}
+                    icon={icon}
+                    type={field.type}
+                    value={values[field.name] ?? ""}
+                    placeholder={placeholder}
+                    onChange={(event) => setValues((v) => ({ ...v, [field.name]: event.target.value }))}
+                    required={field.required}
+                  />
                 ) : (
-                  <input
+                  <Input
                     id={`f-${field.name}`}
                     type={field.type}
                     value={values[field.name] ?? ""}
-                    placeholder={field.placeholder}
+                    placeholder={placeholder}
                     onChange={(event) => setValues((v) => ({ ...v, [field.name]: event.target.value }))}
-                    className={inputClass}
                     required={field.required}
                   />
                 )}
-              </div>
+              </Field>
             );
           })}
           </div>
@@ -354,6 +482,20 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
                           : def.fieldType === "URL"
                             ? "url"
                             : "text";
+                const customIcon =
+                  def.fieldType === "EMAIL"
+                    ? "mail"
+                    : def.fieldType === "PHONE"
+                      ? "phone"
+                      : def.fieldType === "URL"
+                      ? "external"
+                      : def.fieldType === "NUMBER" || def.fieldType === "CURRENCY"
+                        ? "chart"
+                        : def.fieldType === "DATE" || def.fieldType === "DATETIME"
+                          ? "calendar"
+                          : def.fieldType === "TEXT"
+                            ? "note"
+                            : undefined;
                 return (
                   <div key={`cf-${def.key}`}>
                     <label htmlFor={`cf-${def.key}`} className="form-label">
@@ -362,32 +504,36 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
                       <span className="ml-1 text-[10px] font-normal text-(--text-tertiary)">custom</span>
                     </label>
                     {def.fieldType === "BOOLEAN" ? (
-                      <input
+                      <Checkbox
                         id={`cf-${def.key}`}
-                        type="checkbox"
                         checked={customValues[def.key] === true}
-                        onChange={(event) =>
-                          setCustomValues((v) => ({ ...v, [def.key]: event.target.checked }))
+                        onCheckedChange={(checked) =>
+                          setCustomValues((v) => ({ ...v, [def.key]: checked === true }))
                         }
                         className="mt-2"
                       />
                     ) : def.fieldType === "SELECT" ? (
-                      <select
-                        id={`cf-${def.key}`}
-                        value={typeof customValues[def.key] === "string" ? (customValues[def.key] as string) : ""}
-                        onChange={(event) =>
-                          setCustomValues((v) => ({ ...v, [def.key]: event.target.value }))
+                      <Select
+                        value={typeof customValues[def.key] === "string" ? (customValues[def.key] as string) : "__none__"}
+                        onValueChange={(value) =>
+                          setCustomValues((v) => ({ ...v, [def.key]: value === "__none__" ? "" : value }))
                         }
-                        className={inputClass}
                       >
-                        <option value="">— none —</option>
-                        {(def.options ?? []).map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
+                        <IconSelectTrigger id={`cf-${def.key}`} icon="list">
+                          <SelectValue />
+                        </IconSelectTrigger>
+                        <SelectContent position="popper">
+                          <SelectItem value="__none__">— none —</SelectItem>
+                          {(def.options ?? []).map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     ) : def.fieldType === "MULTI_SELECT" ? (
+                      // Native <select multiple> — Radix Select has no
+                      // multi-select mode; styled to match the shadcn input.
                       <select
                         id={`cf-${def.key}`}
                         multiple
@@ -398,7 +544,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
                             [def.key]: Array.from(event.target.selectedOptions).map((option) => option.value),
                           }))
                         }
-                        className={`${inputClass} h-20`}
+                        className="h-20 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30"
                       >
                         {(def.options ?? []).map((option) => (
                           <option key={option} value={option}>
@@ -406,15 +552,26 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
                           </option>
                         ))}
                       </select>
-                    ) : (
-                      <input
+                    ) : customIcon ? (
+                      <IconInput
                         id={`cf-${def.key}`}
+                        icon={customIcon}
                         type={inputType}
                         value={typeof customValues[def.key] === "string" ? (customValues[def.key] as string) : ""}
+                        placeholder={CUSTOM_PLACEHOLDER_BY_TYPE[def.fieldType]}
                         onChange={(event) =>
                           setCustomValues((v) => ({ ...v, [def.key]: event.target.value }))
                         }
-                        className={inputClass}
+                      />
+                    ) : (
+                      <Input
+                        id={`cf-${def.key}`}
+                        type={inputType}
+                        value={typeof customValues[def.key] === "string" ? (customValues[def.key] as string) : ""}
+                        placeholder={CUSTOM_PLACEHOLDER_BY_TYPE[def.fieldType]}
+                        onChange={(event) =>
+                          setCustomValues((v) => ({ ...v, [def.key]: event.target.value }))
+                        }
                       />
                     )}
                   </div>

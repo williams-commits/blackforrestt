@@ -3,6 +3,8 @@ import { scopedContext } from "@/server/records/leads";
 import { pgSearch } from "@/server/search/pg";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
+import { EmptyState } from "@/components/ui";
+import { Card } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
@@ -46,26 +48,26 @@ export default async function SearchPage({ searchParams }: PageProps) {
       />
       <WorkspaceQuickNav />
       {hits.length === 0 && query.length >= 2 ? (
-        <p className="card empty-state">
-          Nothing matched.
-        </p>
+        <Card className="gap-0">
+          <EmptyState illustration="search" title="Nothing matched." />
+        </Card>
       ) : (
         [...grouped.entries()].map(([type, list]) => (
-          <section key={type} className="card overflow-hidden">
-            <h2 className="border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3 text-xs font-semibold uppercase tracking-wide text-(--text-tertiary)">
+          <Card key={type} className="gap-0 overflow-hidden">
+            <h2 className="border-b border-border bg-muted px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {TYPE_LABELS[type] ?? type.toLowerCase()} ({list.length})
             </h2>
-            <ul className="divide-y divide-(--border-default) px-4">
+            <ul className="divide-y divide-border px-4">
               {list.map((hit) => (
                 <li key={hit.id} className="flex items-center justify-between py-2 text-sm">
-                  <Link href={hit.url} className="font-medium text-(--brand) hover:underline">
+                  <Link href={hit.url} className="font-medium text-foreground hover:underline">
                     {hit.label}
                   </Link>
-                  <span className="text-xs text-(--text-tertiary)"> {hit.subtitle}</span>
+                  <span className="text-xs text-muted-foreground"> {hit.subtitle}</span>
                 </li>
               ))}
             </ul>
-          </section>
+          </Card>
         ))
       )}
     </div>

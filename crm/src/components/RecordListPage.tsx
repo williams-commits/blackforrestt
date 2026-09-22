@@ -11,12 +11,26 @@ import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { SmartTips } from "@/components/SmartTips";
 import { rememberRecentRecord } from "@/components/RecentRecords";
 import { Icon } from "@/components/Icon";
-import { EmptyState } from "@/components/ui";
+import { Initials } from "@/components/Initials";
+import { cn } from "@/lib/utils";
+import { EmptyState, Button } from "@/components/ui";
 import { RowActions } from "@/components/RowActions";
 import { InlineEdit } from "@/components/InlineEdit";
 import { useTableSession, writeTableSession } from "@/components/useTableSession";
 import { useConfirmDialog, usePromptDialog } from "@/components/Dialogs";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
+import { Modal } from "@/components/Modal";
+import { IconInput, SearchInput } from "@/components/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface MeContext {
   userId: string;
@@ -469,18 +483,36 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   }, [fetchRows]);
 
   // One-shot: a ?edit=<id> deep link opens the edit drawer once its row loads.
+  // If the row isn't on this page (filtered out — e.g. a completed task under
+  // the default "active" view), fetch it directly rather than silently doing
+  // nothing.
+  const pendingEditFetchedRef = useRef(false);
   useEffect(() => {
-    if (!pendingEditIdRef.current || formMode !== "closed" || rows.length === 0) return;
-    const target = rows.find((row) => row.id === pendingEditIdRef.current);
+    if (!pendingEditIdRef.current || formMode !== "closed" || loading) return;
+    const id = pendingEditIdRef.current;
+    const target = rows.find((row) => row.id === id);
     pendingEditIdRef.current = null;
     if (target) {
       setEditRow(target);
       setFormMode("edit");
+      return;
     }
-  }, [rows, formMode]);
+    if (pendingEditFetchedRef.current) return;
+    pendingEditFetchedRef.current = true;
+    void fetch(`/api/${object}/${id}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (body?.data) {
+          setEditRow(body.data);
+          setFormMode("edit");
+        }
+      })
+      .catch(() => { /* deep-link edit is best-effort */ });
+  }, [rows, formMode, loading, object]);
 
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
   const allSelected = rows.length > 0 && rows.every((row) => selected.has(row.id));
+  const someSelected = rows.some((row) => selected.has(row.id));
 
   // A restored page can outrun the result set (data changed since the last
   // visit) — clamp to the last real page instead of showing an empty one.
@@ -488,14 +520,6 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     if (!hydrated || loading) return;
     if (page > totalPages) setPage(totalPages);
   }, [hydrated, loading, meta, page, totalPages]);
-
-  const selectAllRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    const element = selectAllRef.current;
-    if (element) {
-      element.indeterminate = !allSelected && rows.some((row) => selected.has(row.id));
-    }
-  }, [allSelected, rows, selected]);
 
   function toggleRow(id: string) {
     setSelected((previous) => {
@@ -613,21 +637,20 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         ]}
         actions={<>
           {can.create ? (
-            <button type="button" className="btn btn-primary" onClick={() => { setEditRow(null); setFormMode("create"); }}>
-              <Icon name="plus" size={12} />
+            <Button variant="primary" icon="plus" onClick={() => { setEditRow(null); setFormMode("create"); }}>
               New {config.singular}
-            </button>
+            </Button>
           ) : null}
           {can.export ? (
-            <button
-              type="button"
-              className="btn btn-secondary"
+            <Button
+              variant="secondary"
+              icon="download"
               onClick={() => {
                 window.location.href = `/api/export?object=${object}${search ? `&q=${encodeURIComponent(search)}` : ""}${filters.statusId ? `&statusId=${filters.statusId}` : ""}`;
               }}
             >
               Export
-            </button>
+            </Button>
           ) : null}
         </>}
       />
@@ -657,16 +680,17 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             setPage(1);
           }}
         >
-          <button
-            type="button"
+          <Button
+            variant="tertiary"
+            size="sm"
+            className="w-7 px-0"
             onClick={() => setDensity(density === "comfortable" ? "compact" : "comfortable")}
-            className="icon-button"
             title={density === "comfortable" ? "Compact rows" : "Comfortable rows"}
             aria-label={density === "comfortable" ? "Compact rows" : "Comfortable rows"}
           >
             <Icon name={density === "comfortable" ? "sliders" : "grid"} size={14} />
-          </button>
-          <input
+          </Button>
+          <SearchInput
             type="search"
             value={search}
             onChange={(event) => {
@@ -677,53 +701,59 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             }}
             placeholder={config.searchPlaceholder}
             aria-label="Search"
-            className="input input-sm"
+            className="h-7 text-xs"
           />
           {config.filters.map((filter) => {
             const filterOptions = filter.optionsFrom ? options[filter.optionsFrom] : (filter.options ?? []);
             return (
-              <select
+              <Select
                 key={filter.name}
-                aria-label={filter.label}
-                value={filters[filter.name] ?? ""}
-                onChange={(event) => {
-                  setFilters((previous) => ({ ...previous, [filter.name]: event.target.value }));
+                value={filters[filter.name] ? filters[filter.name] : "__all__"}
+                onValueChange={(value) => {
+                  setFilters((previous) => ({ ...previous, [filter.name]: value === "__all__" ? "" : value }));
                   setPage(1);
                 }}
-                className="input input-sm" style={{ width: "auto", display: "inline-block" }}
               >
-                <option value="">{filter.label}: {filter.emptyLabel ?? "all"}</option>
-                {filterOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger size="sm" aria-label={filter.label} className="w-auto text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  <SelectItem value="__all__">{filter.label}: {filter.emptyLabel ?? "all"}</SelectItem>
+                  {filterOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             );
           })}
         </form>
         <div className="flex items-center gap-2 border-l border-(--border-default) pl-2">
           {isRecordObject && views.length > 0 ? (
-            <select
-              aria-label="Saved views"
-              defaultValue=""
-              onChange={(event) => {
-                const view = views.find((entry) => entry.id === event.target.value);
+            <Select
+              defaultValue="__all__"
+              onValueChange={(value) => {
+                const view = views.find((entry) => entry.id === value);
                 if (!view) return;
                 applySearch(view.config.q ?? "");
                 setFilters(view.config.filters ?? {});
                 setPage(1);
               }}
-              className="input input-sm" style={{ width: "auto", display: "inline-block" }}
             >
-              <option value="">Saved views…</option>
-              {views.map((view) => (
-                <option key={view.id} value={view.id}>
-                  {view.name}
-                  {view.shared ? " (shared)" : ""}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger size="sm" aria-label="Saved views" className="w-auto text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value="__all__">Saved views…</SelectItem>
+                {views.map((view) => (
+                  <SelectItem key={view.id} value={view.id}>
+                    {view.name}
+                    {view.shared ? " (shared)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : null}
           <details className="group relative hidden sm:block">
             <summary className="flex h-8 cursor-pointer list-none items-center gap-2 rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 text-xs font-medium hover:bg-(--bg-hover)">
@@ -741,15 +771,16 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                   return (
                     <label
                       key={column.key}
+                      htmlFor={`column-${column.key}`}
                       className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-(--bg-hover)"
                     >
-                      <input
-                        type="checkbox"
+                      <Checkbox
+                        id={`column-${column.key}`}
                         checked={checked}
                         disabled={checked && visibleColumnCount <= 1}
-                        onChange={(event) => {
+                        onCheckedChange={(next) => {
                           setHiddenColumns((prev) =>
-                            event.target.checked
+                            next
                               ? prev.filter((key) => key !== column.key)
                               : [...prev, column.key],
                           );
@@ -764,15 +795,18 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           </details>
           {isRecordObject ? (
             <>
-              <input
+              <IconInput
                 aria-label="View name"
+                icon="tag"
                 placeholder="Name this view"
                 value={viewName}
                 onChange={(event) => setViewName(event.target.value)}
-                className="w-32 rounded-md border border-(--border-strong) px-2 py-1.5 text-sm"
+                className="h-7 w-32 text-xs"
               />
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="check"
                 disabled={!viewName}
                 onClick={async () => {
                   const response = await fetch("/api/views", {
@@ -793,10 +827,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                     setViews(refreshed.data);
                   }
                 }}
-                className="rounded-md border border-(--border-strong) px-2 py-1.5 text-sm font-medium hover:bg-(--bg-hover) disabled:opacity-50"
               >
                 Save view
-              </button>
+              </Button>
             </>
           ) : null}
         </div>
@@ -807,71 +840,83 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           <span className="font-medium">{selected.size} selected</span>
           {object === "tasks" && can.edit ? (
             <>
-              <button type="button" disabled={bulkBusy} onClick={() => void runBulk("complete", {})} className="btn btn-secondary btn-sm">
-                <Icon name="check" size={13} /> Complete
-              </button>
-              <button type="button" disabled={bulkBusy} onClick={() => void runBulk("cancel", {})} className="btn btn-secondary btn-sm">
-                <Icon name="close" size={13} /> Cancel
-              </button>
+              <Button type="button" variant="secondary" size="sm" icon="check" loading={bulkBusy} disabled={bulkBusy} onClick={() => void runBulk("complete", {})}>
+                Complete
+              </Button>
+              <Button type="button" variant="secondary" size="sm" icon="close" loading={bulkBusy} disabled={bulkBusy} onClick={() => void runBulk("cancel", {})}>
+                Cancel
+              </Button>
             </>
           ) : null}
           {object === "campaigns" && can.edit ? (
-            <select
-              aria-label="Change status"
-              defaultValue=""
+            <Select
+              defaultValue="__none__"
               disabled={bulkBusy}
-              onChange={(event) => {
-                if (event.target.value) void runBulk("status", { status: event.target.value });
+              onValueChange={(value) => {
+                if (value !== "__none__") void runBulk("status", { status: value });
               }}
-              className="input input-sm"
-              style={{ width: "auto" }}
             >
-              <option value="">Change status…</option>
-              <option value="DRAFT">Draft</option>
-              <option value="ACTIVE">Active</option>
-              <option value="PAUSED">Paused</option>
-              <option value="COMPLETED">Completed</option>
-            </select>
+              <SelectTrigger size="sm" aria-label="Change status" className="w-auto text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value="__none__">Change status…</SelectItem>
+                <SelectItem value="DRAFT">Draft</SelectItem>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="PAUSED">Paused</SelectItem>
+                <SelectItem value="COMPLETED">Completed</SelectItem>
+              </SelectContent>
+            </Select>
           ) : null}
           {can.assign ? (
-            <select
-              aria-label="Assign to"
-              defaultValue=""
+            <Select
+              defaultValue="__none__"
               disabled={bulkBusy}
-              onChange={(event) => {
-                if (event.target.value) void runBulk("assign", { assignedUserId: event.target.value });
+              onValueChange={(value) => {
+                if (value !== "__none__") void runBulk("assign", { assignedUserId: value });
               }}
-              className="rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 py-1.5"
             >
-              <option value="">Assign to…</option>
-              {options.users.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger size="sm" aria-label="Assign to">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value="__none__">Assign to…</SelectItem>
+                {options.users.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : null}
           {can.classify && bulkStatusOptions.length > 0 ? (
-            <select
-              aria-label="Change status"
-              defaultValue=""
+            <Select
+              defaultValue="__none__"
               disabled={bulkBusy}
-              onChange={(event) => {
-                if (event.target.value) void runBulk("status", { statusId: event.target.value });
+              onValueChange={(value) => {
+                if (value !== "__none__") void runBulk("status", { statusId: value });
               }}
-              className="rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 py-1.5"
             >
-              <option value="">Change status…</option>
-              {bulkStatusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger size="sm" aria-label="Change status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value="__none__">Change status…</SelectItem>
+                {bulkStatusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : null}
           {can.delete ? (
-            <button
+            <Button
               type="button"
+              variant="destructive"
+              size="sm"
+              icon="trash"
+              loading={bulkBusy}
               disabled={bulkBusy}
               onClick={async () => {
                 const ok = await confirm({
@@ -882,32 +927,38 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 });
                 if (ok) void runBulk("delete", {});
               }}
-              className="btn btn-destructive btn-sm"
             >
               Delete
-            </button>
+            </Button>
           ) : null}
           {can.tags && allTags.length > 0 ? (
-            <select
-              aria-label="Bulk tag"
-              defaultValue=""
+            <Select
+              defaultValue="__none__"
               disabled={bulkBusy}
-              onChange={(event) => {
-                if (event.target.value) void runBulk("tag", { tagId: event.target.value });
+              onValueChange={(value) => {
+                if (value !== "__none__") void runBulk("tag", { tagId: value });
               }}
-              className="rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 py-1.5"
             >
-              <option value="">Add tag…</option>
-              {allTags.map((tag) => (
-                <option key={tag.id} value={tag.id}>
-                  {tag.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger size="sm" aria-label="Bulk tag">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value="__none__">Add tag…</SelectItem>
+                {allTags.map((tag) => (
+                  <SelectItem key={tag.id} value={tag.id}>
+                    {tag.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : null}
           {can.task ? (
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
+              icon="square_check"
+              loading={bulkBusy}
               disabled={bulkBusy}
               onClick={async () => {
                 const title = await prompt({
@@ -918,40 +969,41 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 });
                 if (title && title.trim().length >= 2) void runBulk("task", { title: title.trim() });
               }}
-              className="rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 py-1.5 font-medium"
             >
               Create task…
-            </button>
+            </Button>
           ) : null}
           {mergeableObject && can.delete && selected.size >= 2 && selected.size <= 10 ? (
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => {
                 setMergePrimary(mergeCandidates[0]?.id ?? "");
                 setMergeOpen(true);
               }}
-              className="rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 py-1.5 font-medium"
             >
               Merge selected…
-            </button>
+            </Button>
           ) : null}
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
+            icon="close"
             disabled={bulkBusy}
             onClick={() => setSelected(new Set())}
-            className="btn btn-secondary btn-sm"
           >
             Clear selection
-          </button>
+          </Button>
           {bulkError ? <span className="text-(--error)">{bulkError}</span> : null}
         </div>
       ) : null}
 
       {mergeOpen && mergeCandidates.length >= 2 ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md space-y-4 rounded-lg border border-(--border-default) bg-(--bg-surface) text-(--text-primary) p-6 shadow-xl">
-            <h2 className="text-base font-semibold">Merge {config.title.toLowerCase()}</h2>
-            <p className="text-sm text-(--text-secondary)">
+        <Modal onClose={() => setMergeOpen(false)} title={`Merge ${config.title.toLowerCase()}`} size="md">
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
               Choose the surviving record. The other {mergeCandidates.length - 1}{" "}
               {mergeCandidates.length - 1 === 1 ? "record is" : "records are"} deleted; their timelines, notes,
               emails, and open tasks move to the survivor.
@@ -962,38 +1014,52 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               </p>
             ) : null}
             <div className="space-y-2">
-              {mergeCandidates.map((row) => (
-                <label key={row.id} className="flex items-center gap-2 rounded-md border border-(--border-default) p-3 text-sm">
-                  <input
-                    type="radio"
-                    name="merge-primary"
-                    checked={mergePrimary === row.id}
-                    onChange={() => setMergePrimary(row.id)}
-                  />
-                  Keep <strong>{cellValue(row, "firstName lastName")}</strong>
-                  {cellValue(row, "email") ? ` (${cellValue(row, "email")})` : ""}
-                </label>
-              ))}
+              {mergeCandidates.map((row) => {
+                const name = String(cellValue(row, "firstName lastName") ?? "");
+                const selected = mergePrimary === row.id;
+                return (
+                  <label
+                    key={row.id}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2.5 rounded-md border p-3 text-sm transition-colors",
+                      selected ? "border-ring bg-(--bg-selected)" : "border-(--border-default) hover:border-ring",
+                    )}
+                  >
+                    {name ? <Initials name={name} size="xs" /> : null}
+                    <input
+                      type="radio"
+                      name="merge-primary"
+                      className="size-4"
+                      checked={selected}
+                      onChange={() => setMergePrimary(row.id)}
+                    />
+                    <span>
+                      Keep <strong>{name}</strong>
+                      {cellValue(row, "email") ? ` (${cellValue(row, "email")})` : ""}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() => setMergeOpen(false)}
-                className="btn btn-secondary"
               >
                 Cancel
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="primary"
+                icon="check"
+                loading={mergeBusy}
                 onClick={() => void runMerge()}
                 disabled={mergeBusy || !mergePrimary}
-                className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {mergeBusy ? "Merging…" : "Merge"}
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+        </Modal>
       ) : null}
 
       
@@ -1025,29 +1091,29 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               </span>
             );
           })}
-          <button
+          <Button
             type="button"
-            className="btn btn-ghost"
-            style={{ height: "24px", fontSize: "11px" }}
+            variant="tertiary"
+            size="sm"
+            className="h-6 px-2 text-[11px]"
+            icon="close"
             onClick={() => { applySearch(""); setFilters({}); setPage(1); }}
           >
             Clear all
-          </button>
+          </Button>
         </div>
       ) : null}
 
       <div className="card table-responsive overflow-x-auto p-2 lg:p-0">
         <Table compact={density === "compact"}>
           <THead>
-            <TR className="border-b border-(--border-default) bg-(--bg-hover) text-left text-xs uppercase tracking-wide text-(--text-secondary)">
+            <TR className="border-b border-(--border-default) text-left text-(--text-secondary)">
               {can.bulk ? (
                 <TH className="w-8 px-3 py-2">
-                  <input
-                    ref={selectAllRef}
-                    type="checkbox"
+                  <Checkbox
                     aria-label="Select all on page"
-                    checked={allSelected}
-                    onChange={toggleAllOnPage}
+                    checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                    onCheckedChange={toggleAllOnPage}
                   />
                 </TH>
               ) : null}
@@ -1098,7 +1164,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               [...Array(6)].map((_, index) => (
                 <TR key={`skeleton-${index}`}>
                   <TD colSpan={tableColumnCount} style={{ padding: "10px 12px" }}>
-                    <div className="skeleton" style={{ height: "16px", width: `${70 - index * 8}%` }} />
+                    <Skeleton className="h-4" style={{ width: `${70 - index * 8}%` }} />
                   </TD>
                 </TR>
               ))
@@ -1107,9 +1173,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 <TD colSpan={tableColumnCount}>
                   <div className="empty-state" style={{ padding: "var(--space-8)" }}>
                     <p className="empty-state-title" style={{ color: "var(--error)" }}>{loadError}</p>
-                    <button type="button" onClick={() => void fetchRows()} className="btn btn-secondary" style={{ marginTop: "var(--space-3)" }}>
+                    <Button variant="secondary" icon="refresh" onClick={() => void fetchRows()} className="mt-3">
                       Retry
-                    </button>
+                    </Button>
                   </div>
                 </TD>
               </TR>
@@ -1125,10 +1191,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                         : `Get started by creating your first ${config.singular.toLowerCase()}.`
                     }
                     action={can.create && !search && !Object.values(filters).some(Boolean) ? (
-                      <button type="button" className="btn btn-primary" onClick={() => { setEditRow(null); setFormMode("create"); }}>
-                        <Icon name="plus" size={12} />
+                      <Button variant="primary" icon="plus" onClick={() => { setEditRow(null); setFormMode("create"); }}>
                         New {config.singular}
-                      </button>
+                      </Button>
                     ) : undefined}
                   />
                 </TD>
@@ -1151,11 +1216,10 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 >
                     {can.bulk ? (
                       <TD className="px-3 py-2">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           aria-label="Select row"
                           checked={isSelected}
-                          onChange={() => toggleRow(row.id)}
+                          onCheckedChange={() => toggleRow(row.id)}
                         />
                       </TD>
                     ) : null}
@@ -1166,13 +1230,26 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                         if (!raw) return <span className="text-(--text-tertiary)">—</span>;
                         if (column.type === "record" && index === 0) {
                           return (
-                            <Link
-                              href={`/${config.object}/${row.id}`}
-                              onClick={() => rememberRecentRecord({ href: `/${config.object}/${row.id}`, label: raw, module: config.title })}
-                              className="font-medium text-(--brand) hover:underline"
-                            >
+                            <span className="flex items-center gap-2">
+                              <Initials name={raw} size="sm" />
+                              <Link
+                                href={`/${config.object}/${row.id}`}
+                                onClick={() => rememberRecentRecord({ href: `/${config.object}/${row.id}`, label: raw, module: config.title })}
+                                className="font-medium text-(--brand) hover:underline"
+                              >
+                                {raw}
+                              </Link>
+                            </span>
+                          );
+                        }
+                        // Person columns (assignee/owner/leader names) get the
+                        // same gradient treatment at a smaller size.
+                        if (/^(assignedUser|owner|leader|user)\.name$/.test(column.key) || column.key === "owner" || column.key === "assignee") {
+                          return (
+                            <span className="flex items-center gap-1.5">
+                              <Initials name={raw} size="xs" />
                               {raw}
-                            </Link>
+                            </span>
                           );
                         }
                         if (column.type === "record") {
@@ -1208,9 +1285,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                                   void fetchRows();
                                 }}
                                 render={(val, onClick) => (
-                                  <span className="badge badge-neutral" onClick={onClick}>
+                                  <Badge className="badge badge-neutral" onClick={onClick}>
                                     {raw}
-                                  </span>
+                                  </Badge>
                                 )}
                               />
                             );
@@ -1230,17 +1307,17 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                                   void fetchRows();
                                 }}
                                 render={(val, onClick) => (
-                                  <span className="badge badge-neutral" onClick={onClick}>
+                                  <Badge className="badge badge-neutral" onClick={onClick}>
                                     {raw}
-                                  </span>
+                                  </Badge>
                                 )}
                               />
                             );
                           }
                           return (
-                            <span className="badge badge-neutral">
+                            <Badge className="badge badge-neutral">
                               {raw}
-                            </span>
+                            </Badge>
                           );
                         }
                         if (column.type === "date") return formatDate(raw, false);
@@ -1353,39 +1430,45 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-1">
             Rows
-            <select
+            <Select
               aria-label="Rows per page"
-              value={pageSize}
-              onChange={(event) => {
-                setPageSize(Number(event.target.value));
+              value={String(pageSize)}
+              onValueChange={(value) => {
+                setPageSize(Number(value));
                 setPage(1);
               }}
-              className="btn btn-secondary btn-sm"
-              style={{ width: "auto" }}
             >
-              {[10, 25, 50, 100].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger size="sm" className="w-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                {[10, 25, 50, 100].map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             disabled={meta.page <= 1 || loading}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="btn btn-secondary btn-sm"
           >
             ← Prev
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
+            icon="chevron_right"
             disabled={meta.page >= totalPages || loading}
             onClick={() => setPage((p) => p + 1)}
-            className="btn btn-secondary btn-sm"
           >
             Next →
-          </button>
+          </Button>
         </div>
       </div>
 

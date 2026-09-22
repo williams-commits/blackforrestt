@@ -1,19 +1,16 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
 import { crmBranding } from "@/lib/branding";
 import { BrandingProvider } from "@/components/BrandingProvider";
+import { Toaster } from "@/components/ui/sonner";
+import { cn } from "@/lib/utils";
+
+/** Product typeface (shadcn nova preset) — variable-loaded so tokens can
+ * reference it. Falls back to the system stack when unavailable. */
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 const branding = crmBranding();
-
-/** Single product typeface — a modern professional sans, variable-loaded so
- * design tokens can reference it (never `.className`, which skips the CSS
- * custom property). Falls back to the system stack when unavailable. */
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: {
@@ -25,7 +22,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={inter.variable}>
+    <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -35,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen antialiased">
         <BrandingProvider value={branding}>{children}</BrandingProvider>
+        <Toaster />
       </body>
     </html>
   );

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ImageAttachment } from "@/components/ImageAttachment";
 import { useConfirmDialog } from "@/components/Dialogs";
+import { Icon } from "@/components/Icon";
+import { FileInput } from "@/components/form";
 
 interface AttachmentRow {
   id: string;
@@ -91,9 +93,9 @@ export function AttachmentsPanel({
       {rows.length === 0 ? (
         <p className="text-sm text-(--text-tertiary)">No attachments.</p>
       ) : (
-        <ul className="space-y-1">
+        <ul className="space-y-2">
           {rows.map((row) => (
-            <li key={row.id} className="flex items-center justify-between text-sm">
+            <li key={row.id} className="flex items-center justify-between divider-y rounded-md bg-muted p-2">
               <ImageAttachment
                 filename={row.filename}
                 mimeType={row.mimeType}
@@ -102,7 +104,8 @@ export function AttachmentsPanel({
               <span className="flex items-center gap-2 text-xs text-(--text-tertiary)">
                 {(row.size / 1024).toFixed(0)} KB · {row.uploader} · {new Date(row.createdAt).toLocaleDateString()}
                 {canDelete ? (
-                  <button type="button" onClick={() => void remove(row.id)} className="text-(--error) hover:underline">
+                  <button type="button" onClick={() => void remove(row.id)} className="flex intems-center gap-1 text-(--error) hover:underline">
+                    <Icon name="trash" size={12} />
                     delete
                   </button>
                 ) : null}
@@ -112,21 +115,17 @@ export function AttachmentsPanel({
         </ul>
       )}
       {canUpload ? (
-        <label
-          className={`inline-block cursor-pointer rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) ${busy ? "opacity-50" : ""}`}
-        >
-          {busy ? "Uploading…" : "Attach file…"}
-          <input
-            type="file"
-            className="hidden"
-            disabled={busy}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void upload(file);
-              event.target.value = "";
-            }}
-          />
-        </label>
+        <FileInput
+          icon="upload"
+          aria-label="Attach file"
+          className="max-w-64 cursor-pointer"
+          disabled={busy}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void upload(file);
+            event.target.value = "";
+          }}
+        />
       ) : null}
 
       {confirmDialog}

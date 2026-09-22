@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { OpportunityForm } from "@/components/OpportunityFormDialog";
 import { useConfirmDialog } from "@/components/Dialogs";
+import { RowActions } from "@/components/RowActions";
 import type { Pipeline } from "@/components/OpportunitiesPage";
 
 /** Edit + delete controls for the opportunity detail page. */
@@ -23,7 +23,6 @@ export function OpportunityDetailActions({
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
@@ -50,41 +49,27 @@ export function OpportunityDetailActions({
       destructive: true,
     });
     if (!ok) return;
-    setBusy(true);
-    try {
+    {
       const response = await fetch(`/api/opportunities/${(row as { id: string }).id}`, {
         method: "DELETE",
       });
       if (response.ok) router.push("/opportunities");
-    } finally {
-      setBusy(false);
     }
   }
 
+  const actions = [
+    ...(canOpenActionForm
+      ? [{ label: canEdit ? "Edit" : "Manage actions", icon: "edit", onClick: () => setEditing(true) }]
+      : []),
+    { label: "Related tasks", icon: "square_check", onClick: () => router.push(`/tasks?subjectType=OPPORTUNITY&subjectId=${(row as { id: string }).id}`) },
+    ...(canDelete
+      ? [{ label: "Delete", icon: "trash", destructive: true, onClick: () => void handleDelete() }]
+      : []),
+  ];
+
   return (
     <div className="flex items-center gap-2">
-      <Link href={`/tasks?subjectType=OPPORTUNITY&subjectId=${(row as { id: string }).id}`} className="rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary)">
-        Related tasks
-      </Link>
-      {canOpenActionForm ? (
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-(--brand) focus:ring-offset-2 cursor-pointer"
-        >
-          {canEdit ? "Edit" : "Manage actions"}
-        </button>
-      ) : null}
-      {canDelete ? (
-        <button
-          type="button"
-          onClick={() => void handleDelete()}
-          disabled={busy}
-          className="rounded-md border border-(--border-strong) px-3 py-1.5 text-sm font-medium hover:bg-(--bg-hover) hover:text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-(--brand) focus:ring-offset-2 cursor-pointer"
-        >
-          Delete
-        </button>
-      ) : null}
+      <RowActions actions={actions} />
       {editing && pipeline ? (
         <OpportunityForm
           pipeline={pipeline}

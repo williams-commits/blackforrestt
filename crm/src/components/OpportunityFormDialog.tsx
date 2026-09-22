@@ -1,8 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button, Drawer } from "@/components/ui";
+import { Field, FormError, FormSection, IconInput, IconSelectTrigger } from "@/components/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Pipeline, OpportunityRow } from "@/components/OpportunitiesPage";
 
+/** Create/edit opportunity — slides in from the right (Drawer seam). */
 export function OpportunityForm({
   pipeline,
   initial,
@@ -46,9 +55,6 @@ export function OpportunityForm({
   );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  const inputClass =
-    "w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none";
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -101,94 +107,169 @@ export function OpportunityForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8" role="dialog" aria-modal="true">
-      <form method="post" onSubmit={submit} className="form-dialog w-full max-w-2xl space-y-4 border border-(--border-default) bg-(--bg-surface) p-6 text-(--text-primary) shadow-xl">
-        <div className="form-dialog-header"><div><p className="form-dialog-eyebrow">Revenue workspace</p><h2 className="form-dialog-title">{initial ? "Edit opportunity" : "New opportunity"}</h2><p className="form-help">Pipeline: {pipeline.name}</p></div><button type="button" onClick={onClose} className="icon-button" aria-label="Close form">×</button></div>
-        {error ? (
-          <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
-            {error}
-          </p>
-        ) : null}
-        <div className="form-section space-y-4">
-          <div><p className="form-section-title">Deal essentials</p><p className="form-section-help">Name the opportunity and place it in the right stage.</p></div>
-          <div>
-          <label htmlFor="o-name" className="form-label">Name <span className="form-required">*</span></label>
-          <input id="o-name" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} disabled={!canEditFields} className={inputClass} />
-          </div>
-        <div>
-          <label htmlFor="o-stage" className="mb-1 block text-sm font-medium">Stage</label>
-          <select id="o-stage" value={stageId} onChange={(e) => setStageId(e.target.value)} disabled={!canChangeStage} className={inputClass}>
-            <option value="">First open stage</option>
-            {pipeline.stages.map((stage) => (
-              <option key={stage.id} value={stage.id}>
-                {stage.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="o-account" className="form-label">Account</label>
-            <select id="o-account" value={accountId} onChange={(e) => setAccountId(e.target.value)} disabled={!canEditFields} className={inputClass}>
-              <option value="">— none —</option>
-              {accountOptions.map((account) => (
-                <option key={account.id} value={account.id}>{account.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="o-contact" className="form-label">Contact</label>
-            <select id="o-contact" value={contactId} onChange={(e) => setContactId(e.target.value)} disabled={!canEditFields} className={inputClass}>
-              <option value="">— none —</option>
-              {contactOptions.map((contact) => (
-                <option key={contact.id} value={contact.id}>{contact.firstName} {contact.lastName}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        </div>
-        <div className="form-section grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2"><p className="form-section-title">Forecast</p><p className="form-section-help">Use value, probability, and close date to keep the forecast honest.</p></div>
-          <div>
-            <label htmlFor="o-value" className="form-label">Value (USD)</label>
-            <input id="o-value" type="number" step="0.01" min="0" value={value} onChange={(e) => setValue(e.target.value)} disabled={!canEditFields} className={inputClass} />
-          </div>
-          <div>
-            <label htmlFor="o-prob" className="form-label">Probability %</label>
-            <input id="o-prob" type="number" min="0" max="100" value={probability} onChange={(e) => setProbability(e.target.value)} disabled={!canEditFields} className={inputClass} />
-          </div>
-        </div>
-        <div>
-          <label htmlFor="o-close" className="form-label">Expected close</label>
-          <input id="o-close" type="date" value={expectedCloseAt} onChange={(e) => setExpectedCloseAt(e.target.value)} disabled={!canEditFields} className={inputClass} />
-        </div>
-        {canAssign ? (
-          <div className="form-section grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label htmlFor="o-owner" className="form-label">Owner</label>
-              <select id="o-owner" value={ownerUserId} onChange={(e) => setOwnerUserId(e.target.value)} className={inputClass}>
-                <option value="">— none —</option>
-                {userOptions.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="o-team" className="form-label">Team</label>
-              <select id="o-team" value={teamId} onChange={(e) => setTeamId(e.target.value)} className={inputClass}>
-                <option value="">— none —</option>
-                {teamOptions.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
-              </select>
-            </div>
-          </div>
-        ) : null}
-        <div className="form-actions">
-          <button type="button" onClick={onClose} className="btn btn-secondary">
+    <Drawer
+      open
+      title={initial ? "Edit opportunity" : "New opportunity"}
+      subtitle={`Pipeline: ${pipeline.name}`}
+      onClose={onClose}
+      width="lg"
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
-          </button>
-          <button type="submit" disabled={busy} className="btn btn-primary">
-            {busy ? "Saving…" : "Save"}
-          </button>
-        </div>
+          </Button>
+          <Button type="submit" form="opportunity-form" variant="primary" icon="check" loading={busy}>
+            Save opportunity
+          </Button>
+        </>
+      }
+    >
+      <form id="opportunity-form" method="post" onSubmit={submit} className="space-y-6">
+        <FormError message={error} />
+        <FormSection title="Deal essentials" help="Name the opportunity and place it in the right stage.">
+          <Field id="o-name" label="Name" required>
+            <IconInput
+              id="o-name"
+              icon="tag"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Fleet renewal — Q4 rollout"
+              required
+              minLength={2}
+              disabled={!canEditFields}
+            />
+          </Field>
+          <Field id="o-stage" label="Stage" help="Leave unset to start in the first open stage.">
+            <Select
+              value={stageId ? stageId : "__none__"}
+              onValueChange={(v) => setStageId(v === "__none__" ? "" : v)}
+              disabled={!canChangeStage}
+            >
+              <IconSelectTrigger id="o-stage" icon="tag">
+                <SelectValue />
+              </IconSelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value="__none__">First open stage</SelectItem>
+                {pipeline.stages.map((stage) => (
+                  <SelectItem key={stage.id} value={stage.id}>
+                    {stage.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field id="o-account" label="Account">
+              <Select
+                value={accountId ? accountId : "__none__"}
+                onValueChange={(v) => setAccountId(v === "__none__" ? "" : v)}
+                disabled={!canEditFields}
+              >
+                <IconSelectTrigger id="o-account" icon="building">
+                  <SelectValue />
+                </IconSelectTrigger>
+                <SelectContent position="popper">
+                  <SelectItem value="__none__">— none —</SelectItem>
+                  {accountOptions.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field id="o-contact" label="Contact">
+              <Select
+                value={contactId ? contactId : "__none__"}
+                onValueChange={(v) => setContactId(v === "__none__" ? "" : v)}
+                disabled={!canEditFields}
+              >
+                <IconSelectTrigger id="o-contact" icon="users">
+                  <SelectValue />
+                </IconSelectTrigger>
+                <SelectContent position="popper">
+                  <SelectItem value="__none__">— none —</SelectItem>
+                  {contactOptions.map((contact) => (
+                    <SelectItem key={contact.id} value={contact.id}>{contact.firstName} {contact.lastName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+        </FormSection>
+        <FormSection title="Forecast" help="Use value, probability, and close date to keep the forecast honest.">
+          <div className="grid grid-cols-2 gap-3">
+            <Field id="o-value" label="Value (USD)">
+              <IconInput
+                id="o-value"
+                icon="chart"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="e.g. 12500.00"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                disabled={!canEditFields}
+              />
+            </Field>
+            <Field id="o-prob" label="Probability %">
+              <IconInput
+                id="o-prob"
+                icon="chart"
+                type="number"
+                min="0"
+                max="100"
+                placeholder="e.g. 60"
+                value={probability}
+                onChange={(e) => setProbability(e.target.value)}
+                disabled={!canEditFields}
+              />
+            </Field>
+          </div>
+          <Field id="o-close" label="Expected close">
+            <IconInput
+              id="o-close"
+              icon="calendar"
+              type="date"
+              value={expectedCloseAt}
+              onChange={(e) => setExpectedCloseAt(e.target.value)}
+              disabled={!canEditFields}
+            />
+          </Field>
+        </FormSection>
+        {canAssign ? (
+          <FormSection title="Ownership" help="Who works this deal and which team's scope it lives in.">
+            <div className="grid grid-cols-2 gap-3">
+              <Field id="o-owner" label="Owner">
+                <Select
+                  value={ownerUserId ? ownerUserId : "__none__"}
+                  onValueChange={(v) => setOwnerUserId(v === "__none__" ? "" : v)}
+                >
+                  <IconSelectTrigger id="o-owner" icon="users">
+                    <SelectValue />
+                  </IconSelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value="__none__">— none —</SelectItem>
+                    {userOptions.map((user) => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field id="o-team" label="Team">
+                <Select
+                  value={teamId ? teamId : "__none__"}
+                  onValueChange={(v) => setTeamId(v === "__none__" ? "" : v)}
+                >
+                  <IconSelectTrigger id="o-team" icon="users">
+                    <SelectValue />
+                  </IconSelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value="__none__">— none —</SelectItem>
+                    {teamOptions.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+          </FormSection>
+        ) : null}
       </form>
-    </div>
+    </Drawer>
   );
 }

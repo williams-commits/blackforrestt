@@ -6,6 +6,13 @@ import { useSearchParams } from "next/navigation";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { EmailCompose } from "@/components/EmailCompose";
 import { Button } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
+import { Icon } from "@/components/Icon";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { SearchInput } from "@/components/form";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 /**
  * Mailbox — inbox / unread / sent folders, a reading pane, search, and
@@ -42,9 +49,9 @@ type MailboxResponse = {
 };
 
 const FOLDERS = [
-  { key: "inbox", label: "Inbox" },
-  { key: "unread", label: "Unread" },
-  { key: "sent", label: "Sent" },
+  { key: "inbox", label: "Inbox", icon: "mail" },
+  { key: "unread", label: "Unread", icon: "bell" },
+  { key: "sent", label: "Sent", icon: "external" },
 ] as const;
 
 const RECORD_PATH: Record<string, string> = {
@@ -172,49 +179,49 @@ export function MailboxPage() {
         ]}
       />
       {error ? (
-        <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p>
+        <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       ) : null}
       {smtpConfigured === false ? (
-        <div role="status" className="flex items-start gap-2 rounded-md border border-(--warning-border) bg-(--warning-bg) px-3 py-2 text-sm text-(--warning)">
+        <div role="status" className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground">
           <span aria-hidden>⚠</span>
           <span>
             <strong>SMTP is not configured.</strong> Sending is disabled — set{" "}
-            <code className="rounded bg-(--bg-subtle) px-1">SMTP_URL</code> and{" "}
-            <code className="rounded bg-(--bg-subtle) px-1">SMTP_FROM</code> in the environment and reload. Inbound
+            <code className="rounded bg-background px-1 font-mono text-xs">SMTP_URL</code> and{" "}
+            <code className="rounded bg-background px-1 font-mono text-xs">SMTP_FROM</code> in the environment and reload. Inbound
             email (webhook) is unaffected.
           </span>
         </div>
       ) : null}
 
       {/* Toolbar: search + filters */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-(--border-hairline) pb-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
         {filteredUserId ? (
-          <span className="flex items-center gap-1 rounded-full bg-(--accent-soft) px-3 py-1 text-xs font-medium text-(--accent)">
+          <Badge variant="secondary" className="gap-1 rounded-full px-3 py-1 text-xs font-medium">
             Mail of {filteredUserName}
-            <Link href="/emails" aria-label="Clear user filter" className="text-(--text-secondary) hover:text-(--text-primary)">×</Link>
-          </span>
+            <Link href="/emails" aria-label="Clear user filter" className="text-muted-foreground hover:text-foreground">×</Link>
+          </Badge>
         ) : null}
-        <label className="flex items-center gap-1.5 text-xs text-(--text-secondary)">
-          <input
-            type="checkbox"
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Checkbox
             checked={mineOnly}
-            onChange={(event) => { setMineOnly(event.target.checked); setPage(1); }}
+            onCheckedChange={(checked) => { setMineOnly(checked === true); setPage(1); }}
           />
           Me
         </label>
-        <label htmlFor="mailbox-search" className="sr-only">Search emails</label>
-        <input
+        <Label htmlFor="mailbox-search" className="sr-only">Search emails</Label>
+        <SearchInput
           id="mailbox-search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search subject, body, addresses…"
-          className="input input-sm lg:w-72"
+          className="h-8"
+          wrapperClassName="w-full sm:w-64 lg:w-72"
         />
       </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[13rem_minmax(0,1fr)]">
-        {/* Folder rail — quiet rows, active row carries the module accent */}
-        <div className="card p-2">
+        {/* Folder rail — quiet rows, active row on muted */}
+        <Card className="gap-0 p-2">
           <div role="tablist" aria-label="Mailbox folders" className="flex gap-1 overflow-x-auto lg:flex-col">
             {FOLDERS.map((entry) => (
               <button
@@ -222,31 +229,33 @@ export function MailboxPage() {
                 role="tab"
                 aria-selected={folder === entry.key}
                 onClick={() => { setFolder(entry.key); setPage(1); setSelected(null); }}
-                className={`flex shrink-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition ${
+                className={cn(
+                  "flex shrink-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-colors",
                   folder === entry.key
-                    ? "bg-(--accent-soft) font-semibold text-(--accent)"
-                    : "text-(--text-secondary) hover:bg-(--bg-hover) hover:text-(--text-primary)"
-                }`}
+                    ? "bg-muted font-semibold text-foreground"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                )}
               >
-                <span>{entry.label}</span>
+                <span className="flex items-center gap-2">
+                  <Icon name={entry.icon} size={14} className={folder === entry.key ? "text-foreground" : "text-muted-foreground"} />
+                  {entry.label}
+                </span>
                 {entry.key === "inbox" && data && data.unreadCount > 0 ? (
-                  <span className="rounded-full bg-(--accent) px-1.5 py-0.5 text-[10px] font-bold text-(--text-inverse)">
-                    {data.unreadCount}
-                  </span>
+                  <Badge className="px-1.5 text-[10px] font-bold">{data.unreadCount}</Badge>
                 ) : null}
               </button>
             ))}
           </div>
-        </div>
+        </Card>
 
-        <div className="card overflow-hidden">
+        <Card className="gap-0 overflow-hidden py-0">
           <div className="grid lg:grid-cols-[360px_1fr]">
           {/* List */}
-          <div className="max-h-[70vh] divide-y divide-(--border-hairline) overflow-y-auto border-b border-(--border-hairline) lg:border-b-0 lg:border-r">
+          <div className="max-h-[70vh] divide-y divide-border overflow-y-auto border-b border-border lg:border-b-0 lg:border-r">
             {loading && rows.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-(--text-tertiary)">Loading mailbox…</p>
+              <p className="px-4 py-10 text-center text-sm text-muted-foreground">Loading mailbox…</p>
             ) : rows.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-(--text-tertiary)">
+              <p className="px-4 py-10 text-center text-sm text-muted-foreground">
                 {folder === "sent" ? "No sent emails yet — sends are archived here automatically." : folder === "unread" ? "Inbox zero. Nothing unread." : "No emails match this view."}
               </p>
             ) : (
@@ -255,32 +264,33 @@ export function MailboxPage() {
                   key={row.id}
                   onClick={() => void open(row)}
                   aria-current={selected?.id === row.id}
-                  className={`block w-full px-4 py-3 text-left transition hover:bg-(--bg-hover) ${
-                    selected?.id === row.id ? "bg-(--accent-soft)" : ""
-                  }`}
+                  className={cn(
+                    "block w-full px-4 py-3 text-left transition-colors hover:bg-muted/60",
+                    selected?.id === row.id ? "bg-muted" : ""
+                  )}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`truncate text-sm ${row.read ? "text-(--text-secondary)" : "font-bold text-(--text-primary)"}`}>
+                    <span className={cn("truncate text-sm", row.read ? "text-muted-foreground" : "font-bold text-foreground")}>
                       {row.direction === "INBOUND" ? row.from : `To ${row.to}`}
                     </span>
-                    <span className="shrink-0 text-[11px] text-(--text-tertiary)">{timeAgo(row.createdAt)}</span>
+                    <span className="shrink-0 text-[11px] text-muted-foreground/70">{timeAgo(row.createdAt)}</span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-2">
                     {!row.read && row.direction === "INBOUND" ? (
-                      <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-(--accent)" />
+                      <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-foreground" />
                     ) : (
-                      <span aria-hidden className="h-2 w-2 shrink-0 rounded-full border border-(--border-strong)" />
+                      <span aria-hidden className="h-2 w-2 shrink-0 rounded-full border border-border" />
                     )}
-                    <span className={`truncate text-sm ${row.read ? "text-(--text-secondary)" : "font-semibold text-(--text-primary)"}`}>
+                    <span className={cn("truncate text-sm", row.read ? "text-muted-foreground" : "font-semibold text-foreground")}>
                       {row.status === "FAILED" ? `⚠ ${row.subject}` : row.subject}
                     </span>
                   </div>
-                  <p className="mt-0.5 truncate text-xs text-(--text-tertiary)">{row.preview}</p>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground/70">{row.preview}</p>
                 </button>
               ))
             )}
             {data && (data.page > 1 || data.hasMore) ? (
-              <div className="flex items-center justify-between px-4 py-2 text-xs text-(--text-secondary)">
+              <div className="flex items-center justify-between px-4 py-2 text-xs text-muted-foreground">
                 <Button
                   size="sm"
                   variant="secondary"
@@ -293,6 +303,7 @@ export function MailboxPage() {
                 <Button
                   size="sm"
                   variant="secondary"
+                  icon="chevron_right"
                   disabled={!data.hasMore || loading}
                   onClick={() => setPage((current) => current + 1)}
                 >
@@ -306,15 +317,15 @@ export function MailboxPage() {
           <div className="max-h-[70vh] overflow-y-auto p-5">
             {selected ? (
               <article>
-                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-(--border-hairline) pb-4">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
                   <div className="min-w-0">
-                    <h2 className="text-lg font-semibold text-(--text-primary)">{selected.subject}</h2>
-                    <p className="mt-1 text-sm text-(--text-secondary)">
-                      <span className="font-medium">{selected.direction === "INBOUND" ? "From" : "To"}:</span>{" "}
+                    <h2 className="text-lg font-semibold text-foreground">{selected.subject}</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">{selected.direction === "INBOUND" ? "From" : "To"}:</span>{" "}
                       {selected.direction === "INBOUND" ? selected.from : selected.to}
-                      {selected.cc ? <span className="text-(--text-tertiary)"> · cc {selected.cc}</span> : null}
+                      {selected.cc ? <span className="text-muted-foreground/70"> · cc {selected.cc}</span> : null}
                     </p>
-                    <p className="mt-0.5 text-xs text-(--text-tertiary)">
+                    <p className="mt-0.5 text-xs text-muted-foreground/70">
                       {new Date(selected.createdAt).toLocaleString()}
                       {selected.sentBy ? ` · sent by ${selected.sentBy}` : ""}
                       {selected.status === "FAILED" ? ` · failed: ${selected.error ?? "unknown error"}` : ""}
@@ -322,12 +333,14 @@ export function MailboxPage() {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {selected.subjectType && selected.subjectId && RECORD_PATH[selected.subjectType] ? (
-                      <Link
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        icon="external"
                         href={`/${RECORD_PATH[selected.subjectType]}/${selected.subjectId}`}
-                        className="btn btn-secondary btn-sm"
                       >
                         View {selected.subjectType.toLowerCase()} →
-                      </Link>
+                      </Button>
                     ) : null}
                     {selected.direction === "INBOUND" ? (
                       <>
@@ -354,6 +367,7 @@ export function MailboxPage() {
                         <Button
                           size="sm"
                           variant="secondary"
+                          icon="mail"
                           onClick={() => void markUnread(selected)}
                         >
                           Mark unread
@@ -364,21 +378,21 @@ export function MailboxPage() {
                 </div>
                 {selected.htmlBody ? (
                   <div
-                    className="mt-4 max-w-none text-sm leading-relaxed text-(--text-primary) [&_a]:text-(--brand) [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-(--border-strong) [&_blockquote]:pl-3 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-6"
+                    className="mt-4 max-w-none text-sm leading-relaxed text-foreground [&_a]:text-foreground [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-6"
                     dangerouslySetInnerHTML={{ __html: selected.htmlBody }}
                   />
                 ) : (
-                  <pre className="mt-4 whitespace-pre-wrap font-sans text-sm leading-relaxed text-(--text-primary)">{selected.body}</pre>
+                  <pre className="mt-4 whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">{selected.body}</pre>
                 )}
               </article>
             ) : (
-              <div className="flex h-full min-h-64 items-center justify-center text-sm text-(--text-tertiary)">
+              <div className="flex h-full min-h-64 items-center justify-center text-sm text-muted-foreground/70">
                 Select an email to read it.
               </div>
             )}
           </div>
         </div>
-      </div>
+        </Card>
       </div>
       {compose ? (
         <EmailCompose
@@ -393,4 +407,3 @@ export function MailboxPage() {
     </div>
   );
 }
-

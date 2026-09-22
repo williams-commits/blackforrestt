@@ -258,52 +258,92 @@ contact / task / note, schedule follow-up, import.
 i18n: English-first; strings centralized so next-intl can be adopted later if
 the CRM needs to match the platform's languages.
 
-Design-system rules (globals.css): buttons come from the `.btn` family
-(`.btn-sm` for toolbars/pagination — never inline height overrides), tables
-from `.table` (it styles th/td itself — components must not re-pad cells),
-segmented switches from `.tab-strip`, row text actions from
-`.link-danger`/`.link-muted`. Icons go through `<Icon name="…" />`
-(components/Icon.tsx, lucide-backed) — no hand-rolled inline SVGs.
+Design-system rules: interactive controls are shadcn/ui components
+(`src/components/ui/*`, radix-nova style, neutral base). The legacy
+`.btn`/`.table`/`.input` classes still exist as a compatibility surface, but
+new code uses the shadcn primitives directly or through the `ui.tsx` seams.
+Icons go through `<Icon name="…" />` (components/Icon.tsx, lucide-backed) —
+no hand-rolled inline SVGs.
 
 Table UX invariants: every list page restores its state (page, search, sort,
 filters) across refreshes via `useTableSession` (sessionStorage, per-table
 key); search is server-side and covers every text column plus to-one
 relation names (status/owner/account/campaign) — see `deepSearchWhere`.
+Table headers are Title Case (labels ship capitalized; no uppercase
+transform anywhere in the header row).
 
-Design foundation (2026 enterprise revamp): Inter via next/font
-(`--font-inter`); tokens in globals.css define the full scale (type 10–28px
-on a 13px base, 4px spacing grid, radii 5/7/10/14, control heights 28/32/36,
-calm layered shadows, motion 120/180/250ms + 280ms panel ease). Light mode
-separates surfaces by tone + shadow — cards are BORDERLESS; dark mode swaps
-to hairline borders (shadows don't read). Tables own their own th/td styles;
-row separators use `--border-hairline`.
+Design foundation (2026 shadcn migration): **shadcn/ui on the default
+neutral (zinc) palette** — Geist via next/font (`--font-sans`), OKLCH CSS
+variables from the shadcn theme in globals.css. A compatibility block at
+the end of globals.css remaps every pre-shadcn token (`--brand`,
+`--bg-surface`, `--text-*`, `--accent`…) onto the shadcn variables so
+legacy-styled markup renders neutral without edits. Dark mode is
+`data-theme="dark"` (ThemeToggle) aliased onto the shadcn `.dark` block;
+semantic tones (success/warning/error/info) keep their meaning in both
+modes via dark overrides (tinted `color-mix` backgrounds, lightened text).
+Status/category badges may carry semantic color (open=green,
+converted=blue…); identity/chrome is strictly neutral.
 
-Shared components live in `src/components/ui.tsx`: `Button` (variants
-primary/secondary/tertiary/destructive; sizes sm/md/lg; icon, loading
-spinner, href → anchor), `Drawer` (the ONE side panel: slides in from the
-right, exits with a leftward fade; header/body/footer; Esc + backdrop
-close; vetoable onClose for unsaved changes), `Section` (borderless
-grouping), `EmptyState` + `ModuleIllustration` (abstract line-art inked
-with the module accent). Record create/edit uses the Drawer (RecordForm).
+Shared components live in `src/components/ui.tsx` as **seams over shadcn**:
+`Button` (variants primary/secondary/tertiary/destructive mapping onto
+shadcn buttonVariants; all 8 shadcn sizes incl. icon/icon-sm/icon-lg),
+`Drawer` (wraps Sheet, side=right, `width="md"|"lg"` → `sm:max-w-xl/2xl`),
+`Section` (borderless grouping), `EmptyState` + `ModuleIllustration`
+(inked neutrally). Record create/edit uses the Drawer (RecordForm).
+Modal/dialog surfaces: `Modal` (shadcn Dialog), confirm via AlertDialog,
+prompts via Dialog. Toasts are sonner (`<Toaster />` in the root layout) —
+the legacy Toast.tsx provider was deleted; do not reintroduce it.
 
-Module accents: page roots carry `data-module` → ambient `--accent`,
-`--accent-soft`, `--accent-border` variables (leads green, contacts blue,
-accounts indigo, customers teal, opportunities amber, tasks violet,
-campaigns pink, emails cyan, reports/admin slate). Used subtly: highlights
-band, selected rows, board drag states, illustration ink, sidebar active
-item (mirrored hex map in Sidebar.tsx). Never large color fields.
+Radix constraints honored in code: SelectItem cannot carry an empty value
+— filter selects use sentinels (`__all__`/`__none__`/`__skip__`) translated
+in `onValueChange`; Radix Select/DropdownMenu open on pointerdown, so
+synthetic `.click()` won't open them in tests/automation; inline blur-close
+editors use the native select fallback (Radix focus portal fights
+blur-close).
+
+Form conventions (2026-09 enterprise pass): every form uses the shared
+primitives in `src/components/form.tsx` — `Field` (label + required marker
++ one-line help), `IconInput` (leading recognition icon: mail/shield/plug/
+users/building/tag/calendar), `FormSection` (titled group), `FormActions`
+(right-aligned footer), `FormError`. Placeholders are EXAMPLES ("e.g. Send
+follow-up proposal to Ada"), never label echoes. Helper text is rare —
+only format/consequence notes (password length, SMTP URL shape). Primary
+buttons always carry an icon. Main textareas support ⌘/Ctrl+Enter submit
+and show a character counter when length-capped. The ActivityComposer
+(record pages) and CommentsSection (work items) are the reference
+implementations of the premium comment experience.
+
+Module accents were REMOVED in the neutral migration (no per-module hue
+rules, no sidebar hex map). Do not re-add them; semantic tone classes are
+the only sanctioned color.
 
 Object-home engine: leads, contacts, accounts, customers, campaigns, AND
 tasks all render through `RecordListPage` + `RECORD_UI` (recordUi.ts). The
 four RECORD objects get the full surface (bulk, saved views, export, merge,
 inline status); campaigns/tasks get the same table/toolbar/footer/drawer
-experience gated to their permissions (no bulk/views/export — no API for
-them). Task semantics preserved: fixed due-date ordering (columns
-non-sortable), status/priority/due/ownership filters, Complete/Cancel/Reopen
-row actions, and record→tasks deep-links (?subjectType/…/edit=…) which
-override the restored session. Import-job history mirrors the same table
-experience (toolbar search, rows-per-page, showing-range footer, session
-persistence) via `listJobsPage`.
+experience with their own bulk actions (tasks: Complete/Cancel;
+campaigns: status change + delete — via `/api/{tasks,campaigns}/bulk`,
+looping the per-row service paths so permissions/visibility stay intact)
+and no views/export/merge. Task semantics preserved: status/priority/due/
+ownership filters, Complete/Cancel/Reopen row actions, and
+record→tasks deep-links (?subjectType/…/edit=…) which override the restored
+session. Import-job history mirrors the same table experience (toolbar
+search, rows-per-page, showing-range footer, session persistence) via
+`listJobsPage`.
+
+One table component: every list (record objects, campaigns, tasks, import
+jobs, admin statuses/custom-fields/audit/people, opportunities) renders
+through `src/components/table.tsx` (Table/THead/TBody/TR/TH/TD wrapping
+the shadcn table primitives, plus the legacy `.table` class for cell
+styling). Do not hand-roll `<table>` markup in feature components. The
+leads list defines the table LOOK — match it everywhere: wrap the table
+in `<div className="card table-responsive overflow-x-auto p-2 lg:p-0">`
+(the elevated shadow card, NOT the flat ring shadcn Card), give TH
+`px-3 py-2 font-medium`, TDs `px-3 py-2` (+ `whitespace-nowrap` /
+`tabular-nums` where fits), and render status/category/stage values as
+`<Badge className="badge badge-neutral">` filled neutral chips — never
+colored outline badges inside tables (semantic tones live on record
+pages and status panels, not list rows).
 
 Admin area: route-based (`/admin/*`) with a shared server layout — a
 grouped, permission-gated left rail (`.admin-rail`/`.admin-nav-*`:

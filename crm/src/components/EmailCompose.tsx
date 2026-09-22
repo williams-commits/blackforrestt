@@ -1,10 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { usePromptDialog } from "@/components/Dialogs";
 import { Icon } from "@/components/Icon";
+import { Modal } from "@/components/Modal";
+import { IconSelectTrigger } from "@/components/form";
 import { Button } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 type SubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
 
@@ -321,119 +326,119 @@ export function EmailCompose({
   }
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Compose email">
-      <div className="modal modal-lg overflow-hidden">
-        {/* Title bar */}
-        <div className="flex items-center justify-between border-b border-(--border-hairline) bg-(--bg-subtle) px-5 py-3">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold">{sent ? "Email sent" : "New email"}</h2>
-            <p className="truncate text-xs text-(--text-tertiary)">
-              {linked
-                ? "Linked to this record — it appears in the record's email history."
-                : "Unlinked send — visible in the shared mailbox to every EMAILS_VIEW holder."}
-            </p>
-          </div>
-          <button type="button" onClick={onClose} className="icon-button" aria-label="Close composer">
-            <Icon name="close" size={16} />
-          </button>
+    <>
+      <Modal title={sent ? "Email sent" : "New email"} onClose={onClose} size="xl" closeOnBackdrop={false}>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={linked ? "border-(--info-border) bg-(--info-bg) text-(--info)" : undefined}>
+            {linked ? "Linked to record" : "Shared mailbox"}
+          </Badge>
+          <p className="text-xs text-muted-foreground">
+            {linked
+              ? "Appears in the record's email history."
+              : "Visible to every EMAILS_VIEW holder."}
+          </p>
         </div>
 
         {/* SMTP warning */}
         {smtpConfigured === false ? (
-          <div role="alert" className="flex items-start gap-2 border-b border-(--warning-border) bg-(--warning-bg) px-5 py-3 text-sm text-(--warning)">
+          <div role="alert" className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2.5 text-sm text-foreground">
             <Icon name="alert" size={16} className="mt-0.5 shrink-0" />
             <span>
               <strong>SMTP is not configured.</strong> Sending is disabled — set{" "}
-              <code className="rounded bg-(--bg-subtle) px-1">SMTP_URL</code> (or ask an admin to add your personal SMTP) and reload.
+              <code className="rounded bg-background px-1 font-mono text-xs">SMTP_URL</code> (or ask an admin to add your personal SMTP) and reload.
             </span>
           </div>
         ) : null}
 
         {sent ? (
-          <div className="space-y-4 p-6">
-            <div className="flex items-center gap-2 rounded-md border border-(--success-border) bg-(--success-bg) p-3 text-sm text-(--success)">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 rounded-md border border-border bg-muted p-3 text-sm text-foreground">
               <span aria-hidden>✓</span> Email sent{createFollowUp && linked ? ` — follow-up task created for ${followUpInDays} day(s)` : ""}.
             </div>
             <div className="flex gap-2">
               {linked && subjectType ? (
-                <Link href={`/${RECORD_PATH[subjectType]}/${subjectId}`} className="btn btn-secondary">View record</Link>
+                <Button variant="secondary" href={`/${RECORD_PATH[subjectType]}/${subjectId}`}>View record</Button>
               ) : null}
-              <Link href="/emails" className="btn btn-primary">Open mailbox →</Link>
+              <Button variant="primary" href="/emails">Open mailbox →</Button>
               <Button variant="secondary" onClick={onClose} className="ml-auto">Close</Button>
             </div>
           </div>
         ) : (
           <form
             onSubmit={(event) => { event.preventDefault(); void send(); }}
-            className="space-y-4 p-5"
+            className="space-y-4"
           >
             {error ? (
-              <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p>
+              <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
             ) : null}
 
             {/* Recipients */}
-            <div className="divide-y divide-(--border-hairline) rounded-lg bg-(--bg-subtle)">
+            <div className="divide-y divide-border rounded-lg bg-muted">
               <div className="flex items-center gap-3 px-4 py-2.5">
-                <label htmlFor="ec-to" className="w-14 shrink-0 text-sm font-medium text-(--text-secondary)">To</label>
+                <label htmlFor="ec-to" className="w-14 shrink-0 text-sm font-medium text-muted-foreground">To</label>
+                <Icon name="mail" size={13} className="shrink-0 text-muted-foreground" />
                 <input
                   id="ec-to" type="email" value={to} required disabled={busy}
                   onChange={(event) => setTo(event.target.value)}
                   placeholder="recipient@example.com"
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none" autoFocus
+                  className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none" autoFocus
                 />
                 <div className="flex shrink-0 gap-2">
                   {!ccVisible ? (
-                    <button type="button" onClick={() => setCcVisible(true)} className="text-xs font-medium text-(--brand) hover:underline">Cc</button>
+                    <button type="button" onClick={() => setCcVisible(true)} className="text-xs font-medium text-foreground hover:underline">Cc</button>
                   ) : null}
                   {!bccVisible ? (
-                    <button type="button" onClick={() => setBccVisible(true)} className="text-xs font-medium text-(--brand) hover:underline">Bcc</button>
+                    <button type="button" onClick={() => setBccVisible(true)} className="text-xs font-medium text-foreground hover:underline">Bcc</button>
                   ) : null}
                 </div>
               </div>
               {ccVisible ? (
                 <div className="flex items-center gap-3 px-4 py-2">
-                  <label htmlFor="ec-cc" className="w-14 shrink-0 text-sm font-medium text-(--text-secondary)">Cc</label>
+                  <label htmlFor="ec-cc" className="w-14 shrink-0 text-sm font-medium text-muted-foreground">Cc</label>
+                  <Icon name="users" size={13} className="shrink-0 text-muted-foreground" />
                   <input
                     id="ec-cc" type="email" value={cc} disabled={busy}
                     onChange={(event) => setCc(event.target.value)}
                     placeholder="copy@example.com"
-                    className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none"
                   />
                   <button
                     type="button" aria-label="Close Cc field" disabled={busy}
                     onClick={() => { setCc(""); setCcVisible(false); }}
-                    className="text-sm text-(--text-tertiary) hover:text-(--error)"
+                    className="text-sm text-muted-foreground hover:text-destructive"
                   >×</button>
                 </div>
               ) : null}
               {bccVisible ? (
                 <div className="flex items-center gap-3 px-4 py-2">
-                  <label htmlFor="ec-bcc" className="w-14 shrink-0 text-sm font-medium text-(--text-secondary)">Bcc</label>
+                  <label htmlFor="ec-bcc" className="w-14 shrink-0 text-sm font-medium text-muted-foreground">Bcc</label>
+                  <Icon name="users" size={13} className="shrink-0 text-muted-foreground" />
                   <input
                     id="ec-bcc" type="email" value={bcc} disabled={busy}
                     onChange={(event) => setBcc(event.target.value)}
                     placeholder="blind-copy@example.com"
-                    className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none"
                   />
                   <button
                     type="button" aria-label="Close Bcc field" disabled={busy}
                     onClick={() => { setBcc(""); setBccVisible(false); }}
-                    className="text-sm text-(--text-tertiary) hover:text-(--error)"
+                    className="text-sm text-muted-foreground hover:text-destructive"
                   >×</button>
                 </div>
               ) : null}
               <div className="flex items-center gap-3 px-4 py-2.5">
-                <label htmlFor="ec-subject" className="w-14 shrink-0 text-sm font-medium text-(--text-secondary)">Subject</label>
+                <label htmlFor="ec-subject" className="w-14 shrink-0 text-sm font-medium text-muted-foreground">Subject</label>
+                <Icon name="tag" size={13} className="shrink-0 text-muted-foreground" />
                 <input
                   id="ec-subject" value={subject} required maxLength={300} disabled={busy}
                   onChange={(event) => setSubject(event.target.value)}
-                  className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none"
+                  className="min-w-0 flex-1 bg-transparent text-sm font-medium text-foreground outline-none"
                 />
               </div>
             </div>
 
             {/* Formatting toolbar */}
-            <div className="flex flex-wrap items-center gap-1 rounded-lg border border-(--border-default) bg-(--bg-subtle) p-1" role="toolbar" aria-label="Formatting">
+            <div className="flex flex-wrap items-center gap-1 rounded-lg border border-border bg-muted p-1" role="toolbar" aria-label="Formatting">
               {toolbarButtons.map((button) => {
                 const active = Boolean(activeCmds[button.cmd]);
                 return (
@@ -446,22 +451,23 @@ export function EmailCompose({
                     disabled={busy}
                     onMouseDown={(event) => { event.preventDefault(); }}
                     onClick={() => exec(button.cmd, button.value)}
-                    className={`min-w-8 rounded px-2 py-1 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                    className={cn(
+                      "min-w-8 rounded px-2 py-1 text-xs font-semibold transition-colors disabled:opacity-50",
                       active
-                        ? "bg-(--brand)/15 text-(--brand) ring-1 ring-(--brand)/40"
-                        : "text-(--text-secondary) hover:bg-(--bg-hover) hover:text-(--text-primary)"
-                    }`}
+                        ? "bg-background text-foreground ring-1 ring-border"
+                        : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
+                    )}
                   >
                     {button.label}
                   </button>
                 );
               })}
-              <span className="mx-1 h-4 w-px bg-(--border-strong)" aria-hidden />
+              <span className="mx-1 h-4 w-px bg-border" aria-hidden />
               <button
                 type="button" title="Insert link" aria-label="Insert link" disabled={busy}
                 onMouseDown={(event) => { event.preventDefault(); }}
                 onClick={() => insertLink()}
-                className="rounded px-2 py-1 text-xs font-semibold text-(--text-secondary) hover:bg-(--bg-hover) hover:text-(--text-primary) disabled:opacity-50"
+                className="rounded px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-background/60 hover:text-foreground disabled:opacity-50"
               >
                 Link
               </button>
@@ -469,14 +475,14 @@ export function EmailCompose({
                 type="button" title="Clear formatting" aria-label="Clear formatting" disabled={busy}
                 onMouseDown={(event) => { event.preventDefault(); }}
                 onClick={() => exec("removeFormat")}
-                className="rounded px-2 py-1 text-xs font-medium text-(--text-secondary) hover:bg-(--bg-hover) hover:text-(--text-primary) disabled:opacity-50"
+                className="rounded px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-background/60 hover:text-foreground disabled:opacity-50"
               >
                 Clear
               </button>
             </div>
 
             {/* Rich-text body */}
-            <div className="overflow-hidden rounded-lg border border-(--border-strong) focus-within:border-(--brand) focus-within:ring-2 focus-within:ring-(--brand)/20">
+            <div className="overflow-hidden rounded-lg border border-input focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
               <div
                 ref={editorRef}
                 contentEditable={!busy && !sent}
@@ -487,36 +493,41 @@ export function EmailCompose({
                 onInput={syncFromEditor}
                 onBlur={syncFromEditor}
                 data-empty={bodyText ? undefined : (toName ? `Hi ${toName.split(" ")[0]},` : "Write your message…")}
-                className="min-h-50 max-h-90 overflow-y-auto bg-(--bg-surface) px-4 py-3 text-sm leading-relaxed text-(--text-primary) outline-none empty:before:content-[attr(data-empty)] empty:before:text-(--text-tertiary) [&_a]:text-(--brand) [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-(--border-strong) [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
+                className="min-h-80 max-h-[26rem] overflow-y-auto bg-background px-4 py-3 text-sm leading-relaxed text-foreground outline-none empty:before:content-[attr(data-empty)] empty:before:text-muted-foreground [&_a]:text-foreground [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
               />
             </div>
-            <p className="text-right text-[11px] text-(--text-tertiary)">
+            <p className="text-right text-[11px] text-muted-foreground">
               {bodyText.length.toLocaleString()} / {MAX_BODY.toLocaleString()} characters · ⌘/Ctrl+Enter to send
             </p>
 
             {linked ? (
-              <div className="flex flex-wrap items-center gap-3 rounded-md bg-(--bg-subtle) px-3 py-2.5">
+              <div className="flex flex-wrap items-center gap-3 rounded-md bg-muted px-3 py-2.5">
                 <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox" checked={createFollowUp} disabled={busy}
-                    onChange={(event) => setCreateFollowUp(event.target.checked)}
+                  <Checkbox
+                    checked={createFollowUp} disabled={busy}
+                    onCheckedChange={(checked) => setCreateFollowUp(checked === true)}
                   />
                   Create follow-up task in
                 </label>
-                <select
-                  aria-label="Follow-up days" value={followUpInDays}
-                  onChange={(event) => setFollowUpInDays(parseInt(event.target.value, 10))}
-                  disabled={!createFollowUp || busy} className="input input-sm"
+                <Select
+                  value={String(followUpInDays)}
+                  onValueChange={(value) => setFollowUpInDays(parseInt(value, 10))}
+                  disabled={!createFollowUp || busy}
                 >
-                  {[1, 2, 3, 5, 7, 14, 30].map((days) => (
-                    <option key={days} value={days}>{days} day{days > 1 ? "s" : ""}</option>
-                  ))}
-                </select>
+                  <IconSelectTrigger size="sm" icon="list" className="h-7 w-fit text-xs" aria-label="Follow-up days">
+                    <SelectValue />
+                  </IconSelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 5, 7, 14, 30].map((days) => (
+                      <SelectItem key={days} value={String(days)}>{days} day{days > 1 ? "s" : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             ) : null}
 
-            <div className="flex items-center justify-between gap-2 border-t border-(--border-hairline) pt-4">
-              <p className="text-xs text-(--text-tertiary)">
+            <div className="flex items-center justify-between gap-2 border-t border-border pt-4">
+              <p className="text-xs text-muted-foreground">
                 {linked ? "Archived to this record's email history." : "Archived to the shared mailbox."}
               </p>
               <div className="flex gap-2">
@@ -528,8 +539,8 @@ export function EmailCompose({
             </div>
           </form>
         )}
-      </div>
+      </Modal>
       {linkDialog}
-    </div>
+    </>
   );
 }

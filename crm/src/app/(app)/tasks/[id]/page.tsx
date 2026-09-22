@@ -9,6 +9,7 @@ import { listTimeline } from "@/server/activity";
 import { Timeline } from "@/components/Timeline";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
 import { RecordPageTabs } from "@/components/RecordPageTabs";
+import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { CommentsSection } from "@/components/CommentsSection";
 import { TaskDetailActions } from "@/components/TaskDetailActions";
@@ -87,12 +88,26 @@ export default async function TaskDetailPage({ params }: PageProps) {
       </nav>
       <WorkspaceQuickNav backHref="/tasks" backLabel="Tasks list" />
 
+      <RecordWorkspaceTabs
+        type="tasks"
+        typeLabel="Tasks"
+        id={id}
+        label={task.title}
+        subtitle={[task.status.replaceAll("_", " ").toLowerCase(), task.priority.toLowerCase()].filter(Boolean).join(" · ")}
+        href={`/tasks/${id}`}
+      />
+
       <HighlightsPanel
         title={task.title}
         badge={{ label: task.status.replaceAll("_", " ").toLowerCase(), variant: STATUS_VARIANT[task.status] ?? "brand" }}
         fields={[
           { label: "Owner", value: task.owner.name },
-          { label: "Due", value: overdue ? `⚠ ${dueText}` : dueText || "—" },
+          {
+            label: "Due",
+            value: overdue ? (
+              <span style={{ color: "var(--error)" }}>Overdue — {dueText}</span>
+            ) : dueText || "—",
+          },
           { label: "Priority", value: task.priority.toLowerCase() },
           { label: "Recurrence", value: task.recurrence === "NONE" ? "—" : task.recurrence.toLowerCase() },
           { label: "Reminder", value: formatDateTime(task.reminderAt) || "—" },
@@ -106,30 +121,30 @@ export default async function TaskDetailPage({ params }: PageProps) {
           },
         ]}
       >
-        <TaskDetailActions taskId={task.id} status={task.status} canEdit={canEdit} />
+        <TaskDetailActions taskId={task.id} status={task.status} canEdit={canEdit} task={task} />
       </HighlightsPanel>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <RecordPageTabs
-          tabs={[
-            { key: "overview", label: "Overview" },
-            { key: "comments", label: `Comments (${comments.length})` },
-          ]}
-        >
-          <div className="card">
-            <div className="card-header"><h2 className="card-title">Task details</h2></div>
-            <div className="card-body">
-              <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label="Status" value={task.status.replaceAll("_", " ").toLowerCase()} />
-                <Field label="Completed" value={formatDateTime(task.completedAt) || "—"} />
-                <Field label="Created" value={formatDateTime(task.createdAt)} />
-                <Field label="Updated" value={formatDateTime(task.updatedAt)} />
-                <Field label="Owner email" value={task.owner.email} />
-                <Field label="Task ID" value={task.id} />
-              </dl>
-              <div className="mt-4">
-                <dt className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Viewers (view-only access)</dt>
-                <div className="mt-1.5">
+        <div className="min-w-0">
+          <RecordPageTabs
+            tabs={[
+              { key: "overview", label: "Overview" },
+              { key: "comments", label: "Comments", count: comments.length },
+            ]}
+          >
+            <section className="card">
+              <div className="card-header"><h2 className="card-title">Details</h2></div>
+              <div className="card-body space-y-4">
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+                  <Field label="Status" value={task.status.replaceAll("_", " ").toLowerCase()} />
+                  <Field label="Completed" value={formatDateTime(task.completedAt) || "—"} />
+                  <Field label="Created" value={formatDateTime(task.createdAt)} />
+                  <Field label="Updated" value={formatDateTime(task.updatedAt)} />
+                  <Field label="Owner email" value={task.owner.email} />
+                  <Field label="Task ID" value={task.id} />
+                </dl>
+                <div>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Viewers (view-only access)</p>
                   <TaskViewersPanel
                     taskId={task.id}
                     initialUsers={task.viewerUsers.map((entry) => entry.user)}
@@ -137,35 +152,38 @@ export default async function TaskDetailPage({ params }: PageProps) {
                     canManage={managesViewers}
                   />
                 </div>
+                {task.description ? (
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Description</p>
+                    <p className="whitespace-pre-wrap text-[13px] font-medium leading-relaxed" style={{ color: "var(--text-primary)" }}>
+                      {task.description}
+                    </p>
+                  </div>
+                ) : null}
               </div>
-              {task.description ? (
-                <div className="mt-4">
-                  <dt className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Description</dt>
-                  <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed font-medium" style={{ color: task.description ? "var(--text-primary)" : "var(--text-tertiary)" }}>
-                    {task.description}
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          </div>
-          <div className="card">
-            <div className="card-header"><h2 className="card-title">Comments</h2></div>
-            <div className="card-body">
-              <CommentsSection
-                subjectType="TASK"
-                subjectId={task.id}
-                initial={comments}
-                canComment={canComment}
-                canManage={canManageComments}
-                currentUserId={currentUserId}
-              />
-            </div>
-          </div>
-        </RecordPageTabs>
+            </section>
+            <section className="card">
+              <div className="card-header"><h2 className="card-title">Comments</h2></div>
+              <div className="card-body">
+                <CommentsSection
+                  subjectType="TASK"
+                  subjectId={task.id}
+                  initial={comments}
+                  canComment={canComment}
+                  canManage={canManageComments}
+                  currentUserId={currentUserId}
+                />
+              </div>
+            </section>
+          </RecordPageTabs>
+        </div>
 
-        <aside className="space-y-4">
+        <aside className="no-print">
           <div className="card sticky top-17">
-            <div className="card-header"><h2 className="card-title">Activity</h2></div>
+            <div className="card-header">
+              <h2 className="card-title">Timeline</h2>
+              <span className="badge badge-neutral">{events.length}</span>
+            </div>
             <div className="card-body max-h-150 overflow-y-auto">
               <Timeline events={events} />
             </div>

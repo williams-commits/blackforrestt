@@ -19,7 +19,7 @@ import { listCustomFields } from "@/server/records/customFields";
 import { RecordActivities } from "@/components/RecordActivities";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
-import { SendEmailButton } from "@/components/SendEmailButton";
+import { EmptyState } from "@/components/ui";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { getRecordCapabilities } from "@/lib/recordCapabilities";
@@ -143,11 +143,12 @@ export default async function ContactDetailPage({ params }: PageProps) {
           { label: "Phone", value: contact.phone },
         ]}
       >
-        <SendEmailButton subjectType="CONTACT" subjectId={id} email={contact.email} name={`${contact.firstName} ${contact.lastName}`} />
-        <RecordDetailActions object="contacts" row={contact as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} canAssign={canAssign} canChangeStatus={canChangeStatus} />
+        <RecordDetailActions object="contacts" row={contact as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} canAssign={canAssign} canChangeStatus={canChangeStatus} 
+          email={{ subjectType: "CONTACT", subjectId: id, to: contact.email, name: `${contact.firstName} ${contact.lastName}` }}
+        />
       </HighlightsPanel>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0">
           <RecordPageTabs
             tabs={[
@@ -183,12 +184,10 @@ export default async function ContactDetailPage({ params }: PageProps) {
             </div>
             <div className="card-body">
               {relatedOpportunities.length === 0 ? (
-                <div className="empty-state" style={{ padding: "var(--space-6)" }}>
-                  <p className="empty-state-title">No opportunities yet</p>
-                  <p className="empty-state-description">
-                    Deals linked to this contact or their account will appear here.
-                  </p>
-                </div>
+                <EmptyState
+                  title="No opportunities yet"
+                  description="Deals linked to this contact or their account will appear here."
+                />
               ) : (
                 <ul className="space-y-2">
                   {relatedOpportunities.map((opportunity) => (
@@ -239,10 +238,10 @@ export default async function ContactDetailPage({ params }: PageProps) {
               <AttachmentsPanel subjectType="CONTACT" subjectId={id} canUpload={canUpload} canDelete={canDeleteFiles} />
             </div>
           </section>
-                    {canViewEmails ? (
-            <RecordEmailHistory subjectType="CONTACT" subjectId={id} />
-          ) : null}
-        </RecordPageTabs>
+            {canViewEmails ? (
+              <RecordEmailHistory subjectType="CONTACT" subjectId={id} />
+            ) : null}
+          </RecordPageTabs>
         </div>
 
         <aside className="no-print">

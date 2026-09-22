@@ -4,6 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DuplicateHit } from "@/components/RecordForm";
 import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui";
+import { FormError } from "@/components/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 interface PreviewResponse {
   lead: {
@@ -94,19 +104,25 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
     }
   }
 
-  const radio = "mr-1";
-  const card = "rounded-md border border-(--border-default) p-3";
+  // Choice-card styling shared with the record merge modal — selected cards
+  // get the ring border + selected background; idle cards invite with a hover.
+  const choiceCard = (selected: boolean) =>
+    cn(
+      "flex cursor-pointer items-center gap-2 rounded-md border p-3 text-sm transition-colors",
+      selected ? "border-ring bg-(--bg-selected)" : "border-(--border-default) hover:border-ring",
+    );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8" role="dialog" aria-modal="true">
-      <div className="w-full max-w-xl space-y-4 rounded-lg border border-(--border-default) bg-(--bg-surface) text-(--text-primary) p-6 shadow-xl">
-        <div className="flex items-center justify-between"><h2 className="text-base font-semibold">Convert lead</h2><button type="button" onClick={onClose} className="icon-button" aria-label="Close conversion dialog"><Icon name="close" size={16} /></button></div>
+    <Dialog open onOpenChange={() => undefined}>
+      <DialogContent className="max-h-[85vh] gap-4 overflow-y-auto sm:max-w-xl" showCloseButton={false} aria-describedby={undefined}>
+        <DialogHeader className="flex flex-row items-center justify-between space-y-0">
+          <DialogTitle>Convert lead</DialogTitle>
+          <Button variant="tertiary" size="sm" className="w-7 px-0" onClick={onClose} aria-label="Close conversion dialog">
+            <Icon name="close" size={16} />
+          </Button>
+        </DialogHeader>
 
-        {error ? (
-          <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
-            {error}
-          </p>
-        ) : null}
+        <FormError message={error} />
 
         {!preview ? (
           <p className="text-sm text-(--text-tertiary)">{error ? "" : "Checking for duplicates…"}</p>
@@ -133,24 +149,27 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
             ) : null}
 
             <div className="space-y-3">
-              <div className={card}>
-                <p className="mb-2 text-sm font-medium">Contact</p>
-                <label className="mr-4 text-sm">
+              <div className="space-y-2">
+                <p className="flex items-center gap-1.5 text-sm font-medium">
+                  <Icon name="users" size={14} className="text-(--text-tertiary)" />
+                  Contact
+                </p>
+                <label className={choiceCard(contactChoice.mode === "create")}>
                   <input
                     type="radio"
                     name="contact-mode"
-                    className={radio}
+                    className="size-4"
                     checked={contactChoice.mode === "create"}
                     onChange={() => setContactChoice({ mode: "create" })}
                   />
                   Create new contact
                 </label>
                 {preview.matches.contacts.length > 0 ? (
-                  <label className="text-sm">
+                  <label className={choiceCard(contactChoice.mode === "link")}>
                     <input
                       type="radio"
                       name="contact-mode"
-                      className={radio}
+                      className="size-4"
                       checked={contactChoice.mode === "link"}
                       onChange={() =>
                         setContactChoice({ mode: "link", contactId: preview.matches.contacts[0]!.id })
@@ -164,118 +183,134 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
                 ) : null}
               </div>
 
-              <div className={card}>
-                <p className="mb-2 text-sm font-medium">Customer</p>
-                {(["none", "create"] as const).map((mode) => (
-                  <label key={mode} className="mr-4 text-sm">
-                    <input
-                      type="radio"
-                      name="customer-mode"
-                      className={radio}
-                      checked={customerChoice.mode === mode}
-                      onChange={() => setCustomerChoice({ mode } as CustomerChoice)}
-                    />
-                    {mode === "none" ? "Not now" : "Create customer"}
-                  </label>
-                ))}
-                {preview.matches.customers.length > 0 ? (
-                  <label className="text-sm">
-                    <input
-                      type="radio"
-                      name="customer-mode"
-                      className={radio}
-                      checked={customerChoice.mode === "link"}
-                      onChange={() =>
-                        setCustomerChoice({ mode: "link", customerId: preview.matches.customers[0]!.id })
-                      }
-                    />
-                    Link existing: {preview.matches.customers[0]!.label}
-                  </label>
-                ) : null}
+              <div className="space-y-2">
+                <p className="flex items-center gap-1.5 text-sm font-medium">
+                  <Icon name="heart" size={14} className="text-(--text-tertiary)" />
+                  Customer
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(["none", "create"] as const).map((mode) => (
+                    <label key={mode} className={choiceCard(customerChoice.mode === mode)}>
+                      <input
+                        type="radio"
+                        name="customer-mode"
+                        className="size-4"
+                        checked={customerChoice.mode === mode}
+                        onChange={() => setCustomerChoice({ mode } as CustomerChoice)}
+                      />
+                      {mode === "none" ? "Not now" : "Create customer"}
+                    </label>
+                  ))}
+                  {preview.matches.customers.length > 0 ? (
+                    <label className={choiceCard(customerChoice.mode === "link")}>
+                      <input
+                        type="radio"
+                        name="customer-mode"
+                        className="size-4"
+                        checked={customerChoice.mode === "link"}
+                        onChange={() =>
+                          setCustomerChoice({ mode: "link", customerId: preview.matches.customers[0]!.id })
+                        }
+                      />
+                      Link existing: {preview.matches.customers[0]!.label}
+                    </label>
+                  ) : null}
+                </div>
               </div>
 
-              <div className={card}>
-                <p className="mb-2 text-sm font-medium">Opportunity</p>
-                <label className="mr-4 text-sm">
-                  <input
-                    type="radio"
-                    name="opp-mode"
-                    className={radio}
-                    checked={opportunityChoice.mode === "create"}
-                    onChange={() => setOpportunityChoice({ mode: "create" })}
-                  />
-                  Create in default pipeline
-                </label>
-                <label className="text-sm">
-                  <input
-                    type="radio"
-                    name="opp-mode"
-                    className={radio}
-                    checked={opportunityChoice.mode === "none"}
-                    onChange={() => setOpportunityChoice({ mode: "none" })}
-                  />
-                  Not now
-                </label>
+              <div className="space-y-2">
+                <p className="flex items-center gap-1.5 text-sm font-medium">
+                  <Icon name="target" size={14} className="text-(--text-tertiary)" />
+                  Opportunity
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <label className={choiceCard(opportunityChoice.mode === "create")}>
+                    <input
+                      type="radio"
+                      name="opp-mode"
+                      className="size-4"
+                      checked={opportunityChoice.mode === "create"}
+                      onChange={() => setOpportunityChoice({ mode: "create" })}
+                    />
+                    Create in default pipeline
+                  </label>
+                  <label className={choiceCard(opportunityChoice.mode === "none")}>
+                    <input
+                      type="radio"
+                      name="opp-mode"
+                      className="size-4"
+                      checked={opportunityChoice.mode === "none"}
+                      onChange={() => setOpportunityChoice({ mode: "none" })}
+                    />
+                    Not now
+                  </label>
+                </div>
               </div>
 
               {preview.lead.company ? (
-                <div className={card}>
-                  <p className="mb-2 text-sm font-medium">Account</p>
-                  <label className="mr-4 text-sm">
-                    <input
-                      type="radio"
-                      name="account-mode"
-                      className={radio}
-                      checked={accountChoice.mode === "create"}
-                      onChange={() => setAccountChoice({ mode: "create" })}
-                    />
-                    Create “{preview.lead.company}”
-                  </label>
-                  <label className="text-sm">
-                    <input
-                      type="radio"
-                      name="account-mode"
-                      className={radio}
-                      checked={accountChoice.mode === "none"}
-                      onChange={() => setAccountChoice({ mode: "none" })}
-                    />
-                    Skip
-                  </label>
+                <div className="space-y-2">
+                  <p className="flex items-center gap-1.5 text-sm font-medium">
+                    <Icon name="building" size={14} className="text-(--text-tertiary)" />
+                    Account
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <label className={choiceCard(accountChoice.mode === "create")}>
+                      <input
+                        type="radio"
+                        name="account-mode"
+                        className="size-4"
+                        checked={accountChoice.mode === "create"}
+                        onChange={() => setAccountChoice({ mode: "create" })}
+                      />
+                      Create “{preview.lead.company}”
+                    </label>
+                    <label className={choiceCard(accountChoice.mode === "none")}>
+                      <input
+                        type="radio"
+                        name="account-mode"
+                        className="size-4"
+                        checked={accountChoice.mode === "none"}
+                        onChange={() => setAccountChoice({ mode: "none" })}
+                      />
+                      Skip
+                    </label>
+                  </div>
                 </div>
               ) : null}
             </div>
 
             {preview.matches.contacts.length > 0 || preview.matches.customers.length > 0 ? (
-              <label className="flex items-center gap-2 text-sm text-(--text-secondary)">
-                <input
-                  type="checkbox"
+              <div className="flex items-center gap-2 text-sm text-(--text-secondary)">
+                <Checkbox
+                  id="convert-force"
                   checked={force}
-                  onChange={(event) => setForce(event.target.checked)}
+                  onCheckedChange={(checked) => setForce(checked === true)}
                 />
-                Create anyway despite the possible duplicates above
-              </label>
+                <label htmlFor="convert-force" className="text-sm text-(--text-secondary)">
+                  Create anyway despite the possible duplicates above
+                </label>
+              </div>
             ) : null}
 
             <div className="flex justify-end gap-2 border-t border-(--border-default) pt-4">
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={onClose}
-                className="btn btn-secondary"
               >
                 Cancel
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="primary"
+                icon="check"
                 onClick={() => void convert()}
-                disabled={busy}
-                className="btn btn-primary"
+                loading={busy}
               >
-                {busy ? "Converting…" : "Convert"}
-              </button>
+                Convert
+              </Button>
             </div>
           </>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

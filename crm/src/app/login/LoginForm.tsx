@@ -5,10 +5,13 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui";
+import { Field, FormError, IconInput } from "@/components/form";
 
 /**
  * Staff sign-in — enterprise split layout: brand panel on the left,
- * form on the right. Clean, focused, no distraction.
+ * form on the right. Clean, focused, no distraction. Neutral palette —
+ * the brand panel is a quiet muted surface with a border, no gradient.
  */
 export function LoginForm() {
   const branding = useCrmBranding();
@@ -39,25 +42,16 @@ export function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: "var(--bg-app)" }}>
-      {/* Brand panel (desktop only) */}
-      <div
-        className="hidden w-2/5 flex-col justify-center px-12 lg:flex"
-        style={{
-          background: "linear-gradient(160deg, var(--brand-800) 0%, var(--brand-900) 100%)",
-          color: "var(--text-inverse)",
-        }}
-      >
+    <div className="flex min-h-screen bg-background">
+      {/* Brand panel (desktop only) — neutral */}
+      <div className="hidden w-2/5 flex-col justify-center border-r border-border bg-muted px-12 text-foreground lg:flex">
         <div className="flex items-center gap-3">
-          <span
-            className="flex h-12 w-12 items-center justify-center rounded-xl text-lg font-bold"
-            style={{ background: "rgba(255,255,255,0.15)" }}
-          >
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-background text-lg font-bold">
             {branding.logo}
           </span>
           <div>
             <h1 className="text-2xl font-bold">{branding.name}</h1>
-            <p className="text-sm opacity-75">Sales & relationship management</p>
+            <p className="text-sm text-muted-foreground">Sales & relationship management</p>
           </div>
         </div>
 
@@ -68,15 +62,12 @@ export function LoginForm() {
             { title: "Data you can trust", desc: "Deduplication, audit trails, and scoped access." },
           ].map((feature) => (
             <div key={feature.title} className="flex items-start gap-3">
-              <span
-                className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                style={{ background: "rgba(255,255,255,0.15)" }}
-              >
+              <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground">
                 <Icon name="check" size={12} strokeWidth={3} />
               </span>
               <div>
                 <p className="text-base font-semibold">{feature.title}</p>
-                <p className="text-sm opacity-70">{feature.desc}</p>
+                <p className="text-sm text-muted-foreground">{feature.desc}</p>
               </div>
             </div>
           ))}
@@ -84,86 +75,69 @@ export function LoginForm() {
       </div>
 
       {/* Form panel */}
-      <div className="flex flex-1 items-center justify-center p-6 lg:p-12">
+      <div className="flex flex-1 items-center justify-center bg-background p-6 lg:p-12">
         <div className="w-full max-w-sm">
           {/* Mobile brand */}
           <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <span
-              className="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold"
-              style={{ background: "var(--brand)", color: "var(--text-inverse)" }}
-            >
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
               {branding.logo}
             </span>
             <div>
-              <p className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>{branding.name}</p>
-              <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>Staff sign-in</p>
+              <p className="text-lg font-bold text-foreground">{branding.name}</p>
+              <p className="text-xs text-muted-foreground">Staff sign-in</p>
             </div>
           </div>
 
-          <h2
-            className="mb-1 text-xl font-bold lg:hidden"
-            style={{ color: "var(--text-primary)" }}
-          >
+          <h2 className="mb-1 text-xl font-bold text-foreground lg:hidden">
             Sign in
           </h2>
-          <p className="mb-6 text-sm" style={{ color: "var(--text-secondary)" }}>
+          <p className="mb-6 text-sm text-muted-foreground">
             Enter your credentials to access the CRM.
           </p>
 
           <form method="post" onSubmit={handleSubmit} className="space-y-4">
-            {error ? (
-              <div
-                className="input"
-                style={{
-                  background: "var(--error-bg)",
-                  borderColor: "var(--error-border)",
-                  color: "var(--error)",
-                }}
-                role="alert"
-              >
-                {error}
-              </div>
-            ) : null}
+            <FormError message={error} />
 
-            <div>
-              <label htmlFor="email" className="input-label">Email</label>
-              <input
+            <Field label="Email" required id="email">
+              <IconInput
                 id="email"
                 name="email"
+                icon="mail"
                 type="email"
                 autoComplete="email"
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="input"
-                style={{ width: "100%" }}
+                className="w-full"
                 placeholder="you@company.com"
               />
-            </div>
+            </Field>
 
-            <div>
-              <label htmlFor="password" className="input-label">Password</label>
-              <input
+            <Field label="Password" required id="password">
+              <IconInput
                 id="password"
                 name="password"
+                icon="shield"
                 type="password"
                 autoComplete="current-password"
                 required
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="input"
-                style={{ width: "100%" }}
+                className="w-full"
+                placeholder="••••••••"
               />
-            </div>
+            </Field>
 
-            <button
+            <Button
+              variant="primary"
+              size="lg"
               type="submit"
-              disabled={submitting}
-              className="btn btn-primary btn-lg w-full"
-              style={{ marginTop: "var(--space-4)" }}
+              icon="chevron_right"
+              loading={submitting}
+              className="mt-4 w-full"
             >
-              {submitting ? "Signing in…" : "Sign in"}
-            </button>
+              Sign in
+            </Button>
           </form>
         </div>
       </div>

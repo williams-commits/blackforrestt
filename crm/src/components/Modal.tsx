@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+import { XIcon } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 /**
- * Modal focus trap — accessible dialog behavior:
- * - Traps Tab/Shift+Tab within the modal
- * - ESC closes
- * - Click on backdrop closes
- * - Auto-focuses the first focusable element
- * - Restores focus to the trigger element on close
+ * Modal — now backed by shadcn/ui's Dialog (Radix). Same public API as the
+ * hand-rolled version: title, size, onClose, optional backdrop-close veto.
+ * Radix provides the focus trap, ESC handling, and restore. The close X is
+ * rendered here (not by DialogContent) so it always calls onClose directly —
+ * closeOnBackdrop={false} vetoes backdrop/ESC, never the X.
  */
 export function Modal({
   onClose,
@@ -18,111 +26,35 @@ export function Modal({
   closeOnBackdrop = true,
 }: {
   onClose: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
   title?: string;
   size?: "sm" | "md" | "lg" | "xl";
   closeOnBackdrop?: boolean;
 }) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const previouslyFocused = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    previouslyFocused.current = document.activeElement as HTMLElement;
-    // Focus the dialog itself (or first focusable)
-    const dialog = dialogRef.current;
-    if (dialog) {
-      const focusables = dialog.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusables.length > 0) {
-        focusables[0]!.focus();
-      } else {
-        dialog.focus();
-      }
-    }
-    return () => {
-      previouslyFocused.current?.focus();
-    };
-  }, []);
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-      if (event.key === "Tab") {
-        const dialog = dialogRef.current;
-        if (!dialog) return;
-        const focusables = Array.from(
-          dialog.querySelectorAll<HTMLElement>(
-            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-          )
-        ).filter((el) => el.offsetParent !== null); // visible only
-        if (focusables.length === 0) return;
-        const first = focusables[0]!;
-        const last = focusables[focusables.length - 1]!;
-        if (event.shiftKey) {
-          if (document.activeElement === first) {
-            event.preventDefault();
-            last.focus();
-          }
-        } else {
-          if (document.activeElement === last) {
-            event.preventDefault();
-            first.focus();
-          }
-        }
-      }
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
   const sizeClass =
-    size === "sm" ? "max-w-sm" :
-    size === "md" ? "max-w-lg" :
-    size === "lg" ? "max-w-2xl" :
-    "max-w-4xl";
-
+    size === "sm" ? "max-w-sm" : size === "md" ? "max-w-lg" : size === "lg" ? "max-w-2xl" : "max-w-4xl";
   return (
-    <div
-      className="modal-backdrop"
-      onClick={closeOnBackdrop ? onClose : undefined}
-      role="presentation"
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next && closeOnBackdrop) onClose();
+      }}
     >
-      <div
-        ref={dialogRef}
-        className={`modal ${sizeClass}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        tabIndex={-1}
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.stopPropagation();
-            onClose();
-          }
-        }}
-      >
-        {title ? (
-          <div className="modal-header">
-            <h2 className="modal-title">{title}</h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-lg"
-              style={{ color: "var(--text-tertiary)", background: "none", border: "none", cursor: "pointer" }}
-              aria-label="Close dialog"
-            >
-              ×
-            </button>
-          </div>
-        ) : null}
+      <DialogContent className={cn(sizeClass)} showCloseButton={false}>
+        <DialogHeader>
+          {title ? <DialogTitle>{title}</DialogTitle> : <DialogTitle className="sr-only">Dialog</DialogTitle>}
+          <DialogDescription className="sr-only">{title ?? "Dialog"}</DialogDescription>
+        </DialogHeader>
         {children}
-      </div>
-    </div>
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className="absolute top-2 right-2 inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+        >
+          <XIcon className="size-4" />
+        </button>
+      </DialogContent>
+    </Dialog>
   );
 }

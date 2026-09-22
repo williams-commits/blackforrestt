@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { notificationHref } from "@/lib/notificationLink";
 import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
+import { Button } from "@/components/ui";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface NotificationRow {
   id: string;
@@ -40,7 +42,6 @@ export function NotificationBell() {
   const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const knownIds = useRef<Set<string> | null>(null);
-  const toast = useToast();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -67,7 +68,7 @@ export function NotificationBell() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     void refresh();
@@ -113,39 +114,39 @@ export function NotificationBell() {
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
+      <Button
+        variant="tertiary"
+        size="icon"
         onClick={() => {
           setOpen((previous) => !previous);
           if (!open) void refresh();
         }}
-        className="relative flex h-8 w-8 items-center justify-center rounded-full border transition-colors hover:bg-(--bg-hover)"
-        style={{ borderColor: "var(--border-default)", color: "var(--text-tertiary)" }}
+        className="relative rounded-full text-muted-foreground"
         title={unread > 0 ? `${unread} unread notifications` : "Notifications"}
         aria-label={unread > 0 ? `${unread} unread notifications` : "Notifications"}
         aria-expanded={open}
         aria-haspopup="menu"
       >
         <Icon name="bell" size={16} />
-        {unread > 0 ? <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-(--error) px-1 text-[9px] font-bold leading-4 text-white">{unread > 99 ? "99+" : unread}</span> : null}
-      </button>
+        {unread > 0 ? <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-4 text-white">{unread > 99 ? "99+" : unread}</span> : null}
+      </Button>
 
       {open ? (
-        <div className="absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-(--border-default) bg-(--bg-surface) shadow-(--shadow-dropdown)" role="menu">
-          <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3">
-            <div><p className="text-sm font-semibold">Notifications</p><p className="text-[11px] text-(--text-tertiary)">{unread ? `${unread} unread` : "All caught up"}</p></div>
-            {unread > 0 ? <button type="button" onClick={() => void markAllRead()} className="text-[11px] font-semibold text-(--text-brand) hover:underline">Mark all read</button> : null}
+        <div className="absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-border bg-popover shadow-md" role="menu">
+          <div className="flex items-center justify-between border-b border-border bg-muted px-4 py-3">
+            <div><p className="text-sm font-semibold">Notifications</p><p className="text-[11px] text-muted-foreground">{unread ? `${unread} unread` : "All caught up"}</p></div>
+            {unread > 0 ? <button type="button" onClick={() => void markAllRead()} className="text-[11px] font-semibold hover:underline">Mark all read</button> : null}
           </div>
-          {loading && notifications.length === 0 ? <p className="px-4 py-6 text-center text-sm text-(--text-tertiary)">Checking for updates…</p> : notifications.length === 0 ? <p className="px-4 py-6 text-center text-sm text-(--text-tertiary)">Nothing new yet.</p> : (
+          {loading && notifications.length === 0 ? <p className="px-4 py-6 text-center text-sm text-muted-foreground">Checking for updates…</p> : notifications.length === 0 ? <p className="px-4 py-6 text-center text-sm text-muted-foreground">Nothing new yet.</p> : (
             <ul className="max-h-80 overflow-y-auto">
               {notifications.slice(0, 12).map((notification) => {
                 const href = notificationHref(notification);
-                const content = <><p className="text-xs font-semibold">{notificationTitle(notification)}</p><p className="mt-1 text-[10px] text-(--text-tertiary)">{new Date(notification.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p></>;
-                return <li key={notification.id} className={`border-b border-(--border-default) px-4 py-3 last:border-0 ${notification.readAt ? "text-(--text-secondary)" : "bg-(--bg-selected) text-(--text-primary)"}`}><Link href={href} onClick={() => setOpen(false)} className="block hover:opacity-75">{content}</Link></li>;
+                const content = <><p className="text-xs font-semibold">{notificationTitle(notification)}</p><p className="mt-1 text-[10px] text-muted-foreground">{new Date(notification.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p></>;
+                return <li key={notification.id} className={cn("border-b border-border px-4 py-3 last:border-0", notification.readAt ? "text-muted-foreground" : "bg-muted text-foreground")}><Link href={href} onClick={() => setOpen(false)} className="block hover:opacity-75">{content}</Link></li>;
               })}
             </ul>
           )}
-          <Link href="/notifications" onClick={() => setOpen(false)} className="block border-t border-(--border-default) px-4 py-2.5 text-center text-xs font-semibold text-(--text-brand) hover:bg-(--bg-hover)">View notification center</Link>
+          <Link href="/notifications" onClick={() => setOpen(false)} className="block border-t border-border px-4 py-2.5 text-center text-xs font-semibold hover:bg-muted">View notification center</Link>
         </div>
       ) : null}
     </div>

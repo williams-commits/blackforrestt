@@ -1,5 +1,7 @@
 "use client";
 
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 /**
  * Record page tab navigation — the Salesforce-style tab bar that sits
  * between the highlights panel and the content area. Tabs switch the
@@ -22,46 +24,28 @@ export function RecordTabs({
   onTabChange: (key: string) => void;
 }) {
   return (
-    <div
-      className="no-print sticky top-13 z-20 flex gap-0 overflow-x-auto border-b bg-(--bg-app)"
-      style={{ borderColor: "var(--border-default)" }}
-      role="tablist"
-      aria-label="Record sections"
-    >
-      {tabs.map((tab) => {
-        const active = tab.key === activeTab;
-        return (
-          <button
+    <Tabs value={activeTab} onValueChange={onTabChange}>
+      <TabsList
+        variant="line"
+        aria-label="Record sections"
+        className="no-print sticky top-13 z-20 h-auto w-full justify-start gap-0 overflow-x-auto rounded-none bg-(--bg-app) p-0"
+      >
+        {tabs.map((tab) => (
+          <TabsTrigger
             key={tab.key}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onTabChange(tab.key)}
-            className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium transition-colors"
-            style={{
-              color: active ? "var(--text-brand)" : "var(--text-secondary)",
-              borderBottom: active ? "2px solid var(--brand-600)" : "2px solid transparent",
-              background: active ? "var(--bg-selected)" : "transparent",
-              borderTopLeftRadius: "var(--radius-sm)",
-              borderTopRightRadius: "var(--radius-sm)",
-            }}
+            value={tab.key}
+            className="flex-none gap-1.5 px-4 py-2.5 text-[13px]"
           >
             {tab.label}
             {tab.count !== undefined && tab.count > 0 ? (
-              <span
-                className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
-                style={{
-                  background: active ? "var(--bg-selected)" : "var(--gray-100)",
-                  color: active ? "var(--text-brand)" : "var(--text-secondary)",
-                }}
-              >
+              <span className="rounded-full bg-(--gray-100) px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-(--text-secondary)">
                 {tab.count}
               </span>
             ) : null}
-          </button>
-        );
-      })}
-    </div>
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }
 

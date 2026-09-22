@@ -4,7 +4,7 @@ import { prisma } from "@/server/db";
 import { Sidebar } from "@/components/Sidebar";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { QuickActions } from "@/components/QuickActions";
-import { ToastProvider } from "@/components/Toast";
+import { Button } from "@/components/ui";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PageLoadingNotice } from "@/components/PageLoadingNotice";
@@ -39,7 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const avatarColor = avatarColors[user.name.length % avatarColors.length];
 
   return (
-    <ToastProvider>
+    <>
       <RealtimeBridge />
       <div className="flex min-h-screen" style={{ background: "var(--bg-app)" }}>
         <Sidebar />
@@ -85,13 +85,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </div>
 
             <form action={signOutAction}>
-              <button
+              <Button
                 type="submit"
-                className="btn btn-ghost text-[12px]"
+                variant="tertiary"
+                size="sm"
                 title="Sign out"
               >
                 Sign out
-              </button>
+              </Button>
             </form>
           </div>
         </header>
@@ -106,6 +107,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <PageLoadingNotice />
       </div>
     </div>
-    </ToastProvider>
+    </>
   );
 }

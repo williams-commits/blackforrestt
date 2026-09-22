@@ -2,6 +2,8 @@
  * Highlights panel — the Salesforce-signature colored strip at the top of
  * every record page showing the 4–6 most important fields at a glance.
  */
+import { Badge } from "@/components/ui/badge";
+
 export function HighlightsPanel({
   title,
   badge,
@@ -18,24 +20,22 @@ export function HighlightsPanel({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold" style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)", color: "var(--accent)" }}>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold" style={{ background: "color-mix(in srgb, var(--primary) 14%, transparent)", color: "var(--primary)" }}>
               {title.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase()}
             </span>
             <h1 className="highlights-title truncate">{title}</h1>
             {badge ? (
-              <span
-                className="status-pill"
-                style={{
-                  background:
-                    badge.variant === "success" ? "rgba(255,255,255,0.2)" :
-                    badge.variant === "warning" ? "rgba(255,255,255,0.15)" :
-                    "rgba(255,255,255,0.12)",
-                  color: "#fff",
-                  fontSize: "11px",
-                }}
+              <Badge
+                className={`border-transparent text-white text-[11px] ${
+                  badge.variant === "success"
+                    ? "bg-white/20"
+                    : badge.variant === "warning"
+                      ? "bg-white/15"
+                      : "bg-white/12"
+                }`}
               >
                 {badge.label}
-              </span>
+              </Badge>
             ) : null}
           </div>
           {fields.length > 0 ? (

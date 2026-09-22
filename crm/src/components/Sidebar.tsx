@@ -5,29 +5,15 @@ import { Icon } from "@/components/Icon";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
 interface NavItem {
   href: string;
   label: string;
   icon: string;
-  /** Module accent key — the active item takes this hue (see globals.css). */
-  module?: string;
 }
-
-/** Same restrained hues as [data-module] in globals.css, mirrored for the
- * sidebar's inline active-state (the sidebar sits outside page roots). */
-const MODULE_ACCENT_HEX: Record<string, string> = {
-  leads: "#15803d",
-  contacts: "#2563eb",
-  accounts: "#4f46e5",
-  customers: "#0d9488",
-  opportunities: "#b45309",
-  campaigns: "#be185d",
-  tasks: "#7c3aed",
-  emails: "#0e7490",
-  reports: "#475569",
-  admin: "#334155",
-};
 
 const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
   {
@@ -37,38 +23,38 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
   {
     label: "Sales",
     items: [
-      { href: "/leads", label: "Leads", icon: "target", module: "leads" },
-      { href: "/contacts", label: "Contacts", icon: "users", module: "contacts" },
-      { href: "/accounts", label: "Accounts", icon: "building", module: "accounts" },
-      { href: "/customers", label: "Customers", icon: "heart", module: "customers" },
+      { href: "/leads", label: "Leads", icon: "target" },
+      { href: "/contacts", label: "Contacts", icon: "users" },
+      { href: "/accounts", label: "Accounts", icon: "building" },
+      { href: "/customers", label: "Customers", icon: "heart" },
     ],
   },
   {
     label: "Pipeline",
     items: [
-      { href: "/opportunities", label: "Opportunities", icon: "trending", module: "opportunities" },
-      { href: "/campaigns", label: "Campaigns", icon: "megaphone", module: "campaigns" },
+      { href: "/opportunities", label: "Opportunities", icon: "trending" },
+      { href: "/campaigns", label: "Campaigns", icon: "megaphone" },
     ],
   },
   {
     label: "Work",
     items: [
-      { href: "/tasks", label: "Tasks", icon: "square_check", module: "tasks" },
-      { href: "/emails", label: "Emails", icon: "mail", module: "emails" },
+      { href: "/tasks", label: "Tasks", icon: "square_check" },
+      { href: "/emails", label: "Emails", icon: "mail" },
       { href: "/imports", label: "Import", icon: "upload" },
     ],
   },
   {
     label: "Insights",
     items: [
-      { href: "/reports", label: "Reports", icon: "chart", module: "reports" },
+      { href: "/reports", label: "Reports", icon: "chart" },
       { href: "/search", label: "Search", icon: "search" },
       { href: "/docs", label: "Documentation", icon: "file" },
     ],
   },
   {
     label: "System",
-    items: [{ href: "/admin", label: "Administration", icon: "settings", module: "admin" }],
+    items: [{ href: "/admin", label: "Administration", icon: "settings" }],
   },
 ];
 
@@ -79,41 +65,24 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
       {NAV_SECTIONS.map((section, sectionIndex) => (
         <div key={sectionIndex} className={sectionIndex > 0 ? "mt-3" : ""}>
           {section.label ? (
-            <p
-              className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider"
-              style={{ color: "var(--text-tertiary)" }}
-            >
+            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {section.label}
             </p>
           ) : null}
           {section.items.map((item) => {
             const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-            // Active items carry their module's accent — subtle identity,
-            // the same hues the page itself uses.
-            const accent = active && item.module ? (MODULE_ACCENT_HEX[item.module] ?? "var(--brand-700)") : null;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors"
-                style={{
-                  color: active ? (accent ?? "var(--text-brand)") : "var(--text-secondary)",
-                  background: active
-                    ? accent
-                      ? `color-mix(in srgb, ${accent} 9%, transparent)`
-                      : "var(--bg-selected)"
-                    : "transparent",
-                  boxShadow: active && accent ? `inset 2.5px 0 0 ${accent}` : undefined,
-                  fontWeight: active ? 600 : 500,
-                }}
-                onMouseEnter={(event) => {
-                  if (!active) event.currentTarget.style.background = "var(--bg-hover)";
-                }}
-                onMouseLeave={(event) => {
-                  if (!active) event.currentTarget.style.background = "transparent";
-                }}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] transition-colors",
+                  active
+                    ? "bg-muted font-semibold text-foreground"
+                    : "font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                )}
               >
                 <Icon name={item.icon} size={16} />
                 <span>{item.label}</span>
@@ -126,91 +95,75 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function SidebarShell({ onNavigate }: { onNavigate?: () => void }) {
+  const branding = useCrmBranding();
+  return (
+    <>
+      {/* Brand header */}
+      <div className="flex h-13 shrink-0 items-center justify-between border-b border-border px-4">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
+            {branding.logo}
+          </span>
+          <div>
+            <p className="text-[14px] font-bold leading-tight text-foreground">
+              {branding.name}
+            </p>
+            <p className="text-[10px] font-medium leading-tight text-muted-foreground">
+              CRM
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <NavList onNavigate={onNavigate} />
+
+      {/* Footer */}
+      <div className="border-t border-border px-4 py-3">
+        <p className="text-[10px] text-muted-foreground">
+          {branding.name} v0.1
+        </p>
+      </div>
+    </>
+  );
+}
+
 /**
  * Enterprise sidebar: fixed icon+label rail on desktop with section headers;
- * off-canvas drawer on mobile with backdrop and animation.
+ * shadcn Sheet (side="left") on mobile with backdrop and animation. Neutral
+ * identity — the active item is a muted background with foreground text,
+ * no per-module accent hues.
  */
 export function Sidebar() {
-  const branding = useCrmBranding();
   const [open, setOpen] = useState(false);
   return (
     <>
       {/* Mobile toggle */}
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="icon"
         aria-label="Open navigation"
         onClick={() => setOpen(true)}
-        className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded-lg border lg:hidden"
-        style={{
-          borderColor: "var(--border-default)",
-          background: "var(--bg-surface)",
-          color: "var(--text-secondary)",
-        }}
+        className="fixed left-3 top-3 z-40 lg:hidden"
       >
         <Icon name="menu" size={18} />
-      </button>
+      </Button>
 
-      {/* Backdrop */}
-      {open ? (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] lg:hidden"
-          onClick={() => setOpen(false)}
-          aria-hidden
-        />
-      ) : null}
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r transition-transform duration-200 ease-out lg:static lg:translate-x-0 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-        style={{
-          borderColor: "var(--border-default)",
-          background: "var(--bg-surface)",
-        }}
-      >
-        {/* Brand header */}
-        <div
-          className="flex h-13 items-center justify-between border-b px-4"
-          style={{ borderColor: "var(--border-default)" }}
+      {/* Mobile off-canvas drawer */}
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent
+          side="left"
+          className="w-60 gap-0 p-0 sm:max-w-60"
+          aria-label="Primary navigation"
         >
-          <div className="flex items-center gap-2.5">
-            <span
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold"
-              style={{ background: "var(--brand)", color: "var(--text-inverse)" }}
-            >
-              {branding.logo}
-            </span>
-            <div>
-              <p className="text-[14px] font-bold leading-tight" style={{ color: "var(--text-primary)" }}>
-                {branding.name}
-              </p>
-              <p className="text-[10px] font-medium leading-tight" style={{ color: "var(--text-tertiary)" }}>
-                CRM
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            aria-label="Close navigation"
-            onClick={() => setOpen(false)}
-            className="icon-button lg:hidden"
-          >
-            <Icon name="close" size={16} />
-          </button>
-        </div>
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <SidebarShell onNavigate={() => setOpen(false)} />
+        </SheetContent>
+      </Sheet>
 
-        <NavList onNavigate={() => setOpen(false)} />
-
-        {/* Footer */}
-        <div
-          className="border-t px-4 py-3"
-          style={{ borderColor: "var(--border-default)" }}
-        >
-          <p className="text-[10px] text-(--text-tertiary)">
-            {branding.name} v0.1
-          </p>
-        </div>
+      {/* Desktop rail */}
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-background lg:flex">
+        <SidebarShell />
       </aside>
     </>
   );

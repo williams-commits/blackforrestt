@@ -3,7 +3,11 @@
 import { useState } from "react";
 import type { Pipeline } from "@/components/OpportunitiesPage";
 import { useConfirmDialog } from "@/components/Dialogs";
-import { Icon } from "@/components/Icon";
+import { Modal } from "@/components/Modal";
+import { FormError, IconInput, IconSelectTrigger } from "@/components/form";
+import { Button } from "@/components/ui";
+import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 
 export function PipelineAdmin({
   pipelines,
@@ -31,168 +35,171 @@ export function PipelineAdmin({
     return true;
   }
 
-  const inputClass = "rounded-md border border-(--border-strong) px-2 py-1 text-sm";
-
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-8" role="dialog" aria-modal="true">
-      <div className="w-full max-w-2xl space-y-4 rounded-lg border border-(--border-default) bg-(--bg-surface) text-(--text-primary) p-6 shadow-xl">
-        <div className="flex items-center justify-between"><h2 className="text-base font-semibold">Manage pipelines</h2><button type="button" onClick={onClose} className="icon-button" aria-label="Close pipeline manager"><Icon name="close" size={16} /></button></div>
-        {error ? (
-          <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
-            {error}
-          </p>
-        ) : null}
+    <>
+      <Modal title="Manage pipelines" onClose={onClose} size="lg">
+        <div className="space-y-4">
+          <div><p className="form-section-title">Pipelines & stages</p><p className="form-section-help">Add stages to each pipeline, or create a new pipeline at the bottom.</p></div>
+          <FormError message={error} />
 
-        {pipelines.map((pipeline) => (
-          <div key={pipeline.id} className="card" style={{ padding: "var(--space-3)" }}>
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-semibold">
-                {pipeline.name}
-                {pipeline.isDefault ? " ★ default" : ""}
-              </p>
-              <div className="flex gap-2 text-xs">
-                {!pipeline.isDefault ? (
-                  <button
-                    type="button"
-                    onClick={() => void call(`/api/pipelines/${pipeline.id}`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ isDefault: true }),
-                    })}
-                    className="text-(--brand) hover:underline"
-                  >
-                    Make default
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const ok = await confirm({
-                      title: `Delete pipeline “${pipeline.name}”?`,
-                      message: "The pipeline and all of its stages will be removed. Opportunities referencing its stages may become invalid.",
-                      confirmLabel: "Delete pipeline",
-                      destructive: true,
-                    });
-                    if (ok) {
-                      void call(`/api/pipelines/${pipeline.id}`, { method: "DELETE" });
-                    }
-                  }}
-                  className="text-(--error) hover:underline"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-            <ul className="mb-2 space-y-1">
-              {pipeline.stages.map((stage) => (
-                <li key={stage.id} className="flex items-center justify-between text-sm">
-                  <span>
-                    {stage.name}{" "}
-                    <span className="text-xs text-(--text-tertiary)">
-                      {stage.probability}% · {stage.type.toLowerCase()}
-                    </span>
-                  </span>
+          {pipelines.map((pipeline) => (
+            <Card key={pipeline.id} className="gap-0 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-semibold">
+                  {pipeline.name}
+                  {pipeline.isDefault ? " ★ default" : ""}
+                </p>
+                <div className="flex gap-2 text-xs">
+                  {!pipeline.isDefault ? (
+                    <button
+                      type="button"
+                      onClick={() => void call(`/api/pipelines/${pipeline.id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ isDefault: true }),
+                      })}
+                      className="text-(--brand) hover:underline"
+                    >
+                      Make default
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={async () => {
                       const ok = await confirm({
-                        title: `Delete stage “${stage.name}”?`,
-                        message: "The stage will be removed from this pipeline.",
-                        confirmLabel: "Delete stage",
+                        title: `Delete pipeline “${pipeline.name}”?`,
+                        message: "The pipeline and all of its stages will be removed. Opportunities referencing its stages may become invalid.",
+                        confirmLabel: "Delete pipeline",
                         destructive: true,
                       });
                       if (ok) {
-                        void call(`/api/pipelines/${pipeline.id}/stages/${stage.id}`, { method: "DELETE" });
+                        void call(`/api/pipelines/${pipeline.id}`, { method: "DELETE" });
                       }
                     }}
-                    className="text-xs text-(--error) hover:underline"
+                    className="text-(--error) hover:underline"
                   >
-                    remove
+                    Delete
                   </button>
-                </li>
-              ))}
-            </ul>
-            <form
-              className="flex items-center gap-2"
-              onSubmit={async (event) => {
-                event.preventDefault();
-                const draft = stageDraft[pipeline.id];
-                if (!draft?.name) return;
-                const ok = await call(`/api/pipelines/${pipeline.id}/stages`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ name: draft.name, type: draft.type ?? "OPEN", probability: 50 }),
-                });
-                if (ok) setStageDraft((prev) => ({ ...prev, [pipeline.id]: { name: "", type: "OPEN" } }));
-              }}
-            >
-              <input
-                aria-label={`New stage for ${pipeline.name}`}
-                placeholder="New stage name"
-                value={stageDraft[pipeline.id]?.name ?? ""}
-                onChange={(event) =>
-                  setStageDraft((prev) => ({
-                    ...prev,
-                    [pipeline.id]: { name: event.target.value, type: prev[pipeline.id]?.type ?? "OPEN" },
-                  }))
-                }
-                className={`${inputClass} flex-1`}
-              />
-              <select
-                aria-label="Stage type"
-                value={stageDraft[pipeline.id]?.type ?? "OPEN"}
-                onChange={(event) =>
-                  setStageDraft((prev) => ({
-                    ...prev,
-                    [pipeline.id]: { name: prev[pipeline.id]?.name ?? "", type: event.target.value },
-                  }))
-                }
-                className={inputClass}
+                </div>
+              </div>
+              <ul className="mb-2 space-y-1">
+                {pipeline.stages.map((stage) => (
+                  <li key={stage.id} className="flex items-center justify-between text-sm">
+                    <span>
+                      {stage.name}{" "}
+                      <span className="text-xs text-(--text-tertiary)">
+                        {stage.probability}% · {stage.type.toLowerCase()}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: `Delete stage “${stage.name}”?`,
+                          message: "The stage will be removed from this pipeline.",
+                          confirmLabel: "Delete stage",
+                          destructive: true,
+                        });
+                        if (ok) {
+                          void call(`/api/pipelines/${pipeline.id}/stages/${stage.id}`, { method: "DELETE" });
+                        }
+                      }}
+                      className="text-xs text-(--error) hover:underline"
+                    >
+                      remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <form
+                className="flex items-center gap-2"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  const draft = stageDraft[pipeline.id];
+                  if (!draft?.name) return;
+                  const ok = await call(`/api/pipelines/${pipeline.id}/stages`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: draft.name, type: draft.type ?? "OPEN", probability: 50 }),
+                  });
+                  if (ok) setStageDraft((prev) => ({ ...prev, [pipeline.id]: { name: "", type: "OPEN" } }));
+                }}
               >
-                <option value="OPEN">Open</option>
-                <option value="WON">Won</option>
-                <option value="LOST">Lost</option>
-              </select>
-              <button type="submit" className="rounded-md border border-(--border-strong) px-2 py-1 text-xs font-medium hover:bg-(--bg-hover)">
-                Add stage
-              </button>
-            </form>
+                <div className="flex-1">
+                  <IconInput
+                    aria-label={`New stage for ${pipeline.name}`}
+                    icon="tag"
+                    placeholder="e.g. Negotiation"
+                    value={stageDraft[pipeline.id]?.name ?? ""}
+                    onChange={(event) =>
+                      setStageDraft((prev) => ({
+                        ...prev,
+                        [pipeline.id]: { name: event.target.value, type: prev[pipeline.id]?.type ?? "OPEN" },
+                      }))
+                    }
+                  />
+                </div>
+                <Select
+                  value={stageDraft[pipeline.id]?.type ?? "OPEN"}
+                  onValueChange={(value) =>
+                    setStageDraft((prev) => ({
+                      ...prev,
+                      [pipeline.id]: { name: prev[pipeline.id]?.name ?? "", type: value },
+                    }))
+                  }
+                >
+                  <IconSelectTrigger aria-label="Stage type" icon="tag" wrapperClassName="w-24">
+                    <SelectValue />
+                  </IconSelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="OPEN">Open</SelectItem>
+                    <SelectItem value="WON">Won</SelectItem>
+                    <SelectItem value="LOST">Lost</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button type="submit" variant="secondary" size="sm" icon="plus">
+                  Add stage
+                </Button>
+              </form>
+            </Card>
+          ))}
+
+          <form
+            className="flex items-center gap-2 border-t border-(--border-default) pt-4"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (!pipelineName) return;
+              const ok = await call("/api/pipelines", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: pipelineName }),
+              });
+              if (ok) setPipelineName("");
+            }}
+          >
+            <div className="flex-1">
+              <IconInput
+                aria-label="New pipeline name"
+                icon="tag"
+                placeholder="e.g. Enterprise deals"
+                value={pipelineName}
+                onChange={(event) => setPipelineName(event.target.value)}
+              />
+            </div>
+            <Button type="submit" variant="primary" icon="plus">
+              Add pipeline
+            </Button>
+          </form>
+
+          <div className="form-actions">
+            <Button variant="secondary" onClick={onClose}>
+              Close
+            </Button>
           </div>
-        ))}
-
-        <form
-          className="flex items-center gap-2 border-t border-(--border-default) pt-4"
-          onSubmit={async (event) => {
-            event.preventDefault();
-            if (!pipelineName) return;
-            const ok = await call("/api/pipelines", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ name: pipelineName }),
-            });
-            if (ok) setPipelineName("");
-          }}
-        >
-          <input
-            aria-label="New pipeline name"
-            placeholder="New pipeline name"
-            value={pipelineName}
-            onChange={(event) => setPipelineName(event.target.value)}
-            className={`${inputClass} flex-1`}
-          />
-          <button type="submit" className="btn btn-primary">
-            Add pipeline
-          </button>
-        </form>
-
-        <div className="flex justify-end border-t border-(--border-default) pt-4">
-          <button type="button" onClick={onClose} className="btn btn-secondary">
-            Close
-          </button>
         </div>
-      </div>
+      </Modal>
 
       {confirmDialog}
-    </div>
+    </>
   );
 }

@@ -1,11 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-type RecordWorkspaceType = "leads" | "contacts" | "accounts" | "customers" | "opportunities";
+type RecordWorkspaceType = "leads" | "contacts" | "accounts" | "customers" | "opportunities" | "tasks" | "campaigns";
 
 interface WorkspaceTab {
   id: string;
@@ -25,7 +32,7 @@ function storageKey(type: RecordWorkspaceType) {
 }
 
 function removeOldStoredTabs() {
-  for (const type of ["leads", "contacts", "accounts", "customers", "opportunities"] satisfies RecordWorkspaceType[]) {
+  for (const type of ["leads", "contacts", "accounts", "customers", "opportunities", "tasks", "campaigns"] satisfies RecordWorkspaceType[]) {
     localStorage.removeItem(`${OLD_STORAGE_PREFIX}:${type}`);
   }
 }
@@ -73,8 +80,6 @@ export function RecordWorkspaceTabs({
 }) {
   const router = useRouter();
   const [tabs, setTabs] = useState<WorkspaceTab[]>([]);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     removeOldStoredTabs();
@@ -85,16 +90,11 @@ export function RecordWorkspaceTabs({
   }, [id, label, subtitle, type]);
 
   useEffect(() => {
-    function onClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setMenuOpen(false);
-    }
     function onStorage(event: StorageEvent) {
       if (event.key === storageKey(type)) setTabs(readTabs(type));
     }
-    document.addEventListener("mousedown", onClickOutside);
     window.addEventListener("storage", onStorage);
     return () => {
-      document.removeEventListener("mousedown", onClickOutside);
       window.removeEventListener("storage", onStorage);
     };
   }, [type]);
@@ -111,7 +111,6 @@ export function RecordWorkspaceTabs({
   function clearTabs() {
     writeTabs(type, []);
     setTabs([]);
-    setMenuOpen(false);
   }
 
   return (
@@ -121,46 +120,35 @@ export function RecordWorkspaceTabs({
           <p className="record-workspace-tabs-eyebrow">Open {typeLabel}</p>
           <p className="record-workspace-tabs-count">{tabs.length} quick tab{tabs.length === 1 ? "" : "s"}</p>
         </div>
-        <div ref={menuRef} className="relative">
-          <button
-            type="button"
+        <DropdownMenu>
+          <DropdownMenuTrigger
             className="record-workspace-tabs-menu"
-            onClick={() => setMenuOpen((open) => !open)}
             aria-label={`${typeLabel} tab actions`}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
             title={`${typeLabel} tab actions`}
           >
             <Icon name="more" size={16} />
-          </button>
-          {menuOpen ? (
-            <div className="record-workspace-tabs-dropdown" role="menu">
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  removeTab(id);
-                  setMenuOpen(false);
-                }}
-              >
-                Close current tab
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  clearTabs();
-                  router.push(`/${type}`);
-                }}
-              >
-                Clear and go back
-              </button>
-              <button type="button" role="menuitem" onClick={clearTabs}>
-                Clear all {typeLabel.toLowerCase()} tabs
-              </button>
-            </div>
-          ) : null}
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem
+              onSelect={() => {
+                removeTab(id);
+              }}
+            >
+              Close current tab
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => {
+                clearTabs();
+                router.push(`/${type}`);
+              }}
+            >
+              Clear and go back
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={clearTabs}>
+              Clear all {typeLabel.toLowerCase()} tabs
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* tab-strip wraps by default; quick tabs stay on one scrolling row */}
@@ -173,9 +161,10 @@ export function RecordWorkspaceTabs({
                 <span className="record-workspace-tab-title">{tab.label}</span>
                 {tab.subtitle ? <span className="record-workspace-tab-subtitle">{tab.subtitle}</span> : null}
               </Link>
-              <button
-                type="button"
-                className="icon-button shrink-0 self-center"
+              <Button
+                variant="tertiary"
+                size="sm"
+                className="w-7 shrink-0 self-center px-0"
                 onClick={(event) => {
                   event.preventDefault();
                   removeTab(tab.id);
@@ -184,7 +173,7 @@ export function RecordWorkspaceTabs({
                 title={`Close ${tab.label}`}
               >
                 <Icon name="close" size={14} />
-              </button>
+              </Button>
             </div>
           );
         })}

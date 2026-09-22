@@ -6,7 +6,12 @@ import { Modal } from "@/components/Modal";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { SmartTips } from "@/components/SmartTips";
 import { Button, EmptyState, Section } from "@/components/ui";
-import { Icon } from "@/components/Icon";
+import { Card, CardContent } from "@/components/ui/card";
+import { Field, FormActions, IconInput, IconSelectTrigger } from "@/components/form";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 interface ReportMeta {
@@ -30,17 +35,15 @@ function money(minor: number | null): string {
   });
 }
 
-/* Restrained categorical ramp for the donut + legend: module accent hues
-   (slate, cyan, sage…) flattened toward a common mid gray so every slice
-   stays legible on white surfaces AND dark surfaces. Same S/L band, spread
-   hues — harmonized by construction, not by luck. */
+/* Neutral categorical ramp for the donut + legend: the theme's chart tokens
+   (grays from light to dark) keep every slice legible on light and dark
+   surfaces without module accent hues. */
 const PIE_COLORS = [
-  "#64748b", // slate — the reports accent family
-  "#5c8494", // steel cyan (emails accent, desaturated)
-  "#5f8a74", // sage green
-  "#a98a6b", // muted bronze
-  "#8a82ac", // dusty violet
-  "#a57a85", // dusty rose
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
 ];
 
 const OBJECTS = ["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY", "TASK"] as const;
@@ -68,6 +71,10 @@ const GROUP_KEYS: Record<string, string[]> = {
   OPPORTUNITY: ["stageName", "pipelineName", "owner", "status", "createdAt", "closedAt", "expectedCloseAt"],
   TASK: ["owner", "status", "priority", "createdAt", "dueAt", "completedAt"],
 };
+
+/** shadcn Select items cannot carry an empty string value — sentinel for
+ *  "no time bucket" (group by the raw field value instead). */
+const NO_BUCKET = "__all__";
 
 export function ReportsPage() {
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -167,7 +174,7 @@ export function ReportsPage() {
     ];
   })();
   const pieGradient = (() => {
-    if (totalCount <= 0 || pieRows.length === 0) return "conic-gradient(var(--bg-subtle) 0deg 360deg)";
+    if (totalCount <= 0 || pieRows.length === 0) return "conic-gradient(var(--muted) 0deg 360deg)";
     let cursor = 0;
     return `conic-gradient(${pieRows
       .map((row, index) => {
@@ -195,100 +202,121 @@ export function ReportsPage() {
 
       {builderOpen ? (
         <Modal title="Build a report" onClose={() => setBuilderOpen(false)} size="lg">
-        <div className="space-y-4 p-5">
+        <div className="space-y-4">
           <div><p className="form-section-title">Report definition</p><p className="form-section-help">Choose the object, time field, grouping, and bucket for your analysis.</p></div>
-          <div>
-            <label htmlFor="b-object" className="form-label">Object</label>
-            <select id="b-object" value={bObject} onChange={(e) => { setBObject(e.target.value); setBDateField(DATE_FIELDS[e.target.value][0]); setBGroup(GROUP_KEYS[e.target.value][0]); }} className="input">
-              {OBJECTS.map((object) => <option key={object} value={object}>{object.toLowerCase()}</option>)}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="b-date" className="form-label">Date field</label>
-            <select id="b-date" value={bDateField} onChange={(e) => setBDateField(e.target.value)} className="input">
-              {DATE_FIELDS[bObject].map((field) => <option key={field} value={field}>{field}</option>)}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="b-group" className="form-label">Group by</label>
-            <select id="b-group" value={bGroup} onChange={(e) => setBGroup(e.target.value)} className="input">
-              {GROUP_KEYS[bObject].map((key) => <option key={key} value={key}>{key}</option>)}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="b-unit" className="form-label">Bucket</label>
-            <select id="b-unit" value={bTimeUnit} onChange={(e) => setBTimeUnit(e.target.value as never)} className="input">
-              <option value="">field value</option>
-              <option value="day">by day</option>
-              <option value="week">by week</option>
-              <option value="month">by month</option>
-            </select>
-          </div>
-          <div className="form-actions"><Button variant="secondary" onClick={() => setBuilderOpen(false)}>Cancel</Button><Button
+          <Field label="Object" id="b-object" help="The record type counted in every row.">
+            <Select value={bObject} onValueChange={(value) => { setBObject(value); setBDateField(DATE_FIELDS[value][0]); setBGroup(GROUP_KEYS[value][0]); }}>
+              <IconSelectTrigger id="b-object" icon="box" className="w-full">
+                <SelectValue />
+              </IconSelectTrigger>
+              <SelectContent>
+                {OBJECTS.map((object) => <SelectItem key={object} value={object}>{object.toLowerCase()}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Date field" id="b-date" help="Rows fall inside the From/To range you set after building.">
+            <Select value={bDateField} onValueChange={setBDateField}>
+              <IconSelectTrigger id="b-date" icon="calendar" className="w-full">
+                <SelectValue />
+              </IconSelectTrigger>
+              <SelectContent>
+                {DATE_FIELDS[bObject].map((field) => <SelectItem key={field} value={field}>{field}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Group by" id="b-group" help="One row per value of this field.">
+            <Select value={bGroup} onValueChange={setBGroup}>
+              <IconSelectTrigger id="b-group" icon="users" className="w-full">
+                <SelectValue />
+              </IconSelectTrigger>
+              <SelectContent>
+                {GROUP_KEYS[bObject].map((key) => <SelectItem key={key} value={key}>{key}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Bucket" id="b-unit" help="Bin dates into periods, or keep raw field values.">
+            <Select value={bTimeUnit || NO_BUCKET} onValueChange={(value) => setBTimeUnit(value === NO_BUCKET ? "" : (value as "day" | "week" | "month"))}>
+              <IconSelectTrigger id="b-unit" icon="chart" className="w-full">
+                <SelectValue />
+              </IconSelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_BUCKET}>field value</SelectItem>
+                <SelectItem value="day">by day</SelectItem>
+                <SelectItem value="week">by week</SelectItem>
+                <SelectItem value="month">by month</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <FormActions><Button variant="secondary" onClick={() => setBuilderOpen(false)}>Cancel</Button><Button
             variant="primary"
             icon="chart"
             loading={running}
             onClick={() => void runCustomReport()}
           >
             Run report
-          </Button></div>
+          </Button></FormActions>
         </div>
         </Modal>
       ) : null}
 
-      <div className={`grid gap-4 ${builderOpen ? "" : "lg:grid-cols-[16rem_1fr]"}`}>
-        <nav className={`card space-y-1 p-2 ${builderOpen ? "hidden" : ""}`} aria-label="Report library">
-          {libraryLoading ? (
-            <div style={{ padding: "var(--space-3)" }}>
-              {[...Array(5)].map((_, i) => (<div key={i} className="skeleton" style={{ height: "14px", width: `${80 - i * 10}%`, marginBottom: "10px" }} />))}
-            </div>
-          ) : libraryError ? (
-            <div className="space-y-2 p-3"><p className="text-sm text-(--error)">{libraryError}</p><button type="button" onClick={() => window.location.reload()} className="text-xs font-semibold text-(--text-brand) underline">Retry</button></div>
-          ) : library.length === 0 ? (
-            <div className="p-3"><p className="text-sm font-medium">No saved reports yet</p><p className="mt-1 text-xs text-(--text-tertiary)">Build a report to create your first analysis.</p></div>
-          ) : (
-            library.map((report) => (
-              <button
-                key={report.id}
-                type="button"
-                onClick={() => setSelected(report.id)}
-                className={`block w-full rounded-md px-3 py-2 text-left text-sm transition ${
-                  selected === report.id
-                    ? "bg-(--accent-soft) font-semibold text-(--accent)"
-                    : "text-(--text-secondary) hover:bg-(--bg-hover) hover:text-(--text-primary)"
-                }`}
-              >
-                {report.name}
-                <span className="block text-xs font-normal text-(--text-tertiary)">{report.object.toLowerCase()}</span>
-              </button>
-            ))
-          )}
-        </nav>
+      <div className={cn("grid gap-4", !builderOpen && "lg:grid-cols-[16rem_1fr]")}>
+        <Card className={cn("gap-0 p-2", builderOpen && "hidden")}>
+          <nav className="space-y-1" aria-label="Report library">
+            {libraryLoading ? (
+              <div className="p-3">
+                {[...Array(5)].map((_, i) => (<Skeleton key={i} className="mb-2.5 h-3.5" style={{ width: `${80 - i * 10}%` }} />))}
+              </div>
+            ) : libraryError ? (
+              <div className="space-y-2 p-3"><p className="text-sm text-destructive">{libraryError}</p><button type="button" onClick={() => window.location.reload()} className="text-xs font-semibold text-foreground underline">Retry</button></div>
+            ) : library.length === 0 ? (
+              <div className="p-3"><p className="text-sm font-medium">No saved reports yet</p><p className="mt-1 text-xs text-muted-foreground">Build a report to create your first analysis.</p></div>
+            ) : (
+              library.map((report) => (
+                <button
+                  key={report.id}
+                  type="button"
+                  onClick={() => setSelected(report.id)}
+                  className={cn(
+                    "block w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
+                    selected === report.id
+                      ? "bg-muted font-semibold text-foreground"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  )}
+                >
+                  {report.name}
+                  <span className="block text-xs font-normal text-muted-foreground">{report.object.toLowerCase()}</span>
+                </button>
+              ))
+            )}
+          </nav>
+        </Card>
 
         <div className="space-y-4">
           {meta ? (
-            <div className="card">
-              <div className="card-body">
+            <Card className="gap-0">
+              <CardContent>
                 <Section title={meta.name} description={meta.description}>
-                  {OBJECT_PATH[meta.object] ? <Link href={`/${OBJECT_PATH[meta.object]}`} className="text-xs font-semibold text-(--text-brand) hover:underline">Open {meta.object.toLowerCase()} records →</Link> : null}
+                  {OBJECT_PATH[meta.object] ? <Link href={`/${OBJECT_PATH[meta.object]}`} className="text-xs font-semibold text-foreground hover:underline">Open {meta.object.toLowerCase()} records →</Link> : null}
                 </Section>
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-(--border-hairline) pt-3">
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <label htmlFor="r-from" className="text-xs font-medium text-(--text-secondary)">From</label>
-                    <input
+                    <Label htmlFor="r-from" className="text-xs font-medium text-muted-foreground">From</Label>
+                    <IconInput
                       id="r-from"
+                      icon="calendar"
                       type="date"
                       value={from}
                       onChange={(event) => setFrom(event.target.value)}
-                      className="input input-sm"
+                      className="h-7 w-auto text-xs"
                     />
-                    <label htmlFor="r-to" className="text-xs font-medium text-(--text-secondary)">To</label>
-                    <input
+                    <Label htmlFor="r-to" className="text-xs font-medium text-muted-foreground">To</Label>
+                    <IconInput
                       id="r-to"
+                      icon="calendar"
                       type="date"
                       value={to}
                       onChange={(event) => setTo(event.target.value)}
-                      className="input input-sm"
+                      className="h-7 w-auto text-xs"
                     />
                   </div>
                   <div className="flex items-center gap-2">
@@ -301,41 +329,42 @@ export function ReportsPage() {
                     >
                       Run
                     </Button>
-                    <a
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon="download"
                       href={`/api/reports/${selected}/export?${new URLSearchParams({
                         ...(from ? { from } : {}),
                         ...(to ? { to } : {}),
                       }).toString()}`}
-                      className="btn btn-secondary btn-sm"
                     >
-                      <Icon name="download" size={13} />
                       Export CSV
-                    </a>
+                    </Button>
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ) : null}
 
           {error ? (
-            <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
+            <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {error}
             </p>
           ) : null}
 
-          <div className="card">
-            <div className="card-body">
+          <Card className="gap-0">
+            <CardContent>
             {!result ? (
               <EmptyState illustration="reports" title="Pick a report to run" description="Select a report from the library or build a custom one." />
             ) : result.rows.length === 0 ? (
-              <p className="py-8 text-center text-sm text-(--text-tertiary)">No rows in range (within your scope).</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">No rows in range (within your scope).</p>
             ) : (
               <div className="grid gap-6 xl:grid-cols-[22rem_1fr]">
-                <div className="rounded-xl bg-(--bg-subtle) p-5">
+                <div className="rounded-xl bg-muted p-5">
                   <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-full" style={{ background: pieGradient }}>
-                    <div className="flex h-28 w-28 flex-col items-center justify-center rounded-full border border-(--border-hairline) bg-(--bg-surface) text-center">
-                      <span className="text-3xl font-semibold text-(--text-primary)">{totalCount}</span>
-                      <span className="text-xs uppercase tracking-wide text-(--text-secondary)">records</span>
+                    <div className="flex h-28 w-28 flex-col items-center justify-center rounded-full border border-border bg-background text-center">
+                      <span className="text-3xl font-semibold text-foreground">{totalCount}</span>
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">records</span>
                     </div>
                   </div>
                   <div className="mt-5 space-y-2">
@@ -348,30 +377,30 @@ export function ReportsPage() {
                               className="h-2.5 w-2.5 shrink-0 rounded-full"
                               style={{ background: PIE_COLORS[index % PIE_COLORS.length] }}
                             />
-                            <span className="truncate text-(--text-secondary)">{row.label}</span>
+                            <span className="truncate text-muted-foreground">{row.label}</span>
                           </span>
-                          <span className="whitespace-nowrap font-medium text-(--text-primary)">{percentage}%</span>
+                          <span className="whitespace-nowrap font-medium text-foreground">{percentage}%</span>
                         </div>
                       );
                     })}
                   </div>
                 </div>
 
-                <ul className="divide-y divide-(--border-hairline)">
+                <ul className="divide-y divide-border">
                   {result.rows.map((row, index) => (
                     <li key={`${row.key ?? "none"}-${index}`} className="py-2.5 text-sm first:pt-0 last:pb-0">
                       <div className="mb-1 flex items-baseline justify-between gap-2">
                         <span className="truncate font-medium">{row.key ?? "(none)"}</span>
-                        <span className="whitespace-nowrap text-(--text-secondary)">
+                        <span className="whitespace-nowrap text-muted-foreground">
                           {row.count}
                           {result.report.sums.includes("value")
                             ? ` · ${money(row.sums.value ?? 0)}`
                             : result.report.sums.map((field) => ` · ${field}: ${row.sums[field] ?? 0}`).join("")}
                         </span>
                       </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-(--bg-subtle)">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                         <div
-                          className="h-full rounded-full bg-(--accent)/60"
+                          className="h-full rounded-full bg-foreground/50"
                           style={{
                             width: `${Math.max(2, Math.round((row.count / maxCount) * 100))}%`,
                           }}
@@ -382,8 +411,8 @@ export function ReportsPage() {
                 </ul>
               </div>
             )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

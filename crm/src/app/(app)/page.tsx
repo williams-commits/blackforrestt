@@ -2,37 +2,52 @@ import { DashboardCards } from "@/components/DashboardCards";
 import { HomeWidgets } from "@/components/HomeWidgets";
 import { SmartTips } from "@/components/SmartTips";
 import { RecentRecords } from "@/components/RecentRecords";
-import Link from "next/link";
+import { Button } from "@/components/ui";
 
 export default function HomePage() {
+  const today = new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
+    <div className="mx-auto max-w-6xl space-y-10">
       {/* Quiet, unboxed hero — hierarchy comes from typography and whitespace,
-          not a filled banner. CTAs keep their hrefs and carry the Button
-          visual system (btn-primary / btn-secondary). */}
+          not a filled banner. The date line grounds the dashboard in "today". */}
       <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-xl">
-          <p className="workspace-eyebrow">Workspace overview</p>
-          <h1 className="text-2xl font-semibold tracking-tight text-(--text-primary) sm:text-3xl">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            {today}
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             Good to see you.
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-(--text-secondary)">
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             Your pipeline, priorities, and team activity in one focused view.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/tasks?mine=1" className="btn btn-primary">
+          <Button variant="primary" icon="square_check" href="/tasks?mine=1">
             Open my tasks
-          </Link>
-          <Link href="/leads" className="btn btn-secondary">
+          </Button>
+          <Button variant="secondary" icon="trending" href="/leads">
             View pipeline
-          </Link>
+          </Button>
         </div>
       </header>
-      <DashboardCards />
+
+      <section aria-label="Key metrics" className="space-y-3">
+        <DashboardCards />
+      </section>
+
       <SmartTips context="dashboard" />
+
       <RecentRecords />
-      <HomeWidgets />
+
+      <section aria-label="My work and inbox" className="space-y-3">
+        <HomeWidgets />
+      </section>
     </div>
   );
 }

@@ -3,18 +3,53 @@
 import Link from "next/link";
 import { useCrmBranding } from "@/components/BrandingProvider";
 import { Icon } from "@/components/Icon";
+import { RowActions } from "@/components/RowActions";
+import { Initials } from "@/components/Initials";
 import { UserSmtpPanel } from "@/components/UserSmtpPanel";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useConfirmDialog } from "@/components/Dialogs";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { Modal } from "@/components/Modal";
+import { Field, IconInput, IconSelectTrigger, SearchInput } from "@/components/form";
 import { useTableSession, writeTableSession } from "@/components/useTableSession";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
 import { PERMISSION_CATEGORIES } from "@/server/permissions";
+import { Button, Drawer, EmptyState } from "@/components/ui";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+
+/* Badge tone helpers — semantic tones stay on theme tokens so the NEUTRAL
+   palette maps them; no raw brand hexes. */
+function badgeToneClass(tone: "success" | "warning" | "info" | "error"): string {
+  switch (tone) {
+    case "success":
+      return "border-(--success-border) bg-(--success-bg) text-(--success)";
+    case "warning":
+      return "border-(--warning-border) bg-(--warning-bg) text-(--warning)";
+    case "info":
+      return "border-(--info-border) bg-(--info-bg) text-(--info)";
+    case "error":
+      return "border-(--error-border) bg-(--error-bg) text-(--error)";
+  }
+}
+
+/** Small uppercase section label — replaces the legacy `.card-title` style. */
+function CardLabel({ children }: { children: React.ReactNode }) {
+  return <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">{children}</CardTitle>;
+}
 
 
 function SetupFormModal({ title, onClose, children, size = "md" }: { title: string; onClose: () => void; children: React.ReactNode; size?: "sm" | "md" | "lg" | "xl" }) {
-  return <Modal title={title} onClose={onClose} size={size}><div className="p-5">{children}</div></Modal>;
+  return <Modal title={title} onClose={onClose} size={size}><div>{children}</div></Modal>;
 }
 
 function AdminTableSkeleton({ rows = 6, columns = 5 }: { rows?: number; columns?: number }) {
@@ -24,8 +59,7 @@ function AdminTableSkeleton({ rows = 6, columns = 5 }: { rows?: number; columns?
         <TR key={`admin-skeleton-row-${rowIndex}`}>
           {[...Array(columns)].map((__, columnIndex) => (
             <TD key={`admin-skeleton-cell-${rowIndex}-${columnIndex}`} className="px-3 py-3">
-              <div
-                className="skeleton"
+              <Skeleton
                 style={{
                   height: columnIndex === 0 ? 18 : 14,
                   width: `${columnIndex === 0 ? 80 : 58 - (columnIndex % 3) * 8}%`,
@@ -43,17 +77,17 @@ function AdminCardGridSkeleton({ cards = 4 }: { cards?: number }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {[...Array(cards)].map((_, index) => (
-        <div key={`admin-card-skeleton-${index}`} className="card p-4">
+        <Card key={`admin-card-skeleton-${index}`} className="gap-0 p-4">
           <div className="mb-3 flex items-center gap-3">
-            <div className="skeleton" style={{ height: 36, width: 36 }} />
+            <Skeleton style={{ height: 36, width: 36 }} />
             <div className="min-w-0 flex-1">
-              <div className="skeleton" style={{ height: 16, width: "70%" }} />
-              <div className="skeleton mt-2" style={{ height: 12, width: "45%" }} />
+              <Skeleton style={{ height: 16, width: "70%" }} />
+              <Skeleton className="mt-2" style={{ height: 12, width: "45%" }} />
             </div>
           </div>
-          <div className="skeleton" style={{ height: 12, width: "90%" }} />
-          <div className="skeleton mt-2" style={{ height: 12, width: "60%" }} />
-        </div>
+          <Skeleton style={{ height: 12, width: "90%" }} />
+          <Skeleton className="mt-2" style={{ height: 12, width: "60%" }} />
+        </Card>
       ))}
     </div>
   );
@@ -136,7 +170,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
         eyebrow="Data model"
         title="Statuses"
         subtitle="Define the lifecycle language your teams use across records."
-        actions={canManage ? <button type="button" onClick={() => setShowForm(true)} className="btn btn-primary"><Icon name="plus" size={14} /> Add status</button> : undefined}
+        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>Add status</Button> : undefined}
         metrics={[{ label: "Statuses", value: rows.length, tone: "brand" }, { label: "Objects", value: new Set(rows.map((row) => row.appliesTo)).size, tone: "info" }, { label: "Defaults", value: rows.filter((row) => row.isDefault).length, tone: "success" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
@@ -144,43 +178,50 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
         <SetupFormModal title="Add status" onClose={() => setShowForm(false)}>
         <form method="post" onSubmit={async (event) => { await create(event); setShowForm(false); }} className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2"><p className="form-section-title">Lifecycle status</p><p className="form-section-help">Statuses appear on records and guide your team through the relationship lifecycle.</p></div>
-          <div>
-            <label htmlFor="s-name" className="form-label">Name <span className="form-required">*</span></label>
-            <input id="s-name" value={name} onChange={(e) => setName(e.target.value)} required className="input"/>
-          </div>
-          <div>
-            <label htmlFor="s-applies" className="form-label">Applies to</label>
-            <select id="s-applies" value={appliesTo} onChange={(e) => setAppliesTo(e.target.value)} className="input">
-              <option value="LEAD">Leads</option>
-              <option value="CONTACT">Contacts</option>
-              <option value="CUSTOMER">Customers</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="s-cat" className="form-label">Category</label>
-            <select id="s-cat" value={category} onChange={(e) => setCategory(e.target.value)} className="input">
-              <option value="OPEN">Open</option>
-              <option value="CONVERTED">Converted</option>
-              <option value="LOST">Lost</option>
-              <option value="INVALID">Invalid</option>
-            </select>
-          </div>
-          <div className="form-actions sm:col-span-2"><button type="button" onClick={() => setShowForm(false)} className="btn btn-secondary">Cancel</button><button type="submit" className="btn btn-primary">
-            <Icon name="plus" size={14} /> Add status
-          </button></div>
+          <Field label="Name" required id="s-name">
+            <IconInput id="s-name" icon="tag" value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. Qualified" />
+          </Field>
+          <Field label="Applies to" id="s-applies">
+            <Select value={appliesTo} onValueChange={setAppliesTo}>
+              <IconSelectTrigger id="s-applies" icon="box" className="w-full">
+                <SelectValue />
+              </IconSelectTrigger>
+              <SelectContent>
+                <SelectItem value="LEAD">Leads</SelectItem>
+                <SelectItem value="CONTACT">Contacts</SelectItem>
+                <SelectItem value="CUSTOMER">Customers</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Category" id="s-cat" help="Grouping used in reporting — converted, lost, and invalid end the lifecycle.">
+            <Select value={category} onValueChange={setCategory}>
+              <IconSelectTrigger id="s-cat" icon="tag" className="w-full">
+                <SelectValue />
+              </IconSelectTrigger>
+              <SelectContent>
+                <SelectItem value="OPEN">Open</SelectItem>
+                <SelectItem value="CONVERTED">Converted</SelectItem>
+                <SelectItem value="LOST">Lost</SelectItem>
+                <SelectItem value="INVALID">Invalid</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <div className="form-actions sm:col-span-2"><Button type="button" variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">
+            Add status
+          </Button></div>
         </form>
         </SetupFormModal>
       ) : null}
-      <div className="card overflow-hidden">
+      <div className="card table-responsive overflow-x-auto p-2 lg:p-0">
         <Table>
           <THead>
             <TR>
-              <TH>Name</TH>
-              <TH>Object</TH>
-              <TH>Category</TH>
-              <TH>In use</TH>
-              <TH>Default</TH>
-              {canManage ? <TH className="text-right">Actions</TH> : null}
+              <TH className="px-3 py-2 font-medium">Name</TH>
+              <TH className="px-3 py-2 font-medium">Object</TH>
+              <TH className="px-3 py-2 font-medium">Category</TH>
+              <TH className="px-3 py-2 font-medium">In use</TH>
+              <TH className="px-3 py-2 font-medium">Default</TH>
+              {canManage ? <TH className="px-3 py-2 text-right font-medium">Actions</TH> : null}
             </TR>
           </THead>
           <TBody>
@@ -188,21 +229,23 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
               <AdminTableSkeleton rows={5} columns={canManage ? 6 : 5} />
             ) : rows.map((row) => (
               <TR key={row.id}>
-                <TD className="font-medium">{row.name}</TD>
-                <TD><span className="badge badge-neutral">{row.appliesTo.toLowerCase()}</span></TD>
-                <TD><span className={`badge ${row.category === "OPEN" ? "badge-success" : row.category === "CONVERTED" ? "badge-info" : row.category === "INVALID" ? "badge-error" : "badge-neutral"}`}>{row.category.toLowerCase()}</span></TD>
-                <TD className="tabular-nums text-(--text-secondary)">{row._count.leads + row._count.contacts + row._count.customers}</TD>
-                <TD>{row.isDefault ? <span className="badge badge-brand">Default</span> : <span className="text-xs text-(--text-tertiary)">—</span>}</TD>
+                <TD className="px-3 py-2 font-medium">{row.name}</TD>
+                <TD className="px-3 py-2"><Badge className="badge badge-neutral">{row.appliesTo.toLowerCase()}</Badge></TD>
+                <TD className="px-3 py-2"><Badge className="badge badge-neutral">{row.category.toLowerCase()}</Badge></TD>
+                <TD className="px-3 py-2 tabular-nums text-(--text-secondary)">{row._count.leads + row._count.contacts + row._count.customers}</TD>
+                <TD className="px-3 py-2">{row.isDefault ? <Badge className="badge badge-neutral">Default</Badge> : <span className="text-xs text-(--text-tertiary)">—</span>}</TD>
                 {canManage ? (
-                  <TD className="text-right whitespace-nowrap">
-                    {!row.isDefault ? (
-                      <button type="button" onClick={() => void makeDefault(row.id)} className="mr-2 text-xs text-(--brand) hover:underline">
-                        make default
-                      </button>
-                    ) : null}
-                    <button type="button" onClick={() => void remove(row.id)} className="text-xs text-(--error) hover:underline">
-                      delete
-                    </button>
+                  <TD className="px-3 py-2 text-right">
+                    <div className="flex justify-end">
+                      <RowActions
+                        actions={[
+                          ...(!row.isDefault
+                            ? [{ label: "Make default", icon: "check", onClick: () => void makeDefault(row.id) }]
+                            : []),
+                          { label: "Delete", icon: "trash", destructive: true, onClick: () => void remove(row.id) },
+                        ]}
+                      />
+                    </div>
                   </TD>
                 ) : null}
               </TR>
@@ -212,29 +255,29 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
       </div>
 
       {confirmDialog}
-      <section className="card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3"><div><h2 className="text-sm font-semibold">Potential status</h2><p className="mt-0.5 text-xs text-(--text-tertiary)">Segment leads by commercial potential: Junior, Senior, Institutional, or VIP.</p></div>{canManage ? <button type="button" onClick={() => setShowPotentialForm(true)} className="btn btn-secondary"><Icon name="plus" size={14} /> Add potential status</button> : null}</div>
-        {showPotentialForm && canManage ? <SetupFormModal title="Add potential status" onClose={() => setShowPotentialForm(false)}><form className="space-y-4" onSubmit={async (event) => { event.preventDefault(); const response = await fetch("/api/potential-statuses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: potentialName, sortOrder: potentialRows.length + 1 }) }); if (!response.ok) { setError("Could not create potential status."); return; } setPotentialName(""); setShowPotentialForm(false); void load(); }}><div><label htmlFor="potential-name" className="form-label">Name <span className="form-required">*</span></label><input id="potential-name" value={potentialName} onChange={(event) => setPotentialName(event.target.value)} required className="input" placeholder="VIP" /></div><div className="form-actions"><button type="button" onClick={() => setShowPotentialForm(false)} className="btn btn-secondary">Cancel</button><button type="submit" className="btn btn-primary"><Icon name="plus" size={14} /> Add status</button></div></form></SetupFormModal> : null}
+      <Card className="gap-0 overflow-hidden py-0">
+        <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3"><div><h2 className="text-sm font-semibold">Potential status</h2><p className="mt-0.5 text-xs text-(--text-tertiary)">Segment leads by commercial potential: Junior, Senior, Institutional, or VIP.</p></div>{canManage ? <Button variant="secondary" icon="plus" onClick={() => setShowPotentialForm(true)}>Add potential status</Button> : null}</div>
+        {showPotentialForm && canManage ? <SetupFormModal title="Add potential status" onClose={() => setShowPotentialForm(false)}><form className="space-y-4" onSubmit={async (event) => { event.preventDefault(); const response = await fetch("/api/potential-statuses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: potentialName, sortOrder: potentialRows.length + 1 }) }); if (!response.ok) { setError("Could not create potential status."); return; } setPotentialName(""); setShowPotentialForm(false); void load(); }}><div><p className="form-section-title">Potential status</p><p className="form-section-help">Segment leads by commercial weight for prioritization and filtering.</p></div><Field label="Name" required id="potential-name" help="Ranks a lead's commercial weight — e.g. Junior, Senior, VIP."><IconInput id="potential-name" icon="tag" value={potentialName} onChange={(event) => setPotentialName(event.target.value)} required placeholder="e.g. VIP" /></Field><div className="form-actions"><Button type="button" variant="secondary" onClick={() => setShowPotentialForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">Add status</Button></div></form></SetupFormModal> : null}
         {loading ? <div className="p-3"><AdminCardGridSkeleton cards={4} /></div> : <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">{potentialRows.map((status) => {
           const leadCount = status._count?.leads ?? 0;
           return (
-            <div key={status.id} className="card flex items-center justify-between gap-2 p-3">
+            <Card key={status.id} className="flex-row items-center justify-between gap-2 p-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{status.name}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                  {status._count ? <span className="badge badge-neutral">{leadCount} {leadCount === 1 ? "lead" : "leads"}</span> : null}
-                  {status.isDefault ? <span className="badge badge-brand">default</span> : null}
+                  {status._count ? <Badge variant="outline">{leadCount} {leadCount === 1 ? "lead" : "leads"}</Badge> : null}
+                  {status.isDefault ? <Badge>default</Badge> : null}
                 </div>
               </div>
               {canManage ? (
-                <button type="button" onClick={async () => { const response = await fetch(`/api/potential-statuses/${status.id}`, { method: "DELETE" }); if (!response.ok) setError("Potential status is in use or could not be deleted."); else void load(); }} className="icon-button" aria-label={`Delete ${status.name}`} title={`Delete ${status.name}`}>
+                <Button variant="tertiary" size="sm" onClick={async () => { const response = await fetch(`/api/potential-statuses/${status.id}`, { method: "DELETE" }); if (!response.ok) setError("Potential status is in use or could not be deleted."); else void load(); }} className="size-7 shrink-0 gap-0 px-0" aria-label={`Delete ${status.name}`} title={`Delete ${status.name}`}>
                   <Icon name="close" size={14} />
-                </button>
+                </Button>
               ) : null}
-            </div>
+            </Card>
           );
         })}</div>}
-      </section>
+      </Card>
     </div>
   );
 }
@@ -242,7 +285,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
 export function TagsTab({ canManage }: { canManage: boolean }) {
   const [rows, setRows] = useState<Array<{ id: string; name: string; color: string | null; _count: { links: number } }>>([]);
   const [name, setName] = useState("");
-  const [color, setColor] = useState("#1f6f43");
+  const [color, setColor] = useState("#71717a");
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -296,7 +339,7 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
         eyebrow="Data model"
         title="Tags"
         subtitle="Create lightweight labels that help teams segment and scan records."
-        actions={canManage ? <button type="button" onClick={() => setShowForm(true)} className="btn btn-primary"><Icon name="plus" size={14} /> Add tag</button> : undefined}
+        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>Add tag</Button> : undefined}
         metrics={[{ label: "Tags", value: rows.length, tone: "brand" }, { label: "Applied", value: rows.reduce((sum, row) => sum + row._count.links, 0), tone: "info" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
@@ -304,60 +347,57 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
         <SetupFormModal title="Add tag" onClose={() => setShowForm(false)}>
         <form method="post" onSubmit={async (event) => { await create(event); setShowForm(false); }} className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
           <div className="sm:col-span-2"><p className="form-section-title">Record label</p><p className="form-section-help">Use tags for quick segmentation, prioritization, and saved views.</p></div>
-          <div>
-            <label htmlFor="t-name" className="form-label">Name <span className="form-required">*</span></label>
-            <input id="t-name" value={name} onChange={(e) => setName(e.target.value)} required className="input"/>
-          </div>
-          <div>
-            <label htmlFor="t-color" className="form-label">Color</label>
-            <input
+          <Field label="Name" required id="t-name">
+            <IconInput id="t-name" icon="tag" value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. High-touch" />
+          </Field>
+          <Field label="Color" id="t-color" help="Shown as the tag swatch on records.">
+            <Input
               id="t-color"
               type="color"
               value={color}
               onChange={(e) => setColor(e.target.value)}
-              className="input cursor-pointer"
-              style={{ width: "56px", padding: "2px" }}
+              className="h-8 w-14 cursor-pointer p-1"
               aria-label="Tag color"
               title="Choose a tag color"
             />
-          </div>
-          <div className="form-actions sm:col-span-2"><button type="button" onClick={() => setShowForm(false)} className="btn btn-secondary">Cancel</button><button type="submit" className="btn btn-primary">
-            <Icon name="plus" size={14} /> Add tag
-          </button></div>
+          </Field>
+          <div className="form-actions sm:col-span-2"><Button type="button" variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">
+            Add tag
+          </Button></div>
         </form>
         </SetupFormModal>
       ) : null}
-      <section className="card overflow-hidden">
+      <Card className="gap-0 overflow-hidden py-0">
         <div className="flex flex-col gap-1 border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-sm font-semibold">Tag library</h2>
             <p className="mt-0.5 text-xs text-(--text-tertiary)">Use consistent labels to make records easier to filter and prioritize.</p>
           </div>
-          {rows.length > 0 ? <span className="badge badge-neutral">{rows.length} labels</span> : null}
+          {rows.length > 0 ? <Badge variant="outline">{rows.length} labels</Badge> : null}
         </div>
         {loading ? (
           <div className="p-3"><AdminCardGridSkeleton cards={6} /></div>
         ) : rows.length === 0 ? (
-          <div className="empty-state"><p className="empty-state-title">No tags yet</p><p className="empty-state-description">Create your first label to start segmenting records.</p></div>
+          <EmptyState title="No tags yet" description="Create your first label to start segmenting records." />
         ) : (
           <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
           {rows.map((row) => (
-            <div key={row.id} className="card card-interactive flex items-center gap-3 p-4">
-              <span className="h-7 w-7 shrink-0 rounded-md border border-black/10" style={{ background: row.color ?? "#78716c" }} aria-hidden />
+            <Card key={row.id} className="flex-row items-center gap-3 p-4 transition-colors hover:bg-(--bg-hover)">
+              <span className="h-7 w-7 shrink-0 rounded-md border border-black/10" style={{ background: row.color ?? "var(--text-tertiary)" }} aria-hidden />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{row.name}</p>
                 <p className="mt-0.5 text-xs text-(--text-tertiary)">{row._count.links} {row._count.links === 1 ? "record" : "records"}</p>
               </div>
               {canManage ? (
-                <button type="button" onClick={() => void remove(row.id)} className="icon-button" aria-label={`Delete ${row.name}`} title={`Delete ${row.name}`}>
+                <Button variant="tertiary" size="sm" onClick={() => void remove(row.id)} className="size-7 shrink-0 gap-0 px-0" aria-label={`Delete ${row.name}`} title={`Delete ${row.name}`}>
                   <Icon name="close" size={14} />
-                </button>
+                </Button>
               ) : null}
-            </div>
+            </Card>
           ))
           }</div>
         )}
-      </section>
+      </Card>
 
       {confirmDialog}
     </div>
@@ -434,7 +474,7 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
         eyebrow="Data model"
         title="Custom fields"
         subtitle="Add the business-specific details your team needs on each record."
-        actions={canManage ? <button type="button" onClick={() => setShowForm(true)} className="btn btn-primary"><Icon name="plus" size={14} /> Add field</button> : undefined}
+        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>Add field</Button> : undefined}
         metrics={[{ label: "Fields", value: rows.length, tone: "brand" }, { label: "Active", value: rows.filter((row) => row.active).length, tone: "success" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
@@ -442,90 +482,97 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
         <SetupFormModal title="Add custom field" onClose={() => setShowForm(false)} size="lg">
         <form method="post" onSubmit={async (event) => { await create(event); setShowForm(false); }} className="space-y-4">
           <div>
-            <h3 className="text-sm font-semibold">Add custom field</h3>
-            <p className="mt-1 text-xs text-(--text-secondary)">Define a field that can be used on records of the selected object.</p>
+            <p className="form-section-title">Add custom field</p>
+            <p className="form-section-help">Define a field that can be used on records of the selected object.</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label htmlFor="cf-object" className="form-label">Object</label>
-              <select id="cf-object" value={objectType} onChange={(e) => setObjectType(e.target.value)} className="input">
-              <option value="LEAD">Lead</option>
-              <option value="CONTACT">Contact</option>
-              <option value="ACCOUNT">Account</option>
-              <option value="CUSTOMER">Customer</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="cf-label" className="form-label">Label</label>
-              <input id="cf-label" value={label} onChange={(e) => setLabel(e.target.value)} required placeholder="e.g. Customer tier" className="input" />
-            </div>
-            <div>
-              <label htmlFor="cf-key" className="form-label">Key</label>
-              <input id="cf-key" value={key} onChange={(e) => setKey(e.target.value)} required pattern="[a-z][a-zA-Z0-9_]*" title="Start with a lowercase letter; use letters, numbers, or underscores." placeholder="e.g. customerTier" className="input" />
-              <p className="mt-1 text-xs text-(--text-tertiary)">Lowercase camelCase, letters, numbers, and underscores.</p>
-            </div>
-            <div>
-              <label htmlFor="cf-type" className="form-label">Type</label>
-              <select id="cf-type" value={fieldType} onChange={(e) => setFieldType(e.target.value)} className="input">
-              {["TEXT", "NUMBER", "CURRENCY", "BOOLEAN", "DATE", "DATETIME", "SELECT", "MULTI_SELECT", "PHONE", "EMAIL", "URL"].map((type) => (
-                <option key={type} value={type}>{type.replaceAll("_", " ").toLowerCase()}</option>
-              ))}
-              </select>
-            </div>
+            <Field label="Object" id="cf-object">
+              <Select value={objectType} onValueChange={setObjectType}>
+                <IconSelectTrigger id="cf-object" icon="box" className="w-full">
+                  <SelectValue />
+                </IconSelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LEAD">Lead</SelectItem>
+                  <SelectItem value="CONTACT">Contact</SelectItem>
+                  <SelectItem value="ACCOUNT">Account</SelectItem>
+                  <SelectItem value="CUSTOMER">Customer</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Label" required id="cf-label">
+              <IconInput id="cf-label" icon="tag" value={label} onChange={(e) => setLabel(e.target.value)} required placeholder="e.g. Customer tier" />
+            </Field>
+            <Field label="Key" required id="cf-key" help="Lowercase camelCase, letters, numbers, and underscores.">
+              <IconInput id="cf-key" icon="tag" value={key} onChange={(e) => setKey(e.target.value)} required pattern="[a-z][a-zA-Z0-9_]*" title="Start with a lowercase letter; use letters, numbers, or underscores." placeholder="e.g. customerTier" />
+            </Field>
+            <Field label="Type" id="cf-type">
+              <Select value={fieldType} onValueChange={setFieldType}>
+                <IconSelectTrigger id="cf-type" icon="list" className="w-full">
+                  <SelectValue />
+                </IconSelectTrigger>
+                <SelectContent>
+                  {["TEXT", "NUMBER", "CURRENCY", "BOOLEAN", "DATE", "DATETIME", "SELECT", "MULTI_SELECT", "PHONE", "EMAIL", "URL"].map((type) => (
+                    <SelectItem key={type} value={type}>{type.replaceAll("_", " ").toLowerCase()}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
           </div>
           {fieldType === "SELECT" || fieldType === "MULTI_SELECT" ? (
-            <div>
-              <label htmlFor="cf-options" className="form-label">Options</label>
-              <input id="cf-options" value={options} onChange={(e) => setOptions(e.target.value)} required placeholder="e.g. New, Active, Archived" className="input" />
-              <p className="mt-1 text-xs text-(--text-tertiary)">Separate each option with a comma.</p>
-            </div>
+            <Field label="Options" required id="cf-options" help="Separate each option with a comma.">
+              <IconInput id="cf-options" icon="list" value={options} onChange={(e) => setOptions(e.target.value)} required placeholder="e.g. New, Active, Archived" />
+            </Field>
           ) : null}
           <div className="form-actions">
-            <button type="button" onClick={() => setShowForm(false)} className="btn btn-secondary">Cancel</button>
-            <button type="submit" className="btn btn-primary"><Icon name="plus" size={14} /> Add field</button>
+            <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
+            <Button type="submit" variant="primary" icon="plus">Add field</Button>
           </div>
         </form>
         </SetupFormModal>
       ) : null}
-      <div className="card overflow-hidden">
+      <div className="card table-responsive overflow-x-auto p-2 lg:p-0">
         <Table>
           <THead>
             <TR>
-              <TH>Object</TH>
-              <TH>Label</TH>
-              <TH>Key</TH>
-              <TH>Type</TH>
-              <TH>Options</TH>
-              <TH>State</TH>
-              {canManage ? <TH className="text-right">Actions</TH> : null}
+              <TH className="px-3 py-2 font-medium">Object</TH>
+              <TH className="px-3 py-2 font-medium">Label</TH>
+              <TH className="px-3 py-2 font-medium">Key</TH>
+              <TH className="px-3 py-2 font-medium">Type</TH>
+              <TH className="px-3 py-2 font-medium">Options</TH>
+              <TH className="px-3 py-2 font-medium">State</TH>
+              {canManage ? <TH className="px-3 py-2 text-right font-medium">Actions</TH> : null}
             </TR>
           </THead>
           <TBody>
             {loading ? (
               <AdminTableSkeleton rows={6} columns={canManage ? 7 : 6} />
             ) : rows.length === 0 ? (
-              <TR><TD colSpan={7}><div className="empty-state"><p className="empty-state-title">No custom fields defined</p><p className="empty-state-description">Add a field above to capture business-specific details on records.</p></div></TD></TR>
+              <TR><TD colSpan={7}><EmptyState title="No custom fields defined" description="Add a field above to capture business-specific details on records." /></TD></TR>
             ) : (
               rows.map((row) => (
                 <TR key={row.id}>
-                  <TD>{row.objectType.toLowerCase()}</TD>
-                  <TD className="font-medium">{row.label}</TD>
-                  <TD className="font-mono text-xs">{row.key}</TD>
-                  <TD className="font-mono text-xs">{row.fieldType.replaceAll("_", " ").toLowerCase()}</TD>
-                  <TD>
+                  <TD className="px-3 py-2">{row.objectType.toLowerCase()}</TD>
+                  <TD className="px-3 py-2 font-medium">{row.label}</TD>
+                  <TD className="px-3 py-2 font-mono text-xs">{row.key}</TD>
+                  <TD className="px-3 py-2 font-mono text-xs">{row.fieldType.replaceAll("_", " ").toLowerCase()}</TD>
+                  <TD className="px-3 py-2">
                     {row.options && row.options.length > 0 ? (
                       <span className="flex flex-wrap gap-1">
-                        {row.options.slice(0, 3).map((option) => <span key={option} className="badge badge-neutral">{option}</span>)}
+                        {row.options.slice(0, 3).map((option) => <Badge key={option} className="badge badge-neutral">{option}</Badge>)}
                         {row.options.length > 3 ? <span className="self-center text-xs text-(--text-tertiary)">+{row.options.length - 3} more</span> : null}
                       </span>
                     ) : "—"}
                   </TD>
-                  <TD><span className={row.active ? "badge badge-success" : "badge badge-neutral"}>{row.active ? "active" : "hidden"}</span></TD>
+                  <TD className="px-3 py-2"><Badge className="badge badge-neutral">{row.active ? "active" : "hidden"}</Badge></TD>
                   {canManage ? (
-                    <TD className="text-right">
-                      <button type="button" onClick={() => void remove(row.id)} className="text-xs text-(--error) hover:underline">
-                        delete
-                      </button>
+                    <TD className="px-3 py-2 text-right">
+                      <div className="flex justify-end">
+                        <RowActions
+                          actions={[
+                            { label: "Delete", icon: "trash", destructive: true, onClick: () => void remove(row.id) },
+                          ]}
+                        />
+                      </div>
                     </TD>
                   ) : null}
                 </TR>
@@ -690,36 +737,37 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
         eyebrow="Access management"
         title="Users & teams"
         subtitle={`Manage who can work in ${branding.short} and how records are shared.`}
-        actions={canManage ? <button type="button" onClick={() => setShowUserForm(true)} className="btn btn-primary"><Icon name="plus" size={14} /> New user</button> : undefined}
+        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => setShowUserForm(true)}>New user</Button> : undefined}
         metrics={[{ label: "Total users", value: users.length, tone: "brand" }, { label: "Active", value: users.filter((user) => user.status === "ACTIVE").length, tone: "success" }, { label: "Teams", value: teams.length, tone: "info" }, { label: "Roles", value: roles.length, tone: "warning" }]}
       />
       {showUserForm && canManage ? (
         <SetupFormModal title="New user" onClose={() => setShowUserForm(false)}>
         <form method="post" onSubmit={createUser} className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2"><p className="form-section-title">Access profile</p><p className="form-section-help">Create a person, then assign their role and scope.</p></div>
-          <div>
-            <label htmlFor="au-email" className="form-label">Email <span className="form-required">*</span></label>
-            <input id="au-email" type="email" value={uEmail} onChange={(e) => setUEmail(e.target.value)} required className="input" />
-          </div>
-          <div>
-            <label htmlFor="au-name" className="form-label">Name <span className="form-required">*</span></label>
-            <input id="au-name" value={uName} onChange={(e) => setUName(e.target.value)} required className="input" />
-          </div>
-          <div>
-            <label htmlFor="au-pass" className="form-label">Password <span className="form-required">*</span> (10+)</label>
-            <input id="au-pass" type="password" value={uPassword} onChange={(e) => setUPassword(e.target.value)} required minLength={10} className="input" />
-          </div>
-          <div>
-            <label htmlFor="au-role" className="form-label">Role</label>
-            <select id="au-role" value={uRole} onChange={(e) => setURole(e.target.value)} className="input">
-              {roles.map((role) => <option key={role.key} value={role.key}>{role.name}</option>)}
-            </select>
-          </div>
-          <div className="form-actions sm:col-span-2"><button type="button" onClick={() => setShowUserForm(false)} className="btn btn-secondary">Cancel</button><button type="submit" className="btn btn-primary"><Icon name="plus" size={14} /> Create user</button></div>
+          <Field label="Email" required id="au-email" help="Used for sign-in and notifications.">
+            <IconInput id="au-email" icon="mail" type="email" value={uEmail} onChange={(e) => setUEmail(e.target.value)} required placeholder="ada@company.com" />
+          </Field>
+          <Field label="Name" required id="au-name">
+            <IconInput id="au-name" icon="users" value={uName} onChange={(e) => setUName(e.target.value)} required placeholder="e.g. Ada Lovelace" />
+          </Field>
+          <Field label="Password" required id="au-pass" help="Minimum 10 characters.">
+            <IconInput id="au-pass" icon="shield" type="password" value={uPassword} onChange={(e) => setUPassword(e.target.value)} required minLength={10} placeholder="••••••••••" />
+          </Field>
+          <Field label="Role" id="au-role" help="Controls what this user can see and do.">
+            <Select value={uRole} onValueChange={setURole}>
+              <IconSelectTrigger id="au-role" icon="shield" className="w-full">
+                <SelectValue />
+              </IconSelectTrigger>
+              <SelectContent>
+                {roles.map((role) => <SelectItem key={role.key} value={role.key}>{role.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+          <div className="form-actions sm:col-span-2"><Button type="button" variant="secondary" onClick={() => setShowUserForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">Create user</Button></div>
         </form>
         </SetupFormModal>
       ) : null}
-      <div className="card overflow-hidden">
+      <div className="card table-responsive overflow-x-auto">
         <div className="flex flex-col gap-3 border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h3 className="text-sm font-semibold">People</h3>
@@ -727,10 +775,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <label htmlFor="people-search" className="sr-only">Search users</label>
-            <div className="relative w-full sm:w-64">
-              <Icon name="search" size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--text-tertiary)" />
-              <input id="people-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search people, roles, teams" className="input pl-9" />
-            </div>
+            <SearchInput id="people-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search people, roles, teams" wrapperClassName="w-full sm:w-64" />
             <div role="group" aria-label="Filter by status" className="flex rounded-md border border-(--border-strong) p-0.5">
               {(["ALL", "ACTIVE", "SUSPENDED", "DISABLED"] as const).map((value) => {
                 const label = value === "ALL" ? "All" : value.charAt(0) + value.slice(1).toLowerCase();
@@ -748,21 +793,29 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                 );
               })}
             </div>
-            <select aria-label="Sort users" value={sort} onChange={(event) => setSort(event.target.value)} className="input"><option value="name">Name</option><option value="lastLogin">Last login</option></select>
-            <span className="badge badge-neutral">{filteredUsers.length} of {users.length}</span>
+            <Select value={sort} onValueChange={setSort}>
+              <SelectTrigger aria-label="Sort users" className="w-fit">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="lastLogin">Last login</SelectItem>
+              </SelectContent>
+            </Select>
+            <Badge variant="outline">{filteredUsers.length} of {users.length}</Badge>
           </div>
         </div>
-        {canManage && selectedIds.length > 0 ? <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-selected) px-4 py-2 text-sm"><span>{selectedIds.length} selected</span><button type="button" onClick={() => void suspendSelected()} className="btn btn-destructive btn-sm">Suspend selected</button></div> : null}
+        {canManage && selectedIds.length > 0 ? <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-selected) px-4 py-2 text-sm"><span>{selectedIds.length} selected</span><Button variant="destructive" size="sm" icon="x_circle" onClick={() => void suspendSelected()}>Suspend selected</Button></div> : null}
         <Table>
           <THead>
             <TR>
-              {canManage ? <TH className="w-10"><input type="checkbox" aria-label="Select all visible users" checked={filteredUsers.length > 0 && filteredUsers.every((user) => selectedIds.includes(user.id))} onChange={(event) => setSelectedIds(event.target.checked ? filteredUsers.map((user) => user.id) : [])} /></TH> : null}
-              <TH>User</TH>
-              <TH>Role</TH>
-              <TH>Teams</TH>
-              <TH>Last login</TH>
-              <TH>Status</TH>
-              {canManage ? <TH className="text-right">Actions</TH> : null}
+              {canManage ? <TH className="w-10 px-3 py-2"><Checkbox aria-label="Select all visible users" checked={filteredUsers.length > 0 && filteredUsers.every((user) => selectedIds.includes(user.id)) ? true : filteredUsers.some((user) => selectedIds.includes(user.id)) ? "indeterminate" : false} onCheckedChange={(checked) => setSelectedIds(checked === true ? filteredUsers.map((user) => user.id) : [])} /></TH> : null}
+              <TH className="px-3 py-2 font-medium">User</TH>
+              <TH className="px-3 py-2 font-medium">Role</TH>
+              <TH className="px-3 py-2 font-medium">Teams</TH>
+              <TH className="px-3 py-2 font-medium">Last login</TH>
+              <TH className="px-3 py-2 font-medium">Status</TH>
+              {canManage ? <TH className="px-3 py-2 text-right font-medium">Actions</TH> : null}
             </TR>
           </THead>
           <TBody>
@@ -770,49 +823,58 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
               <AdminTableSkeleton rows={6} columns={canManage ? 6 : 5} />
             ) : filteredUsers.map((user) => (
               <TR key={user.id} className={selectedUserId === user.id ? "bg-(--bg-selected)" : undefined}>
-                {canManage ? <TD><input type="checkbox" aria-label={`Select ${user.name}`} checked={selectedIds.includes(user.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, user.id] : current.filter((id) => id !== user.id))} /></TD> : null}
-                <TD><button type="button" onClick={() => setSelectedUserId(user.id)} className="flex items-center gap-3 text-left"><span className="avatar avatar-sm" style={{ background: "var(--brand-100)", color: "var(--brand-800)" }}>{user.name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</span><span><span className="block font-medium hover:text-(--text-brand)">{user.name}</span><span className="block text-xs text-(--text-tertiary)">{user.email}</span></span></button></TD>
+                {canManage ? <TD className="px-3 py-2"><Checkbox aria-label={`Select ${user.name}`} checked={selectedIds.includes(user.id)} onCheckedChange={(checked) => setSelectedIds((current) => checked ? [...current, user.id] : current.filter((id) => id !== user.id))} /></TD> : null}
+                <TD className="px-3 py-2"><button type="button" onClick={() => setSelectedUserId(user.id)} className="flex items-center gap-3 text-left"><Initials name={user.name} size="md" /><span><span className="block font-medium hover:text-(--text-brand)">{user.name}</span><span className="block text-xs text-(--text-tertiary)">{user.email}</span></span></button></TD>
                 <TD>
                   {canManage ? (
-                    <select aria-label={`Role for ${user.name}`} value={user.role.key} onChange={(e) => void patchUser(user.id, { roleKey: e.target.value })} className="input">
-                      {roles.map((role) => <option key={role.key} value={role.key}>{role.name}</option>)}
-                    </select>
+                    <Select value={user.role.key} onValueChange={(value) => void patchUser(user.id, { roleKey: value })}>
+                      <SelectTrigger aria-label={`Role for ${user.name}`} size="sm" className="h-7 w-full max-w-40 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roles.map((role) => <SelectItem key={role.key} value={role.key}>{role.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   ) : user.role.name}
                 </TD>
-                <TD className="text-xs">{user.memberships.map((m) => m.team.name).join(", ") || "—"}</TD>
-                <TD className="text-xs">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "never"}</TD>
-                <TD><span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${user.status === "ACTIVE" ? "bg-(--success-bg) text-(--success)" : user.status === "SUSPENDED" ? "bg-(--warning-bg) text-(--warning)" : "bg-(--bg-subtle) text-(--text-secondary)"}`}><span aria-hidden className={`h-1.5 w-1.5 rounded-full ${user.status === "ACTIVE" ? "bg-(--success)" : user.status === "SUSPENDED" ? "bg-(--warning)" : "bg-(--text-tertiary)"}`} />{user.status.charAt(0) + user.status.slice(1).toLowerCase()}</span></TD>
+                <TD className="px-3 py-2 text-xs">{user.memberships.map((m) => m.team.name).join(", ") || "—"}</TD>
+                <TD className="px-3 py-2 whitespace-nowrap text-xs">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "never"}</TD>
+                <TD className="px-3 py-2"><Badge className="badge badge-neutral">{user.status.charAt(0) + user.status.slice(1).toLowerCase()}</Badge></TD>
                 {canManage ? (
-                  <TD className="text-right whitespace-nowrap">
-                    <button
-                      type="button"
-                      onClick={() => void patchUser(user.id, { status: user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" })}
-                      className="mr-3 text-xs text-(--text-brand) hover:underline"
-                    >
-                      {user.status === "ACTIVE" ? "suspend" : "activate"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const ok = await confirm({
-                          title: `Permanently delete "${user.name}"?`,
-                          message: `${user.email} — all owned records will be reassigned to you. This action cannot be undone.`,
-                          confirmLabel: "Delete user",
-                          destructive: true,
-                        });
-                        if (!ok) return;
-                        const response = await fetch(`/api/admin/users?id=${user.id}`, { method: "DELETE" });
-                        if (!response.ok) {
-                          const body = (await response.json().catch(() => null)) as { error?: string } | null;
-                          setError(body?.error ?? "Delete failed.");
-                          return;
-                        }
-                        void load();
-                      }}
-                      className="text-xs text-(--error) hover:underline"
-                    >
-                      delete
-                    </button>
+                  <TD className="px-3 py-2 text-right">
+                    <div className="flex justify-end">
+                      <RowActions
+                        actions={[
+                          { label: "View profile", icon: "users", onClick: () => setSelectedUserId(user.id) },
+                          {
+                            label: user.status === "ACTIVE" ? "Suspend access" : "Restore access",
+                            icon: user.status === "ACTIVE" ? "x_circle" : "play",
+                            onClick: () => void patchUser(user.id, { status: user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" }),
+                          },
+                          {
+                            label: "Delete",
+                            icon: "trash",
+                            destructive: true,
+                            onClick: async () => {
+                              const ok = await confirm({
+                                title: `Permanently delete "${user.name}"?`,
+                                message: `${user.email} — all owned records will be reassigned to you. This action cannot be undone.`,
+                                confirmLabel: "Delete user",
+                                destructive: true,
+                              });
+                              if (!ok) return;
+                              const response = await fetch(`/api/admin/users?id=${user.id}`, { method: "DELETE" });
+                              if (!response.ok) {
+                                const body = (await response.json().catch(() => null)) as { error?: string } | null;
+                                setError(body?.error ?? "Delete failed.");
+                                return;
+                              }
+                              void load();
+                            },
+                          },
+                        ]}
+                      />
+                    </div>
                   </TD>
                 ) : null}
               </TR>
@@ -820,10 +882,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
             {!loading && filteredUsers.length === 0 ? (
               <TR>
                 <TD colSpan={canManage ? 7 : 5}>
-                  <div className="empty-state">
-                    <p className="empty-state-title">No users match this view</p>
-                    <p className="empty-state-description">Adjust the search or status filter.</p>
-                  </div>
+                  <EmptyState title="No users match this view" description="Adjust the search or status filter." />
                 </TD>
               </TR>
             ) : null}
@@ -831,60 +890,125 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
         </Table>
       </div>
 
-      {selectedUser ? <div className="card border-(--brand-200) p-5" aria-label={`Profile for ${selectedUser.name}`}>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-3"><span className="avatar flex h-11 w-11 items-center justify-center rounded-xl text-sm font-bold" style={{ background: "var(--brand-100)", color: "var(--brand-800)" }}>{selectedUser.name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</span><div><p className="card-title">User profile</p><h3 className="mt-0.5 flex items-center gap-2 text-lg font-semibold">{selectedUser.name}<span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${selectedUser.status === "ACTIVE" ? "bg-(--success-bg) text-(--success)" : "bg-(--warning-bg) text-(--warning)"}`}>{selectedUser.status.charAt(0) + selectedUser.status.slice(1).toLowerCase()}</span><span className="rounded-full bg-(--bg-subtle) px-2 py-0.5 text-[11px] font-medium text-(--text-secondary)">{selectedUser.role.name}</span></h3><p className="text-sm text-(--text-secondary)">{selectedUser.email}</p></div></div>
-          <button type="button" onClick={() => setSelectedUserId(null)} className="btn btn-secondary">Close</button>
-        </div>
-        <div className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
-          <div><p className="card-title">Access status</p><p className="mt-1 font-medium">{selectedUser.status.toLowerCase()}</p></div>
-          <div><p className="card-title">Role</p><p className="mt-1 font-medium">{selectedUser.role.name}</p></div>
-          <div><p className="card-title">Last login</p><p className="mt-1 font-medium">{selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleString() : "Never"}</p></div>
-        </div>
-        <div className="mt-4 border-t border-(--border-default) pt-4"><p className="card-title">Team assignments</p><p className="mt-1 text-sm">{selectedUser.memberships.map((membership) => membership.team.name).join(", ") || "No teams assigned"}</p></div>
-        <div className="mt-4 border-t border-(--border-default) pt-4"><p className="card-title">Workspace overview</p><div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Link href={`/emails?userId=${selectedUser.id}&userName=${encodeURIComponent(selectedUser.name)}`} className="card card-interactive flex items-center gap-2.5 p-3"><Icon name="mail" size={16} className="text-(--text-tertiary)" /><span className="text-sm font-medium">Mailbox</span></Link>
-          <Link href={`/leads?assignment=user:${selectedUser.id}`} className="card card-interactive flex items-center gap-2.5 p-3"><Icon name="target" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.assignedLeads}</span><span className="block text-xs text-(--text-secondary)">Leads</span></span></Link>
-          <Link href={`/contacts?ownerUserId=${selectedUser.id}`} className="card card-interactive flex items-center gap-2.5 p-3"><Icon name="users" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedContacts}</span><span className="block text-xs text-(--text-secondary)">Contacts</span></span></Link>
-          <Link href={`/accounts?ownerUserId=${selectedUser.id}`} className="card card-interactive flex items-center gap-2.5 p-3"><Icon name="building" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedAccounts}</span><span className="block text-xs text-(--text-secondary)">Accounts</span></span></Link>
-          <Link href={`/customers?ownerUserId=${selectedUser.id}`} className="card card-interactive flex items-center gap-2.5 p-3"><Icon name="heart" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedCustomers}</span><span className="block text-xs text-(--text-secondary)">Customers</span></span></Link>
-          <Link href={`/opportunities?ownerUserId=${selectedUser.id}`} className="card card-interactive flex items-center gap-2.5 p-3"><Icon name="trending" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedOpps}</span><span className="block text-xs text-(--text-secondary)">Opportunities</span></span></Link>
-          <Link href={`/tasks?mine=0&ownerUserId=${selectedUser.id}`} className="card card-interactive flex items-center gap-2.5 p-3"><Icon name="check" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedTasks}</span><span className="block text-xs text-(--text-secondary)">Tasks</span></span></Link>
-        </div></div>
-        <div className="mt-4 border-t border-(--border-default) pt-4"><div className="flex items-center justify-between"><p className="card-title">Recent activity</p><span className="text-[11px] text-(--text-tertiary)">{userActivity.length} events</span></div>
-          {activityError ? <p role="alert" className="mt-2 text-sm text-(--error)">{activityError}</p> : activityLoading ? <div className="mt-2 space-y-2"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-4 w-1/2" /></div> : userActivity.length === 0 ? <p className="mt-2 text-sm text-(--text-tertiary)">No recorded activity yet.</p> : <ul className="mt-2 max-h-52 space-y-2 overflow-y-auto">{userActivity.map((event) => <li key={event.id} className="flex items-start justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><span><span className="font-medium">{event.label}</span><span className="ml-2 text-xs text-(--text-tertiary)">{event.objectType.toLowerCase()}</span></span><time className="shrink-0 text-[11px] text-(--text-tertiary)">{new Date(event.createdAt).toLocaleDateString()}</time></li>)}</ul>}
-        </div>
-        {canManage ? <UserSmtpPanel userId={selectedUser.id} userEmail={selectedUser.email} /> : null}
-        {canManage ? <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => void patchUser(selectedUser.id, { status: selectedUser.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" })} className="btn btn-secondary">{selectedUser.status === "ACTIVE" ? "Suspend access" : "Restore access"}</button><button type="button" onClick={() => setSelectedUserId(null)} className="btn btn-secondary">Done</button></div> : null}
-      </div> : null}
+      {selectedUser ? (
+        <Drawer
+          open
+          title={selectedUser.name}
+          subtitle={selectedUser.email}
+          onClose={() => setSelectedUserId(null)}
+          width="lg"
+          label={`Profile for ${selectedUser.name}`}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${selectedUser.status === "ACTIVE" ? "bg-(--success-bg) text-(--success)" : selectedUser.status === "SUSPENDED" ? "bg-(--warning-bg) text-(--warning)" : "bg-(--bg-subtle) text-(--text-secondary)"}`}>
+              <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${selectedUser.status === "ACTIVE" ? "bg-(--success)" : selectedUser.status === "SUSPENDED" ? "bg-(--warning)" : "bg-(--text-tertiary)"}`} />
+              {selectedUser.status.charAt(0) + selectedUser.status.slice(1).toLowerCase()}
+            </span>
+            <span className="rounded-full bg-(--bg-subtle) px-2 py-0.5 text-xs font-medium text-(--text-secondary)">{selectedUser.role.name} role</span>
+            <span className="text-xs text-(--text-tertiary)">
+              Last login {selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleString() : "never"}
+            </span>
+          </div>
+
+          <Tabs key={selectedUser.id} defaultValue="profile" className="mt-4">
+            <TabsList variant="line">
+              <TabsTrigger value="profile">Profile</TabsTrigger>
+              <TabsTrigger value="workspace">Workspace</TabsTrigger>
+              <TabsTrigger value="activity">Activity</TabsTrigger>
+              {canManage ? <TabsTrigger value="smtp">SMTP access</TabsTrigger> : null}
+            </TabsList>
+
+            <TabsContent value="profile" className="mt-4 space-y-5">
+              <div className="flex items-center gap-3">
+                <Avatar className="size-11 rounded-xl text-sm font-bold" style={{ background: "var(--brand-100)", color: "var(--brand-800)" }}>
+                  <AvatarFallback className="rounded-xl bg-transparent text-sm font-bold">{selectedUser.name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <CardLabel>Access</CardLabel>
+                  <p className="mt-0.5 text-sm text-(--text-secondary)">
+                    {selectedUser.role.name} · {selectedUser.status.toLowerCase()}
+                  </p>
+                </div>
+                {canManage ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="ml-auto shrink-0"
+                    onClick={() => void patchUser(selectedUser.id, { status: selectedUser.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" })}
+                  >
+                    {selectedUser.status === "ACTIVE" ? "Suspend access" : "Restore access"}
+                  </Button>
+                ) : null}
+              </div>
+              <div className="grid gap-4 text-sm sm:grid-cols-2">
+                <div><CardLabel>Role</CardLabel><p className="mt-1 font-medium">{selectedUser.role.name}</p></div>
+                <div><CardLabel>Last login</CardLabel><p className="mt-1 font-medium">{selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleString() : "Never"}</p></div>
+              </div>
+              <div className="border-t border-(--border-default) pt-4">
+                <CardLabel>Team assignments</CardLabel>
+                <p className="mt-1 text-sm">{selectedUser.memberships.map((membership) => membership.team.name).join(", ") || "No teams assigned"}</p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="workspace" className="mt-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Link href={`/emails?userId=${selectedUser.id}&userName=${encodeURIComponent(selectedUser.name)}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="mail" size={16} className="text-(--text-tertiary)" /><span className="text-sm font-medium">Mailbox</span></Link>
+                <Link href={`/leads?assignment=user:${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="target" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.assignedLeads}</span><span className="block text-xs text-(--text-secondary)">Leads</span></span></Link>
+                <Link href={`/contacts?ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="users" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedContacts}</span><span className="block text-xs text-(--text-secondary)">Contacts</span></span></Link>
+                <Link href={`/accounts?ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="building" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedAccounts}</span><span className="block text-xs text-(--text-secondary)">Accounts</span></span></Link>
+                <Link href={`/customers?ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="heart" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedCustomers}</span><span className="block text-xs text-(--text-secondary)">Customers</span></span></Link>
+                <Link href={`/opportunities?ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="trending" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedOpps}</span><span className="block text-xs text-(--text-secondary)">Opportunities</span></span></Link>
+                <Link href={`/tasks?mine=0&ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="check" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedTasks}</span><span className="block text-xs text-(--text-secondary)">Tasks</span></span></Link>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="activity" className="mt-4">
+              <div className="mb-2 flex items-center justify-between">
+                <CardLabel>Recent activity</CardLabel>
+                <span className="text-[11px] text-(--text-tertiary)">{userActivity.length} events</span>
+              </div>
+              {activityError ? <p role="alert" className="mt-2 text-sm text-(--error)">{activityError}</p> : activityLoading ? <div className="mt-2 space-y-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-1/2" /></div> : userActivity.length === 0 ? <p className="mt-2 text-sm text-(--text-tertiary)">No recorded activity yet.</p> : <ul className="mt-2 space-y-2">{userActivity.map((event) => <li key={event.id} className="flex items-start justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><span><span className="font-medium">{event.label}</span><span className="ml-2 text-xs text-(--text-tertiary)">{event.objectType.toLowerCase()}</span></span><time className="shrink-0 text-[11px] text-(--text-tertiary)">{new Date(event.createdAt).toLocaleDateString()}</time></li>)}</ul>}
+            </TabsContent>
+
+            {canManage ? (
+              <TabsContent value="smtp" className="mt-4">
+                <UserSmtpPanel userId={selectedUser.id} userEmail={selectedUser.email} />
+              </TabsContent>
+            ) : null}
+          </Tabs>
+        </Drawer>
+      ) : null}
 
       <div className="flex flex-col gap-3 border-b border-(--border-default) pb-3 pt-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="card-title mb-1">Structure</p>
-          <h3 className="text-lg font-semibold tracking-tight">Teams <span className="text-sm font-normal text-(--text-tertiary)">{teams.length}</span></h3>
+          <CardLabel>Structure</CardLabel>
+          <h3 className="mt-1 text-lg font-semibold tracking-tight">Teams <span className="text-sm font-normal text-(--text-tertiary)">{teams.length}</span></h3>
         </div>
         {canManage ? (
-          <button type="button" onClick={() => setShowTeamForm((p) => !p)} className="btn btn-secondary">
-            <Icon name="plus" size={14} /> New team
-          </button>
+          <Button variant="secondary" icon="plus" onClick={() => setShowTeamForm((p) => !p)}>
+            New team
+          </Button>
         ) : null}
       </div>
       {showTeamForm && canManage ? (
         <SetupFormModal title="New team" onClose={() => setShowTeamForm(false)}>
         <form method="post" onSubmit={createTeam} className="space-y-4">
           <div><p className="form-section-title">Team structure</p><p className="form-section-help">Teams shape visibility, ownership, and collaboration.</p></div>
-          <div>
-            <label htmlFor="at-name" className="form-label">Name <span className="form-required">*</span></label>
-            <input id="at-name" value={tName} onChange={(e) => setTName(e.target.value)} required minLength={2} className="input" />
-          </div>
-          <div>
-            <label htmlFor="at-leader" className="form-label">Leader</label>
-            <select id="at-leader" value={tLeader} onChange={(e) => setTLeader(e.target.value)} className="input">
-              <option value="">— none —</option>
-              {users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
-            </select>
-          </div>
-          <div className="form-actions"><button type="button" onClick={() => setShowTeamForm(false)} className="btn btn-secondary">Cancel</button><button type="submit" className="btn btn-primary"><Icon name="plus" size={14} /> Create team</button></div>
+          <Field label="Name" required id="at-name">
+            <IconInput id="at-name" icon="users" value={tName} onChange={(e) => setTName(e.target.value)} required minLength={2} placeholder="e.g. EMEA desk" />
+          </Field>
+          <Field label="Leader" id="at-leader" help="Optional — shown as the team lead.">
+            <Select value={tLeader || "__none__"} onValueChange={(value) => setTLeader(value === "__none__" ? "" : value)}>
+              <IconSelectTrigger id="at-leader" icon="users" className="w-full">
+                <SelectValue />
+              </IconSelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— none —</SelectItem>
+                {users.map((user) => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+          <div className="form-actions"><Button type="button" variant="secondary" onClick={() => setShowTeamForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">Create team</Button></div>
         </form>
         </SetupFormModal>
       ) : null}
@@ -892,8 +1016,8 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
         {loading ? (
           <AdminCardGridSkeleton cards={4} />
         ) : teams.map((team) => (
-          <div key={team.id} className="card card-interactive p-4 text-sm">
-            <div className="mb-2 flex items-center justify-between gap-2"><p className="font-semibold">{team.name}</p><span className="badge badge-neutral">{team.memberships.length} members</span></div>
+          <Card key={team.id} className="gap-0 p-4 text-sm transition-colors hover:bg-(--bg-hover)">
+            <div className="mb-2 flex items-center justify-between gap-2"><p className="font-semibold">{team.name}</p><Badge variant="outline">{team.memberships.length} members</Badge></div>
             <p className="text-xs text-(--text-secondary)">Lead: {team.leader?.name ?? "Unassigned"}{team.parent ? <span className="text-(--text-tertiary)"> · under {team.parent.name}</span> : null}</p>
             <p className="mt-2 truncate text-xs text-(--text-tertiary)">{team.memberships.map((m) => m.user.name).join(", ") || "No members assigned"}</p>
             {canManage ? (
@@ -920,7 +1044,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                 delete
               </button>
             ) : null}
-          </div>
+          </Card>
         ))}
       </div>
 
@@ -1008,29 +1132,43 @@ export function RolesTab({ canManage = false }: { canManage?: boolean }) {
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
       {loading ? (
         <AdminCardGridSkeleton cards={3} />
-      ) : selectedRole ? <section className="card overflow-hidden">
+      ) : selectedRole ? <Card className="gap-0 overflow-hidden py-0">
         <div className="flex flex-col gap-3 border-b border-(--border-default) bg-(--bg-subtle) px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-          <div><label htmlFor="role-select" className="form-label">Role</label><select id="role-select" value={selectedRole.id} onChange={(event) => setSelectedRoleId(event.target.value)} className="input mt-1 min-w-56 font-semibold">{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select><p className="mt-2 text-xs text-(--text-secondary)">{selectedRole.description} · {selectedRole._count.users} assigned users · {selectedRole.scope.toLowerCase()} scope</p></div>
-          <div className="relative w-full sm:w-64"><label htmlFor="permission-search" className="sr-only">Search permissions</label><Icon name="search" size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--text-tertiary)" /><input id="permission-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search permissions" className="input pl-9" /></div>
+          <div><Label htmlFor="role-select">Role</Label><Select value={selectedRole.id} onValueChange={setSelectedRoleId}><IconSelectTrigger id="role-select" icon="shield" className="mt-1 min-w-56 w-full font-semibold sm:w-56"><SelectValue /></IconSelectTrigger><SelectContent>{roles.map((role) => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}</SelectContent></Select><p className="mt-2 text-xs text-(--text-secondary)">{selectedRole.description} · {selectedRole._count.users} assigned users · {selectedRole.scope.toLowerCase()} scope</p></div>
+          <div className="w-full sm:w-64"><label htmlFor="permission-search" className="sr-only">Search permissions</label><SearchInput id="permission-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search permissions" /></div>
         </div>
-        <div className="divide-y divide-(--border-default)">
+        <Accordion type="multiple" value={expanded} onValueChange={setExpanded} className="divide-y divide-(--border-default)">
           {visibleCategories.map((category) => {
             const enabledCount = category.permissions.filter(({ key }) => selectedRole.permissions.some((entry) => entry.permission === key)).length;
-            const isExpanded = expanded.includes(category.key);
             const locked = selectedRole.key === "SUPER_ADMIN" || !canManage;
-            return <div key={category.key}>
-              <div className="flex items-center gap-3 px-4 py-3 hover:bg-(--bg-hover)">
-                <button type="button" aria-expanded={isExpanded} onClick={() => setExpanded((current) => current.includes(category.key) ? current.filter((key) => key !== category.key) : [...current, category.key])} className="w-5 text-left text-(--text-secondary)"><Icon name={isExpanded ? "chevron_down" : "chevron_right"} size={14} /></button>
-                <button type="button" onClick={() => setExpanded((current) => current.includes(category.key) ? current : [...current, category.key])} className="flex-1 text-left text-sm font-medium">{category.label}</button>
-                <span className="badge badge-neutral">{enabledCount} / {category.permissions.length} enabled</span>
-                <button type="button" disabled={locked} onClick={() => void setCategory(selectedRole.id, category.permissions, true)} className="btn btn-ghost btn-sm disabled:opacity-40">Enable all</button>
-                <button type="button" disabled={locked} onClick={() => void setCategory(selectedRole.id, category.permissions, false)} className="btn btn-ghost btn-sm disabled:opacity-40">Disable all</button>
-              </div>
-              {isExpanded ? <div className="grid gap-1 border-t border-(--border-default) bg-(--bg-surface) px-12 py-2 sm:grid-cols-2 lg:grid-cols-3">{category.permissions.map(({ key, label }) => { const enabled = selectedRole.permissions.some((entry) => entry.permission === key); return <label key={key} className={`flex items-center gap-2 rounded px-2 py-2 text-sm ${enabled ? "bg-(--bg-subtle) text-(--text-primary)" : "text-(--text-tertiary)"}`}><input type="checkbox" checked={enabled} disabled={locked} onChange={(event) => void toggle(selectedRole.id, key, event.target.checked)} />{label}</label>; })}</div> : null}
-            </div>;
+            return (
+              <AccordionItem key={category.key} value={category.key} className="border-b-0">
+                <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-(--bg-hover)">
+                  <AccordionTrigger className="gap-2 py-0 text-sm font-medium hover:no-underline">
+                    {category.label}
+                  </AccordionTrigger>
+                  <Badge variant="outline" className="shrink-0">{enabledCount} / {category.permissions.length} enabled</Badge>
+                  <Button type="button" variant="tertiary" size="sm" icon="check" disabled={locked} onClick={() => void setCategory(selectedRole.id, category.permissions, true)} className="shrink-0">Enable all</Button>
+                  <Button type="button" variant="tertiary" size="sm" icon="close" disabled={locked} onClick={() => void setCategory(selectedRole.id, category.permissions, false)} className="shrink-0">Disable all</Button>
+                </div>
+                <AccordionContent className="pb-0">
+                  <div className="grid gap-1 border-t border-(--border-default) bg-(--bg-surface) px-12 py-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {category.permissions.map(({ key, label }) => {
+                      const enabled = selectedRole.permissions.some((entry) => entry.permission === key);
+                      return (
+                        <label key={key} htmlFor={`perm-${selectedRole.id}-${key}`} className={`flex items-center gap-2 rounded px-2 py-2 text-sm ${enabled ? "bg-(--bg-subtle) text-(--text-primary)" : "text-(--text-tertiary)"}`}>
+                          <Checkbox id={`perm-${selectedRole.id}-${key}`} checked={enabled} disabled={locked} onCheckedChange={(checked) => void toggle(selectedRole.id, key, checked === true)} />
+                          {label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            );
           })}
-        </div>
-      </section> : null}
+        </Accordion>
+      </Card> : null}
     </div>
   );
 }
@@ -1080,25 +1218,23 @@ export function SettingsTab() {
         eyebrow="Workspace behavior"
         title="Settings"
         subtitle={`Manage organization-level defaults used throughout ${branding.short}.`}
-        actions={<button type="button" onClick={() => setShowForm(true)} className="btn btn-primary"><Icon name="plus" size={14} /> Add setting</button>}
+        actions={<Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>Add setting</Button>}
         metrics={[{ label: "Configured", value: settings.length, tone: "brand" }, { label: "Storage", value: "Workspace", tone: "info" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
       {showForm ? <SetupFormModal title="Add workspace setting" onClose={() => setShowForm(false)}>
       <form method="post" onSubmit={async (event) => { await save(event); setShowForm(false); }} className="space-y-4">
         <div><p className="form-section-title">Workspace default</p><p className="form-section-help">Use a namespaced key such as org.currency or tasks.defaultDueDays.</p></div>
-        <div>
-          <label htmlFor="set-key" className="form-label">Key (e.g. org.currency)</label>
-          <input id="set-key" value={key} onChange={(e) => setKey(e.target.value)} required pattern="[a-z][a-z0-9_.]*" className="input" />
-        </div>
-        <div>
-          <label htmlFor="set-value" className="form-label">Value</label>
-          <input id="set-value" value={value} onChange={(e) => setValue(e.target.value)} required className="input" />
-        </div>
-        <div className="form-actions"><button type="button" onClick={() => setShowForm(false)} className="btn btn-secondary">Cancel</button><button type="submit" className="btn btn-primary"><Icon name="plus" size={14} /> Save setting</button></div>
+        <Field label="Key" required id="set-key" help="Lowercase, dot-namespaced.">
+          <IconInput id="set-key" icon="tag" value={key} onChange={(e) => setKey(e.target.value)} required pattern="[a-z][a-z0-9_.]*" placeholder="e.g. org.currency" />
+        </Field>
+        <Field label="Value" required id="set-value" help="JSON, number, or string.">
+          <IconInput id="set-value" icon="sliders" value={value} onChange={(e) => setValue(e.target.value)} required placeholder="e.g. EUR" />
+        </Field>
+        <div className="form-actions"><Button type="button" variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">Save setting</Button></div>
       </form>
       </SetupFormModal> : null}
-      <div className="card overflow-hidden">
+      <Card className="gap-0 overflow-hidden py-0">
         <div className="border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3">
           <h2 className="text-sm font-semibold">Configured values</h2>
           <p className="mt-0.5 text-xs text-(--text-tertiary)">Changes are applied across the workspace.</p>
@@ -1107,15 +1243,15 @@ export function SettingsTab() {
           <div className="p-4">
             {[...Array(4)].map((_, index) => (
               <div key={`settings-skeleton-${index}`} className="flex items-center justify-between gap-4 border-b border-(--border-default) py-3 last:border-0">
-                <div className="skeleton" style={{ height: 14, width: "35%" }} />
-                <div className="skeleton" style={{ height: 14, width: "22%" }} />
+                <Skeleton style={{ height: 14, width: "35%" }} />
+                <Skeleton style={{ height: 14, width: "22%" }} />
               </div>
             ))}
           </div>
         ) : settings.length === 0 ? (
-          <div className="empty-state"><p className="empty-state-title">No settings yet</p><p className="empty-state-description">Add a workspace default above to make it available to the CRM.</p></div>
+          <EmptyState title="No settings yet" description="Add a workspace default above to make it available to the CRM." />
         ) : (
-          <div className="card-body">
+          <CardContent>
             <dl className="admin-desc-list">
               {settings.map((setting) => (
                 <Fragment key={setting.id}>
@@ -1124,9 +1260,9 @@ export function SettingsTab() {
                 </Fragment>
               ))}
             </dl>
-          </div>
+          </CardContent>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
@@ -1191,18 +1327,18 @@ export function AuditTab() {
         subtitle="Review configuration and record changes across your workspace."
         metrics={[{ label: "Entries", value: total, tone: "brand" }, { label: "Page", value: page, tone: "info" }, { label: "Page size", value: pageSize, tone: "success" }]}
       />
-      <div className="card overflow-hidden">
+      <div className="card table-responsive overflow-x-auto">
         <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3">
           <div><h2 className="text-sm font-semibold">Recent activity</h2><p className="mt-0.5 text-xs text-(--text-tertiary)">Append-only history of important changes.</p></div>
-          <span className="badge badge-neutral">{total} entries</span>
+          <Badge className="badge badge-neutral">{total} entries</Badge>
         </div>
         <Table>
           <THead>
             <TR>
-              <TH>When</TH>
-              <TH>Actor</TH>
-              <TH>Action</TH>
-              <TH>Object</TH>
+              <TH className="px-3 py-2 font-medium">When</TH>
+              <TH className="px-3 py-2 font-medium">Actor</TH>
+              <TH className="px-3 py-2 font-medium">Action</TH>
+              <TH className="px-3 py-2 font-medium">Object</TH>
             </TR>
           </THead>
           <TBody>
@@ -1210,19 +1346,19 @@ export function AuditTab() {
               <AdminTableSkeleton rows={8} columns={4} />
             ) : entries.map((entry) => (
               <TR key={entry.id}>
-                <TD className="whitespace-nowrap text-xs text-(--text-secondary)">
+                <TD className="px-3 py-2 whitespace-nowrap text-xs text-(--text-secondary)">
                   {new Date(entry.createdAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "medium" })}
                 </TD>
-                <TD><span className="font-medium">{entry.actor?.name ?? "System"}</span></TD>
-                <TD><span className={`badge ${entry.action.endsWith("_CREATED") ? "badge-success" : entry.action.endsWith("_UPDATED") ? "badge-info" : entry.action.endsWith("_DELETED") ? "badge-error" : "badge-neutral"}`}>{entry.action.replaceAll("_", " ").toLowerCase()}</span></TD>
-                <TD className="text-xs text-(--text-secondary)">
+                <TD className="px-3 py-2"><span className="flex items-center gap-1.5">{entry.actor?.name ? <><Initials name={entry.actor.name} size="xs" /><span className="font-medium">{entry.actor.name}</span></> : <span className="font-medium">System</span>}</span></TD>
+                <TD className="px-3 py-2"><Badge className="badge badge-neutral whitespace-nowrap">{entry.action.replaceAll("_", " ").toLowerCase()}</Badge></TD>
+                <TD className="px-3 py-2 text-xs text-(--text-secondary)">
                   <span className="font-medium text-(--text-primary)">{entry.objectType.toLowerCase()}</span>
                   {entry.objectId ? ` · …${entry.objectId.slice(-6)}` : ""}
                 </TD>
               </TR>
             ))}
             {!loading && entries.length === 0 ? (
-              <TR><TD colSpan={4}><div className="empty-state"><p className="empty-state-title">No audit entries yet</p><p className="empty-state-description">Configuration and record changes will appear here as they happen.</p></div></TD></TR>
+              <TR><TD colSpan={4}><EmptyState title="No audit entries yet" description="Configuration and record changes will appear here as they happen." /></TD></TR>
             ) : null}
           </TBody>
         </Table>
@@ -1238,24 +1374,26 @@ export function AuditTab() {
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-1">
             Rows
-            <select
-              aria-label="Rows per page"
-              value={pageSize}
-              onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}
-              className="input input-sm"
-              style={{ width: "auto" }}
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => { setPageSize(Number(value)); setPage(1); }}
             >
-              {[10, 25, 50].map((size) => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
+              <SelectTrigger aria-label="Rows per page" size="sm" className="h-7 w-fit text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 25, 50].map((size) => (
+                  <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
-          <button type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="btn btn-secondary btn-sm">
+          <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
             Previous
-          </button>
-          <button type="button" disabled={page * pageSize >= total} onClick={() => setPage((current) => current + 1)} className="btn btn-secondary btn-sm">
+          </Button>
+          <Button variant="secondary" size="sm" icon="chevron_right" disabled={page * pageSize >= total} onClick={() => setPage((current) => current + 1)}>
             Next
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -1313,7 +1451,7 @@ export function IntegrationsTab() {
 
 function IntegrationCard({ title, description, enabled, detail }: { title: string; description: string; enabled: boolean; detail: string }) {
   return (
-    <section className="card p-4">
+    <Card className="gap-0 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-(--border-default) bg-(--bg-subtle) text-(--text-secondary)" aria-hidden>
@@ -1324,10 +1462,10 @@ function IntegrationCard({ title, description, enabled, detail }: { title: strin
             <p className="mt-1 text-sm text-(--text-secondary)">{description}</p>
           </div>
         </div>
-        <span className={enabled ? "badge badge-success" : "badge badge-neutral"}>{enabled ? "Connected" : "Not configured"}</span>
+        <Badge variant="outline" className={enabled ? badgeToneClass("success") : undefined}>{enabled ? "Connected" : "Not configured"}</Badge>
       </div>
-      <div className="mt-3 flex items-center gap-2 border-t border-(--border-default) pt-3 text-xs text-(--text-tertiary)"><span className={`h-2 w-2 rounded-full ${enabled ? "bg-(--success)" : "bg-(--gray-400)"}`} />{detail}</div>
-    </section>
+      <div className="mt-3 flex items-center gap-2 border-t border-(--border-default) pt-3 text-xs text-(--text-tertiary)"><span aria-hidden className={`h-2 w-2 rounded-full ${enabled ? "bg-(--success)" : "bg-(--text-tertiary)"}`} />{detail}</div>
+    </Card>
   );
 }
 
@@ -1403,7 +1541,7 @@ export function ObjectsTab() {
         eyebrow="Data model"
         title="Custom objects"
         subtitle={`Extend ${branding.short} with record types that match how your business works.`}
-        actions={<button type="button" onClick={() => setShowForm(true)} className="btn btn-primary"><Icon name="plus" size={14} /> New object type</button>}
+        actions={<Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>New object type</Button>}
         metrics={[{ label: "Object types", value: objects.length, tone: "brand" }, { label: "Active", value: objects.filter((object) => object.active).length, tone: "success" }, { label: "Records", value: objects.reduce((sum, object) => sum + object._count.records, 0), tone: "info" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
@@ -1418,40 +1556,34 @@ export function ObjectsTab() {
         <form method="post" onSubmit={async (event) => { await create(event); setShowForm(false); }} className="space-y-4">
           <div><p className="form-section-title">Object definition</p><p className="form-section-help">Define the identity and fields for a new record type.</p></div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <label htmlFor="co-key" className="form-label">Key (URL slug) *</label>
-              <input id="co-key" value={key} onChange={(e) => setKey(e.target.value)} required pattern="[a-z][a-z0-9-]*" placeholder="properties" className="input" />
-            </div>
-            <div>
-              <label htmlFor="co-name" className="form-label">Name (singular) *</label>
-              <input id="co-name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Property" className="input" />
-            </div>
-            <div>
-              <label htmlFor="co-plural" className="form-label">Plural name *</label>
-              <input id="co-plural" value={pluralName} onChange={(e) => setPluralName(e.target.value)} required placeholder="Properties" className="input" />
-            </div>
+            <Field label="Key (URL slug)" required id="co-key">
+              <IconInput id="co-key" icon="tag" value={key} onChange={(e) => setKey(e.target.value)} required pattern="[a-z][a-z0-9-]*" placeholder="properties" />
+            </Field>
+            <Field label="Name (singular)" required id="co-name">
+              <IconInput id="co-name" icon="tag" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Property" />
+            </Field>
+            <Field label="Plural name" required id="co-plural">
+              <IconInput id="co-plural" icon="list" value={pluralName} onChange={(e) => setPluralName(e.target.value)} required placeholder="Properties" />
+            </Field>
           </div>
-          <div>
-            <label htmlFor="co-desc" className="form-label">Description</label>
-            <input id="co-desc" value={description} onChange={(e) => setDescription(e.target.value)} className="input" />
-          </div>
-          <div>
-            <label htmlFor="co-fields" className="form-label">
-              Fields (JSON array) — key, label, type, required, options, sortOrder
-            </label>
-            <textarea
+          <Field label="Description" id="co-desc" help="Optional — one line shown under the object name.">
+            <IconInput id="co-desc" icon="note" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Properties we manage for clients" />
+          </Field>
+          <Field
+            label="Fields (JSON array)"
+            id="co-fields"
+            help="Each entry: key, label, type, required, options, sortOrder — types: TEXT, NUMBER, CURRENCY, BOOLEAN, DATE, DATETIME, SELECT, MULTI_SELECT, PHONE, EMAIL, URL."
+          >
+            <Textarea
               id="co-fields"
               value={fieldsJson}
               onChange={(e) => setFieldsJson(e.target.value)}
               rows={6}
-              className="input font-mono"
+              className="font-mono"
               placeholder={'[{"key":"title","label":"Title","type":"TEXT","required":true,"sortOrder":1},{"key":"price","label":"Price","type":"NUMBER","sortOrder":2}]'}
             />
-            <p className="mt-1 text-[10px] text-(--text-tertiary)">
-              Types: TEXT, NUMBER, CURRENCY, BOOLEAN, DATE, DATETIME, SELECT, MULTI_SELECT, PHONE, EMAIL, URL
-            </p>
-          </div>
-          <div className="form-actions"><button type="button" onClick={() => setShowForm(false)} className="btn btn-secondary">Cancel</button><button type="submit" className="btn btn-primary"><Icon name="plus" size={14} /> Create object</button></div>
+          </Field>
+          <div className="form-actions"><Button type="button" variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">Create object</Button></div>
         </form>
         </SetupFormModal>
       ) : null}
@@ -1460,7 +1592,7 @@ export function ObjectsTab() {
         {loading ? (
           <AdminCardGridSkeleton cards={4} />
         ) : objects.map((object) => (
-          <div key={object.id} className="card card-interactive p-4">
+          <Card key={object.id} className="gap-0 p-4 transition-colors hover:bg-(--bg-hover)">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-base font-medium">
@@ -1468,7 +1600,7 @@ export function ObjectsTab() {
                   <span className="ml-2 font-mono text-xs text-(--text-tertiary)">/{object.key}</span>
                 </p>
                 {object.description ? <p className="text-xs text-(--text-secondary)">{object.description}</p> : null}
-                <div className="mt-3 flex flex-wrap gap-2"><span className={object.active ? "badge badge-success" : "badge badge-neutral"}>{object.active ? "active" : "inactive"}</span><span className="badge badge-neutral">{object._count.records} records</span><span className="badge badge-neutral">{object.fields?.length ?? 0} fields</span></div>
+                <div className="mt-3 flex flex-wrap gap-2"><Badge variant="outline" className={object.active ? badgeToneClass("success") : undefined}>{object.active ? "active" : "inactive"}</Badge><Badge variant="outline">{object._count.records} records</Badge><Badge variant="outline">{object.fields?.length ?? 0} fields</Badge></div>
               </div>
               <div className="flex gap-2 text-xs">
                 <button type="button" onClick={() => void toggleActive(object.id, !object.active)} className="text-(--brand) hover:underline">
@@ -1503,12 +1635,12 @@ export function ObjectsTab() {
             <div className="mt-3 border-t border-(--border-default) pt-3 text-xs text-(--text-tertiary)">
               {object.fields?.map((field) => field.label).join(", ") || "No fields defined"}
             </div>
-          </div>
+          </Card>
         ))}
         {!loading && objects.length === 0 ? (
-          <p className="card empty-state">
+          <Card className="gap-0 p-6 text-sm text-(--text-tertiary)">
             No custom objects yet — create one above (e.g. Properties, Vendors).
-          </p>
+          </Card>
         ) : null}
       </div>
 

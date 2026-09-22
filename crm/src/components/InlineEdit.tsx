@@ -7,6 +7,10 @@ import { Icon } from "@/components/Icon";
  * Inline edit — click a value to edit it directly in the table/detail page.
  * Shows a save/cancel pair; ESC cancels. Used for status, priority, and
  * other select-type fields where a modal is overkill.
+ *
+ * Deliberately keeps the native <select class="input">: the editor closes
+ * on blur, and a Radix Select moves focus into a portal on open — the
+ * blur would tear the editor down before a choice can be made.
  */
 export function InlineEdit({
   value,
@@ -71,7 +75,7 @@ export function InlineEdit({
         }}
         disabled={saving}
         autoFocus
-        className="input"
+        className="rounded-md border border-input bg-transparent outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         style={{ height: "24px", fontSize: "12px", padding: "0 6px", width: "auto" }}
       >
         {options.map((option) => (

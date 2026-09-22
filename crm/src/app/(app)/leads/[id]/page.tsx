@@ -18,8 +18,7 @@ import { listCustomFields } from "@/server/records/customFields";
 import { RecordActivities } from "@/components/RecordActivities";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
-import { SendEmailButton } from "@/components/SendEmailButton";
-import { LeadConvertControls } from "@/components/LeadConvertControls";
+import { LeadConvertedBanner } from "@/components/LeadConvertControls";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { getRecordCapabilities } from "@/lib/recordCapabilities";
@@ -124,16 +123,26 @@ export default async function LeadDetailPage({ params }: PageProps) {
           { label: "Phone", value: lead.phone },
         ]}
       >
-        <SendEmailButton subjectType="LEAD" subjectId={id} email={lead.email} name={`${lead.firstName} ${lead.lastName}`} />
-        <RecordDetailActions object="leads" row={lead as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} canAssign={canAssign} canChangeStatus={canChangeStatus} canChangePotentialStatus={canChangePotentialStatus} />
-        <LeadConvertControls
-          leadId={lead.id}
-          convertedAt={lead.convertedAt?.toISOString() ?? null}
-          convertedContactId={lead.convertedContactId}
-          convertedCustomerId={lead.convertedCustomerId}
-          canConvert={canConvert}
+        <RecordDetailActions
+          object="leads"
+          row={lead as unknown as Record<string, unknown>}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          canAssign={canAssign}
+          canChangeStatus={canChangeStatus}
+          canChangePotentialStatus={canChangePotentialStatus}
+          email={{ subjectType: "LEAD", subjectId: id, to: lead.email, name: `${lead.firstName} ${lead.lastName}` }}
+          convert={canConvert && !lead.convertedAt}
         />
       </HighlightsPanel>
+
+      {lead.convertedAt ? (
+        <LeadConvertedBanner
+          convertedAt={lead.convertedAt.toISOString()}
+          contactId={lead.convertedContactId}
+          customerId={lead.convertedCustomerId}
+        />
+      ) : null}
 
       {/* Tabbed two-column: active tab left, timeline right */}
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
@@ -209,10 +218,10 @@ export default async function LeadDetailPage({ params }: PageProps) {
                 <AttachmentsPanel subjectType="LEAD" subjectId={id} canUpload={canUpload} canDelete={canDeleteFiles} />
               </div>
             </section>
-                    {canViewEmails ? (
-            <RecordEmailHistory subjectType="LEAD" subjectId={id} />
-          ) : null}
-        </RecordPageTabs>
+            {canViewEmails ? (
+              <RecordEmailHistory subjectType="LEAD" subjectId={id} />
+            ) : null}
+          </RecordPageTabs>
         </div>
 
         {/* Timeline sidebar (always visible) */}

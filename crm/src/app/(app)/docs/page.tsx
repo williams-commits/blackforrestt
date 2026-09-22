@@ -1,7 +1,17 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
-import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { prisma } from "@/server/db";
 import { permissionsForRoleKey } from "@/server/permissions";
 
@@ -15,13 +25,15 @@ export const metadata = { title: "Documentation" };
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section id={id} className="card scroll-mt-20">
-      <div className="card-header">
-        <h2 className="card-title">{title}</h2>
-      </div>
-      <div className="card-body space-y-3" style={{ fontSize: "var(--text-md)", lineHeight: 1.6 }}>
-        {children}
-      </div>
+    <section id={id} className="scroll-mt-20">
+      <Card>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm leading-relaxed">
+          {children}
+        </CardContent>
+      </Card>
     </section>
   );
 }
@@ -29,8 +41,8 @@ function Section({ id, title, children }: { id: string; title: string; children:
 function SubSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="mb-1.5 text-[15px] font-semibold" style={{ color: "var(--text-primary)" }}>{title}</h3>
-      <div className="text-[14px]" style={{ color: "var(--text-secondary)" }}>{children}</div>
+      <h3 className="mb-1.5 text-[15px] font-semibold text-foreground">{title}</h3>
+      <div className="text-[14px] text-muted-foreground">{children}</div>
     </div>
   );
 }
@@ -43,7 +55,7 @@ function PermTable({ permissions }: { permissions: string[] }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {unique.map((perm) => (
-        <span key={perm} className="badge badge-neutral" style={{ fontSize: "10px" }}>{perm}</span>
+        <Badge key={perm} variant="outline" className="text-[10px]">{perm}</Badge>
       ))}
     </div>
   );
@@ -51,7 +63,7 @@ function PermTable({ permissions }: { permissions: string[] }) {
 
 function StepList({ steps }: { steps: string[] }) {
   return (
-    <ol className="ml-4 list-decimal space-y-1 text-[14px]" style={{ color: "var(--text-secondary)" }}>
+    <ol className="ml-4 list-decimal space-y-1 text-[14px] text-muted-foreground">
       {steps.map((step, i) => <li key={i}>{step}</li>)}
     </ol>
   );
@@ -59,7 +71,7 @@ function StepList({ steps }: { steps: string[] }) {
 
 function BulletList({ items }: { items: string[] }) {
   return (
-    <ul className="ml-4 list-disc space-y-1 text-[14px]" style={{ color: "var(--text-secondary)" }}>
+    <ul className="ml-4 list-disc space-y-1 text-[14px] text-muted-foreground">
       {items.map((item, i) => <li key={i}>{item}</li>)}
     </ul>
   );
@@ -493,9 +505,10 @@ export default async function DocsPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       {/* Breadcrumb */}
-      <nav className="breadcrumb no-print" aria-label="Breadcrumb">
-        <Link href="/">Home</Link><span className="breadcrumb-sep">/</span>
-        <span className="breadcrumb-current">Documentation</span>
+      <nav className="no-print flex items-center gap-2 text-sm" aria-label="Breadcrumb">
+        <Link href="/" className="text-muted-foreground hover:text-foreground">Home</Link>
+        <span className="text-muted-foreground/60">/</span>
+        <span className="text-foreground">Documentation</span>
       </nav>
 
       <WorkspaceHeader
@@ -510,52 +523,45 @@ export default async function DocsPage() {
       />
 
       {/* Table of contents */}
-      <div className="card">
-        <div className="card-header"><h2 className="card-title">Contents</h2></div>
-        <div className="card-body">
+      <Card className="gap-0">
+        <CardHeader><CardTitle>Contents</CardTitle></CardHeader>
+        <CardContent>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            <a href="#my-profile" className="text-[14px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>My Profile & Role</a>
-            <a href="#user-roles" className="text-[14px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>User Roles Guide</a>
-            <a href="#teams" className="text-[14px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>Teams Directory</a>
+            <a href="#my-profile" className="text-[14px] font-medium text-foreground underline-offset-4 hover:underline">My Profile & Role</a>
+            <a href="#user-roles" className="text-[14px] font-medium text-foreground underline-offset-4 hover:underline">User Roles Guide</a>
+            <a href="#teams" className="text-[14px] font-medium text-foreground underline-offset-4 hover:underline">Teams Directory</a>
             {FEATURE_DOCS.map((doc) => (
-              <a key={doc.id} href={`#${doc.id}`} className="text-[14px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>
+              <a key={doc.id} href={`#${doc.id}`} className="text-[14px] font-medium text-foreground underline-offset-4 hover:underline">
                 {doc.title}
               </a>
             ))}
-            <a href="#shortcuts" className="text-[14px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>Keyboard Shortcuts</a>
-            <a href="#faq" className="text-[14px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>FAQ</a>
+            <a href="#shortcuts" className="text-[14px] font-medium text-foreground underline-offset-4 hover:underline">Keyboard Shortcuts</a>
+            <a href="#faq" className="text-[14px] font-medium text-foreground underline-offset-4 hover:underline">FAQ</a>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* ── My Profile ── */}
       {currentUser && (
         <Section id="my-profile" title="My Profile & Role">
           <div className="flex flex-wrap items-start gap-4">
-            <span
-              className="avatar avatar-lg"
-              style={{
-                background: "var(--brand)",
-                color: "var(--text-inverse)",
-                width: 48,
-                height: 48,
-                fontSize: "16px",
-              }}
-            >
-              {currentUser.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
-            </span>
+            <Avatar className="size-12 text-base">
+              <AvatarFallback className="bg-primary text-base font-bold text-primary-foreground">
+                {currentUser.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
             <div className="flex-1">
-              <p className="text-[18px] font-bold" style={{ color: "var(--text-primary)" }}>
+              <p className="text-[18px] font-bold text-foreground">
                 {currentUser.name}
               </p>
-              <p className="text-[13px]" style={{ color: "var(--text-secondary)" }}>
+              <p className="text-[13px] text-muted-foreground">
                 {currentUser.email}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
-                <span className="badge badge-brand">{currentUser.role.name}</span>
-                <span className="badge badge-neutral">Scope: {currentUser.role.scope.toLowerCase()}</span>
+                <Badge>{currentUser.role.name}</Badge>
+                <Badge variant="outline">Scope: {currentUser.role.scope.toLowerCase()}</Badge>
                 {userTeams.map((team) => (
-                  <span key={team} className="badge badge-info">Team: {team}</span>
+                  <Badge key={team} variant="secondary">Team: {team}</Badge>
                 ))}
               </div>
             </div>
@@ -580,36 +586,36 @@ export default async function DocsPage() {
 
       {/* ── User Roles Guide ── */}
       <Section id="user-roles" title="User Roles Guide">
-        <p className="text-[14px]" style={{ color: "var(--text-secondary)" }}>
+        <p className="text-[14px] text-muted-foreground">
           The CRM uses role-based access control (RBAC) with six roles in a hierarchy.
           Each role has a data scope that determines which records are visible, plus specific permissions.
         </p>
         {ROLE_DOCS.map((role) => (
-          <div key={role.key} className="rounded-lg border p-4" style={{ borderColor: "var(--border-default)" }}>
+          <div key={role.key} className="rounded-lg border border-border p-4">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-[16px] font-bold" style={{ color: "var(--text-primary)" }}>{role.name}</h3>
-              <span className="badge badge-neutral">Scope: {role.scope}</span>
+              <h3 className="text-[16px] font-bold text-foreground">{role.name}</h3>
+              <Badge variant="outline">Scope: {role.scope}</Badge>
             </div>
-            <p className="mt-1 text-[14px]" style={{ color: "var(--text-secondary)" }}>{role.description}</p>
+            <p className="mt-1 text-[14px] text-muted-foreground">{role.description}</p>
 
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               <div>
-                <p className="mb-1 text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--success)" }}>✓ Can do</p>
+                <p className="mb-1 text-[12px] font-semibold uppercase tracking-wider text-foreground">✓ Can do</p>
                 <BulletList items={role.canDo.slice(0, 6)} />
                 {role.canDo.length > 6 && (
-                  <p className="mt-1 text-[12px]" style={{ color: "var(--text-tertiary)" }}>+{role.canDo.length - 6} more…</p>
+                  <p className="mt-1 text-[12px] text-muted-foreground">+{role.canDo.length - 6} more…</p>
                 )}
               </div>
               {role.cannotDo.length > 0 && (
                 <div>
-                  <p className="mb-1 text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--error)" }}>✗ Cannot do</p>
+                  <p className="mb-1 text-[12px] font-semibold uppercase tracking-wider text-destructive">✗ Cannot do</p>
                   <BulletList items={role.cannotDo.slice(0, 5)} />
                 </div>
               )}
             </div>
 
             <details className="mt-3">
-              <summary className="cursor-pointer text-[13px] font-medium" style={{ color: "var(--text-brand)" }}>
+              <summary className="cursor-pointer text-[13px] font-medium text-foreground underline-offset-4 hover:underline">
                 View {role.name} workflow guide
               </summary>
               <div className="mt-2 space-y-3">
@@ -625,7 +631,7 @@ export default async function DocsPage() {
             </details>
 
             <details className="mt-2">
-              <summary className="cursor-pointer text-[13px] font-medium" style={{ color: "var(--text-brand)" }}>
+              <summary className="cursor-pointer text-[13px] font-medium text-foreground underline-offset-4 hover:underline">
                 View all {role.name} permissions
               </summary>
               <div className="mt-2">
@@ -638,26 +644,26 @@ export default async function DocsPage() {
 
       {/* ── Teams Directory ── */}
       <Section id="teams" title="Teams Directory">
-        <p className="text-[14px]" style={{ color: "var(--text-secondary)" }}>
+        <p className="text-[14px] text-muted-foreground">
           Teams organize users into working groups. Data visibility follows team membership:
           Reps see their own records, Team Leads see their team&#39;s records, and Managers see all teams in their hierarchy.
         </p>
         {teams.length === 0 ? (
-          <p className="text-[14px]" style={{ color: "var(--text-tertiary)" }}>No teams configured yet.</p>
+          <p className="text-[14px] text-muted-foreground">No teams configured yet.</p>
         ) : (
           teams.map((team) => (
-            <div key={team.id} className="rounded-lg border p-4" style={{ borderColor: "var(--border-default)" }}>
+            <div key={team.id} className="rounded-lg border border-border p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-[16px] font-bold" style={{ color: "var(--text-primary)" }}>
+                  <h3 className="text-[16px] font-bold text-foreground">
                     {team.name}
                     {team.parent && (
-                      <span className="ml-2 text-[12px] font-normal" style={{ color: "var(--text-tertiary)" }}>
+                      <span className="ml-2 text-[12px] font-normal text-muted-foreground">
                         under {team.parent.name}
                       </span>
                     )}
                   </h3>
-                  <p className="text-[13px]" style={{ color: "var(--text-secondary)" }}>
+                  <p className="text-[13px] text-muted-foreground">
                     Led by {team.leader?.name ?? "—"} · {team.members.length} member{team.members.length === 1 ? "" : "s"}
                   </p>
                 </div>
@@ -667,21 +673,16 @@ export default async function DocsPage() {
                   {team.members.map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center gap-2 rounded-full border px-3 py-1.5"
-                      style={{ borderColor: "var(--border-default)" }}
+                      className="flex items-center gap-2 rounded-full border border-border px-3 py-1.5"
                     >
-                      <span
-                        className="avatar avatar-sm"
-                        style={{
-                          background: `hsl(${member.name.length * 37 % 360}, 60%, 45%)`,
-                          color: "white",
-                        }}
-                      >
-                        {member.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
-                      </span>
+                      <Avatar size="sm">
+                        <AvatarFallback>
+                          {member.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="leading-tight">
-                        <p className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>{member.name}</p>
-                        <p className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>{member.role.name}</p>
+                        <p className="text-[13px] font-medium text-foreground">{member.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{member.role.name}</p>
                       </div>
                     </div>
                   ))}
@@ -695,13 +696,13 @@ export default async function DocsPage() {
       {/* ── Feature Guides ── */}
       {FEATURE_DOCS.map((feature) => (
         <Section key={feature.id} id={feature.id} title={feature.title}>
-          <p className="text-[14px]" style={{ color: "var(--text-secondary)" }}>{feature.description}</p>
+          <p className="text-[14px] text-muted-foreground">{feature.description}</p>
           {feature.topics.map((topic) => (
-            <details key={topic.name} className="rounded-md border p-3" style={{ borderColor: "var(--border-default)" }}>
-              <summary className="cursor-pointer text-[14px] font-medium" style={{ color: "var(--text-primary)" }}>
+            <details key={topic.name} className="rounded-md border border-border p-3">
+              <summary className="cursor-pointer text-[14px] font-medium text-foreground">
                 {topic.name}
               </summary>
-              <p className="mt-2 text-[14px]" style={{ color: "var(--text-secondary)" }}>{topic.content}</p>
+              <p className="mt-2 text-[14px] text-muted-foreground">{topic.content}</p>
             </details>
           ))}
         </Section>
@@ -711,10 +712,10 @@ export default async function DocsPage() {
       <Section id="shortcuts" title="Keyboard Shortcuts">
         <div className="overflow-x-auto">
           <Table>
-            <THead>
-              <TR><TH>Shortcut</TH><TH>Action</TH><TH>Context</TH></TR>
-            </THead>
-            <TBody>
+            <TableHeader>
+              <TableRow><TableHead>Shortcut</TableHead><TableHead>Action</TableHead><TableHead>Context</TableHead></TableRow>
+            </TableHeader>
+            <TableBody>
               {[
                 { key: "/", action: "Focus global search", context: "Anywhere" },
                 { key: "Alt+N", action: "Open quick actions menu", context: "Anywhere" },
@@ -728,13 +729,13 @@ export default async function DocsPage() {
                 { key: "Tab", action: "Navigate between elements", context: "Anywhere" },
                 { key: "Escape", action: "Close modal/dialog", context: "Any dialog" },
               ].map((shortcut) => (
-                <TR key={shortcut.key}>
-                  <TD><kbd className="rounded border px-2 py-0.5 text-[12px] font-mono" style={{ borderColor: "var(--border-strong)", background: "var(--bg-subtle)" }}>{shortcut.key}</kbd></TD>
-                  <TD>{shortcut.action}</TD>
-                  <TD style={{ color: "var(--text-tertiary)" }}>{shortcut.context}</TD>
-                </TR>
+                <TableRow key={shortcut.key}>
+                  <TableCell><kbd className="rounded border border-border bg-muted px-2 py-0.5 font-mono text-[12px]">{shortcut.key}</kbd></TableCell>
+                  <TableCell>{shortcut.action}</TableCell>
+                  <TableCell className="text-muted-foreground">{shortcut.context}</TableCell>
+                </TableRow>
               ))}
-            </TBody>
+            </TableBody>
           </Table>
         </div>
       </Section>
@@ -755,11 +756,11 @@ export default async function DocsPage() {
           { q: "How do I add a custom field to Leads?", a: "Administration → Custom Fields → add a field with a key (camelCase), label, and type. The field appears in lead forms and is validated on every write." },
           { q: "What are Custom Objects?", a: "Admin-defined record types beyond the standard leads/contacts/accounts/customers. Examples: Properties, Vendors, Equipment. Each has its own field schema stored as JSON." },
         ].map((faq) => (
-          <details key={faq.q} className="rounded-md border p-3" style={{ borderColor: "var(--border-default)" }}>
-            <summary className="cursor-pointer text-[14px] font-medium" style={{ color: "var(--text-primary)" }}>
+          <details key={faq.q} className="rounded-md border border-border p-3">
+            <summary className="cursor-pointer text-[14px] font-medium text-foreground">
               {faq.q}
             </summary>
-            <p className="mt-2 text-[14px]" style={{ color: "var(--text-secondary)" }}>{faq.a}</p>
+            <p className="mt-2 text-[14px] text-muted-foreground">{faq.a}</p>
           </details>
         ))}
       </Section>

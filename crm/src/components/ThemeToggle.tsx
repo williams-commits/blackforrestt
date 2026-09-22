@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui";
 
 /**
  * Dark/light mode toggle — swaps CSS variables via `data-theme` on `<html>`,
@@ -27,15 +28,11 @@ export function ThemeToggle() {
   const isDark = dark ?? false;
 
   return (
-    <button
-      type="button"
+    <Button
+      variant="secondary"
+      size="icon"
       onClick={toggle}
-      className="flex h-8 w-8 items-center justify-center rounded-full border transition-colors"
-      style={{
-        borderColor: "var(--border-default)",
-        color: "var(--text-tertiary)",
-        background: "var(--bg-surface)",
-      }}
+      className="rounded-full text-muted-foreground"
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
@@ -44,6 +41,6 @@ export function ThemeToggle() {
       ) : (
         <Icon name="moon" size={14} />
       )}
-    </button>
+    </Button>
   );
 }

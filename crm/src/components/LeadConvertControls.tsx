@@ -1,60 +1,42 @@
 "use client";
 
-import { useState } from "react";
-import { ConvertDialog } from "@/components/ConvertDialog";
+import { Icon } from "@/components/Icon";
 
-/** "Convert" trigger + converted banner for the lead detail header. */
-export function LeadConvertControls({
-  leadId,
+/** Success banner shown on a converted lead's detail page. */
+export function LeadConvertedBanner({
   convertedAt,
-  convertedContactId,
-  convertedCustomerId,
-  canConvert,
+  contactId,
+  customerId,
 }: {
-  leadId: string;
-  convertedAt: string | null;
-  convertedContactId: string | null;
-  convertedCustomerId: string | null;
-  canConvert: boolean;
+  convertedAt: string;
+  contactId: string | null;
+  customerId: string | null;
 }) {
-  const [open, setOpen] = useState(false);
-
-  if (convertedAt) {
-    return (
-      <div className="rounded-md border border-(--brand)/30 bg-(--brand)/5 px-3 py-2 text-sm">
-        <p className="font-medium">Converted</p>
-        <p className="text-xs text-(--text-secondary)">
-          {new Date(convertedAt).toLocaleDateString()} →{" "}
-          {convertedContactId ? (
-            <a href={`/contacts/${convertedContactId}`} className="text-(--brand) underline">
-              contact
+  return (
+    <div className="card flex items-center gap-3 p-4" aria-label="Lead converted">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-(--success-bg) text-(--success)">
+        <Icon name="check_circle" size={16} />
+      </span>
+      <div className="min-w-0 text-sm">
+        <p className="font-medium text-foreground">
+          Converted on {new Date(convertedAt).toLocaleDateString()}
+        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          This lead became{" "}
+          {contactId ? (
+            <a href={`/contacts/${contactId}`} className="font-medium text-foreground underline">
+              a contact
             </a>
           ) : null}
-          {convertedCustomerId ? (
-            <>
-              {" · "}
-              <a href={`/customers/${convertedCustomerId}`} className="text-(--brand) underline">
-                customer
-              </a>
-            </>
+          {contactId && customerId ? " and " : null}
+          {customerId ? (
+            <a href={`/customers/${customerId}`} className="font-medium text-foreground underline">
+              a customer
+            </a>
           ) : null}
+          — its timeline, notes, and emails moved with it.
         </p>
       </div>
-    );
-  }
-
-  if (!canConvert) return null;
-
-  return (
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="btn btn-primary"
-      >
-        Convert
-      </button>
-      {open ? <ConvertDialog leadId={leadId} onClose={() => setOpen(false)} /> : null}
     </div>
   );
 }

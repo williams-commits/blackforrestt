@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui";
+import { Button, Section } from "@/components/ui";
 
 type RecentRecord = { href: string; label: string; module: string; visitedAt: number };
 const STORAGE_KEY = "crm-recent-records";
@@ -36,35 +36,35 @@ export function RecentRecords() {
   if (records.length === 0) return null;
 
   return (
-    <section className="section" aria-label="Recently visited records">
-      <div className="section-header">
-        <div className="min-w-0">
-          <h2 className="section-title">Recently visited</h2>
-          <p className="section-description">Your shortcuts</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
+  <Section
+        title="Recently visited"
+        description="Your shortcuts"
+        actions={
+          <> 
+            <Button
             variant="secondary"
             size="sm"
+            icon="close"
             onClick={() => {
               window.localStorage.removeItem(STORAGE_KEY);
               setRecords([]);
             }}
           >
-            Clear
-          </Button>
-        </div>
-      </div>
-      <ul className="divide-y divide-(--border-hairline)">
+              Clear
+            </Button>
+          </>
+        }
+      >
+      <ul className="divide-y divide-border">
         {records.map((record) => (
           <li key={record.href}>
-            <Link href={record.href} className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2.5 text-sm hover:bg-(--bg-hover)">
+            <Link href={record.href} className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2.5 text-sm hover:bg-muted">
               <span className="min-w-0 truncate font-medium">{record.label}</span>
-              <span className="shrink-0 text-xs text-(--text-tertiary)">{record.module}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">{record.module}</span>
             </Link>
           </li>
         ))}
       </ul>
-    </section>
+    </Section>
   );
 }

@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/Icon";
+import { Modal } from "@/components/Modal";
+import { Skeleton } from "@/components/ui/skeleton";
+import { buttonVariants } from "@/components/ui/button";
 
 /**
  * Image attachment link — shows an inline preview modal for image files
@@ -36,8 +39,7 @@ export function ImageAttachment({
     return (
       <a
         href={`/api/attachments/${attachmentId}`}
-        className="font-medium hover:underline"
-        style={{ color: "var(--text-brand)" }}
+        className="font-medium text-foreground hover:underline"
       >
         {filename}
       </a>
@@ -49,88 +51,43 @@ export function ImageAttachment({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 font-medium hover:underline"
-        style={{ color: "var(--text-brand)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+        className="inline-flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 font-medium text-foreground hover:underline"
       >
         <Icon name="file" size={14} />
         {filename}
       </button>
 
       {open ? (
-        <div
-          className="modal-backdrop"
-          onClick={() => setOpen(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Preview: ${filename}`}
-        >
-          <div
-            className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-xl"
-            style={{ background: "var(--bg-surface)", color: "var(--text-primary)", boxShadow: "var(--shadow-modal)" }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            {/* Header bar */}
-            <div
-              className="flex items-center justify-between px-4 py-3 border-b"
-              style={{ borderColor: "var(--border-default)" }}
-            >
-              <p className="text-[14px] font-semibold" style={{ color: "var(--text-primary)" }}>
-                {filename}
-              </p>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-(--bg-hover)"
-                style={{ color: "var(--text-tertiary)" }}
-                aria-label="Close preview"
-              >
-                <Icon name="close" size={18} />
-              </button>
-            </div>
-
-            {/* Image */}
-            <div
-              className="flex items-center justify-center p-4"
-              style={{ minHeight: "200px", background: "var(--bg-subtle)" }}
-            >
-              {!loaded ? (
-                <div
-                  className="skeleton"
-                  style={{ width: "400px", height: "300px", borderRadius: "var(--radius-lg)" }}
-                />
-              ) : null}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/api/attachments/${attachmentId}`}
-                alt={filename}
-                onLoad={() => setLoaded(true)}
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "70vh",
-                  objectFit: "contain",
-                  display: loaded ? "block" : "none",
-                  borderRadius: "var(--radius-md)",
-                }}
-              />
-            </div>
-
-            {/* Footer with download link */}
-            <div
-              className="flex justify-end px-4 py-3 border-t"
-              style={{ borderColor: "var(--border-default)" }}
-            >
-              <a
-                href={`/api/attachments/${attachmentId}`}
-                download={filename}
-                className="btn btn-secondary"
-                style={{ textDecoration: "none" }}
-              >
-                <Icon name="download" size={14} />
-                Download
-              </a>
-            </div>
+        <Modal onClose={() => setOpen(false)} title={filename} size="xl">
+          {/* Image */}
+          <div className="flex items-center justify-center rounded-lg bg-muted p-4" style={{ minHeight: "200px" }}>
+            {!loaded ? (
+              <Skeleton className="h-75 w-100" />
+            ) : null}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/attachments/${attachmentId}`}
+              alt={filename}
+              onLoad={() => setLoaded(true)}
+              className="max-h-[70vh] max-w-full rounded-md object-contain"
+              style={{ display: loaded ? "block" : "none" }}
+            />
           </div>
-        </div>
+
+          {/* Footer with download link */}
+          <div className="flex justify-end pt-3">
+            {/* Plain anchor styled through the shadcn button system — the
+                Button seam's href mode cannot carry the download attribute. */}
+            <a
+              href={`/api/attachments/${attachmentId}`}
+              download={filename}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              <Icon name="download" size={14} />
+              Download
+            </a>
+          </div>
+        </Modal>
       ) : null}
     </>
   );

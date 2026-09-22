@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { IconSelectTrigger } from "@/components/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 
 type SubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
 
@@ -92,7 +99,7 @@ export function TagEditor({
             <span
               key={tag.tagId}
               className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-white"
-              style={{ background: tag.color ?? "#78716c" }}
+              style={{ background: tag.color ?? "var(--gray-500)" }}
             >
               {tag.name}
               {canManage ? (
@@ -111,22 +118,25 @@ export function TagEditor({
         )}
       </div>
       {canManage && available.length > 0 ? (
-        <select
-          aria-label="Add tag"
-          defaultValue=""
+        <Select
+          defaultValue="__none__"
           disabled={busy}
-          onChange={(event) => {
-            if (event.target.value) void link(event.target.value);
+          onValueChange={(value) => {
+            if (value !== "__none__") void link(value);
           }}
-          className="rounded-md border border-(--border-strong) px-2 py-1 text-xs"
         >
-          <option value="">Add tag…</option>
-          {available.map((tag) => (
-            <option key={tag.id} value={tag.id}>
-              {tag.name}
-            </option>
-          ))}
-        </select>
+          <IconSelectTrigger icon="tag" size="sm" aria-label="Add tag" className="w-auto gap-1 text-xs">
+            <SelectValue />
+          </IconSelectTrigger>
+          <SelectContent position="popper">
+            <SelectItem value="__none__">Add tag…</SelectItem>
+            {available.map((tag) => (
+              <SelectItem key={tag.id} value={tag.id}>
+                {tag.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       ) : null}
     </div>
   );

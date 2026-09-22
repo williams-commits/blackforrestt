@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 export function WorkspaceHeader({
   eyebrow,
@@ -14,22 +15,28 @@ export function WorkspaceHeader({
   metrics?: Array<{ label: string; value: ReactNode; tone?: "brand" | "success" | "warning" | "info" }>;
 }) {
   return (
-    <header className="workspace-header">
+    <header className="space-y-3">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          {eyebrow ? <p className="workspace-eyebrow">{eyebrow}</p> : null}
-          <h1 className="workspace-title">{title}</h1>
-          {subtitle ? <p className="workspace-subtitle">{subtitle}</p> : null}
+          {eyebrow ? <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{eyebrow}</p> : null}
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+          {subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
       {metrics?.length ? (
-        <div className="workspace-metrics" aria-label={`${title} summary`}>
+        <div className="flex gap-5 overflow-x-auto pb-0.5 sm:gap-7" aria-label={`${title} summary`}>
           {metrics.map((metric) => (
-            <div key={metric.label} className="workspace-metric">
-              <span className={`workspace-metric-dot ${metric.tone ?? "brand"}`} />
-              <span className="workspace-metric-value">{metric.value}</span>
-              <span className="workspace-metric-label">{metric.label}</span>
+            <div key={metric.label} className="flex shrink-0 items-center gap-2">
+              <span
+                aria-hidden
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  metric.tone === "warning" ? "bg-foreground/40" : "bg-foreground/60"
+                )}
+              />
+              <span className="text-lg font-bold tabular-nums text-foreground">{metric.value}</span>
+              <span className="text-xs text-muted-foreground">{metric.label}</span>
             </div>
           ))}
         </div>

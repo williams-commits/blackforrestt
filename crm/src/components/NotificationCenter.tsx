@@ -5,6 +5,11 @@ import Link from "next/link";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { Button, EmptyState } from "@/components/ui";
+import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import { useTableSession, writeTableSession } from "@/components/useTableSession";
 import { notificationHref } from "@/lib/notificationLink";
 
@@ -12,6 +17,10 @@ type NotificationRow = { id: string; type: string; payload: Record<string, unkno
 type ResponseData = { data: NotificationRow[]; meta: { unread: number; total: number; page: number; pageSize: number; hasMore: boolean } };
 
 const TYPE_LABELS: Record<string, string> = { RECORD_ASSIGNED: "Assignment", TASK_CREATED: "Task", TASK_DUE: "Task due", TASK_OVERDUE: "Overdue task", TASK_REMINDER: "Task reminder", APPOINTMENT_SCHEDULED: "Appointment", IMPORT_COMPLETED: "Import completed", IMPORT_FAILED: "Import failed", PLATFORM_USER_ONLINE: "Client activity", SYSTEM: "System" };
+
+/** shadcn Select items cannot carry an empty string value — sentinel for
+ *  "All event types". */
+const ALL_TYPES = "__all__";
 
 function titleFor(row: NotificationRow) {
   const label = TYPE_LABELS[row.type] ?? row.type.replaceAll("_", " ").toLowerCase();
@@ -99,14 +108,28 @@ export function NotificationCenter() {
   return <div className="space-y-4">
     <WorkspaceHeader eyebrow="Workspace inbox" title="Notifications" subtitle="Actionable updates from assignments, tasks, imports, and system activity." actions={data?.meta.unread ? <Button variant="secondary" size="sm" icon="check" onClick={() => void markAllRead()}>Mark all read</Button> : undefined} metrics={[{ label: "Unread", value: data?.meta.unread ?? 0, tone: data?.meta.unread ? "warning" : "success" }, { label: "Showing", value: data?.meta.total ?? 0, tone: "info" }]} />
     <WorkspaceQuickNav />
-    <div className="card overflow-hidden">
-      <div className="flex flex-col gap-3 border-b border-(--border-hairline) p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="tab-strip" role="group" aria-label="Notification state">{[{ value: "all", label: "All" }, { value: "unread", label: "Unread" }, { value: "read", label: "Read" }].map((item) => <button key={item.value} type="button" aria-pressed={read === item.value} onClick={() => { setRead(item.value); setPage(1); }} className={`tab-strip-button ${read === item.value ? "active" : ""}`}>{item.label}</button>)}</div>
-        <select aria-label="Notification type" value={type} onChange={(event) => { setType(event.target.value); setPage(1); }} className="input input-sm sm:w-52"><option value="">All event types</option>{types.map((item) => <option key={item} value={item}>{TYPE_LABELS[item] ?? item}</option>)}</select>
+    <Card className="gap-0 overflow-hidden">
+      <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+        <Tabs value={read} onValueChange={(value) => { setRead(value); setPage(1); }}>
+          <TabsList aria-label="Notification state">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="unread">Unread</TabsTrigger>
+            <TabsTrigger value="read">Read</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Select value={type || ALL_TYPES} onValueChange={(value) => { setType(value === ALL_TYPES ? "" : value); setPage(1); }}>
+          <SelectTrigger size="sm" className="w-full text-xs sm:w-52" aria-label="Notification type">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_TYPES}>All event types</SelectItem>
+            {types.map((item) => <SelectItem key={item} value={item}>{TYPE_LABELS[item] ?? item}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
-      {error ? <div className="m-4 rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error} <button type="button" onClick={() => void load()} className="ml-2 font-semibold underline">Retry</button></div> : null}
-      {loading && rows.length === 0 ? <div className="space-y-3 p-5">{[1, 2, 3, 4].map((item) => <div key={item} className="skeleton h-16 rounded-md" />)}</div> : rows.length === 0 ? <EmptyState title="You are all caught up" description="Meaningful assignments, reminders, and system events will appear here." /> : <div>{groupedRows.map((group) => <section key={group.label} aria-label={group.label}><h2 className="border-b border-(--border-default) bg-(--bg-subtle) px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-(--text-tertiary)">{group.label}</h2><ul className="divide-y divide-(--border-hairline)">{group.rows.map((row) => <li key={row.id} className={`flex gap-4 p-4 transition-colors hover:bg-(--bg-hover) ${row.readAt ? "" : "bg-(--accent-soft)"}`}><div className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${row.readAt ? "border border-(--border-strong)" : "bg-(--accent)"}`} /><div className="min-w-0 flex-1"><Link href={notificationHref(row)} className="font-medium hover:text-(--text-brand)">{titleFor(row)}</Link><p className="mt-1 text-xs text-(--text-tertiary)">{new Date(row.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p></div><button type="button" onClick={() => void setReadState(row, !row.readAt)} className="shrink-0 text-xs font-medium text-(--text-brand) hover:underline">{row.readAt ? "Mark unread" : "Mark read"}</button></li>)}</ul></section>)}</div>}
-      {data && (data.meta.page > 1 || data.meta.hasMore) ? <div className="flex items-center justify-between border-t border-(--border-hairline) px-4 py-3 text-xs text-(--text-secondary)"><Button variant="secondary" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</Button><span>Page {page}</span><Button variant="secondary" size="sm" disabled={!data.meta.hasMore || loading} onClick={() => setPage((value) => value + 1)}>Next</Button></div> : null}
-    </div>
+      {error ? <div className="m-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error} <button type="button" onClick={() => void load()} className="ml-2 font-semibold underline">Retry</button></div> : null}
+      {loading && rows.length === 0 ? <div className="space-y-3 p-5">{[1, 2, 3, 4].map((item) => <Skeleton key={item} className="h-16 rounded-md" />)}</div> : rows.length === 0 ? <EmptyState title="You are all caught up" description="Meaningful assignments, reminders, and system events will appear here." /> : <div>{groupedRows.map((group) => <section key={group.label} aria-label={group.label}><h2 className="border-b border-border bg-muted px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{group.label}</h2><ul className="divide-y divide-border">{group.rows.map((row) => <li key={row.id} className={cn("flex gap-4 p-4 transition-colors hover:bg-muted/50", row.readAt ? "" : "bg-muted")}><div className={cn("mt-1 h-2.5 w-2.5 shrink-0 rounded-full", row.readAt ? "border border-border" : "bg-foreground")} /><div className="min-w-0 flex-1"><Link href={notificationHref(row)} className="font-medium hover:underline">{titleFor(row)}</Link><p className="mt-1 text-xs text-muted-foreground">{new Date(row.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p></div><button type="button" onClick={() => void setReadState(row, !row.readAt)} className="shrink-0 text-xs font-medium hover:underline">{row.readAt ? "Mark unread" : "Mark read"}</button></li>)}</ul></section>)}</div>}
+      {data && (data.meta.page > 1 || data.meta.hasMore) ? <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs text-muted-foreground"><Button variant="secondary" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</Button><span>Page {page}</span><Button variant="secondary" size="sm" icon="chevron_right" disabled={!data.meta.hasMore || loading} onClick={() => setPage((value) => value + 1)}>Next</Button></div> : null}
+    </Card>
   </div>;
 }

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui";
+import { FormError } from "@/components/form";
 import { useConfirmDialog } from "@/components/Dialogs";
 
 interface PlatformUser {
@@ -103,20 +105,16 @@ export function PlatformLinkPanel({
       <p className="text-sm text-(--text-secondary)">
         Not linked. Matching is by email and confirmed by you — nothing is linked automatically.
       </p>
-      {error ? (
-        <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
-          {error}
-        </p>
-      ) : null}
+      {error ? <FormError message={error} /> : null}
       {canEdit ? (
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          icon="search"
           onClick={() => void runLookup()}
-          disabled={busy}
-          className="btn btn-secondary"
+          loading={busy}
         >
-          {busy ? "Checking…" : `Look up platform user by ${customerEmail ?? "email"}`}
-        </button>
+          {`Look up platform user by ${customerEmail ?? "email"}`}
+        </Button>
       ) : null}
       {lookup.status === "missing" ? (
         <p className="text-sm text-(--warning)"> {lookup.reason}</p>
@@ -130,14 +128,14 @@ export function PlatformLinkPanel({
             <li>Registered: {new Date(lookup.user.registeredAt).toLocaleDateString()}</li>
             <li>Email verified: {lookup.user.emailVerified ? "yes" : "no"}</li>
           </ul>
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            icon="plug"
             onClick={() => void link()}
-            disabled={busy}
-            className="btn btn-primary"
+            loading={busy}
           >
             Link this platform user
-          </button>
+          </Button>
         </div>
       ) : null}
     </div>

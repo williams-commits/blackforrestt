@@ -5,7 +5,14 @@ import Link from "next/link";
 import Papa from "papaparse";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { Button, EmptyState } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Icon } from "@/components/Icon";
+import { Field, FormError, IconInput, IconSelectTrigger, SearchInput } from "@/components/form";
+import { RowActions } from "@/components/RowActions";
 import { useTableSession, writeTableSession } from "@/components/useTableSession";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
 
@@ -365,17 +372,17 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
         />
 
         <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
-          <div className="card overflow-hidden">
-            <div className="card-header items-start">
+          <Card className="gap-0 overflow-hidden py-0">
+            <CardHeader className="flex-col items-start gap-0 border-b py-5">
               <div>
-                <p className="card-title">Import access</p>
+                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">Import access</CardTitle>
                 <h2 className="mt-2 text-2xl font-semibold text-(--text-primary)">Ask an admin to enable imports</h2>
                 <p className="mt-2 max-w-2xl text-sm text-(--text-secondary)">
                   Your current role cannot upload CSV files or Google Sheets into the CRM. This keeps leads, contacts,
                   accounts, and customers safe from accidental bulk changes.
                 </p>
               </div>
-            </div>
+            </CardHeader>
             <div className="grid gap-5 p-6 sm:grid-cols-3">
               {[
                 ["1", "Prepare your file", "Clean the spreadsheet and keep a header row."],
@@ -383,7 +390,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 ["3", "Import safely", "Map, validate, and review duplicates before records are written."],
               ].map(([stepNumber, title, description]) => (
                 <div key={stepNumber}>
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-(--accent-soft) text-sm font-semibold text-(--accent)">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-(--accent-soft) text-sm font-semibold text-accent">
                     {stepNumber}
                   </span>
                   <p className="mt-3 font-medium text-(--text-primary)">{title}</p>
@@ -391,20 +398,20 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
-          <aside className="card p-5">
-            <p className="card-title">What admins unlock</p>
+          <Card className="gap-0 p-5">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">What admins unlock</CardTitle>
             <ul className="mt-2 divide-y divide-(--border-hairline) text-sm text-(--text-secondary)">
               <li className="py-3">CSV and Google Sheets import wizard</li>
               <li className="py-3">Column mapping and saved mappings</li>
               <li className="py-3">Duplicate checks before import</li>
               <li className="py-3">Import history, retries, and error CSV downloads</li>
             </ul>
-            <Link href="/docs#imports" className="btn btn-secondary mt-5 w-full justify-center">
+            <Button variant="secondary" href="/docs#imports" className="mt-5 w-full">
               Read import guide
-            </Link>
-          </aside>
+            </Button>
+          </Card>
         </div>
       </div>
     );
@@ -440,9 +447,9 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 aria-hidden
                 className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
                   complete
-                    ? "bg-(--accent) text-(--text-inverse)"
+                    ? "bg-accent text-(--text-inverse)"
                     : active
-                      ? "border border-(--accent) bg-(--accent-soft) text-(--accent)"
+                      ? "border border-accent bg-(--accent-soft) text-accent"
                       : "border border-(--border-hairline) text-(--text-tertiary)"
                 }`}
               >
@@ -457,39 +464,35 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
         })}
       </div>
 
-      {error ? (
-        <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">
-          {error}
-        </p>
-      ) : null}
+      <FormError message={error} />
 
       {step === 1 ? (
         <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="card space-y-5 p-6">
+          <Card className="gap-0 space-y-5 p-6">
             <div>
-              <p className="card-title">Start import</p>
+              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">Start import</CardTitle>
               <h2 className="mt-1 text-xl font-semibold text-(--text-primary)">Choose where this data belongs</h2>
               <p className="mt-1 text-sm text-(--text-secondary)">
                 Select the CRM object first so the wizard can suggest the right fields and validation rules.
               </p>
             </div>
-            <div>
-              <label htmlFor="import-object" className="input-label">
-                Import destination
-              </label>
-              <select
-                id="import-object"
+            <Field label="Import destination" id="import-object">
+              <Select
                 value={objectType}
-                onChange={(event) => setObjectType(event.target.value as typeof objectType)}
-                className="input"
+                onValueChange={(value) => setObjectType(value as typeof objectType)}
               >
-                {OBJECT_TYPES.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <IconSelectTrigger id="import-object" icon="box" className="w-full">
+                  <SelectValue />
+                </IconSelectTrigger>
+                <SelectContent>
+                  {OBJECT_TYPES.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
             <div>
               <p className="input-label">Data source</p>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -502,7 +505,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                     <label
                       key={value}
                       className={`cursor-pointer rounded-xl border p-4 transition ${
-                        active ? "border-(--accent) bg-(--accent-soft)" : "border-(--border-default) bg-(--bg-surface) hover:bg-(--bg-hover)"
+                        active ? "border-accent bg-(--accent-soft)" : "border-(--border-default) bg-(--bg-surface) hover:bg-(--bg-hover)"
                       }`}
                     >
                       <input
@@ -520,32 +523,36 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               </div>
             </div>
             {source === "sheets" ? (
-              <div>
-                <label htmlFor="sheet-url" className="input-label">
-                  Published sheet CSV link
-                </label>
+              <Field
+                label="Published sheet CSV link"
+                id="sheet-url"
+                help="Needs public access — in Google Sheets use File → Share → Publish to web → CSV (link-sharing alone is not enough)."
+              >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <input
+                  <IconInput
                     id="sheet-url"
+                    icon="plug"
                     value={sheetUrl}
                     onChange={(event) => setSheetUrl(event.target.value)}
                     placeholder="https://docs.google.com/spreadsheets/d/…"
-                    className="input flex-1"
+                    className="flex-1"
                   />
-                  <Button variant="primary" loading={validating} onClick={() => void loadSheet()}>
+                  <Button variant="primary" icon="download" loading={validating} onClick={() => void loadSheet()}>
                     Load sheet
                   </Button>
                 </div>
-                <p className="mt-2 text-xs text-(--text-tertiary)">In Google Sheets, publish to web as CSV first.</p>
-              </div>
+              </Field>
             ) : (
               <div className="rounded-2xl border border-dashed border-(--border-strong) bg-(--bg-subtle) p-6 text-center">
                 <label htmlFor="import-file" className="block cursor-pointer">
+                  <span className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-(--border-default) bg-(--bg-surface) text-(--text-secondary)">
+                    <Icon name="upload" size={16} />
+                  </span>
                   <span className="text-base font-semibold text-(--text-primary)">Drop in a CSV export</span>
                   <span className="mt-1 block text-sm text-(--text-secondary)">
                     Max {MAX_ROWS.toLocaleString()} rows. Header row required.
                   </span>
-                  <input
+                  <Input
                     id="import-file"
                     type="file"
                     hidden
@@ -554,15 +561,15 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                       const file = event.target.files?.[0];
                       if (file) handleFile(file);
                     }}
-                    className="input mx-auto mt-4 max-w-md"
+                    className="mx-auto mt-4 max-w-md"
                   />
                 </label>
               </div>
             )}
-          </div>
+          </Card>
 
-          <aside className="card p-5">
-            <p className="card-title">Safety checks</p>
+          <Card className="gap-0 p-5">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">Safety checks</CardTitle>
             <ul className="mt-2 divide-y divide-(--border-hairline)">
               {[
                 ["Preview first", "You see sample rows before mapping."],
@@ -576,23 +583,24 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 </li>
               ))}
             </ul>
-            <Link href="/docs#imports" className="btn btn-secondary mt-5 w-full justify-center">
+            <Link href="/docs#imports" className="mt-2 hover:underline flex items-center text-sm font-medium text-(--text-primary)">
               Import guide
+              <Icon name="external" size={16} className="ml-2 inline" />
             </Link>
-          </aside>
+          </Card>
         </div>
       ) : null}
 
       {step === 2 ? (
         <div className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="card overflow-hidden">
-            <div className="card-header">
+          <Card className="gap-0 overflow-hidden py-0">
+            <CardHeader className="flex-col items-start gap-0 border-b py-3">
               <div className="min-w-0">
-                <p className="card-title">Preview</p>
+                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">Preview</CardTitle>
                 <p className="mt-0.5 text-xs normal-case tracking-normal text-(--text-secondary)">First 3 rows from {fileName || "your source"}</p>
               </div>
-            </div>
+            </CardHeader>
             <div className="overflow-x-auto">
               <Table>
                 <THead>
@@ -613,17 +621,24 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 </TBody>
               </Table>
             </div>
-          </div>
+          </Card>
 
-          <div className="card p-4">
+          <Card className="gap-0 p-4">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-(--text-primary)">Map columns to {objectType.toLowerCase()} fields</p>
                 <p className="text-xs text-(--text-secondary)">{mappedColumnCount} of {columns.length} columns mapped</p>
               </div>
-              <span className={`badge ${missingRequired.length > 0 ? "badge-warning" : "badge-success"}`}>
+              <Badge
+                variant="outline"
+                className={
+                  missingRequired.length > 0
+                    ? "border-(--warning-border) bg-(--warning-bg) text-(--warning)"
+                    : "border-(--success-border) bg-(--success-bg) text-(--success)"
+                }
+              >
                 {missingRequired.length > 0 ? `${missingRequired.length} required missing` : "Required fields ready"}
-              </span>
+              </Badge>
             </div>
             {missingRequired.length > 0 ? (
               <p className="mb-2 rounded-md bg-(--warning-bg) px-3 py-2 text-sm text-(--warning)">
@@ -635,60 +650,63 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 <div key={column} className="flex items-center gap-2">
                   <span className="w-40 truncate text-sm text-(--text-secondary)" title={column}>{column}</span>
                   <span aria-hidden className="text-(--text-tertiary)">→</span>
-                  <select
-                    aria-label={`Map ${column}`}
-                    value={mapping[column] ?? ""}
-                    onChange={(event) =>
-                      setMapping((previous) => ({ ...previous, [column]: event.target.value }))
+                  <Select
+                    value={mapping[column] || "__skip__"}
+                    onValueChange={(value) =>
+                      setMapping((previous) => ({ ...previous, [column]: value === "__skip__" ? "" : value }))
                     }
-                    className="input input-sm flex-1"
                   >
-                    <option value="">— skip —</option>
-                    {fields.map((field) => (
-                      <option key={field.key} value={field.key}>
-                        {field.label}
-                        {field.required ? " *" : ""}
-                      </option>
-                    ))}
-                  </select>
+                    <IconSelectTrigger aria-label={`Map ${column}`} icon="tag" size="sm" className="h-7 flex-1 text-xs">
+                      <SelectValue />
+                    </IconSelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__skip__">— skip —</SelectItem>
+                      {fields.map((field) => (
+                        <SelectItem key={field.key} value={field.key}>
+                          {field.label}
+                          {field.required ? " *" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
           </div>
 
-          <div className="card grid gap-5 p-4 sm:grid-cols-2">
+          <Card className="grid gap-5 p-4 sm:grid-cols-2">
             {(() => {
               const sourceField = fields.find((f) => f.key === "source" || f.key === "leadSource");
               if (!sourceField) return null;
               return (
                 <div className="rounded-xl bg-(--bg-subtle) p-4">
                   <p className="mb-2 text-sm font-semibold text-(--text-primary)">Default values</p>
-                  <label htmlFor="default-source" className="mb-1 block text-sm text-(--text-secondary)">
-                    Default {sourceField.label.toLowerCase()} for imported rows
-                  </label>
-                  <input
+                  <Field
+                    label={`Default ${sourceField.label.toLowerCase()} for imported rows`}
                     id="default-source"
-                    value={defaultSource}
-                    onChange={(event) => setDefaultSource(event.target.value)}
-                    placeholder={objectType === "LEAD" ? "e.g. WEB_FORM, REFERRAL…" : "e.g. WEBSITE, PARTNER…"}
-                    maxLength={60}
-                    className="input"
-                  />
-                  <p className="mt-2 text-xs text-(--text-tertiary)">
-                    Applied to every row whose sheet has no {sourceField.label.toLowerCase()} value — a mapped column always wins. Ignored when updating existing records.
-                  </p>
+                    help={`Applied to every row whose sheet has no ${sourceField.label.toLowerCase()} value — a mapped column always wins. Ignored when updating existing records.`}
+                  >
+                    <IconInput
+                      id="default-source"
+                      icon="megaphone"
+                      value={defaultSource}
+                      onChange={(event) => setDefaultSource(event.target.value)}
+                      placeholder={objectType === "LEAD" ? "e.g. WEB_FORM, REFERRAL…" : "e.g. WEBSITE, PARTNER…"}
+                      maxLength={60}
+                    />
+                  </Field>
                 </div>
               );
             })()}
             <div className="rounded-xl bg-(--bg-subtle) p-4">
               <p className="mb-2 text-sm font-semibold text-(--text-primary)">Duplicate matching</p>
               {(["email", "phone", "externalId"] as const).map((rule) => (
-                <label key={rule} className="mr-4 inline-flex items-center gap-2 text-sm text-(--text-secondary)">
-                  <input
-                    type="checkbox"
+                <label key={rule} htmlFor={`match-rule-${rule}`} className="mr-4 inline-flex items-center gap-2 text-sm text-(--text-secondary)">
+                  <Checkbox
+                    id={`match-rule-${rule}`}
                     checked={matchRules[rule]}
-                    onChange={(event) => setMatchRules((prev) => ({ ...prev, [rule]: event.target.checked }))}
+                    onCheckedChange={(checked) => setMatchRules((prev) => ({ ...prev, [rule]: checked === true }))}
                   />
                   {rule === "externalId" ? "External ID" : rule}
                 </label>
@@ -699,58 +717,68 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               <p className="mb-2 text-sm font-semibold text-(--text-primary)">Strategy</p>
               {(
                 [
-                  ["CREATE", "Create new (duplicates skipped)"],
-                  ["UPDATE", "Update matched only"],
-                  ["UPSERT", "Create or update"],
+                  ["CREATE", "Create new (duplicates skipped)", "plus"],
+                  ["UPDATE", "Update matched only", "edit"],
+                  ["UPSERT", "Create or update", "refresh"],
                 ] as const
-              ).map(([value, label]) => (
-                <label key={value} className="mb-2 block rounded-lg bg-(--bg-surface) p-2 text-sm text-(--text-secondary)">
+              ).map(([value, label, icon]) => (
+                <label
+                  key={value}
+                  className="mb-2 flex items-center gap-2 rounded-lg bg-(--bg-surface) p-2 text-sm text-(--text-secondary)"
+                >
                   <input
                     type="radio"
                     name="strategy"
                     checked={strategy === value}
                     onChange={() => setStrategy(value)}
-                  />{" "}
+                  />
+                  <Icon name={icon} size={14} className="shrink-0 text-(--text-tertiary)" aria-hidden />
                   {label}
                 </label>
               ))}
+              <p className="mt-2 text-xs text-(--text-tertiary)">Decides what happens to rows that match an existing record.</p>
             </div>
-          </div>
+          </Card>
 
-          <div className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <select
-              aria-label="Saved mappings"
-              defaultValue=""
-              onChange={(event) => {
-                const saved = savedMappings.find((entry) => entry.id === event.target.value);
+          <Card className="flex-row flex-wrap items-center gap-3 p-4">
+            <Select
+              onValueChange={(value) => {
+                const saved = savedMappings.find((entry) => entry.id === value);
                 if (saved) setMapping(saved.mapping);
               }}
-              className="input"
             >
-              <option value="">Load saved mapping…</option>
-              {savedMappings
-                .filter((entry) => entry.objectType === objectType)
-                .map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.name}
-                  </option>
-                ))}
-            </select>
-            <input
+              <div className="w-full max-w-56">
+                <IconSelectTrigger aria-label="Saved mappings" icon="list" className="h-8 text-sm">
+                  <SelectValue placeholder="Load saved mapping…" />
+                </IconSelectTrigger>
+              </div>
+              <SelectContent>
+                {savedMappings
+                  .filter((entry) => entry.objectType === objectType)
+                  .map((entry) => (
+                    <SelectItem key={entry.id} value={entry.id}>
+                      {entry.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <IconInput
+              icon="file"
               aria-label="Mapping name"
-              placeholder="Name this mapping"
+              placeholder="Name this mapping — e.g. HubSpot lead export"
               value={mappingName}
               onChange={(event) => setMappingName(event.target.value)}
-              className="input"
+              className="w-full sm:w-auto sm:flex-1"
             />
-            <Button variant="secondary" onClick={() => void saveMapping()} disabled={!mappingName}>
+            <Button variant="secondary" icon="check" onClick={() => void saveMapping()} disabled={!mappingName}>
               Save mapping
             </Button>
-          </div>
+          </Card>
 
           <div className="flex justify-end">
             <Button
               variant="primary"
+              icon="search"
               loading={validating}
               disabled={missingRequired.length > 0}
               onClick={() => void runValidation()}
@@ -770,14 +798,14 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               ["Row errors", validation.summary.errorRows, "warning"],
               ["Duplicates", validation.summary.duplicateRows, "info"],
             ].map(([label, value, tone]) => (
-              <div key={String(label)} className="card p-4">
+              <Card key={String(label)} className="gap-0 p-4">
                 <p className={`text-2xl font-semibold tabular-nums ${tone === "success" ? "text-(--success)" : tone === "warning" ? "text-(--warning)" : tone === "info" ? "text-(--text-brand)" : "text-(--text-primary)"}`}>{value as number}</p>
                 <p className="text-sm text-(--text-secondary)">{label as string}</p>
-              </div>
+              </Card>
             ))}
           </div>
 
-          <div className="card p-5">
+          <Card className="gap-0 p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-lg font-semibold text-(--text-primary)">Validation review</p>
@@ -785,60 +813,67 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                   Review the summary before writing anything into {selectedObjectLabel.toLowerCase()}.
                 </p>
               </div>
-              <span className={`badge ${validation.summary.errorRows > 0 ? "badge-warning" : "badge-success"}`}>
+              <Badge
+                variant="outline"
+                className={
+                  validation.summary.errorRows > 0
+                    ? "border-(--warning-border) bg-(--warning-bg) text-(--warning)"
+                    : "border-(--success-border) bg-(--success-bg) text-(--success)"
+                }
+              >
                 {validation.summary.errorRows > 0 ? "Needs attention" : "Ready to import"}
-              </span>
+              </Badge>
             </div>
-          </div>
+          </Card>
 
           {validation.issues.length > 0 ? (
-            <div className="card overflow-hidden">
+            <Card className="gap-0 overflow-hidden py-0">
               <div className="border-b border-(--border-default) bg-(--warning-bg) px-4 py-3">
                 <p className="text-sm font-semibold text-(--warning)">Issues</p>
                 <p className="text-xs text-(--warning)">Fix these rows or they may be skipped.</p>
               </div>
               <div className="p-4">
-              <ul className="max-h-40 space-y-1 overflow-y-auto text-sm">
-                {validation.issues.slice(0, 100).map((issue, index) => (
-                  <li key={index} className={issue.level === "error" ? "text-(--error)" : "text-(--warning)"}>
-                    Row {issue.row}: {issue.message}
-                  </li>
-                ))}
-              </ul>
-              {validation.issues.length > 100 ? (
-                <p className="text-xs text-(--text-tertiary)">…and {validation.issues.length - 100} more.</p>
-              ) : null}
+                <ul className="max-h-40 space-y-1 overflow-y-auto text-sm">
+                  {validation.issues.slice(0, 100).map((issue, index) => (
+                    <li key={index} className={issue.level === "error" ? "text-(--error)" : "text-(--warning)"}>
+                      Row {issue.row}: {issue.message}
+                    </li>
+                  ))}
+                </ul>
+                {validation.issues.length > 100 ? (
+                  <p className="text-xs text-(--text-tertiary)">…and {validation.issues.length - 100} more.</p>
+                ) : null}
               </div>
-            </div>
+            </Card>
           ) : null}
 
           {validation.duplicates.length > 0 ? (
-            <div className="card overflow-hidden">
+            <Card className="gap-0 overflow-hidden py-0">
               <div className="border-b border-(--warning-border) bg-(--warning-bg) px-4 py-3">
                 <p className="text-sm font-semibold text-(--warning)">Possible duplicates</p>
                 <p className="text-xs text-(--warning)">Strategy: {strategy.toLowerCase()}</p>
               </div>
               <div className="p-4">
-              <ul className="max-h-40 space-y-1 overflow-y-auto text-sm text-(--text-primary)">
-                {validation.duplicates.slice(0, 100).map((duplicate, index) => (
-                  <li key={index}>
-                    Row {duplicate.row}: “{duplicate.label}” (matched on {duplicate.matchOn})
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2 text-xs text-(--warning)">
-                With strategy <strong>{strategy}</strong>
-                {strategy === "CREATE" ? " these rows will be skipped." : " these rows will update the matched record."}
-              </p>
+                <ul className="max-h-40 space-y-1 overflow-y-auto text-sm text-(--text-primary)">
+                  {validation.duplicates.slice(0, 100).map((duplicate, index) => (
+                    <li key={index}>
+                      Row {duplicate.row}: “{duplicate.label}” (matched on {duplicate.matchOn})
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-(--warning)">
+                  With strategy <strong>{strategy}</strong>
+                  {strategy === "CREATE" ? " these rows will be skipped." : " these rows will update the matched record."}
+                </p>
               </div>
-            </div>
+            </Card>
           ) : null}
 
           <div className="flex flex-wrap justify-end gap-2">
             <Button variant="secondary" onClick={() => setStep(2)}>
               Back to mapping
             </Button>
-            <Button variant="primary" onClick={() => void runImport()}>
+            <Button variant="primary" icon="upload" onClick={() => void runImport()}>
               Import {validation.summary.valid + validation.summary.duplicateRows} row(s)
             </Button>
           </div>
@@ -847,10 +882,10 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
 
       {step === 4 && job ? (
         <div className="space-y-4">
-          <div className="card overflow-hidden">
-            <div className="card-header">
+          <Card className="gap-0 overflow-hidden py-0">
+            <CardHeader className="flex-col items-start gap-0 border-b py-3">
               <div className="min-w-0">
-                <p className="card-title">Import run</p>
+                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">Import run</CardTitle>
                 <h2 className="mt-1 text-xl font-semibold text-(--text-primary)">
                   {job.status === "RUNNING"
                     ? `Importing ${job.processedRows}/${job.totalRows} rows`
@@ -859,12 +894,12 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                       : `Import ${job.status.toLowerCase()}`}
                 </h2>
               </div>
-            </div>
+            </CardHeader>
             <div className="p-6">
             {job.status === "RUNNING" ? (
               <div className="mt-2 h-2 overflow-hidden rounded bg-(--bg-subtle)">
                 <div
-                  className="h-full bg-(--accent)"
+                  className="h-full bg-accent transition-all duration-300"
                   style={{
                     width: `${job.totalRows === 0 ? 0 : Math.round((job.processedRows / job.totalRows) * 100)}%`,
                   }}
@@ -886,13 +921,12 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               ))}
             </div>
             {job.errorCount > 0 ? (
-              <a href={`/api/imports/${job.id}/errors`} className="btn btn-secondary mt-4">
-                <Icon name="download" size={13} />
+              <Button variant="secondary" icon="download" href={`/api/imports/${job.id}/errors`} className="mt-4">
                 Download error report (CSV)
-              </a>
+              </Button>
             ) : null}
             </div>
-          </div>
+          </Card>
           <div className="flex justify-end">
             <Button variant="secondary" onClick={reset}>
               Import another file
@@ -903,7 +937,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
         <p className="p-6 text-center text-sm text-(--text-tertiary)">Starting import…</p>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-(--border-hairline) pb-3">
+      <div className="flex flex-wrap items-center gap-2">
         <form
           className="flex min-w-0 flex-1 items-center gap-2"
           onSubmit={(event) => {
@@ -914,7 +948,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             setJobsPage(1);
           }}
         >
-          <input
+          <SearchInput
             type="search"
             value={jobsSearch}
             onChange={(event) => {
@@ -925,16 +959,16 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             }}
             placeholder="Search imports — file, object, status…"
             aria-label="Search imports"
-            className="input input-sm"
+            className="h-7 text-xs"
           />
         </form>
       </div>
 
-      <div className="card table-responsive overflow-hidden">
-        <div className="card-header">
-          <div className="min-w-0">
-            <p className="card-title">Recent imports</p>
-            <p className="mt-0.5 text-xs normal-case tracking-normal text-(--text-secondary)">Audit recent jobs, retries, and outcomes.</p>
+      <div className="card table-responsive overflow-x-auto">
+        <div className="flex-col items-start gap-0 border-b border-(--border-default) bg-(--bg-subtle) py-3 sm:px-4">
+          <div className="min-w-0 px-4 sm:px-0">
+            <h3 className="text-sm font-semibold text-(--text-secondary)">Recent imports</h3>
+            <p className="mt-0.5 text-xs text-(--text-secondary)">Audit recent jobs, retries, and outcomes.</p>
           </div>
         </div>
         {jobs.length === 0 ? (
@@ -946,49 +980,43 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           <Table>
             <THead>
               <TR>
-                <TH>File</TH>
-                <TH>Object</TH>
-                <TH>Strategy</TH>
-                <TH>Rows</TH>
-                <TH>Created / Updated / Dup / Err</TH>
-                <TH>Status</TH>
-                <TH>When</TH>
-                <TH></TH>
+                <TH className="px-3 py-2 font-medium">File</TH>
+                <TH className="px-3 py-2 font-medium">Object</TH>
+                <TH className="px-3 py-2 font-medium">Strategy</TH>
+                <TH className="px-3 py-2 font-medium">Rows</TH>
+                <TH className="px-3 py-2 font-medium">Created / Updated / Dup / Err</TH>
+                <TH className="px-3 py-2 font-medium">Status</TH>
+                <TH className="px-3 py-2 font-medium">When</TH>
+                <TH className="px-3 py-2"></TH>
               </TR>
             </THead>
             <TBody>
               {jobs.map((entry) => (
                 <TR key={entry.id}>
-                  <TD>{entry.fileKey ?? "—"}</TD>
-                  <TD>{entry.objectType.toLowerCase()}</TD>
-                  <TD>{entry.strategy.toLowerCase()}</TD>
-                  <TD className="tabular-nums">{entry.processedRows}/{entry.totalRows}</TD>
-                  <TD className="tabular-nums">
+                  <TD className="px-3 py-2">{entry.fileKey ?? "—"}</TD>
+                  <TD className="px-3 py-2">{entry.objectType.toLowerCase()}</TD>
+                  <TD className="px-3 py-2">{entry.strategy.toLowerCase()}</TD>
+                  <TD className="px-3 py-2 tabular-nums">{entry.processedRows}/{entry.totalRows}</TD>
+                  <TD className="px-3 py-2 tabular-nums">
                     {entry.createdCount} / {entry.updatedCount} / {entry.duplicateCount} / {entry.errorCount}
                   </TD>
-                  <TD>
-                    <span className={`badge ${
-                      entry.status === "COMPLETED"
-                        ? "badge-success"
-                        : entry.status === "FAILED"
-                          ? "badge-error"
-                          : "badge-neutral"
-                    }`}>
-                      {entry.status.toLowerCase()}
-                    </span>
+                  <TD className="px-3 py-2">
+                    <Badge className="badge badge-neutral">{entry.status.toLowerCase()}</Badge>
                   </TD>
-                  <TD>{new Date(entry.createdAt).toLocaleString()}</TD>
-                  <TD>
-                    <button
-                      type="button"
-                      className="text-xs text-(--brand) hover:underline"
-                      onClick={async () => {
-                        const response = await fetch(`/api/imports/${entry.id}/retry`, { method: "POST" });
-                        if (response.ok) void refreshJobs();
-                      }}
-                    >
-                      retry
-                    </button>
+                  <TD className="px-3 py-2 whitespace-nowrap">{new Date(entry.createdAt).toLocaleString()}</TD>
+                  <TD className="px-3 py-2 text-right">
+                    <RowActions
+                      actions={[
+                        {
+                          label: "Retry import",
+                          icon: "refresh",
+                          onClick: async () => {
+                            const response = await fetch(`/api/imports/${entry.id}/retry`, { method: "POST" });
+                            if (response.ok) void refreshJobs();
+                          },
+                        },
+                      ]}
+                    />
                   </TD>
                 </TR>
               ))}
@@ -1019,22 +1047,24 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-1">
             Rows
-            <select
-              aria-label="Rows per page"
-              value={jobsPageSize}
-              onChange={(event) => {
-                setJobsPageSize(Number(event.target.value));
+            <Select
+              value={String(jobsPageSize)}
+              onValueChange={(value) => {
+                setJobsPageSize(Number(value));
                 setJobsPage(1);
               }}
-              className="input input-sm"
-              style={{ width: "auto", display: "inline-block" }}
             >
-              {[10, 25, 50].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger aria-label="Rows per page" size="sm" className="h-7 w-fit text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 25, 50].map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
           <Button
             variant="secondary"

@@ -1,7 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { Button } from "@/components/ui";
 import { Icon } from "@/components/Icon";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 /**
  * Object Home view tabs — the Salesforce-style preset view selector
@@ -41,7 +48,6 @@ export function ViewTabs({
   totalCount?: number;
   showHeader?: boolean;
 }) {
-  const [showSaved, setShowSaved] = useState(false);
   const presetViews = views.filter((v) => !v.isSaved);
   const savedViews = views.filter((v) => v.isSaved);
 
@@ -49,111 +55,84 @@ export function ViewTabs({
     <div className="no-print space-y-0">
       {/* ── Action bar ── */}
       {showHeader ? (
-        <div
-          className="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between"
-          style={{ borderColor: "var(--border-default)" }}
-        >
+        <div className="flex flex-col gap-3 border-b border-(--border-default) pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>
+            <h1 className="truncate text-xl font-semibold tracking-tight text-(--text-primary)">
               {title}
             </h1>
-            <p className="mt-0.5 text-xs" style={{ color: "var(--text-tertiary)" }}>
+            <p className="mt-0.5 text-xs text-(--text-tertiary)">
               {totalCount ?? 0} record{totalCount === 1 ? "" : "s"} in your view
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {canCreate && onNewClick ? (
-              <button type="button" className="btn btn-primary" onClick={onNewClick}>
-                <Icon name="plus" size={12} strokeWidth={3} />
+              <Button variant="primary" icon="plus" onClick={onNewClick}>
                 New {title.endsWith("s") ? title.slice(0, -1) : title}
-              </button>
+              </Button>
             ) : null}
             {onImportClick ? (
-              <button type="button" className="btn btn-secondary" onClick={onImportClick}>
+              <Button variant="secondary" icon="upload" onClick={onImportClick}>
                 Import
-              </button>
+              </Button>
             ) : null}
             {canExport && onExportClick ? (
-              <button type="button" className="btn btn-secondary" onClick={onExportClick}>
+              <Button variant="secondary" icon="download" onClick={onExportClick}>
                 Export
-              </button>
+              </Button>
             ) : null}
           </div>
         </div>
       ) : null}
 
       {/* ── View tabs ── */}
-      <div className="flex items-center gap-0 overflow-x-auto pt-1" role="tablist" aria-label="List views">
-        {presetViews.map((view) => {
-          const active = view.key === activeView;
-          return (
-            <button
-              key={view.key}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => onViewChange(view.key)}
-              className="px-3 py-2 text-[13px] font-medium transition-colors"
-              style={{
-                color: active ? "var(--text-brand)" : "var(--text-secondary)",
-                borderBottom: active ? "2px solid var(--brand-600)" : "2px solid transparent",
-                background: active ? "var(--bg-selected)" : "transparent",
-                borderTopLeftRadius: "var(--radius-sm)",
-                borderTopRightRadius: "var(--radius-sm)",
-              }}
-            >
-              {view.label}
-            </button>
-          );
-        })}
+      <Tabs value={activeView} onValueChange={(key) => onViewChange(key)}>
+        <div className="flex items-center gap-1 overflow-x-auto pt-1">
+          <TabsList
+            variant="line"
+            aria-label="List views"
+            className="h-auto w-fit justify-start gap-0 p-0"
+          >
+            {presetViews.map((view) => (
+              <TabsTrigger
+                key={view.key}
+                value={view.key}
+                className="flex-none px-3 py-2 text-[13px]"
+              >
+                {view.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        {/* Saved views dropdown */}
-        {savedViews.length > 0 ? (
-          <div className="relative ml-1">
-            <button
-              type="button"
-              onClick={() => setShowSaved((p) => !p)}
-              className="flex items-center gap-1 px-3 py-2 text-[13px] font-medium transition-colors"
-              style={{
-                color: savedViews.some((v) => v.key === activeView) ? "var(--text-brand)" : "var(--text-secondary)",
-              }}
-            >
-              <Icon name="list" size={14} />
-              Saved Views
-            </button>
-            {showSaved ? (
-              <div
-                className="absolute left-0 top-full z-30 mt-1 w-44 rounded-lg border"
+          {/* Saved views dropdown */}
+          {savedViews.length > 0 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="flex items-center gap-1 px-3 py-2 text-[13px] font-medium transition-colors"
                 style={{
-                  background: "var(--bg-surface)",
-                  borderColor: "var(--border-default)",
-                  boxShadow: "var(--shadow-dropdown)",
+                  color: savedViews.some((v) => v.key === activeView)
+                    ? "var(--text-brand)"
+                    : "var(--text-secondary)",
                 }}
               >
+                <Icon name="list" size={14} />
+                Saved Views
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-44">
                 {savedViews.map((view) => (
-                  <button
+                  <DropdownMenuItem
                     key={view.key}
-                    type="button"
-                    onClick={() => {
-                      onViewChange(view.key);
-                      setShowSaved(false);
-                    }}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] hover:bg-(--bg-hover)"
-                    style={{
-                      color: view.key === activeView ? "var(--text-brand)" : "var(--text-primary)",
-                    }}
+                    onSelect={() => onViewChange(view.key)}
+                    className={view.key === activeView ? "text-(--text-brand)" : ""}
                   >
                     <span className="truncate">{view.label}</span>
-                    {view.isPinned ? (
-                      <Icon name="pin" size={12} />
-                    ) : null}
-                  </button>
+                    {view.isPinned ? <Icon name="pin" size={12} /> : null}
+                  </DropdownMenuItem>
                 ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+        </div>
+      </Tabs>
     </div>
   );
 }

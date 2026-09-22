@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui";
+import { Field, FormError, IconInput } from "@/components/form";
+import { Switch } from "@/components/ui/switch";
 
 /**
  * Admin panel: manage a user's personal SMTP credentials (per-user mail
@@ -112,9 +115,6 @@ export function UserSmtpPanel({ userId, userEmail }: { userId: string; userEmail
     setBusy("idle");
   }
 
-  const inputClass =
-    "w-full rounded-md border border-(--border-strong) px-2.5 py-1.5 text-sm focus:border-(--brand) focus:outline-none focus:ring-2 focus:ring-(--brand)/20";
-
   if (loaded && !config && !host) {
     // Still render the empty form — first-time setup for this user.
   }
@@ -133,44 +133,43 @@ export function UserSmtpPanel({ userId, userEmail }: { userId: string; userEmail
         When set, this user&#39;s outgoing email is sent through their own mail server. Without it, the global SMTP is used.
       </p>
       {notice ? <p role="status" className="mt-2 rounded-md bg-(--success-bg) px-3 py-2 text-sm text-(--success)">{notice}</p> : null}
-      {error ? <p role="alert" className="mt-2 rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <label className="text-xs text-(--text-secondary)">SMTP host
-          <input value={host} onChange={(e) => setHost(e.target.value)} placeholder="smtp.example.com" className={`mt-1 ${inputClass}`} />
-        </label>
+      {error ? <div className="mt-2"><FormError message={error} /></div> : null}
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <Field label="SMTP host" id="smtp-host">
+          <IconInput id="smtp-host" icon="plug" value={host} onChange={(e) => setHost(e.target.value)} placeholder="smtp.example.com" />
+        </Field>
         <div className="grid grid-cols-[80px_1fr] gap-2">
-          <label className="text-xs text-(--text-secondary)">Port
-            <input type="number" min={1} max={65535} value={port} onChange={(e) => setPort(e.target.value)} className={`mt-1 ${inputClass}`} />
-          </label>
-          <label className="flex items-end gap-2 pb-2 text-xs text-(--text-secondary)">
-            <input type="checkbox" checked={secure} onChange={(e) => setSecure(e.target.checked)} /> TLS/SSL
+          <Field label="Port" id="smtp-port">
+            <IconInput id="smtp-port" icon="plug" type="number" min={1} max={65535} value={port} onChange={(e) => setPort(e.target.value)} placeholder="587" />
+          </Field>
+          <label htmlFor="smtp-secure" className="flex items-end gap-2 pb-2 text-xs text-(--text-secondary)">
+            <Switch id="smtp-secure" checked={secure} onCheckedChange={(checked) => setSecure(checked === true)} /> TLS/SSL
           </label>
         </div>
-        <label className="text-xs text-(--text-secondary)">Username
-          <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="off" className={`mt-1 ${inputClass}`} />
-        </label>
-        <label className="text-xs text-(--text-secondary)">
-          Password {config?.hasPassword ? "(saved — leave blank to keep)" : ""}
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" className={`mt-1 ${inputClass}`} />
-        </label>
-        <label className="text-xs text-(--text-secondary)">From name
-          <input value={fromName} onChange={(e) => setFromName(e.target.value)} placeholder="e.g. Klaus Bergmann" className={`mt-1 ${inputClass}`} />
-        </label>
-        <label className="text-xs text-(--text-secondary)">From address
-          <input type="email" value={fromAddress} onChange={(e) => setFromAddress(e.target.value)} className={`mt-1 ${inputClass}`} />
-        </label>
+        <Field label="Username" id="smtp-username">
+          <IconInput id="smtp-username" icon="users" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="off" placeholder="e.g. klaus@company.com" />
+        </Field>
+        <Field label="Password" id="smtp-password" help={config?.hasPassword ? "Saved — leave blank to keep the current password." : undefined}>
+          <IconInput id="smtp-password" icon="shield" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" placeholder="••••••••••" />
+        </Field>
+        <Field label="From name" id="smtp-from-name">
+          <IconInput id="smtp-from-name" icon="users" value={fromName} onChange={(e) => setFromName(e.target.value)} placeholder="e.g. Klaus Bergmann" />
+        </Field>
+        <Field label="From address" id="smtp-from-address">
+          <IconInput id="smtp-from-address" icon="mail" type="email" value={fromAddress} onChange={(e) => setFromAddress(e.target.value)} placeholder="e.g. klaus@company.com" />
+        </Field>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" disabled={busy !== "idle"} onClick={() => void save()} className="rounded-md border border-(--border-strong) px-3 py-1.5 text-xs font-semibold hover:bg-(--bg-hover) disabled:opacity-50">
-          {busy === "saving" ? "Saving…" : "Save SMTP"}
-        </button>
-        <button type="button" disabled={busy !== "idle" || !host || !username} onClick={() => void test()} className="rounded-md border border-(--border-strong) px-3 py-1.5 text-xs font-medium hover:bg-(--bg-hover) disabled:opacity-50">
-          {busy === "testing" ? "Testing…" : "Test connection"}
-        </button>
+        <Button type="button" variant="secondary" size="sm" icon="check" loading={busy === "saving"} disabled={busy !== "idle" && busy !== "saving"} onClick={() => void save()}>
+          Save SMTP
+        </Button>
+        <Button type="button" variant="secondary" size="sm" icon="plug" loading={busy === "testing"} disabled={(busy !== "idle" && busy !== "testing") || !host || !username} onClick={() => void test()}>
+          Test connection
+        </Button>
         {config ? (
-          <button type="button" disabled={busy !== "idle"} onClick={() => void remove()} className="rounded-md border border-(--border-strong) px-3 py-1.5 text-xs font-medium text-(--error) hover:bg-(--bg-hover) disabled:opacity-50">
+          <Button type="button" variant="destructive" size="sm" icon="trash" loading={busy === "removing"} disabled={busy !== "idle" && busy !== "removing"} onClick={() => void remove()}>
             Remove override
-          </button>
+          </Button>
         ) : null}
       </div>
     </div>

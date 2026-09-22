@@ -19,6 +19,7 @@ import { listCustomFields } from "@/server/records/customFields";
 import { RecordActivities } from "@/components/RecordActivities";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
+import { EmptyState } from "@/components/ui";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { getRecordCapabilities } from "@/lib/recordCapabilities";
@@ -120,7 +121,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
         <RecordDetailActions object="accounts" row={account as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} canAssign={canAssign} canChangeStatus={canChangeStatus} />
       </HighlightsPanel>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0">
           <RecordPageTabs
             tabs={[
@@ -180,9 +181,10 @@ export default async function AccountDetailPage({ params }: PageProps) {
             </div>
             <div className="card-body">
               {account.contacts.length === 0 ? (
-                <div className="empty-state" style={{ padding: "var(--space-6)" }}>
-                  <p className="empty-state-description">No contacts linked to this account yet.</p>
-                </div>
+                <EmptyState
+                  title="No contacts linked yet"
+                  description="Contacts belonging to this account will appear here."
+                />
               ) : (
                 <ul className="space-y-2">
                   {account.contacts.map((contact) => (
@@ -213,7 +215,10 @@ export default async function AccountDetailPage({ params }: PageProps) {
             </div>
             <div className="card-body">
               {relatedOpportunities.length === 0 ? (
-                <p className="text-[13px]" style={{ color: "var(--text-tertiary)" }}>No opportunities.</p>
+                <EmptyState
+                  title="No opportunities yet"
+                  description="Deals linked to this account will appear here."
+                />
               ) : (
                 <ul className="space-y-2">
                   {relatedOpportunities.map((opportunity) => (
@@ -260,10 +265,10 @@ export default async function AccountDetailPage({ params }: PageProps) {
               <AttachmentsPanel subjectType="ACCOUNT" subjectId={id} canUpload={canUpload} canDelete={canDeleteFiles} />
             </div>
           </section>
-                    {canViewEmails ? (
-            <RecordEmailHistory subjectType="ACCOUNT" subjectId={id} />
-          ) : null}
-        </RecordPageTabs>
+            {canViewEmails ? (
+              <RecordEmailHistory subjectType="ACCOUNT" subjectId={id} />
+            ) : null}
+          </RecordPageTabs>
         </div>
 
         {/* Timeline sidebar */}

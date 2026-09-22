@@ -1,11 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { Modal } from "@/components/Modal";
 import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { IconInput } from "@/components/form";
 
 /* ═══════════════════════════════════════════════════════════════════
-   ConfirmDialog — replaces window.confirm with a styled, accessible modal
+   ConfirmDialog — replaces window.confirm with a styled, accessible
+   alert dialog (shadcn AlertDialog). Destructive confirms style their
+   action button destructively.
    ═══════════════════════════════════════════════════════════════════ */
 
 export interface ConfirmConfig {
@@ -26,41 +48,45 @@ export function ConfirmDialog({
   onCancel: () => void;
 }) {
   return (
-    <Modal onClose={onCancel} title={config.title} size="sm">
-      <div className="modal-body">
-        <div className="flex items-start gap-3">
-          <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-            style={{
-              background: config.destructive ? "var(--error-bg)" : "var(--warning-bg)",
-              color: config.destructive ? "var(--error)" : "var(--warning)",
-            }}
+    <AlertDialog
+      open
+      onOpenChange={(next) => {
+        if (!next) onCancel();
+      }}
+    >
+      <AlertDialogContent size="sm">
+        <AlertDialogHeader>
+          <AlertDialogMedia
+            className={
+              config.destructive
+                ? "bg-destructive/10 text-destructive"
+                : "bg-(--warning-bg) text-(--warning)"
+            }
           >
-            <Icon name={config.destructive ? "alert" : "alert"} size={20} />
-          </span>
-          <p className="text-[14px]" style={{ color: "var(--text-secondary)", paddingTop: "8px" }}>
-            {config.message}
-          </p>
-        </div>
-      </div>
-      <div className="modal-footer">
-        <button type="button" className="btn btn-secondary" onClick={onCancel}>
-          {config.cancelLabel ?? "Cancel"}
-        </button>
-        <button
-          type="button"
-          className={`btn ${config.destructive ? "btn-destructive" : "btn-primary"}`}
-          onClick={onConfirm}
-        >
-          {config.confirmLabel ?? "Confirm"}
-        </button>
-      </div>
-    </Modal>
+            <Icon name="alert" size={20} />
+          </AlertDialogMedia>
+          <AlertDialogTitle>{config.title}</AlertDialogTitle>
+          <AlertDialogDescription>{config.message}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onCancel}>
+            {config.cancelLabel ?? "Cancel"}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            variant={config.destructive ? "destructive" : "default"}
+            onClick={onConfirm}
+          >
+            {config.confirmLabel ?? "Confirm"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   PromptDialog — replaces window.prompt with a styled, accessible modal
+   PromptDialog — replaces window.prompt with a styled, accessible
+   dialog (shadcn Dialog).
    ═══════════════════════════════════════════════════════════════════ */
 
 export interface PromptConfig {
@@ -92,33 +118,39 @@ export function PromptDialog({
   }
 
   return (
-    <Modal onClose={onCancel} title={config.title} size="sm">
-      <form method="post" onSubmit={handleSubmit}>
-        <div className="modal-body">
-          <p className="mb-3 text-[14px]" style={{ color: "var(--text-secondary)" }}>
-            {config.message}
-          </p>
-          <input
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next) onCancel();
+      }}
+    >
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{config.title}</DialogTitle>
+          <DialogDescription>{config.message}</DialogDescription>
+        </DialogHeader>
+        <form method="post" onSubmit={handleSubmit} className="grid gap-4">
+          <IconInput
+            icon="edit"
             type="text"
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            placeholder={config.placeholder}
+            placeholder={config.placeholder ?? "Type your answer…"}
             maxLength={config.maxLength ?? 200}
             required={config.required !== false}
             autoFocus
-            className="w-full rounded-md border border-(--border-strong) px-3 py-2 text-sm focus:border-(--brand) focus:outline-none focus:ring-2 focus:ring-(--brand)/20"
           />
-        </div>
-        <div className="modal-footer">
-          <button type="button" className="btn btn-secondary" onClick={onCancel}>
-            {config.cancelLabel ?? "Cancel"}
-          </button>
-          <button type="submit" className="btn btn-primary">
-            {config.confirmLabel ?? "Submit"}
-          </button>
-        </div>
-      </form>
-    </Modal>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={onCancel}>
+              {config.cancelLabel ?? "Cancel"}
+            </Button>
+            <Button type="submit" variant="primary" icon="check">
+              {config.confirmLabel ?? "Submit"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

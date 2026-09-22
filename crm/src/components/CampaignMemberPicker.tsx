@@ -2,6 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button, EmptyState } from "@/components/ui";
+import { SearchInput } from "@/components/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface MemberRow {
   id: string;
@@ -108,17 +118,20 @@ export function CampaignMemberPicker({
     <div className="space-y-4">
       {canEdit ? (
         <div className="flex flex-wrap items-center gap-2 rounded-md border border-(--border-default) p-3">
-          <select
-            aria-label="Member type"
+          <Select
             value={type}
-            onChange={(event) => setType(event.target.value as typeof type)}
-            className="input"
+            onValueChange={(value) => setType(value as typeof type)}
           >
-            <option value="LEAD">Leads</option>
-            <option value="CONTACT">Contacts</option>
-            <option value="CUSTOMER">Customers</option>
-          </select>
-          <input
+            <SelectTrigger aria-label="Member type" className="w-auto">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectItem value="LEAD">Leads</SelectItem>
+              <SelectItem value="CONTACT">Contacts</SelectItem>
+              <SelectItem value="CUSTOMER">Customers</SelectItem>
+            </SelectContent>
+          </Select>
+          <SearchInput
             aria-label="Search records"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -129,16 +142,15 @@ export function CampaignMemberPicker({
               }
             }}
             placeholder="Search by name or email…"
-            className="min-w-52 flex-1 rounded-md border border-(--border-strong) px-3 py-1.5 text-sm"
+            wrapperClassName="min-w-52 flex-1"
           />
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={() => void search()}
             disabled={busy}
-            className="btn btn-secondary"
           >
             Search
-          </button>
+          </Button>
           {error ? <span className="text-sm text-(--error)">{error}</span> : null}
           {results.length > 0 ? (
             <ul className="w-full space-y-1">
@@ -152,7 +164,7 @@ export function CampaignMemberPicker({
                       type="button"
                       onClick={() => void add(result.id)}
                       disabled={busy}
-                      className="text-xs font-medium text-(--brand) hover:underline"
+                      className="text-xs font-medium text-(--text-brand) hover:underline"
                     >
                       Add
                     </button>
@@ -164,33 +176,39 @@ export function CampaignMemberPicker({
         </div>
       ) : null}
 
-      <ul className="space-y-1">
-        {members.length === 0 ? (
-          <li className="text-sm text-(--text-tertiary)">No members yet.</li>
-        ) : (
-          members.map((member) => (
+      {members.length === 0 ? (
+        <EmptyState
+          title="No members yet"
+          description="Add leads, contacts, or customers to start tracking this campaign."
+        />
+      ) : (
+        <ul className="space-y-1">
+          {members.map((member) => (
             <li key={member.id} className="flex items-center justify-between rounded border border-(--border-default) px-2 py-1 text-sm">
               <span>
-                <a href={`/${member.subjectType.toLowerCase()}s/${member.subjectId}`} className="text-(--brand) hover:underline">
+                <Link href={`/${member.subjectType.toLowerCase()}s/${member.subjectId}`} className="text-(--text-brand) hover:underline">
                   {member.label}
-                </a>
+                </Link>
                 <span className="ml-2 text-xs text-(--text-tertiary)">{member.subjectType.toLowerCase()}</span>
               </span>
               <span className="flex items-center gap-2">
                 {canEdit ? (
-                  <select
-                    aria-label={`Status for ${member.label}`}
+                  <Select
                     value={member.status}
                     disabled={busy}
-                    onChange={(event) => void setStatus(member.id, event.target.value)}
-                    className="rounded border border-(--border-default) px-1 py-0.5 text-xs"
+                    onValueChange={(value) => void setStatus(member.id, value)}
                   >
-                    {MEMBER_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {status.toLowerCase()}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger size="sm" aria-label={`Status for ${member.label}`} className="h-auto w-auto py-0.5 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent position="popper">
+                      {MEMBER_STATUSES.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status.toLowerCase()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 ) : (
                   <span className="text-xs text-(--text-tertiary)">{member.status.toLowerCase()}</span>
                 )}
@@ -206,9 +224,9 @@ export function CampaignMemberPicker({
                 ) : null}
               </span>
             </li>
-          ))
-        )}
-      </ul>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

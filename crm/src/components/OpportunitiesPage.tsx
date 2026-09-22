@@ -8,7 +8,14 @@ import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { SmartTips } from "@/components/SmartTips";
 import { Button, EmptyState } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { SearchInput } from "@/components/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTableSession, writeTableSession } from "@/components/useTableSession";
+import { Initials } from "@/components/Initials";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
 
 export interface Stage {
@@ -72,21 +79,21 @@ function OpportunityBoardSkeleton() {
   return (
     <div className="flex gap-3 overflow-x-auto pb-2">
       {[...Array(4)].map((_, columnIndex) => (
-        <div key={`opp-board-skeleton-${columnIndex}`} className="card w-64 shrink-0 p-2">
+        <Card key={`opp-board-skeleton-${columnIndex}`} className="w-64 shrink-0 gap-0 p-2">
           <div className="mb-3 flex items-center justify-between gap-3 px-1">
-            <div className="skeleton" style={{ height: 16, width: "46%" }} />
-            <div className="skeleton" style={{ height: 12, width: "30%" }} />
+            <Skeleton style={{ height: 16, width: "46%" }} />
+            <Skeleton style={{ height: 12, width: "30%" }} />
           </div>
           <div className="space-y-2">
             {[...Array(columnIndex === 0 ? 3 : 2)].map((__, cardIndex) => (
               <div key={`opp-card-skeleton-${columnIndex}-${cardIndex}`} className="rounded-md border border-(--border-hairline) bg-(--bg-surface) p-2">
-                <div className="skeleton" style={{ height: 15, width: `${78 - cardIndex * 8}%` }} />
-                <div className="skeleton mt-2" style={{ height: 12, width: "52%" }} />
-                <div className="skeleton mt-2" style={{ height: 11, width: "70%" }} />
+                <Skeleton style={{ height: 15, width: `${78 - cardIndex * 8}%` }} />
+                <Skeleton className="mt-2" style={{ height: 12, width: "52%" }} />
+                <Skeleton className="mt-2" style={{ height: 11, width: "70%" }} />
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       ))}
     </div>
   );
@@ -94,7 +101,7 @@ function OpportunityBoardSkeleton() {
 
 function OpportunityListSkeleton() {
   return (
-    <div className="card overflow-hidden">
+    <Card className="gap-0 overflow-hidden py-0">
       <Table>
         <THead>
           <TR>
@@ -112,8 +119,7 @@ function OpportunityListSkeleton() {
             <TR key={`opp-list-skeleton-${rowIndex}`}>
               {[...Array(7)].map((__, columnIndex) => (
                 <TD key={`opp-list-skeleton-${rowIndex}-${columnIndex}`}>
-                  <div
-                    className="skeleton"
+                  <Skeleton
                     style={{ height: columnIndex === 0 ? 16 : 13, width: `${columnIndex === 0 ? 78 : 55 - (columnIndex % 3) * 8}%` }}
                   />
                 </TD>
@@ -122,7 +128,7 @@ function OpportunityListSkeleton() {
           ))}
         </TBody>
       </Table>
-    </div>
+    </Card>
   );
 }
 
@@ -275,15 +281,18 @@ export function OpportunitiesPage() {
       <WorkspaceQuickNav />
       <SmartTips context="records" />
       <div className="flex flex-wrap items-center gap-2">
-        <select
-          aria-label="Pipeline"
-          value={pipelineId}
-          onChange={(event) => setPipelineId(event.target.value)}
-          className="input input-sm"
-          style={{ width: "auto" }}
-        >
-          {pipelines.map((pipeline) => <option key={pipeline.id} value={pipeline.id}>{pipeline.name}{pipeline.isDefault ? " ★" : ""}</option>)}
-        </select>
+        <Select value={pipelineId} onValueChange={setPipelineId}>
+          <SelectTrigger aria-label="Pipeline" size="sm" className="h-7 w-fit text-xs">
+            <SelectValue placeholder="Pipeline" />
+          </SelectTrigger>
+          <SelectContent>
+            {pipelines.map((pipeline) => (
+              <SelectItem key={pipeline.id} value={pipeline.id}>
+                {pipeline.name}{pipeline.isDefault ? " ★" : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="tab-strip" role="group" aria-label="Opportunities view">
           <button
             type="button"
@@ -304,41 +313,43 @@ export function OpportunitiesPage() {
         </div>
         {view === "list" ? (
           <>
-            <input
+            <SearchInput
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search all fields — name, owner, account, stage…"
               aria-label="Search opportunities"
-              className="input input-sm"
-              style={{ maxWidth: "300px" }}
+              className="h-7 text-xs"
+              wrapperClassName="w-full max-w-[300px]"
             />
-            <select
-              aria-label="Status filter"
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-              className="input input-sm"
-              style={{ width: "auto" }}
+            <Select
+              value={statusFilter || "__all__"}
+              onValueChange={(value) => setStatusFilter(value === "__all__" ? "" : value)}
             >
-              <option value="">Status: all</option>
-              <option value="OPEN">Open</option>
-              <option value="WON">Won</option>
-              <option value="LOST">Lost</option>
-            </select>
+              <SelectTrigger aria-label="Status filter" size="sm" className="h-7 w-fit text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Status: all</SelectItem>
+                <SelectItem value="OPEN">Open</SelectItem>
+                <SelectItem value="WON">Won</SelectItem>
+                <SelectItem value="LOST">Lost</SelectItem>
+              </SelectContent>
+            </Select>
           </>
         ) : null}
         {view === "board" ? (
-          <label className="flex items-center gap-1 text-sm text-(--text-secondary)">
-            <input
-              type="checkbox"
+          <label htmlFor="opp-include-closed" className="flex items-center gap-1.5 text-sm text-(--text-secondary)">
+            <Checkbox
+              id="opp-include-closed"
               checked={includeClosed}
-              onChange={(event) => setIncludeClosed(event.target.checked)}
+              onCheckedChange={(checked) => setIncludeClosed(checked === true)}
             />
             Show won/lost
           </label>
         ) : null}
         {can.settings ? (
-          <Button variant="secondary" size="sm" onClick={() => setShowAdmin(true)}>
+          <Button variant="secondary" size="sm" icon="settings" onClick={() => setShowAdmin(true)}>
             Manage pipelines
           </Button>
         ) : null}
@@ -358,13 +369,13 @@ export function OpportunitiesPage() {
       ) : null}
 
       {pipelines.length === 0 && !loading ? (
-        <div className="card">
+        <Card className="gap-0 py-0">
           <EmptyState
             illustration="opportunities"
             title="No pipelines configured yet"
             description={can.settings ? "Create one under “Manage pipelines”." : undefined}
           />
-        </div>
+        </Card>
       ) : null}
 
       {loading ? (
@@ -388,20 +399,20 @@ export function OpportunitiesPage() {
                   const id = event.dataTransfer.getData("text/opportunity-id");
                   if (id && can.edit) void moveStage(id, stage.id);
                 }}
-                className="card w-64 shrink-0 transition-colors"
+                className="w-64 shrink-0 rounded-xl bg-card ring-1 ring-foreground/10 transition-colors"
                 style={dragOver === stage.id ? { background: "var(--accent-soft)", borderColor: "var(--accent-border)" } : undefined}
               >
-                <div className="card-header">
+                <div className="flex items-start justify-between gap-2 px-4 pb-3 pt-4">
                   <div className="min-w-0">
-                    <p className="card-title truncate">
+                    <CardTitle className="truncate text-sm font-semibold">
                       {stage.name}
                       {stage.type !== "OPEN" ? ` (${stage.type.toLowerCase()})` : ""}
-                    </p>
-                    <p className="text-xs tabular-nums text-(--text-secondary)">
+                    </CardTitle>
+                    <p className="mt-0.5 text-xs tabular-nums text-(--text-secondary)">
                       {money(agg?.value ?? 0)}
                     </p>
                   </div>
-                  <span className="badge badge-neutral tabular-nums">{agg?.count ?? 0}</span>
+                  <Badge variant="outline" className="tabular-nums">{agg?.count ?? 0}</Badge>
                 </div>
                 <div className="space-y-2 p-2">
                   {cards.map((card) => (
@@ -409,7 +420,7 @@ export function OpportunitiesPage() {
                       key={card.id}
                       draggable={can.edit}
                       onDragStart={(event) => event.dataTransfer.setData("text/opportunity-id", card.id)}
-                      className="rounded-md border border-(--border-hairline) bg-(--bg-surface) p-2"
+                      className="rounded-lg border bg-card p-2"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <Link
@@ -419,9 +430,9 @@ export function OpportunitiesPage() {
                           {card.name}
                         </Link>
                         {card.stage.type === "WON" ? (
-                          <span className="badge badge-success">won</span>
+                          <Badge variant="outline" className="border-(--success-border) bg-(--success-bg) text-(--success)">won</Badge>
                         ) : card.stage.type === "LOST" ? (
-                          <span className="badge badge-error">lost</span>
+                          <Badge variant="destructive">lost</Badge>
                         ) : null}
                       </div>
                       <p className="mt-0.5 text-xs tabular-nums text-(--text-secondary)">
@@ -434,18 +445,29 @@ export function OpportunitiesPage() {
                           : ""}
                       </p>
                       {can.edit ? (
-                        <select
-                          aria-label={`Stage for ${card.name}`}
+                        <Select
                           value={card.stageId}
-                          onChange={(event) => void moveStage(card.id, event.target.value)}
-                          className="mt-1 w-full rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 py-1 text-xs"
+                          onValueChange={(value) => void moveStage(card.id, value)}
                         >
-                          {stages.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.name}
-                            </option>
-                          ))}
-                        </select>
+                          {/* stopPropagation keeps clicks on the select from
+                              starting the card drag (native selects got this
+                              for free). */}
+                          <SelectTrigger
+                            aria-label={`Stage for ${card.name}`}
+                            size="sm"
+                            className="mt-1 h-7 w-full text-xs"
+                            onMouseDown={(event) => event.stopPropagation()}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {stages.map((option) => (
+                              <SelectItem key={option.id} value={option.id}>
+                                {option.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       ) : null}
                     </div>
                   ))}
@@ -458,17 +480,17 @@ export function OpportunitiesPage() {
           })}
         </div>
       ) : view === "list" ? (
-        <div className="card overflow-hidden">
+        <div className="card table-responsive overflow-x-auto p-2 lg:p-0">
           <Table>
             <THead>
               <TR>
-                <TH>Opportunity</TH>
-                <TH>Account</TH>
-                <TH>Stage</TH>
-                <TH>Value</TH>
-                <TH>Prob.</TH>
-                <TH>Close date</TH>
-                <TH>Owner</TH>
+                <TH className="px-3 py-2 font-medium">Opportunity</TH>
+                <TH className="px-3 py-2 font-medium">Account</TH>
+                <TH className="px-3 py-2 font-medium">Stage</TH>
+                <TH className="px-3 py-2 font-medium">Value</TH>
+                <TH className="px-3 py-2 font-medium">Prob.</TH>
+                <TH className="px-3 py-2 font-medium">Close date</TH>
+                <TH className="px-3 py-2 font-medium">Owner</TH>
               </TR>
             </THead>
             <TBody>
@@ -485,23 +507,23 @@ export function OpportunitiesPage() {
               ) : (
                 rows.map((row) => (
                   <TR key={row.id}>
-                    <TD>
+                    <TD className="px-3 py-2">
                       <Link href={`/opportunities/${row.id}`} className="font-medium text-(--brand) hover:underline">
                         {row.name}
                       </Link>
                     </TD>
-                    <TD>{row.account?.name ?? "—"}</TD>
-                    <TD>
-                      <span className="badge badge-neutral">
+                    <TD className="px-3 py-2 whitespace-nowrap">{row.account?.name ? <span className="flex items-center gap-1.5"><Initials name={row.account.name} size="xs" />{row.account.name}</span> : "—"}</TD>
+                    <TD className="px-3 py-2">
+                      <Badge className="badge badge-neutral">
                         {row.stage.name}
-                      </span>
+                      </Badge>
                     </TD>
-                    <TD className="tabular-nums">{row.value ? money(Number(row.value)) : "—"}</TD>
-                    <TD className="tabular-nums">{row.probability}%</TD>
-                    <TD>
+                    <TD className="px-3 py-2 tabular-nums">{row.value ? money(Number(row.value)) : "—"}</TD>
+                    <TD className="px-3 py-2 tabular-nums">{row.probability}%</TD>
+                    <TD className="px-3 py-2 whitespace-nowrap">
                       {row.expectedCloseAt ? new Date(row.expectedCloseAt).toLocaleDateString() : "—"}
                     </TD>
-                    <TD>{row.owner?.name ?? "—"}</TD>
+                    <TD className="px-3 py-2 whitespace-nowrap">{row.owner?.name ? <span className="flex items-center gap-1.5"><Initials name={row.owner.name} size="xs" />{row.owner.name}</span> : "—"}</TD>
                   </TR>
                 ))
               )}

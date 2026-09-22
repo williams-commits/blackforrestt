@@ -3,8 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useToast } from "@/components/Toast";
+import { toast } from "sonner";
 import { CommentsSection } from "@/components/CommentsSection";
+import { Button } from "@/components/ui";
+import { Field, IconInput } from "@/components/form";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Icon } from "./Icon";
 
 export interface SubjectNote {
   id: string;
@@ -57,7 +63,6 @@ export function RecordActivities({
   canScheduleAppointment: boolean;
 }) {
   const router = useRouter();
-  const toast = useToast();
   const [noteBody, setNoteBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,9 +106,6 @@ export function RecordActivities({
     setOpenComments((previous) => ({ ...previous, [id]: !previous[id] }));
   }, []);
 
-  const inputClass =
-    "w-full rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none";
-
   function refreshAfterToast() {
     window.setTimeout(() => router.refresh(), 150);
   }
@@ -133,15 +135,15 @@ export function RecordActivities({
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
         const message = body?.error ?? "Could not add note.";
         setError(message);
-        toast.error("Note not added", message);
+        toast.error("Note not added", { description: message });
         return;
       }
       setNoteBody("");
-      toast.success("Note added", `Note added to ${subjectLabel}.`);
+      toast.success("Note added", { description: `Note added to ${subjectLabel}.` });
       refreshAfterToast();
     } catch {
       setError("Could not add note.");
-      toast.error("Note not added", "Check your connection and try again.");
+      toast.error("Note not added", { description: "Check your connection and try again." });
     } finally {
       setBusy(false);
     }
@@ -161,15 +163,15 @@ export function RecordActivities({
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
         const message = body?.error ?? "Could not create task.";
         setError(message);
-        toast.error("Task not created", message);
+        toast.error("Task not created", { description: message });
         return;
       }
       setShowTask(false);
-      toast.success("Task created", `Follow-up task created for ${subjectLabel}.`);
+      toast.success("Task created", { description: `Follow-up task created for ${subjectLabel}.` });
       refreshAfterToast();
     } catch {
       setError("Could not create task.");
-      toast.error("Task not created", "Check your connection and try again.");
+      toast.error("Task not created", { description: "Check your connection and try again." });
     } finally {
       setBusy(false);
     }
@@ -189,15 +191,15 @@ export function RecordActivities({
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
         const message = body?.error ?? "Could not schedule appointment.";
         setError(message);
-        toast.error("Appointment not scheduled", message);
+        toast.error("Appointment not scheduled", { description: message });
         return;
       }
       setShowAppointment(false);
-      toast.success("Appointment scheduled", `Appointment scheduled with ${subjectLabel}.`);
+      toast.success("Appointment scheduled", { description: `Appointment scheduled with ${subjectLabel}.` });
       refreshAfterToast();
     } catch {
       setError("Could not schedule appointment.");
-      toast.error("Appointment not scheduled", "Check your connection and try again.");
+      toast.error("Appointment not scheduled", { description: "Check your connection and try again." });
     } finally {
       setBusy(false);
     }
@@ -214,123 +216,196 @@ export function RecordActivities({
       {canAddNote || canCreateTask || canScheduleAppointment ? (
         <>
           {canAddNote ? <form method="post" onSubmit={addNote} className="space-y-2">
-            <textarea
+            <div>
+              <p className="form-section-title">Note</p>
+              <p className="form-section-help">Context for everyone working this record — visible on the timeline.</p>
+            </div>
+            <Textarea
               value={noteBody}
               onChange={(event) => setNoteBody(event.target.value)}
-              placeholder="Add a note…"
+              placeholder="Add a note — context, decisions, next steps…"
               aria-label="New note"
               rows={2}
               required
               maxLength={5000}
-              className={inputClass}
+              className="resize-y"
             />
-            <div className="flex justify-end">
-              <button
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] text-(--text-tertiary)">{noteBody.length.toLocaleString()} / 5,000</p>
+              <Button
                 type="submit"
-                disabled={busy}
-                className="btn btn-secondary"
+                variant="primary"
+                icon="note"
+                loading={busy}
+                disabled={!noteBody.trim()}
               >
-                {busy ? "Adding…" : "Add note"}
-              </button>
+                Add note
+              </Button>
             </div>
           </form> : null}
 
           <div className="flex gap-2">
-            {canCreateTask ? <button
-              type="button"
+            {canCreateTask ? <Button
+              variant="secondary"
+              icon="square_check"
               onClick={() => {
                 setShowTask((previous) => !previous);
                 setShowAppointment(false);
               }}
-              className="btn btn-secondary"
+              aria-pressed={showTask}
             >
               Create follow-up task
-            </button> : null}
-            {canScheduleAppointment ? <button
-              type="button"
+            </Button> : null}
+            {canScheduleAppointment ? <Button
+              variant="secondary"
+              icon="calendar"
               onClick={() => {
                 setShowAppointment((previous) => !previous);
                 setShowTask(false);
               }}
-              className="btn btn-secondary"
+              aria-pressed={showAppointment}
             >
               Schedule appointment
-            </button> : null}
+            </Button> : null}
           </div>
 
           {canCreateTask && showTask ? (
-            <form method="post" onSubmit={createTask} className="grid gap-2 rounded-md border border-(--border-default) p-3 sm:grid-cols-3">
-              <input
-                aria-label="Task title"
-                value={taskTitle}
-                onChange={(event) => setTaskTitle(event.target.value)}
-                required
-                minLength={2}
-                className={inputClass}
-              />
-              <input
-                aria-label="Task due"
-                type="datetime-local"
-                value={taskDue}
-                onChange={(event) => setTaskDue(event.target.value)}
-                className={inputClass}
-              />
-              <button
-                type="submit"
-                className="btn btn-primary"
-              >
-                Create
-              </button>
+            <form method="post" onSubmit={createTask} className="space-y-3 rounded-md border border-(--border-default) p-3">
+              <div>
+                <p className="form-section-title">Follow-up task</p>
+                <p className="form-section-help">Linked to this record — appears on its timeline and your queue.</p>
+              </div>
+              <Field label="What needs to happen" required id="ra-task-title">
+                <IconInput
+                  id="ra-task-title"
+                  icon="square_check"
+                  aria-label="Task title"
+                  value={taskTitle}
+                  onChange={(event) => setTaskTitle(event.target.value)}
+                  placeholder="e.g. Send the revised proposal"
+                  required
+                  minLength={2}
+                />
+              </Field>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Field label="Due" id="ra-task-due">
+                  <IconInput
+                    id="ra-task-due"
+                    icon="calendar"
+                    aria-label="Task due"
+                    type="datetime-local"
+                    value={taskDue}
+                    onChange={(event) => setTaskDue(event.target.value)}
+                  />
+                </Field>
+                <div className="flex items-end">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    icon="plus"
+                    loading={busy}
+                    disabled={!taskTitle.trim()}
+                  >
+                    Create
+                  </Button>
+                </div>
+              </div>
             </form>
           ) : null}
 
           {canScheduleAppointment && showAppointment ? (
-            <form method="post" onSubmit={scheduleAppointment} className="grid gap-2 rounded-md border border-(--border-default) p-3 sm:grid-cols-4">
-              <input
-                aria-label="Appointment title"
-                value={apptTitle}
-                onChange={(event) => setApptTitle(event.target.value)}
-                required
-                minLength={2}
-                className={inputClass}
-              />
-              <input
-                aria-label="Starts at"
-                type="datetime-local"
-                value={apptStart}
-                onChange={(event) => setApptStart(event.target.value)}
-                required
-                className={inputClass}
-              />
-              <input
-                aria-label="Location or link"
-                value={apptLocation}
-                onChange={(event) => setApptLocation(event.target.value)}
-                placeholder="Zoom, office…"
-                className={inputClass}
-              />
-              <button
-                type="submit"
-                className="btn btn-primary"
-              >
-                Schedule
-              </button>
+            <form method="post" onSubmit={scheduleAppointment} className="space-y-3 rounded-md border border-(--border-default) p-3">
+              <div>
+                <p className="form-section-title">Schedule</p>
+                <p className="form-section-help">Logged on the activity timeline for this record.</p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Field label="What" required id="ra-appt-title">
+                  <IconInput
+                    id="ra-appt-title"
+                    icon="calendar"
+                    aria-label="Appointment title"
+                    value={apptTitle}
+                    onChange={(event) => setApptTitle(event.target.value)}
+                    placeholder="e.g. Onboarding call"
+                    required
+                    minLength={2}
+                  />
+                </Field>
+                <Field label="Starts" required id="ra-appt-start">
+                  <IconInput
+                    id="ra-appt-start"
+                    icon="clock"
+                    aria-label="Starts at"
+                    type="datetime-local"
+                    value={apptStart}
+                    onChange={(event) => setApptStart(event.target.value)}
+                    required
+                  />
+                </Field>
+              </div>
+              <Field label="Location or link" id="ra-appt-location" help="Where it happens — a room, a Zoom link, a phone number.">
+                <IconInput
+                  id="ra-appt-location"
+                  icon="map_pin"
+                  aria-label="Location or link"
+                  value={apptLocation}
+                  onChange={(event) => setApptLocation(event.target.value)}
+                  placeholder="e.g. Zoom — link in the invite"
+                />
+              </Field>
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  icon="calendar"
+                  loading={busy}
+                  disabled={!apptTitle.trim() || !apptStart}
+                >
+                  Schedule
+                </Button>
+              </div>
             </form>
           ) : null}
         </>
       ) : null}
 
       <div className="overflow-hidden rounded-lg border border-(--border-default)">
-        <div className="flex border-b border-(--border-default) bg-(--bg-subtle)" role="tablist" aria-label="Related activity">
-          {[{ key: "notes" as const, label: "Notes", count: notes.length }, { key: "tasks" as const, label: "Tasks", count: tasks.length }, { key: "appointments" as const, label: "Schedule", count: appointments.length }].map((tab) => <button key={tab.key} type="button" role="tab" aria-selected={activeTab === tab.key} onClick={() => { setActiveTab(tab.key); if (tab.key === "tasks" && tasks.length === 0) void loadTasks(); }} className={`flex-1 px-3 py-2 text-xs font-semibold ${activeTab === tab.key ? "bg-(--bg-surface) text-(--text-brand) shadow-sm" : "text-(--text-secondary) hover:bg-(--bg-hover)"}`}>{tab.label} <span className="ml-1 text-(--text-tertiary)">{tab.count}</span></button>)}
-        </div>
+        <Tabs
+          value={activeTab}
+          onValueChange={(key) => {
+            const next = key as typeof activeTab;
+            setActiveTab(next);
+            if (next === "tasks" && tasks.length === 0) void loadTasks();
+          }}
+        >
+          <div className="border-b border-(--border-default) bg-(--bg-subtle)">
+            <TabsList
+              variant="line"
+              aria-label="Related activity"
+              className="h-auto w-full justify-stretch gap-0 p-0"
+            >
+              {[{ key: "notes" as const, label: "Notes", count: notes.length }, { key: "tasks" as const, label: "Tasks", count: tasks.length }, { key: "appointments" as const, label: "Schedule", count: appointments.length }].map((tab) => (
+                <TabsTrigger
+                  key={tab.key}
+                  value={tab.key}
+                  className="flex-1 justify-center gap-1 px-3 py-2 text-xs font-semibold"
+                >
+                  {tab.label}
+                  <span className="text-[10px] font-normal text-(--text-tertiary)">{tab.count}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+        </Tabs>
         <div className="p-3">
           {activeTab === "notes" ? notes.length === 0 ? <p className="text-sm text-(--text-tertiary)">No notes yet.</p> : <ul className="space-y-2">{notes.map((note) => <li key={note.id} className="rounded-md border border-(--border-default) bg-(--bg-hover) p-3 text-sm">
   <p className="whitespace-pre-wrap">{note.body}</p>
   <div className="mt-1 flex items-center justify-between gap-2">
     <p className="text-xs text-(--text-tertiary)">{note.author.name} · {new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p>
-    <button type="button" onClick={() => toggleComments(note.id)} className="text-xs text-(--text-secondary) hover:text-(--text-brand) hover:underline">
-      💬 {openComments[note.id] ? "Hide comments" : "Comments"}
+    <button type="button" onClick={() => toggleComments(note.id)} className="flex items-center gap-1 text-xs text-(--text-secondary) hover:text-(--text-brand) hover:underline">
+      <Icon name="note" size={12} />
+      {openComments[note.id] ? "Hide comments" : "Comments"}
     </button>
   </div>
   {openComments[note.id] && me ? (
@@ -339,14 +414,15 @@ export function RecordActivities({
     </div>
   ) : null}
 </li>)}</ul> : null}
-          {activeTab === "tasks" ? tasksLoading ? <div className="skeleton h-12" /> : tasks.length === 0 ? <p className="text-sm text-(--text-tertiary)">No related tasks yet.</p> : <ul className="space-y-2">{tasks.map((task) => <li key={task.id} className="flex items-center justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><Link href={`/tasks/${task.id}`} className="min-w-0 truncate font-medium text-(--text-brand) hover:underline">{task.title}</Link><span className="shrink-0 text-xs text-(--text-tertiary)">{task.dueAt ? new Date(task.dueAt).toLocaleDateString() : "No due date"} · {task.status.toLowerCase()}</span></li>)}</ul> : null}
+          {activeTab === "tasks" ? tasksLoading ? <Skeleton className="h-12 w-full" /> : tasks.length === 0 ? <p className="text-sm text-(--text-tertiary)">No related tasks yet.</p> : <ul className="space-y-2">{tasks.map((task) => <li key={task.id} className="flex items-center justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><Link href={`/tasks/${task.id}`} className="min-w-0 truncate font-medium text-(--text-brand) hover:underline">{task.title}</Link><span className="shrink-0 text-xs text-(--text-tertiary)">{task.dueAt ? new Date(task.dueAt).toLocaleDateString() : "No due date"} · {task.status.toLowerCase()}</span></li>)}</ul> : null}
           {activeTab === "appointments" ? appointments.length === 0 ? <p className="text-sm text-(--text-tertiary)">No appointments yet.</p> : <ul className="space-y-2">{appointments.map((appointment) => <li key={appointment.id} className="rounded-md border border-(--border-default) px-3 py-2 text-sm">
   <div className="flex items-center justify-between gap-3">
     <span className="font-medium">{appointment.title}</span>
     <span className="flex shrink-0 items-center gap-3">
       <span className="text-xs text-(--text-secondary)">{new Date(appointment.startAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} · {appointment.status.toLowerCase()}</span>
-      <button type="button" onClick={() => toggleComments(appointment.id)} className="text-xs text-(--text-secondary) hover:text-(--text-brand) hover:underline">
-        💬 {openComments[appointment.id] ? "Hide comments" : "Comments"}
+      <button type="button" onClick={() => toggleComments(appointment.id)} className="flex items-center gap-1 text-xs text-(--text-secondary) hover:text-(--text-brand) hover:underline">
+        <Icon name="note" size={12} />
+        {openComments[appointment.id] ? "Hide comments" : "Comments"}
       </button>
     </span>
   </div>

@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useConfirmDialog } from "@/components/Dialogs";
 import { Button } from "@/components/ui";
+import { Initials } from "@/components/Initials";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { CommentRow } from "@/server/records/comments";
 import { Icon } from "./Icon";
 
@@ -192,11 +192,7 @@ export function CommentsSection({
             return (
               <li key={comment.id} className="rounded-md border border-(--border-default) bg-(--bg-surface) px-3 py-2.5">
                 <div className="flex items-center gap-2">
-                  <Avatar aria-hidden className="size-5.5 shrink-0">
-                    <AvatarFallback className="text-[10px]">
-                      {comment.author.name.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <Initials name={comment.author.name} size="xs" />
                   <span className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>{comment.author.name}</span>
                   <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
                     {relativeTime(comment.createdAt)}{comment.editedAt ? " · edited" : ""}
@@ -211,7 +207,7 @@ export function CommentsSection({
                           setEditBody(comment.body);
                         }}
                       >
-                        <Icon name="edit" size={12} />
+                        <Icon name={editingId === comment.id  ? "close" : "edit"} size={12} />
                         {editingId === comment.id ? "Cancel" : "Edit"}
                       </button>
                       <button type="button" className="flex items-center gap-1 text-(--error) hover:underline" onClick={() => void remove(comment.id)}>

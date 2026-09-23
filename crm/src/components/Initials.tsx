@@ -60,7 +60,7 @@ export function Initials({
       aria-hidden
       title={name}
       className={cn(
-        "inline-flex shrink-0 select-none items-center justify-center rounded-full bg-linear-to-br font-semibold text-white shadow-xs",
+        "inline-flex shrink-0 select-none items-center justify-center rounded-md bg-linear-to-br font-semibold text-white shadow-xs",
         SIZES[size],
         gradientOf(name),
         className,

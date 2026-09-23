@@ -7,6 +7,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSidebarCollapse } from "@/components/SidebarCollapse";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -58,36 +60,46 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
   },
 ];
 
-function NavList({ onNavigate }: { onNavigate?: () => void }) {
+function NavList({ onNavigate, collapsed }: { onNavigate?: () => void; collapsed?: boolean }) {
   const pathname = usePathname();
   return (
     <nav className="flex-1 overflow-y-auto px-2 py-2" aria-label="Primary">
       {NAV_SECTIONS.map((section, sectionIndex) => (
         <div key={sectionIndex} className={sectionIndex > 0 ? "mt-3" : ""}>
-          {section.label ? (
+          {!collapsed && section.label ? (
             <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {section.label}
             </p>
           ) : null}
           {section.items.map((item) => {
             const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-            return (
+            const link = (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
+                aria-label={collapsed ? item.label : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] transition-colors",
+                  "flex items-center rounded-md text-[13px] transition-colors",
+                  collapsed ? "justify-center px-0 py-2" : "gap-3 px-3 py-2",
                   active
-                    ? "bg-muted font-semibold text-foreground"
+                    ? "bg-primary/10 font-semibold text-primary"
                     : "font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}
               >
-                <Icon name={item.icon} size={16} />
-                <span>{item.label}</span>
+                <Icon name={item.icon} size={16} className="shrink-0" />
+                {collapsed ? null : <span className="truncate">{item.label}</span>}
               </Link>
             );
+            return collapsed ? (
+              <Tooltip key={item.href}>
+                <TooltipTrigger asChild>{link}</TooltipTrigger>
+                <TooltipContent side="right" className="text-xs">
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            ) : link;
           })}
         </div>
       ))}
@@ -95,47 +107,59 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-function SidebarShell({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarShell({ onNavigate, collapsed }: { onNavigate?: () => void; collapsed?: boolean }) {
   const branding = useCrmBranding();
   return (
     <>
       {/* Brand header */}
-      <div className="flex h-13 shrink-0 items-center justify-between border-b border-border px-4">
+      <div
+        className={cn(
+          "flex h-13 shrink-0 items-center border-b border-border",
+          collapsed ? "justify-center px-0" : "justify-between px-4"
+        )}
+      >
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
             {branding.logo}
           </span>
-          <div>
-            <p className="text-[14px] font-bold leading-tight text-foreground">
-              {branding.name}
-            </p>
-            <p className="text-[10px] font-medium leading-tight text-muted-foreground">
-              CRM
-            </p>
-          </div>
+          {collapsed ? null : (
+            <div>
+              <p className="text-[14px] font-bold leading-tight text-foreground">
+                {branding.name}
+              </p>
+              <p className="text-[10px] font-medium leading-tight text-muted-foreground">
+                CRM
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
-      <NavList onNavigate={onNavigate} />
+      <NavList onNavigate={onNavigate} collapsed={collapsed} />
 
       {/* Footer */}
-      <div className="border-t border-border px-4 py-3">
-        <p className="text-[10px] text-muted-foreground">
-          {branding.name} v0.1
-        </p>
-      </div>
+      {collapsed ? null : (
+        <div className="border-t border-border px-4 py-3">
+          <p className="text-[10px] text-muted-foreground">
+            {branding.name} v0.1
+          </p>
+        </div>
+      )}
     </>
   );
 }
 
 /**
- * Enterprise sidebar: fixed icon+label rail on desktop with section headers;
- * shadcn Sheet (side="left") on mobile with backdrop and animation. Neutral
- * identity — the active item is a muted background with foreground text,
- * no per-module accent hues.
+ * Enterprise sidebar: fixed icon+label rail on desktop with section headers,
+ * collapsible to an icon-only rail via the top-bar toggle (see
+ * SidebarCollapse); shadcn Sheet (side="left") on mobile with backdrop and
+ * animation — the mobile sheet always shows full labels. The active item
+ * carries the brand accent (primary tint + primary text) so the green
+ * identity echoes in navigation; everything else stays neutral.
  */
 export function Sidebar() {
   const [open, setOpen] = useState(false);
+  const { collapsed } = useSidebarCollapse();
   return (
     <>
       {/* Mobile toggle */}
@@ -161,10 +185,18 @@ export function Sidebar() {
         </SheetContent>
       </Sheet>
 
-      {/* Desktop rail */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-background lg:flex">
-        <SidebarShell />
-      </aside>
+      {/* Desktop rail — data-slot scopes the pre-hydration collapse CSS */}
+      <TooltipProvider delayDuration={0}>
+        <aside
+          data-slot="sidebar-rail"
+          className={cn(
+            "hidden shrink-0 flex-col overflow-hidden border-r border-border bg-background transition-[width] duration-200 ease-in-out lg:flex",
+            collapsed ? "w-14" : "w-60"
+          )}
+        >
+          <SidebarShell collapsed={collapsed} />
+        </aside>
+      </TooltipProvider>
     </>
   );
 }

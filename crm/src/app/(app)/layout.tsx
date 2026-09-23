@@ -2,9 +2,11 @@ import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
 import { prisma } from "@/server/db";
 import { Sidebar } from "@/components/Sidebar";
+import { SidebarCollapseProvider, SidebarToggle } from "@/components/SidebarCollapse";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { QuickActions } from "@/components/QuickActions";
 import { Button } from "@/components/ui";
+import { Initials } from "@/components/Initials";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PageLoadingNotice } from "@/components/PageLoadingNotice";
@@ -28,19 +30,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     await signOut({ redirectTo: "/login" });
   }
 
-  const initials = user.name
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
-  const avatarColors = ["#15803d", "#2563eb", "#d97706", "#dc2626", "#7c3aed", "#0891b2"];
-  const avatarColor = avatarColors[user.name.length % avatarColors.length];
-
   return (
     <>
       <RealtimeBridge />
+      <SidebarCollapseProvider>
       <div className="flex min-h-screen" style={{ background: "var(--bg-app)" }}>
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
@@ -54,6 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           }}
         >
           <div className="flex min-w-0 flex-1 items-center gap-3 pl-10 lg:pl-0">
+            <SidebarToggle />
             <GlobalSearch />
           </div>
 
@@ -67,12 +61,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
             {/* User chip */}
             <div className="hidden items-center gap-2 md:flex">
-              <span
-                className="avatar"
-                style={{ background: avatarColor, color: "var(--text-inverse)" }}
-                title={user.email ?? user.name}
-              >
-                {initials}
+              <span title={user.email ?? user.name}>
+                <Initials name={user.name} size="md" />
               </span>
               <div className="leading-tight">
                 <p className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>
@@ -106,7 +96,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
         <PageLoadingNotice />
       </div>
-    </div>
+      </div>
+      </SidebarCollapseProvider>
     </>
   );
 }

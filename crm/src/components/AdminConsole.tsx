@@ -168,7 +168,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
     <div className="space-y-4">
       <WorkspaceHeader
         eyebrow="Data model"
-        title="Statuses"
+        title="Statuses" titleIcon="sliders"
         subtitle="Define the lifecycle language your teams use across records."
         actions={canManage ? <Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>Add status</Button> : undefined}
         metrics={[{ label: "Statuses", value: rows.length, tone: "brand" }, { label: "Objects", value: new Set(rows.map((row) => row.appliesTo)).size, tone: "info" }, { label: "Defaults", value: rows.filter((row) => row.isDefault).length, tone: "success" }]}
@@ -337,7 +337,7 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
     <div className="space-y-4">
       <WorkspaceHeader
         eyebrow="Data model"
-        title="Tags"
+        title="Tags" titleIcon="tag"
         subtitle="Create lightweight labels that help teams segment and scan records."
         actions={canManage ? <Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>Add tag</Button> : undefined}
         metrics={[{ label: "Tags", value: rows.length, tone: "brand" }, { label: "Applied", value: rows.reduce((sum, row) => sum + row._count.links, 0), tone: "info" }]}
@@ -472,7 +472,7 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
     <div className="space-y-4">
       <WorkspaceHeader
         eyebrow="Data model"
-        title="Custom fields"
+        title="Custom fields" titleIcon="list"
         subtitle="Add the business-specific details your team needs on each record."
         actions={canManage ? <Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>Add field</Button> : undefined}
         metrics={[{ label: "Fields", value: rows.length, tone: "brand" }, { label: "Active", value: rows.filter((row) => row.active).length, tone: "success" }]}
@@ -735,7 +735,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
       <WorkspaceHeader
         eyebrow="Access management"
-        title="Users & teams"
+        title="Users & teams" titleIcon="users"
         subtitle={`Manage who can work in ${branding.short} and how records are shared.`}
         actions={canManage ? <Button variant="primary" icon="plus" onClick={() => setShowUserForm(true)}>New user</Button> : undefined}
         metrics={[{ label: "Total users", value: users.length, tone: "brand" }, { label: "Active", value: users.filter((user) => user.status === "ACTIVE").length, tone: "success" }, { label: "Teams", value: teams.length, tone: "info" }, { label: "Roles", value: roles.length, tone: "warning" }]}
@@ -1125,7 +1125,7 @@ export function RolesTab({ canManage = false }: { canManage?: boolean }) {
     <div className="space-y-4">
       <WorkspaceHeader
         eyebrow="Access management"
-        title="Roles & permissions"
+        title="Roles & permissions" titleIcon="shield"
         subtitle={`Control what each team role can see and do across ${branding.short}.`}
         metrics={[{ label: "Roles", value: roles.length, tone: "brand" }, { label: "Categories", value: PERMISSION_CATEGORIES.length, tone: "info" }, { label: "Assigned users", value: roles.reduce((sum, role) => sum + role._count.users, 0), tone: "success" }]}
       />
@@ -1216,7 +1216,7 @@ export function SettingsTab() {
     <div className="space-y-4">
       <WorkspaceHeader
         eyebrow="Workspace behavior"
-        title="Settings"
+        title="Settings" titleIcon="settings"
         subtitle={`Manage organization-level defaults used throughout ${branding.short}.`}
         actions={<Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>Add setting</Button>}
         metrics={[{ label: "Configured", value: settings.length, tone: "brand" }, { label: "Storage", value: "Workspace", tone: "info" }]}
@@ -1323,7 +1323,7 @@ export function AuditTab() {
     <div className="space-y-4">
       <WorkspaceHeader
         eyebrow="Governance"
-        title="Audit log"
+        title="Audit log" titleIcon="clock"
         subtitle="Review configuration and record changes across your workspace."
         metrics={[{ label: "Entries", value: total, tone: "brand" }, { label: "Page", value: page, tone: "info" }, { label: "Page size", value: pageSize, tone: "success" }]}
       />
@@ -1421,7 +1421,7 @@ export function IntegrationsTab() {
     <div className="space-y-4">
       <WorkspaceHeader
         eyebrow="Connections"
-        title="Integrations"
+        title="Integrations" titleIcon="plug"
         subtitle={`Connect ${branding.short} to the services your team depends on.`}
         metrics={[
           { label: "Connections", value: status ? 2 : "—", tone: "brand" },
@@ -1539,7 +1539,7 @@ export function ObjectsTab() {
     <div className="space-y-4">
       <WorkspaceHeader
         eyebrow="Data model"
-        title="Custom objects"
+        title="Custom objects" titleIcon="box"
         subtitle={`Extend ${branding.short} with record types that match how your business works.`}
         actions={<Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>New object type</Button>}
         metrics={[{ label: "Object types", value: objects.length, tone: "brand" }, { label: "Active", value: objects.filter((object) => object.active).length, tone: "success" }, { label: "Records", value: objects.reduce((sum, object) => sum + object._count.records, 0), tone: "info" }]}

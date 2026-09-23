@@ -15,6 +15,9 @@ import { CommentsSection } from "@/components/CommentsSection";
 import { TaskDetailActions } from "@/components/TaskDetailActions";
 import { TaskViewersPanel } from "@/components/TaskViewersPanel";
 
+import { DetailField } from "@/components/DetailOverview";
+import { Icon } from "@/components/Icon";
+
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Task · CRM" };
@@ -35,15 +38,6 @@ const STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | 
   COMPLETED: "success",
   CANCELLED: "neutral",
 };
-
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>{label}</dt>
-      <dd className="text-[13px] font-medium" style={{ color: value ? "var(--text-primary)" : "var(--text-tertiary)" }}>{value || "—"}</dd>
-    </div>
-  );
-}
 
 function formatDateTime(value: Date | string | null): string {
   if (!value) return "";
@@ -135,13 +129,13 @@ export default async function TaskDetailPage({ params }: PageProps) {
             <section className="card">
               <div className="card-header"><h2 className="card-title">Details</h2></div>
               <div className="card-body space-y-4">
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-                  <Field label="Status" value={task.status.replaceAll("_", " ").toLowerCase()} />
-                  <Field label="Completed" value={formatDateTime(task.completedAt) || "—"} />
-                  <Field label="Created" value={formatDateTime(task.createdAt)} />
-                  <Field label="Updated" value={formatDateTime(task.updatedAt)} />
-                  <Field label="Owner email" value={task.owner.email} />
-                  <Field label="Task ID" value={task.id} />
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+                  <DetailField label="Status" value={task.status.replaceAll("_", " ").toLowerCase()} />
+                  <DetailField label="Completed" value={formatDateTime(task.completedAt) || "—"} />
+                  <DetailField label="Created" value={formatDateTime(task.createdAt)} />
+                  <DetailField label="Updated" value={formatDateTime(task.updatedAt)} />
+                  <DetailField label="Owner email" value={task.owner.email} />
+                  <DetailField label="Task ID" value={task.id} />
                 </dl>
                 <div>
                   <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Viewers (view-only access)</p>
@@ -179,12 +173,12 @@ export default async function TaskDetailPage({ params }: PageProps) {
         </div>
 
         <aside className="no-print">
-          <div className="card sticky top-17">
+          <div className="card lg:sticky lg:top-17">
             <div className="card-header">
-              <h2 className="card-title">Timeline</h2>
-              <span className="badge badge-neutral">{events.length}</span>
+              <h2 className="card-title flex items-center gap-1.5"><Icon name="clock" size={14} className="text-muted-foreground" />Timeline</h2>
+              <span className="badge badge-neutral tabular-nums">{events.length}</span>
             </div>
-            <div className="card-body max-h-150 overflow-y-auto">
+            <div className="card-body max-h-[70vh] overflow-y-auto">
               <Timeline events={events} />
             </div>
           </div>

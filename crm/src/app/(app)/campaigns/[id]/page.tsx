@@ -10,18 +10,11 @@ import { RecordDetailActions } from "@/components/RecordDetailActions";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 
+import { DetailField } from "@/components/DetailOverview";
+
 export const dynamic = "force-dynamic";
 
 type PageProps = { params: Promise<{ id: string }> };
-
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>{label}</dt>
-      <dd className="text-[13px] font-medium" style={{ color: value ? "var(--text-primary)" : "var(--text-tertiary)" }}>{value || "—"}</dd>
-    </div>
-  );
-}
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "error" | "info" | "neutral" | "brand"> = {
   DRAFT: "neutral",
@@ -105,14 +98,14 @@ export default async function CampaignDetailPage({ params }: PageProps) {
                     </p>
                   </div>
                 ) : null}
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-                  <Field label="Status" value={campaign.status.toLowerCase()} />
-                  <Field label="Source" value={campaign.source} />
-                  <Field label="Owner" value={campaign.owner.name} />
-                  <Field label="Starts" value={campaign.startsAt?.toLocaleDateString() ?? null} />
-                  <Field label="Ends" value={campaign.endsAt?.toLocaleDateString() ?? null} />
-                  <Field label="Created" value={campaign.createdAt.toLocaleDateString()} />
-                  <Field label="Updated" value={campaign.updatedAt.toLocaleDateString()} />
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+                  <DetailField label="Status" value={campaign.status.toLowerCase()} />
+                  <DetailField label="Source" value={campaign.source} />
+                  <DetailField label="Owner" value={campaign.owner.name} />
+                  <DetailField label="Starts" value={campaign.startsAt?.toLocaleDateString() ?? null} />
+                  <DetailField label="Ends" value={campaign.endsAt?.toLocaleDateString() ?? null} />
+                  <DetailField label="Created" value={campaign.createdAt.toLocaleDateString()} />
+                  <DetailField label="Updated" value={campaign.updatedAt.toLocaleDateString()} />
                 </dl>
               </div>
             </section>
@@ -132,20 +125,20 @@ export default async function CampaignDetailPage({ params }: PageProps) {
 
         {/* Stats sidebar */}
         <aside className="no-print">
-          <div className="card sticky top-17">
+          <div className="card lg:sticky lg:top-17">
             <div className="card-header">
               <h2 className="card-title">Stats</h2>
               <span className="badge badge-neutral">{campaign.stats.total}</span>
             </div>
             <div className="card-body">
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-                <Field label="Responded" value={`${campaign.stats.responded}`} />
-                <Field label="Qualified" value={`${campaign.stats.byStatus?.QUALIFIED ?? 0}`} />
-                <Field label="Converted" value={`${campaign.stats.byStatus?.CONVERTED ?? 0}`} />
-                <Field label="Won revenue" value={campaign.stats.total > 0 ? wonRevenue : null} />
-                <Field label="Leads" value={`${campaign.stats.byType?.LEAD ?? 0}`} />
-                <Field label="Contacts" value={`${campaign.stats.byType?.CONTACT ?? 0}`} />
-                <Field label="Customers" value={`${campaign.stats.byType?.CUSTOMER ?? 0}`} />
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <DetailField label="Responded" value={`${campaign.stats.responded}`} />
+                <DetailField label="Qualified" value={`${campaign.stats.byStatus?.QUALIFIED ?? 0}`} />
+                <DetailField label="Converted" value={`${campaign.stats.byStatus?.CONVERTED ?? 0}`} />
+                <DetailField label="Won revenue" value={campaign.stats.total > 0 ? wonRevenue : null} />
+                <DetailField label="Leads" value={`${campaign.stats.byType?.LEAD ?? 0}`} />
+                <DetailField label="Contacts" value={`${campaign.stats.byType?.CONTACT ?? 0}`} />
+                <DetailField label="Customers" value={`${campaign.stats.byType?.CUSTOMER ?? 0}`} />
               </dl>
             </div>
           </div>

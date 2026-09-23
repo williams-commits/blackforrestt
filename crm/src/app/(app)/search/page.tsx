@@ -40,7 +40,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
     <div className="mx-auto max-w-6xl space-y-6">
       <WorkspaceHeader
         eyebrow="Command center"
-        title="Search"
+        title="Search" titleIcon="search"
         subtitle={query.length < 2
           ? "Type at least two characters in the header search."
           : `${hits.length} result(s) for “${query}” (within your scope)`}

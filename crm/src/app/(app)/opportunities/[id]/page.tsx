@@ -22,18 +22,12 @@ import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { getRecordCapabilities } from "@/lib/recordCapabilities";
 
+import { DetailField } from "@/components/DetailOverview";
+import { Icon } from "@/components/Icon";
+
 export const dynamic = "force-dynamic";
 
 type PageProps = { params: Promise<{ id: string }> };
-
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>{label}</dt>
-      <dd className="text-[13px] font-medium" style={{ color: value ? "var(--text-primary)" : "var(--text-tertiary)" }}>{value || "—"}</dd>
-    </div>
-  );
-}
 
 export default async function OpportunityDetailPage({ params }: PageProps) {
   const { id } = await params;
@@ -138,8 +132,8 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                   attached={tags.map((link) => ({ tagId: link.tagId, name: link.tag.name, color: link.tag.color }))}
                 />
               </div>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-                <Field
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+                <DetailField
                   label="Account"
                   value={
                     opportunity.account ? (
@@ -149,7 +143,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                     ) : null
                   }
                 />
-                <Field
+                <DetailField
                   label="Contact"
                   value={
                     opportunity.contact ? (
@@ -159,11 +153,11 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                     ) : null
                   }
                 />
-                <Field label="Team" value={opportunity.team?.name} />
-                <Field label="Source" value={opportunity.source} />
-                <Field label="Expected Close" value={opportunity.expectedCloseAt?.toLocaleDateString() ?? null} />
-                <Field label="Closed" value={opportunity.closedAt?.toLocaleDateString() ?? null} />
-                <Field label="Created" value={opportunity.createdAt.toLocaleDateString()} />
+                <DetailField label="Team" value={opportunity.team?.name} />
+                <DetailField label="Source" value={opportunity.source} />
+                <DetailField label="Expected Close" value={opportunity.expectedCloseAt?.toLocaleDateString() ?? null} />
+                <DetailField label="Closed" value={opportunity.closedAt?.toLocaleDateString() ?? null} />
+                <DetailField label="Created" value={opportunity.createdAt.toLocaleDateString()} />
                 <CustomFieldsPanel defs={cfDefs} values={opportunity.customFields} />
               </dl>
             </div>
@@ -201,15 +195,15 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
 
         {/* Timeline sidebar */}
         <aside className="no-print">
-          <div className="card sticky top-17">
+          <div className="card lg:sticky lg:top-17">
             <div className="card-header">
-              <h2 className="card-title">Timeline</h2>
-              <span className="badge badge-neutral">{events.length}</span>
+              <h2 className="card-title flex items-center gap-1.5"><Icon name="clock" size={14} className="text-muted-foreground" />Timeline</h2>
+              <span className="badge badge-neutral tabular-nums">{events.length}</span>
             </div>
             <div className="mx-3 mt-3">
               <ActivityComposer subjectType="OPPORTUNITY" subjectId={id} subjectLabel={opportunity.name} canAddNote={canAddNote} canCreateTask={canCreateTask} canScheduleAppointment={canScheduleAppointment} />
             </div>
-            <div className="card-body max-h-150 overflow-y-auto">
+            <div className="card-body max-h-[70vh] overflow-y-auto">
               <Timeline events={events} />
             </div>
           </div>

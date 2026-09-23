@@ -363,7 +363,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
       <div className="space-y-6">
         <WorkspaceHeader
           eyebrow="Data operations"
-          title="Import center"
+          title="Import center" titleIcon="upload"
           subtitle="Importing is protected because it can create or update many CRM records at once."
           metrics={[
             { label: "Permission", value: "Required", tone: "warning" },
@@ -427,7 +427,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
     <div className="space-y-6">
       <WorkspaceHeader
         eyebrow="Data operations"
-        title="Import center"
+        title="Import center" titleIcon="upload"
         subtitle={fileName ? `${fileName} · ${IMPORT_STEPS[step - 1].help}` : "Bring clean, trusted data into your workspace with preview, mapping, duplicate checks, and safe execution."}
         actions={step > 1 ? <Button variant="secondary" onClick={reset}>Start over</Button> : undefined}
         metrics={[

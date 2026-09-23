@@ -23,18 +23,12 @@ import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { getRecordCapabilities } from "@/lib/recordCapabilities";
 
+import { DetailField } from "@/components/DetailOverview";
+import { Icon } from "@/components/Icon";
+
 export const dynamic = "force-dynamic";
 
 type PageProps = { params: Promise<{ id: string }> };
-
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>{label}</dt>
-      <dd className="text-[13px] font-medium" style={{ color: value ? "var(--text-primary)" : "var(--text-tertiary)" }}>{value || "—"}</dd>
-    </div>
-  );
-}
 
 export default async function LeadDetailPage({ params }: PageProps) {
   const { id } = await params;
@@ -167,16 +161,16 @@ export default async function LeadDetailPage({ params }: PageProps) {
                     attached={tags.map((link) => ({ tagId: link.tagId, name: link.tag.name, color: link.tag.color }))}
                   />
                 </div>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-                  <Field label="Secondary phone" value={lead.secondaryPhone} />
-                  <Field label="Country" value={lead.country} />
-                  <Field label="Region" value={lead.region} />
-                  <Field label="Source" value={lead.source} />
-                  <Field label="Campaign" value={lead.campaign?.name ?? (campaigns.map((entry) => entry.campaign.name).join(", ") || null)} />
-                  <Field label="External ID" value={lead.externalId} />
-                  <Field label="Last contact" value={lead.lastContactAt?.toLocaleDateString() ?? null} />
-                  <Field label="Next follow-up" value={lead.nextFollowUpAt?.toLocaleDateString() ?? null} />
-                  <Field label="Created" value={lead.createdAt.toLocaleDateString()} />
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+                  <DetailField label="Secondary phone" value={lead.secondaryPhone} />
+                  <DetailField label="Country" value={lead.country} />
+                  <DetailField label="Region" value={lead.region} />
+                  <DetailField label="Source" value={lead.source} />
+                  <DetailField label="Campaign" value={lead.campaign?.name ?? (campaigns.map((entry) => entry.campaign.name).join(", ") || null)} />
+                  <DetailField label="External ID" value={lead.externalId} />
+                  <DetailField label="Last contact" value={lead.lastContactAt?.toLocaleDateString() ?? null} />
+                  <DetailField label="Next follow-up" value={lead.nextFollowUpAt?.toLocaleDateString() ?? null} />
+                  <DetailField label="Created" value={lead.createdAt.toLocaleDateString()} />
                   <CustomFieldsPanel defs={cfDefs} values={lead.customFields} />
                 </dl>
               </div>
@@ -226,15 +220,15 @@ export default async function LeadDetailPage({ params }: PageProps) {
 
         {/* Timeline sidebar (always visible) */}
         <aside className="no-print">
-          <div className="card sticky top-17">
+          <div className="card lg:sticky lg:top-17">
             <div className="card-header">
-              <h2 className="card-title">Timeline</h2>
-              <span className="badge badge-neutral">{events.length}</span>
+              <h2 className="card-title flex items-center gap-1.5"><Icon name="clock" size={14} className="text-muted-foreground" />Timeline</h2>
+              <span className="badge badge-neutral tabular-nums">{events.length}</span>
             </div>
             <div className="mx-3 mt-3">
               <ActivityComposer subjectType="LEAD" subjectId={id} subjectLabel={`${lead.firstName} ${lead.lastName}`} canAddNote={canAddNote} canCreateTask={canCreateTask} canScheduleAppointment={canScheduleAppointment} />
             </div>
-            <div className="card-body max-h-150 overflow-y-auto">
+            <div className="card-body max-h-[70vh] overflow-y-auto">
               <Timeline events={events} />
             </div>
           </div>

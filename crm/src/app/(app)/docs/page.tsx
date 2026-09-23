@@ -513,7 +513,7 @@ export default async function DocsPage() {
 
       <WorkspaceHeader
         eyebrow="Knowledge base"
-        title="Documentation"
+        title="Documentation" titleIcon="file"
         subtitle="User guides, role permissions, team structure, and feature reference."
         metrics={[
           { label: "Role", value: currentUser?.role.name ?? "Guest", tone: "brand" },

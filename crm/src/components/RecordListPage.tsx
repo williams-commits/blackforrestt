@@ -3,6 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { RECORD_UI, type ObjectKey, type RecordObjectKey } from "@/lib/recordUi";
+
+/** Module icon per object — mirrors the sidebar nav vocabulary. */
+const OBJECT_ICON: Record<ObjectKey, string> = {
+  leads: "target",
+  contacts: "users",
+  accounts: "building",
+  customers: "heart",
+  campaigns: "megaphone",
+  tasks: "square_check",
+};
 import { getRecordCapabilities } from "@/lib/recordCapabilities";
 import { RecordForm, type OptionSource } from "@/components/RecordForm";
 import { ViewTabs, type ViewOption } from "@/components/ViewTabs";
@@ -629,6 +639,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       <WorkspaceHeader
         eyebrow="Record workspace"
         title={config.title}
+        titleIcon={OBJECT_ICON[object]}
         subtitle={`${meta.total} record${meta.total === 1 ? "" : "s"} in your current view.`}
         metrics={[
           { label: "Records", value: meta.total, tone: "brand" },

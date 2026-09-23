@@ -266,7 +266,7 @@ export function OpportunitiesPage() {
     <div className="space-y-4" data-module="opportunities">
       <WorkspaceHeader
         eyebrow="Revenue workspace"
-        title="Opportunities"
+        title="Opportunities" titleIcon="trending"
         subtitle="See what is moving, what is at risk, and where to focus next."
         metrics={board?.aggregates ? [
           { label: "Open", value: board.aggregates.openCount, tone: "brand" },

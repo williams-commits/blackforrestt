@@ -106,7 +106,7 @@ export function NotificationCenter() {
   }
 
   return <div className="space-y-4">
-    <WorkspaceHeader eyebrow="Workspace inbox" title="Notifications" subtitle="Actionable updates from assignments, tasks, imports, and system activity." actions={data?.meta.unread ? <Button variant="secondary" size="sm" icon="check" onClick={() => void markAllRead()}>Mark all read</Button> : undefined} metrics={[{ label: "Unread", value: data?.meta.unread ?? 0, tone: data?.meta.unread ? "warning" : "success" }, { label: "Showing", value: data?.meta.total ?? 0, tone: "info" }]} />
+    <WorkspaceHeader eyebrow="Workspace inbox" title="Notifications" titleIcon="bell" subtitle="Actionable updates from assignments, tasks, imports, and system activity." actions={data?.meta.unread ? <Button variant="secondary" size="sm" icon="check" onClick={() => void markAllRead()}>Mark all read</Button> : undefined} metrics={[{ label: "Unread", value: data?.meta.unread ?? 0, tone: data?.meta.unread ? "warning" : "success" }, { label: "Showing", value: data?.meta.total ?? 0, tone: "info" }]} />
     <WorkspaceQuickNav />
     <Card className="gap-0 overflow-hidden">
       <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">

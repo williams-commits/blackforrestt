@@ -24,18 +24,12 @@ import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { getRecordCapabilities } from "@/lib/recordCapabilities";
 
+import { DetailField } from "@/components/DetailOverview";
+import { Icon } from "@/components/Icon";
+
 export const dynamic = "force-dynamic";
 
 type PageProps = { params: Promise<{ id: string }> };
-
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>{label}</dt>
-      <dd className="text-[13px] font-medium" style={{ color: value ? "var(--text-primary)" : "var(--text-tertiary)" }}>{value || "—"}</dd>
-    </div>
-  );
-}
 
 export default async function AccountDetailPage({ params }: PageProps) {
   const { id } = await params;
@@ -145,11 +139,11 @@ export default async function AccountDetailPage({ params }: PageProps) {
                   attached={tags.map((link) => ({ tagId: link.tagId, name: link.tag.name, color: link.tag.color }))}
                 />
               </div>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-                <Field label="Industry" value={account.industry} />
-                <Field label="Company Size" value={account.companySize} />
-                <Field label="Revenue" value={account.revenue ? (Number(account.revenue) / 100).toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }) : null} />
-                <Field
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+                <DetailField label="Industry" value={account.industry} />
+                <DetailField label="Company Size" value={account.companySize} />
+                <DetailField label="Revenue" value={account.revenue ? (Number(account.revenue) / 100).toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }) : null} />
+                <DetailField
                   label="Website"
                   value={
                     account.website ? (
@@ -159,10 +153,10 @@ export default async function AccountDetailPage({ params }: PageProps) {
                     ) : null
                   }
                 />
-                <Field label="City" value={account.city} />
-                <Field label="Country" value={account.country} />
-                <Field label="External ID" value={account.externalId} />
-                <Field label="Created" value={account.createdAt.toLocaleDateString()} />
+                <DetailField label="City" value={account.city} />
+                <DetailField label="Country" value={account.country} />
+                <DetailField label="External ID" value={account.externalId} />
+                <DetailField label="Created" value={account.createdAt.toLocaleDateString()} />
                 <CustomFieldsPanel defs={cfDefs} values={account.customFields} />
               </dl>
             </div>
@@ -273,15 +267,15 @@ export default async function AccountDetailPage({ params }: PageProps) {
 
         {/* Timeline sidebar */}
         <aside className="no-print">
-          <div className="card sticky top-17">
+          <div className="card lg:sticky lg:top-17">
             <div className="card-header">
-              <h2 className="card-title">Timeline</h2>
-              <span className="badge badge-neutral">{events.length}</span>
+              <h2 className="card-title flex items-center gap-1.5"><Icon name="clock" size={14} className="text-muted-foreground" />Timeline</h2>
+              <span className="badge badge-neutral tabular-nums">{events.length}</span>
             </div>
             <div className="mx-3 mt-3">
               <ActivityComposer subjectType="ACCOUNT" subjectId={id} subjectLabel={account.name} canAddNote={canAddNote} canCreateTask={canCreateTask} canScheduleAppointment={canScheduleAppointment} />
             </div>
-            <div className="card-body max-h-150 overflow-y-auto">
+            <div className="card-body max-h-[70vh] overflow-y-auto">
               <Timeline events={events} />
             </div>
           </div>

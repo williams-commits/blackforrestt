@@ -192,9 +192,9 @@ export function ReportsPage() {
     <div className="space-y-4" data-module="reports">
       <WorkspaceHeader
         eyebrow="Insights"
-        title="Reports"
+        title="Reports" titleIcon="chart"
         subtitle="Turn your scoped CRM data into a decision you can act on."
-        actions={<Button variant="secondary" onClick={() => setBuilderOpen((previous) => !previous)}>{builderOpen ? "Back to library" : "Build a report"}</Button>}
+        actions={<Button variant="primary" icon="plus" onClick={() => setBuilderOpen((previous) => !previous)}>{builderOpen ? "Back to library" : "Build a report"}</Button>}
         metrics={[{ label: "Saved reports", value: library.length, tone: "brand" }, { label: "Scope", value: "Your access", tone: "success" }]}
       />
       <WorkspaceQuickNav />

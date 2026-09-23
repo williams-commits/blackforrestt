@@ -5,12 +5,34 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { CommentsSection } from "@/components/CommentsSection";
+import { Initials } from "@/components/Initials";
 import { Button } from "@/components/ui";
 import { Field, IconInput } from "@/components/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Icon } from "./Icon";
+
+/** Compact semantic chip for a raw status string (task/apointment states). */
+function StatusChip({ value }: { value: string }) {
+  const normalized = value.toLowerCase().replace(/_/g, " ");
+  const cls = normalized.includes("complet")
+    ? "badge badge-success"
+    : normalized.includes("cancel")
+      ? "badge badge-error"
+      : "badge badge-neutral";
+  return <span className={`${cls} tabular-nums`}>{normalized}</span>;
+}
+
+/** Inline empty-state for the activity sub-lists. */
+function EmptyHint({ icon, text }: { icon: string; text: string }) {
+  return (
+    <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+      <Icon name={icon} size={15} className="shrink-0 text-muted-foreground/60" />
+      {text}
+    </div>
+  );
+}
 
 export interface SubjectNote {
   id: string;
@@ -244,9 +266,9 @@ export function RecordActivities({
             </div>
           </form> : null}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {canCreateTask ? <Button
-              variant="secondary"
+              variant={showTask ? "primary" : "secondary"}
               icon="square_check"
               onClick={() => {
                 setShowTask((previous) => !previous);
@@ -254,10 +276,10 @@ export function RecordActivities({
               }}
               aria-pressed={showTask}
             >
-              Create follow-up task
+              {showTask ? "Hide task form" : "Create follow-up task"}
             </Button> : null}
             {canScheduleAppointment ? <Button
-              variant="secondary"
+              variant={showAppointment ? "primary" : "secondary"}
               icon="calendar"
               onClick={() => {
                 setShowAppointment((previous) => !previous);
@@ -265,7 +287,7 @@ export function RecordActivities({
               }}
               aria-pressed={showAppointment}
             >
-              Schedule appointment
+              {showAppointment ? "Hide schedule form" : "Schedule appointment"}
             </Button> : null}
           </div>
 
@@ -385,53 +407,94 @@ export function RecordActivities({
               aria-label="Related activity"
               className="h-auto w-full justify-stretch gap-0 p-0"
             >
-              {[{ key: "notes" as const, label: "Notes", count: notes.length }, { key: "tasks" as const, label: "Tasks", count: tasks.length }, { key: "appointments" as const, label: "Schedule", count: appointments.length }].map((tab) => (
-                <TabsTrigger
-                  key={tab.key}
-                  value={tab.key}
-                  className="flex-1 justify-center gap-1 px-3 py-2 text-xs font-semibold"
-                >
-                  {tab.label}
-                  <span className="text-[10px] font-normal text-(--text-tertiary)">{tab.count}</span>
-                </TabsTrigger>
-              ))}
+            {[{ key: "notes" as const, label: "Notes", icon: "note", count: notes.length }, { key: "tasks" as const, label: "Tasks", icon: "square_check", count: tasks.length }, { key: "appointments" as const, label: "Schedule", icon: "calendar", count: appointments.length }].map((tab) => (
+              <TabsTrigger
+                key={tab.key}
+                value={tab.key}
+                className="flex-1 justify-center gap-1.5 px-3 py-2 text-xs font-semibold"
+              >
+                <Icon name={tab.icon} size={13} />
+                {tab.label}
+                {tab.count > 0 ? (
+                  <span className="rounded-full bg-(--gray-100) px-1.5 text-[10px] font-semibold tabular-nums text-(--text-secondary)">{tab.count}</span>
+                ) : null}
+              </TabsTrigger>
+            ))}
             </TabsList>
           </div>
         </Tabs>
         <div className="p-3">
-          {activeTab === "notes" ? notes.length === 0 ? <p className="text-sm text-(--text-tertiary)">No notes yet.</p> : <ul className="space-y-2">{notes.map((note) => <li key={note.id} className="rounded-md border border-(--border-default) bg-(--bg-hover) p-3 text-sm">
-  <p className="whitespace-pre-wrap">{note.body}</p>
-  <div className="mt-1 flex items-center justify-between gap-2">
-    <p className="text-xs text-(--text-tertiary)">{note.author.name} · {new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p>
-    <button type="button" onClick={() => toggleComments(note.id)} className="flex items-center gap-1 text-xs text-(--text-secondary) hover:text-(--text-brand) hover:underline">
-      <Icon name="note" size={12} />
-      {openComments[note.id] ? "Hide comments" : "Comments"}
-    </button>
-  </div>
-  {openComments[note.id] && me ? (
-    <div className="mt-2 border-t border-(--border-default) pt-2">
-      <CommentsSection subjectType="NOTE" subjectId={note.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount />
-    </div>
-  ) : null}
-</li>)}</ul> : null}
-          {activeTab === "tasks" ? tasksLoading ? <Skeleton className="h-12 w-full" /> : tasks.length === 0 ? <p className="text-sm text-(--text-tertiary)">No related tasks yet.</p> : <ul className="space-y-2">{tasks.map((task) => <li key={task.id} className="flex items-center justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><Link href={`/tasks/${task.id}`} className="min-w-0 truncate font-medium text-(--text-brand) hover:underline">{task.title}</Link><span className="shrink-0 text-xs text-(--text-tertiary)">{task.dueAt ? new Date(task.dueAt).toLocaleDateString() : "No due date"} · {task.status.toLowerCase()}</span></li>)}</ul> : null}
-          {activeTab === "appointments" ? appointments.length === 0 ? <p className="text-sm text-(--text-tertiary)">No appointments yet.</p> : <ul className="space-y-2">{appointments.map((appointment) => <li key={appointment.id} className="rounded-md border border-(--border-default) px-3 py-2 text-sm">
-  <div className="flex items-center justify-between gap-3">
-    <span className="font-medium">{appointment.title}</span>
-    <span className="flex shrink-0 items-center gap-3">
-      <span className="text-xs text-(--text-secondary)">{new Date(appointment.startAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} · {appointment.status.toLowerCase()}</span>
-      <button type="button" onClick={() => toggleComments(appointment.id)} className="flex items-center gap-1 text-xs text-(--text-secondary) hover:text-(--text-brand) hover:underline">
-        <Icon name="note" size={12} />
-        {openComments[appointment.id] ? "Hide comments" : "Comments"}
-      </button>
-    </span>
-  </div>
-  {openComments[appointment.id] && me ? (
-    <div className="mt-2 border-t border-(--border-default) pt-2">
-      <CommentsSection subjectType="APPOINTMENT" subjectId={appointment.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount />
-    </div>
-  ) : null}
-</li>)}</ul> : null}
+          {activeTab === "notes" ? notes.length === 0 ? <EmptyHint icon="note" text="No notes yet — add context for everyone working this record." /> : <ul className="space-y-2">{notes.map((note) => (
+          <li key={note.id} className="rounded-md border border-border bg-muted/40 p-3 text-sm transition-colors hover:bg-muted/70">
+            <div className="flex items-start gap-2.5">
+              <Initials name={note.author.name} size="xs" />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                  <span className="text-[13px] font-semibold text-foreground">{note.author.name}</span>
+                  <time className="text-[11px] text-muted-foreground" dateTime={note.createdAt}>
+                    {new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                  </time>
+                </div>
+                <p className="mt-1 whitespace-pre-wrap wrap-break-words text-[13px] leading-relaxed text-foreground">{note.body}</p>
+              </div>
+            </div>
+            <div className="mt-2 flex justify-end border-t border-border pt-1.5">
+              <button type="button" onClick={() => toggleComments(note.id)} className="flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <Icon name="note" size={12} />
+                {openComments[note.id] ? "Hide comments" : "Comments"}
+              </button>
+            </div>
+            {openComments[note.id] && me ? (
+              <div className="mt-2 border-t border-border pt-2">
+                <CommentsSection subjectType="NOTE" subjectId={note.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount />
+              </div>
+            ) : null}
+          </li>))}</ul> : null}
+          {activeTab === "tasks" ? tasksLoading ? <Skeleton className="h-12 w-full" /> : tasks.length === 0 ? <EmptyHint icon="square_check" text="No related tasks yet — create a follow-up above." /> : <ul className="space-y-2">{tasks.map((task) => (
+          <li key={task.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-muted/50">
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <Icon name="square_check" size={15} className="shrink-0 text-muted-foreground" />
+              <Link href={`/tasks/${task.id}`} className="min-w-0 truncate font-medium text-primary hover:underline">{task.title}</Link>
+            </span>
+            <span className="flex shrink-0 items-center gap-1.5">
+              {task.dueAt ? (
+                <span className="badge badge-neutral gap-1"><Icon name="calendar" size={11} />{new Date(task.dueAt).toLocaleDateString()}</span>
+              ) : (
+                <span className="text-xs text-muted-foreground">No due date</span>
+              )}
+              <StatusChip value={task.status} />
+            </span>
+          </li>))}</ul> : null}
+          {activeTab === "appointments" ? appointments.length === 0 ? <EmptyHint icon="calendar" text="No appointments yet — schedule one above." /> : <ul className="space-y-2">{appointments.map((appointment) => (
+          <li key={appointment.id} className="rounded-md border border-border p-3 text-sm transition-colors hover:bg-muted/50">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <span className="flex min-w-0 items-center gap-2">
+                <Icon name="calendar" size={15} className="shrink-0 text-muted-foreground" />
+                <span className="truncate font-medium text-foreground">{appointment.title}</span>
+              </span>
+              <span className="ml-auto flex shrink-0 flex-wrap items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">{new Date(appointment.startAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</span>
+                <StatusChip value={appointment.status} />
+              </span>
+            </div>
+            {appointment.locationOrLink ? (
+              <p className="mt-1.5 flex items-center gap-1.5 pl-5.75 text-xs text-muted-foreground">
+                <Icon name="map_pin" size={11} className="shrink-0" />
+                <span className="truncate">{appointment.locationOrLink}</span>
+              </p>
+            ) : null}
+            <div className="mt-2 flex justify-end border-t border-border pt-1.5">
+              <button type="button" onClick={() => toggleComments(appointment.id)} className="flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <Icon name="note" size={12} />
+                {openComments[appointment.id] ? "Hide comments" : "Comments"}
+              </button>
+            </div>
+            {openComments[appointment.id] && me ? (
+              <div className="mt-2 border-t border-border pt-2">
+                <CommentsSection subjectType="APPOINTMENT" subjectId={appointment.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount />
+              </div>
+            ) : null}
+          </li>))}</ul> : null}
         </div>
       </div>
     </div>

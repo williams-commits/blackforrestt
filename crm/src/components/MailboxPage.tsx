@@ -166,7 +166,7 @@ export function MailboxPage() {
     <div className="space-y-4" data-module="emails">
       <WorkspaceHeader
         eyebrow="Mail"
-        title="Emails"
+        title="Emails" titleIcon="mail"
         subtitle="Correspondence history — inbound replies arrive here automatically; every send is archived against its record."
         actions={
           <Button variant="primary" icon="edit" onClick={() => setCompose({})}>

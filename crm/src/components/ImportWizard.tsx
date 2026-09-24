@@ -390,7 +390,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 ["3", "Import safely", "Map, validate, and review duplicates before records are written."],
               ].map(([stepNumber, title, description]) => (
                 <div key={stepNumber}>
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-(--accent-soft) text-sm font-semibold text-accent">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-(--accent-soft) text-sm font-semibold">
                     {stepNumber}
                   </span>
                   <p className="mt-3 font-medium text-(--text-primary)">{title}</p>
@@ -449,7 +449,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                   complete
                     ? "bg-accent text-(--text-inverse)"
                     : active
-                      ? "border border-accent bg-(--accent-soft) text-accent"
+                      ? "border border-accent bg-(--accent-soft)"
                       : "border border-(--border-hairline) text-(--text-tertiary)"
                 }`}
               >

@@ -10,7 +10,7 @@
  *
  * Rules (enforced by tests/architecture.test.ts):
  * - NO JSX, NO React types, NO next-intl here. Pure data models.
- * - Domain content packages (src/domains/<domain>/content.ts) ASSEMBLE these
+ * - Domain content packages (src/domains/<domain>/content/) ASSEMBLE these
  *   objects from the i18n catalogs + brand profile + domain config. They are
  *   the only modules that know which catalog namespace feeds which field.
  * - Designs (src/designs/<key>/) RENDER these objects. They must not

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ConvertioFooter } from "@/designs/convertio/ConvertioFooter";
 import type { LandingDesignProps } from "@/designs/contracts";
 import type { LandingPageContent } from "@/content/contracts";
 import { ConvertioStyles, convertioFonts } from "../ConvertioStyles";
@@ -40,7 +41,7 @@ export async function ConvertioLanding({ content, brand }: LandingDesignProps) {
         <ConvertioCta content={c} />
       </main>
 
-      <ConvertioFooter brand={brand} content={content} />
+      <ConvertioFooter brand={brand} footer={content.footer} />
     </div>
   );
 }
@@ -694,56 +695,5 @@ function ConvertioCta({ content }: { content: ConvertioLandingContent }) {
         </Reveal>
       </div>
     </section>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════════════════
-   FOOTER
-   ══════════════════════════════════════════════════════════════════════════ */
-function ConvertioFooter({ brand, content }: { brand: LandingDesignProps["brand"]; content: LandingDesignProps["content"] }) {
-  const footer = content.footer;
-  return (
-    <footer style={{
-      background: "var(--cv-canvas)",
-      borderTop: "1px solid var(--cv-hairline)",
-      paddingTop: 64,
-      paddingBottom: 32,
-    }}>
-      <div className="cv-container">
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "2fr repeat(3, 1fr)",
-          gap: 48,
-          marginBottom: 48,
-        }}>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: "1rem", color: "var(--cv-ink)" }}>{brand.name}</div>
-            <p className="cv-body-sm" style={{ marginTop: 12, maxWidth: 240 }}>{footer.tagline}</p>
-            <p className="cv-body-sm" style={{ marginTop: 12 }}>{footer.contact.supportEmail}</p>
-            {footer.registrationSummary && (
-              <p className="cv-body-sm" style={{ marginTop: 12, borderLeft: "2px solid var(--cv-primary)", paddingLeft: 12, fontSize: "0.75rem" }}>
-                {footer.registrationSummary}
-              </p>
-            )}
-          </div>
-          {footer.columns.map((col) => (
-            <nav key={col.key} aria-label={col.label}>
-              <h4 className="cv-footer-col-title">{col.label}</h4>
-              {col.links.map((link) => (
-                <Link key={link.href} href={link.href} className="cv-footer-link">{link.label}</Link>
-              ))}
-            </nav>
-          ))}
-        </div>
-
-        <div style={{ borderTop: "1px solid var(--cv-hairline)", paddingTop: 24 }}>
-          <p className="cv-legal">{footer.risk.paragraphs[0]}</p>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
-            <span className="cv-legal">{footer.copyright}</span>
-            <span className="cv-legal">{footer.trademarkLine}</span>
-          </div>
-        </div>
-      </div>
-    </footer>
   );
 }

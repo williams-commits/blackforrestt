@@ -49,54 +49,6 @@ export function GbfxsStyles() {
       .ag-card-hover { transition: border-color 220ms ease, transform 220ms ease, background-color 220ms ease; }
       .ag-card-hover:hover { border-color: rgba(240, 185, 11, 0.48); transform: translateY(-2px); }
 
-      /* Frosted glass over the photo bands: used for panels/tiles that float
-         on SectionBackdrop plates. Solid fallback where backdrop-filter is
-         unsupported so text never sits on raw imagery. */
-      .ag-glass {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02) 38%, rgba(0, 0, 0, 0.12));
-        backdrop-filter: blur(24px) saturate(1.25);
-        -webkit-backdrop-filter: blur(24px) saturate(1.25);
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        border-radius: 12px;
-        box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.85);
-      }
-      .ag-glass-tile {
-        background: rgba(19, 19, 22, 0.5);
-        backdrop-filter: blur(18px) saturate(1.15);
-        -webkit-backdrop-filter: blur(18px) saturate(1.15);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 10px;
-      }
-      .ag-glass-tile.ag-card-hover:hover { border-color: rgba(240, 185, 11, 0.55); }
-      @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-        .ag-glass { background: rgba(19, 19, 22, 0.92); }
-        .ag-glass-tile { background: rgba(19, 19, 22, 0.92); }
-      }
-
-      /* Clipped accent border — replaces the panel's full hairline with two
-         framing lines that fade out at each end (viewfinder aesthetic).
-         Deliberately ordered after .ag-glass so it neutralizes its border. */
-      .ag-clip-border { border-color: transparent; }
-      .ag-clip-border::before,
-      .ag-clip-border::after {
-        content: "";
-        position: absolute;
-        left: 9%;
-        right: 9%;
-        height: 1px;
-        pointer-events: none;
-        background: linear-gradient(
-          90deg,
-          transparent,
-          rgba(240, 185, 11, 0.7) 22%,
-          rgba(255, 255, 255, 0.32) 50%,
-          rgba(240, 185, 11, 0.7) 78%,
-          transparent
-        );
-      }
-      .ag-clip-border::before { top: 0; }
-      .ag-clip-border::after { bottom: 0; }
-
       .ag-btn {
         display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
         border-radius: 6px; padding: 0.75rem 1.75rem;
@@ -140,8 +92,6 @@ export function GbfxsStyles() {
          source order wins without !important). */
       .ag-ink-h2 { color: #0d0d0f; }
       .ag-ink-sub { color: rgba(13, 13, 15, 0.76); }
-      .ag-ink-text { color: rgba(13, 13, 15, 0.84); }
-      .ag-ink-faint { color: rgba(13, 13, 15, 0.58); }
 
       .ag-up { color: #0ecb81; }
       .ag-down { color: var(--ag-negative); }
@@ -255,14 +205,6 @@ export function GbfxsStyles() {
       .ag-page-cta { border-top: 1px solid rgba(255, 255, 255, 0.1); }
 
       /* ─── Trading-desk surface system ──────────────────────────────────── */
-
-      /* Mesh gradient — layered warm-black washes used as section ambience. */
-      .ag-mesh {
-        background:
-          radial-gradient(42% 56% at 12% 8%, rgba(58, 45, 11, 0.5), transparent 68%),
-          radial-gradient(36% 48% at 88% 22%, rgba(240, 185, 11, 0.07), transparent 66%),
-          radial-gradient(40% 52% at 70% 96%, rgba(42, 33, 8, 0.48), transparent 70%);
-      }
 
       /* Hairline frame with yellow catchlights — the terminal-panel device. */
       .ag-frame {

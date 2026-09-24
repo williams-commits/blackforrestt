@@ -26,7 +26,7 @@ const KIND_META: Record<string, { label: string; icon: string; tone: Tone }> = {
   merged: { label: "Merged into this record", icon: "plug", tone: "neutral" },
   email_sent: { label: "Email sent", icon: "mail", tone: "warning" },
   imported: { label: "Imported", icon: "upload", tone: "neutral" },
-  comment: { label: "Comment", icon: "note", tone: "brand" },
+  comment: { label: "Comment", icon: "comment", tone: "brand" },
 };
 
 type Tone = "brand" | "neutral" | "success" | "warning" | "error" | "info";

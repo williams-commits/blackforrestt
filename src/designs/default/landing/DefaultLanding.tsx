@@ -5,8 +5,7 @@ import { Hero } from "@/components/landing/Hero";
 import { Markets } from "@/components/landing/Markets";
 import { TradingPlayground } from "@/components/landing/TradingPlayground";
 import { ConfidenceSection } from "@/components/landing/ConfidenceSection";
-import { TableOfContents } from "@/components/landing/TableOfContents";
-import { ProgressChecklist } from "@/components/landing/ProgressChecklist";
+import { JourneyBar } from "@/components/landing/JourneyBar";
 import { StickyCta } from "@/components/landing/StickyCta";
 import { Footer } from "@/components/landing/Footer";
 import { getLandingInstruments } from "@/lib/landingData";
@@ -16,12 +15,13 @@ import type { FinalCtaContent } from "@/content/contracts";
 // branding values are read from env at request time, not build time.
 
 /**
- * The DEFAULT landing design (Black Forest editorial architecture): serif hero, sticky TOC
- * rail, progress checklist, playground + markets, confidence section.
- * Composed from the shared landing library (@/components/landing/*); this
- * folder owns composition only. ALL copy is assembled ONCE from the
- * blackforest domain content package and flows down as typed contracts.
- * Selected whenever a domain's landingDesign is "default" or unknown.
+ * The DEFAULT landing design (Black Forest editorial architecture): serif hero,
+ * a sticky journey bar (scroll-spy chips + progress), then full-width product
+ * bands — playground, markets, confidence, final CTA. Composed from the shared
+ * landing library (@/components/landing/*); this folder owns composition only.
+ * ALL copy is assembled ONCE from the blackforest domain content package and
+ * flows down as typed contracts. Selected whenever a domain's landingDesign
+ * is "default" or unknown.
  */
 export async function DefaultLanding({ content }: LandingDesignProps) {
   const { landing, navigation, footer } = content;
@@ -36,47 +36,30 @@ export async function DefaultLanding({ content }: LandingDesignProps) {
       <main id="main-content" tabIndex={-1}>
         <Hero content={landing.hero} />
 
-        {/* Sticky-rail layout: TOC on the left, content centre, progress right. */}
-        <div className="relative">
-          <div className="max-w-7xl mx-auto px-4 lg:px-8 grid lg:grid-cols-[200px_minmax(0,1fr)_240px] gap-8">
-            {/* Left rail: TOC (sticky, desktop) */}
-            <aside className="hidden lg:block py-8">
-              <TableOfContents items={SECTIONS} />
-            </aside>
+        {/* Guided-tour navigation: sticky chips + progress under the navbar.
+            Section anchors scroll-clear the navbar + bar (≈112px). */}
+        <JourneyBar items={SECTIONS} />
 
-            {/* Centre column: playground + markets */}
-            <div className="min-w-0 py-8 lg:py-12">
-              {/* Mobile TOC strip */}
-              <div className="lg:hidden mb-8">
-                <TableOfContents items={SECTIONS} />
-              </div>
-
-              <section id="playground" className="scroll-mt-24 mb-16 lg:mb-24">
-                <div className="max-w-2xl mb-6">
-                  <span className="text-[11px] font-semibold uppercase tracking-widest text-brand">
-                    {landing.playground!.eyebrow}
-                  </span>
-                  <h2 className="mt-2 text-3xl lg:text-4xl font-bold tracking-tight">
-                    {landing.playground!.title}
-                  </h2>
-                  <p className="font-prose mt-3 text-lg leading-relaxed text-text-muted">
-                    {landing.playground!.subtitle}
-                  </p>
-                </div>
-                <TradingPlayground initial={instruments} content={landing.playground!} />
-              </section>
-
-              <Markets content={landing.markets.editorial!} />
+        {/* ── Playground band — full width ── */}
+        <section id="playground" className="scroll-mt-28 py-16 lg:py-24">
+          <div className="max-w-7xl mx-auto px-4 lg:px-8">
+            <div className="max-w-2xl mb-8">
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-brand">
+                {landing.playground!.eyebrow}
+              </span>
+              <h2 className="mt-2 text-3xl lg:text-4xl font-bold tracking-tight">
+                {landing.playground!.title}
+              </h2>
+              <p className="font-prose mt-3 text-lg leading-relaxed text-text-muted">
+                {landing.playground!.subtitle}
+              </p>
             </div>
-
-            {/* Right rail: progress checklist (sticky, desktop) */}
-            <aside className="hidden lg:block py-8">
-              <div className="sticky top-24 space-y-4">
-                <ProgressChecklist items={SECTIONS} />
-              </div>
-            </aside>
+            <TradingPlayground initial={instruments} content={landing.playground!} />
           </div>
-        </div>
+        </section>
+
+        {/* ── Markets bands — live editorial tables ── */}
+        <Markets content={landing.markets.editorial!} />
 
         {/* Confidence (features + education) — full width */}
         <ConfidenceSection content={landing.confidence!} />
@@ -93,7 +76,7 @@ export async function DefaultLanding({ content }: LandingDesignProps) {
 
 function FinalCta({ content }: { content: FinalCtaContent }) {
   return (
-    <section id="final-cta" className="scroll-mt-24 py-20 bg-canvas border-t border-border-soft">
+    <section id="final-cta" className="scroll-mt-28 py-20 lg:py-28 bg-canvas border-t border-border-soft">
       <div className="max-w-4xl mx-auto px-4 lg:px-8 text-center">
         <span className="text-[11px] font-semibold uppercase tracking-widest text-brand">
           {content.eyebrow}

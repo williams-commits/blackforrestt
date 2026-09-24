@@ -51,13 +51,15 @@ export function CommentsSection({
   const [editBody, setEditBody] = useState("");
 
   const refresh = useCallback(async () => {
+    setLoaded(false);
     try {
-      setLoaded(true);
       const response = await fetch(`/api/comments?subjectType=${subjectType}&subjectId=${subjectId}`);
       const payload = (await response.json().catch(() => null)) as { data?: CommentRow[] } | null;
       if (response.ok) setComments(payload?.data ?? []);
     } catch {
       // Refresh is best-effort; the server-rendered initial list stands.
+    } finally {
+      setLoaded(true);
     }
   }, [subjectType, subjectId]);
 
@@ -172,7 +174,7 @@ export function CommentsSection({
           {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] text-(--text-tertiary)">{body.length.toLocaleString()} / 5,000 · ⌘/Ctrl+Enter to post</p>
-            <Button type="submit" variant="primary" icon="note" loading={busy} disabled={!body.trim()}>
+            <Button type="submit" variant="primary" icon="comment" loading={busy} disabled={busy || !body.trim()}>
               Comment
             </Button>
           </div>
@@ -195,22 +197,24 @@ export function CommentsSection({
                   <Initials name={comment.author.name} size="xs" />
                   <span className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>{comment.author.name}</span>
                   <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
-                    {relativeTime(comment.createdAt)}{comment.editedAt ? " · edited" : ""}
+                    <time dateTime={comment.createdAt}>{relativeTime(comment.createdAt)}</time>{comment.editedAt ? " · edited" : ""}
                   </span>
                   {mayModify ? (
                     <span className="ml-auto flex gap-2 text-[11px]">
                       <button
                         type="button"
+                        aria-label={editingId === comment.id ? "Cancel editing comment" : "Edit comment"}
+                        disabled={busy}
                         className="flex items-center gap-1 text-(--text-secondary) hover:underline"
                         onClick={() => {
                           setEditingId(editingId === comment.id ? null : comment.id);
                           setEditBody(comment.body);
                         }}
                       >
-                        <Icon name={editingId === comment.id  ? "close" : "edit"} size={12} />
+                        <Icon name={editingId === comment.id ? "close" : "edit"} size={12} />
                         {editingId === comment.id ? "Cancel" : "Edit"}
                       </button>
-                      <button type="button" className="flex items-center gap-1 text-(--error) hover:underline" onClick={() => void remove(comment.id)}>
+                      <button type="button" aria-label="Delete comment" disabled={busy} className="flex items-center gap-1 text-(--error) hover:underline" onClick={() => void remove(comment.id)}>
                         <Icon name="trash" size={12} />
                         Delete
                       </button>
@@ -218,7 +222,7 @@ export function CommentsSection({
                   ) : null}
                 </div>
                 {editingId === comment.id ? (
-                  <div className="mt-2 space-y-2">
+                  <div className="mt-2 space-y-2" role="group" aria-label="Edit comment">
                     <Textarea
                       value={editBody}
                       onChange={(event) => setEditBody(event.target.value)}
@@ -226,9 +230,15 @@ export function CommentsSection({
                       maxLength={5000}
                       aria-label="Edit comment"
                       className="resize-y"
+                      onKeyDown={(event) => {
+                        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                          event.preventDefault();
+                          void saveEdit(comment.id);
+                        }
+                      }}
                     />
                     <div className="flex justify-end gap-2">
-                      <Button variant="secondary" onClick={() => setEditingId(null)}>Cancel</Button>
+                      <Button variant="secondary" disabled={busy} onClick={() => setEditingId(null)}>Cancel</Button>
                       <Button variant="primary" disabled={busy || !editBody.trim()} onClick={() => void saveEdit(comment.id)} icon="check" loading={busy}>
                         Save
                       </Button>

@@ -61,7 +61,6 @@ export function MarketsSection({
       id="markets"
       className="ag-section relative scroll-mt-24 overflow-hidden bg-[#111113]"
     >
-      {/* <div className="pointer-events-none absolute inset-0 ag-mesh opacity-50" aria-hidden="true" /> */}
       <div className="ag-container relative">
         {/* Section header — the general pitch, with the explore CTA right */}
         <div className="flex flex-wrap items-end justify-between gap-6">

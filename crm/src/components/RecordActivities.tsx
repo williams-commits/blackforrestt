@@ -440,7 +440,7 @@ export function RecordActivities({
             </div>
             <div className="mt-2 flex justify-end border-t border-border pt-1.5">
               <button type="button" onClick={() => toggleComments(note.id)} className="flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <Icon name="note" size={12} />
+                <Icon name={openComments[note.id] ? "no_comment" : "comment"} size={12} />
                 {openComments[note.id] ? "Hide comments" : "Comments"}
               </button>
             </div>
@@ -485,7 +485,7 @@ export function RecordActivities({
             ) : null}
             <div className="mt-2 flex justify-end border-t border-border pt-1.5">
               <button type="button" onClick={() => toggleComments(appointment.id)} className="flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <Icon name="note" size={12} />
+                <Icon name={openComments[appointment.id] ? "no_comment" : "comment"} size={12} />
                 {openComments[appointment.id] ? "Hide comments" : "Comments"}
               </button>
             </div>

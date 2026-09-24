@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { resolveUserId, withSerializableRetry } from "@/server/db";
+import { consumeRateLimit } from "@/server/security/rateLimit";
 import { userMutationMutex } from "@/server/locks";
 import { appendAuditEvent } from "@/server/ledger";
 import { PaymentAmountSchema } from "@/server/moneyValidation";
@@ -22,6 +23,9 @@ const Schema = DepositRequestSchema.extend({ amount: PaymentAmountSchema });
 export async function POST(req: Request) {
   const session = await auth();
   const userId = await resolveUserId(session?.user?.id);
+  // Each deposit fans out a notification, a queued email, and a hash-chained
+  // audit append — cap creation rate per user.
+  await consumeRateLimit({ scope: "deposit", identifier: userId, limit: 10, windowSeconds: 60 });
   const parsed = Schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid deposit request.", details: parsed.error.flatten() }, { status: 400 });

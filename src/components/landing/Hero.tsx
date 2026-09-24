@@ -20,11 +20,11 @@ export function Hero({ content }: { content: HeroContent }) {
         <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-10 items-center">
           {/* Left: pitch */}
           <div>
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-soft text-brand text-xs font-semibold mb-6">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-brand-soft bg-brand-soft/60 text-brand text-xs font-semibold mb-6">
               <span className="h-1.5 w-1.5 rounded-full bg-brand" />
               {content.badge}
             </span>
-            <h1 className="text-4xl lg:text-5xl font-extrabold leading-[1.05] tracking-tight">
+            <h1 className="text-4xl lg:text-[3.4rem] font-extrabold leading-[1.05] tracking-tight">
               {(content.titleSegments ?? []).map((segment, index) =>
                 segment.accent ? (
                   <span key={index} className="text-brand">{segment.text}</span>
@@ -52,11 +52,13 @@ export function Hero({ content }: { content: HeroContent }) {
                 {content.ctaSecondaryLabel}
               </Link>
             </div>
-            <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-text-muted">
-              {(content.stats ?? []).map((stat) => (
-                <Stat key={stat.label} value={stat.value} label={stat.label} />
-              ))}
-            </div>
+            {(content.stats ?? []).length > 0 ? (
+              <dl className="mt-10 flex flex-wrap divide-x divide-border-soft border-t border-border-soft pt-6">
+                {(content.stats ?? []).map((stat) => (
+                  <Stat key={stat.label} value={stat.value} label={stat.label} />
+                ))}
+              </dl>
+            ) : null}
           </div>
 
           {/* Right: featured market + new this week */}
@@ -115,9 +117,9 @@ function NewThisWeekCard({ content }: { content: NonNullable<HeroContent["newThi
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-xl font-bold text-text tnum font-mono">{value}</span>
-      <span className="text-text-faint">{label}</span>
+    <div className="flex flex-col gap-0.5 px-6 first:pl-0 py-1">
+      <dd className="text-xl font-bold tnum font-mono text-text">{value}</dd>
+      <dt className="text-[11px] uppercase tracking-wider text-text-faint">{label}</dt>
     </div>
   );
 }

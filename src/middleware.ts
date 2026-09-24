@@ -85,14 +85,32 @@ const MARKETING_DOMAIN_PREFIXES = [
   "/legal",
 ];
 
+/** True when the host belongs to a configured brand family (apex or any
+ *  subdomain of it) or is a local/dev origin. Anything else is untrusted
+ *  proxy input — redirect targets and origin checks must never echo it
+ *  back (host-header poisoning). */
+function hostIsTrusted(host: string): boolean {
+  const stripped = host.replace(/:\d+$/, "");
+  if (isLocalHost(stripped) || stripped.endsWith(".localhost")) return true;
+  for (const domain of brandDomainList()) {
+    if (stripped === domain || stripped.endsWith(`.${domain}`)) return true;
+  }
+  return false;
+}
+
 /**
  * Resolve the host (hostname only, no port) from the request, honoring the
- * X-Forwarded-Host header set by the reverse proxy (Caddy).
+ * X-Forwarded-Host header set by the reverse proxy (Caddy). An unrecognized
+ * host is replaced with the canonical brand domain rather than echoed — the
+ * app is only ever deployed on configured brand hosts.
  */
 function requestHost(req: Request): string {
   const forwarded = req.headers.get("x-forwarded-host");
-  if (forwarded) return forwarded.split(",")[0]!.trim().toLowerCase();
-  return (req.headers.get("host") ?? "").toLowerCase();
+  const raw = (
+    forwarded ? forwarded.split(",")[0]!.trim() : (req.headers.get("host") ?? "")
+  ).toLowerCase();
+  if (hostIsTrusted(raw)) return raw;
+  return brandDomainList()[0] ?? raw;
 }
 
 /** Host WITHOUT the port — what domain routing matches against. Kept separate

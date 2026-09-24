@@ -30,10 +30,6 @@ export function Hero({ content, instruments }: { content: GbfxsHeroContent; inst
         filter="saturate(1.2)"
         scrim="linear-gradient(90deg, #0a0a0b 0%, rgba(10,10,11,0.94) 46%, rgba(10,10,11,0.42) 100%)"
       />
-      {/* <div
-        className="pointer-events-none absolute inset-0 ag-mesh opacity-90"
-        aria-hidden="true"
-      /> */}
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 h-40"
         style={{ background: "linear-gradient(180deg, transparent, #0a0a0b)" }}

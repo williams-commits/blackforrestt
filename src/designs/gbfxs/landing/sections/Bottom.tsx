@@ -153,7 +153,6 @@ export function IntelligenceSection({ content }: { content: IntelligenceContent 
 export function ShowcaseSection({ content }: { content: ShowcaseContent }) {
   return (
     <section id="terminal" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
-      {/* <div className="pointer-events-none absolute inset-0 ag-mesh opacity-80" aria-hidden="true" /> */}
       <div className="ag-container relative grid items-center gap-16 lg:grid-cols-[0.9fr_1.1fr]">
         {/* Narrative + capabilities */}
         <Reveal>
@@ -361,7 +360,6 @@ export function TrustSection({ content }: { content: TrustContent }) {
 export function StepsBand({ content }: { content: StepsContent }) {
   return (
     <section id="get-started" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
-      {/* <div className="pointer-events-none absolute inset-0 ag-mesh opacity-60" aria-hidden="true" /> */}
       <div className="ag-container relative">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>

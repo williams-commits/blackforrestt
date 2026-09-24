@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { hub } from "@/server/engine/hub";
 import { prisma, resolveUserId } from "@/server/db";
 import { Dashboard } from "@/components/trade/Dashboard";
@@ -66,6 +66,7 @@ export default async function TradePage({ params, searchParams }: PageProps) {
 
   // Resolve per-user settings (trading enabled, deposit UI, payment methods).
   const session = await import("@/auth").then((m) => m.auth());
+  if (!session?.user?.id) redirect("/login");
   const userId = await resolveUserId(session?.user?.id);
   const settings = await resolveUserSettings(userId);
 

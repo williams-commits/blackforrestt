@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hub, TradingError } from "@/server/engine/hub";
 import { prisma, resolveUserId } from "@/server/db";
+import { consumeRateLimit } from "@/server/security/rateLimit";
 import { auth } from "@/auth";
 import { appendAuditEvent } from "@/server/ledger";
 
@@ -55,6 +56,9 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
+  // Per-user order-submission cap: each placement runs Serializable-tx ledger
+  // work and a hash-chained audit append — a runaway client must not flood it.
+  await consumeRateLimit({ scope: "orders", identifier: userId, limit: 60, windowSeconds: 60 });
   const idempotencyKey = req.headers.get("idempotency-key")?.trim();
   if (!idempotencyKey || idempotencyKey.length < 6 || idempotencyKey.length > 128) {
     return NextResponse.json(

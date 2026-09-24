@@ -68,7 +68,7 @@ export function AdminNav({ canManage, canAudit }: { canManage: boolean; canAudit
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex h-[34px] items-center gap-2 whitespace-nowrap rounded-md px-3 text-sm font-medium transition-colors",
+                    "flex h-8.5 items-center gap-2 whitespace-nowrap rounded-md px-3 text-sm font-medium transition-colors",
                     active
                       ? "bg-muted font-semibold text-foreground"
                       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"

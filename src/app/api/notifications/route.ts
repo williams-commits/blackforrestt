@@ -22,6 +22,9 @@ const NOTIFICATION_GROUPS: Record<string, string[]> = {
  */
 export async function GET(req: Request) {
   const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const userId = await resolveUserId(session?.user?.id);
   const params = new URL(req.url).searchParams;
   const scope = params.get("scope") ?? "recent";
@@ -105,6 +108,9 @@ export async function GET(req: Request) {
  */
 export async function PATCH(req: Request) {
   const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const userId = await resolveUserId(session?.user?.id);
   const body = await req.json().catch(() => ({} as { ids?: unknown; all?: boolean; toasted?: boolean }));
   const ids = Array.isArray(body.ids)

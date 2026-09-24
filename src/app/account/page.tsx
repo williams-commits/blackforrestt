@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma, resolveUserId } from "@/server/db";
 import { auth } from "@/auth";
 import { Logo } from "@/components/trade/Logo";
@@ -48,6 +49,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const initialTab = tab && (VALID_TABS as readonly string[]).includes(tab) ? tab : undefined;
 
   const session = await auth();
+  if (!session?.user?.id) redirect("/login");
   const userId = await resolveUserId(session?.user?.id);
 
   const [

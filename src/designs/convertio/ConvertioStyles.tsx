@@ -126,11 +126,7 @@ export function ConvertioStyles() {
 
       .cv-section { padding: 96px 0; }
       .cv-section-soft { padding: 96px 0; background: var(--cv-surface-soft); }
-      .cv-section-dark {
-        padding: 96px 0;
-        background: var(--cv-surface-dark);
-        color: var(--cv-on-dark);
-      }
+
 
       /* ══════════════════════════════════════════════════════════════════
          TYPOGRAPHY
@@ -142,10 +138,10 @@ export function ConvertioStyles() {
         line-height: 1.0;
         color: inherit;
       }
-      .cv-display-mega { font-size: clamp(2.5rem, 5vw, 5rem); }
+
       .cv-display-lg { font-size: clamp(2rem, 4vw, 3.25rem); }
       .cv-display-md { font-size: clamp(1.75rem, 3vw, 2.75rem); }
-      .cv-display-sm { font-size: clamp(1.5rem, 2.5vw, 2.25rem); }
+
 
       .cv-body-md {
         font-size: 1rem;
@@ -159,11 +155,7 @@ export function ConvertioStyles() {
         line-height: 1.5;
         color: var(--cv-muted);
       }
-      .cv-mono {
-        font-family: var(--cv-font-mono);
-        font-weight: 500;
-        font-variant-numeric: tabular-nums;
-      }
+
       .cv-eyebrow {
         font-size: 0.75rem;
         font-weight: 600;
@@ -194,15 +186,14 @@ export function ConvertioStyles() {
       .cv-btn-primary { background: var(--cv-primary); color: var(--cv-on-primary); }
       .cv-btn-primary:active { background: var(--cv-primary-active); transform: scale(0.98); }
       .cv-btn-primary:disabled { background: #a8b8cc; cursor: not-allowed; }
-      .cv-btn-secondary-light { background: var(--cv-surface-strong); color: var(--cv-ink); }
-      .cv-btn-secondary-dark { background: var(--cv-surface-dark-elevated); color: var(--cv-on-dark); }
+
       .cv-btn-outline-dark {
         background: transparent;
         color: var(--cv-on-dark);
         border: 1px solid rgba(255, 255, 255, 0.3);
       }
       .cv-btn-cta { height: 56px; padding: 16px 32px; }
-      .cv-btn-text { background: transparent; color: var(--cv-primary); padding: 12px 8px; height: auto; }
+
 
       /* ══════════════════════════════════════════════════════════════════
          CARDS
@@ -215,85 +206,26 @@ export function ConvertioStyles() {
         transition: box-shadow 200ms ease;
       }
       .cv-card:hover { box-shadow: 0 4px 12px rgba(10, 11, 13, 0.06); }
-      .cv-card-dark {
-        background: var(--cv-surface-dark-elevated);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 24px;
-        padding: 32px;
-        color: var(--cv-on-dark);
-      }
+
 
       /* ══════════════════════════════════════════════════════════════════
          BADGES / PILLS
          ══════════════════════════════════════════════════════════════════ */
-      .cv-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 6px 14px;
-        border-radius: 100px;
-        background: var(--cv-surface-strong);
-        color: var(--cv-ink);
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-      }
+
 
       /* ══════════════════════════════════════════════════════════════════
          TRADING
          ══════════════════════════════════════════════════════════════════ */
       .cv-up { color: var(--cv-up); }
       .cv-down { color: var(--cv-down); }
-      .cv-price {
-        font-family: var(--cv-font-mono);
-        font-weight: 500;
-        font-size: 1.125rem;
-        font-variant-numeric: tabular-nums;
-      }
-      .cv-price-change {
-        font-family: var(--cv-font-mono);
-        font-weight: 500;
-        font-size: 1rem;
-        font-variant-numeric: tabular-nums;
-      }
-      .cv-asset-row {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        padding: 16px 0;
-        border-bottom: 1px solid var(--cv-hairline);
-      }
+
       .cv-asset-row:last-child { border-bottom: none; }
-      .cv-asset-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 9999px;
-        background: var(--cv-surface-strong);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      }
+
 
       /* ══════════════════════════════════════════════════════════════════
          NAVIGATION
          ══════════════════════════════════════════════════════════════════ */
-      .cv-nav {
-        background: var(--cv-canvas);
-        border-bottom: 1px solid var(--cv-hairline);
-        height: 64px;
-        display: flex;
-        align-items: center;
-        position: sticky;
-        top: 0;
-        z-index: 50;
-      }
-      .cv-nav-dark {
-        background: rgba(10, 11, 13, 0.85);
-        backdrop-filter: blur(16px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        color: var(--cv-on-dark);
-      }
+
       .cv-nav-link {
         font-size: 0.875rem;
         font-weight: 500;
@@ -427,10 +359,11 @@ export function ConvertioStyles() {
          RESPONSIVE
          ══════════════════════════════════════════════════════════════════ */
       @media (max-width: 640px) {
-        .cv-display-mega { font-size: 2.5rem; }
-        .cv-section, .cv-section-soft, .cv-section-dark { padding: 48px 0; }
+
+        .cv-section, .cv-section-soft,
+
         .cv-card { padding: 20px; border-radius: 16px; }
-        .cv-card-dark { padding: 20px; border-radius: 16px; }
+
       }
     `}</style>
   );

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { resolveUserId } from "@/server/db";
+import { consumeRateLimit } from "@/server/security/rateLimit";
 import { PaymentError, receivePaymentProof } from "@/server/payments";
 
 export const runtime = "nodejs";
@@ -10,6 +11,9 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
   const userId = await resolveUserId(session?.user?.id);
+  // Uploads route through the malware scanner and object storage; same
+  // per-user cap philosophy as the KYC document upload route.
+  await consumeRateLimit({ scope: "payment-proof", identifier: userId, limit: 30, windowSeconds: 60 * 60 });
   const { id } = await context.params;
   const form = await request.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: "Expected multipart/form-data." }, { status: 400 });

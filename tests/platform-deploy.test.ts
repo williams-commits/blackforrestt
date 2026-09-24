@@ -26,7 +26,7 @@ async function lib(): Promise<typeof import("../scripts/platform/lib/deploy-conf
 
 interface TestDomain { key: string; hosts: string[]; tradeEnabled: boolean }
 
-function setupTempSites(dir: string, domains: Array<{ key: string }>, { renderDomainSite }: { renderDomainSite: (d: TestDomain, e: string) => string }, envFile: string) {
+function setupTempSites(dir: string, domains: TestDomain[], { renderDomainSite }: { renderDomainSite: (d: TestDomain, e: string) => string }, envFile: string) {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   for (const domain of domains) {

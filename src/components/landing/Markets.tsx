@@ -35,10 +35,10 @@ async function MarketSection({
   const instruments = getInstrumentsByCategory(category);
 
   return (
-    <section id={id} className="scroll-mt-24 py-16 lg:py-20 border-t border-border-soft first:border-t-0">
+    <section id={id} className="scroll-mt-28 py-16 lg:py-20 border-t border-border-soft first:border-t-0">
       <div className="max-w-7xl mx-auto px-4 lg:px-8 grid lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] gap-10">
         {/* Left: editorial intro */}
-        <div className="lg:sticky lg:top-24 self-start">
+        <div className="lg:sticky lg:top-28 self-start">
           <div className="flex items-center gap-3 mb-4">
             <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-panel-2 text-brand">
               <MarketIcon category={category} className="h-7 w-7" />

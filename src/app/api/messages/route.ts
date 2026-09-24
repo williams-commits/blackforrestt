@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { resolveUserId, prisma } from "@/server/db";
+import { consumeRateLimit } from "@/server/security/rateLimit";
 import {
   getUserMessageThread,
   resolveSupportRecipient,
@@ -79,6 +80,8 @@ export async function POST(req: Request) {
     const session = await auth();
     const userId = await resolveUserId(session?.user?.id);
     const parsed = SendSchema.safeParse(await req.json().catch(() => null));
+    // Support messages notify operators in realtime and persist per row.
+    await consumeRateLimit({ scope: "messages", identifier: userId, limit: 30, windowSeconds: 60 });
     if (!parsed.success) {
       return NextResponse.json({ error: "A message body of 1–4000 characters is required." }, { status: 400 });
     }

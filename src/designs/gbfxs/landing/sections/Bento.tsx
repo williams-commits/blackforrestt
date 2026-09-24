@@ -30,7 +30,6 @@ export function BentoSection({
 }) {
   return (
     <section id="platform" className="ag-section relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
-      {/* <div className="pointer-events-none absolute inset-0 ag-mesh opacity-70" aria-hidden="true" /> */}
       <div className="ag-container relative">
         <Reveal>
           <span className="ag-eyebrow">{content.eyebrow}</span>

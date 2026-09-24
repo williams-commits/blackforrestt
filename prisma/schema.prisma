@@ -550,6 +550,8 @@ model PaymentRequest {
   @@index([status, createdAt])
   @@index([userId, createdAt])
   @@index([reconciliationStatus, createdAt])
+  // Beneficiary cooling-off check scans by fingerprint on every withdrawal.
+  @@index([beneficiaryFingerprint])
   @@unique([asset, externalReference])
   @@unique([asset, reconciliationReference])
 }

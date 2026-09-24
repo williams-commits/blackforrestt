@@ -8,7 +8,7 @@ import type { ConfidenceContent } from "@/content/contracts";
  */
 export function ConfidenceSection({ content }: { content: ConfidenceContent }) {
   return (
-    <section id="confidence" className="scroll-mt-24 py-16 lg:py-24 border-t border-border-soft bg-panel">
+    <section id="confidence" className="scroll-mt-28 py-16 lg:py-24 border-t border-border-soft bg-panel">
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         <div className="max-w-2xl">
           <span className="text-[11px] font-semibold uppercase tracking-widest text-brand">

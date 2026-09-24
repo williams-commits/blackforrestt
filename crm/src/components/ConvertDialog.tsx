@@ -6,12 +6,7 @@ import type { DuplicateHit } from "@/components/RecordForm";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui";
 import { FormError } from "@/components/form";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Modal } from "@/components/Modal";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
@@ -113,15 +108,8 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
     );
 
   return (
-    <Dialog open onOpenChange={() => undefined}>
-      <DialogContent className="max-h-[85vh] gap-4 overflow-y-auto sm:max-w-xl" showCloseButton={false} aria-describedby={undefined}>
-        <DialogHeader className="flex flex-row items-center justify-between space-y-0">
-          <DialogTitle>Convert lead</DialogTitle>
-          <Button variant="tertiary" size="sm" className="w-7 px-0" onClick={onClose} aria-label="Close conversion dialog">
-            <Icon name="close" size={16} />
-          </Button>
-        </DialogHeader>
-
+    <Modal onClose={onClose} title="Convert lead" closeOnBackdrop={false}>
+      <div className="max-h-[65vh] space-y-4 overflow-y-auto pr-1">
         <FormError message={error} />
 
         {!preview ? (
@@ -310,7 +298,7 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
             </div>
           </>
         )}
-      </DialogContent>
-    </Dialog>
+      </div>
+    </Modal>
   );
 }

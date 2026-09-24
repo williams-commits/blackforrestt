@@ -493,7 +493,7 @@ export function EmailCompose({
                 onInput={syncFromEditor}
                 onBlur={syncFromEditor}
                 data-empty={bodyText ? undefined : (toName ? `Hi ${toName.split(" ")[0]},` : "Write your message…")}
-                className="min-h-80 max-h-[26rem] overflow-y-auto bg-background px-4 py-3 text-sm leading-relaxed text-foreground outline-none empty:before:content-[attr(data-empty)] empty:before:text-muted-foreground [&_a]:text-foreground [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
+                className="min-h-80 max-h-104 overflow-y-auto bg-background px-4 py-3 text-sm leading-relaxed text-foreground outline-none empty:before:content-[attr(data-empty)] empty:before:text-muted-foreground [&_a]:text-foreground [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
               />
             </div>
             <p className="text-right text-[11px] text-muted-foreground">

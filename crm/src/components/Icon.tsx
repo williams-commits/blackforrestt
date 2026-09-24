@@ -54,6 +54,8 @@ import {
   Users,
   X,
   XCircle,
+  MessageCircle,
+  MessageCircleX,
 } from "lucide-react";
 
 /**
@@ -124,6 +126,8 @@ const ICONS: Record<string, LucideIcon> = {
   sun: Sun,
   bell: Bell,
   lightbulb: Lightbulb,
+  comment: MessageCircle,
+  no_comment: MessageCircleX,
 };
 
 export function Icon({

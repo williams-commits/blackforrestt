@@ -106,7 +106,18 @@ if [[ "$CADDY_CHANGED" == true ]]; then
 fi
 "${COMPOSE[@]}" ps
 
-DOMAIN="$(grep -E '^DOMAIN=' .env.production | tail -1 | cut -d= -f2-)"
+# Health-check host: DOMAIN overrides; otherwise the first BRAND_DOMAIN
+# entry (the canonical apex). Neither set → skip the wait with a warning
+# instead of curling https:///api/health for 150 seconds.
+DOMAIN="$(grep -E '^DOMAIN=' .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' || :)"
+if [[ -z "$DOMAIN" ]]; then
+  DOMAIN="$(grep -E '^BRAND_DOMAIN=' .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | cut -d, -f1 | tr -d '[:space:]' || :)"
+fi
+if [[ -z "$DOMAIN" ]]; then
+  echo "WARNING: no DOMAIN= or BRAND_DOMAIN= in .env.production — skipping the health check." >&2
+  "${COMPOSE[@]}" ps
+  exit 0
+fi
 echo "Waiting for https://${DOMAIN}/api/health"
 for attempt in {1..30}; do
   if curl --fail --silent --show-error "https://${DOMAIN}/api/health" >/dev/null; then

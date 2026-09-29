@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useMobileMenu } from "@/hooks/useMobileMenu";
 import { Menu, X, ChevronDown, LogIn, UserPlus } from "lucide-react";
 import { GbfxsMark } from "./GbfxsMark";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
@@ -20,7 +21,7 @@ import type { NavigationContent } from "@/content/contracts";
  */
 export function GbfxsNavbar({ content }: { content: NavigationContent }) {
   const [open, setOpen] = useState<string | null>(null);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { open: mobileOpen, setOpen: setMobileOpen } = useMobileMenu();
   const [mobileGroup, setMobileGroup] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
 
@@ -31,26 +32,16 @@ export function GbfxsNavbar({ content }: { content: NavigationContent }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close everything on Escape.
+  // Close the desktop dropdowns on Escape. The mobile sheet's Escape close
+  // and body scroll-lock come from the shared useMobileMenu hook.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setOpen(null);
-      setMobileOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-
-  // Lock body scroll behind the mobile sheet.
-  useEffect(() => {
-    if (!mobileOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [mobileOpen]);
 
   return (
     <header

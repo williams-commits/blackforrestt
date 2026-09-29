@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useMobileMenu } from "@/hooks/useMobileMenu";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/trade/Logo";
@@ -17,27 +18,14 @@ export function Navbar({ content }: { content: NavigationContent }) {
   const pathname = usePathname();
   const menus = content.groups;
   const [open, setOpen] = useState<string | null>(null);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { open: mobileOpen, setOpen: setMobileOpen } = useMobileMenu();
   const [mobileGroup, setMobileGroup] = useState<string | null>(null);
 
+  // Route changes close the mobile sheet and its accordion.
   useEffect(() => {
     setMobileOpen(false);
     setMobileGroup(null);
-  }, [pathname]);
-
-  useEffect(() => {
-    if (!mobileOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileOpen(false);
-    };
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [mobileOpen]);
+  }, [pathname, setMobileOpen]);
 
   return (
     <header

@@ -19,17 +19,17 @@ import type { InstrumentView } from "@/lib/types";
  * Design-only component: ALL copy arrives as typed content from the gbfxs
  * domain content package; live instruments arrive as data props.
  */
-export function Hero({ content, instruments }: { content: GbfxsHeroContent; instruments: InstrumentView[] }) {
+export function Hero({ content, instruments, heroBackground }: { content: GbfxsHeroContent; instruments: InstrumentView[]; heroBackground?: string }) {
   return (
     <section id="hero" className="relative scroll-mt-24 overflow-hidden bg-[#0a0a0b]">
-      <SectionBackdrop
-        src="/brands/gbfxs/backgrounds/hero-bg.jpg"
+      {heroBackground ? <SectionBackdrop
+        src={heroBackground}
         opacity={0.8}
         position="74% 36%"
         blur={0}
         filter="saturate(1.2)"
         scrim="linear-gradient(90deg, #0a0a0b 0%, rgba(10,10,11,0.94) 46%, rgba(10,10,11,0.42) 100%)"
-      />
+      /> : null}
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 h-40"
         style={{ background: "linear-gradient(180deg, transparent, #0a0a0b)" }}

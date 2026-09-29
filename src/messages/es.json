@@ -1151,49 +1151,6 @@
         "desc": "Cuentas verificadas KYC, almacenamiento cifrado de documentos y fondos de clientes segregados."
       }
     },
-    "features": {
-      "eyebrow": "La plataforma",
-      "title": "Diseñada para operar con decisión.",
-      "subtitle": "Cuatro cosas en las que no negociamos.",
-      "f1": {
-        "title": "Ejecución rápida",
-        "desc": "Las órdenes salen al mercado en el momento del clic — con posible mejora de precio."
-      },
-      "f2": {
-        "title": "Terminal móvil ante todo",
-        "desc": "El espacio de trading completo en tu teléfono: gráficos, posiciones y cuenta en una mano."
-      },
-      "f3": {
-        "title": "Un panel que cuadra",
-        "desc": "Balance, equity, margen y P/L flotante conciliados en tiempo real."
-      },
-      "f4": {
-        "title": "El riesgo lo controlas tú",
-        "desc": "Stop-loss, take-profit y protección de margen en cada posición."
-      }
-    },
-    "benefits": {
-      "b1": {
-        "t": "Ejecución rápida",
-        "d": "Órdenes enrutadas en menos de un segundo."
-      },
-      "b2": {
-        "t": "Mercados globales",
-        "d": "Divisas, índices, materias primas y cripto."
-      },
-      "b3": {
-        "t": "Análisis profesional",
-        "d": "Análisis técnico, fundamental y de tendencia incluidos."
-      },
-      "b4": {
-        "t": "Cuentas verificadas",
-        "d": "Plataforma con KYC, almacenamiento cifrado de documentos."
-      },
-      "b5": {
-        "t": "Fondos segregados",
-        "d": "El dinero de los clientes se mantiene aparte del de la empresa."
-      }
-    },
     "value": {
       "title": "Sin complejidad oculta. Simplemente trading más limpio.",
       "subtitle": "Los números que importan, desde el principio.",
@@ -1337,15 +1294,6 @@
           "trades": "156"
         }
       ]
-    },
-    "edu": {
-      "eyebrow": "Aprende el oficio",
-      "title": "Formación gratuita, integrada.",
-      "subtitle": "Cursos estructurados, análisis diario y herramientas de trading — incluidos con cada cuenta.",
-      "cta": "Empezar a aprender",
-      "b1": "Cursos de principiante a avanzado",
-      "b2": "Análisis y señales diarias de mercado",
-      "b3": "Calculadoras y calendario económico"
     }
   }
 }

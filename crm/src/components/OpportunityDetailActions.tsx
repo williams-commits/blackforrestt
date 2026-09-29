@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { OpportunityForm } from "@/components/OpportunityFormDialog";
 import { useConfirmDialog } from "@/components/Dialogs";
 import { RowActions } from "@/components/RowActions";
@@ -53,7 +54,12 @@ export function OpportunityDetailActions({
       const response = await fetch(`/api/opportunities/${(row as { id: string }).id}`, {
         method: "DELETE",
       });
-      if (response.ok) router.push("/opportunities");
+      if (response.ok) {
+        router.push("/opportunities");
+      } else {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        toast.error(body?.error ?? "Could not delete this opportunity.");
+      }
     }
   }
 

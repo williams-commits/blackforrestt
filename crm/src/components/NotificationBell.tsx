@@ -104,11 +104,14 @@ export function NotificationBell() {
   async function markAllRead() {
     try {
       const response = await fetch("/api/notifications", { method: "PATCH" });
-      if (!response.ok) return;
+      if (!response.ok) {
+        toast.error("Could not mark notifications as read — try again.");
+        return;
+      }
       setNotifications((previous) => previous.map((notification) => ({ ...notification, readAt: new Date().toISOString() })));
       setUnread(0);
     } catch {
-      // Keep the current unread state when the request did not reach the API.
+      toast.error("Could not mark notifications as read — try again.");
     }
   }
 

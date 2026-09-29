@@ -10,13 +10,12 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useConfirmDialog } from "@/components/Dialogs";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { Modal } from "@/components/Modal";
-import { Field, IconInput, IconSelectTrigger, SearchInput } from "@/components/form";
+import { Field, FormError, IconInput, IconSelectTrigger, SearchInput } from "@/components/form";
 import { useTableSession, writeTableSession } from "@/components/useTableSession";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
 import { PERMISSION_CATEGORIES } from "@/server/permissions";
 import { Button, Drawer, EmptyState } from "@/components/ui";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,7 +24,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 
 /* Badge tone helpers — semantic tones stay on theme tokens so the NEUTRAL
    palette maps them; no raw brand hexes. */
@@ -104,6 +102,8 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
   const [showPotentialForm, setShowPotentialForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [potentialBusy, setPotentialBusy] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
@@ -124,18 +124,24 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
   async function create(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    const response = await fetch("/api/record-statuses", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, appliesTo, category, sortOrder: rows.length + 1 }),
-    });
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Could not create status.");
-      return;
+    setBusy(true);
+    try {
+      const response = await fetch("/api/record-statuses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, appliesTo, category, sortOrder: rows.length + 1 }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Could not create status.");
+        return;
+      }
+      setShowForm(false);
+      setName("");
+      void load();
+    } finally {
+      setBusy(false);
     }
-    setName("");
-    void load();
   }
 
   async function remove(id: string) {
@@ -170,13 +176,13 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
         eyebrow="Data model"
         title="Statuses" titleIcon="sliders"
         subtitle="Define the lifecycle language your teams use across records."
-        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>Add status</Button> : undefined}
+        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => { setError(null); setShowForm(true); }}>Add status</Button> : undefined}
         metrics={[{ label: "Statuses", value: rows.length, tone: "brand" }, { label: "Objects", value: new Set(rows.map((row) => row.appliesTo)).size, tone: "info" }, { label: "Defaults", value: rows.filter((row) => row.isDefault).length, tone: "success" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
       {showForm && canManage ? (
-        <SetupFormModal title="Add status" onClose={() => setShowForm(false)}>
-        <form method="post" onSubmit={async (event) => { await create(event); setShowForm(false); }} className="grid gap-4 sm:grid-cols-2">
+        <SetupFormModal title="Add status" onClose={() => { setError(null); setShowForm(false); }}>
+        <form method="post" onSubmit={create} className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2"><p className="form-section-title">Lifecycle status</p><p className="form-section-help">Statuses appear on records and guide your team through the relationship lifecycle.</p></div>
           <Field label="Name" required id="s-name">
             <IconInput id="s-name" icon="tag" value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. Qualified" />
@@ -206,7 +212,8 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
               </SelectContent>
             </Select>
           </Field>
-          <div className="form-actions sm:col-span-2"><Button type="button" variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">
+          {error ? <div className="sm:col-span-2"><FormError message={error} /></div> : null}
+          <div className="form-actions sm:col-span-2"><Button type="button" variant="secondary" onClick={() => { setError(null); setShowForm(false); }}>Cancel</Button><Button type="submit" variant="primary" icon="plus" loading={busy}>
             Add status
           </Button></div>
         </form>
@@ -257,7 +264,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
       {confirmDialog}
       <Card className="gap-0 overflow-hidden py-0">
         <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3"><div><h2 className="text-sm font-semibold">Potential status</h2><p className="mt-0.5 text-xs text-(--text-tertiary)">Segment leads by commercial potential: Junior, Senior, Institutional, or VIP.</p></div>{canManage ? <Button variant="secondary" icon="plus" onClick={() => setShowPotentialForm(true)}>Add potential status</Button> : null}</div>
-        {showPotentialForm && canManage ? <SetupFormModal title="Add potential status" onClose={() => setShowPotentialForm(false)}><form className="space-y-4" onSubmit={async (event) => { event.preventDefault(); const response = await fetch("/api/potential-statuses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: potentialName, sortOrder: potentialRows.length + 1 }) }); if (!response.ok) { setError("Could not create potential status."); return; } setPotentialName(""); setShowPotentialForm(false); void load(); }}><div><p className="form-section-title">Potential status</p><p className="form-section-help">Segment leads by commercial weight for prioritization and filtering.</p></div><Field label="Name" required id="potential-name" help="Ranks a lead's commercial weight — e.g. Junior, Senior, VIP."><IconInput id="potential-name" icon="tag" value={potentialName} onChange={(event) => setPotentialName(event.target.value)} required placeholder="e.g. VIP" /></Field><div className="form-actions"><Button type="button" variant="secondary" onClick={() => setShowPotentialForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">Add status</Button></div></form></SetupFormModal> : null}
+        {showPotentialForm && canManage ? <SetupFormModal title="Add potential status" onClose={() => { setError(null); setShowPotentialForm(false); }}><form className="space-y-4" onSubmit={async (event) => { event.preventDefault(); setError(null); setPotentialBusy(true); try { const response = await fetch("/api/potential-statuses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: potentialName, sortOrder: potentialRows.length + 1 }) }); if (!response.ok) { setError("Could not create potential status."); return; } setPotentialName(""); setShowPotentialForm(false); void load(); } finally { setPotentialBusy(false); } }}><div><p className="form-section-title">Potential status</p><p className="form-section-help">Segment leads by commercial weight for prioritization and filtering.</p></div><Field label="Name" required id="potential-name" help="Ranks a lead's commercial weight — e.g. Junior, Senior, VIP."><IconInput id="potential-name" icon="tag" value={potentialName} onChange={(event) => setPotentialName(event.target.value)} required placeholder="e.g. VIP" /></Field><FormError message={error} /><div className="form-actions"><Button type="button" variant="secondary" onClick={() => { setError(null); setShowPotentialForm(false); }}>Cancel</Button><Button type="submit" variant="primary" icon="plus" loading={potentialBusy}>Add status</Button></div></form></SetupFormModal> : null}
         {loading ? <div className="p-3"><AdminCardGridSkeleton cards={4} /></div> : <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">{potentialRows.map((status) => {
           const leadCount = status._count?.leads ?? 0;
           return (
@@ -282,6 +289,17 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
   );
 }
 
+const TAG_COLOR_PRESETS = [
+  { name: "Slate", value: "#64748b" },
+  { name: "Green", value: "#16a34a" },
+  { name: "Teal", value: "#0d9488" },
+  { name: "Blue", value: "#2563eb" },
+  { name: "Violet", value: "#7c3aed" },
+  { name: "Pink", value: "#db2777" },
+  { name: "Amber", value: "#d97706" },
+  { name: "Red", value: "#dc2626" },
+] as const;
+
 export function TagsTab({ canManage }: { canManage: boolean }) {
   const [rows, setRows] = useState<Array<{ id: string; name: string; color: string | null; _count: { links: number } }>>([]);
   const [name, setName] = useState("");
@@ -289,6 +307,7 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
@@ -307,18 +326,24 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
   async function create(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    const response = await fetch("/api/tags", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, color }),
-    });
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Could not create tag.");
-      return;
+    setBusy(true);
+    try {
+      const response = await fetch("/api/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Could not create tag.");
+        return;
+      }
+      setShowForm(false);
+      setName("");
+      void load();
+    } finally {
+      setBusy(false);
     }
-    setName("");
-    void load();
   }
 
   async function remove(id: string) {
@@ -339,29 +364,57 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
         eyebrow="Data model"
         title="Tags" titleIcon="tag"
         subtitle="Create lightweight labels that help teams segment and scan records."
-        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>Add tag</Button> : undefined}
+        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => { setError(null); setShowForm(true); }}>Add tag</Button> : undefined}
         metrics={[{ label: "Tags", value: rows.length, tone: "brand" }, { label: "Applied", value: rows.reduce((sum, row) => sum + row._count.links, 0), tone: "info" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
       {showForm && canManage ? (
-        <SetupFormModal title="Add tag" onClose={() => setShowForm(false)}>
-        <form method="post" onSubmit={async (event) => { await create(event); setShowForm(false); }} className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-          <div className="sm:col-span-2"><p className="form-section-title">Record label</p><p className="form-section-help">Use tags for quick segmentation, prioritization, and saved views.</p></div>
+        <SetupFormModal title="Add tag" onClose={() => { setError(null); setShowForm(false); }}>
+        <form method="post" onSubmit={create} className="space-y-5">
+          <div>
+            <p className="form-section-title">Record label</p>
+            <p className="form-section-help">Tags segment and prioritize records — they show as colored chips everywhere the record appears.</p>
+          </div>
           <Field label="Name" required id="t-name">
-            <IconInput id="t-name" icon="tag" value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. High-touch" />
+            <IconInput id="t-name" icon="tag" value={name} onChange={(e) => setName(e.target.value)} required maxLength={32} placeholder="e.g. High-touch" />
           </Field>
-          <Field label="Color" id="t-color" help="Shown as the tag swatch on records.">
-            <Input
-              id="t-color"
-              type="color"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              className="h-8 w-14 cursor-pointer p-1"
-              aria-label="Tag color"
-              title="Choose a tag color"
-            />
+          <Field label="Color" id="t-color">
+            <div className="flex flex-wrap items-center gap-2">
+              {TAG_COLOR_PRESETS.map((preset) => {
+                const selected = color.toLowerCase() === preset.value;
+                return (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    aria-label={`Color: ${preset.name}`}
+                    aria-pressed={selected}
+                    onClick={() => setColor(preset.value)}
+                    className={`size-7 shrink-0 rounded-full border border-black/10 transition-transform hover:scale-110 ${selected ? "ring-2 ring-ring ring-offset-2 ring-offset-(--popover)" : ""}`}
+                    style={{ background: preset.value }}
+                  />
+                );
+              })}
+              <Input
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                aria-label="Custom color"
+                title="Custom color"
+                className="h-7 w-7 shrink-0 cursor-pointer appearance-none rounded-full border border-black/10 bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0"
+              />
+            </div>
           </Field>
-          <div className="form-actions sm:col-span-2"><Button type="button" variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">
+          <div className="rounded-lg border border-dashed border-(--border-default) bg-(--bg-subtle) px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-(--text-tertiary)">Preview on a record</p>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ background: color }}>
+                {name.trim() || "Tag name"}
+              </span>
+              <span className="text-xs text-(--text-tertiary)">— exactly how the chip reads on records</span>
+            </div>
+          </div>
+          {error ? <FormError message={error} /> : null}
+          <div className="form-actions"><Button type="button" variant="secondary" onClick={() => { setError(null); setShowForm(false); }}>Cancel</Button><Button type="submit" variant="primary" icon="plus" loading={busy}>
             Add tag
           </Button></div>
         </form>
@@ -414,6 +467,7 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
@@ -432,28 +486,34 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
   async function create(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    const response = await fetch("/api/custom-fields", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        objectType,
-        key,
-        label,
-        fieldType,
-        ...(fieldType === "SELECT" || fieldType === "MULTI_SELECT"
-          ? { options: options.split(",").map((entry) => entry.trim()).filter(Boolean) }
-          : {}),
-      }),
-    });
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Could not create field.");
-      return;
+    setBusy(true);
+    try {
+      const response = await fetch("/api/custom-fields", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          objectType,
+          key,
+          label,
+          fieldType,
+          ...(fieldType === "SELECT" || fieldType === "MULTI_SELECT"
+            ? { options: options.split(",").map((entry) => entry.trim()).filter(Boolean) }
+            : {}),
+        }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Could not create field.");
+        return;
+      }
+      setShowForm(false);
+      setKey("");
+      setLabel("");
+      setOptions("");
+      void load();
+    } finally {
+      setBusy(false);
     }
-    setKey("");
-    setLabel("");
-    setOptions("");
-    void load();
   }
 
   async function remove(id: string) {
@@ -474,13 +534,13 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
         eyebrow="Data model"
         title="Custom fields" titleIcon="list"
         subtitle="Add the business-specific details your team needs on each record."
-        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>Add field</Button> : undefined}
+        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => { setError(null); setShowForm(true); }}>Add field</Button> : undefined}
         metrics={[{ label: "Fields", value: rows.length, tone: "brand" }, { label: "Active", value: rows.filter((row) => row.active).length, tone: "success" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
       {showForm && canManage ? (
-        <SetupFormModal title="Add custom field" onClose={() => setShowForm(false)} size="lg">
-        <form method="post" onSubmit={async (event) => { await create(event); setShowForm(false); }} className="space-y-4">
+        <SetupFormModal title="Add custom field" onClose={() => { setError(null); setShowForm(false); }} size="lg">
+        <form method="post" onSubmit={create} className="space-y-4">
           <div>
             <p className="form-section-title">Add custom field</p>
             <p className="form-section-help">Define a field that can be used on records of the selected object.</p>
@@ -523,9 +583,10 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
               <IconInput id="cf-options" icon="list" value={options} onChange={(e) => setOptions(e.target.value)} required placeholder="e.g. New, Active, Archived" />
             </Field>
           ) : null}
+          {error ? <FormError message={error} /> : null}
           <div className="form-actions">
-            <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
-            <Button type="submit" variant="primary" icon="plus">Add field</Button>
+            <Button type="button" variant="secondary" onClick={() => { setError(null); setShowForm(false); }}>Cancel</Button>
+            <Button type="submit" variant="primary" icon="plus" loading={busy}>Add field</Button>
           </div>
         </form>
         </SetupFormModal>
@@ -604,6 +665,8 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
   const [showUserForm, setShowUserForm] = useState(false);
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userBusy, setUserBusy] = useState(false);
+  const [teamBusy, setTeamBusy] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [uEmail, setUEmail] = useState("");
   const [uName, setUName] = useState("");
@@ -668,19 +731,24 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
   async function createUser(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    const response = await fetch("/api/admin/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: uEmail, name: uName, password: uPassword, roleKey: uRole }),
-    });
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Could not create user.");
-      return;
+    setUserBusy(true);
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: uEmail, name: uName, password: uPassword, roleKey: uRole }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Could not create user.");
+        return;
+      }
+      setShowUserForm(false);
+      setUEmail(""); setUName(""); setUPassword("");
+      void load();
+    } finally {
+      setUserBusy(false);
     }
-    setShowUserForm(false);
-    setUEmail(""); setUName(""); setUPassword("");
-    void load();
   }
 
   async function patchUser(id: string, payload: Record<string, unknown>) {
@@ -715,19 +783,24 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
   async function createTeam(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    const response = await fetch("/api/admin/teams", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: tName, leaderId: tLeader || null }),
-    });
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Could not create team.");
-      return;
+    setTeamBusy(true);
+    try {
+      const response = await fetch("/api/admin/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: tName, leaderId: tLeader || null }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Could not create team.");
+        return;
+      }
+      setShowTeamForm(false);
+      setTName(""); setTLeader("");
+      void load();
+    } finally {
+      setTeamBusy(false);
     }
-    setShowTeamForm(false);
-    setTName(""); setTLeader("");
-    void load();
   }
 
   return (
@@ -737,11 +810,11 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
         eyebrow="Access management"
         title="Users & teams" titleIcon="users"
         subtitle={`Manage who can work in ${branding.short} and how records are shared.`}
-        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => setShowUserForm(true)}>New user</Button> : undefined}
+        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => { setError(null); setShowUserForm(true); }}>New user</Button> : undefined}
         metrics={[{ label: "Total users", value: users.length, tone: "brand" }, { label: "Active", value: users.filter((user) => user.status === "ACTIVE").length, tone: "success" }, { label: "Teams", value: teams.length, tone: "info" }, { label: "Roles", value: roles.length, tone: "warning" }]}
       />
       {showUserForm && canManage ? (
-        <SetupFormModal title="New user" onClose={() => setShowUserForm(false)}>
+        <SetupFormModal title="New user" onClose={() => { setError(null); setShowUserForm(false); }}>
         <form method="post" onSubmit={createUser} className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2"><p className="form-section-title">Access profile</p><p className="form-section-help">Create a person, then assign their role and scope.</p></div>
           <Field label="Email" required id="au-email" help="Used for sign-in and notifications.">
@@ -763,7 +836,8 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
               </SelectContent>
             </Select>
           </Field>
-          <div className="form-actions sm:col-span-2"><Button type="button" variant="secondary" onClick={() => setShowUserForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">Create user</Button></div>
+          {error ? <div className="sm:col-span-2"><FormError message={error} /></div> : null}
+          <div className="form-actions sm:col-span-2"><Button type="button" variant="secondary" onClick={() => { setError(null); setShowUserForm(false); }}>Cancel</Button><Button type="submit" variant="primary" icon="plus" loading={userBusy}>Create user</Button></div>
         </form>
         </SetupFormModal>
       ) : null}
@@ -920,9 +994,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
 
             <TabsContent value="profile" className="mt-4 space-y-5">
               <div className="flex items-center gap-3">
-                <Avatar className="size-11 rounded-xl text-sm font-bold" style={{ background: "var(--brand-100)", color: "var(--brand-800)" }}>
-                  <AvatarFallback className="rounded-xl bg-transparent text-sm font-bold">{selectedUser.name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</AvatarFallback>
-                </Avatar>
+                <Initials name={selectedUser.name} size="md" />
                 <div className="min-w-0">
                   <CardLabel>Access</CardLabel>
                   <p className="mt-0.5 text-sm text-(--text-secondary)">
@@ -985,13 +1057,13 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
           <h3 className="mt-1 text-lg font-semibold tracking-tight">Teams <span className="text-sm font-normal text-(--text-tertiary)">{teams.length}</span></h3>
         </div>
         {canManage ? (
-          <Button variant="secondary" icon="plus" onClick={() => setShowTeamForm((p) => !p)}>
+          <Button variant="secondary" icon="plus" onClick={() => { setError(null); setShowTeamForm((p) => !p); }}>
             New team
           </Button>
         ) : null}
       </div>
       {showTeamForm && canManage ? (
-        <SetupFormModal title="New team" onClose={() => setShowTeamForm(false)}>
+        <SetupFormModal title="New team" onClose={() => { setError(null); setShowTeamForm(false); }}>
         <form method="post" onSubmit={createTeam} className="space-y-4">
           <div><p className="form-section-title">Team structure</p><p className="form-section-help">Teams shape visibility, ownership, and collaboration.</p></div>
           <Field label="Name" required id="at-name">
@@ -1008,7 +1080,8 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
               </SelectContent>
             </Select>
           </Field>
-          <div className="form-actions"><Button type="button" variant="secondary" onClick={() => setShowTeamForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">Create team</Button></div>
+          {error ? <FormError message={error} /> : null}
+          <div className="form-actions"><Button type="button" variant="secondary" onClick={() => { setError(null); setShowTeamForm(false); }}>Cancel</Button><Button type="submit" variant="primary" icon="plus" loading={teamBusy}>Create team</Button></div>
         </form>
         </SetupFormModal>
       ) : null}
@@ -1152,11 +1225,11 @@ export function RolesTab({ canManage = false }: { canManage?: boolean }) {
                   <Button type="button" variant="tertiary" size="sm" icon="close" disabled={locked} onClick={() => void setCategory(selectedRole.id, category.permissions, false)} className="shrink-0">Disable all</Button>
                 </div>
                 <AccordionContent className="pb-0">
-                  <div className="grid gap-1 border-t border-(--border-default) bg-(--bg-surface) px-12 py-2 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-1 border-t border-(--border-default) bg-(--bg-surface) px-2 py-2 sm:grid-cols-2 lg:grid-cols-3">
                     {category.permissions.map(({ key, label }) => {
                       const enabled = selectedRole.permissions.some((entry) => entry.permission === key);
                       return (
-                        <label key={key} htmlFor={`perm-${selectedRole.id}-${key}`} className={`flex items-center gap-2 rounded px-2 py-2 text-sm ${enabled ? "bg-(--bg-subtle) text-(--text-primary)" : "text-(--text-tertiary)"}`}>
+                        <label key={key} htmlFor={`perm-${selectedRole.id}-${key}`} className={`flex items-center gap-2 rounded-lg px-2 py-2 text-sm cursor-pointer ${enabled ? "bg-(--bg-subtle) text-(--text-primary)" : "text-(--text-tertiary)"}`}>
                           <Checkbox id={`perm-${selectedRole.id}-${key}`} checked={enabled} disabled={locked} onCheckedChange={(checked) => void toggle(selectedRole.id, key, checked === true)} />
                           {label}
                         </label>
@@ -1181,6 +1254,7 @@ export function SettingsTab() {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1198,18 +1272,24 @@ export function SettingsTab() {
   async function save(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    const response = await fetch("/api/admin/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, value }),
-    });
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Save failed.");
-      return;
+    setBusy(true);
+    try {
+      const response = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, value }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Save failed.");
+        return;
+      }
+      setShowForm(false);
+      setKey(""); setValue("");
+      void load();
+    } finally {
+      setBusy(false);
     }
-    setKey(""); setValue("");
-    void load();
   }
 
   return (
@@ -1218,12 +1298,12 @@ export function SettingsTab() {
         eyebrow="Workspace behavior"
         title="Settings" titleIcon="settings"
         subtitle={`Manage organization-level defaults used throughout ${branding.short}.`}
-        actions={<Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>Add setting</Button>}
+        actions={<Button variant="primary" icon="plus" onClick={() => { setError(null); setShowForm(true); }}>Add setting</Button>}
         metrics={[{ label: "Configured", value: settings.length, tone: "brand" }, { label: "Storage", value: "Workspace", tone: "info" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
-      {showForm ? <SetupFormModal title="Add workspace setting" onClose={() => setShowForm(false)}>
-      <form method="post" onSubmit={async (event) => { await save(event); setShowForm(false); }} className="space-y-4">
+      {showForm ? <SetupFormModal title="Add workspace setting" onClose={() => { setError(null); setShowForm(false); }}>
+      <form method="post" onSubmit={save} className="space-y-4">
         <div><p className="form-section-title">Workspace default</p><p className="form-section-help">Use a namespaced key such as org.currency or tasks.defaultDueDays.</p></div>
         <Field label="Key" required id="set-key" help="Lowercase, dot-namespaced.">
           <IconInput id="set-key" icon="tag" value={key} onChange={(e) => setKey(e.target.value)} required pattern="[a-z][a-z0-9_.]*" placeholder="e.g. org.currency" />
@@ -1231,7 +1311,8 @@ export function SettingsTab() {
         <Field label="Value" required id="set-value" help="JSON, number, or string.">
           <IconInput id="set-value" icon="sliders" value={value} onChange={(e) => setValue(e.target.value)} required placeholder="e.g. EUR" />
         </Field>
-        <div className="form-actions"><Button type="button" variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">Save setting</Button></div>
+        {error ? <FormError message={error} /> : null}
+        <div className="form-actions"><Button type="button" variant="secondary" onClick={() => { setError(null); setShowForm(false); }}>Cancel</Button><Button type="submit" variant="primary" icon="plus" loading={busy}>Save setting</Button></div>
       </form>
       </SetupFormModal> : null}
       <Card className="gap-0 overflow-hidden py-0">
@@ -1470,6 +1551,32 @@ function IntegrationCard({ title, description, enabled, detail }: { title: strin
 }
 
 
+const FIELD_TYPE_OPTIONS = ["TEXT", "NUMBER", "CURRENCY", "BOOLEAN", "DATE", "DATETIME", "SELECT", "MULTI_SELECT", "PHONE", "EMAIL", "URL"] as const;
+
+type ObjectFieldDraft = { id: number; label: string; type: string; required: boolean; options: string };
+
+let fieldRowSeq = 0;
+const emptyFieldRow = (): ObjectFieldDraft => ({ id: ++fieldRowSeq, label: "", type: "TEXT", required: false, options: "" });
+
+function fieldKeyFromLabel(label: string): string {
+  const parts = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "field";
+  const key = parts[0] + parts.slice(1).map((part) => part[0].toUpperCase() + part.slice(1)).join("");
+  return /^[a-z]/.test(key) ? key : `f${key}`;
+}
+
+function uniqueFieldKeys(rows: ObjectFieldDraft[]): string[] {
+  const used = new Set<string>();
+  return rows.map((row) => {
+    const base = fieldKeyFromLabel(row.label);
+    let key = base;
+    let suffix = 2;
+    while (used.has(key)) key = `${base}_${suffix++}`;
+    used.add(key);
+    return key;
+  });
+}
+
 export function ObjectsTab() {
   const branding = useCrmBranding();
   const [objects, setObjects] = useState<Array<{
@@ -1483,9 +1590,10 @@ export function ObjectsTab() {
   const [name, setName] = useState("");
   const [pluralName, setPluralName] = useState("");
   const [description, setDescription] = useState("");
-  const [fieldsJson, setFieldsJson] = useState('[{"key":"title","label":"Title","type":"TEXT","required":true,"sortOrder":1}]');
+  const [fieldRows, setFieldRows] = useState<ObjectFieldDraft[]>([emptyFieldRow()]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
@@ -1501,29 +1609,54 @@ export function ObjectsTab() {
     void load();
   }, [load]);
 
+  function updateFieldRow(id: number, patch: Partial<ObjectFieldDraft>) {
+    setFieldRows((rows) => rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+  }
+
   async function create(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    let fields: unknown;
+    if (fieldRows.some((row) => !row.label.trim())) {
+      setError("Every field needs a label.");
+      return;
+    }
+    const missingOptions = fieldRows.find(
+      (row) => (row.type === "SELECT" || row.type === "MULTI_SELECT") && !row.options.split(",").some((entry) => entry.trim())
+    );
+    if (missingOptions) {
+      setError(`"${missingOptions.label.trim()}" needs at least one option.`);
+      return;
+    }
+    const keys = uniqueFieldKeys(fieldRows);
+    const fields = fieldRows.map((row, index) => ({
+      key: keys[index],
+      label: row.label.trim(),
+      type: row.type,
+      required: row.required,
+      sortOrder: index + 1,
+      ...(row.type === "SELECT" || row.type === "MULTI_SELECT"
+        ? { options: row.options.split(",").map((entry) => entry.trim()).filter(Boolean) }
+        : {}),
+    }));
+    setBusy(true);
     try {
-      fields = JSON.parse(fieldsJson);
-    } catch {
-      setError("Fields must be valid JSON.");
-      return;
+      const response = await fetch("/api/admin/objects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, name, pluralName, description: description || null, fields }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Could not create object.");
+        return;
+      }
+      setShowForm(false);
+      setKey(""); setName(""); setPluralName(""); setDescription("");
+      setFieldRows([emptyFieldRow()]);
+      void load();
+    } finally {
+      setBusy(false);
     }
-    const response = await fetch("/api/admin/objects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, name, pluralName, description: description || null, fields }),
-    });
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Could not create object.");
-      return;
-    }
-    setShowForm(false);
-    setKey(""); setName(""); setPluralName(""); setDescription("");
-    void load();
   }
 
   async function toggleActive(id: string, active: boolean) {
@@ -1541,7 +1674,7 @@ export function ObjectsTab() {
         eyebrow="Data model"
         title="Custom objects" titleIcon="box"
         subtitle={`Extend ${branding.short} with record types that match how your business works.`}
-        actions={<Button variant="primary" icon="plus" onClick={() => setShowForm(true)}>New object type</Button>}
+        actions={<Button variant="primary" icon="plus" onClick={() => { setError(null); setFieldRows([emptyFieldRow()]); setShowForm(true); }}>New object type</Button>}
         metrics={[{ label: "Object types", value: objects.length, tone: "brand" }, { label: "Active", value: objects.filter((object) => object.active).length, tone: "success" }, { label: "Records", value: objects.reduce((sum, object) => sum + object._count.records, 0), tone: "info" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
@@ -1552,8 +1685,8 @@ export function ObjectsTab() {
       </div>
 
       {showForm ? (
-        <SetupFormModal title="New custom object" onClose={() => setShowForm(false)} size="lg">
-        <form method="post" onSubmit={async (event) => { await create(event); setShowForm(false); }} className="space-y-4">
+        <SetupFormModal title="New custom object" onClose={() => { setError(null); setShowForm(false); }} size="lg">
+        <form method="post" onSubmit={create} className="space-y-4">
           <div><p className="form-section-title">Object definition</p><p className="form-section-help">Define the identity and fields for a new record type.</p></div>
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Key (URL slug)" required id="co-key">
@@ -1569,21 +1702,66 @@ export function ObjectsTab() {
           <Field label="Description" id="co-desc" help="Optional — one line shown under the object name.">
             <IconInput id="co-desc" icon="note" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Properties we manage for clients" />
           </Field>
-          <Field
-            label="Fields (JSON array)"
-            id="co-fields"
-            help="Each entry: key, label, type, required, options, sortOrder — types: TEXT, NUMBER, CURRENCY, BOOLEAN, DATE, DATETIME, SELECT, MULTI_SELECT, PHONE, EMAIL, URL."
-          >
-            <Textarea
-              id="co-fields"
-              value={fieldsJson}
-              onChange={(e) => setFieldsJson(e.target.value)}
-              rows={6}
-              className="font-mono"
-              placeholder={'[{"key":"title","label":"Title","type":"TEXT","required":true,"sortOrder":1},{"key":"price","label":"Price","type":"NUMBER","sortOrder":2}]'}
-            />
-          </Field>
-          <div className="form-actions"><Button type="button" variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button type="submit" variant="primary" icon="plus">Create object</Button></div>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-baseline justify-between gap-1">
+              <p className="text-sm font-medium">Fields <span className="font-normal text-(--text-tertiary)">({fieldRows.length})</span></p>
+              <p className="text-xs text-(--text-tertiary)">Keys are generated from labels — used in imports and the API.</p>
+            </div>
+            {fieldRows.map((row, index) => (
+              <div key={row.id} className="space-y-2 rounded-lg border border-(--border-default) bg-(--bg-subtle) p-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    value={row.label}
+                    onChange={(e) => updateFieldRow(row.id, { label: e.target.value })}
+                    placeholder={`Field ${index + 1} label — e.g. Price`}
+                    aria-label={`Field ${index + 1} label`}
+                    maxLength={80}
+                    className="h-8 min-w-0 flex-1"
+                  />
+                  <Select value={row.type} onValueChange={(value) => updateFieldRow(row.id, { type: value })}>
+                    <SelectTrigger size="sm" aria-label={`Field ${index + 1} type`} className="h-8 w-36 shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FIELD_TYPE_OPTIONS.map((type) => (
+                        <SelectItem key={type} value={type}>{type.replaceAll("_", " ").toLowerCase()}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-(--text-secondary)">
+                    <Checkbox checked={row.required} onCheckedChange={(checked) => updateFieldRow(row.id, { required: checked === true })} aria-label={`Field ${index + 1} required`} />
+                    Required
+                  </label>
+                  <Button
+                    type="button" variant="tertiary" size="sm" className="size-7 shrink-0 gap-0 px-0"
+                    aria-label={`Remove field ${index + 1}`} title="Remove field"
+                    disabled={fieldRows.length === 1}
+                    onClick={() => setFieldRows((rows) => rows.filter((entry) => entry.id !== row.id))}
+                  >
+                    <Icon name="close" size={14} />
+                  </Button>
+                </div>
+                {row.type === "SELECT" || row.type === "MULTI_SELECT" ? (
+                  <Input
+                    value={row.options}
+                    onChange={(e) => updateFieldRow(row.id, { options: e.target.value })}
+                    placeholder="Options, comma separated — e.g. New, Active, Archived"
+                    aria-label={`Field ${index + 1} options`}
+                    className="h-8"
+                  />
+                ) : null}
+              </div>
+            ))}
+            <Button
+              type="button" variant="secondary" size="sm" icon="plus" className="w-full border-dashed"
+              disabled={fieldRows.length >= 50}
+              onClick={() => setFieldRows((rows) => [...rows, emptyFieldRow()])}
+            >
+              Add field
+            </Button>
+          </div>
+          {error ? <FormError message={error} /> : null}
+          <div className="form-actions"><Button type="button" variant="secondary" onClick={() => { setError(null); setShowForm(false); }}>Cancel</Button><Button type="submit" variant="primary" icon="plus" loading={busy}>Create object</Button></div>
         </form>
         </SetupFormModal>
       ) : null}

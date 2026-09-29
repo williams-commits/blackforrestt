@@ -21,18 +21,24 @@ export function PipelineAdmin({
   const [pipelineName, setPipelineName] = useState("");
   const [stageDraft, setStageDraft] = useState<Record<string, { name: string; type: string }>>({});
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
-  async function call(input: RequestInfo, init: RequestInit) {
-    const response = await fetch(input, init);
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Action failed.");
-      return false;
+  async function call(pendingKey: string, input: RequestInfo, init: RequestInit) {
+    setPending(pendingKey);
+    try {
+      const response = await fetch(input, init);
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Action failed.");
+        return false;
+      }
+      setError(null);
+      onChanged();
+      return true;
+    } finally {
+      setPending(null);
     }
-    setError(null);
-    onChanged();
-    return true;
   }
 
   return (
@@ -53,7 +59,7 @@ export function PipelineAdmin({
                   {!pipeline.isDefault ? (
                     <button
                       type="button"
-                      onClick={() => void call(`/api/pipelines/${pipeline.id}`, {
+                      onClick={() => void call(`default:${pipeline.id}`, `/api/pipelines/${pipeline.id}`, {
                         method: "PATCH",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ isDefault: true }),
@@ -73,7 +79,7 @@ export function PipelineAdmin({
                         destructive: true,
                       });
                       if (ok) {
-                        void call(`/api/pipelines/${pipeline.id}`, { method: "DELETE" });
+                        void call(`pipeline-delete:${pipeline.id}`, `/api/pipelines/${pipeline.id}`, { method: "DELETE" });
                       }
                     }}
                     className="text-(--error) hover:underline"
@@ -101,7 +107,7 @@ export function PipelineAdmin({
                           destructive: true,
                         });
                         if (ok) {
-                          void call(`/api/pipelines/${pipeline.id}/stages/${stage.id}`, { method: "DELETE" });
+                          void call(`stage-delete:${stage.id}`, `/api/pipelines/${pipeline.id}/stages/${stage.id}`, { method: "DELETE" });
                         }
                       }}
                       className="text-xs text-(--error) hover:underline"
@@ -117,7 +123,7 @@ export function PipelineAdmin({
                   event.preventDefault();
                   const draft = stageDraft[pipeline.id];
                   if (!draft?.name) return;
-                  const ok = await call(`/api/pipelines/${pipeline.id}/stages`, {
+                  const ok = await call(`stage:${pipeline.id}`, `/api/pipelines/${pipeline.id}/stages`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ name: draft.name, type: draft.type ?? "OPEN", probability: 50 }),
@@ -157,7 +163,7 @@ export function PipelineAdmin({
                     <SelectItem value="LOST">Lost</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button type="submit" variant="secondary" size="sm" icon="plus">
+                <Button type="submit" variant="secondary" size="sm" icon="plus" loading={pending === `stage:${pipeline.id}`}>
                   Add stage
                 </Button>
               </form>
@@ -169,7 +175,7 @@ export function PipelineAdmin({
             onSubmit={async (event) => {
               event.preventDefault();
               if (!pipelineName) return;
-              const ok = await call("/api/pipelines", {
+              const ok = await call("pipeline", "/api/pipelines", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: pipelineName }),
@@ -186,7 +192,7 @@ export function PipelineAdmin({
                 onChange={(event) => setPipelineName(event.target.value)}
               />
             </div>
-            <Button type="submit" variant="primary" icon="plus">
+            <Button type="submit" variant="primary" icon="plus" loading={pending === "pipeline"}>
               Add pipeline
             </Button>
           </form>

@@ -31,6 +31,7 @@ export function TagEditor({
   const router = useRouter();
   const [allTags, setAllTags] = useState<Array<{ id: string; name: string }>>([]);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [canManageTags, setCanManageTags] = useState(false);
   const attachedIds = new Set(attached.map((tag) => tag.tagId));
 
@@ -62,11 +63,17 @@ export function TagEditor({
   async function link(tagId: string) {
     setBusy(true);
     try {
-      await fetch("/api/tags/link", {
+      const response = await fetch("/api/tags/link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tagId, subjectType, subjectId }),
       });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Could not attach tag.");
+        return;
+      }
+      setError(null);
       router.refresh();
     } finally {
       setBusy(false);
@@ -76,11 +83,17 @@ export function TagEditor({
   async function unlink(tagId: string) {
     setBusy(true);
     try {
-      await fetch("/api/tags/link", {
+      const response = await fetch("/api/tags/link", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tagId, subjectType, subjectId }),
       });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Could not remove tag.");
+        return;
+      }
+      setError(null);
       router.refresh();
     } finally {
       setBusy(false);
@@ -117,6 +130,7 @@ export function TagEditor({
           ))
         )}
       </div>
+      {error ? <p role="alert" className="text-xs text-(--error)">{error}</p> : null}
       {canManage && available.length > 0 ? (
         <Select
           defaultValue="__none__"

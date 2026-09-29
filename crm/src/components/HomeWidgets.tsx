@@ -97,7 +97,8 @@ export function HomeWidgets() {
   }, [refresh]);
 
   async function markAllRead() {
-    await fetch("/api/notifications", { method: "PATCH" });
+    const response = await fetch("/api/notifications", { method: "PATCH" });
+    if (!response.ok) return;
     setNotifications((previous) => previous.map((n) => ({ ...n, readAt: new Date().toISOString() })));
     setUnread(0);
   }

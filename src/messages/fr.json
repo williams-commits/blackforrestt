@@ -1151,49 +1151,6 @@
         "desc": "Comptes vérifiés KYC, stockage chiffré des documents et fonds clients séparés."
       }
     },
-    "features": {
-      "eyebrow": "La plateforme",
-      "title": "Conçue pour un trading décisif.",
-      "subtitle": "Quatre points sur lesquels nous ne transigeons pas.",
-      "f1": {
-        "title": "Exécution rapide",
-        "desc": "Les ordres partent vers le marché dès votre clic — avec amélioration possible du prix."
-      },
-      "f2": {
-        "title": "Terminal mobile d'abord",
-        "desc": "L'espace de trading complet sur votre téléphone : graphiques, positions et compte en main."
-      },
-      "f3": {
-        "title": "Un tableau de bord qui tombe juste",
-        "desc": "Solde, équité, marge et P/L flottant réconciliés en temps réel."
-      },
-      "f4": {
-        "title": "Le risque, vous le contrôlez",
-        "desc": "Stop-loss, take-profit et garde-fous de marge sur chaque position."
-      }
-    },
-    "benefits": {
-      "b1": {
-        "t": "Exécution rapide",
-        "d": "Ordres routés en moins d'une seconde."
-      },
-      "b2": {
-        "t": "Marchés mondiaux",
-        "d": "Devises, indices, matières premières et crypto."
-      },
-      "b3": {
-        "t": "Analyses pro",
-        "d": "Analyses technique, fondamentale et de tendance incluses."
-      },
-      "b4": {
-        "t": "Comptes vérifiés",
-        "d": "Plateforme sous KYC, stockage chiffré des documents."
-      },
-      "b5": {
-        "t": "Fonds séparés",
-        "d": "L'argent des clients est détenu à part de celui de la société."
-      }
-    },
     "value": {
       "title": "Pas de complexité cachée. Juste un trading plus net.",
       "subtitle": "Les chiffres qui comptent, dès le départ.",
@@ -1337,15 +1294,6 @@
           "trades": "156"
         }
       ]
-    },
-    "edu": {
-      "eyebrow": "Apprenez le métier",
-      "title": "Une formation gratuite, intégrée.",
-      "subtitle": "Cours structurés, analyses quotidiennes et outils de trading — inclus avec chaque compte.",
-      "cta": "Commencer à apprendre",
-      "b1": "Cours du débutant à l'avancé",
-      "b2": "Analyses et signaux quotidiens",
-      "b3": "Calculateurs et calendrier économique"
     }
   }
 }

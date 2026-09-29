@@ -89,11 +89,16 @@ export function CampaignMemberPicker({
   async function setStatus(memberId: string, status: string) {
     setBusy(true);
     try {
-      await fetch(`/api/campaigns/${campaignId}/members`, {
+      const response = await fetch(`/api/campaigns/${campaignId}/members`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberId, status }),
       });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Could not update member.");
+        return;
+      }
       router.refresh();
     } finally {
       setBusy(false);
@@ -103,11 +108,16 @@ export function CampaignMemberPicker({
   async function remove(memberId: string) {
     setBusy(true);
     try {
-      await fetch(`/api/campaigns/${campaignId}/members`, {
+      const response = await fetch(`/api/campaigns/${campaignId}/members`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberId }),
       });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Could not remove member.");
+        return;
+      }
       router.refresh();
     } finally {
       setBusy(false);

@@ -106,15 +106,21 @@ export function PromptDialog({
   onCancel,
 }: {
   config: PromptConfig;
-  onSubmit: (value: string) => void;
+  onSubmit: (value: string) => void | Promise<void>;
   onCancel: () => void;
 }) {
   const [value, setValue] = useState(config.defaultValue ?? "");
+  const [busy, setBusy] = useState(false);
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (config.required !== false && !value.trim()) return;
-    onSubmit(value);
+    setBusy(true);
+    try {
+      await onSubmit(value);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -144,7 +150,7 @@ export function PromptDialog({
             <Button type="button" variant="secondary" onClick={onCancel}>
               {config.cancelLabel ?? "Cancel"}
             </Button>
-            <Button type="submit" variant="primary" icon="check">
+            <Button type="submit" variant="primary" icon="check" loading={busy}>
               {config.confirmLabel ?? "Submit"}
             </Button>
           </DialogFooter>

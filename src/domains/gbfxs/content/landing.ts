@@ -17,6 +17,7 @@
 import { getTranslations } from "next-intl/server";
 import type { BrandProfile } from "@/lib/branding";
 import { tradeHostForDomain } from "@/lib/branding";
+import { GBFXS_ASSETS } from "../assets";
 import type {
   HeroContent,
   IntelligenceContent,
@@ -35,6 +36,9 @@ import type {
 /** The assembled agile landing — this design's required sections narrowed to
  *  non-optional so section components get complete contracts. */
 export type GbfxsLandingPageContent = LandingPageContent & {
+  /** Section backdrop images, from the domain asset registry (assets.ts) —
+   *  designs must never hardcode brand asset paths. */
+  assets: { heroBackground: string; ctaBackground: string };
   hero: HeroContent & Required<Pick<HeroContent, "titleA" | "titleB" | "trustLine" | "panel">>;
   stats: StatsContent;
   pillars: PillarsContent;
@@ -101,7 +105,8 @@ export async function gbfxsLandingContent(brand: BrandProfile): Promise<GbfxsLan
 
   return {
     domain: "gbfxs",
-    hero: {
+    assets: { heroBackground: GBFXS_ASSETS.heroBackground, ctaBackground: GBFXS_ASSETS.ctaBackground },
+  hero: {
       badge: brand.heroBadge || tHero("badge"),
       titleA: t("heroTitleA"),
       titleB: t("heroTitleB"),

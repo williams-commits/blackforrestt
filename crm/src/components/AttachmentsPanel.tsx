@@ -78,7 +78,13 @@ export function AttachmentsPanel({
     if (!ok) return;
     setBusy(true);
     try {
-      await fetch(`/api/attachments?id=${id}`, { method: "DELETE" });
+      const response = await fetch(`/api/attachments?id=${id}`, { method: "DELETE" });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Could not delete the attachment.");
+        return;
+      }
+      setError(null);
       void load();
     } finally {
       setBusy(false);

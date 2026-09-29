@@ -60,6 +60,8 @@ type GbfxsLandingPageContent = LandingPageContent & Required<
 > & {
   markets: { board: NonNullable<LandingPageContent["markets"]["board"]> };
   hero: HeroContent & Required<Pick<HeroContent, "titleA" | "titleB" | "trustLine" | "panel">>;
+  /** Backdrop images supplied by the domain's asset registry (assets.ts). */
+  assets: { heroBackground: string; ctaBackground: string };
 };
 
 export async function GbfxsLanding({ content }: LandingDesignProps) {
@@ -79,7 +81,7 @@ export async function GbfxsLanding({ content }: LandingDesignProps) {
       <GbfxsStyles />
       <GbfxsNavbar content={navigation} />
       <main id="main-content" tabIndex={-1}>
-        <Hero content={narrowed.hero} instruments={instruments} />
+        <Hero content={narrowed.hero} instruments={instruments} heroBackground={narrowed.assets.heroBackground} />
         <StatBar content={narrowed.stats} />
         <BentoSection content={narrowed.pillars} categoryCounts={categoryCounts} />
         <MarketsSection initial={instruments} content={narrowed.markets.board} />
@@ -89,7 +91,7 @@ export async function GbfxsLanding({ content }: LandingDesignProps) {
         <TrustSection content={narrowed.trust} />
         <StepsBand content={narrowed.steps} />
         <TestimonialsSection content={narrowed.testimonials} />
-        <FinalCta content={narrowed.finalCta} />
+        <FinalCta content={narrowed.finalCta} ctaBackground={narrowed.assets.ctaBackground} />
       </main>
       <GbfxsFooter content={footer} />
     </div>

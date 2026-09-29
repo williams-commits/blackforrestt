@@ -1151,49 +1151,6 @@
         "desc": "KYC-verifizierte Konten, verschlüsselte Dokumentenspeicherung und getrennte Kundengelder."
       }
     },
-    "features": {
-      "eyebrow": "Die Plattform",
-      "title": "Für entscheidungsstarkes Trading gebaut.",
-      "subtitle": "Vier Dinge, bei denen wir keine Kompromisse eingehen.",
-      "f1": {
-        "title": "Schnelle Ausführung",
-        "desc": "Orders gehen mit dem Klick auf den Markt — inklusive möglicher Preisverbesserungen."
-      },
-      "f2": {
-        "title": "Mobile-First-Terminal",
-        "desc": "Der komplette Trading-Workspace auf dem Handy: Charts, Positionen und Konto in einer Hand."
-      },
-      "f3": {
-        "title": "Ein Dashboard, das aufgeht",
-        "desc": "Balance, Equity, Marge und Floating P/L in Echtzeit abgestimmt."
-      },
-      "f4": {
-        "title": "Risiko unter Ihrer Kontrolle",
-        "desc": "Stop-Loss, Take-Profit und Margin-Schutz auf jeder Position."
-      }
-    },
-    "benefits": {
-      "b1": {
-        "t": "Schnelle Ausführung",
-        "d": "Orders in unter einer Sekunde geroutet."
-      },
-      "b2": {
-        "t": "Globale Märkte",
-        "d": "Devisen, Indizes, Rohstoffe und Krypto."
-      },
-      "b3": {
-        "t": "Profi-Analysen",
-        "d": "Technische, fundamentale und Trendanalysen inklusive."
-      },
-      "b4": {
-        "t": "Verifizierte Konten",
-        "d": "KYC-geschützte Plattform, verschlüsselte Dokumentenspeicherung."
-      },
-      "b5": {
-        "t": "Getrennte Gelder",
-        "d": "Kundengelder werden getrennt von Firmengeldern verwahrt."
-      }
-    },
     "value": {
       "title": "Keine versteckte Komplexität. Einfach sauberes Trading.",
       "subtitle": "Die Zahlen, die zählen — von Anfang an.",
@@ -1337,15 +1294,6 @@
           "trades": "156"
         }
       ]
-    },
-    "edu": {
-      "eyebrow": "Das Handwerk lernen",
-      "title": "Kostenlose Weiterbildung, integriert.",
-      "subtitle": "Strukturierte Kurse, tägliche Analysen und Trading-Tools — in jedem Konto enthalten.",
-      "cta": "Jetzt lernen",
-      "b1": "Kurse von Einsteiger bis Fortgeschritten",
-      "b2": "Tägliche Marktanalysen & Signale",
-      "b3": "Rechner und Wirtschaftskalender"
     }
   }
 }

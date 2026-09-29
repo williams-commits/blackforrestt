@@ -429,7 +429,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
         eyebrow="Data operations"
         title="Import center" titleIcon="upload"
         subtitle={fileName ? `${fileName} · ${IMPORT_STEPS[step - 1].help}` : "Bring clean, trusted data into your workspace with preview, mapping, duplicate checks, and safe execution."}
-        actions={step > 1 ? <Button variant="secondary" onClick={reset}>Start over</Button> : undefined}
+        actions={step > 1 ? <Button variant="secondary" icon="refresh" onClick={reset}>Start over</Button> : undefined}
         metrics={[
           { label: "Step", value: `${step}/4`, tone: "brand" },
           { label: "Recent jobs", value: jobsMeta.total, tone: "info" },
@@ -445,9 +445,9 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             <div key={entry.label} className="flex items-start gap-3">
               <span
                 aria-hidden
-                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-semibold ${
                   complete
-                    ? "bg-accent text-(--text-inverse)"
+                    ? "bg-accent"
                     : active
                       ? "border border-accent bg-(--accent-soft)"
                       : "border border-(--border-hairline) text-(--text-tertiary)"

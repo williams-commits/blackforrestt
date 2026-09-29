@@ -1130,27 +1130,6 @@
         "desc": "KYC-verified accounts, encrypted document storage and segregated client funds."
       }
     },
-    "features": {
-      "eyebrow": "The platform",
-      "title": "Designed for decisive trading.",
-      "subtitle": "Four things we refuse to compromise on.",
-      "f1": {
-        "title": "Fast execution",
-        "desc": "Orders route to the market the moment you click — with price-improvement handling on fills."
-      },
-      "f2": {
-        "title": "Mobile-first terminal",
-        "desc": "The full trading workspace on your phone: charts, positions and account in one hand."
-      },
-      "f3": {
-        "title": "A dashboard that adds up",
-        "desc": "Balance, equity, margin and floating P/L reconciled in real time. Your numbers always agree."
-      },
-      "f4": {
-        "title": "Risk you control",
-        "desc": "Stop-loss, take-profit and margin guards on every position. You set the boundaries."
-      }
-    },
     "testimonials": {
       "eyebrow": "Real feedback",
       "title": "Trusted by individuals, teams, and trading communities across the globe.",
@@ -1243,41 +1222,10 @@
         ]
       }
     },
-    "edu": {
-      "eyebrow": "Learn the craft",
-      "title": "Free education, built in.",
-      "subtitle": "Structured courses, daily analysis and trading tools — included with every account.",
-      "cta": "Start learning",
-      "b1": "Beginner to advanced courses",
-      "b2": "Daily market analysis & signals",
-      "b3": "Calculators and an economic calendar"
-    },
     "ctaTitle": "Ready when you are.",
     "ctaSubtitle": "An account takes minutes. The markets are already moving.",
     "heroTrustLine": "Free account · KYC-verified platform · Segregated client funds",
     "globalTitle": "One desk. Every timezone.",
-    "benefits": {
-      "b1": {
-        "t": "Fast execution",
-        "d": "Orders routed in under a second."
-      },
-      "b2": {
-        "t": "Global markets",
-        "d": "Forex, indices, commodities and crypto."
-      },
-      "b3": {
-        "t": "Pro analytics",
-        "d": "Technical, fundamental and trend analysis included."
-      },
-      "b4": {
-        "t": "Verified accounts",
-        "d": "KYC-gated platform, encrypted document storage."
-      },
-      "b5": {
-        "t": "Segregated funds",
-        "d": "Client money held apart from company funds."
-      }
-    },
     "value": {
       "title": "No hidden complexity. Just cleaner trading.",
       "subtitle": "The numbers that matter, up front.",

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { RECORD_UI, type ObjectKey, type RecordObjectKey } from "@/lib/recordUi";
 import { RecordForm, type OptionSource } from "@/components/RecordForm";
 import { useConfirmDialog } from "@/components/Dialogs";
@@ -178,7 +179,12 @@ export function RecordDetailActions({
     if (!ok) return;
     {
       const response = await fetch(`/api/${object}/${(row as { id: string }).id}`, { method: "DELETE" });
-      if (response.ok) router.push(`/${object}`);
+      if (response.ok) {
+        router.push(`/${object}`);
+      } else {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        toast.error(body?.error ?? `Could not delete this ${singular}.`);
+      }
     }
   }
 

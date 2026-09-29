@@ -120,7 +120,7 @@ export function UserSmtpPanel({ userId, userEmail }: { userId: string; userEmail
   }
 
   return (
-    <div className="mt-4 border-t border-(--border-default) pt-4" data-testid="user-smtp-panel">
+    <div data-testid="user-smtp-panel">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-(--text-tertiary)">Personal SMTP (email sending identity)</p>
         <div className="flex items-center gap-2">

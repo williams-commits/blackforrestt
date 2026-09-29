@@ -403,17 +403,17 @@ export function StepsBand({ content }: { content: StepsContent }) {
  * near-solid scrim, display headline, dual CTA and the platform's real
  * numbers as a closing ledger row.
  */
-export function FinalCta({ content }: { content: FinalCtaContent }) {
+export function FinalCta({ content, ctaBackground }: { content: FinalCtaContent; ctaBackground?: string }) {
   return (
     <section id="final-cta" className="relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
-      <SectionBackdrop
-        src="/brands/gbfxs/backgrounds/cta-bg.jpg"
+      {ctaBackground ? <SectionBackdrop
+        src={ctaBackground}
         opacity={0.5}
         position="center 30%"
         blur={0}
         filter="saturate(1.05)"
         scrim="linear-gradient(180deg, #0d0d0f 0%, rgba(13,13,15,0.82) 45%, rgba(13,13,15,0.9) 100%)"
-      />
+      /> : null}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"

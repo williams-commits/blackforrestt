@@ -40,12 +40,12 @@ export function Modal({
         if (!next && closeOnBackdrop) onClose();
       }}
     >
-      <DialogContent className={cn(sizeClass)} showCloseButton={false}>
+      <DialogContent className={cn(sizeClass, "grid-cols-[minmax(0,1fr)]")} showCloseButton={false}>
         <DialogHeader>
           {title ? <DialogTitle>{title}</DialogTitle> : <DialogTitle className="sr-only">Dialog</DialogTitle>}
           <DialogDescription className="sr-only">{title ?? "Dialog"}</DialogDescription>
         </DialogHeader>
-        {children}
+        <div className="min-w-0">{children}</div>
         <button
           type="button"
           aria-label="Close"

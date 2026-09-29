@@ -103,9 +103,11 @@ function ConvertioHero({ content, brand, instruments }: {
   instruments: InstrumentView[];
 }) {
   const hero = content.hero;
-  const badge = hero?.badge ?? "Now live";
-  const title = (hero?.titleA ?? brand.name).trim();
-  const subtitle = hero?.subtitle ?? "The trusted platform for trading crypto, forex, and more.";
+  // Title resolution is brand-driven, never design copy: explicit titleA,
+  // else the segment-assembled headline, else the brand name.
+  const title = hero.titleA ?? (((hero.titleSegments ?? []).map((seg) => seg.text).join(" ").trim()) || brand.name);
+  const subtitle = hero.subtitle;
+  const trustLine = hero.trustLine ?? [];
 
   return (
     <section style={{
@@ -139,7 +141,7 @@ function ConvertioHero({ content, brand, instruments }: {
             }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#0052ff" }} />
               <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#7aa2ff", letterSpacing: "0.04em", textTransform: "uppercase" }}>
-                {badge}
+                {hero.badge}
               </span>
             </div>
 
@@ -167,19 +169,20 @@ function ConvertioHero({ content, brand, instruments }: {
 
             <div style={{ display: "flex", gap: 12, marginTop: 40 }}>
               <Link href="/register" className="cv-btn cv-btn-primary cv-btn-cta">
-                {hero?.ctaPrimaryLabel ?? "Get started"}
+                {hero.ctaPrimaryLabel}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </Link>
               <Link href="/login" className="cv-btn cv-btn-outline-dark cv-btn-cta">
-                {hero?.ctaSecondaryLabel ?? "Sign in"}
+                {hero.ctaSecondaryLabel}
               </Link>
             </div>
 
-            {/* Micro trust */}
+            {/* Micro trust — from the content contract (hero.trustLine) */}
+            {trustLine.length > 0 ? (
             <div style={{ display: "flex", gap: 24, marginTop: 40, flexWrap: "wrap" }}>
-              {["Segregated funds", "Bank-grade security", "24/7 support"].map((item) => (
+              {trustLine.map((item) => (
                 <span key={item} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8125rem", color: "var(--cv-on-dark-soft)" }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#05b169" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 6L9 17l-5-5" />
@@ -188,11 +191,12 @@ function ConvertioHero({ content, brand, instruments }: {
                 </span>
               ))}
             </div>
+            ) : null}
           </Reveal>
 
           {/* Right: dashboard mockup */}
           <Reveal delay={150}>
-            <ConvertioDashboard instruments={instruments} />
+            <ConvertioDashboard instruments={instruments} liveLabel={hero.panel?.tickerLive} />
           </Reveal>
         </div>
       </div>
@@ -203,8 +207,12 @@ function ConvertioHero({ content, brand, instruments }: {
 /* ══════════════════════════════════════════════════════════════════════════
    DASHBOARD MOCKUP — the floating product-UI card stack
    ══════════════════════════════════════════════════════════════════════════ */
-function ConvertioDashboard({ instruments }: { instruments: InstrumentView[] }) {
+function ConvertioDashboard({ instruments, liveLabel }: { instruments: InstrumentView[]; liveLabel?: string }) {
   const visible = instruments.slice(0, 5);
+  // Live headline instrument — replaces the earlier fabricated portfolio
+  // figures ("$48,294.16 / +12.4%"). Only real quote data is ever shown.
+  const headline = visible[0];
+  const headlineUp = headline ? headline.changePct >= 0 : true;
   return (
     <div style={{ position: "relative" }}>
       {/* Main dashboard card */}
@@ -217,26 +225,31 @@ function ConvertioDashboard({ instruments }: { instruments: InstrumentView[] }) 
       }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          {headline ? (
           <div>
             <span style={{ fontSize: "0.6875rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--cv-on-dark-soft)" }}>
-              Portfolio
+              {headline.symbol}
             </span>
             <div style={{ fontFamily: "var(--cv-font-mono)", fontSize: "2rem", fontWeight: 500, color: "#fff", marginTop: 4 }}>
-              $48,294.<span style={{ color: "var(--cv-on-dark-soft)" }}>16</span>
+              {headline.mid.toFixed(headline.digits)}
             </div>
           </div>
+          ) : null}
+          {headline ? (
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 6,
             padding: "6px 12px", borderRadius: 100,
-            background: "rgba(5,177,105,0.12)", border: "1px solid rgba(5,177,105,0.2)",
+            background: headlineUp ? "rgba(5,177,105,0.12)" : "rgba(207,32,47,0.12)",
+            border: `1px solid ${headlineUp ? "rgba(5,177,105,0.2)" : "rgba(207,32,47,0.2)"}`,
           }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#05b169" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={headlineUp ? "#05b169" : "#cf202f"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 6l-9.5 9.5-5-5L1 18" /><path d="M17 6h6v6" />
             </svg>
-            <span style={{ fontFamily: "var(--cv-font-mono)", fontSize: "0.8125rem", fontWeight: 500, color: "#05b169" }}>
-              +12.4%
+            <span style={{ fontFamily: "var(--cv-font-mono)", fontSize: "0.8125rem", fontWeight: 500, color: headlineUp ? "#05b169" : "#cf202f" }}>
+              {headlineUp ? "+" : ""}{headline.changePct.toFixed(2)}%
             </span>
           </div>
+          ) : null}
         </div>
 
         {/* Sparkline chart */}
@@ -306,42 +319,6 @@ function ConvertioDashboard({ instruments }: { instruments: InstrumentView[] }) 
         </div>
       </div>
 
-      {/* Floating secondary card — overlapping */}
-      <div style={{
-        position: "absolute",
-        bottom: -32,
-        right: -20,
-        width: 220,
-        background: "#16181c",
-        border: "1px solid rgba(255,255,255,0.1)",
-        borderRadius: 20,
-        padding: 20,
-        transform: "rotate(-2deg)",
-        boxShadow: "0 20px 40px -10px rgba(0,0,0,0.5)",
-      }}>
-        <span style={{ fontSize: "0.625rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--cv-on-dark-soft)" }}>
-          Order filled
-        </span>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-          <span style={{ fontFamily: "var(--cv-font-mono)", fontSize: "1.25rem", fontWeight: 500, color: "#05b169" }}>
-            BUY 0.5
-          </span>
-          <span style={{ fontFamily: "var(--cv-font-mono)", fontSize: "0.8125rem", color: "var(--cv-on-dark-soft)" }}>
-            BTC @ 67,240
-          </span>
-        </div>
-        <div style={{
-          marginTop: 12, height: 4, borderRadius: 2,
-          background: "rgba(255,255,255,0.04)",
-          overflow: "hidden",
-        }}>
-          <div style={{ width: "72%", height: "100%", borderRadius: 2, background: "#0052ff" }} />
-        </div>
-        <span style={{ fontSize: "0.625rem", color: "var(--cv-on-dark-soft)", marginTop: 6, display: "block" }}>
-          Portfolio · 72% of target
-        </span>
-      </div>
-
       {/* Floating tertiary card */}
       <div style={{
         position: "absolute",
@@ -355,7 +332,7 @@ function ConvertioDashboard({ instruments }: { instruments: InstrumentView[] }) 
         boxShadow: "0 12px 24px -8px rgba(0,0,0,0.4)",
       }}>
         <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#0052ff", animation: "pulse 2s infinite" }} />
-        <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "#fff" }}>Live markets</span>
+        {liveLabel ? <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "#fff" }}>{liveLabel}</span> : null}
         <style>{`@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
       </div>
     </div>
@@ -366,12 +343,8 @@ function ConvertioDashboard({ instruments }: { instruments: InstrumentView[] }) 
    2. STATS / TRUST STRIP (soft gray)
    ══════════════════════════════════════════════════════════════════════════ */
 function ConvertioStats({ content }: { content: ConvertioLandingContent }) {
-  const stats = content.stats?.items ?? [
-    { value: "45+", label: "Instruments" },
-    { value: "<1s", label: "Execution" },
-    { value: "24/7", label: "Markets" },
-    { value: "9", label: "Languages" },
-  ];
+  const stats = content.stats?.items ?? content.hero?.stats ?? [];
+  if (stats.length === 0) return null;
   return (
     <section className="cv-section-soft" style={{ paddingTop: 64, paddingBottom: 64 }}>
       <div className="cv-container">
@@ -431,25 +404,16 @@ const FEATURE_ICONS = [
   <svg key="4" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z" /><circle cx="7" cy="7" r="1" />
   </svg>,
-  // Devices (monitor)
-  <svg key="5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
-  </svg>,
-  // API (code)
-  <svg key="6" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
-  </svg>,
 ];
 
 function ConvertioFeatures({ content }: { content: ConvertioLandingContent }) {
   const pillars = content.pillars;
+  if (!pillars) return null;
   const features = [
-    { icon: 0, title: pillars?.all?.title ?? "Every market", desc: pillars?.all?.desc ?? "Forex, crypto, commodities, indices, and stocks — all on one account." },
-    { icon: 1, title: pillars?.speed?.title ?? "Fast execution", desc: pillars?.speed?.desc ?? "Millisecond order routing with live quotes streamed to every device." },
-    { icon: 2, title: pillars?.security?.title ?? "Institutional security", desc: pillars?.security?.desc ?? "Segregated client funds with bank-grade encryption and cold storage." },
-    { icon: 3, title: pillars?.pricing?.title ?? "Transparent pricing", desc: pillars?.pricing?.desc ?? "What you see is what you trade. No hidden fees or spreads." },
-    { icon: 4, title: "Any device", desc: "Trade from your browser, phone, or tablet with full feature parity." },
-    { icon: 5, title: "Developer API", desc: "REST and WebSocket APIs for automated trading strategies." },
+    { icon: 0, title: pillars.all.title, desc: pillars.all.desc },
+    { icon: 1, title: pillars.speed.title, desc: pillars.speed.desc },
+    { icon: 2, title: pillars.security.title, desc: pillars.security.desc },
+    { icon: 3, title: pillars.pricing.title, desc: pillars.pricing.desc },
   ];
 
   return (
@@ -457,12 +421,12 @@ function ConvertioFeatures({ content }: { content: ConvertioLandingContent }) {
       <div className="cv-container">
         <Reveal>
           <div style={{ maxWidth: 640 }}>
-            <span className="cv-eyebrow">{pillars?.eyebrow ?? "Platform"}</span>
+            <span className="cv-eyebrow">{pillars.eyebrow}</span>
             <h2 className="cv-display cv-display-lg" style={{ marginTop: 16 }}>
-              {pillars?.title ?? "Built for serious traders"}
+              {pillars.title}
             </h2>
             <p className="cv-body-md" style={{ marginTop: 16 }}>
-              {pillars?.subtitle ?? "Everything you need to trade with confidence, from your first position to your thousandth."}
+              {pillars.subtitle}
             </p>
           </div>
         </Reveal>
@@ -511,17 +475,21 @@ function ConvertioMarkets({ instruments, content }: { instruments: InstrumentVie
     <section className="cv-section-soft">
       <div className="cv-container">
         <Reveal>
+          {markets.board ? (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 48 }}>
             <div>
-              <span className="cv-eyebrow">{markets?.board?.eyebrow ?? "Live markets"}</span>
+              <span className="cv-eyebrow">{markets.board.eyebrow}</span>
               <h2 className="cv-display cv-display-md" style={{ marginTop: 12 }}>
-                {markets?.board?.title ?? "Trade the world's markets"}
+                {markets.board.title}
               </h2>
             </div>
-            <Link href="/register" className="cv-btn cv-btn-primary" style={{ height: 40, padding: "10px 24px", fontSize: "0.875rem" }}>
-              {markets?.board?.ctaLabel ?? "Start trading"}
-            </Link>
+            {markets.board.ctaLabel ? (
+              <Link href="/register" className="cv-btn cv-btn-primary" style={{ height: 40, padding: "10px 24px", fontSize: "0.875rem" }}>
+                {markets.board.ctaLabel}
+              </Link>
+            ) : null}
           </div>
+          ) : <div style={{ marginBottom: 48 }} aria-hidden="true" /> }
         </Reveal>
 
         <Reveal delay={80}>
@@ -586,30 +554,27 @@ function ConvertioMarkets({ instruments, content }: { instruments: InstrumentVie
    5. HOW IT WORKS (3-step, numbered)
    ══════════════════════════════════════════════════════════════════════════ */
 function ConvertioSteps({ content }: { content: ConvertioLandingContent }) {
-  const steps = content.steps?.steps ?? [
-    { title: "Create your account", desc: "Sign up in minutes with just your email. No minimum deposit to start." },
-    { title: "Fund and verify", desc: "Deposit via bank transfer, card, or crypto. KYC verification is built-in." },
-    { title: "Start trading", desc: "Access all markets from one dashboard with professional tools." },
-  ];
+  const steps = content.steps;
+  if (!steps || steps.steps.length === 0) return null;
 
   return (
     <section className="cv-section">
       <div className="cv-container">
         <Reveal>
           <div style={{ textAlign: "center", maxWidth: 560, margin: "0 auto 64px" }}>
-            <span className="cv-eyebrow">{content.steps?.eyebrow ?? "Get started"}</span>
+            <span className="cv-eyebrow">{steps.eyebrow}</span>
             <h2 className="cv-display cv-display-lg" style={{ marginTop: 16 }}>
-              {content.steps?.title ?? "Three steps to your first trade"}
+              {steps.title}
             </h2>
           </div>
         </Reveal>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 32 }}>
-          {steps.map((step, i) => (
+          {steps.steps.map((step, i) => (
             <Reveal key={step.title} delay={i * 100}>
               <div style={{ position: "relative", padding: "0 8px" }}>
                 {/* Connector line */}
-                {i < steps.length - 1 && (
+                {i < steps.steps.length - 1 && (
                   <div style={{
                     position: "absolute", top: 24, right: -32, width: 64,
                     height: 1,
@@ -673,7 +638,7 @@ function ConvertioCta({ content }: { content: ConvertioLandingContent }) {
             maxWidth: 640,
             margin: "0 auto",
           }}>
-            {cta?.title ?? "Ready when you are."}
+            {cta.title}
           </h2>
           <p style={{
             fontSize: "1.125rem",
@@ -682,14 +647,14 @@ function ConvertioCta({ content }: { content: ConvertioLandingContent }) {
             maxWidth: 440,
             margin: "20px auto 0",
           }}>
-            {cta?.subtitle ?? "An account takes minutes. The markets are already moving."}
+            {cta.subtitle}
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 40 }}>
             <Link href="/register" className="cv-btn cv-btn-primary cv-btn-cta">
-              {cta?.ctaPrimaryLabel ?? "Get started"}
+              {cta.ctaPrimaryLabel}
             </Link>
             <Link href="/login" className="cv-btn cv-btn-outline-dark cv-btn-cta">
-              {cta?.ctaSecondaryLabel ?? "Sign in"}
+              {cta.ctaSecondaryLabel}
             </Link>
           </div>
         </Reveal>

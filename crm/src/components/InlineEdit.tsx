@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Icon } from "@/components/Icon";
 
 /**
  * Inline edit — click a value to edit it directly in the table/detail page.
@@ -24,19 +23,19 @@ export function InlineEdit({
   render: (value: string, onClick: () => void) => React.ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [selected, setSelected] = useState(value);
 
   async function save(newValue: string) {
-    setSaving(true);
+    setStatus("saving");
     try {
       await onSave(newValue);
       setEditing(false);
+      setStatus("idle");
     } catch {
-      // Save failed ( onSave throws on !response.ok) — keep the editor
-      // open so the value isn't silently reverted on the next refetch.
-    } finally {
-      setSaving(false);
+      // Save failed (onSave throws on !response.ok) — keep the editor open
+      // and surface the failure so the value isn't silently lost.
+      setStatus("error");
     }
   }
 
@@ -61,7 +60,7 @@ export function InlineEdit({
   }
 
   return (
-    <span className="inline-flex items-center gap-1" onBlur={() => setEditing(false)}>
+    <span className="inline-flex items-center gap-1" onBlur={() => { setEditing(false); setStatus("idle"); }}>
       <select
         value={selected}
         onChange={(event) => {
@@ -71,9 +70,10 @@ export function InlineEdit({
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             setEditing(false);
+            setStatus("idle");
           }
         }}
-        disabled={saving}
+        disabled={status === "saving"}
         autoFocus
         className="rounded-md border border-input bg-transparent outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         style={{ height: "24px", fontSize: "12px", padding: "0 6px", width: "auto" }}
@@ -84,11 +84,11 @@ export function InlineEdit({
           </option>
         ))}
       </select>
-      {saving ? (
-        <span className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>…</span>
-      ) : (
-        <Icon name="check" size={12} className="text-(--success)" />
-      )}
+      {status === "saving" ? (
+        <span className="text-[10px] text-(--text-tertiary)" role="status">saving…</span>
+      ) : status === "error" ? (
+        <span className="text-[10px] text-(--error)" role="alert">Couldn’t save</span>
+      ) : null}
     </span>
   );
 }

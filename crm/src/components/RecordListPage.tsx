@@ -1274,6 +1274,13 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                           );
                         }
                         if (column.type === "badge") {
+                          // Record-status chips use the status's admin-defined
+                          // color when set; anything else (potential tiers,
+                          // enum statuses) stays neutral.
+                          const recordStatus = row.status as { color?: string | null } | null | undefined;
+                          const statusColor = recordStatus && typeof recordStatus === "object" ? recordStatus.color : null;
+                          const chipClass = statusColor ? "border-transparent text-white" : "badge badge-neutral";
+                          const chipStyle = statusColor ? { background: statusColor } : undefined;
                           // Inline status editing for every core object (same
                           // CHANGE_STATUS capability the bulk bar uses), and a
                           // separate potential-status editor for leads. Exact
@@ -1296,7 +1303,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                                   void fetchRows();
                                 }}
                                 render={(val, onClick) => (
-                                  <Badge className="badge badge-neutral" onClick={onClick}>
+                                  <Badge className={chipClass} style={chipStyle} onClick={onClick}>
                                     {raw}
                                   </Badge>
                                 )}
@@ -1323,6 +1330,13 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                                   </Badge>
                                 )}
                               />
+                            );
+                          }
+                          if (column.key === "status.name") {
+                            return (
+                              <Badge className={chipClass} style={chipStyle}>
+                                {raw}
+                              </Badge>
                             );
                           }
                           return (

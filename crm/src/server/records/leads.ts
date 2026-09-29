@@ -113,7 +113,7 @@ const SEARCH_RELATIONS = {
 } as const;
 
 const listInclude = {
-  status: { select: { name: true, category: true } },
+  status: { select: { name: true, category: true, color: true } },
   potentialStatus: { select: { id: true, name: true } },
   assignedUser: { select: { id: true, name: true } },
   campaign: { select: { id: true, name: true } },
@@ -194,6 +194,13 @@ async function assertPotentialStatus(potentialStatusId?: string | null) {
   return status;
 }
 
+async function assertCampaign(campaignId?: string | null) {
+  if (!campaignId) return undefined;
+  const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
+  if (!campaign) throw new CrmError("Invalid campaign.", 400);
+  return campaign;
+}
+
 /**
  * Normalize write payloads. Keys the caller did not provide are omitted
  * entirely (Prisma treats undefined as "leave unchanged"); provided values
@@ -246,6 +253,7 @@ export async function createLead(ctx: ScopedContext, input: z.infer<typeof Creat
   const status = (await assertStatusFor("LEAD", input.statusId)) ?? defaultStatus;
   if (!status) throw new CrmError("No lead status configured — seed the database.", 400);
   const potentialStatus = (await assertPotentialStatus(input.potentialStatusId)) ?? await prisma.potentialStatus.findFirst({ where: { isDefault: true } });
+  const campaign = await assertCampaign(input.campaignId);
 
   // Non-administrators always create leads assigned to themselves.
   let assignedUserId = input.assignedUserId ?? null;
@@ -265,7 +273,7 @@ export async function createLead(ctx: ScopedContext, input: z.infer<typeof Creat
         score: input.score ?? 0,
         statusId: status.id,
         potentialStatusId: potentialStatus?.id ?? null,
-        campaignId: input.campaignId ?? null,
+        campaignId: campaign?.id ?? null,
         assignedUserId,
         assignedTeamId,
         customFields: (await sanitizeCustomFields("LEAD", input.customFields, "create")) as never,
@@ -297,15 +305,16 @@ export async function updateLead(ctx: ScopedContext, id: string, input: z.infer<
 
   // Dedup keys changed? Re-check against other leads unless explicitly forced.
   if (!input.allowDuplicates) {
+    const nextEmail = input.email !== undefined ? normalizeEmail(input.email) : existing.email;
+    const nextPhone = input.phone !== undefined ? normalizePhone(input.phone) : existing.phone;
+    const nextExternalId = input.externalId !== undefined ? normalizeText(input.externalId) : existing.externalId;
     const changedDedupKeys =
-      (input.email !== undefined && normalizeEmail(input.email) !== existing.email) ||
-      (input.phone !== undefined && normalizePhone(input.phone) !== existing.phone) ||
-      (input.externalId !== undefined && input.externalId !== existing.externalId);
+      nextEmail !== existing.email || nextPhone !== existing.phone || nextExternalId !== existing.externalId;
     if (changedDedupKeys) {
       const matches = await findMatches(ctx, {
-        email: input.email ?? existing.email,
-        phone: input.phone ?? existing.phone,
-        externalId: input.externalId ?? existing.externalId,
+        email: nextEmail,
+        phone: nextPhone,
+        externalId: nextExternalId,
         excludeLeadId: id,
       });
       if (matches.leads.length > 0) {
@@ -316,9 +325,8 @@ export async function updateLead(ctx: ScopedContext, id: string, input: z.infer<
     }
   }
 
-  const status = input.statusId ? await assertStatusFor("LEAD", input.statusId) : undefined;
-  if (input.statusId && !status) throw new CrmError("Invalid lead status.", 400);
-  const potentialStatus = input.potentialStatusId !== undefined ? await assertPotentialStatus(input.potentialStatusId) : undefined;
+  // Capability gates come before validation so unauthorized callers get 403,
+  // not validation details about records they may not touch.
   if (input.statusId !== undefined) requireCapability(ctx, "LEADS_CHANGE_STATUS");
   if (input.potentialStatusId !== undefined) requireCapability(ctx, "LEADS_CHANGE_POTENTIAL_STATUS");
 
@@ -326,6 +334,17 @@ export async function updateLead(ctx: ScopedContext, id: string, input: z.infer<
     requireCapability(ctx, "LEADS_ASSIGN");
     await assertAssignableUser(input.assignedUserId);
   }
+
+  const status = input.statusId ? await assertStatusFor("LEAD", input.statusId) : undefined;
+  if (input.statusId && !status) throw new CrmError("Invalid lead status.", 400);
+  // Tri-state: absent = leave unchanged, null = clear, id = set. A plain
+  // falsy check would collapse null into "no change" and silently drop clears.
+  const potentialStatusProvided = input.potentialStatusId !== undefined;
+  const potentialStatus = potentialStatusProvided && input.potentialStatusId
+    ? await assertPotentialStatus(input.potentialStatusId)
+    : undefined;
+  const campaignProvided = input.campaignId !== undefined;
+  const campaign = campaignProvided ? await assertCampaign(input.campaignId) : undefined;
 
   const updated = await prisma.$transaction(async (tx) => {
     const saved = await tx.lead.update({
@@ -335,8 +354,8 @@ export async function updateLead(ctx: ScopedContext, id: string, input: z.infer<
         ...(input.priority !== undefined ? { priority: input.priority } : {}),
         ...(input.score !== undefined ? { score: input.score } : {}),
         ...(status ? { statusId: status.id } : {}),
-        ...(potentialStatus !== undefined ? { potentialStatusId: potentialStatus?.id ?? null } : {}),
-        ...(input.campaignId !== undefined ? { campaignId: input.campaignId } : {}),
+        ...(potentialStatusProvided ? { potentialStatusId: potentialStatus?.id ?? null } : {}),
+        ...(campaignProvided ? { campaignId: campaign?.id ?? null } : {}),
         ...(input.assignedUserId !== undefined ? { assignedUserId: input.assignedUserId } : {}),
         ...(input.assignedTeamId !== undefined ? { assignedTeamId: input.assignedTeamId } : {}),
         ...(input.lastContactAt !== undefined ? { lastContactAt: input.lastContactAt } : {}),
@@ -457,6 +476,10 @@ export async function bulkLeads(ctx: ScopedContext, input: z.infer<typeof BulkLe
         });
       }
     } else {
+      // "assign" — both fields null would build an empty update; make that an explicit 400.
+      if (input.assignedUserId === null && input.assignedTeamId === null) {
+        throw new CrmError("Choose a user or team to assign.", 400);
+      }
       await tx.lead.updateMany({
         where: { id: { in: ids } },
         data: {

@@ -11,7 +11,7 @@ export function HighlightsPanel({
   children,
 }: {
   title: string;
-  badge?: { label: string; variant: "success" | "warning" | "error" | "info" | "neutral" | "brand" };
+  badge?: { label: string; variant: "success" | "warning" | "error" | "info" | "neutral" | "brand"; color?: string | null };
   fields: Array<{ label: string; value: React.ReactNode }>;
   children?: React.ReactNode;
 }) {
@@ -26,13 +26,14 @@ export function HighlightsPanel({
             <h1 className="highlights-title truncate">{title}</h1>
             {badge ? (
               <Badge
-                className={`border-transparent text-white text-[11px] ${
-                  badge.variant === "success"
-                    ? "bg-white/20"
-                    : badge.variant === "warning"
-                      ? "bg-white/15"
-                      : "bg-white/12"
+                className={`border-transparent text-[11px] ${
+                  badge.color
+                    ? "text-white"
+                    : // No explicit color — neutral chip that stays visible on the
+                      // accent-soft strip in BOTH themes (white-alpha vanishes on light).
+                      "bg-foreground/10 text-foreground dark:bg-white/15 dark:text-white"
                 }`}
+                style={badge.color ? { background: badge.color, boxShadow: "0 0 0 1px rgba(255,255,255,0.35)" } : undefined}
               >
                 {badge.label}
               </Badge>

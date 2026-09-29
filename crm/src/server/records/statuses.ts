@@ -17,6 +17,7 @@ export const CreateStatus = z.object({
   category: z.enum(["OPEN", "CONVERTED", "LOST", "INVALID"]),
   sortOrder: z.coerce.number().int().min(0).default(0),
   isDefault: z.boolean().default(false),
+  color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Color must be a hex value (e.g. #16a34a).").optional().nullable(),
 });
 
 export const UpdateStatus = CreateStatus.partial().omit({ appliesTo: true });
@@ -90,6 +91,7 @@ export async function updateStatus(ctx: CrmContext, id: string, input: z.infer<t
         ...(input.category !== undefined ? { category: input.category } : {}),
         ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
         ...(input.isDefault !== undefined ? { isDefault: input.isDefault } : {}),
+        ...(input.color !== undefined ? { color: input.color } : {}),
       },
     });
     if (!saved.isDefault) {

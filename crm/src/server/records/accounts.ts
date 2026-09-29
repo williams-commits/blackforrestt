@@ -45,7 +45,7 @@ const SEARCH_RELATIONS = { status: ["name"], owner: ["name"] } as const;
 
 const include = {
   owner: { select: { id: true, name: true } },
-  status: { select: { id: true, name: true } },
+  status: { select: { id: true, name: true, color: true } },
   _count: { select: { contacts: true, opportunities: true } },
 } satisfies Prisma.AccountInclude;
 
@@ -86,7 +86,7 @@ export async function getAccount(ctx: ScopedContext, id: string) {
     where: { id, deletedAt: null, ...ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds) },
     include: {
       owner: { select: { id: true, name: true } },
-      status: { select: { id: true, name: true } },
+      status: { select: { id: true, name: true, color: true } },
       team: { select: { id: true, name: true } },
       contacts: {
         where: { deletedAt: null },

@@ -361,6 +361,7 @@ model RecordStatus {
   category  RecordStatusCategory
   appliesTo SubjectType
   isDefault Boolean              @default(false)
+  color     String?
 
   leads     Lead[]
   accounts  Account[]

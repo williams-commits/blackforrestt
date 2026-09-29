@@ -46,7 +46,7 @@ const SEARCH_RELATIONS = { status: ["name"], owner: ["name"], contact: ["firstNa
 
 const include = {
   owner: { select: { id: true, name: true } },
-  status: { select: { id: true, name: true } },
+  status: { select: { id: true, name: true, color: true } },
   contact: { select: { id: true, firstName: true, lastName: true } },
 } satisfies Prisma.CustomerInclude;
 

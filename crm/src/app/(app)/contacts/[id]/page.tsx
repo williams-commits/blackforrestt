@@ -128,7 +128,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
 
       <HighlightsPanel
         title={`${contact.firstName} ${contact.lastName}`}
-        badge={contact.status ? { label: contact.status.name, variant: "brand" as never } : undefined}
+        badge={contact.status ? { label: contact.status.name, variant: "brand" as never, color: contact.status.color } : undefined}
         fields={[
           { label: "Owner", value: contact.owner.name },
           { label: "Account", value: contact.account?.name },

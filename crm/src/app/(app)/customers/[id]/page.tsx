@@ -100,7 +100,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
 
       <HighlightsPanel
         title={`${customer.firstName} ${customer.lastName}`}
-        badge={customer.status ? { label: customer.status.name, variant: "brand" as never } : undefined}
+        badge={customer.status ? { label: customer.status.name, variant: "brand" as never, color: customer.status.color } : undefined}
         fields={[
           { label: "Owner", value: customer.owner?.name },
           { label: "Email", value: customer.email },

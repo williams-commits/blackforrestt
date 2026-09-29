@@ -47,7 +47,7 @@ const SEARCH_RELATIONS = { status: ["name"], owner: ["name"], account: ["name"] 
 const include = {
   account: { select: { id: true, name: true } },
   owner: { select: { id: true, name: true } },
-  status: { select: { id: true, name: true } },
+  status: { select: { id: true, name: true, color: true } },
 } satisfies Prisma.ContactInclude;
 
 export async function listContacts(

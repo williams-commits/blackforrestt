@@ -92,10 +92,11 @@ function AdminCardGridSkeleton({ cards = 4 }: { cards?: number }) {
 }
 
 export function StatusesTab({ canManage }: { canManage: boolean }) {
-  const [rows, setRows] = useState<Array<{ id: string; name: string; appliesTo: string; category: string; sortOrder: number; isDefault: boolean; _count: { leads: number; contacts: number; customers: number } }>>([]);
+  const [rows, setRows] = useState<Array<{ id: string; name: string; appliesTo: string; category: string; sortOrder: number; isDefault: boolean; color: string | null; _count: { leads: number; contacts: number; customers: number } }>>([]);
   const [name, setName] = useState("");
   const [appliesTo, setAppliesTo] = useState("LEAD");
   const [category, setCategory] = useState("OPEN");
+  const [color, setColor] = useState("#71717a");
   const [showForm, setShowForm] = useState(false);
   const [potentialRows, setPotentialRows] = useState<Array<{ id: string; name: string; sortOrder: number; isDefault: boolean; _count?: { leads: number } }>>([]);
   const [potentialName, setPotentialName] = useState("");
@@ -129,7 +130,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
       const response = await fetch("/api/record-statuses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, appliesTo, category, sortOrder: rows.length + 1 }),
+        body: JSON.stringify({ name, appliesTo, category, color, sortOrder: rows.length + 1 }),
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -138,6 +139,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
       }
       setShowForm(false);
       setName("");
+      setColor("#71717a");
       void load();
     } finally {
       setBusy(false);
@@ -176,7 +178,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
         eyebrow="Data model"
         title="Statuses" titleIcon="sliders"
         subtitle="Define the lifecycle language your teams use across records."
-        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => { setError(null); setShowForm(true); }}>Add status</Button> : undefined}
+        actions={canManage ? <Button variant="primary" icon="plus" onClick={() => { setError(null); setColor("#71717a"); setShowForm(true); }}>Add status</Button> : undefined}
         metrics={[{ label: "Statuses", value: rows.length, tone: "brand" }, { label: "Objects", value: new Set(rows.map((row) => row.appliesTo)).size, tone: "info" }, { label: "Defaults", value: rows.filter((row) => row.isDefault).length, tone: "success" }]}
       />
       {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
@@ -212,6 +214,41 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
               </SelectContent>
             </Select>
           </Field>
+          <div className="sm:col-span-2">
+            <Field label="Color" id="s-color">
+              <div className="flex flex-wrap items-center gap-2">
+                {TAG_COLOR_PRESETS.map((preset) => {
+                  const selected = color.toLowerCase() === preset.value;
+                  return (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      aria-label={`Color: ${preset.name}`}
+                      aria-pressed={selected}
+                      onClick={() => setColor(preset.value)}
+                      className={`size-7 shrink-0 rounded-full border border-black/10 transition-transform hover:scale-110 ${selected ? "ring-2 ring-ring ring-offset-2 ring-offset-popover" : ""}`}
+                      style={{ background: preset.value }}
+                    />
+                  );
+                })}
+                <Input
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  aria-label="Custom color"
+                  title="Custom color"
+                  className="h-7 w-7 shrink-0 cursor-pointer appearance-none rounded-full border border-black/10 bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0"
+                />
+                <span
+                  className="ml-1 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium text-white"
+                  style={{ background: color }}
+                  aria-hidden
+                >
+                  {name.trim() || "Status name"}
+                </span>
+              </div>
+            </Field>
+          </div>
           {error ? <div className="sm:col-span-2"><FormError message={error} /></div> : null}
           <div className="form-actions sm:col-span-2"><Button type="button" variant="secondary" onClick={() => { setError(null); setShowForm(false); }}>Cancel</Button><Button type="submit" variant="primary" icon="plus" loading={busy}>
             Add status
@@ -236,7 +273,12 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
               <AdminTableSkeleton rows={5} columns={canManage ? 6 : 5} />
             ) : rows.map((row) => (
               <TR key={row.id}>
-                <TD className="px-3 py-2 font-medium">{row.name}</TD>
+                <TD className="px-3 py-2 font-medium">
+                  <span className="flex items-center gap-2">
+                    {row.color ? <span className="size-2.5 shrink-0 rounded-full border border-black/10" style={{ background: row.color }} aria-hidden /> : null}
+                    {row.name}
+                  </span>
+                </TD>
                 <TD className="px-3 py-2"><Badge className="badge badge-neutral">{row.appliesTo.toLowerCase()}</Badge></TD>
                 <TD className="px-3 py-2"><Badge className="badge badge-neutral">{row.category.toLowerCase()}</Badge></TD>
                 <TD className="px-3 py-2 tabular-nums text-(--text-secondary)">{row._count.leads + row._count.contacts + row._count.customers}</TD>
@@ -389,7 +431,7 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
                     aria-label={`Color: ${preset.name}`}
                     aria-pressed={selected}
                     onClick={() => setColor(preset.value)}
-                    className={`size-7 shrink-0 rounded-full border border-black/10 transition-transform hover:scale-110 ${selected ? "ring-2 ring-ring ring-offset-2 ring-offset-(--popover)" : ""}`}
+                    className={`size-7 shrink-0 rounded-full border border-black/10 transition-transform hover:scale-110 ${selected ? "ring-2 ring-ring ring-offset-2 ring-offset-popover" : ""}`}
                     style={{ background: preset.value }}
                   />
                 );

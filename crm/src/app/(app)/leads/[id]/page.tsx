@@ -107,7 +107,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
 
       <HighlightsPanel
         title={`${lead.firstName} ${lead.lastName}`}
-        badge={{ label: lead.status.name, variant: statusVariant as never }}
+        badge={{ label: lead.status.name, variant: statusVariant as never, color: lead.status.color }}
         fields={[
           { label: "Assignee", value: lead.assignedUser?.name ?? "Unassigned" },
           { label: "Company", value: lead.company },

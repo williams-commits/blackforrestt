@@ -127,7 +127,7 @@ export default async function TaskDetailPage({ params }: PageProps) {
             ]}
           >
             <section className="card">
-              <div className="card-header"><h2 className="card-title">Details</h2></div>
+              <div className="card-header"><h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="list" size={13} /></span>Details</h2></div>
               <div className="card-body space-y-4">
                 <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
                   <DetailField label="Status" value={task.status.replaceAll("_", " ").toLowerCase()} />
@@ -157,7 +157,7 @@ export default async function TaskDetailPage({ params }: PageProps) {
               </div>
             </section>
             <section className="card">
-              <div className="card-header"><h2 className="card-title">Comments</h2></div>
+              <div className="card-header"><h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="comment" size={13} /></span>Comments</h2></div>
               <div className="card-body">
                 <CommentsSection
                   subjectType="TASK"

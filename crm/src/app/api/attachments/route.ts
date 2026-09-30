@@ -52,12 +52,19 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: "Missing subject." }, { status: 400 });
     const ctx = await scopedContext("FILES_UPLOAD");
     const data = Buffer.from(await file.arrayBuffer());
+    // Optional display name — keeps the original extension, strips path
+    // characters, so the stored filename stays safe AND recognizable.
+    const requestedName = String(form.get("name") ?? "").trim();
+    const extension = file.name.includes(".") ? `.${file.name.split(".").pop()}` : "";
+    const displayName = requestedName
+      ? `${requestedName.replace(/[\\/:*?"<>|]/g, "").trim().slice(0, 120)}${extension}`.slice(0, 160)
+      : file.name;
     const attachment = await attachFile(
       ctx,
       {
         subjectType: parsed.data.subjectType,
         subjectId: parsed.data.subjectId,
-        filename: file.name,
+        filename: displayName || file.name,
         mimeType: file.type || "application/octet-stream",
         size: file.size,
       },

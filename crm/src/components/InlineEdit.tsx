@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 
 /**
  * Inline edit — click a value to edit it directly in the table/detail page.
@@ -32,6 +33,7 @@ export function InlineEdit({
       await onSave(newValue);
       setEditing(false);
       setStatus("idle");
+      toast.success("Updated");
     } catch {
       // Save failed (onSave throws on !response.ok) — keep the editor open
       // and surface the failure so the value isn't silently lost.

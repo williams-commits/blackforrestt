@@ -114,6 +114,11 @@ export function PromptDialog({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    // Dialogs render through a portal, and React portal events bubble through
+    // the COMPONENT tree: without this, confirming the dialog also fired the
+    // onSubmit of whatever outer <form> the trigger lives in (e.g. inserting
+    // a link from the note composer submitted the note itself).
+    event.stopPropagation();
     if (config.required !== false && !value.trim()) return;
     setBusy(true);
     try {

@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Icon } from "@/components/Icon";
+import { cn } from "@/lib/utils";
+import { relativeTime, absoluteTime } from "@/lib/time";
 
 /**
  * Email history for one CRM record — both directions (sent and received),
@@ -63,11 +65,26 @@ export function RecordEmailHistory({
     }
   }
 
+  const unread = rows.filter((row) => row.direction === "INBOUND" && !row.read).length;
+
   return (
     <Card aria-labelledby="record-email-history" className="gap-3">
       <CardHeader className="flex-row items-center justify-between">
-        <h2 id="record-email-history" className="text-sm font-semibold text-(--text-primary)">Email history</h2>
-        <Link href="/emails" className="text-xs font-medium text-(--text-brand) hover:underline">Open mailbox →</Link>
+        <h2 id="record-email-history" className="flex items-center gap-2 text-sm font-semibold text-(--text-primary)">
+          <span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden>
+            <Icon name="mail" size={13} />
+          </span>
+          Email history
+          {rows.length > 0 ? (
+            <span className="rounded-full bg-muted px-1.5 py-px text-[10px] font-semibold tabular-nums text-muted-foreground">{rows.length}</span>
+          ) : null}
+          {unread > 0 ? (
+            <span className="rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-semibold tabular-nums text-primary">{unread} unread</span>
+          ) : null}
+        </h2>
+        <Link href="/emails" className="flex items-center gap-1 text-xs font-medium text-(--text-brand) hover:underline">
+          Open mailbox <Icon name="chevron_right" size={12} />
+        </Link>
       </CardHeader>
       <CardContent>
       {error ? (
@@ -75,44 +92,69 @@ export function RecordEmailHistory({
       ) : loading ? (
         <p className="text-sm text-(--text-tertiary)">Loading emails…</p>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-(--text-tertiary)">No email correspondence yet. Emails sent from this record — and replies from this address — appear here.</p>
+        <div className="flex items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2.5 text-xs text-muted-foreground">
+          <Icon name="mail" size={14} className="shrink-0 text-muted-foreground/60" />
+          No email correspondence yet. Emails sent from this record — and replies from this address — appear here.
+        </div>
       ) : (
-        <ul className="divide-y divide-(--border-default)">
-          {rows.slice(0, 10).map((row) => (
+        <ul className="space-y-1.5">
+          {rows.slice(0, 10).map((row) => {
+            const isOpen = open?.id === row.id;
+            const isUnread = row.direction === "INBOUND" && !row.read;
+            return (
             <li key={row.id}>
               <button
                 type="button"
                 onClick={() => void openEmail(row)}
-                aria-expanded={open?.id === row.id}
-                className="flex w-full items-center justify-between gap-3 px-1 py-2.5 text-left hover:bg-(--bg-hover)"
+                aria-expanded={isOpen}
+                className={cn(
+                  "group/mail flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2 py-2 text-left transition-colors",
+                  isOpen ? "border-border bg-muted/40" : "hover:border-border/70 hover:bg-muted/30"
+                )}
               >
+                <span
+                  className={cn(
+                    "flex size-7 shrink-0 items-center justify-center rounded-md",
+                    row.status === "FAILED" ? "bg-(--error-bg) text-(--error)" : row.direction === "INBOUND" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                  )}
+                  aria-hidden
+                >
+                  <Icon name={row.status === "FAILED" ? "alert" : row.direction === "INBOUND" ? "download" : "upload"} size={13} />
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
-                    <Badge
-                      className={`border-transparent text-[10px] font-bold uppercase ${
-                        row.direction === "INBOUND"
-                          ? "bg-(--bg-selected) text-(--brand)"
-                          : "bg-(--bg-subtle) text-(--text-secondary)"
-                      }`}
+                    {isUnread ? <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label="Unread" /> : null}
+                    <span className={cn("truncate text-[13px]", isUnread ? "font-semibold text-foreground" : "font-medium text-foreground")}>
+                      {row.subject}
+                    </span>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold uppercase",
+                        row.direction === "INBOUND" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                      )}
                     >
                       {row.direction === "INBOUND" ? "In" : "Out"}
-                    </Badge>
-                    <span className={`truncate text-sm ${row.read || row.direction === "OUTBOUND" ? "text-(--text-primary)" : "font-bold text-(--text-primary)"}`}>
-                      {row.status === "FAILED" ? `⚠ ${row.subject}` : row.subject}
                     </span>
+                    {row.status === "FAILED" ? (
+                      <span className="shrink-0 rounded-full bg-(--error-bg) px-1.5 py-px text-[10px] font-semibold uppercase text-(--error)">Failed</span>
+                    ) : null}
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-(--text-tertiary)">
                     {row.direction === "INBOUND" ? row.from : `to ${row.to}`} · {row.preview}
                   </span>
                 </span>
-                <span className="shrink-0 text-[11px] text-(--text-tertiary)">
-                  {new Date(row.createdAt).toLocaleDateString()}
-                </span>
+                <time
+                  className="shrink-0 text-[11px] tabular-nums text-(--text-tertiary)"
+                  dateTime={row.createdAt}
+                  title={absoluteTime(row.createdAt)}
+                >
+                  {relativeTime(row.createdAt)}
+                </time>
               </button>
-              {open?.id === row.id ? (
-                <div className="mb-3 rounded-lg bg-(--bg-subtle) p-3">
+              {isOpen ? (
+                <div className="mx-2 mb-1.5 rounded-lg border border-border/70 bg-muted/30 p-3">
                   <p className="text-xs text-(--text-tertiary)">
-                    {new Date(row.createdAt).toLocaleString()}
+                    {absoluteTime(row.createdAt)}
                     {row.sentBy ? ` · sent by ${row.sentBy}` : ""}
                     {row.status === "FAILED" ? ` · failed: ${row.error ?? "unknown"}` : ""}
                   </p>
@@ -120,7 +162,7 @@ export function RecordEmailHistory({
                 </div>
               ) : null}
             </li>
-          ))}
+          );})}
         </ul>
       )}
       </CardContent>

@@ -7,6 +7,7 @@ import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { relativeTime, absoluteTime } from "@/lib/time";
 
 interface NotificationRow {
   id: string;
@@ -27,6 +28,11 @@ const TYPE_LABELS: Record<string, string> = {
   IMPORT_FAILED: "Import failed",
   PLATFORM_USER_ONLINE: "Client is online",
   SYSTEM: "System update",
+  RECORD_STATUS_CHANGED: "Status changed",
+  STAGE_CHANGED: "Stage changed",
+  NOTE_ADDED: "New note",
+  TASK_COMPLETED: "Task completed",
+  TASK_CANCELLED: "Task cancelled",
 };
 
 function notificationTitle(notification: NotificationRow): string {
@@ -144,7 +150,7 @@ export function NotificationBell() {
             <ul className="max-h-80 overflow-y-auto">
               {notifications.slice(0, 12).map((notification) => {
                 const href = notificationHref(notification);
-                const content = <><p className="text-xs font-semibold">{notificationTitle(notification)}</p><p className="mt-1 text-[10px] text-muted-foreground">{new Date(notification.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p></>;
+                const content = <><p className="text-xs font-semibold">{notificationTitle(notification)}</p><p className="mt-1 text-[10px] text-muted-foreground"><time dateTime={notification.createdAt} title={absoluteTime(notification.createdAt)}>{relativeTime(notification.createdAt)}</time></p></>;
                 return <li key={notification.id} className={cn("border-b border-border px-4 py-3 last:border-0", notification.readAt ? "text-muted-foreground" : "bg-muted text-foreground")}><Link href={href} onClick={() => setOpen(false)} className="block hover:opacity-75">{content}</Link></li>;
               })}
             </ul>

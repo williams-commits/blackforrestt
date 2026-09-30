@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/Icon";
 import { Button, Section } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { relativeTime, absoluteTime } from "@/lib/time";
 import { notificationHref } from "@/lib/notificationLink";
 
 interface NotificationRow {
@@ -36,6 +38,11 @@ const TYPE_LABELS: Record<string, string> = {
   IMPORT_FAILED: "Import failed",
   PLATFORM_USER_ONLINE: "Client is online",
   SYSTEM: "System",
+  RECORD_STATUS_CHANGED: "Status changed",
+  STAGE_CHANGED: "Stage changed",
+  NOTE_ADDED: "New note",
+  TASK_COMPLETED: "Task completed",
+  TASK_CANCELLED: "Task cancelled",
 };
 
 const TYPE_ICONS: Record<string, string> = {
@@ -49,6 +56,11 @@ const TYPE_ICONS: Record<string, string> = {
   IMPORT_FAILED: "x_circle",
   PLATFORM_USER_ONLINE: "plug",
   SYSTEM: "shield",
+  RECORD_STATUS_CHANGED: "refresh",
+  STAGE_CHANGED: "trending",
+  NOTE_ADDED: "note",
+  TASK_COMPLETED: "check_circle",
+  TASK_CANCELLED: "x_circle",
 };
 
 const SUBJECT_PATH: Record<string, string> = {
@@ -98,7 +110,11 @@ export function HomeWidgets() {
 
   async function markAllRead() {
     const response = await fetch("/api/notifications", { method: "PATCH" });
-    if (!response.ok) return;
+    if (!response.ok) {
+      toast.error("Could not mark notifications as read — try again.");
+      return;
+    }
+    toast.success("All caught up");
     setNotifications((previous) => previous.map((n) => ({ ...n, readAt: new Date().toISOString() })));
     setUnread(0);
   }
@@ -199,12 +215,13 @@ export function HomeWidgets() {
                       {TYPE_LABELS[notification.type] ?? notification.type}
                       {typeof notification.payload.title === "string" ? `: ${notification.payload.title}` : ""}
                     </span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">
-                      {new Date(notification.createdAt).toLocaleString(undefined, {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </span>
+                    <time
+                      className="mt-0.5 block text-xs text-muted-foreground"
+                      dateTime={notification.createdAt}
+                      title={absoluteTime(notification.createdAt)}
+                    >
+                      {relativeTime(notification.createdAt)}
+                    </time>
                   </span>
                   {!notification.readAt ? <span aria-hidden className="mt-2 ml-auto h-2 w-2 shrink-0 rounded-full bg-foreground" /> : null}
                 </Link>

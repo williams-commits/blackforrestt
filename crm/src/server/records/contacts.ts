@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/server/db";
 import { CrmError, requireCapability } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
+import { notify, subjectNotificationContext } from "@/server/notifications";
 import { appendActivity } from "@/server/activity";
 import { normalizeEmail, normalizePhone, normalizeText } from "@/server/normalize";
 import { ownerScopeWhere } from "@/server/scope";
@@ -156,7 +157,7 @@ export async function updateContact(ctx: ScopedContext, id: string, input: z.inf
   if (input.ownerUserId !== undefined || input.teamId !== undefined) requireCapability(ctx, "CONTACTS_ASSIGN");
   if (input.ownerUserId) await assertAssignableUser(input.ownerUserId);
 
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const saved = await tx.contact.update({
       where: { id },
       data: {
@@ -196,6 +197,22 @@ export async function updateContact(ctx: ScopedContext, id: string, input: z.inf
     });
     return saved;
   });
+  // Status change reaches the owner (unless they made it themselves).
+  if (status && status.id !== existing.statusId && existing.ownerUserId && existing.ownerUserId !== ctx.userId) {
+    await notify({
+      recipientUserId: existing.ownerUserId,
+      type: "RECORD_STATUS_CHANGED",
+      payload: {
+        recordType: "CONTACT",
+        recordId: id,
+        label: `${existing.firstName} ${existing.lastName}`,
+        to: status.name,
+        byName: ctx.name,
+      },
+      context: subjectNotificationContext("CONTACT", id),
+    });
+  }
+  return updated;
 }
 
 export async function softDeleteContact(ctx: ScopedContext, id: string) {

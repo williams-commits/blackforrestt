@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import Link from "next/link";
 import Papa from "papaparse";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
@@ -1012,6 +1013,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                           icon: "refresh",
                           onClick: async () => {
                             const response = await fetch(`/api/imports/${entry.id}/retry`, { method: "POST" });
+                            if (response.ok) toast.success("Import retry started", { description: "Watch the job list for results." });
                             if (response.ok) void refreshJobs();
                           },
                         },

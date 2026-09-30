@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import type { DuplicateHit } from "@/components/RecordForm";
 import { Icon } from "@/components/Icon";
@@ -92,6 +93,7 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
         setError(body?.error ?? "Conversion failed.");
         return;
       }
+      toast.success("Lead converted", { description: "Contact, customer, and records are linked." });
       router.push(body.data.contactId ? `/contacts/${body.data.contactId}` : "/leads");
       router.refresh();
     } finally {

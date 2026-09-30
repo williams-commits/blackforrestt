@@ -40,6 +40,7 @@ export function ActivityComposer({
   const [activeAction, setActiveAction] = useState<"none" | "note" | "task" | "appointment">("none");
   const noteFormRef = useRef<HTMLFormElement>(null);
   const noteEditorRef = useRef<RichTextEditorHandle>(null);
+  const busyRef = useRef(false);
   const [noteText, setNoteText] = useState("");
   const [noteHtml, setNoteHtml] = useState("");
   const [taskTitle, setTaskTitle] = useState("");
@@ -57,6 +58,8 @@ export function ActivityComposer({
   if (!canAddNote && !canCreateTask && !canScheduleAppointment) return null;
 
   async function post(url: string, payload: Record<string, unknown>, successTitle: string, successDescription: string, reset: () => void) {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -80,6 +83,7 @@ export function ActivityComposer({
       setError("Check your connection and try again.");
       toast.error(successTitle + " failed", { description: "Check your connection and try again." });
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }

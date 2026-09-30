@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "@/components/Icon";
 import { redirect } from "next/navigation";
 import { CrmError } from "@/server/guard";
 import { getCampaign } from "@/server/records/campaigns";
@@ -88,7 +89,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
           >
             {/* ── Overview tab ── */}
             <section className="card">
-              <div className="card-header"><h2 className="card-title">Details</h2></div>
+              <div className="card-header"><h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="list" size={13} /></span>Details</h2></div>
               <div className="card-body space-y-4">
                 {campaign.description ? (
                   <div>
@@ -113,7 +114,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
             {/* ── Members tab ── */}
             <section className="card">
               <div className="card-header">
-                <h2 className="card-title">Members</h2>
+                <h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="users" size={13} /></span>Members</h2>
                 <span className="badge badge-neutral">{campaign.stats.total}</span>
               </div>
               <div className="card-body">
@@ -127,7 +128,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
         <aside className="no-print">
           <div className="card lg:sticky lg:top-17">
             <div className="card-header">
-              <h2 className="card-title">Stats</h2>
+              <h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="chart" size={13} /></span>Stats</h2>
               <span className="badge badge-neutral">{campaign.stats.total}</span>
             </div>
             <div className="card-body">

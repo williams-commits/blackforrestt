@@ -169,6 +169,34 @@ export async function listComments(
   return rows.map(toRow);
 }
 
+/**
+ * Comment counts for a batch of parents (badge on the Comments toggle).
+ * Scope is enforced per parent: only parents the caller can already view
+ * contribute counts; out-of-scope ids simply report 0 rather than 403 so a
+ * mixed batch never breaks the page render.
+ */
+export async function countComments(
+  ctx: ScopedContext,
+  subjectType: CommentSubject,
+  subjectIds: string[],
+): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  const groups = await prisma.comment.groupBy({
+    by: ["subjectId"],
+    where: { subjectType, subjectId: { in: subjectIds } },
+    _count: { _all: true },
+  });
+  for (const group of groups) {
+    try {
+      await resolveParent(ctx, subjectType, group.subjectId);
+      counts[group.subjectId] = group._count._all;
+    } catch {
+      // Parent outside the caller's scope — report nothing for it.
+    }
+  }
+  return counts;
+}
+
 /** Post a comment (COMMENTS_CREATE + parent in scope). */
 export async function createComment(ctx: ScopedContext, input: z.infer<typeof CreateComment>): Promise<CommentRow> {
   requireCapability(ctx, "COMMENTS_CREATE");

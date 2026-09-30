@@ -412,6 +412,23 @@ export async function updateLead(ctx: ScopedContext, id: string, input: z.infer<
       context: subjectNotificationContext("LEAD", id),
     });
   }
+  // Status changes reach the assignee (unless they made the change) — the
+  // lifecycle moving under you is exactly what an inbox is for.
+  if (status && status.id !== existing.statusId && existing.assignedUserId && existing.assignedUserId !== ctx.userId) {
+    await notify({
+      recipientUserId: existing.assignedUserId,
+      type: "RECORD_STATUS_CHANGED",
+      payload: {
+        recordType: "LEAD",
+        recordId: id,
+        label: `${existing.firstName} ${existing.lastName}`,
+        from: existing.statusId,
+        to: status.name,
+        byName: ctx.name,
+      },
+      context: subjectNotificationContext("LEAD", id),
+    });
+  }
   return updated;
 }
 

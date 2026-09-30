@@ -21,8 +21,8 @@ export function DetailField({
       </dt>
       <dd
         className={cn(
-          "wrap-break-words text-[13px] font-medium leading-snug",
-          value ? "text-foreground" : "text-muted-foreground"
+          "wrap-break-words text-sm font-medium leading-snug",
+          value ? "text-foreground" : "text-muted-foreground/70"
         )}
       >
         {value || "—"}

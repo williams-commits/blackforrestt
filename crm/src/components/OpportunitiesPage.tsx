@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { OpportunityForm } from "@/components/OpportunityFormDialog";
 import { PipelineAdmin } from "@/components/PipelineAdminDialog";
 import Link from "next/link";
@@ -252,6 +253,7 @@ export function OpportunitiesPage() {
       return;
     }
     setError(null);
+    toast.success("Stage updated", { description: "The opportunity moved — the owner was notified." });
     void load();
   }
 

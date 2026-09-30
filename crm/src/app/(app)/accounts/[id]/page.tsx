@@ -129,7 +129,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
           >
           {/* Overview */}
           <section className="card">
-            <div className="card-header"><h2 className="card-title">Details</h2></div>
+            <div className="card-header"><h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="list" size={13} /></span>Details</h2></div>
             <div className="card-body space-y-4">
               <div>
                 <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Tags</p>
@@ -165,7 +165,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
           {/* Contacts */}
           <section className="card">
             <div className="card-header">
-              <h2 className="card-title">Contacts</h2>
+              <h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="users" size={13} /></span>Contacts</h2>
               <div className="flex items-center gap-2">
                 <span className="badge badge-neutral">{account.contacts.length}</span>
                 <Link href="/contacts" className="text-[12px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>
@@ -199,7 +199,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
           {/* Opportunities */}
           <section className="card">
             <div className="card-header">
-              <h2 className="card-title">Opportunities</h2>
+              <h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="trending" size={13} /></span>Opportunities</h2>
               <div className="flex items-center gap-2">
                 <span className="badge badge-neutral">{relatedOpportunities.length}</span>
                 <Link href="/opportunities" className="text-[12px] font-medium hover:underline" style={{ color: "var(--text-brand)" }}>
@@ -237,7 +237,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
 
           {/* Activities */}
           <section className="card">
-            <div className="card-header"><h2 className="card-title">Activities</h2></div>
+            <div className="card-header"><h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="clock" size={13} /></span>Activities</h2></div>
             <div className="card-body">
               <RecordActivities
                 subjectType="ACCOUNT"
@@ -254,7 +254,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
 
           {/* Files */}
           <section className="card">
-            <div className="card-header"><h2 className="card-title">Files</h2></div>
+            <div className="card-header"><h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="folder" size={13} /></span>Files</h2></div>
             <div className="card-body">
               <AttachmentsPanel subjectType="ACCOUNT" subjectId={id} canUpload={canUpload} canDelete={canDeleteFiles} />
             </div>

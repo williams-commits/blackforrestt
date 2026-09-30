@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, EmptyState } from "@/components/ui";
@@ -80,6 +81,7 @@ export function CampaignMemberPicker({
         setError(body?.error ?? "Could not add member.");
         return;
       }
+      toast.success("Member added");
       router.refresh();
     } finally {
       setBusy(false);
@@ -99,6 +101,7 @@ export function CampaignMemberPicker({
         setError(body?.error ?? "Could not update member.");
         return;
       }
+      toast.success("Member updated");
       router.refresh();
     } finally {
       setBusy(false);
@@ -118,6 +121,7 @@ export function CampaignMemberPicker({
         setError(body?.error ?? "Could not remove member.");
         return;
       }
+      toast.success("Member removed");
       router.refresh();
     } finally {
       setBusy(false);

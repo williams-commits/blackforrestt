@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button, Drawer } from "@/components/ui";
 import { Field, FormError, FormSection, IconInput, IconSelectTrigger } from "@/components/form";
 import {
@@ -100,6 +101,7 @@ export function OpportunityForm({
         setError(body?.error ?? "Save failed.");
         return;
       }
+      toast.success(initial ? "Opportunity saved" : "Opportunity created");
       onSaved();
     } finally {
       setBusy(false);

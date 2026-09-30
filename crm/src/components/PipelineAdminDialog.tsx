@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import type { Pipeline } from "@/components/OpportunitiesPage";
 import { useConfirmDialog } from "@/components/Dialogs";
 import { Modal } from "@/components/Modal";
@@ -34,6 +35,7 @@ export function PipelineAdmin({
         return false;
       }
       setError(null);
+      toast.success("Done", { description: "Pipelines updated." });
       onChanged();
       return true;
     } finally {

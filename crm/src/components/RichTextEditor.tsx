@@ -167,11 +167,14 @@ export function RichTextEditor({
 
   async function insertLink() {
     const editor = editorRef.current;
-    editor?.focus();
+    if (!editor) return;
+    // Capture the range BEFORE the dialog: closing it restores focus and
+    // collapses the caret, so the live selection can no longer be trusted.
     const selection = window.getSelection();
-    const hasSelection = Boolean(
-      selection && !selection.isCollapsed && editor?.contains(selection.anchorNode),
+    const hadSelection = Boolean(
+      selection && !selection.isCollapsed && editor.contains(selection.anchorNode),
     );
+    const savedRange = hadSelection ? selection!.getRangeAt(0).cloneRange() : null;
     const url = await promptDialog({
       title: "Insert link",
       message: "Choose the address the link opens (https://… or mailto:).",
@@ -181,8 +184,16 @@ export function RichTextEditor({
       required: true,
     });
     if (!url) return;
-    if (hasSelection) exec("createLink", url);
-    else exec("insertHTML", `<a href="${url.replaceAll('"', "&quot;")}">${escapeHtml(url)}</a>&nbsp;`);
+    if (savedRange) {
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(savedRange);
+    }
+    editor.focus();
+    if (savedRange) document.execCommand("createLink", false, url);
+    else document.execCommand("insertHTML", false, `<a href="${url.replaceAll('"', "&quot;")}">${escapeHtml(url)}</a>&nbsp;`);
+    syncFromEditor();
+    refreshToolbarState();
   }
 
   const overLimit = text.length > maxLength;
@@ -226,7 +237,7 @@ export function RichTextEditor({
         <button
           type="button" title="Clear formatting" aria-label="Clear formatting" disabled={disabled}
           onMouseDown={(event) => { event.preventDefault(); }}
-          onClick={() => exec("removeFormat")}
+          onClick={() => { exec("removeFormat"); exec("unlink"); }}
           className="rounded px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-background/60 hover:text-foreground disabled:opacity-50"
         >
           Clear

@@ -154,7 +154,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
             ]}
           >
           <section className="card">
-            <div className="card-header"><h2 className="card-title">Details</h2></div>
+            <div className="card-header"><h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="list" size={13} /></span>Details</h2></div>
             <div className="card-body space-y-4">
               <div>
                 <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Tags</p>
@@ -173,7 +173,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
 
           <section className="card">
             <div className="card-header">
-              <h2 className="card-title">Opportunities</h2>
+              <h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="trending" size={13} /></span>Opportunities</h2>
               <span className="badge badge-neutral">{relatedOpportunities.length}</span>
             </div>
             <div className="card-body">
@@ -211,7 +211,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
           </section>
 
           <section className="card">
-            <div className="card-header"><h2 className="card-title">Activities</h2></div>
+            <div className="card-header"><h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="clock" size={13} /></span>Activities</h2></div>
             <div className="card-body">
               <RecordActivities
                 subjectType="CONTACT"
@@ -227,7 +227,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
           </section>
 
           <section className="card">
-            <div className="card-header"><h2 className="card-title">Files</h2></div>
+            <div className="card-header"><h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="folder" size={13} /></span>Files</h2></div>
             <div className="card-body">
               <AttachmentsPanel subjectType="CONTACT" subjectId={id} canUpload={canUpload} canDelete={canDeleteFiles} />
             </div>

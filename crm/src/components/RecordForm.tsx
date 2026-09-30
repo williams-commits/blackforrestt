@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Button, Drawer } from "@/components/ui";
 import { Input } from "@/components/ui/input";
@@ -283,6 +284,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
         setError(body?.error ?? "Save failed.");
         return false;
       }
+      toast.success(editing ? "Changes saved" : "Record created");
       router.refresh();
       onSaved?.();
       onClose();

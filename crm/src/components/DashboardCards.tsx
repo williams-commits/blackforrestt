@@ -99,14 +99,16 @@ export function DashboardCards() {
                 className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
               />
             </span>
-            <span className="block truncate text-xl font-semibold tracking-tight tabular-nums text-foreground">
-              {card.value}
-            </span>
-            {card.sub ? (
-              <span className="block truncate text-[10px] tabular-nums text-muted-foreground">
-                {card.sub}
+            <div className="flex items-center justify-between">
+              <span className="block truncate text-xl font-semibold tracking-tight tabular-nums text-foreground">
+                {card.value}
               </span>
-            ) : null}
+              {card.sub ? (
+                <span className="block truncate text-[10px] tabular-nums text-muted-foreground">
+                  {card.sub}
+                </span>
+              ) : null}
+            </div>
           </Card>
         </Link>
       ))}

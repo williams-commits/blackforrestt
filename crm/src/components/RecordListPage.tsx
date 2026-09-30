@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { RECORD_UI, type ObjectKey, type RecordObjectKey } from "@/lib/recordUi";
 
@@ -567,6 +568,8 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         throw new Error(body?.error ?? "Bulk action failed.");
       }
       setSelected(new Set());
+      const count = selected.size;
+      toast.success(`Bulk ${action} complete`, { description: `${count} ${count === 1 ? "record" : "records"} updated.` });
       await fetchRows();
     } catch (error) {
       setBulkError(error instanceof Error ? error.message : "Bulk action failed.");
@@ -592,6 +595,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       );
       return;
     }
+    toast.success(`${config.singular} deleted`);
     void fetchRows();
   }
 
@@ -625,7 +629,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         throw new Error(body?.error ?? "Merge failed.");
       }
       setMergeOpen(false);
+      const merged = selected.size;
       setSelected(new Set());
+      toast.success("Records merged", { description: `${merged} ${merged === 1 ? "record" : "records"} combined into the survivor.` });
       await fetchRows();
     } catch (error) {
       setMergeError(error instanceof Error ? error.message : "Merge failed.");
@@ -831,6 +837,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                     }),
                   });
                   if (response.ok) {
+                    toast.success("View saved", { description: `"${viewName}" is available in the view bar.` });
                     setViewName("");
                     const refreshed = await fetch(
                       `/api/views?objectType=${object.toUpperCase().slice(0, -1)}`,

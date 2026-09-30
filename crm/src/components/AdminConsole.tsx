@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { toast } from "sonner";
 import { useCrmBranding } from "@/components/BrandingProvider";
 import { Icon } from "@/components/Icon";
 import { RowActions } from "@/components/RowActions";
@@ -140,6 +141,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
       setShowForm(false);
       setName("");
       setColor("#71717a");
+      toast.success("Status created", { description: `${name} is now available on records.` });
       void load();
     } finally {
       setBusy(false);
@@ -160,15 +162,17 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
       setError(body?.error ?? "Could not delete status.");
       return;
     }
+    toast.success("Status deleted");
     void load();
   }
 
   async function makeDefault(id: string) {
-    await fetch(`/api/record-statuses/${id}`, {
+    const response = await fetch(`/api/record-statuses/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isDefault: true }),
     });
+    if (response.ok) toast.success("Default status updated");
     void load();
   }
 
@@ -306,7 +310,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
       {confirmDialog}
       <Card className="gap-0 overflow-hidden py-0">
         <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3"><div><h2 className="text-sm font-semibold">Potential status</h2><p className="mt-0.5 text-xs text-(--text-tertiary)">Segment leads by commercial potential: Junior, Senior, Institutional, or VIP.</p></div>{canManage ? <Button variant="secondary" icon="plus" onClick={() => setShowPotentialForm(true)}>Add potential status</Button> : null}</div>
-        {showPotentialForm && canManage ? <SetupFormModal title="Add potential status" onClose={() => { setError(null); setShowPotentialForm(false); }}><form className="space-y-4" onSubmit={async (event) => { event.preventDefault(); setError(null); setPotentialBusy(true); try { const response = await fetch("/api/potential-statuses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: potentialName, sortOrder: potentialRows.length + 1 }) }); if (!response.ok) { setError("Could not create potential status."); return; } setPotentialName(""); setShowPotentialForm(false); void load(); } finally { setPotentialBusy(false); } }}><div><p className="form-section-title">Potential status</p><p className="form-section-help">Segment leads by commercial weight for prioritization and filtering.</p></div><Field label="Name" required id="potential-name" help="Ranks a lead's commercial weight — e.g. Junior, Senior, VIP."><IconInput id="potential-name" icon="tag" value={potentialName} onChange={(event) => setPotentialName(event.target.value)} required placeholder="e.g. VIP" /></Field><FormError message={error} /><div className="form-actions"><Button type="button" variant="secondary" onClick={() => { setError(null); setShowPotentialForm(false); }}>Cancel</Button><Button type="submit" variant="primary" icon="plus" loading={potentialBusy}>Add status</Button></div></form></SetupFormModal> : null}
+        {showPotentialForm && canManage ? <SetupFormModal title="Add potential status" onClose={() => { setError(null); setShowPotentialForm(false); }}><form className="space-y-4" onSubmit={async (event) => { event.preventDefault(); setError(null); setPotentialBusy(true); try { const response = await fetch("/api/potential-statuses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: potentialName, sortOrder: potentialRows.length + 1 }) }); if (!response.ok) { setError("Could not create potential status."); return; } toast.success("Potential status created"); setPotentialName(""); setShowPotentialForm(false); void load(); } finally { setPotentialBusy(false); } }}><div><p className="form-section-title">Potential status</p><p className="form-section-help">Segment leads by commercial weight for prioritization and filtering.</p></div><Field label="Name" required id="potential-name" help="Ranks a lead's commercial weight — e.g. Junior, Senior, VIP."><IconInput id="potential-name" icon="tag" value={potentialName} onChange={(event) => setPotentialName(event.target.value)} required placeholder="e.g. VIP" /></Field><FormError message={error} /><div className="form-actions"><Button type="button" variant="secondary" onClick={() => { setError(null); setShowPotentialForm(false); }}>Cancel</Button><Button type="submit" variant="primary" icon="plus" loading={potentialBusy}>Add status</Button></div></form></SetupFormModal> : null}
         {loading ? <div className="p-3"><AdminCardGridSkeleton cards={4} /></div> : <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">{potentialRows.map((status) => {
           const leadCount = status._count?.leads ?? 0;
           return (
@@ -319,7 +323,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
                 </div>
               </div>
               {canManage ? (
-                <Button variant="tertiary" size="sm" onClick={async () => { const response = await fetch(`/api/potential-statuses/${status.id}`, { method: "DELETE" }); if (!response.ok) setError("Potential status is in use or could not be deleted."); else void load(); }} className="size-7 shrink-0 gap-0 px-0" aria-label={`Delete ${status.name}`} title={`Delete ${status.name}`}>
+                <Button variant="tertiary" size="sm" onClick={async () => { const response = await fetch(`/api/potential-statuses/${status.id}`, { method: "DELETE" }); if (!response.ok) setError("Potential status is in use or could not be deleted."); else { toast.success("Potential status deleted"); void load(); } }} className="size-7 shrink-0 gap-0 px-0" aria-label={`Delete ${status.name}`} title={`Delete ${status.name}`}>
                   <Icon name="close" size={14} />
                 </Button>
               ) : null}
@@ -382,6 +386,7 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
       }
       setShowForm(false);
       setName("");
+      toast.success("Tag created", { description: `${name} is ready to use on records.` });
       void load();
     } finally {
       setBusy(false);
@@ -397,6 +402,7 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
     });
     if (!ok) return;
     await fetch(`/api/tags?id=${id}`, { method: "DELETE" });
+    toast.success("Tag deleted");
     void load();
   }
 
@@ -552,6 +558,7 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
       setKey("");
       setLabel("");
       setOptions("");
+      toast.success("Custom field created", { description: `${label} appears on record forms now.` });
       void load();
     } finally {
       setBusy(false);
@@ -567,6 +574,7 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
     });
     if (!ok) return;
     await fetch(`/api/custom-fields/${id}`, { method: "DELETE" });
+    toast.success("Field deleted");
     void load();
   }
 
@@ -787,6 +795,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
       }
       setShowUserForm(false);
       setUEmail(""); setUName(""); setUPassword("");
+      toast.success("User created", { description: `${uEmail} can now sign in.` });
       void load();
     } finally {
       setUserBusy(false);
@@ -802,8 +811,10 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
       setError(body?.error ?? "Update failed.");
+      toast.error("Update failed", { description: body?.error ?? "Try again." });
       return;
     }
+    toast.success("User updated");
     void load();
   }
 
@@ -818,6 +829,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
     });
     if (!confirmed) return;
     await Promise.all(targets.map((user) => fetch(`/api/admin/users?id=${user.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "SUSPENDED" }) })));
+    toast.success("Users suspended", { description: `${targets.length} user${targets.length === 1 ? "" : "s"} lost access immediately.` });
     setSelectedIds([]);
     void load();
   }
@@ -839,6 +851,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
       }
       setShowTeamForm(false);
       setTName(""); setTLeader("");
+      toast.success("Team created", { description: `${tName} shapes visibility and ownership.` });
       void load();
     } finally {
       setTeamBusy(false);
@@ -985,6 +998,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                                 setError(body?.error ?? "Delete failed.");
                                 return;
                               }
+                              toast.success("User deleted");
                               void load();
                             },
                           },
@@ -1152,6 +1166,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                     setError(body?.error ?? "Delete failed.");
                     return;
                   }
+                  toast.success("Team deleted");
                   void load();
                 }}
                 className="mt-1 text-xs text-(--error) hover:underline"
@@ -1215,9 +1230,11 @@ export function RolesTab({ canManage = false }: { canManage?: boolean }) {
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
       setError(body?.error ?? "Update failed.");
+      toast.error("Permission not updated", { description: body?.error ?? "Try again." });
       return;
     }
     setError(null);
+    toast.success(enabled ? "Permission granted" : "Permission revoked");
     void load();
   }
 
@@ -1227,7 +1244,7 @@ export function RolesTab({ canManage = false }: { canManage?: boolean }) {
     const current = new Set(role.permissions.map((entry) => entry.permission));
     permissions.forEach(({ key }) => enabled ? current.add(key) : current.delete(key));
     const response = await fetch(`/api/admin/roles?id=${roleId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ permissions: [...current] }) });
-    if (!response.ok) setError("Update failed."); else void load();
+    if (!response.ok) setError("Update failed."); else { toast.success("Permissions updated"); void load(); }
   }
 
   const selectedRole = roles.find((role) => role.id === selectedRoleId) ?? roles[0];
@@ -1328,6 +1345,7 @@ export function SettingsTab() {
       }
       setShowForm(false);
       setKey(""); setValue("");
+      toast.success("Setting saved", { description: `${key} applied across the workspace.` });
       void load();
     } finally {
       setBusy(false);
@@ -1695,6 +1713,7 @@ export function ObjectsTab() {
       setShowForm(false);
       setKey(""); setName(""); setPluralName(""); setDescription("");
       setFieldRows([emptyFieldRow()]);
+      toast.success("Object created", { description: `${pluralName} is live with ${fieldRows.length} field${fieldRows.length === 1 ? "" : "s"}.` });
       void load();
     } finally {
       setBusy(false);
@@ -1707,6 +1726,7 @@ export function ObjectsTab() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active }),
     });
+    toast.success(active ? "Object activated" : "Object deactivated");
     void load();
   }
 
@@ -1843,6 +1863,7 @@ export function ObjectsTab() {
                         setError(body?.error ?? "Delete failed.");
                         return;
                       }
+                      toast.success("Object deleted");
                       void load();
                     }}
                     className="text-(--error) hover:underline"

@@ -24,7 +24,12 @@ export type NotifiableType =
   | "TASK_DUE"
   | "TASK_OVERDUE"
   | "TASK_REMINDER"
-  | "COMMENT_ADDED";
+  | "COMMENT_ADDED"
+  | "RECORD_STATUS_CHANGED"
+  | "STAGE_CHANGED"
+  | "NOTE_ADDED"
+  | "TASK_COMPLETED"
+  | "TASK_CANCELLED";
 
 export const NotificationQuery = z.object({
   read: z.enum(["all", "unread", "read"]).default("all"),
@@ -76,6 +81,31 @@ function emailFor(type: NotifiableType, payload: Record<string, unknown>): { sub
       return {
         subject: `CRM: ${payload.reassigned ? "Reassigned" : "New assignment"} — ${payload.label ?? payload.recordType ?? "record"}`,
         text: `${payload.byName ?? "Someone"} assigned you ${payload.label ?? payload.recordType ?? "a record"}${payload.count ? ` (${payload.count} records)` : ""}. Open the CRM to review.`,
+      };
+    case "RECORD_STATUS_CHANGED":
+      return {
+        subject: `CRM: Status changed — ${payload.label ?? payload.recordType ?? "record"}`,
+        text: `${payload.byName ?? "Someone"} moved ${payload.label ?? "a record"} to "${payload.to ?? "a new status"}". Open the CRM to review.`,
+      };
+    case "STAGE_CHANGED":
+      return {
+        subject: `CRM: Stage changed — ${payload.label ?? "opportunity"}`,
+        text: `${payload.byName ?? "Someone"} moved ${payload.label ?? "an opportunity"} to "${payload.to ?? "a new stage"}". Open the CRM to review.`,
+      };
+    case "TASK_COMPLETED":
+      return {
+        subject: `CRM: Task completed — ${payload.title ?? "task"}`,
+        text: `${payload.byName ?? "Someone"} completed "${payload.title ?? "a task"}". Open the CRM to see the outcome.`,
+      };
+    case "TASK_CANCELLED":
+      return {
+        subject: `CRM: Task cancelled — ${payload.title ?? "task"}`,
+        text: `${payload.byName ?? "Someone"} cancelled "${payload.title ?? "a task"}" you are involved with.`,
+      };
+    case "NOTE_ADDED":
+      return {
+        subject: `CRM: New note — ${payload.label ?? "record"}`,
+        text: `${payload.byName ?? "Someone"} added a note on ${payload.label ?? "a record"}: "${String(payload.excerpt ?? "")}". Open the CRM to read it.`,
       };
     case "TASK_CREATED":
       return {

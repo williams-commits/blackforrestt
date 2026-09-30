@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 import { FormError } from "@/components/form";
@@ -94,6 +95,7 @@ export function PlatformLinkPanel({
         setError(body?.error ?? "Link failed.");
         return;
       }
+      toast.success("Platform account linked", { description: "KYC, wallets, and payments now show on this customer." });
       router.refresh();
     } finally {
       setBusy(false);
@@ -163,6 +165,7 @@ export function PlatformUnlinkButton({ customerId }: { customerId: string }) {
           setBusy(true);
           try {
             await fetch(`/api/customers/${customerId}/link`, { method: "DELETE" });
+            toast.success("Platform account unlinked");
             router.refresh();
           } finally {
             setBusy(false);

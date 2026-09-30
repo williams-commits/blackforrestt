@@ -396,6 +396,20 @@ export async function updateTask(ctx: ScopedContext, id: string, input: z.infer<
         : { href: `/tasks/${updated.id}` },
     });
   }
+  // Lifecycle changes reach the owner when someone else closes/cancels
+  // their task — the queue moving under you is inbox-worthy.
+  if (
+    input.status !== undefined && input.status !== existing.status &&
+    (input.status === "COMPLETED" || input.status === "CANCELLED") &&
+    existing.ownerUserId !== ctx.userId
+  ) {
+    await notify({
+      recipientUserId: existing.ownerUserId,
+      type: input.status === "COMPLETED" ? "TASK_COMPLETED" : "TASK_CANCELLED",
+      payload: { taskId: updated.id, title: updated.title, byName: ctx.name },
+      context: { href: `/tasks/${updated.id}` },
+    });
+  }
   return updated;
 }
 

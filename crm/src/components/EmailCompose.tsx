@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { usePromptDialog } from "@/components/Dialogs";
 import { escapeHtml, sanitizeRichText as sanitizeClient } from "@/lib/richText";
 import { Icon } from "@/components/Icon";
@@ -234,6 +235,7 @@ export function EmailCompose({
         return;
       }
       try { window.localStorage.removeItem(draftKey); } catch { /* best-effort */ }
+      toast.success("Email sent", { description: linked ? "Logged on the record's email history." : "Sent from the shared mailbox." });
       setSent(true);
       onSent?.();
     } finally {
@@ -265,11 +267,15 @@ export function EmailCompose({
   ];
 
   async function insertLink() {
-    editorRef.current?.focus();
+    const editor = editorRef.current;
+    if (!editor) return;
+    // Capture the range BEFORE the dialog: closing it restores focus and
+    // collapses the caret, so the live selection can no longer be trusted.
     const selection = window.getSelection();
     const hasSelection = Boolean(
-      selection && !selection.isCollapsed && editorRef.current?.contains(selection.anchorNode),
+      selection && !selection.isCollapsed && editor.contains(selection.anchorNode),
     );
+    const savedRange = hasSelection ? selection!.getRangeAt(0).cloneRange() : null;
     const url = await promptDialog({
       title: "Insert link",
       message: "Choose the address the link opens (https://… or mailto:).",
@@ -281,8 +287,17 @@ export function EmailCompose({
     if (!url) return;
     // With selected text createLink wraps it; with no selection insert the
     // URL itself as the link text at the cursor.
-    if (hasSelection) exec("createLink", url);
-    else exec("insertHTML", `<a href="${url.replaceAll('"', "&quot;")}">${escapeHtml(url)}</a>&nbsp;`);
+    if (savedRange) {
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(savedRange);
+    }
+    editor.focus();
+    if (savedRange) document.execCommand("createLink", false, url);
+    else document.execCommand("insertHTML", false, `<a href="${url.replaceAll('"', "&quot;")}">${escapeHtml(url)}</a>&nbsp;`);
+    saveSelection();
+    syncFromEditor();
+    refreshToolbarState();
   }
 
   return (

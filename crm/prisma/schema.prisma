@@ -150,6 +150,11 @@ enum NotificationType {
   SYSTEM
   TASK_REMINDER
   COMMENT_ADDED
+  RECORD_STATUS_CHANGED
+  STAGE_CHANGED
+  NOTE_ADDED
+  TASK_COMPLETED
+  TASK_CANCELLED
 }
 
 // ──────────────────────── Identity & structure ────────────────────────

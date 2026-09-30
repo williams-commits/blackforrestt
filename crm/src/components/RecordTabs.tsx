@@ -1,6 +1,7 @@
 "use client";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Icon } from "@/components/Icon";
 
 /**
  * Record page tab navigation — the Salesforce-style tab bar that sits
@@ -13,6 +14,19 @@ export interface RecordTab {
   label: string;
   count?: number;
 }
+
+/** Stable per-section icons — keyed off the tab key every page already uses. */
+const TAB_ICONS: Record<string, string> = {
+  overview: "grid",
+  activity: "clock",
+  files: "folder",
+  emails: "mail",
+  comments: "comment",
+  members: "users",
+  platform: "plug",
+  contacts: "users",
+  opportunities: "trending",
+};
 
 export function RecordTabs({
   tabs,
@@ -36,6 +50,7 @@ export function RecordTabs({
             value={tab.key}
             className="flex-none gap-1.5 px-4 py-2.5 text-[13px]"
           >
+            {TAB_ICONS[tab.key] ? <Icon name={TAB_ICONS[tab.key]} size={14} className="shrink-0" /> : null}
             {tab.label}
             {tab.count !== undefined && tab.count > 0 ? (
               <span className="rounded-full bg-(--gray-100) px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-(--text-secondary)">

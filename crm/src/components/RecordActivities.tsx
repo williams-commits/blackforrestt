@@ -9,6 +9,7 @@ import { Initials } from "@/components/Initials";
 import { Button } from "@/components/ui";
 import { Field, IconInput } from "@/components/form";
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/RichTextEditor";
+import { relativeTime, absoluteTime } from "@/lib/time";
 import { renderRichText } from "@/lib/richText";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -88,6 +89,7 @@ export function RecordActivities({
   const router = useRouter();
   const noteFormRef = useRef<HTMLFormElement>(null);
   const noteEditorRef = useRef<RichTextEditorHandle>(null);
+  const noteBusyRef = useRef(false); // synchronous — ⌘/Ctrl+Enter can double-fire within one render
   const [noteText, setNoteText] = useState("");
   const [noteHtml, setNoteHtml] = useState("");
   const [busy, setBusy] = useState(false);
@@ -105,6 +107,35 @@ export function RecordActivities({
   // Comment capabilities resolve per user (client fetch — same as RecordListPage).
   const [me, setMe] = useState<{ userId: string; canComment: boolean; canManage: boolean } | null>(null);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+
+  // Batch comment-count badges for the visible work items (notes,
+  // appointments, loaded tasks). Re-runs on the realtime refresh so other
+  // users' comments bump the badges live.
+  const refreshCommentCounts = useCallback(async () => {
+    const groups = [
+      { type: "NOTE" as const, ids: notes.map((note) => note.id) },
+      { type: "APPOINTMENT" as const, ids: appointments.map((appointment) => appointment.id) },
+      { type: "TASK" as const, ids: tasks.map((task) => task.id) },
+    ];
+    for (const group of groups) {
+      if (group.ids.length === 0) continue;
+      const ids = group.ids.slice(0, 100).join(",");
+      try {
+        const response = await fetch(`/api/comments/counts?subjectType=${group.type}&ids=${ids}`);
+        if (!response.ok) continue;
+        const payload = (await response.json().catch(() => null)) as { data?: Record<string, number> } | null;
+        if (payload?.data) setCommentCounts((current) => ({ ...current, ...payload.data }));
+      } catch { /* badges are best-effort */ }
+    }
+  }, [notes, appointments, tasks]);
+
+  useEffect(() => {
+    void refreshCommentCounts();
+    const onRealtime = () => void refreshCommentCounts();
+    window.addEventListener("crm:realtime-refresh", onRealtime);
+    return () => window.removeEventListener("crm:realtime-refresh", onRealtime);
+  }, [refreshCommentCounts]);
 
   useEffect(() => {
     let cancelled = false;
@@ -149,6 +180,8 @@ export function RecordActivities({
 
   async function addNote(event: React.FormEvent) {
     event.preventDefault();
+    if (noteBusyRef.current) return;
+    noteBusyRef.current = true;
     setError(null);
     setBusy(true);
     try {
@@ -171,6 +204,7 @@ export function RecordActivities({
       setError("Could not add note.");
       toast.error("Note not added", { description: "Check your connection and try again." });
     } finally {
+      noteBusyRef.current = false;
       setBusy(false);
     }
   }
@@ -426,81 +460,123 @@ export function RecordActivities({
             </TabsList>
           </div>
         </Tabs>
-        <div className="p-3">
-          {activeTab === "notes" ? notes.length === 0 ? <EmptyHint icon="note" text="No notes yet — add context for everyone working this record." /> : <ul className="space-y-2">{notes.map((note) => (
-          <li key={note.id} className="rounded-md border border-border bg-muted/40 p-3 text-sm transition-colors hover:bg-muted/70">
-            <div className="flex items-start gap-2.5">
-              <Initials name={note.author.name} size="xs" />
+        <div className="p-3 bg-accent/30">
+          {activeTab === "notes" ? notes.length === 0 ? <EmptyHint icon="note" text="No notes yet — add context for everyone working this record." /> : <ul className="space-y-2.5">{notes.map((note) => {
+          const noteCount = commentCounts[note.id] ?? 0;
+          const noteOpen = Boolean(openComments[note.id]);
+          return (
+          <li key={note.id} className="group rounded-lg border border-border bg-card p-3 shadow-xs transition-colors hover:border-border/80 hover:bg-muted/30">
+            <div className="flex items-start gap-3">
+              <Initials name={note.author.name} size="sm" />
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                   <span className="text-[13px] font-semibold text-foreground">{note.author.name}</span>
-                  <time className="text-[11px] text-muted-foreground" dateTime={note.createdAt}>
-                    {new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <Icon name="note" size={10} /> Note
+                  </span>
+                  <time className="ml-auto text-[11px] text-muted-foreground" dateTime={note.createdAt} title={absoluteTime(note.createdAt)}>
+                    {relativeTime(note.createdAt)}
                   </time>
                 </div>
                 <div
-                  className="mt-1 wrap-break-words text-[13px] leading-relaxed text-foreground [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
+                  className="mt-1.5 wrap-break-words text-[13px] leading-relaxed text-foreground [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
                   dangerouslySetInnerHTML={{ __html: renderRichText(note.body) }}
                 />
               </div>
             </div>
-            <div className="mt-2 flex justify-end border-t border-border pt-1.5">
-              <button type="button" onClick={() => toggleComments(note.id)} className="flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <Icon name={openComments[note.id] ? "no_comment" : "comment"} size={12} />
-                {openComments[note.id] ? "Hide comments" : "Comments"}
+            <div className="mt-2 flex items-center justify-end gap-2 border-t border-border/70 pt-1.5">
+              <button type="button" onClick={() => toggleComments(note.id)} aria-expanded={noteOpen} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <Icon name={noteOpen ? "no_comment" : "comment"} size={12} />
+                {noteOpen ? "Hide comments" : "Comments"}
+                {noteCount > 0 ? (
+                  <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold tabular-nums text-primary">{noteCount}</span>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground/70 tabular-nums">0</span>
+                )}
               </button>
             </div>
-            {openComments[note.id] && me ? (
-              <div className="mt-2 border-t border-border pt-2">
-                <CommentsSection subjectType="NOTE" subjectId={note.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount />
+            {noteOpen && me ? (
+              <div className="mt-2.5 border-t border-border/70 pt-2.5">
+                <CommentsSection subjectType="NOTE" subjectId={note.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount onCount={(count) => setCommentCounts((current) => ({ ...current, [note.id]: count }))} />
               </div>
             ) : null}
-          </li>))}</ul> : null}
-          {activeTab === "tasks" ? tasksLoading ? <Skeleton className="h-12 w-full" /> : tasks.length === 0 ? <EmptyHint icon="square_check" text="No related tasks yet — create a follow-up above." /> : <ul className="space-y-2">{tasks.map((task) => (
-          <li key={task.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-muted/50">
-            <span className="flex min-w-0 flex-1 items-center gap-2">
-              <Icon name="square_check" size={15} className="shrink-0 text-muted-foreground" />
-              <Link href={`/tasks/${task.id}`} className="min-w-0 truncate font-medium text-primary hover:underline">{task.title}</Link>
-            </span>
-            <span className="flex shrink-0 items-center gap-1.5">
-              {task.dueAt ? (
-                <span className="badge badge-neutral gap-1"><Icon name="calendar" size={11} />{new Date(task.dueAt).toLocaleDateString()}</span>
-              ) : (
-                <span className="text-xs text-muted-foreground">No due date</span>
-              )}
-              <StatusChip value={task.status} />
-            </span>
-          </li>))}</ul> : null}
-          {activeTab === "appointments" ? appointments.length === 0 ? <EmptyHint icon="calendar" text="No appointments yet — schedule one above." /> : <ul className="space-y-2">{appointments.map((appointment) => (
-          <li key={appointment.id} className="rounded-md border border-border p-3 text-sm transition-colors hover:bg-muted/50">
+          </li>);})}</ul> : null}
+          {activeTab === "tasks" ? tasksLoading ? <Skeleton className="h-12 w-full" /> : tasks.length === 0 ? <EmptyHint icon="square_check" text="No related tasks yet — create a follow-up above." /> : <ul className="space-y-2.5">{tasks.map((task) => {
+          const taskCount = commentCounts[task.id] ?? 0;
+          const taskOpen = Boolean(openComments[task.id]);
+          return (
+          <li key={task.id} className="group rounded-lg border border-border bg-card p-3 shadow-xs transition-colors hover:border-border/80 hover:bg-muted/30">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <span className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon name="square_check" size={14} /></span>
+                <Link href={`/tasks/${task.id}`} className="min-w-0 truncate font-medium text-foreground hover:text-primary hover:underline">{task.title}</Link>
+              </span>
+              <span className="flex shrink-0 items-center gap-1.5">
+                {task.dueAt ? (
+                  <span className="badge badge-neutral gap-1"><Icon name="calendar" size={11} />{new Date(task.dueAt).toLocaleDateString()}</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">No due date</span>
+                )}
+                <StatusChip value={task.status} />
+              </span>
+            </div>
+            <div className="mt-2 flex items-center justify-end border-t border-border/70 pt-1.5">
+              <button type="button" onClick={() => toggleComments(task.id)} aria-expanded={taskOpen} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <Icon name={taskOpen ? "no_comment" : "comment"} size={12} />
+                {taskOpen ? "Hide comments" : "Comments"}
+                {taskCount > 0 ? (
+                  <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold tabular-nums text-primary">{taskCount}</span>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground/70 tabular-nums">0</span>
+                )}
+              </button>
+            </div>
+            {taskOpen && me ? (
+              <div className="mt-2.5 border-t border-border/70 pt-2.5">
+                <CommentsSection subjectType="TASK" subjectId={task.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount onCount={(count) => setCommentCounts((current) => ({ ...current, [task.id]: count }))} />
+              </div>
+            ) : null}
+          </li>);})}</ul> : null}
+          {activeTab === "appointments" ? appointments.length === 0 ? <EmptyHint icon="calendar" text="No appointments yet — schedule one above." /> : <ul className="space-y-2.5">{appointments.map((appointment) => {
+          const apptCount = commentCounts[appointment.id] ?? 0;
+          const apptOpen = Boolean(openComments[appointment.id]);
+          return (
+          <li key={appointment.id} className="group rounded-lg border border-border bg-card p-3 shadow-xs transition-colors hover:border-border/80 hover:bg-muted/30">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
               <span className="flex min-w-0 items-center gap-2">
-                <Icon name="calendar" size={15} className="shrink-0 text-muted-foreground" />
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon name="calendar" size={14} /></span>
                 <span className="truncate font-medium text-foreground">{appointment.title}</span>
               </span>
               <span className="ml-auto flex shrink-0 flex-wrap items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">{new Date(appointment.startAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</span>
+                <time className="text-xs text-muted-foreground" dateTime={appointment.startAt} title={absoluteTime(appointment.startAt)}>
+                  {new Date(appointment.startAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                </time>
                 <StatusChip value={appointment.status} />
               </span>
             </div>
             {appointment.locationOrLink ? (
-              <p className="mt-1.5 flex items-center gap-1.5 pl-5.75 text-xs text-muted-foreground">
+              <p className="mt-1.5 flex items-center gap-1.5 pl-9 text-xs text-muted-foreground">
                 <Icon name="map_pin" size={11} className="shrink-0" />
                 <span className="truncate">{appointment.locationOrLink}</span>
               </p>
             ) : null}
-            <div className="mt-2 flex justify-end border-t border-border pt-1.5">
-              <button type="button" onClick={() => toggleComments(appointment.id)} className="flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <Icon name={openComments[appointment.id] ? "no_comment" : "comment"} size={12} />
-                {openComments[appointment.id] ? "Hide comments" : "Comments"}
+            <div className="mt-2 flex items-center justify-end border-t border-border/70 pt-1.5">
+              <button type="button" onClick={() => toggleComments(appointment.id)} aria-expanded={apptOpen} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <Icon name={apptOpen ? "no_comment" : "comment"} size={12} />
+                {apptOpen ? "Hide comments" : "Comments"}
+                {apptCount > 0 ? (
+                  <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold tabular-nums text-primary">{apptCount}</span>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground/70 tabular-nums">0</span>
+                )}
               </button>
             </div>
-            {openComments[appointment.id] && me ? (
-              <div className="mt-2 border-t border-border pt-2">
-                <CommentsSection subjectType="APPOINTMENT" subjectId={appointment.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount />
+            {apptOpen && me ? (
+              <div className="mt-2.5 border-t border-border/70 pt-2.5">
+                <CommentsSection subjectType="APPOINTMENT" subjectId={appointment.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount onCount={(count) => setCommentCounts((current) => ({ ...current, [appointment.id]: count }))} />
               </div>
             ) : null}
-          </li>))}</ul> : null}
+          </li>);})}</ul> : null}
         </div>
       </div>
     </div>

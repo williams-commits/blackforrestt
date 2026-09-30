@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
@@ -153,6 +154,7 @@ export function MailboxPage() {
       body: JSON.stringify({ read: false }),
     }).catch(() => null);
     if (response?.ok) {
+      toast.success("Marked as unread");
       setSelected(null);
       void load();
     } else {

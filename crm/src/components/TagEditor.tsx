@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { IconSelectTrigger } from "@/components/form";
 import {
@@ -74,6 +75,7 @@ export function TagEditor({
         return;
       }
       setError(null);
+      toast.success("Tag attached");
       router.refresh();
     } finally {
       setBusy(false);
@@ -94,6 +96,7 @@ export function TagEditor({
         return;
       }
       setError(null);
+      toast.success("Tag removed");
       router.refresh();
     } finally {
       setBusy(false);

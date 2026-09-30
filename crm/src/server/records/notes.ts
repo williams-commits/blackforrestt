@@ -4,6 +4,7 @@ import { prisma } from "@/server/db";
 import { appendAudit } from "@/server/audit";
 import { appendActivity } from "@/server/activity";
 import { CrmError, requireCapability } from "@/server/guard";
+import { notify, subjectNotificationContext } from "@/server/notifications";
 import { resolveSubject, subjectPermission } from "@/server/records/subjects";
 import { sanitizeEmailHtml, htmlToText } from "@/server/emailHtml";
 import type { ScopedContext } from "@/server/records/leads";
@@ -33,7 +34,7 @@ export async function createNote(ctx: ScopedContext, input: z.infer<typeof Creat
   if (plain.length > NOTE_MAX_PLAIN) throw new CrmError(`Note is too long — keep it under ${NOTE_MAX_PLAIN.toLocaleString()} characters.`, 400);
   const body = sanitizeEmailHtml(input.body);
   const subject = await resolveSubject(ctx, input.subjectType, input.subjectId);
-  return prisma.$transaction(async (tx) => {
+  const note = await prisma.$transaction(async (tx) => {
     const note = await tx.note.create({
       data: {
         body,
@@ -62,6 +63,49 @@ export async function createNote(ctx: ScopedContext, input: z.infer<typeof Creat
     });
     return note;
   });
+  // Notes reach the record's owner (unless they wrote it) — context the
+  // owner would otherwise miss until their next visit.
+  const owner = await ownerOfSubject(subject.type, subject.id);
+  if (owner && owner !== ctx.userId) {
+    await notify({
+      recipientUserId: owner,
+      type: "NOTE_ADDED",
+      payload: {
+        recordType: subject.type,
+        recordId: subject.id,
+        label: subject.label,
+        excerpt: plain.slice(0, 120),
+        byName: ctx.name,
+      },
+      context: subjectNotificationContext(subject.type, subject.id),
+    });
+  }
+  return note;
+}
+
+/** The user who owns a subject record (assignee/owner), when there is one. */
+async function ownerOfSubject(
+  subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
+  subjectId: string,
+): Promise<string | null> {
+  if (subjectType === "LEAD") {
+    const row = await prisma.lead.findUnique({ where: { id: subjectId }, select: { assignedUserId: true } });
+    return row?.assignedUserId ?? null;
+  }
+  if (subjectType === "OPPORTUNITY") {
+    const row = await prisma.opportunity.findUnique({ where: { id: subjectId }, select: { ownerUserId: true } });
+    return row?.ownerUserId ?? null;
+  }
+  if (subjectType === "CONTACT") {
+    const row = await prisma.contact.findUnique({ where: { id: subjectId }, select: { ownerUserId: true } });
+    return row?.ownerUserId ?? null;
+  }
+  if (subjectType === "CUSTOMER") {
+    const row = await prisma.customer.findUnique({ where: { id: subjectId }, select: { ownerUserId: true } });
+    return row?.ownerUserId ?? null;
+  }
+  const row = await prisma.account.findUnique({ where: { id: subjectId }, select: { ownerUserId: true } });
+  return row?.ownerUserId ?? null;
 }
 
 export function listNotesBySubject(

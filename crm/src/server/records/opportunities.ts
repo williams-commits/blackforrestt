@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/server/db";
 import { CrmError, requireCapability } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
+import { notify, subjectNotificationContext } from "@/server/notifications";
 import { appendActivity } from "@/server/activity";
 import { ownerScopeWhere } from "@/server/scope";
 import { assertAssignableUser } from "@/server/records/assignment";
@@ -303,7 +304,7 @@ export async function updateOpportunity(
     }
   }
 
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const saved = await tx.opportunity.update({
       where: { id },
       data: {
@@ -354,6 +355,25 @@ export async function updateOpportunity(
     });
     return serialize(saved);
   });
+  // Pipeline movement reaches the owner (unless they moved it themselves) —
+  // a deal sliding stages under you is inbox-worthy.
+  if (newStage && newStage.id !== existing.stageId && existing.ownerUserId !== ctx.userId) {
+    await notify({
+      recipientUserId: existing.ownerUserId,
+      type: "STAGE_CHANGED",
+      payload: {
+        recordType: "OPPORTUNITY",
+        recordId: id,
+        label: existing.name,
+        from: existing.stage.name,
+        to: newStage.name,
+        status,
+        byName: ctx.name,
+      },
+      context: subjectNotificationContext("OPPORTUNITY", id),
+    });
+  }
+  return updated;
 }
 
 export async function softDeleteOpportunity(ctx: ScopedContext, id: string) {

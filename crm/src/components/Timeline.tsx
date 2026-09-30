@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { Icon } from "@/components/Icon";
 import { cn } from "@/lib/utils";
+import { relativeTime, absoluteTime } from "@/lib/time";
 
 type EventRow = Prisma.ActivityEventGetPayload<{ include: { actor: { select: { name: true } } } }>;
 
@@ -40,19 +41,18 @@ const TONE_CLASSES: Record<Tone, string> = {
   info: "bg-(--info-bg) text-(--info)",
 };
 
-/** Relative time ("2 hours ago", "3 days ago") */
-function relativeTime(date: Date): string {
-  const diff = Date.now() - date.getTime();
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `${weeks}w ago`;
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+/** Day bucket label for grouping: Today / Yesterday / weekday-qualified date. */
+function dayLabel(date: Date): string {
+  const now = new Date();
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.round((startOf(now) - startOf(date)) / 86_400_000);
+  if (dayDiff === 0) return "Today";
+  if (dayDiff === 1) return "Yesterday";
+  return date.toLocaleDateString(undefined, {
+    ...(dayDiff > 6 ? { year: "numeric" } : { weekday: "long" }),
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function payloadSummary(payload: Prisma.JsonValue | null): string | null {
@@ -71,9 +71,9 @@ function payloadSummary(payload: Prisma.JsonValue | null): string | null {
 }
 
 /**
- * Activity timeline — vertical feed with per-kind icon medallions on a
- * hairline connector, relative timestamps (absolute time on hover), and
- * payload summaries. Rows highlight on hover.
+ * Activity timeline — day-grouped vertical feed with per-kind icon
+ * medallions on a hairline connector, relative timestamps (absolute on
+ * hover), and payload summaries. Rows highlight on hover.
  */
 export function Timeline({ events }: { events: EventRow[] }) {
   if (events.length === 0) {
@@ -86,46 +86,66 @@ export function Timeline({ events }: { events: EventRow[] }) {
     );
   }
 
+  // Group into day buckets (events arrive newest-first).
+  const groups: Array<{ label: string; events: EventRow[] }> = [];
+  for (const event of events) {
+    const label = dayLabel(event.createdAt);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.events.push(event);
+    else groups.push({ label, events: [event] });
+  }
+
   return (
-    // Connector rail runs behind the medallions (medallion center = 18px in).
-    <div className="relative flex flex-col gap-0.5 before:absolute before:top-3 before:bottom-3 before:left-4.5 before:w-0.5 before:-translate-x-1/2 before:rounded-full before:bg-border">
-      {events.map((event) => {
-        const meta = KIND_META[event.kind] ?? { label: event.kind, icon: "clock", tone: "neutral" as Tone };
-        const summary = payloadSummary(event.payload);
-        return (
-          <div
-            key={event.id}
-            className="relative flex gap-2.5 rounded-md p-1.5 transition-colors hover:bg-muted/50"
-          >
-            <span
-              className={cn(
-                "relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full",
-                TONE_CLASSES[meta.tone]
-              )}
-              aria-hidden
-            >
-              <Icon name={meta.icon} size={12} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="truncate text-[13px] font-semibold text-foreground">
-                  {meta.label}
-                </span>
-                <span
-                  className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground"
-                  title={event.createdAt.toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })}
-                >
-                  {relativeTime(event.createdAt)}
-                </span>
-              </div>
-              <p className="truncate text-[12px] text-muted-foreground">
-                {event.actor?.name ?? "System"}
-                {summary ? <span className="text-muted-foreground/70"> · {summary}</span> : null}
-              </p>
-            </div>
+    <div className="space-y-4">
+      {groups.map((group) => (
+        <section key={group.label} aria-label={group.label}>
+          <div className="sticky top-0 z-20 -mx-1 mb-1 bg-background/95 px-1 py-1 backdrop-blur-sm">
+            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{group.label}</h4>
           </div>
-        );
-      })}
+          {/* Connector rail runs behind the medallions (medallion center = 18px in). */}
+          <div className="relative flex flex-col gap-0.5 before:absolute before:top-3 before:bottom-3 before:left-4.5 before:w-0.5 before:-translate-x-1/2 before:rounded-full before:bg-border">
+            {group.events.map((event) => {
+              const meta = KIND_META[event.kind] ?? { label: event.kind, icon: "clock", tone: "neutral" as Tone };
+              const summary = payloadSummary(event.payload);
+              const iso = event.createdAt.toISOString();
+              return (
+                <div
+                  key={event.id}
+                  className="relative flex gap-2.5 rounded-md p-1.5 transition-colors hover:bg-muted/50"
+                >
+                  <span
+                    className={cn(
+                      "relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full",
+                      TONE_CLASSES[meta.tone]
+                    )}
+                    aria-hidden
+                  >
+                    <Icon name={meta.icon} size={12} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-[13px] font-semibold text-foreground">
+                        {meta.label}
+                      </span>
+                      <time
+                        className="shrink-0 text-[10px] tabular-nums text-muted-foreground"
+                        dateTime={iso}
+                        title={absoluteTime(iso)}
+                      >
+                        {relativeTime(iso)}
+                      </time>
+                    </div>
+                    <p className="truncate text-[12px] text-muted-foreground">
+                      {event.actor?.name ?? "System"}
+                      {summary ? <span className="text-muted-foreground/70"> · {summary}</span> : null}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

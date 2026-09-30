@@ -187,7 +187,7 @@ export function Section({
 }
 
 /* EmptyState + ModuleIllustration now live as shadcn-style primitives in
-   ui/empty-state.tsx and ui/module-illustration.tsx; re-exported here so
+   ui/empty-state.tsx; re-exported here so
    every existing `@/components/ui` import keeps working. */
 
 export { EmptyState } from "@/components/ui/empty-state";

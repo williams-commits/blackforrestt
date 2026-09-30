@@ -14,7 +14,7 @@ import { relativeTime, absoluteTime } from "@/lib/time";
 import { renderRichText } from "@/lib/richText";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Icon } from "./Icon";
+import { Icon } from "@/components/Icon";
 
 /** Compact semantic chip for a raw status string (task/apointment states). */
 function StatusChip({ value }: { value: string }) {

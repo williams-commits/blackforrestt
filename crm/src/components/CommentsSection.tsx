@@ -12,7 +12,7 @@ import { renderRichText } from "@/lib/richText";
 import { relativeTime, absoluteTime } from "@/lib/time";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CommentRow } from "@/server/records/comments";
-import { Icon } from "./Icon";
+import { Icon } from "@/components/Icon";
 
 /**
  * Comment thread for a work item (task, note, appointment). Posting/editing

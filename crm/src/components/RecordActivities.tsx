@@ -30,7 +30,7 @@ function StatusChip({ value }: { value: string }) {
 /** Inline empty-state for the activity sub-lists — renders through the
  * shared EmptyState primitive (left-aligned compact variant). */
 function EmptyHint({ icon, text }: { icon: string; text: string }) {
-  return <EmptyState icon={icon} title={text} className="justify-start py-4 text-left" />;
+  return <EmptyState icon={icon} iconTile={false} title={text} className="justify-start py-4 text-left" />;
 }
 
 export interface SubjectNote {

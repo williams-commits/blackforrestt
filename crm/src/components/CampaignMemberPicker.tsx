@@ -192,8 +192,10 @@ export function CampaignMemberPicker({
 
       {members.length === 0 ? (
         <EmptyState
+          icon="users"
           title="No members yet"
           description="Add leads, contacts, or customers to start tracking this campaign."
+          className="py-6"
         />
       ) : (
         <ul className="space-y-1">

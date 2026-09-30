@@ -974,8 +974,10 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
         </div>
         {jobs.length === 0 ? (
           <EmptyState
+            icon="upload"
             title="No imports yet"
             description={jobsDebouncedSearch ? "Try a different search — file, object, or status." : undefined}
+            className="py-6"
           />
         ) : (
           <Table>

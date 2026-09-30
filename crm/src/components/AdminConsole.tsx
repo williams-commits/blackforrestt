@@ -479,7 +479,7 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
         {loading ? (
           <div className="p-3"><AdminCardGridSkeleton cards={6} /></div>
         ) : rows.length === 0 ? (
-          <EmptyState title="No tags yet" description="Create your first label to start segmenting records." />
+          <EmptyState icon="tag" title="No tags yet" description="Create your first label to start segmenting records." className="py-8" />
         ) : (
           <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
           {rows.map((row) => (
@@ -658,7 +658,7 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
             {loading ? (
               <AdminTableSkeleton rows={6} columns={canManage ? 7 : 6} />
             ) : rows.length === 0 ? (
-              <TR><TD colSpan={7}><EmptyState title="No custom fields defined" description="Add a field above to capture business-specific details on records." /></TD></TR>
+              <TR><TD colSpan={7}><EmptyState icon="list" title="No custom fields defined" description="Add a field above to capture business-specific details on records." className="py-6" /></TD></TR>
             ) : (
               rows.map((row) => (
                 <TR key={row.id}>
@@ -1012,7 +1012,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
             {!loading && filteredUsers.length === 0 ? (
               <TR>
                 <TD colSpan={canManage ? 7 : 5}>
-                  <EmptyState title="No users match this view" description="Adjust the search or status filter." />
+                  <EmptyState icon="users" title="No users match this view" description="Adjust the search or status filter." className="py-8" />
                 </TD>
               </TR>
             ) : null}
@@ -1390,7 +1390,7 @@ export function SettingsTab() {
             ))}
           </div>
         ) : settings.length === 0 ? (
-          <EmptyState title="No settings yet" description="Add a workspace default above to make it available to the CRM." />
+          <EmptyState icon="settings" title="No settings yet" description="Add a workspace default above to make it available to the CRM." className="py-6" />
         ) : (
           <CardContent>
             <dl className="admin-desc-list">
@@ -1499,7 +1499,7 @@ export function AuditTab() {
               </TR>
             ))}
             {!loading && entries.length === 0 ? (
-              <TR><TD colSpan={4}><EmptyState title="No audit entries yet" description="Configuration and record changes will appear here as they happen." /></TD></TR>
+              <TR><TD colSpan={4}><EmptyState icon="clock" title="No audit entries yet" description="Configuration and record changes will appear here as they happen." className="py-6" /></TD></TR>
             ) : null}
           </TBody>
         </Table>

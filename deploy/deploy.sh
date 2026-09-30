@@ -16,6 +16,21 @@ cd "$ROOT"
 # final step can force-recreate Caddy when it did.
 CADDYFILE="$ROOT/deploy/caddy/render/Caddyfile"
 CADDY_HASH_BEFORE="$(sha256sum "$CADDYFILE" 2>/dev/null | cut -d' ' -f1 || :)"
+# CADDY_EMAIL is required by the Caddyfile render (TLS renewal contact).
+# Default it to admin@<primary domain> and PERSIST the choice so it is
+# visible and changeable in .env.production on later deploys.
+CADDY_EMAIL_CFG="$(grep -E '^CADDY_EMAIL=' .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' || :)"
+if [[ -z "$CADDY_EMAIL_CFG" ]]; then
+  PRIMARY_DOMAIN="$(grep -E '^DOMAIN=' .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' || :)"
+  if [[ -z "$PRIMARY_DOMAIN" ]]; then
+    PRIMARY_DOMAIN="$(grep -E '^BRAND_DOMAIN=' .env.production | head -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | cut -d, -f1 | tr -d '[:space:]' || :)"
+  fi
+  if [[ -n "$PRIMARY_DOMAIN" ]]; then
+    CADDY_EMAIL_CFG="admin@${PRIMARY_DOMAIN}"
+    printf '\nCADDY_EMAIL=%s\n' "$CADDY_EMAIL_CFG" >> .env.production
+    echo "CADDY_EMAIL was not set — defaulted to ${CADDY_EMAIL_CFG} (TLS renewal contact). Edit .env.production to change it."
+  fi
+fi
 # Seed per-domain site files for every registry domain on FIRST deploy.
 # The render runs INSIDE a container built from this repo's builder stage —
 # the host only needs Docker (no host Node), same pattern as crm-seed below.

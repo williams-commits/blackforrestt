@@ -88,7 +88,12 @@ export function renderDomainSite(domain, envFile) {
 /** @param {{ envFile?: string, sitesDir?: string, snippetsPath?: string, outPath?: string, email?: string, domains?: Array<{key:string}> }} args */
 export function renderCaddyfile({ envFile, sitesDir, snippetsPath, outPath, email: emailOverride, domains: domainsOverride } = {}) {
   const email = emailOverride ?? envValue(envFile, "CADDY_EMAIL");
-  if (!email) throw new Error("CADDY_EMAIL is not set in the environment file.");
+  if (!email) {
+    throw new Error(
+      "CADDY_EMAIL is not set in the environment file. Add CADDY_EMAIL=you@example.com — " +
+      "it is the contact address for TLS certificate renewal notices."
+    );
+  }
   const crmDomain = envValue(envFile, "CRM_DOMAIN");
   const snippets = readFileSync(snippetsPath, "utf-8");
   // DEPLOY_DOMAINS scoping: when provided, only the selected domains' site

@@ -185,3 +185,7 @@ caddy-validate: ## Validate the rendered Caddy config with the official image
 # Simple nano 
 clear-env-production:
 	: > .env.production
+
+# Redact sensitive values in .env.production (for sharing or screenshots)
+redact-env-production:
+	@sed -E 's/(PASSWORD|SECRET|TOKEN|KEY)=.*/\1=***REDACTED***/' .env.production.sample.saved 

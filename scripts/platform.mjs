@@ -10,7 +10,7 @@
  * Every command: --help, actionable errors, deterministic exit codes
  * (0 ok / 1 usage or validation failure / 2 runtime failure).
  */
-import { join, dirname } from "node:path";
+import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
@@ -69,8 +69,10 @@ async function main() {
     if (command === "render") {
       const { flags } = parseFlags(rest);
       const { renderCaddyfile } = await import("./platform/lib/deploy-config.mjs");
-      const envFile = join(ROOT, flags["env-file"] ?? ".env.production");
-      const out = flags.out ?? join(ROOT, "deploy/caddy/render/Caddyfile");
+      // resolve (not join): an absolute --env-file (e.g. a container mount
+      // path) must not be concatenated under ROOT.
+      const envFile = resolve(ROOT, flags["env-file"] ?? ".env.production");
+      const out = resolve(ROOT, flags.out ?? join(ROOT, "deploy/caddy/render/Caddyfile"));
       // DEPLOY_DOMAINS scoping: read from the env file (or --domains flag).
       let domainsScope = null;
       const domainsFlag = flags.domains;

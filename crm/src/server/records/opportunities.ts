@@ -73,6 +73,40 @@ function scopeWhere(ctx: ScopedContext) {
   return ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds);
 }
 
+/**
+ * Opportunities related to a record (contact- or account-linked), for the
+ * detail pages' Opportunities section. Applies the same owner scope as the
+ * pipeline list — a contact viewer must never see deals outside their
+ * scope — and returns [] for callers without OPPORTUNITIES_VIEW so pages
+ * can hide the section entirely.
+ */
+export async function listRelatedOpportunities(
+  ctx: ScopedContext,
+  subject: { contactId?: string; accountId?: string },
+  take = 10,
+) {
+  if (!ctx.permissions.includes("OPPORTUNITIES_VIEW")) return [];
+  const filters: Prisma.OpportunityWhereInput[] = [];
+  if (subject.contactId) filters.push({ contactId: subject.contactId });
+  if (subject.accountId) filters.push({ accountId: subject.accountId });
+  if (filters.length === 0) return [];
+  return prisma.opportunity.findMany({
+    where: { deletedAt: null, AND: [{ OR: filters }, ownerScopeWhere(ctx.userId, ctx.scope, ctx.teamIds)] },
+    orderBy: { createdAt: "desc" },
+    take,
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      value: true,
+      currency: true,
+      contactId: true,
+      accountId: true,
+      stage: { select: { name: true } },
+    },
+  });
+}
+
 export async function listOpportunities(
   ctx: ScopedContext,
   query: { page: number; pageSize: number; sort?: string; order?: "asc" | "desc"; q?: string },

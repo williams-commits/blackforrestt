@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { EmptyState } from "@/components/ui/empty-state";
 import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Icon } from "@/components/Icon";
@@ -92,10 +93,12 @@ export function RecordEmailHistory({
       ) : loading ? (
         <p className="text-sm text-(--text-tertiary)">Loading emails…</p>
       ) : rows.length === 0 ? (
-        <div className="flex items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2.5 text-xs text-muted-foreground">
-          <Icon name="mail" size={14} className="shrink-0 text-muted-foreground/60" />
-          No email correspondence yet. Emails sent from this record — and replies from this address — appear here.
-        </div>
+        <EmptyState
+          icon="mail"
+          title="No email correspondence yet"
+          description="Emails sent from this record — and replies from this address — appear here."
+          className="py-6"
+        />
       ) : (
         <ul className="space-y-1.5">
           {rows.slice(0, 10).map((row) => {

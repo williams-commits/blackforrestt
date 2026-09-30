@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/ui/empty-state";
 import { auth } from "@/auth";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -649,7 +650,7 @@ export default async function DocsPage() {
           Reps see their own records, Team Leads see their team&#39;s records, and Managers see all teams in their hierarchy.
         </p>
         {teams.length === 0 ? (
-          <p className="text-[14px] text-muted-foreground">No teams configured yet.</p>
+          <EmptyState icon="users" title="No teams configured yet" description="Create one in Admin → Users & teams." className="py-6" />
         ) : (
           teams.map((team) => (
             <div key={team.id} className="rounded-lg border border-border p-4">

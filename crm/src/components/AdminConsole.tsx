@@ -269,7 +269,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
               <TH className="px-3 py-2 font-medium">Category</TH>
               <TH className="px-3 py-2 font-medium">In use</TH>
               <TH className="px-3 py-2 font-medium">Default</TH>
-              {canManage ? <TH className="px-3 py-2 text-right font-medium">Actions</TH> : null}
+              {canManage ? <TH className="px-3 py-2 text-right font-medium"><span className="sr-only">Actions</span></TH> : null}
             </TR>
           </THead>
           <TBody>
@@ -651,7 +651,7 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
               <TH className="px-3 py-2 font-medium">Type</TH>
               <TH className="px-3 py-2 font-medium">Options</TH>
               <TH className="px-3 py-2 font-medium">State</TH>
-              {canManage ? <TH className="px-3 py-2 text-right font-medium">Actions</TH> : null}
+              {canManage ? <TH className="px-3 py-2 text-right font-medium"><span className="sr-only">Actions</span></TH> : null}
             </TR>
           </THead>
           <TBody>
@@ -944,7 +944,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
               <TH className="px-3 py-2 font-medium">Teams</TH>
               <TH className="px-3 py-2 font-medium">Last login</TH>
               <TH className="px-3 py-2 font-medium">Status</TH>
-              {canManage ? <TH className="px-3 py-2 text-right font-medium">Actions</TH> : null}
+              {canManage ? <TH className="px-3 py-2 text-right font-medium"><span className="sr-only">Actions</span></TH> : null}
             </TR>
           </THead>
           <TBody>
@@ -1095,7 +1095,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                 <CardLabel>Recent activity</CardLabel>
                 <span className="text-[11px] text-(--text-tertiary)">{userActivity.length} events</span>
               </div>
-              {activityError ? <p role="alert" className="mt-2 text-sm text-(--error)">{activityError}</p> : activityLoading ? <div className="mt-2 space-y-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-1/2" /></div> : userActivity.length === 0 ? <p className="mt-2 text-sm text-(--text-tertiary)">No recorded activity yet.</p> : <ul className="mt-2 space-y-2">{userActivity.map((event) => <li key={event.id} className="flex items-start justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><span><span className="font-medium">{event.label}</span><span className="ml-2 text-xs text-(--text-tertiary)">{event.objectType.toLowerCase()}</span></span><time className="shrink-0 text-[11px] text-(--text-tertiary)">{new Date(event.createdAt).toLocaleDateString()}</time></li>)}</ul>}
+              {activityError ? <p role="alert" className="mt-2 text-sm text-(--error)">{activityError}</p> : activityLoading ? <div className="mt-2 space-y-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-1/2" /></div> : userActivity.length === 0 ? <EmptyState icon="clock" title="No recorded activity yet" description="Config and record changes will appear here." className="py-6" /> : <ul className="mt-2 space-y-2">{userActivity.map((event) => <li key={event.id} className="flex items-start justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><span><span className="font-medium">{event.label}</span><span className="ml-2 text-xs text-(--text-tertiary)">{event.objectType.toLowerCase()}</span></span><time className="shrink-0 text-[11px] text-(--text-tertiary)">{new Date(event.createdAt).toLocaleDateString()}</time></li>)}</ul>}
             </TabsContent>
 
             {canManage ? (
@@ -1879,8 +1879,8 @@ export function ObjectsTab() {
           </Card>
         ))}
         {!loading && objects.length === 0 ? (
-          <Card className="gap-0 p-6 text-sm text-(--text-tertiary)">
-            No custom objects yet — create one above (e.g. Properties, Vendors).
+          <Card className="gap-0 py-0">
+            <EmptyState icon="box" title="No custom objects yet" description="Create one above — e.g. Properties or Vendors." className="py-8" />
           </Card>
         ) : null}
       </div>

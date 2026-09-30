@@ -46,7 +46,7 @@ export function LoginForm() {
       {/* Brand panel (desktop only) — neutral */}
       <div className="hidden w-2/5 flex-col justify-center border-r border-border bg-muted px-12 text-foreground lg:flex">
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-background text-lg font-bold">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-primary text-primary-foreground text-lg font-bold">
             {branding.logo}
           </span>
           <div>
@@ -62,7 +62,7 @@ export function LoginForm() {
             { title: "Data you can trust", desc: "Deduplication, audit trails, and scoped access." },
           ].map((feature) => (
             <div key={feature.title} className="flex items-start gap-3">
-              <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground">
+              <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-primary text-primary-foreground">
                 <Icon name="check" size={12} strokeWidth={3} />
               </span>
               <div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
+import { EmptyState } from "@/components/ui/empty-state";
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -116,10 +117,12 @@ export function AttachmentsPanel({
         <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p>
       ) : null}
       {rows.length === 0 && !staged ? (
-        <div className="flex items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2.5 text-xs text-muted-foreground">
-          <Icon name="folder" size={14} className="shrink-0 text-muted-foreground/60" />
-          No files yet — attach contracts, IDs, screenshots, or anything the team needs.
-        </div>
+        <EmptyState
+          icon="folder"
+          title="No files yet"
+          description="Attach contracts, IDs, screenshots, or anything the team needs."
+          className="py-6"
+        />
       ) : null}
       {rows.length > 0 ? (
         <ul className="space-y-2">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useConfirmDialog } from "@/components/Dialogs";
@@ -205,10 +206,7 @@ export function CommentsSection({
       {!loaded ? (
         <Skeleton className="h-10 w-full" />
       ) : comments.length === 0 ? (
-        <div className="flex items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2.5 text-xs text-muted-foreground">
-          <Icon name="comment" size={14} className="shrink-0 text-muted-foreground/60" />
-          No comments yet — start the discussion above.
-        </div>
+        <EmptyState icon="comment" title="No comments yet" description="Start the discussion above." className="py-6" />
       ) : (
         <ul className="space-y-2">
           {comments.map((comment) => {

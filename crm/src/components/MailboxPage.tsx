@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -257,9 +258,12 @@ export function MailboxPage() {
             {loading && rows.length === 0 ? (
               <p className="px-4 py-10 text-center text-sm text-muted-foreground">Loading mailbox…</p>
             ) : rows.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-                {folder === "sent" ? "No sent emails yet — sends are archived here automatically." : folder === "unread" ? "Inbox zero. Nothing unread." : "No emails match this view."}
-              </p>
+              <EmptyState
+                icon="mail"
+                title={folder === "sent" ? "No sent emails yet" : folder === "unread" ? "Inbox zero" : "No emails match this view"}
+                description={folder === "sent" ? "Sends are archived here automatically." : folder === "unread" ? "Nothing unread — you are all caught up." : "Try a different folder or search."}
+                className="py-8"
+              />
             ) : (
               rows.map((row) => (
                 <button

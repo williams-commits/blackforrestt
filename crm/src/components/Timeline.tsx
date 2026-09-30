@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { Icon } from "@/components/Icon";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 import { relativeTime, absoluteTime } from "@/lib/time";
 
 type EventRow = Prisma.ActivityEventGetPayload<{ include: { actor: { select: { name: true } } } }>;
@@ -78,11 +79,7 @@ function payloadSummary(payload: Prisma.JsonValue | null): string | null {
 export function Timeline({ events }: { events: EventRow[] }) {
   if (events.length === 0) {
     return (
-      <div className="empty-state">
-        <Icon name="clock" size={48} strokeWidth={1.5} className="empty-state-icon" />
-        <p className="empty-state-title">No activity yet</p>
-        <p className="empty-state-description">Actions on this record will appear here.</p>
-      </div>
+      <EmptyState icon="clock" title="No activity yet" description="Actions on this record will appear here." />
     );
   }
 

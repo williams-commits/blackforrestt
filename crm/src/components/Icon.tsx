@@ -56,6 +56,9 @@ import {
   XCircle,
   MessageCircle,
   MessageCircleX,
+  LogOut,
+  LoaderCircle,
+  Loader,
 } from "lucide-react";
 
 /**
@@ -128,6 +131,9 @@ const ICONS: Record<string, LucideIcon> = {
   lightbulb: Lightbulb,
   comment: MessageCircle,
   no_comment: MessageCircleX,
+  log_out: LogOut,
+  loader_circle: LoaderCircle,
+  loader: Loader,
 };
 
 export function Icon({

@@ -65,8 +65,15 @@ export function GlobalSearch() {
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      // `/` opens the search palette (Salesforce-style shortcut)
-      if (event.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement)?.tagName)) {
+      // `/` opens the search palette (Salesforce-style shortcut) — never
+      // while typing: form fields AND contenteditable editors (notes,
+      // comments, email bodies) must receive the character untouched.
+      const target = event.target as HTMLElement | null;
+      const typing =
+        ["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "") ||
+        target?.isContentEditable === true ||
+        target?.closest?.('[role="textbox"]') != null;
+      if (event.key === "/" && !typing) {
         event.preventDefault();
         setOpen(true);
       }
@@ -95,7 +102,7 @@ export function GlobalSearch() {
         className="flex h-8 w-full items-center gap-2 rounded-lg border border-input bg-transparent px-3 text-[13px] text-muted-foreground transition-colors outline-none select-none hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50"
       >
         <Icon name="search" size={14} className="shrink-0 opacity-50" />
-        <span className="truncate">Search…</span>
+        <span className="truncate">Search CRM…</span>
         <kbd className="ml-auto rounded border border-border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground">/</kbd>
       </button>
 
@@ -112,7 +119,7 @@ export function GlobalSearch() {
           <CommandInput
             value={query}
             onValueChange={setQuery}
-            placeholder="Search… (press / )"
+            placeholder="Search CRM… (press / )"
             onKeyDown={(event) => {
               // Enter with no matching records falls through to the full
               // search page (the original header-bar behavior).
@@ -123,7 +130,9 @@ export function GlobalSearch() {
           />
           <CommandList>
             {loading ? (
-              <p className="px-2 py-6 text-center text-sm text-muted-foreground">Searching…</p>
+              <p className="flex items-center justify-center gap-2 px-2 py-4 text-center text-sm text-muted-foreground">
+                <Icon name="loader" size={14} className="shrink-0 opacity-50 animate-spin" /> Searching…
+              </p>
             ) : query.trim().length >= 2 && hits.length === 0 ? (
               <CommandEmpty>No matches in your scope.</CommandEmpty>
             ) : (

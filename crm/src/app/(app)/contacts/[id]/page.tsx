@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { listRelatedOpportunities } from "@/server/records/opportunities";
 import { redirect } from "next/navigation";
 import { prisma } from "@/server/db";
 import { CrmError } from "@/server/guard";
@@ -68,28 +69,10 @@ export default async function ContactDetailPage({ params }: PageProps) {
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "CONTACT");
     notes = await listNotesBySubject("CONTACT", id);
     appointments = await listAppointmentsBySubject("CONTACT", id);
-    relatedOpportunities = await prisma.opportunity.findMany({
-      where: {
-        deletedAt: null,
-        OR: [
-          { contactId: id },
-          ...(contact.accountId ? [{ accountId: contact.accountId }] : []),
-        ],
-      },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      distinct: ["id"],
-      select: {
-        id: true,
-        name: true,
-        status: true,
-        value: true,
-        currency: true,
-        contactId: true,
-        accountId: true,
-        stage: { select: { name: true } },
-      },
-    });
+    relatedOpportunities = await listRelatedOpportunities(
+      ctx,
+      { contactId: id, ...(contact.accountId ? { accountId: contact.accountId } : {}) },
+    );
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "CONTACT", subjectId: id }, include: { campaign: true } });
     canViewEmails = ctx.permissions.includes("EMAILS_VIEW");
     const capabilities = getRecordCapabilities("CONTACT", ctx.permissions);
@@ -174,27 +157,31 @@ export default async function ContactDetailPage({ params }: PageProps) {
           <section className="card">
             <div className="card-header">
               <h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="trending" size={13} /></span>Opportunities</h2>
-              <span className="badge badge-neutral">{relatedOpportunities.length}</span>
             </div>
             <div className="card-body">
               {relatedOpportunities.length === 0 ? (
                 <EmptyState
+                  icon="trending"
                   title="No opportunities yet"
                   description="Deals linked to this contact or their account will appear here."
+                  className="py-8"
                 />
               ) : (
-                <ul className="space-y-2">
+                <ul className="space-y-2.5">
                   {relatedOpportunities.map((opportunity) => (
-                    <li key={opportunity.id} className="flex items-start justify-between gap-3 rounded-md border border-(--border-default) bg-(--bg-subtle) px-3 py-2 text-[13px]">
-                      <div className="min-w-0">
-                        <Link href={`/opportunities/${opportunity.id}`} className="font-medium text-(--text-brand) hover:underline">
+                    <li key={opportunity.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 shadow-xs transition-colors hover:border-border/80 hover:bg-muted/30">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden>
+                        <Icon name="trending" size={15} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <Link href={`/opportunities/${opportunity.id}`} className="block truncate font-medium text-foreground hover:text-primary hover:underline">
                           {opportunity.name}
                         </Link>
-                        <p className="mt-0.5 text-[11px] text-(--text-tertiary)">
+                        <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
                           {opportunity.contactId === id ? "Contact deal" : "Account deal"} · {opportunity.stage.name} · {opportunity.status.toLowerCase()}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-[12px] font-semibold text-(--text-secondary)">
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-[13px] font-semibold tabular-nums text-foreground">
                         {opportunity.value
                           ? (Number(opportunity.value) / 100).toLocaleString(undefined, {
                               style: "currency",

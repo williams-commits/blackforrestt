@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { listRelatedOpportunities } from "@/server/records/opportunities";
 import { redirect } from "next/navigation";
 import { prisma } from "@/server/db";
 import { CrmError } from "@/server/guard";
@@ -55,12 +56,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
     const ctx = await scopedContext("ACCOUNTS_VIEW");
     account = await getAccount(ctx, id);
     events = await listTimeline("ACCOUNT", id);
-    relatedOpportunities = await prisma.opportunity.findMany({
-      where: { accountId: id, deletedAt: null },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      select: { id: true, name: true, status: true, stage: { select: { name: true } } },
-    });
+    relatedOpportunities = await listRelatedOpportunities(ctx, { accountId: id });
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "ACCOUNT", subjectId: id }, include: { campaign: true } });
     tags = await listTagsForSubject(ctx, "ACCOUNT", id);
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "ACCOUNT");
@@ -176,6 +172,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
             <div className="card-body">
               {account.contacts.length === 0 ? (
                 <EmptyState
+                  icon="users"
                   title="No contacts linked yet"
                   description="Contacts belonging to this account will appear here."
                 />
@@ -210,17 +207,22 @@ export default async function AccountDetailPage({ params }: PageProps) {
             <div className="card-body">
               {relatedOpportunities.length === 0 ? (
                 <EmptyState
+                  icon="trending"
                   title="No opportunities yet"
                   description="Deals linked to this account will appear here."
+                  className="py-8"
                 />
               ) : (
-                <ul className="space-y-2">
+                <ul className="space-y-2.5">
                   {relatedOpportunities.map((opportunity) => (
-                    <li key={opportunity.id} className="flex items-center justify-between text-[13px]">
-                      <Link href={`/opportunities/${opportunity.id}`} className="font-medium hover:underline" style={{ color: "var(--text-brand)" }}>
+                    <li key={opportunity.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 shadow-xs transition-colors hover:border-border/80 hover:bg-muted/30">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden>
+                        <Icon name="trending" size={15} />
+                      </span>
+                      <Link href={`/opportunities/${opportunity.id}`} className="min-w-0 flex-1 truncate font-medium text-foreground hover:text-primary hover:underline">
                         {opportunity.name}
                       </Link>
-                      <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+                      <span className="shrink-0 text-[11px] text-muted-foreground">
                         {opportunity.stage.name} · {opportunity.status.toLowerCase()}
                       </span>
                     </li>

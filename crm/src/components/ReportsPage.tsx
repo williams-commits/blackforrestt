@@ -355,7 +355,7 @@ export function ReportsPage() {
           <Card className="gap-0">
             <CardContent>
             {!result ? (
-              <EmptyState illustration="reports" title="Pick a report to run" description="Select a report from the library or build a custom one." />
+              <EmptyState icon="chart" title="Pick a report to run" description="Select a report from the library or build a custom one." />
             ) : result.rows.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">No rows in range (within your scope).</p>
             ) : (

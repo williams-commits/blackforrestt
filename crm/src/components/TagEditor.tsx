@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/components/Icon";
 import { IconSelectTrigger } from "@/components/form";
 import {
   Select,
@@ -107,9 +108,14 @@ export function TagEditor({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap items-center gap-1.5">
         {attached.length === 0 ? (
-          <span className="text-sm text-(--text-tertiary)">No tags.</span>
+          // Ghost chip — same shape/metrics as a real tag so the row reads
+          // "a tag goes here", not a floating empty-state heading.
+          <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-0.5 text-xs text-muted-foreground/70">
+            <Icon name="tag" size={11} className="shrink-0" />
+            No tags yet
+          </span>
         ) : (
           attached.map((tag) => (
             <span
@@ -124,9 +130,9 @@ export function TagEditor({
                   aria-label={`Remove tag ${tag.name}`}
                   onClick={() => void unlink(tag.tagId)}
                   disabled={busy}
-                  className="ml-0.5 opacity-80 hover:opacity-100"
+                  className="-mr-0.5 ml-0.5 flex size-3.5 items-center justify-center rounded-full text-[11px] leading-none opacity-70 transition-opacity hover:bg-white/25 hover:opacity-100 disabled:opacity-40"
                 >
-                  ×
+                  <Icon name="close" size={10} strokeWidth={3} />
                 </button>
               ) : null}
             </span>

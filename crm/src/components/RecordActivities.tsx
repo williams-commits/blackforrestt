@@ -9,6 +9,7 @@ import { Initials } from "@/components/Initials";
 import { Button } from "@/components/ui";
 import { Field, IconInput } from "@/components/form";
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/RichTextEditor";
+import { EmptyState } from "@/components/ui/empty-state";
 import { relativeTime, absoluteTime } from "@/lib/time";
 import { renderRichText } from "@/lib/richText";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,14 +27,10 @@ function StatusChip({ value }: { value: string }) {
   return <span className={`${cls} tabular-nums`}>{normalized}</span>;
 }
 
-/** Inline empty-state for the activity sub-lists. */
+/** Inline empty-state for the activity sub-lists — renders through the
+ * shared EmptyState primitive (left-aligned compact variant). */
 function EmptyHint({ icon, text }: { icon: string; text: string }) {
-  return (
-    <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-      <Icon name={icon} size={15} className="shrink-0 text-muted-foreground/60" />
-      {text}
-    </div>
-  );
+  return <EmptyState icon={icon} title={text} className="justify-start py-4 text-left" />;
 }
 
 export interface SubjectNote {

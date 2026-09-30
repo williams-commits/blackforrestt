@@ -373,7 +373,7 @@ export function OpportunitiesPage() {
       {pipelines.length === 0 && !loading ? (
         <Card className="gap-0 py-0">
           <EmptyState
-            illustration="opportunities"
+            icon="trending"
             title="No pipelines configured yet"
             description={can.settings ? "Create one under “Manage pipelines”." : undefined}
           />
@@ -500,7 +500,7 @@ export function OpportunitiesPage() {
                 <TR>
                   <TD colSpan={7}>
                     <EmptyState
-                      illustration="opportunities"
+                      icon="trending"
                       title="No opportunities in this pipeline"
                       description="Try a different pipeline or adjust the filters."
                     />

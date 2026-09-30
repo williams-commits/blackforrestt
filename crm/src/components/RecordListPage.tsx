@@ -1173,7 +1173,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                 );
               })}
               {hasRowActions ? (
-                <TH className="px-3 py-2 text-right font-medium">Actions</TH>
+                <TH className="px-3 py-2 text-right font-medium"><span className="sr-only">Actions</span></TH>
               ) : null}
             </TR>
           </THead>
@@ -1189,19 +1189,18 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             ) : loadError ? (
               <TR>
                 <TD colSpan={tableColumnCount}>
-                  <div className="empty-state" style={{ padding: "var(--space-8)" }}>
-                    <p className="empty-state-title" style={{ color: "var(--error)" }}>{loadError}</p>
-                    <Button variant="secondary" icon="refresh" onClick={() => void fetchRows()} className="mt-3">
+                  <EmptyState tone="error" title={loadError} className="py-8" action={
+                    <Button variant="secondary" icon="refresh" onClick={() => void fetchRows()}>
                       Retry
                     </Button>
-                  </div>
+                  } />
                 </TD>
               </TR>
             ) : rows.length === 0 ? (
               <TR>
                 <TD colSpan={tableColumnCount}>
                   <EmptyState
-                    illustration={object}
+                    icon={OBJECT_ICON[object]}
                     title={`No ${config.title.toLowerCase()} found`}
                     description={
                       search || Object.values(filters).some(Boolean)

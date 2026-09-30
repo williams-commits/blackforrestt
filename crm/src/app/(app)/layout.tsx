@@ -65,7 +65,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 <Initials name={user.name} size="md" />
               </span>
               <div className="leading-tight">
-                <p className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>
+                <p className="text-[13px] font-semibold truncate" style={{ color: "var(--text-primary)" }}>
                   {user.name}
                 </p>
                 <p className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>
@@ -80,6 +80,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 variant="tertiary"
                 size="sm"
                 title="Sign out"
+                icon="log_out"
               >
                 Sign out
               </Button>

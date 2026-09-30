@@ -564,11 +564,6 @@ button {
 }
 
 /* ── Module illustration ink ── */
-.module-illustration {
-  display: block;
-  margin: 0 auto var(--space-3);
-  opacity: 0.9;
-}
 
 /* ── Spinner ── */
 .spin {
@@ -1166,33 +1161,6 @@ select.input {
 }
 
 /* ── Empty state ── */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-10) var(--space-6);
-  text-align: center;
-}
-.empty-state-icon {
-  width: 48px;
-  height: 48px;
-  margin-bottom: var(--space-3);
-  color: var(--text-tertiary);
-  opacity: 0.5;
-}
-.empty-state-title {
-  font-size: var(--text-lg);
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: var(--space-1);
-}
-.empty-state-description {
-  font-size: var(--text-base);
-  color: var(--text-tertiary);
-  max-width: 320px;
-  margin-bottom: var(--space-4);
-}
 
 /* ── Timeline ── */
 .timeline {

@@ -49,7 +49,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
       <WorkspaceQuickNav />
       {hits.length === 0 && query.length >= 2 ? (
         <Card className="gap-0">
-          <EmptyState illustration="search" title="Nothing matched." />
+          <EmptyState icon="search" title="Nothing matched." />
         </Card>
       ) : (
         [...grouped.entries()].map(([type, list]) => (

@@ -6,6 +6,7 @@ import { appendAudit } from "@/server/audit";
 import { appendActivity, type ActivityEntry } from "@/server/activity";
 import { notify, isNotificationSubjectType, subjectNotificationContext } from "@/server/notifications";
 import { visibleOwnerIds } from "@/server/scope";
+import { sanitizeEmailHtml, htmlToText } from "@/server/emailHtml";
 import { getTask } from "@/server/records/tasks";
 import type { ScopedContext } from "@/server/records/leads";
 
@@ -26,15 +27,29 @@ import type { ScopedContext } from "@/server/records/leads";
 export const COMMENT_SUBJECTS = ["TASK", "NOTE", "APPOINTMENT"] as const;
 export type CommentSubject = (typeof COMMENT_SUBJECTS)[number];
 
+// Bodies are rich text from the shared editor — sanitized with the email
+// HTML allowlist before storing; the 5,000-char budget applies to the
+// plain-text projection (checked in the service, not here).
+export const COMMENT_MAX_PLAIN = 5000;
+const BodySchema = z.string().trim().min(1).max(20_000);
+
 export const CreateComment = z.object({
-  body: z.string().trim().min(1).max(5000),
+  body: BodySchema,
   subjectType: z.enum(COMMENT_SUBJECTS),
   subjectId: z.string().trim().min(5),
 });
 
 export const UpdateComment = z.object({
-  body: z.string().trim().min(1).max(5000),
+  body: BodySchema,
 });
+
+/** Reject empty/oversized bodies and return the store-ready sanitized HTML. */
+function preparedBody(body: string): string {
+  const plain = htmlToText(body);
+  if (plain.length < 1) throw new CrmError("Comment is empty.", 400);
+  if (plain.length > COMMENT_MAX_PLAIN) throw new CrmError(`Comment is too long — keep it under ${COMMENT_MAX_PLAIN.toLocaleString()} characters.`, 400);
+  return sanitizeEmailHtml(body);
+}
 
 export interface CommentRow {
   id: string;
@@ -158,12 +173,13 @@ export async function listComments(
 export async function createComment(ctx: ScopedContext, input: z.infer<typeof CreateComment>): Promise<CommentRow> {
   requireCapability(ctx, "COMMENTS_CREATE");
   const parent = await resolveParent(ctx, input.subjectType, input.subjectId);
-  const excerpt = excerptOf(input.body);
+  const body = preparedBody(input.body);
+  const excerpt = excerptOf(htmlToText(input.body));
 
   const comment = await prisma.$transaction(async (tx) => {
     const created = await tx.comment.create({
       data: {
-        body: input.body,
+        body,
         authorUserId: ctx.userId,
         subjectType: input.subjectType,
         subjectId: input.subjectId,
@@ -224,10 +240,11 @@ function excerptOf(body: string): string {
 /** Edit a comment (author or COMMENTS_MANAGE); marks editedAt. */
 export async function updateComment(ctx: ScopedContext, id: string, input: z.infer<typeof UpdateComment>): Promise<CommentRow> {
   const { parent } = await loadOwnedComment(ctx, id);
+  const body = preparedBody(input.body);
   const updated = await prisma.$transaction(async (tx) => {
     const saved = await tx.comment.update({
       where: { id },
-      data: { body: input.body, editedAt: new Date() },
+      data: { body, editedAt: new Date() },
       include: { author: { select: { id: true, name: true } } },
     });
     await appendAudit(tx, {
@@ -243,7 +260,7 @@ export async function updateComment(ctx: ScopedContext, id: string, input: z.inf
       subjectId: parent.timeline.subjectId,
       kind: "comment",
       actorUserId: ctx.userId,
-      payload: { comment: excerptOf(input.body), on: parent.label, state: "edited" },
+      payload: { comment: excerptOf(htmlToText(input.body)), on: parent.label, state: "edited" },
     });
     return saved;
   });

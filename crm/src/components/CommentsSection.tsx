@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useConfirmDialog } from "@/components/Dialogs";
 import { Button } from "@/components/ui";
 import { Initials } from "@/components/Initials";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor, type RichTextEditorHandle } from "@/components/RichTextEditor";
+import { renderRichText } from "@/lib/richText";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CommentRow } from "@/server/records/comments";
 import { Icon } from "./Icon";
@@ -44,11 +45,15 @@ export function CommentsSection({
   const { confirm, dialog } = useConfirmDialog();
   const [comments, setComments] = useState<CommentRow[]>(initial);
   const [loaded, setLoaded] = useState(!lazyMount);
-  const [body, setBody] = useState("");
+  const commentFormRef = useRef<HTMLFormElement>(null);
+  const commentEditorRef = useRef<RichTextEditorHandle>(null);
+  const [bodyText, setBodyText] = useState("");
+  const [bodyHtml, setBodyHtml] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editBody, setEditBody] = useState("");
+  const [editText, setEditText] = useState("");
+  const [editHtml, setEditHtml] = useState("");
 
   const refresh = useCallback(async () => {
     setLoaded(false);
@@ -75,14 +80,14 @@ export function CommentsSection({
 
   async function post(event: React.FormEvent) {
     event.preventDefault();
-    if (!body.trim() || busy) return;
+    if (!bodyText.trim() || busy) return;
     setBusy(true);
     setError(null);
     try {
       const response = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: body.trim(), subjectType, subjectId }),
+        body: JSON.stringify({ body: bodyHtml, subjectType, subjectId }),
       });
       const payload = (await response.json().catch(() => null)) as { data?: CommentRow; error?: string } | null;
       if (!response.ok || !payload?.data) {
@@ -92,7 +97,7 @@ export function CommentsSection({
         return;
       }
       setComments((current) => [...current, payload.data!]);
-      setBody("");
+      commentEditorRef.current?.clear();
       window.setTimeout(() => router.refresh(), 150);
     } catch {
       setError("Could not post comment.");
@@ -103,13 +108,13 @@ export function CommentsSection({
   }
 
   async function saveEdit(id: string) {
-    if (!editBody.trim() || busy) return;
+    if (!editText.trim() || busy) return;
     setBusy(true);
     try {
       const response = await fetch(`/api/comments/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: editBody.trim() }),
+        body: JSON.stringify({ body: editHtml }),
       });
       const payload = (await response.json().catch(() => null)) as { data?: CommentRow; error?: string } | null;
       if (!response.ok || !payload?.data) {
@@ -118,7 +123,8 @@ export function CommentsSection({
       }
       setComments((current) => current.map((comment) => (comment.id === id ? payload.data! : comment)));
       setEditingId(null);
-      setEditBody("");
+      setEditText("");
+      setEditHtml("");
       window.setTimeout(() => router.refresh(), 150);
     } finally {
       setBusy(false);
@@ -152,29 +158,25 @@ export function CommentsSection({
     <div className="space-y-3">
       {dialog}
       {canComment ? (
-        <form onSubmit={post} className="space-y-2">
+        <form ref={commentFormRef} onSubmit={post} className="space-y-2">
           <div>
             <p className="form-section-title">Discussion</p>
             <p className="form-section-help">Visible to everyone who can open this item.</p>
           </div>
-          <Textarea
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
+          <RichTextEditor
+            ref={commentEditorRef}
+            ariaLabel="New comment"
             placeholder="Add a comment — ask a question, share context, or leave a decision for the team…"
-            rows={compact ? 2 : 3}
             maxLength={5000}
-            aria-label="New comment"
-            className="resize-y"
-            onKeyDown={(event) => {
-              if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && event.currentTarget.form?.requestSubmit) {
-                event.currentTarget.form.requestSubmit();
-              }
-            }}
+            minHeight={compact ? 56 : 72}
+            disabled={busy}
+            onSubmit={() => commentFormRef.current?.requestSubmit()}
+            onChange={(text, html) => { setBodyText(text); setBodyHtml(html); }}
           />
           {error ? <p role="alert" className="rounded-md bg-(--error-bg) px-3 py-2 text-sm text-(--error)">{error}</p> : null}
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] text-(--text-tertiary)">{body.length.toLocaleString()} / 5,000 · ⌘/Ctrl+Enter to post</p>
-            <Button type="submit" variant="primary" icon="comment" loading={busy} disabled={busy || !body.trim()}>
+            <p className="text-[11px] text-(--text-tertiary)">⌘/Ctrl+Enter to post · formatting and links are kept</p>
+            <Button type="submit" variant="primary" icon="comment" loading={busy} disabled={busy || !bodyText.trim()}>
               Comment
             </Button>
           </div>
@@ -208,7 +210,8 @@ export function CommentsSection({
                         className="flex items-center gap-1 text-(--text-secondary) hover:underline"
                         onClick={() => {
                           setEditingId(editingId === comment.id ? null : comment.id);
-                          setEditBody(comment.body);
+                          setEditText(comment.body);
+                          setEditHtml(renderRichText(comment.body));
                         }}
                       >
                         <Icon name={editingId === comment.id ? "close" : "edit"} size={12} />
@@ -223,31 +226,29 @@ export function CommentsSection({
                 </div>
                 {editingId === comment.id ? (
                   <div className="mt-2 space-y-2" role="group" aria-label="Edit comment">
-                    <Textarea
-                      value={editBody}
-                      onChange={(event) => setEditBody(event.target.value)}
-                      rows={compact ? 2 : 3}
+                    <RichTextEditor
+                      defaultValue={renderRichText(comment.body)}
+                      ariaLabel="Edit comment"
                       maxLength={5000}
-                      aria-label="Edit comment"
-                      className="resize-y"
-                      onKeyDown={(event) => {
-                        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                          event.preventDefault();
-                          void saveEdit(comment.id);
-                        }
-                      }}
+                      minHeight={compact ? 56 : 72}
+                      disabled={busy}
+                      autoFocus
+                      onSubmit={() => void saveEdit(comment.id)}
+                      onChange={(text, html) => { setEditText(text); setEditHtml(html); }}
                     />
                     <div className="flex justify-end gap-2">
                       <Button variant="secondary" disabled={busy} onClick={() => setEditingId(null)}>Cancel</Button>
-                      <Button variant="primary" disabled={busy || !editBody.trim()} onClick={() => void saveEdit(comment.id)} icon="check" loading={busy}>
+                      <Button variant="primary" disabled={busy || !editText.trim()} onClick={() => void saveEdit(comment.id)} icon="check" loading={busy}>
                         Save
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-1.5 whitespace-pre-wrap text-[13px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                    {comment.body}
-                  </p>
+                  <div
+                    className="mt-1.5 text-[13px] leading-relaxed [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
+                    style={{ color: "var(--text-secondary)" }}
+                    dangerouslySetInnerHTML={{ __html: renderRichText(comment.body) }}
+                  />
                 )}
               </li>
             );

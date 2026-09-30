@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui";
 import { Card } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Field, FormError, IconInput, IconSelectTrigger } from "@/components/form";
+import { RichTextEditor, type RichTextEditorHandle } from "@/components/RichTextEditor";
 import {
   Select,
   SelectContent,
@@ -38,7 +38,10 @@ export function ActivityComposer({
 }) {
   const router = useRouter();
   const [activeAction, setActiveAction] = useState<"none" | "note" | "task" | "appointment">("none");
-  const [noteBody, setNoteBody] = useState("");
+  const noteFormRef = useRef<HTMLFormElement>(null);
+  const noteEditorRef = useRef<RichTextEditorHandle>(null);
+  const [noteText, setNoteText] = useState("");
+  const [noteHtml, setNoteHtml] = useState("");
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDue, setTaskDue] = useState("");
   const [taskPriority, setTaskPriority] = useState("NORMAL");
@@ -119,16 +122,17 @@ export function ActivityComposer({
       {/* Note composer */}
       {activeAction === "note" ? (
         <form
+          ref={noteFormRef}
           method="post"
           className="space-y-2.5 p-3"
           onSubmit={(event) => {
             event.preventDefault();
             void post(
               "/api/notes",
-              { body: noteBody, subjectType, subjectId },
+              { body: noteHtml, subjectType, subjectId },
               "Note added",
               `Note added to ${subjectLabel}.`,
-              () => setNoteBody(""),
+              () => noteEditorRef.current?.clear(),
             );
           }}
         >
@@ -136,28 +140,22 @@ export function ActivityComposer({
             <p className="form-section-title">Note</p>
             <p className="form-section-help">Context for everyone who works {subjectLabel} — visible on the timeline.</p>
           </div>
-          <Textarea
-            value={noteBody}
-            onChange={(event) => setNoteBody(event.target.value)}
+          <RichTextEditor
+            ref={noteEditorRef}
+            ariaLabel="New note"
             placeholder={`e.g. Spoke with ${subjectLabel} — discussed onboarding timeline.`}
-            rows={3}
-            required
             maxLength={5000}
-            className="resize-y"
+            minHeight={84}
             autoFocus
-            onKeyDown={(event) => {
-              if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && event.currentTarget.form?.requestSubmit) {
-                event.currentTarget.form.requestSubmit();
-              }
-            }}
+            disabled={busy}
+            onSubmit={() => noteFormRef.current?.requestSubmit()}
+            onChange={(text, html) => { setNoteText(text); setNoteHtml(html); }}
           />
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] text-(--text-tertiary)">
-              {noteBody.length.toLocaleString()} / 5,000 · ⌘/Ctrl+Enter to save
-            </p>
+            <p className="text-[11px] text-(--text-tertiary)">⌘/Ctrl+Enter to save · formatting and links are kept</p>
             <div className="flex gap-2">
               <Button variant="tertiary" onClick={() => setActiveAction("none")}>Cancel</Button>
-              <Button variant="primary" icon="check" type="submit" loading={busy} disabled={!noteBody.trim()}>
+              <Button variant="primary" icon="check" type="submit" loading={busy} disabled={!noteText.trim()}>
                 Save note
               </Button>
             </div>

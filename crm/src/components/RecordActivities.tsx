@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -8,7 +8,8 @@ import { CommentsSection } from "@/components/CommentsSection";
 import { Initials } from "@/components/Initials";
 import { Button } from "@/components/ui";
 import { Field, IconInput } from "@/components/form";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor, type RichTextEditorHandle } from "@/components/RichTextEditor";
+import { renderRichText } from "@/lib/richText";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Icon } from "./Icon";
@@ -85,7 +86,10 @@ export function RecordActivities({
   canScheduleAppointment: boolean;
 }) {
   const router = useRouter();
-  const [noteBody, setNoteBody] = useState("");
+  const noteFormRef = useRef<HTMLFormElement>(null);
+  const noteEditorRef = useRef<RichTextEditorHandle>(null);
+  const [noteText, setNoteText] = useState("");
+  const [noteHtml, setNoteHtml] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTask, setShowTask] = useState(false);
@@ -151,7 +155,7 @@ export function RecordActivities({
       const response = await fetch("/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: noteBody, subjectType, subjectId }),
+        body: JSON.stringify({ body: noteHtml, subjectType, subjectId }),
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -160,7 +164,7 @@ export function RecordActivities({
         toast.error("Note not added", { description: message });
         return;
       }
-      setNoteBody("");
+      noteEditorRef.current?.clear();
       toast.success("Note added", { description: `Note added to ${subjectLabel}.` });
       refreshAfterToast();
     } catch {
@@ -237,29 +241,28 @@ export function RecordActivities({
 
       {canAddNote || canCreateTask || canScheduleAppointment ? (
         <>
-          {canAddNote ? <form method="post" onSubmit={addNote} className="space-y-2">
+          {canAddNote ? <form ref={noteFormRef} method="post" onSubmit={addNote} className="space-y-2">
             <div>
               <p className="form-section-title">Note</p>
               <p className="form-section-help">Context for everyone working this record — visible on the timeline.</p>
             </div>
-            <Textarea
-              value={noteBody}
-              onChange={(event) => setNoteBody(event.target.value)}
+            <RichTextEditor
+              ref={noteEditorRef}
+              ariaLabel="New note"
               placeholder="Add a note — context, decisions, next steps…"
-              aria-label="New note"
-              rows={2}
-              required
               maxLength={5000}
-              className="resize-y"
+              minHeight={64}
+              disabled={busy}
+              onSubmit={() => noteFormRef.current?.requestSubmit()}
+              onChange={(text, html) => { setNoteText(text); setNoteHtml(html); }}
             />
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] text-(--text-tertiary)">{noteBody.length.toLocaleString()} / 5,000</p>
+            <div className="flex items-center justify-end gap-2">
               <Button
                 type="submit"
                 variant="primary"
                 icon="note"
                 loading={busy}
-                disabled={!noteBody.trim()}
+                disabled={!noteText.trim()}
               >
                 Add note
               </Button>
@@ -435,7 +438,10 @@ export function RecordActivities({
                     {new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
                   </time>
                 </div>
-                <p className="mt-1 whitespace-pre-wrap wrap-break-words text-[13px] leading-relaxed text-foreground">{note.body}</p>
+                <div
+                  className="mt-1 wrap-break-words text-[13px] leading-relaxed text-foreground [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
+                  dangerouslySetInnerHTML={{ __html: renderRichText(note.body) }}
+                />
               </div>
             </div>
             <div className="mt-2 flex justify-end border-t border-border pt-1.5">

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePromptDialog } from "@/components/Dialogs";
+import { escapeHtml, sanitizeRichText as sanitizeClient } from "@/lib/richText";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
 import { IconSelectTrigger } from "@/components/form";
@@ -42,47 +43,6 @@ interface Draft {
   subject?: string;
   body?: string;
   html?: string;
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
-
-/** Client-side copy of the server allowlist, so previews match what sends. */
-function sanitizeClient(html: string): string {
-  const root = document.createElement("div");
-  root.innerHTML = html;
-  root.querySelectorAll("script,style,iframe,object,embed,noscript,template,svg,math").forEach((el) => el.remove());
-  const walk = (node: Element): void => {
-    Array.from(node.children).forEach((child) => {
-      walk(child);
-      const tag = child.tagName.toUpperCase();
-      const allowed = ["P", "BR", "DIV", "SPAN", "BLOCKQUOTE", "PRE", "B", "STRONG", "I", "EM", "U", "S", "STRIKE", "UL", "OL", "LI", "H1", "H2", "H3", "A", "FONT"];
-      if (!allowed.includes(tag)) {
-        const frag = document.createDocumentFragment();
-        while (child.firstChild) frag.appendChild(child.firstChild);
-        child.replaceWith(frag);
-        return;
-      }
-      if (tag === "A") {
-        const href = child.getAttribute("href") ?? "";
-        if (!/^(https?:\/\/|mailto:)/i.test(href)) child.removeAttribute("href");
-        else {
-          child.setAttribute("rel", "noopener noreferrer");
-          child.setAttribute("target", "_blank");
-        }
-      }
-      Array.from(child.attributes).forEach((attr) => {
-        if (tag === "A" && attr.name === "href") return;
-        child.removeAttribute(attr.name);
-      });
-    });
-  };
-  walk(root);
-  return root.innerHTML;
 }
 
 export function EmailCompose({
@@ -328,7 +288,7 @@ export function EmailCompose({
   return (
     <>
       <Modal title={sent ? "Email sent" : "New email"} onClose={onClose} size="xl" closeOnBackdrop={false}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pb-2">
           <Badge variant="outline" className={linked ? "border-(--info-border) bg-(--info-bg) text-(--info)" : undefined}>
             {linked ? "Linked to record" : "Shared mailbox"}
           </Badge>
@@ -341,7 +301,7 @@ export function EmailCompose({
 
         {/* SMTP warning */}
         {smtpConfigured === false ? (
-          <div role="alert" className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2.5 text-sm text-foreground">
+          <div role="alert" className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2.5 text-sm text-foreground mb-2">
             <Icon name="alert" size={16} className="mt-0.5 shrink-0" />
             <span>
               <strong>SMTP is not configured.</strong> Sending is disabled — set{" "}

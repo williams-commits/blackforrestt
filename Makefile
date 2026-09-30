@@ -176,7 +176,7 @@ typecheck: ## TypeScript strict check
 # ── Multi-brand / proxy helpers ──────────────────────────────────────────────
 
 caddy-render: ## Re-render deploy/caddy/render/Caddyfile from the domain manifests
-	node $(ROOT)/scripts/platform.mjs caddy render --env-file $(ROOT)/.env.production
+	bash $(ROOT)/deploy/render-caddy.sh $(ROOT)/.env.production
 
 caddy-validate: ## Validate the rendered Caddy config with the official image
 	docker run --rm -v $(ROOT)/deploy/caddy/render/Caddyfile:/etc/caddy/Caddyfile:ro \

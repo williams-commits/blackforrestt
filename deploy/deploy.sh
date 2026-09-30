@@ -16,8 +16,19 @@ cd "$ROOT"
 # final step can force-recreate Caddy when it did.
 CADDYFILE="$ROOT/deploy/caddy/render/Caddyfile"
 CADDY_HASH_BEFORE="$(sha256sum "$CADDYFILE" 2>/dev/null | cut -d' ' -f1 || :)"
-# Seed per-domain site files for every registry domain on FIRST deploy
-node "$ROOT/scripts/platform.mjs" caddy render --env-file "$ROOT/.env.production" --out "$CADDYFILE"
+# Seed per-domain site files for every registry domain on FIRST deploy.
+# The render runs INSIDE a container built from this repo's builder stage —
+# the host only needs Docker (no host Node), same pattern as crm-seed below.
+# Repo pieces the render reads/writes are bind-mounted over the image's /app
+# copy so the output always matches the checked-out manifests + env file.
+docker build --target builder -t blckforest-render:tmp "$ROOT" >/dev/null
+docker run --rm \
+  -v "$ROOT/scripts:/app/scripts:ro" \
+  -v "$ROOT/src/domains/.generated:/app/src/domains/.generated:ro" \
+  -v "$ROOT/.env.production:/app/.env.production:ro" \
+  -v "$ROOT/deploy/caddy:/app/deploy/caddy" \
+  blckforest-render:tmp \
+  node scripts/platform.mjs caddy render --env-file /app/.env.production --out /app/deploy/caddy/render/Caddyfile
 CADDY_HASH_AFTER="$(sha256sum "$CADDYFILE" | cut -d' ' -f1)"
 CADDY_CHANGED=false
 if [[ "$CADDY_HASH_BEFORE" != "$CADDY_HASH_AFTER" ]]; then

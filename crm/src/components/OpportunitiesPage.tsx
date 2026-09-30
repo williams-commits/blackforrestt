@@ -87,7 +87,7 @@ function OpportunityBoardSkeleton() {
           </div>
           <div className="space-y-2">
             {[...Array(columnIndex === 0 ? 3 : 2)].map((__, cardIndex) => (
-              <div key={`opp-card-skeleton-${columnIndex}-${cardIndex}`} className="rounded-md border border-(--border-hairline) bg-(--bg-surface) p-2">
+              <div key={`opp-card-skeleton-${columnIndex}-${cardIndex}`} className="rounded-md border border-(--border-hairline) bg-card p-2">
                 <Skeleton style={{ height: 15, width: `${78 - cardIndex * 8}%` }} />
                 <Skeleton className="mt-2" style={{ height: 12, width: "52%" }} />
                 <Skeleton className="mt-2" style={{ height: 11, width: "70%" }} />
@@ -341,7 +341,7 @@ export function OpportunitiesPage() {
           </>
         ) : null}
         {view === "board" ? (
-          <label htmlFor="opp-include-closed" className="flex items-center gap-1.5 text-sm text-(--text-secondary)">
+          <label htmlFor="opp-include-closed" className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Checkbox
               id="opp-include-closed"
               checked={includeClosed}
@@ -410,7 +410,7 @@ export function OpportunitiesPage() {
                       {stage.name}
                       {stage.type !== "OPEN" ? ` (${stage.type.toLowerCase()})` : ""}
                     </CardTitle>
-                    <p className="mt-0.5 text-xs tabular-nums text-(--text-secondary)">
+                    <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
                       {money(agg?.value ?? 0)}
                     </p>
                   </div>
@@ -437,7 +437,7 @@ export function OpportunitiesPage() {
                           <Badge variant="destructive">lost</Badge>
                         ) : null}
                       </div>
-                      <p className="mt-0.5 text-xs tabular-nums text-(--text-secondary)">
+                      <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
                         {card.value ? money(Number(card.value)) : "—"} · {card.probability}%
                       </p>
                       <p className="text-xs text-(--text-tertiary)">

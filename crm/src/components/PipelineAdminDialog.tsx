@@ -173,7 +173,7 @@ export function PipelineAdmin({
           ))}
 
           <form
-            className="flex items-center gap-2 border-t border-(--border-default) pt-4"
+            className="flex items-center gap-2 border-t border-border pt-4"
             onSubmit={async (event) => {
               event.preventDefault();
               if (!pipelineName) return;

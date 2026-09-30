@@ -683,7 +683,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           showHeader={false}
         />
       ) : (
-        <div className="h-9 border-b border-(--border-default)" />
+        <div className="h-9 border-b border-border" />
       )}
 
       <div className="flex flex-wrap items-center gap-2">
@@ -746,7 +746,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             );
           })}
         </form>
-        <div className="flex items-center gap-2 border-l border-(--border-default) pl-2">
+        <div className="flex items-center gap-2 border-l border-border pl-2">
           {isRecordObject && views.length > 0 ? (
             <Select
               defaultValue="__all__"
@@ -773,15 +773,15 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             </Select>
           ) : null}
           <details className="group relative hidden sm:block">
-            <summary className="flex h-8 cursor-pointer list-none items-center gap-2 rounded-md border border-(--border-strong) bg-(--bg-surface) px-2 text-xs font-medium hover:bg-(--bg-hover)">
+            <summary className="flex h-8 cursor-pointer list-none items-center gap-2 rounded-md border border-input bg-card px-2 text-xs font-medium hover:bg-muted">
               Columns
               <span className="text-(--text-tertiary)">{visibleColumnCount}/{config.columns.length}</span>
             </summary>
             <div
-              className="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-(--border-default) bg-(--bg-surface) p-2 shadow-lg"
+              className="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-border bg-card p-2 shadow-lg"
               role="menu"
             >
-              <p className="px-2 pb-2 text-xs font-medium text-(--text-secondary)">Visible columns</p>
+              <p className="px-2 pb-2 text-xs font-medium text-muted-foreground">Visible columns</p>
               <div className="max-h-72 space-y-1 overflow-auto">
                 {config.columns.map((column) => {
                   const checked = !hiddenColumns.includes(column.key);
@@ -789,7 +789,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                     <label
                       key={column.key}
                       htmlFor={`column-${column.key}`}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-(--bg-hover)"
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
                     >
                       <Checkbox
                         id={`column-${column.key}`}
@@ -1040,7 +1040,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                     key={row.id}
                     className={cn(
                       "flex cursor-pointer items-center gap-2.5 rounded-md border p-3 text-sm transition-colors",
-                      selected ? "border-ring bg-(--bg-selected)" : "border-(--border-default) hover:border-ring",
+                      selected ? "border-ring bg-muted" : "border-border hover:border-ring",
                     )}
                   >
                     {name ? <Initials name={name} size="xs" /> : null}
@@ -1125,7 +1125,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       <div className="card table-responsive overflow-x-auto p-2 lg:p-0">
         <Table compact={density === "compact"}>
           <THead>
-            <TR className="border-b border-(--border-default) text-left text-(--text-secondary)">
+            <TR className="border-b border-border text-left text-muted-foreground">
               {can.bulk ? (
                 <TH className="w-8 px-3 py-2">
                   <Checkbox

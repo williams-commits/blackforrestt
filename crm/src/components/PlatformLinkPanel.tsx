@@ -104,7 +104,7 @@ export function PlatformLinkPanel({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-(--text-secondary)">
+      <p className="text-sm text-muted-foreground">
         Not linked. Matching is by email and confirmed by you — nothing is linked automatically.
       </p>
       {error ? <FormError message={error} /> : null}
@@ -122,9 +122,9 @@ export function PlatformLinkPanel({
         <p className="text-sm text-(--warning)"> {lookup.reason}</p>
       ) : null}
       {lookup.status === "found" ? (
-        <div className="space-y-2 rounded-lg border border-(--brand-200) bg-(--bg-selected) p-3 text-sm">
+        <div className="space-y-2 rounded-lg border border-(--brand-200) bg-muted p-3 text-sm">
           <p className="font-medium">Platform user found</p>
-          <ul className="space-y-0.5 text-(--text-secondary)">
+          <ul className="space-y-0.5 text-muted-foreground">
             <li>Name: {lookup.user.name ?? "—"}</li>
             <li>Email: {lookup.user.email}</li>
             <li>Registered: {new Date(lookup.user.registeredAt).toLocaleDateString()}</li>

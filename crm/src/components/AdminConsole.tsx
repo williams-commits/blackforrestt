@@ -43,7 +43,7 @@ function badgeToneClass(tone: "success" | "warning" | "info" | "error"): string 
 
 /** Small uppercase section label — replaces the legacy `.card-title` style. */
 function CardLabel({ children }: { children: React.ReactNode }) {
-  return <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">{children}</CardTitle>;
+  return <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{children}</CardTitle>;
 }
 
 
@@ -285,7 +285,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
                 </TD>
                 <TD className="px-3 py-2"><Badge className="badge badge-neutral">{row.appliesTo.toLowerCase()}</Badge></TD>
                 <TD className="px-3 py-2"><Badge className="badge badge-neutral">{row.category.toLowerCase()}</Badge></TD>
-                <TD className="px-3 py-2 tabular-nums text-(--text-secondary)">{row._count.leads + row._count.contacts + row._count.customers}</TD>
+                <TD className="px-3 py-2 tabular-nums text-muted-foreground">{row._count.leads + row._count.contacts + row._count.customers}</TD>
                 <TD className="px-3 py-2">{row.isDefault ? <Badge className="badge badge-neutral">Default</Badge> : <span className="text-xs text-(--text-tertiary)">—</span>}</TD>
                 {canManage ? (
                   <TD className="px-3 py-2 text-right">
@@ -309,7 +309,7 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
 
       {confirmDialog}
       <Card className="gap-0 overflow-hidden py-0">
-        <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3"><div><h2 className="text-sm font-semibold">Potential status</h2><p className="mt-0.5 text-xs text-(--text-tertiary)">Segment leads by commercial potential: Junior, Senior, Institutional, or VIP.</p></div>{canManage ? <Button variant="secondary" icon="plus" onClick={() => setShowPotentialForm(true)}>Add potential status</Button> : null}</div>
+        <div className="flex items-center justify-between border-b border-border bg-muted px-4 py-3"><div><h2 className="text-sm font-semibold">Potential status</h2><p className="mt-0.5 text-xs text-(--text-tertiary)">Segment leads by commercial potential: Junior, Senior, Institutional, or VIP.</p></div>{canManage ? <Button variant="secondary" icon="plus" onClick={() => setShowPotentialForm(true)}>Add potential status</Button> : null}</div>
         {showPotentialForm && canManage ? <SetupFormModal title="Add potential status" onClose={() => { setError(null); setShowPotentialForm(false); }}><form className="space-y-4" onSubmit={async (event) => { event.preventDefault(); setError(null); setPotentialBusy(true); try { const response = await fetch("/api/potential-statuses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: potentialName, sortOrder: potentialRows.length + 1 }) }); if (!response.ok) { setError("Could not create potential status."); return; } toast.success("Potential status created"); setPotentialName(""); setShowPotentialForm(false); void load(); } finally { setPotentialBusy(false); } }}><div><p className="form-section-title">Potential status</p><p className="form-section-help">Segment leads by commercial weight for prioritization and filtering.</p></div><Field label="Name" required id="potential-name" help="Ranks a lead's commercial weight — e.g. Junior, Senior, VIP."><IconInput id="potential-name" icon="tag" value={potentialName} onChange={(event) => setPotentialName(event.target.value)} required placeholder="e.g. VIP" /></Field><FormError message={error} /><div className="form-actions"><Button type="button" variant="secondary" onClick={() => { setError(null); setShowPotentialForm(false); }}>Cancel</Button><Button type="submit" variant="primary" icon="plus" loading={potentialBusy}>Add status</Button></div></form></SetupFormModal> : null}
         {loading ? <div className="p-3"><AdminCardGridSkeleton cards={4} /></div> : <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">{potentialRows.map((status) => {
           const leadCount = status._count?.leads ?? 0;
@@ -452,7 +452,7 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
               />
             </div>
           </Field>
-          <div className="rounded-lg border border-dashed border-(--border-default) bg-(--bg-subtle) px-4 py-3">
+          <div className="rounded-lg border border-dashed border-border bg-muted px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-(--text-tertiary)">Preview on a record</p>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ background: color }}>
@@ -469,7 +469,7 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
         </SetupFormModal>
       ) : null}
       <Card className="gap-0 overflow-hidden py-0">
-        <div className="flex flex-col gap-1 border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1 border-b border-border bg-muted px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-sm font-semibold">Tag library</h2>
             <p className="mt-0.5 text-xs text-(--text-tertiary)">Use consistent labels to make records easier to filter and prioritize.</p>
@@ -483,7 +483,7 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
         ) : (
           <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
           {rows.map((row) => (
-            <Card key={row.id} className="flex-row items-center gap-3 p-4 transition-colors hover:bg-(--bg-hover)">
+            <Card key={row.id} className="flex-row items-center gap-3 p-4 transition-colors hover:bg-muted">
               <span className="h-7 w-7 shrink-0 rounded-md border border-black/10" style={{ background: row.color ?? "var(--text-tertiary)" }} aria-hidden />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{row.name}</p>
@@ -897,7 +897,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
         </SetupFormModal>
       ) : null}
       <div className="card table-responsive overflow-x-auto">
-        <div className="flex flex-col gap-3 border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 border-b border-border bg-muted px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h3 className="text-sm font-semibold">People</h3>
             <p className="mt-0.5 text-xs text-(--text-tertiary)">Roles, access, and activity across your workspace</p>
@@ -905,7 +905,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
           <div className="flex flex-wrap items-center gap-2">
             <label htmlFor="people-search" className="sr-only">Search users</label>
             <SearchInput id="people-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search people, roles, teams" wrapperClassName="w-full sm:w-64" />
-            <div role="group" aria-label="Filter by status" className="flex rounded-md border border-(--border-strong) p-0.5">
+            <div role="group" aria-label="Filter by status" className="flex rounded-md border border-input p-0.5">
               {(["ALL", "ACTIVE", "SUSPENDED", "DISABLED"] as const).map((value) => {
                 const label = value === "ALL" ? "All" : value.charAt(0) + value.slice(1).toLowerCase();
                 const active = statusFilter === value;
@@ -915,7 +915,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                     type="button"
                     aria-pressed={active}
                     onClick={() => setStatusFilter(value)}
-                    className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${active ? "bg-(--bg-surface) text-(--text-primary) shadow-sm" : "text-(--text-secondary) hover:text-(--text-primary)"}`}
+                    className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     {label}
                   </button>
@@ -934,7 +934,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
             <Badge variant="outline">{filteredUsers.length} of {users.length}</Badge>
           </div>
         </div>
-        {canManage && selectedIds.length > 0 ? <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-selected) px-4 py-2 text-sm"><span>{selectedIds.length} selected</span><Button variant="destructive" size="sm" icon="x_circle" onClick={() => void suspendSelected()}>Suspend selected</Button></div> : null}
+        {canManage && selectedIds.length > 0 ? <div className="flex items-center justify-between border-b border-border bg-muted px-4 py-2 text-sm"><span>{selectedIds.length} selected</span><Button variant="destructive" size="sm" icon="x_circle" onClick={() => void suspendSelected()}>Suspend selected</Button></div> : null}
         <Table>
           <THead>
             <TR>
@@ -951,9 +951,9 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
             {loading ? (
               <AdminTableSkeleton rows={6} columns={canManage ? 6 : 5} />
             ) : filteredUsers.map((user) => (
-              <TR key={user.id} className={selectedUserId === user.id ? "bg-(--bg-selected)" : undefined}>
+              <TR key={user.id} className={selectedUserId === user.id ? "bg-muted" : undefined}>
                 {canManage ? <TD className="px-3 py-2"><Checkbox aria-label={`Select ${user.name}`} checked={selectedIds.includes(user.id)} onCheckedChange={(checked) => setSelectedIds((current) => checked ? [...current, user.id] : current.filter((id) => id !== user.id))} /></TD> : null}
-                <TD className="px-3 py-2"><button type="button" onClick={() => setSelectedUserId(user.id)} className="flex items-center gap-3 text-left"><Initials name={user.name} size="md" /><span><span className="block font-medium hover:text-(--text-brand)">{user.name}</span><span className="block text-xs text-(--text-tertiary)">{user.email}</span></span></button></TD>
+                <TD className="px-3 py-2"><button type="button" onClick={() => setSelectedUserId(user.id)} className="flex items-center gap-3 text-left"><Initials name={user.name} size="md" /><span><span className="block font-medium hover:text-primary">{user.name}</span><span className="block text-xs text-(--text-tertiary)">{user.email}</span></span></button></TD>
                 <TD>
                   {canManage ? (
                     <Select value={user.role.key} onValueChange={(value) => void patchUser(user.id, { roleKey: value })}>
@@ -1030,11 +1030,11 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
           label={`Profile for ${selectedUser.name}`}
         >
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${selectedUser.status === "ACTIVE" ? "bg-(--success-bg) text-(--success)" : selectedUser.status === "SUSPENDED" ? "bg-(--warning-bg) text-(--warning)" : "bg-(--bg-subtle) text-(--text-secondary)"}`}>
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${selectedUser.status === "ACTIVE" ? "bg-(--success-bg) text-(--success)" : selectedUser.status === "SUSPENDED" ? "bg-(--warning-bg) text-(--warning)" : "bg-muted text-muted-foreground"}`}>
               <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${selectedUser.status === "ACTIVE" ? "bg-(--success)" : selectedUser.status === "SUSPENDED" ? "bg-(--warning)" : "bg-(--text-tertiary)"}`} />
               {selectedUser.status.charAt(0) + selectedUser.status.slice(1).toLowerCase()}
             </span>
-            <span className="rounded-full bg-(--bg-subtle) px-2 py-0.5 text-xs font-medium text-(--text-secondary)">{selectedUser.role.name} role</span>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{selectedUser.role.name} role</span>
             <span className="text-xs text-(--text-tertiary)">
               Last login {selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleString() : "never"}
             </span>
@@ -1053,7 +1053,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                 <Initials name={selectedUser.name} size="md" />
                 <div className="min-w-0">
                   <CardLabel>Access</CardLabel>
-                  <p className="mt-0.5 text-sm text-(--text-secondary)">
+                  <p className="mt-0.5 text-sm text-muted-foreground">
                     {selectedUser.role.name} · {selectedUser.status.toLowerCase()}
                   </p>
                 </div>
@@ -1072,7 +1072,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                 <div><CardLabel>Role</CardLabel><p className="mt-1 font-medium">{selectedUser.role.name}</p></div>
                 <div><CardLabel>Last login</CardLabel><p className="mt-1 font-medium">{selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleString() : "Never"}</p></div>
               </div>
-              <div className="border-t border-(--border-default) pt-4">
+              <div className="border-t border-border pt-4">
                 <CardLabel>Team assignments</CardLabel>
                 <p className="mt-1 text-sm">{selectedUser.memberships.map((membership) => membership.team.name).join(", ") || "No teams assigned"}</p>
               </div>
@@ -1080,13 +1080,13 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
 
             <TabsContent value="workspace" className="mt-4">
               <div className="grid gap-3 sm:grid-cols-2">
-                <Link href={`/emails?userId=${selectedUser.id}&userName=${encodeURIComponent(selectedUser.name)}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="mail" size={16} className="text-(--text-tertiary)" /><span className="text-sm font-medium">Mailbox</span></Link>
-                <Link href={`/leads?assignment=user:${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="target" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.assignedLeads}</span><span className="block text-xs text-(--text-secondary)">Leads</span></span></Link>
-                <Link href={`/contacts?ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="users" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedContacts}</span><span className="block text-xs text-(--text-secondary)">Contacts</span></span></Link>
-                <Link href={`/accounts?ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="building" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedAccounts}</span><span className="block text-xs text-(--text-secondary)">Accounts</span></span></Link>
-                <Link href={`/customers?ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="heart" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedCustomers}</span><span className="block text-xs text-(--text-secondary)">Customers</span></span></Link>
-                <Link href={`/opportunities?ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="trending" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedOpps}</span><span className="block text-xs text-(--text-secondary)">Opportunities</span></span></Link>
-                <Link href={`/tasks?mine=0&ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-(--bg-hover)"><Icon name="check" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedTasks}</span><span className="block text-xs text-(--text-secondary)">Tasks</span></span></Link>
+                <Link href={`/emails?userId=${selectedUser.id}&userName=${encodeURIComponent(selectedUser.name)}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-muted"><Icon name="mail" size={16} className="text-(--text-tertiary)" /><span className="text-sm font-medium">Mailbox</span></Link>
+                <Link href={`/leads?assignment=user:${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-muted"><Icon name="target" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.assignedLeads}</span><span className="block text-xs text-muted-foreground">Leads</span></span></Link>
+                <Link href={`/contacts?ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-muted"><Icon name="users" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedContacts}</span><span className="block text-xs text-muted-foreground">Contacts</span></span></Link>
+                <Link href={`/accounts?ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-muted"><Icon name="building" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedAccounts}</span><span className="block text-xs text-muted-foreground">Accounts</span></span></Link>
+                <Link href={`/customers?ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-muted"><Icon name="heart" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedCustomers}</span><span className="block text-xs text-muted-foreground">Customers</span></span></Link>
+                <Link href={`/opportunities?ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-muted"><Icon name="trending" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedOpps}</span><span className="block text-xs text-muted-foreground">Opportunities</span></span></Link>
+                <Link href={`/tasks?mine=0&ownerUserId=${selectedUser.id}`} className="flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-muted"><Icon name="check" size={16} className="text-(--text-tertiary)" /><span className="min-w-0"><span className="block text-lg font-semibold leading-tight">{selectedUser._count.ownedTasks}</span><span className="block text-xs text-muted-foreground">Tasks</span></span></Link>
               </div>
             </TabsContent>
 
@@ -1095,7 +1095,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
                 <CardLabel>Recent activity</CardLabel>
                 <span className="text-[11px] text-(--text-tertiary)">{userActivity.length} events</span>
               </div>
-              {activityError ? <p role="alert" className="mt-2 text-sm text-(--error)">{activityError}</p> : activityLoading ? <div className="mt-2 space-y-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-1/2" /></div> : userActivity.length === 0 ? <EmptyState icon="clock" title="No recorded activity yet" description="Config and record changes will appear here." className="py-6" /> : <ul className="mt-2 space-y-2">{userActivity.map((event) => <li key={event.id} className="flex items-start justify-between gap-3 rounded-md border border-(--border-default) px-3 py-2 text-sm"><span><span className="font-medium">{event.label}</span><span className="ml-2 text-xs text-(--text-tertiary)">{event.objectType.toLowerCase()}</span></span><time className="shrink-0 text-[11px] text-(--text-tertiary)">{new Date(event.createdAt).toLocaleDateString()}</time></li>)}</ul>}
+              {activityError ? <p role="alert" className="mt-2 text-sm text-(--error)">{activityError}</p> : activityLoading ? <div className="mt-2 space-y-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-1/2" /></div> : userActivity.length === 0 ? <EmptyState icon="clock" title="No recorded activity yet" description="Config and record changes will appear here." className="py-6" /> : <ul className="mt-2 space-y-2">{userActivity.map((event) => <li key={event.id} className="flex items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm"><span><span className="font-medium">{event.label}</span><span className="ml-2 text-xs text-(--text-tertiary)">{event.objectType.toLowerCase()}</span></span><time className="shrink-0 text-[11px] text-(--text-tertiary)">{new Date(event.createdAt).toLocaleDateString()}</time></li>)}</ul>}
             </TabsContent>
 
             {canManage ? (
@@ -1107,7 +1107,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
         </Drawer>
       ) : null}
 
-      <div className="flex flex-col gap-3 border-b border-(--border-default) pb-3 pt-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 border-b border-border pb-3 pt-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <CardLabel>Structure</CardLabel>
           <h3 className="mt-1 text-lg font-semibold tracking-tight">Teams <span className="text-sm font-normal text-(--text-tertiary)">{teams.length}</span></h3>
@@ -1145,9 +1145,9 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
         {loading ? (
           <AdminCardGridSkeleton cards={4} />
         ) : teams.map((team) => (
-          <Card key={team.id} className="gap-0 p-4 text-sm transition-colors hover:bg-(--bg-hover)">
+          <Card key={team.id} className="gap-0 p-4 text-sm transition-colors hover:bg-muted">
             <div className="mb-2 flex items-center justify-between gap-2"><p className="font-semibold">{team.name}</p><Badge variant="outline">{team.memberships.length} members</Badge></div>
-            <p className="text-xs text-(--text-secondary)">Lead: {team.leader?.name ?? "Unassigned"}{team.parent ? <span className="text-(--text-tertiary)"> · under {team.parent.name}</span> : null}</p>
+            <p className="text-xs text-muted-foreground">Lead: {team.leader?.name ?? "Unassigned"}{team.parent ? <span className="text-(--text-tertiary)"> · under {team.parent.name}</span> : null}</p>
             <p className="mt-2 truncate text-xs text-(--text-tertiary)">{team.memberships.map((m) => m.user.name).join(", ") || "No members assigned"}</p>
             {canManage ? (
               <button
@@ -1265,8 +1265,8 @@ export function RolesTab({ canManage = false }: { canManage?: boolean }) {
       {loading ? (
         <AdminCardGridSkeleton cards={3} />
       ) : selectedRole ? <Card className="gap-0 overflow-hidden py-0">
-        <div className="flex flex-col gap-3 border-b border-(--border-default) bg-(--bg-subtle) px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-          <div><Label htmlFor="role-select">Role</Label><Select value={selectedRole.id} onValueChange={setSelectedRoleId}><IconSelectTrigger id="role-select" icon="shield" className="mt-1 min-w-56 w-full font-semibold sm:w-56"><SelectValue /></IconSelectTrigger><SelectContent>{roles.map((role) => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}</SelectContent></Select><p className="mt-2 text-xs text-(--text-secondary)">{selectedRole.description} · {selectedRole._count.users} assigned users · {selectedRole.scope.toLowerCase()} scope</p></div>
+        <div className="flex flex-col gap-3 border-b border-border bg-muted px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div><Label htmlFor="role-select">Role</Label><Select value={selectedRole.id} onValueChange={setSelectedRoleId}><IconSelectTrigger id="role-select" icon="shield" className="mt-1 min-w-56 w-full font-semibold sm:w-56"><SelectValue /></IconSelectTrigger><SelectContent>{roles.map((role) => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}</SelectContent></Select><p className="mt-2 text-xs text-muted-foreground">{selectedRole.description} · {selectedRole._count.users} assigned users · {selectedRole.scope.toLowerCase()} scope</p></div>
           <div className="w-full sm:w-64"><label htmlFor="permission-search" className="sr-only">Search permissions</label><SearchInput id="permission-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search permissions" /></div>
         </div>
         <Accordion type="multiple" value={expanded} onValueChange={setExpanded} className="divide-y divide-(--border-default)">
@@ -1275,7 +1275,7 @@ export function RolesTab({ canManage = false }: { canManage?: boolean }) {
             const locked = selectedRole.key === "SUPER_ADMIN" || !canManage;
             return (
               <AccordionItem key={category.key} value={category.key} className="border-b-0">
-                <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-(--bg-hover)">
+                <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted">
                   <AccordionTrigger className="gap-2 py-0 text-sm font-medium hover:no-underline">
                     {category.label}
                   </AccordionTrigger>
@@ -1284,11 +1284,11 @@ export function RolesTab({ canManage = false }: { canManage?: boolean }) {
                   <Button type="button" variant="tertiary" size="sm" icon="close" disabled={locked} onClick={() => void setCategory(selectedRole.id, category.permissions, false)} className="shrink-0">Disable all</Button>
                 </div>
                 <AccordionContent className="pb-0">
-                  <div className="grid gap-1 border-t border-(--border-default) bg-(--bg-surface) px-2 py-2 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-1 border-t border-border bg-card px-2 py-2 sm:grid-cols-2 lg:grid-cols-3">
                     {category.permissions.map(({ key, label }) => {
                       const enabled = selectedRole.permissions.some((entry) => entry.permission === key);
                       return (
-                        <label key={key} htmlFor={`perm-${selectedRole.id}-${key}`} className={`flex items-center gap-2 rounded-lg px-2 py-2 text-sm cursor-pointer ${enabled ? "bg-(--bg-subtle) text-(--text-primary)" : "text-(--text-tertiary)"}`}>
+                        <label key={key} htmlFor={`perm-${selectedRole.id}-${key}`} className={`flex items-center gap-2 rounded-lg px-2 py-2 text-sm cursor-pointer ${enabled ? "bg-muted text-foreground" : "text-(--text-tertiary)"}`}>
                           <Checkbox id={`perm-${selectedRole.id}-${key}`} checked={enabled} disabled={locked} onCheckedChange={(checked) => void toggle(selectedRole.id, key, checked === true)} />
                           {label}
                         </label>
@@ -1376,14 +1376,14 @@ export function SettingsTab() {
       </form>
       </SetupFormModal> : null}
       <Card className="gap-0 overflow-hidden py-0">
-        <div className="border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3">
+        <div className="border-b border-border bg-muted px-4 py-3">
           <h2 className="text-sm font-semibold">Configured values</h2>
           <p className="mt-0.5 text-xs text-(--text-tertiary)">Changes are applied across the workspace.</p>
         </div>
         {loading ? (
           <div className="p-4">
             {[...Array(4)].map((_, index) => (
-              <div key={`settings-skeleton-${index}`} className="flex items-center justify-between gap-4 border-b border-(--border-default) py-3 last:border-0">
+              <div key={`settings-skeleton-${index}`} className="flex items-center justify-between gap-4 border-b border-border py-3 last:border-0">
                 <Skeleton style={{ height: 14, width: "35%" }} />
                 <Skeleton style={{ height: 14, width: "22%" }} />
               </div>
@@ -1469,7 +1469,7 @@ export function AuditTab() {
         metrics={[{ label: "Entries", value: total, tone: "brand" }, { label: "Page", value: page, tone: "info" }, { label: "Page size", value: pageSize, tone: "success" }]}
       />
       <div className="card table-responsive overflow-x-auto">
-        <div className="flex items-center justify-between border-b border-(--border-default) bg-(--bg-subtle) px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border bg-muted px-4 py-3">
           <div><h2 className="text-sm font-semibold">Recent activity</h2><p className="mt-0.5 text-xs text-(--text-tertiary)">Append-only history of important changes.</p></div>
           <Badge className="badge badge-neutral">{total} entries</Badge>
         </div>
@@ -1487,13 +1487,13 @@ export function AuditTab() {
               <AdminTableSkeleton rows={8} columns={4} />
             ) : entries.map((entry) => (
               <TR key={entry.id}>
-                <TD className="px-3 py-2 whitespace-nowrap text-xs text-(--text-secondary)">
+                <TD className="px-3 py-2 whitespace-nowrap text-xs text-muted-foreground">
                   {new Date(entry.createdAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "medium" })}
                 </TD>
                 <TD className="px-3 py-2"><span className="flex items-center gap-1.5">{entry.actor?.name ? <><Initials name={entry.actor.name} size="xs" /><span className="font-medium">{entry.actor.name}</span></> : <span className="font-medium">System</span>}</span></TD>
                 <TD className="px-3 py-2"><Badge className="badge badge-neutral whitespace-nowrap">{entry.action.replaceAll("_", " ").toLowerCase()}</Badge></TD>
-                <TD className="px-3 py-2 text-xs text-(--text-secondary)">
-                  <span className="font-medium text-(--text-primary)">{entry.objectType.toLowerCase()}</span>
+                <TD className="px-3 py-2 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">{entry.objectType.toLowerCase()}</span>
                   {entry.objectId ? ` · …${entry.objectId.slice(-6)}` : ""}
                 </TD>
               </TR>
@@ -1504,10 +1504,10 @@ export function AuditTab() {
           </TBody>
         </Table>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-(--text-secondary)">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
         <span>
           {total > 0 ? (
-            <>Showing <strong className="text-(--text-primary)">{(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)}</strong> of {total}</>
+            <>Showing <strong className="text-foreground">{(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)}</strong> of {total}</>
           ) : (
             <>Page {page} of {totalPages}</>
           )}
@@ -1595,17 +1595,17 @@ function IntegrationCard({ title, description, enabled, detail }: { title: strin
     <Card className="gap-0 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-(--border-default) bg-(--bg-subtle) text-(--text-secondary)" aria-hidden>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground" aria-hidden>
             <Icon name="plug" size={16} />
           </span>
           <div className="min-w-0">
             <h2 className="text-sm font-medium">{title}</h2>
-            <p className="mt-1 text-sm text-(--text-secondary)">{description}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           </div>
         </div>
         <Badge variant="outline" className={enabled ? badgeToneClass("success") : undefined}>{enabled ? "Connected" : "Not configured"}</Badge>
       </div>
-      <div className="mt-3 flex items-center gap-2 border-t border-(--border-default) pt-3 text-xs text-(--text-tertiary)"><span aria-hidden className={`h-2 w-2 rounded-full ${enabled ? "bg-(--success)" : "bg-(--text-tertiary)"}`} />{detail}</div>
+      <div className="mt-3 flex items-center gap-2 border-t border-border pt-3 text-xs text-(--text-tertiary)"><span aria-hidden className={`h-2 w-2 rounded-full ${enabled ? "bg-(--success)" : "bg-(--text-tertiary)"}`} />{detail}</div>
     </Card>
   );
 }
@@ -1770,7 +1770,7 @@ export function ObjectsTab() {
               <p className="text-xs text-(--text-tertiary)">Keys are generated from labels — used in imports and the API.</p>
             </div>
             {fieldRows.map((row, index) => (
-              <div key={row.id} className="space-y-2 rounded-lg border border-(--border-default) bg-(--bg-subtle) p-2.5">
+              <div key={row.id} className="space-y-2 rounded-lg border border-border bg-muted p-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Input
                     value={row.label}
@@ -1790,7 +1790,7 @@ export function ObjectsTab() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-(--text-secondary)">
+                  <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
                     <Checkbox checked={row.required} onCheckedChange={(checked) => updateFieldRow(row.id, { required: checked === true })} aria-label={`Field ${index + 1} required`} />
                     Required
                   </label>
@@ -1832,14 +1832,14 @@ export function ObjectsTab() {
         {loading ? (
           <AdminCardGridSkeleton cards={4} />
         ) : objects.map((object) => (
-          <Card key={object.id} className="gap-0 p-4 transition-colors hover:bg-(--bg-hover)">
+          <Card key={object.id} className="gap-0 p-4 transition-colors hover:bg-muted">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-base font-medium">
                   {object.pluralName}
                   <span className="ml-2 font-mono text-xs text-(--text-tertiary)">/{object.key}</span>
                 </p>
-                {object.description ? <p className="text-xs text-(--text-secondary)">{object.description}</p> : null}
+                {object.description ? <p className="text-xs text-muted-foreground">{object.description}</p> : null}
                 <div className="mt-3 flex flex-wrap gap-2"><Badge variant="outline" className={object.active ? badgeToneClass("success") : undefined}>{object.active ? "active" : "inactive"}</Badge><Badge variant="outline">{object._count.records} records</Badge><Badge variant="outline">{object.fields?.length ?? 0} fields</Badge></div>
               </div>
               <div className="flex gap-2 text-xs">
@@ -1873,7 +1873,7 @@ export function ObjectsTab() {
                 ) : null}
               </div>
             </div>
-            <div className="mt-3 border-t border-(--border-default) pt-3 text-xs text-(--text-tertiary)">
+            <div className="mt-3 border-t border-border pt-3 text-xs text-(--text-tertiary)">
               {object.fields?.map((field) => field.label).join(", ") || "No fields defined"}
             </div>
           </Card>

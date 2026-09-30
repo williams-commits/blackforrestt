@@ -45,7 +45,7 @@ export function InlineEdit({
     return (
       <span
         onClick={() => setEditing(true)}
-        className="cursor-pointer rounded px-1 transition-colors hover:bg-(--bg-hover)"
+        className="cursor-pointer rounded px-1 transition-colors hover:bg-muted"
         title="Click to edit"
         role="button"
         tabIndex={0}

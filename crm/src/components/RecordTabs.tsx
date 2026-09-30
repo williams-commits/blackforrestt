@@ -42,7 +42,7 @@ export function RecordTabs({
       <TabsList
         variant="line"
         aria-label="Record sections"
-        className="no-print sticky top-13 z-20 h-auto w-full justify-start gap-0 overflow-x-auto rounded-none bg-(--bg-app) p-0"
+        className="no-print sticky top-13 z-20 h-auto w-full justify-start gap-0 overflow-x-auto rounded-none bg-background p-0"
       >
         {tabs.map((tab) => (
           <TabsTrigger
@@ -53,7 +53,7 @@ export function RecordTabs({
             {TAB_ICONS[tab.key] ? <Icon name={TAB_ICONS[tab.key]} size={14} className="shrink-0" /> : null}
             {tab.label}
             {tab.count !== undefined && tab.count > 0 ? (
-              <span className="rounded-full bg-(--gray-100) px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-(--text-secondary)">
+              <span className="rounded-full bg-(--gray-100) px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
                 {tab.count}
               </span>
             ) : null}

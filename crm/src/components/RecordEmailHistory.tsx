@@ -71,7 +71,7 @@ export function RecordEmailHistory({
   return (
     <Card aria-labelledby="record-email-history" className="gap-3">
       <CardHeader className="flex-row items-center justify-between">
-        <h2 id="record-email-history" className="flex items-center gap-2 text-sm font-semibold text-(--text-primary)">
+        <h2 id="record-email-history" className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden>
             <Icon name="mail" size={13} />
           </span>
@@ -83,7 +83,7 @@ export function RecordEmailHistory({
             <span className="rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-semibold tabular-nums text-primary">{unread} unread</span>
           ) : null}
         </h2>
-        <Link href="/emails" className="flex items-center gap-1 text-xs font-medium text-(--text-brand) hover:underline">
+        <Link href="/emails" className="flex items-center gap-1 text-xs font-medium text-primary hover:underline">
           Open mailbox <Icon name="chevron_right" size={12} />
         </Link>
       </CardHeader>
@@ -161,7 +161,7 @@ export function RecordEmailHistory({
                     {row.sentBy ? ` · sent by ${row.sentBy}` : ""}
                     {row.status === "FAILED" ? ` · failed: ${row.error ?? "unknown"}` : ""}
                   </p>
-                  <pre className="mt-2 whitespace-pre-wrap font-sans text-sm text-(--text-primary)">{row.body}</pre>
+                  <pre className="mt-2 whitespace-pre-wrap font-sans text-sm text-foreground">{row.body}</pre>
                 </div>
               ) : null}
             </li>
@@ -171,7 +171,7 @@ export function RecordEmailHistory({
       </CardContent>
       {rows.length > 10 ? (
         <p className="mt-2 text-xs text-(--text-tertiary)">
-          Showing the latest 10 of {rows.length} — <Link href="/emails" className="text-(--text-brand) hover:underline">view all in the mailbox</Link>.
+          Showing the latest 10 of {rows.length} — <Link href="/emails" className="text-primary hover:underline">view all in the mailbox</Link>.
         </p>
       ) : null}
     </Card>

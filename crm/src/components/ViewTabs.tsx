@@ -55,9 +55,9 @@ export function ViewTabs({
     <div className="no-print space-y-0">
       {/* ── Action bar ── */}
       {showHeader ? (
-        <div className="flex flex-col gap-3 border-b border-(--border-default) pb-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-b border-border pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-semibold tracking-tight text-(--text-primary)">
+            <h1 className="truncate text-xl font-semibold tracking-tight text-foreground">
               {title}
             </h1>
             <p className="mt-0.5 text-xs text-(--text-tertiary)">
@@ -122,7 +122,7 @@ export function ViewTabs({
                   <DropdownMenuItem
                     key={view.key}
                     onSelect={() => onViewChange(view.key)}
-                    className={view.key === activeView ? "text-(--text-brand)" : ""}
+                    className={view.key === activeView ? "text-primary" : ""}
                   >
                     <span className="truncate">{view.label}</span>
                     {view.isPinned ? <Icon name="pin" size={12} /> : null}

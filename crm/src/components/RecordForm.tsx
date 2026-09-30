@@ -369,7 +369,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
                 <li key={`${match.objectType}-${match.id}`} className="flex items-center justify-between gap-2">
                   <a
                     href={`/${match.objectType.toLowerCase()}s/${match.id}`}
-                    className="font-medium text-(--text-primary) underline decoration-(--warning)"
+                    className="font-medium text-foreground underline decoration-(--warning)"
                   >
                     {match.label}
                   </a>
@@ -386,7 +386,7 @@ export function RecordForm({ object, fields, options, initial, onClose, onSaved,
                 icon="check"
                 onClick={() => void createAnyway()}
                 loading={submitting}
-                className="bg-(--warning) text-(--text-inverse) hover:bg-(--warning)/80"
+                className="bg-(--warning) text-primary-foreground hover:bg-(--warning)/80"
               >
                 Create anyway
               </Button>

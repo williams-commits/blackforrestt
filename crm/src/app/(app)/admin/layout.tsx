@@ -23,7 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div data-module="admin">
-      <div className="mb-6 border-b border-(--border-default) pb-5">
+      <div className="mb-6 border-b border-border pb-5">
         <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-(--text-tertiary)">{branding.short} setup</p>
         <h1 className="page-title">Administration</h1>
         <p className="page-subtitle">Configure your workspace, access, and operating rules.</p>

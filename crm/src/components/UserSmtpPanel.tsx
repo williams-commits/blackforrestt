@@ -129,7 +129,7 @@ export function UserSmtpPanel({ userId, userEmail }: { userId: string; userEmail
           </Link>
         </div>
       </div>
-      <p className="mt-1 text-[13px] text-(--text-secondary)">
+      <p className="mt-1 text-[13px] text-muted-foreground">
         When set, this user&#39;s outgoing email is sent through their own mail server. Without it, the global SMTP is used.
       </p>
       {notice ? <p role="status" className="mt-2 rounded-md bg-(--success-bg) px-3 py-2 text-sm text-(--success)">{notice}</p> : null}
@@ -142,7 +142,7 @@ export function UserSmtpPanel({ userId, userEmail }: { userId: string; userEmail
           <Field label="Port" id="smtp-port">
             <IconInput id="smtp-port" icon="plug" type="number" min={1} max={65535} value={port} onChange={(e) => setPort(e.target.value)} placeholder="587" />
           </Field>
-          <label htmlFor="smtp-secure" className="flex items-end gap-2 pb-2 text-xs text-(--text-secondary)">
+          <label htmlFor="smtp-secure" className="flex items-end gap-2 pb-2 text-xs text-muted-foreground">
             <Switch id="smtp-secure" checked={secure} onCheckedChange={(checked) => setSecure(checked === true)} /> TLS/SSL
           </label>
         </div>

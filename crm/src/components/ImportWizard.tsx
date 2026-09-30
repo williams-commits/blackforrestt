@@ -376,9 +376,9 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           <Card className="gap-0 overflow-hidden py-0">
             <CardHeader className="flex-col items-start gap-0 border-b py-5">
               <div>
-                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">Import access</CardTitle>
-                <h2 className="mt-2 text-2xl font-semibold text-(--text-primary)">Ask an admin to enable imports</h2>
-                <p className="mt-2 max-w-2xl text-sm text-(--text-secondary)">
+                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Import access</CardTitle>
+                <h2 className="mt-2 text-2xl font-semibold text-foreground">Ask an admin to enable imports</h2>
+                <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
                   Your current role cannot upload CSV files or Google Sheets into the CRM. This keeps leads, contacts,
                   accounts, and customers safe from accidental bulk changes.
                 </p>
@@ -391,19 +391,19 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 ["3", "Import safely", "Map, validate, and review duplicates before records are written."],
               ].map(([stepNumber, title, description]) => (
                 <div key={stepNumber}>
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-(--accent-soft) text-sm font-semibold">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-semibold">
                     {stepNumber}
                   </span>
-                  <p className="mt-3 font-medium text-(--text-primary)">{title}</p>
-                  <p className="mt-1 text-sm text-(--text-secondary)">{description}</p>
+                  <p className="mt-3 font-medium text-foreground">{title}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{description}</p>
                 </div>
               ))}
             </div>
           </Card>
 
           <Card className="gap-0 p-5">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">What admins unlock</CardTitle>
-            <ul className="mt-2 divide-y divide-(--border-hairline) text-sm text-(--text-secondary)">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">What admins unlock</CardTitle>
+            <ul className="mt-2 divide-y divide-(--border-hairline) text-sm text-muted-foreground">
               <li className="py-3">CSV and Google Sheets import wizard</li>
               <li className="py-3">Column mapping and saved mappings</li>
               <li className="py-3">Duplicate checks before import</li>
@@ -450,14 +450,14 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                   complete
                     ? "bg-accent"
                     : active
-                      ? "border border-accent bg-(--accent-soft)"
+                      ? "border border-accent bg-muted"
                       : "border border-(--border-hairline) text-(--text-tertiary)"
                 }`}
               >
                 {complete ? <Icon name="check" size={13} /> : stepNumber}
               </span>
               <div className="min-w-0 pt-0.5">
-                <p className={`text-sm font-semibold ${active ? "text-(--text-primary)" : "text-(--text-secondary)"}`}>{entry.label}</p>
+                <p className={`text-sm font-semibold ${active ? "text-foreground" : "text-muted-foreground"}`}>{entry.label}</p>
                 <p className="mt-0.5 text-xs text-(--text-tertiary)">{entry.help}</p>
               </div>
             </div>
@@ -471,9 +471,9 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
         <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <Card className="gap-0 space-y-5 p-6">
             <div>
-              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">Start import</CardTitle>
-              <h2 className="mt-1 text-xl font-semibold text-(--text-primary)">Choose where this data belongs</h2>
-              <p className="mt-1 text-sm text-(--text-secondary)">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Start import</CardTitle>
+              <h2 className="mt-1 text-xl font-semibold text-foreground">Choose where this data belongs</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Select the CRM object first so the wizard can suggest the right fields and validation rules.
               </p>
             </div>
@@ -506,7 +506,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                     <label
                       key={value}
                       className={`cursor-pointer rounded-xl border p-4 transition ${
-                        active ? "border-accent bg-(--accent-soft)" : "border-(--border-default) bg-(--bg-surface) hover:bg-(--bg-hover)"
+                        active ? "border-accent bg-muted" : "border-border bg-card hover:bg-muted"
                       }`}
                     >
                       <input
@@ -516,8 +516,8 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                         onChange={() => setSource(value as "csv" | "sheets")}
                         className="sr-only"
                       />
-                      <span className="text-sm font-semibold text-(--text-primary)">{title}</span>
-                      <span className="mt-1 block text-sm text-(--text-secondary)">{description}</span>
+                      <span className="text-sm font-semibold text-foreground">{title}</span>
+                      <span className="mt-1 block text-sm text-muted-foreground">{description}</span>
                     </label>
                   );
                 })}
@@ -544,13 +544,13 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 </div>
               </Field>
             ) : (
-              <div className="rounded-2xl border border-dashed border-(--border-strong) bg-(--bg-subtle) p-6 text-center">
+              <div className="rounded-2xl border border-dashed border-input bg-muted p-6 text-center">
                 <label htmlFor="import-file" className="block cursor-pointer">
-                  <span className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-(--border-default) bg-(--bg-surface) text-(--text-secondary)">
+                  <span className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground">
                     <Icon name="upload" size={16} />
                   </span>
-                  <span className="text-base font-semibold text-(--text-primary)">Drop in a CSV export</span>
-                  <span className="mt-1 block text-sm text-(--text-secondary)">
+                  <span className="text-base font-semibold text-foreground">Drop in a CSV export</span>
+                  <span className="mt-1 block text-sm text-muted-foreground">
                     Max {MAX_ROWS.toLocaleString()} rows. Header row required.
                   </span>
                   <Input
@@ -570,7 +570,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           </Card>
 
           <Card className="gap-0 p-5">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">Safety checks</CardTitle>
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Safety checks</CardTitle>
             <ul className="mt-2 divide-y divide-(--border-hairline)">
               {[
                 ["Preview first", "You see sample rows before mapping."],
@@ -579,12 +579,12 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 ["No silent writes", "Nothing is created until you validate and confirm."],
               ].map(([title, description]) => (
                 <li key={title} className="py-3">
-                  <p className="text-sm font-medium text-(--text-primary)">{title}</p>
-                  <p className="mt-0.5 text-xs text-(--text-secondary)">{description}</p>
+                  <p className="text-sm font-medium text-foreground">{title}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
                 </li>
               ))}
             </ul>
-            <Link href="/docs#imports" className="mt-2 hover:underline flex items-center text-sm font-medium text-(--text-primary)">
+            <Link href="/docs#imports" className="mt-2 hover:underline flex items-center text-sm font-medium text-foreground">
               Import guide
               <Icon name="external" size={16} className="ml-2 inline" />
             </Link>
@@ -598,8 +598,8 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           <Card className="gap-0 overflow-hidden py-0">
             <CardHeader className="flex-col items-start gap-0 border-b py-3">
               <div className="min-w-0">
-                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">Preview</CardTitle>
-                <p className="mt-0.5 text-xs normal-case tracking-normal text-(--text-secondary)">First 3 rows from {fileName || "your source"}</p>
+                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Preview</CardTitle>
+                <p className="mt-0.5 text-xs normal-case tracking-normal text-muted-foreground">First 3 rows from {fileName || "your source"}</p>
               </div>
             </CardHeader>
             <div className="overflow-x-auto">
@@ -627,8 +627,8 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           <Card className="gap-0 p-4">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-(--text-primary)">Map columns to {objectType.toLowerCase()} fields</p>
-                <p className="text-xs text-(--text-secondary)">{mappedColumnCount} of {columns.length} columns mapped</p>
+                <p className="text-sm font-semibold text-foreground">Map columns to {objectType.toLowerCase()} fields</p>
+                <p className="text-xs text-muted-foreground">{mappedColumnCount} of {columns.length} columns mapped</p>
               </div>
               <Badge
                 variant="outline"
@@ -649,7 +649,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             <div className="grid gap-2 sm:grid-cols-2">
               {columns.map((column) => (
                 <div key={column} className="flex items-center gap-2">
-                  <span className="w-40 truncate text-sm text-(--text-secondary)" title={column}>{column}</span>
+                  <span className="w-40 truncate text-sm text-muted-foreground" title={column}>{column}</span>
                   <span aria-hidden className="text-(--text-tertiary)">→</span>
                   <Select
                     value={mapping[column] || "__skip__"}
@@ -681,8 +681,8 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               const sourceField = fields.find((f) => f.key === "source" || f.key === "leadSource");
               if (!sourceField) return null;
               return (
-                <div className="rounded-xl bg-(--bg-subtle) p-4">
-                  <p className="mb-2 text-sm font-semibold text-(--text-primary)">Default values</p>
+                <div className="rounded-xl bg-muted p-4">
+                  <p className="mb-2 text-sm font-semibold text-foreground">Default values</p>
                   <Field
                     label={`Default ${sourceField.label.toLowerCase()} for imported rows`}
                     id="default-source"
@@ -700,10 +700,10 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 </div>
               );
             })()}
-            <div className="rounded-xl bg-(--bg-subtle) p-4">
-              <p className="mb-2 text-sm font-semibold text-(--text-primary)">Duplicate matching</p>
+            <div className="rounded-xl bg-muted p-4">
+              <p className="mb-2 text-sm font-semibold text-foreground">Duplicate matching</p>
               {(["email", "phone", "externalId"] as const).map((rule) => (
-                <label key={rule} htmlFor={`match-rule-${rule}`} className="mr-4 inline-flex items-center gap-2 text-sm text-(--text-secondary)">
+                <label key={rule} htmlFor={`match-rule-${rule}`} className="mr-4 inline-flex items-center gap-2 text-sm text-muted-foreground">
                   <Checkbox
                     id={`match-rule-${rule}`}
                     checked={matchRules[rule]}
@@ -714,8 +714,8 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               ))}
               <p className="mt-2 text-xs text-(--text-tertiary)">Matched duplicates can be skipped, updated, or upserted based on your strategy.</p>
             </div>
-            <div className="rounded-xl bg-(--bg-subtle) p-4">
-              <p className="mb-2 text-sm font-semibold text-(--text-primary)">Strategy</p>
+            <div className="rounded-xl bg-muted p-4">
+              <p className="mb-2 text-sm font-semibold text-foreground">Strategy</p>
               {(
                 [
                   ["CREATE", "Create new (duplicates skipped)", "plus"],
@@ -725,7 +725,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               ).map(([value, label, icon]) => (
                 <label
                   key={value}
-                  className="mb-2 flex items-center gap-2 rounded-lg bg-(--bg-surface) p-2 text-sm text-(--text-secondary)"
+                  className="mb-2 flex items-center gap-2 rounded-lg bg-card p-2 text-sm text-muted-foreground"
                 >
                   <input
                     type="radio"
@@ -800,8 +800,8 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
               ["Duplicates", validation.summary.duplicateRows, "info"],
             ].map(([label, value, tone]) => (
               <Card key={String(label)} className="gap-0 p-4">
-                <p className={`text-2xl font-semibold tabular-nums ${tone === "success" ? "text-(--success)" : tone === "warning" ? "text-(--warning)" : tone === "info" ? "text-(--text-brand)" : "text-(--text-primary)"}`}>{value as number}</p>
-                <p className="text-sm text-(--text-secondary)">{label as string}</p>
+                <p className={`text-2xl font-semibold tabular-nums ${tone === "success" ? "text-(--success)" : tone === "warning" ? "text-(--warning)" : tone === "info" ? "text-primary" : "text-foreground"}`}>{value as number}</p>
+                <p className="text-sm text-muted-foreground">{label as string}</p>
               </Card>
             ))}
           </div>
@@ -809,8 +809,8 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           <Card className="gap-0 p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-lg font-semibold text-(--text-primary)">Validation review</p>
-                <p className="text-sm text-(--text-secondary)">
+                <p className="text-lg font-semibold text-foreground">Validation review</p>
+                <p className="text-sm text-muted-foreground">
                   Review the summary before writing anything into {selectedObjectLabel.toLowerCase()}.
                 </p>
               </div>
@@ -829,7 +829,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
 
           {validation.issues.length > 0 ? (
             <Card className="gap-0 overflow-hidden py-0">
-              <div className="border-b border-(--border-default) bg-(--warning-bg) px-4 py-3">
+              <div className="border-b border-border bg-(--warning-bg) px-4 py-3">
                 <p className="text-sm font-semibold text-(--warning)">Issues</p>
                 <p className="text-xs text-(--warning)">Fix these rows or they may be skipped.</p>
               </div>
@@ -855,7 +855,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 <p className="text-xs text-(--warning)">Strategy: {strategy.toLowerCase()}</p>
               </div>
               <div className="p-4">
-                <ul className="max-h-40 space-y-1 overflow-y-auto text-sm text-(--text-primary)">
+                <ul className="max-h-40 space-y-1 overflow-y-auto text-sm text-foreground">
                   {validation.duplicates.slice(0, 100).map((duplicate, index) => (
                     <li key={index}>
                       Row {duplicate.row}: “{duplicate.label}” (matched on {duplicate.matchOn})
@@ -886,8 +886,8 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           <Card className="gap-0 overflow-hidden py-0">
             <CardHeader className="flex-col items-start gap-0 border-b py-3">
               <div className="min-w-0">
-                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-(--text-secondary)">Import run</CardTitle>
-                <h2 className="mt-1 text-xl font-semibold text-(--text-primary)">
+                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Import run</CardTitle>
+                <h2 className="mt-1 text-xl font-semibold text-foreground">
                   {job.status === "RUNNING"
                     ? `Importing ${job.processedRows}/${job.totalRows} rows`
                     : job.status === "COMPLETED"
@@ -898,7 +898,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
             </CardHeader>
             <div className="p-6">
             {job.status === "RUNNING" ? (
-              <div className="mt-2 h-2 overflow-hidden rounded bg-(--bg-subtle)">
+              <div className="mt-2 h-2 overflow-hidden rounded bg-muted">
                 <div
                   className="h-full bg-accent transition-all duration-300"
                   style={{
@@ -915,9 +915,9 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
                 ["Duplicates", job.duplicateCount],
                 ["Errors", job.errorCount],
               ].map(([label, value]) => (
-                <div key={String(label)} className="rounded-lg bg-(--bg-subtle) p-3">
+                <div key={String(label)} className="rounded-lg bg-muted p-3">
                   <p className="text-xl font-semibold tabular-nums">{value as number}</p>
-                  <p className="text-xs text-(--text-secondary)">{label as string}</p>
+                  <p className="text-xs text-muted-foreground">{label as string}</p>
                 </div>
               ))}
             </div>
@@ -966,10 +966,10 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
       </div>
 
       <div className="card table-responsive overflow-x-auto">
-        <div className="flex-col items-start gap-0 border-b border-(--border-default) bg-(--bg-subtle) py-3 sm:px-4">
+        <div className="flex-col items-start gap-0 border-b border-border bg-muted py-3 sm:px-4">
           <div className="min-w-0 px-4 sm:px-0">
-            <h3 className="text-sm font-semibold text-(--text-secondary)">Recent imports</h3>
-            <p className="mt-0.5 text-xs text-(--text-secondary)">Audit recent jobs, retries, and outcomes.</p>
+            <h3 className="text-sm font-semibold text-muted-foreground">Recent imports</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">Audit recent jobs, retries, and outcomes.</p>
           </div>
         </div>
         {jobs.length === 0 ? (
@@ -1034,17 +1034,17 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           {jobsMeta.total > 0 ? (
             <>
               Showing{" "}
-              <strong className="text-(--text-primary)">
+              <strong className="text-foreground">
                 {(jobsMeta.page - 1) * jobsMeta.pageSize + 1}–{Math.min(jobsMeta.page * jobsMeta.pageSize, jobsMeta.total)}
               </strong>{" "}
               of {jobsMeta.total}
               <span className="ml-2">
-                · Page <strong className="text-(--text-primary)">{jobsMeta.page}</strong> of {jobsTotalPages}
+                · Page <strong className="text-foreground">{jobsMeta.page}</strong> of {jobsTotalPages}
               </span>
             </>
           ) : (
             <>
-              Page <strong className="text-(--text-primary)">{jobsMeta.page}</strong> of {jobsTotalPages}
+              Page <strong className="text-foreground">{jobsMeta.page}</strong> of {jobsTotalPages}
             </>
           )}
         </span>

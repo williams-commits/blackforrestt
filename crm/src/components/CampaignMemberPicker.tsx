@@ -131,7 +131,7 @@ export function CampaignMemberPicker({
   return (
     <div className="space-y-4">
       {canEdit ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-(--border-default) p-3">
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border p-3">
           <Select
             value={type}
             onValueChange={(value) => setType(value as typeof type)}
@@ -169,7 +169,7 @@ export function CampaignMemberPicker({
           {results.length > 0 ? (
             <ul className="w-full space-y-1">
               {results.map((result) => (
-                <li key={result.id} className="flex items-center justify-between rounded border border-(--border-default) px-2 py-1 text-sm">
+                <li key={result.id} className="flex items-center justify-between rounded border border-border px-2 py-1 text-sm">
                   <span>{result.label}</span>
                   {existing.has(`${type}:${result.id}`) ? (
                     <span className="text-xs text-(--text-tertiary)">already a member</span>
@@ -178,7 +178,7 @@ export function CampaignMemberPicker({
                       type="button"
                       onClick={() => void add(result.id)}
                       disabled={busy}
-                      className="text-xs font-medium text-(--text-brand) hover:underline"
+                      className="text-xs font-medium text-primary hover:underline"
                     >
                       Add
                     </button>
@@ -200,9 +200,9 @@ export function CampaignMemberPicker({
       ) : (
         <ul className="space-y-1">
           {members.map((member) => (
-            <li key={member.id} className="flex items-center justify-between rounded border border-(--border-default) px-2 py-1 text-sm">
+            <li key={member.id} className="flex items-center justify-between rounded border border-border px-2 py-1 text-sm">
               <span>
-                <Link href={`/${member.subjectType.toLowerCase()}s/${member.subjectId}`} className="text-(--text-brand) hover:underline">
+                <Link href={`/${member.subjectType.toLowerCase()}s/${member.subjectId}`} className="text-primary hover:underline">
                   {member.label}
                 </Link>
                 <span className="ml-2 text-xs text-(--text-tertiary)">{member.subjectType.toLowerCase()}</span>

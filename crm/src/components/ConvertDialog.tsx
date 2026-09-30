@@ -106,7 +106,7 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
   const choiceCard = (selected: boolean) =>
     cn(
       "flex cursor-pointer items-center gap-2 rounded-md border p-3 text-sm transition-colors",
-      selected ? "border-ring bg-(--bg-selected)" : "border-(--border-default) hover:border-ring",
+      selected ? "border-ring bg-muted" : "border-border hover:border-ring",
     );
 
   return (
@@ -118,7 +118,7 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
           <p className="text-sm text-(--text-tertiary)">{error ? "" : "Checking for duplicates…"}</p>
         ) : (
           <>
-            <p className="text-sm text-(--text-secondary)">
+            <p className="text-sm text-muted-foreground">
               Convert <strong>{preview.lead.firstName} {preview.lead.lastName}</strong>
               {preview.lead.company ? ` (${preview.lead.company})` : ""} into working records.
               Open tasks and notes follow the new contact automatically.
@@ -270,19 +270,19 @@ export function ConvertDialog({ leadId, onClose }: { leadId: string; onClose: ()
             </div>
 
             {preview.matches.contacts.length > 0 || preview.matches.customers.length > 0 ? (
-              <div className="flex items-center gap-2 text-sm text-(--text-secondary)">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Checkbox
                   id="convert-force"
                   checked={force}
                   onCheckedChange={(checked) => setForce(checked === true)}
                 />
-                <label htmlFor="convert-force" className="text-sm text-(--text-secondary)">
+                <label htmlFor="convert-force" className="text-sm text-muted-foreground">
                   Create anyway despite the possible duplicates above
                 </label>
               </div>
             ) : null}
 
-            <div className="flex justify-end gap-2 border-t border-(--border-default) pt-4">
+            <div className="flex justify-end gap-2 border-t border-border pt-4">
               <Button
                 variant="secondary"
                 onClick={onClose}

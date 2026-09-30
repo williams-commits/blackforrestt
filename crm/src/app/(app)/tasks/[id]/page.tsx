@@ -108,7 +108,7 @@ export default async function TaskDetailPage({ params }: PageProps) {
           {
             label: "Linked to",
             value: task.subjectType && task.subjectId && SUBJECT_PATH[task.subjectType] ? (
-              <Link href={`/${SUBJECT_PATH[task.subjectType]}/${task.subjectId}`} className="text-(--text-brand) hover:underline">
+              <Link href={`/${SUBJECT_PATH[task.subjectType]}/${task.subjectId}`} className="text-primary hover:underline">
                 {task.subjectType.toLowerCase()} …{task.subjectId.slice(-6)}
               </Link>
             ) : "—",

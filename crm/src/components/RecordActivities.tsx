@@ -326,7 +326,7 @@ export function RecordActivities({
           </div>
 
           {canCreateTask && showTask ? (
-            <form method="post" onSubmit={createTask} className="space-y-3 rounded-md border border-(--border-default) p-3">
+            <form method="post" onSubmit={createTask} className="space-y-3 rounded-md border border-border p-3">
               <div>
                 <p className="form-section-title">Follow-up task</p>
                 <p className="form-section-help">Linked to this record — appears on its timeline and your queue.</p>
@@ -370,7 +370,7 @@ export function RecordActivities({
           ) : null}
 
           {canScheduleAppointment && showAppointment ? (
-            <form method="post" onSubmit={scheduleAppointment} className="space-y-3 rounded-md border border-(--border-default) p-3">
+            <form method="post" onSubmit={scheduleAppointment} className="space-y-3 rounded-md border border-border p-3">
               <div>
                 <p className="form-section-title">Schedule</p>
                 <p className="form-section-help">Logged on the activity timeline for this record.</p>
@@ -426,7 +426,7 @@ export function RecordActivities({
         </>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border border-(--border-default)">
+      <div className="overflow-hidden rounded-lg border border-border">
         <Tabs
           value={activeTab}
           onValueChange={(key) => {
@@ -435,7 +435,7 @@ export function RecordActivities({
             if (next === "tasks" && tasks.length === 0) void loadTasks();
           }}
         >
-          <div className="border-b border-(--border-default) bg-(--bg-subtle)">
+          <div className="border-b border-border bg-muted">
             <TabsList
               variant="line"
               aria-label="Related activity"
@@ -450,7 +450,7 @@ export function RecordActivities({
                 <Icon name={tab.icon} size={13} />
                 {tab.label}
                 {tab.count > 0 ? (
-                  <span className="rounded-full bg-(--gray-100) px-1.5 text-[10px] font-semibold tabular-nums text-(--text-secondary)">{tab.count}</span>
+                  <span className="rounded-full bg-(--gray-100) px-1.5 text-[10px] font-semibold tabular-nums text-muted-foreground">{tab.count}</span>
                 ) : null}
               </TabsTrigger>
             ))}

@@ -12,6 +12,7 @@
  */
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -72,6 +73,7 @@ async function main() {
       // resolve (not join): an absolute --env-file (e.g. a container mount
       // path) must not be concatenated under ROOT.
       const envFile = resolve(ROOT, flags["env-file"] ?? ".env.production");
+      const sitesDir = join(ROOT, "deploy/caddy/render/sites");
       const out = resolve(ROOT, flags.out ?? join(ROOT, "deploy/caddy/render/Caddyfile"));
       // DEPLOY_DOMAINS scoping: read from the env file (or --domains flag).
       let domainsScope = null;
@@ -92,9 +94,24 @@ async function main() {
         const { deploymentDomains } = await import("./platform/lib/deploy-config.mjs");
         try { domainsScope = deploymentDomains(envFile); } catch { domainsScope = null; }
       }
+      // FIRST-DEPLOY SEED: every in-scope registry domain gets its site file
+      // if missing — existing files are never overwritten (per-domain edits
+      // are deployment state). Also guarantees the sites dir exists, so a
+      // fresh checkout (old render layout, no sites/ yet) cannot ENOENT.
+      mkdirSync(sitesDir, { recursive: true });
+      if (Array.isArray(domainsScope) && domainsScope.length > 0) {
+        const { renderDomainSite } = await import("./platform/lib/deploy-config.mjs");
+        for (const domain of domainsScope) {
+          const siteFile = join(sitesDir, `${domain.key}.caddy`);
+          if (!existsSync(siteFile)) {
+            writeFileSync(siteFile, renderDomainSite(domain, envFile));
+            console.log(`Seeded site file for "${domain.key}" → ${siteFile}`);
+          }
+        }
+      }
       const output = renderCaddyfile({
         envFile,
-        sitesDir: join(ROOT, "deploy/caddy/render/sites"),
+        sitesDir,
         snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"),
         outPath: out,
         email: flags.email,

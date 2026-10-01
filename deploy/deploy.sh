@@ -71,6 +71,20 @@ if [[ -n "$CRM_DOMAIN_CFG" ]]; then
   done
 fi
 
+# ── Deploy scope for the new domain-manifest system ──────────────────────────
+# The registry lists every domain family; DOMAIN slots left empty disable a
+# family. Translate non-empty DOMAIN/DOMAIN_2/DOMAIN_3 slots into
+# DEPLOY_DOMAINS (persisted) so the render only routes configured families.
+DEPLOY_DOMAINS_CFG="$(grep -E '^DEPLOY_DOMAINS=' .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' || :)"
+if [[ -z "$DEPLOY_DOMAINS_CFG" ]]; then
+  SLOTS="$(grep -E '^DOMAIN(_[0-9]+)?=' .env.production | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' | grep -v '^$' || :)"
+  if [[ -n "$SLOTS" ]]; then
+    DEPLOY_DOMAINS_CFG="$(echo "$SLOTS" | paste -sd, -)"
+    printf '\nDEPLOY_DOMAINS=%s\n' "$DEPLOY_DOMAINS_CFG" >> .env.production
+    echo "DEPLOY_DOMAINS derived from DOMAIN slots and persisted: $DEPLOY_DOMAINS_CFG"
+  fi
+fi
+
 "${COMPOSE[@]}" pull postgres redis minio minio-init caddy clamav
 "${COMPOSE[@]}" build --pull app malware-scanner crm
 # clamav starts early so signature downloads overlap with the migrate/seed steps.

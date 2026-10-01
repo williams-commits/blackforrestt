@@ -85,7 +85,28 @@ if [[ -z "$DEPLOY_DOMAINS_CFG" ]]; then
   fi
 fi
 
-"${COMPOSE[@]}" pull postgres redis minio minio-init caddy clamav
+# ── Image pull ───────────────────────────────────────────────────────────────
+# MinIO removed ALL community images from public registries (quay.io tags
+# wiped, Docker Hub repo gone — 2025 community-edition discontinuation).
+# --ignore-pull-failures keeps a deploy working when the pinned MinIO
+# images are already present locally from an earlier deploy; the explicit
+# existence checks below then fail loudly ONLY on a fresh host where the
+# images truly cannot be obtained.
+if ! "${COMPOSE[@]}" pull --ignore-pull-failures postgres redis minio minio-init caddy clamav; then
+  echo "WARNING: some images failed to pull — continuing with locally present images." >&2
+fi
+MINIO_SERVER_IMAGE="$(grep -E '^  minio:' -A1 "$ROOT/deploy/docker-compose.prod.yml" | grep 'image:' | head -1 | sed -E 's/.*image: *//;s/[" ]//g')"
+MINIO_MC_IMAGE="$(grep -E '^  minio-init:' -A1 "$ROOT/deploy/docker-compose.prod.yml" | grep 'image:' | head -1 | sed -E 's/.*image: *//;s/[" ]//g')"
+for required_image in "$MINIO_SERVER_IMAGE" "$MINIO_MC_IMAGE"; do
+  if ! docker image inspect "$required_image" >/dev/null 2>&1; then
+    echo "ERROR: $required_image is not available: pulled from public registries and" >&2
+    echo "not present on this host. Restore it from your image backup:" >&2
+    echo "  gunzip -c backup/minio-images.tgz | docker load" >&2
+    echo "Or migrate the stack to a maintained S3-compatible image." >&2
+    exit 1
+  fi
+done
+
 "${COMPOSE[@]}" build --pull app malware-scanner crm
 # clamav starts early so signature downloads overlap with the migrate/seed steps.
 "${COMPOSE[@]}" up -d postgres redis minio minio-init clamav

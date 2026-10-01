@@ -116,6 +116,19 @@ export async function updateAppointment(
   });
   if (!existing) throw new CrmError("Appointment not found.", 404);
 
+  const fieldsChanged =
+    (input.title !== undefined && input.title !== existing.title) ||
+    (input.startAt !== undefined && input.startAt.getTime() !== existing.startAt.getTime()) ||
+    (input.endAt !== undefined && (input.endAt?.getTime() ?? null) !== (existing.endAt?.getTime() ?? null)) ||
+    (input.locationOrLink !== undefined && input.locationOrLink !== existing.locationOrLink);
+  const snapshot = (row: typeof existing) => ({
+    title: row.title,
+    startAt: row.startAt.toISOString(),
+    endAt: row.endAt?.toISOString() ?? null,
+    locationOrLink: row.locationOrLink,
+    status: row.status,
+  });
+
   return prisma.$transaction(async (tx) => {
     const saved = await tx.appointment.update({
       where: { id },
@@ -127,19 +140,29 @@ export async function updateAppointment(
         ...(input.status !== undefined ? { status: input.status } : {}),
       },
     });
-    if (existing && existing.subjectType && existing.subjectId && input.status && input.status !== existing.status) {
-      await appendActivity(tx, {
-        subjectType: existing.subjectType as "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
-        subjectId: existing.subjectId,
-        kind:
-          input.status === "COMPLETED"
-            ? "appointment_completed"
-            : input.status === "CANCELLED"
-              ? "appointment_cancelled"
-              : "appointment_scheduled",
-        actorUserId: ctx.userId,
-        payload: { appointmentId: id, title: existing.title },
-      });
+    if (existing.subjectType && existing.subjectId) {
+      if (input.status && input.status !== existing.status) {
+        await appendActivity(tx, {
+          subjectType: existing.subjectType as "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
+          subjectId: existing.subjectId,
+          kind:
+            input.status === "COMPLETED"
+              ? "appointment_completed"
+              : input.status === "CANCELLED"
+                ? "appointment_cancelled"
+                : "appointment_scheduled",
+          actorUserId: ctx.userId,
+          payload: { appointmentId: id, title: existing.title },
+        });
+      } else if (fieldsChanged) {
+        await appendActivity(tx, {
+          subjectType: existing.subjectType as "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
+          subjectId: existing.subjectId,
+          kind: "appointment_updated",
+          actorUserId: ctx.userId,
+          payload: { appointmentId: id, title: saved.title },
+        });
+      }
     }
     await appendAudit(tx, {
       actorId: ctx.userId,
@@ -147,8 +170,8 @@ export async function updateAppointment(
       action: "APPOINTMENT_UPDATED",
       objectType: "Appointment",
       objectId: id,
-      before: existing ? { status: existing.status } : undefined,
-      after: { status: saved.status },
+      before: snapshot(existing),
+      after: snapshot(saved),
     });
     return saved;
   });

@@ -57,6 +57,56 @@ test("conversion moves open tasks and notes to the contact", async () => {
   await prisma.lead.delete({ where: { id: lead } });
 });
 
+test("conversion resolves the converted status by category and self-heals a missing one", async () => {
+  const rep = await repContext();
+  const original = await prisma.recordStatus.findFirstOrThrow({ where: { appliesTo: "LEAD", category: "CONVERTED" } });
+  const convert = (leadId: string) =>
+    convertLead(rep, leadId, {
+      contact: { mode: "create" },
+      customer: { mode: "none" },
+      account: { mode: "none" },
+      opportunity: { mode: "none" },
+      force: true,
+    });
+
+  // Rename-proof: statuses are admin-editable, so the lookup must follow the
+  // CONVERTED category, not the literal name "Converted".
+  await prisma.recordStatus.update({ where: { id: original.id }, data: { name: "Won (temp rename)" } });
+  const renamedLead = await makeLead(rep, "convert-rename");
+  let renamedConversion: Awaited<ReturnType<typeof convertLead>> | null = null;
+  try {
+    renamedConversion = await convert(renamedLead);
+    assert.ok(renamedConversion.contactId, "conversion works after the status was renamed");
+  } finally {
+    if (renamedConversion?.contactId) await prisma.contact.deleteMany({ where: { id: renamedConversion.contactId } }).catch(() => undefined);
+    await prisma.lead.delete({ where: { id: renamedLead } }).catch(() => undefined);
+    await prisma.recordStatus.update({ where: { id: original.id }, data: { name: original.name } });
+  }
+
+  // Self-heal: with no CONVERTED-category AND no "Converted" name match,
+  // conversion provisions the status instead of failing the feature.
+  await prisma.recordStatus.update({ where: { id: original.id }, data: { name: "Archived (temp)", category: "OPEN" } });
+  const healedLead = await makeLead(rep, "convert-selfheal");
+  let provisionedStatusId: string | null = null;
+  try {
+    const healed = await convert(healedLead);
+    assert.ok(healed.contactId, "conversion works without a seeded Converted status");
+    const claimed = await prisma.lead.findUniqueOrThrow({ where: { id: healedLead }, select: { statusId: true } });
+    const status = await prisma.recordStatus.findUniqueOrThrow({ where: { id: claimed.statusId } });
+    assert.equal(status.category, "CONVERTED", "lead was claimed with a CONVERTED-category status");
+    provisionedStatusId = status.id;
+  } finally {
+    await prisma.lead.delete({ where: { id: healedLead } }).catch(() => undefined);
+    // Delete the provisioned row BEFORE restoring the original's name — both
+    // are named "Converted" and the [name, appliesTo] unique key would reject
+    // the restore otherwise.
+    if (provisionedStatusId && provisionedStatusId !== original.id) {
+      await prisma.recordStatus.delete({ where: { id: provisionedStatusId } }).catch(() => undefined);
+    }
+    await prisma.recordStatus.update({ where: { id: original.id }, data: { name: original.name, category: original.category } });
+  }
+});
+
 /** Merge: snapshot recovery, timeline copy, soft delete. */
 test("lead merge copies timeline and snapshots the merged record", async () => {
   const rep = await managerContext();

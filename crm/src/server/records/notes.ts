@@ -10,8 +10,9 @@ import { sanitizeEmailHtml, htmlToText } from "@/server/emailHtml";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
- * Notes are immutable — created and read, never edited or deleted. The
- * record timeline and audit trail preserve full context.
+ * Notes: created, read, and editable in place (author or NOTES_EDIT —
+ * the same author-or-manage model as comments). Deletes stay impossible;
+ * the record timeline and audit trail preserve full context.
  *
  * Bodies are rich text from the shared editor: sanitized with the same
  * server allowlist as email HTML before storing, with length limits
@@ -27,12 +28,22 @@ export const CreateNote = z.object({
   subjectId: z.string().trim().min(5),
 });
 
-export async function createNote(ctx: ScopedContext, input: z.infer<typeof CreateNote>) {
-  requireCapability(ctx, subjectPermission(input.subjectType, "ADD_NOTE"));
-  const plain = htmlToText(input.body);
+export const UpdateNote = z.object({
+  body: z.string().trim().min(1).max(20_000),
+});
+
+/** Reject empty/oversized bodies and return the store-ready sanitized HTML. */
+function preparedBody(body: string): string {
+  const plain = htmlToText(body);
   if (plain.length < 1) throw new CrmError("Note is empty.", 400);
   if (plain.length > NOTE_MAX_PLAIN) throw new CrmError(`Note is too long — keep it under ${NOTE_MAX_PLAIN.toLocaleString()} characters.`, 400);
-  const body = sanitizeEmailHtml(input.body);
+  return sanitizeEmailHtml(body);
+}
+
+export async function createNote(ctx: ScopedContext, input: z.infer<typeof CreateNote>) {
+  requireCapability(ctx, subjectPermission(input.subjectType, "ADD_NOTE"));
+  const body = preparedBody(input.body);
+  const plain = htmlToText(input.body);
   const subject = await resolveSubject(ctx, input.subjectType, input.subjectId);
   const note = await prisma.$transaction(async (tx) => {
     const note = await tx.note.create({
@@ -81,6 +92,51 @@ export async function createNote(ctx: ScopedContext, input: z.infer<typeof Creat
     });
   }
   return note;
+}
+
+/**
+ * Edit a note in place. Authorization mirrors comments: the AUTHOR may fix
+ * their own note, NOTES_EDIT holders may edit anyone's. The subject scope is
+ * resolved FIRST, so neither can touch a note on a record they can no
+ * longer see. Every edit stamps editedAt and writes audit + timeline.
+ */
+export async function updateNote(ctx: ScopedContext, id: string, input: z.infer<typeof UpdateNote>) {
+  const existing = await prisma.note.findUnique({ where: { id } });
+  if (!existing) throw new CrmError("Note not found.", 404);
+  const recordSubjects: readonly string[] = ["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"];
+  if (!recordSubjects.includes(existing.subjectType)) {
+    throw new CrmError("Note has an unsupported subject.", 400);
+  }
+  const subject = await resolveSubject(ctx, existing.subjectType, existing.subjectId);
+  if (existing.authorUserId !== ctx.userId && !ctx.permissions.includes("NOTES_EDIT")) {
+    throw new CrmError("Forbidden — only the author or NOTES_EDIT may edit a note", 403);
+  }
+  const body = preparedBody(input.body);
+  const excerpt = htmlToText(input.body).slice(0, 120);
+
+  return prisma.$transaction(async (tx) => {
+    const saved = await tx.note.update({
+      where: { id },
+      data: { body, editedAt: new Date() },
+      include: { author: { select: { id: true, name: true } } },
+    });
+    await appendActivity(tx, {
+      subjectType: subject.type,
+      subjectId: subject.id,
+      kind: "note_updated",
+      actorUserId: ctx.userId,
+      payload: { noteId: id, excerpt },
+    });
+    await appendAudit(tx, {
+      actorId: ctx.userId,
+      ip: ctx.ip,
+      action: "NOTE_UPDATED",
+      objectType: "Note",
+      objectId: id,
+      after: { subject: subject.label, excerpt },
+    });
+    return saved;
+  });
 }
 
 /** The user who owns a subject record (assignee/owner), when there is one. */

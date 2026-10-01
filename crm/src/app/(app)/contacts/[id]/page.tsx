@@ -207,7 +207,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
                 canAddNote={canAddNote}
                 canCreateTask={canCreateTask}
                 canScheduleAppointment={canScheduleAppointment}
-                notes={notes.map((note) => ({ id: note.id, body: note.body, createdAt: note.createdAt.toISOString(), author: note.author }))}
+                notes={notes.map((note) => ({ id: note.id, body: note.body, createdAt: note.createdAt.toISOString(), editedAt: note.editedAt?.toISOString() ?? null, author: note.author }))}
                 appointments={appointments.map((appointment) => ({ id: appointment.id, title: appointment.title, startAt: appointment.startAt.toISOString(), endAt: appointment.endAt?.toISOString() ?? null, status: appointment.status, locationOrLink: appointment.locationOrLink }))}
               />
             </div>

@@ -731,6 +731,7 @@ model Note {
   subjectType  SubjectType
   subjectId    String
   createdAt    DateTime    @default(now())
+  editedAt     DateTime?
 
   @@index([subjectType, subjectId, createdAt])
   @@index([authorUserId])

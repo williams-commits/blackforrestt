@@ -191,6 +191,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
                     id: note.id,
                     body: note.body,
                     createdAt: note.createdAt.toISOString(),
+                    editedAt: note.editedAt?.toISOString() ?? null,
                     author: note.author,
                   }))}
                   appointments={appointments.map((appointment) => ({

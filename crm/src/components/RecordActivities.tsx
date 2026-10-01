@@ -33,10 +33,19 @@ function EmptyHint({ icon, text }: { icon: string; text: string }) {
   return <EmptyState icon={icon} iconTile={false} title={text} className="justify-start py-4 text-left" />;
 }
 
+/** UTC instant → local datetime-local value (YYYY-MM-DDTHH:mm). */
+function toLocalInputValue(instant: string): string {
+  const date = new Date(instant);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
 export interface SubjectNote {
   id: string;
   body: string;
   createdAt: string;
+  editedAt?: string | null;
   author: { id: string; name: string };
 }
 
@@ -62,7 +71,9 @@ type SubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
 /**
  * Record-scoped activity panel: add a note, create a follow-up task, or
  * schedule an appointment — all attached to the record via subject refs
- * (scope-validated server-side).
+ * (scope-validated server-side). Notes and appointments edit in place:
+ * notes by their author or a NOTES_EDIT holder, appointments by
+ * APPOINTMENTS_EDIT holders — the server re-checks both.
  */
 export function RecordActivities({
   subjectType,
@@ -102,9 +113,31 @@ export function RecordActivities({
   const [apptStart, setApptStart] = useState("");
   const [apptLocation, setApptLocation] = useState("");
   // Comment capabilities resolve per user (client fetch — same as RecordListPage).
-  const [me, setMe] = useState<{ userId: string; canComment: boolean; canManage: boolean } | null>(null);
+  const [me, setMe] = useState<{
+    userId: string;
+    canComment: boolean;
+    canManage: boolean;
+    canEditNotes: boolean;
+    canEditAppointments: boolean;
+  } | null>(null);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+
+  // Inline edit state. Successful PATCHes land in the patch overlays so the
+  // row updates instantly; router.refresh() then re-syncs from the server.
+  const [notePatches, setNotePatches] = useState<Record<string, { body: string; editedAt: string | null }>>({});
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteEditText, setNoteEditText] = useState("");
+  const [noteEditHtml, setNoteEditHtml] = useState("");
+  const [apptPatches, setApptPatches] = useState<Record<string, Partial<SubjectAppointment>>>({});
+  const [editingApptId, setEditingApptId] = useState<string | null>(null);
+  const [apptEditTitle, setApptEditTitle] = useState("");
+  const [apptEditStart, setApptEditStart] = useState("");
+  const [apptEditEnd, setApptEditEnd] = useState("");
+  const [apptEditLocation, setApptEditLocation] = useState("");
+
+  const visibleNotes = notes.map((note) => (notePatches[note.id] ? { ...note, ...notePatches[note.id] } : note));
+  const visibleAppointments = appointments.map((appointment) => (apptPatches[appointment.id] ? { ...appointment, ...apptPatches[appointment.id] } : appointment));
 
   // Batch comment-count badges for the visible work items (notes,
   // appointments, loaded tasks). Re-runs on the realtime refresh so other
@@ -148,6 +181,8 @@ export function RecordActivities({
           userId: body.data.userId,
           canComment: permissions.includes("COMMENTS_CREATE"),
           canManage: permissions.includes("COMMENTS_MANAGE"),
+          canEditNotes: permissions.includes("NOTES_EDIT"),
+          canEditAppointments: permissions.includes("APPOINTMENTS_EDIT"),
         });
       } catch {
         // Comment affordance stays hidden — the server still enforces authz.
@@ -257,6 +292,92 @@ export function RecordActivities({
     } catch {
       setError("Could not schedule appointment.");
       toast.error("Appointment not scheduled", { description: "Check your connection and try again." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startNoteEdit(note: SubjectNote) {
+    if (editingNoteId === note.id) {
+      setEditingNoteId(null);
+      return;
+    }
+    setEditingNoteId(note.id);
+    setNoteEditText(note.body);
+    setNoteEditHtml(renderRichText(note.body));
+  }
+
+  async function saveNoteEdit(id: string) {
+    if (!noteEditText.trim() || busy) return;
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/notes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: noteEditHtml }),
+      });
+      const payload = (await response.json().catch(() => null)) as { data?: { editedAt: string | null }; error?: string } | null;
+      if (!response.ok || !payload?.data) {
+        toast.error("Note not updated", { description: payload?.error ?? "Try again." });
+        return;
+      }
+      setNotePatches((current) => ({ ...current, [id]: { body: noteEditHtml, editedAt: payload.data!.editedAt ?? new Date().toISOString() } }));
+      setEditingNoteId(null);
+      setNoteEditText("");
+      setNoteEditHtml("");
+      toast.success("Note updated", { description: `Note on ${subjectLabel} updated.` });
+      refreshAfterToast();
+    } catch {
+      toast.error("Note not updated", { description: "Check your connection and try again." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startAppointmentEdit(appointment: SubjectAppointment) {
+    if (editingApptId === appointment.id) {
+      setEditingApptId(null);
+      return;
+    }
+    setEditingApptId(appointment.id);
+    setApptEditTitle(appointment.title);
+    setApptEditStart(toLocalInputValue(appointment.startAt));
+    setApptEditEnd(appointment.endAt ? toLocalInputValue(appointment.endAt) : "");
+    setApptEditLocation(appointment.locationOrLink ?? "");
+  }
+
+  async function saveAppointmentEdit(id: string) {
+    if (!apptEditTitle.trim() || !apptEditStart || busy) return;
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/appointments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: apptEditTitle,
+          startAt: apptEditStart,
+          endAt: apptEditEnd || null,
+          locationOrLink: apptEditLocation || null,
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        data?: { title: string; startAt: string; endAt: string | null; locationOrLink: string | null; status: string };
+        error?: string;
+      } | null;
+      if (!response.ok || !payload?.data) {
+        toast.error("Appointment not updated", { description: payload?.error ?? "Try again." });
+        return;
+      }
+      const saved = payload.data;
+      setApptPatches((current) => ({
+        ...current,
+        [id]: { title: saved.title, startAt: saved.startAt, endAt: saved.endAt, locationOrLink: saved.locationOrLink, status: saved.status },
+      }));
+      setEditingApptId(null);
+      toast.success("Appointment updated", { description: `Appointment on ${subjectLabel} updated.` });
+      refreshAfterToast();
+    } catch {
+      toast.error("Appointment not updated", { description: "Check your connection and try again." });
     } finally {
       setBusy(false);
     }
@@ -458,9 +579,10 @@ export function RecordActivities({
           </div>
         </Tabs>
         <div className="p-3 bg-accent/30">
-          {activeTab === "notes" ? notes.length === 0 ? <EmptyHint icon="note" text="No notes yet — add context for everyone working this record." /> : <ul className="space-y-2.5">{notes.map((note) => {
+          {activeTab === "notes" ? visibleNotes.length === 0 ? <EmptyHint icon="note" text="No notes yet — add context for everyone working this record." /> : <ul className="space-y-2.5">{visibleNotes.map((note) => {
           const noteCount = commentCounts[note.id] ?? 0;
           const noteOpen = Boolean(openComments[note.id]);
+          const mayEditNote = Boolean(me && (note.author.id === me.userId || me.canEditNotes));
           return (
           <li key={note.id} className="group rounded-lg border border-border bg-card p-3 shadow-xs transition-colors hover:border-border/80 hover:bg-muted/30">
             <div className="flex items-start gap-3">
@@ -474,14 +596,49 @@ export function RecordActivities({
                   <time className="ml-auto text-[11px] text-muted-foreground" dateTime={note.createdAt} title={absoluteTime(note.createdAt)}>
                     {relativeTime(note.createdAt)}
                   </time>
+                  {note.editedAt ? <span className="rounded-full bg-muted px-1.5 py-px text-[10px] font-medium text-muted-foreground" title={absoluteTime(note.editedAt)}>edited</span> : null}
                 </div>
-                <div
-                  className="mt-1.5 wrap-break-words text-[13px] leading-relaxed text-foreground [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
-                  dangerouslySetInnerHTML={{ __html: renderRichText(note.body) }}
-                />
+                {editingNoteId === note.id ? (
+                  <div className="mt-2 space-y-2" role="group" aria-label="Edit note">
+                    <RichTextEditor
+                      defaultValue={renderRichText(note.body)}
+                      ariaLabel="Edit note"
+                      placeholder="Update the note…"
+                      maxLength={5000}
+                      minHeight={64}
+                      disabled={busy}
+                      autoFocus
+                      onSubmit={() => void saveNoteEdit(note.id)}
+                      onChange={(text, html) => { setNoteEditText(text); setNoteEditHtml(html); }}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="secondary" disabled={busy} onClick={() => setEditingNoteId(null)}>Cancel</Button>
+                      <Button type="button" variant="primary" icon="check" loading={busy} disabled={busy || !noteEditText.trim()} onClick={() => void saveNoteEdit(note.id)}>
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="mt-1.5 wrap-break-words text-[13px] leading-relaxed text-foreground [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
+                    dangerouslySetInnerHTML={{ __html: renderRichText(note.body) }}
+                  />
+                )}
               </div>
             </div>
             <div className="mt-2 flex items-center justify-end gap-2 border-t border-border/70 pt-1.5">
+              {mayEditNote ? (
+                <button
+                  type="button"
+                  aria-label={editingNoteId === note.id ? "Cancel editing note" : "Edit note"}
+                  disabled={busy}
+                  onClick={() => startNoteEdit(note)}
+                  className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                >
+                  <Icon name={editingNoteId === note.id ? "close" : "edit"} size={12} />
+                  {editingNoteId === note.id ? "Cancel" : "Edit"}
+                </button>
+              ) : null}
               <button type="button" onClick={() => toggleComments(note.id)} aria-expanded={noteOpen} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                 <Icon name={noteOpen ? "no_comment" : "comment"} size={12} />
                 {noteOpen ? "Hide comments" : "Comments"}
@@ -534,9 +691,10 @@ export function RecordActivities({
               </div>
             ) : null}
           </li>);})}</ul> : null}
-          {activeTab === "appointments" ? appointments.length === 0 ? <EmptyHint icon="calendar" text="No appointments yet — schedule one above." /> : <ul className="space-y-2.5">{appointments.map((appointment) => {
+          {activeTab === "appointments" ? visibleAppointments.length === 0 ? <EmptyHint icon="calendar" text="No appointments yet — schedule one above." /> : <ul className="space-y-2.5">{visibleAppointments.map((appointment) => {
           const apptCount = commentCounts[appointment.id] ?? 0;
           const apptOpen = Boolean(openComments[appointment.id]);
+          const mayEditAppt = Boolean(me?.canEditAppointments);
           return (
           <li key={appointment.id} className="group rounded-lg border border-border bg-card p-3 shadow-xs transition-colors hover:border-border/80 hover:bg-muted/30">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -551,13 +709,85 @@ export function RecordActivities({
                 <StatusChip value={appointment.status} />
               </span>
             </div>
-            {appointment.locationOrLink ? (
+            {editingApptId === appointment.id ? (
+              <form
+                method="post"
+                onSubmit={(event) => { event.preventDefault(); void saveAppointmentEdit(appointment.id); }}
+                className="mt-2.5 space-y-2.5 rounded-md border border-border bg-background/60 p-2.5"
+                role="group"
+                aria-label="Edit appointment"
+              >
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <Field label="What" required id={`ra-appt-edit-${appointment.id}-title`}>
+                    <IconInput
+                      id={`ra-appt-edit-${appointment.id}-title`}
+                      icon="calendar"
+                      aria-label="Appointment title"
+                      value={apptEditTitle}
+                      onChange={(event) => setApptEditTitle(event.target.value)}
+                      placeholder="e.g. Onboarding call"
+                      required
+                      minLength={2}
+                    />
+                  </Field>
+                  <Field label="Starts" required id={`ra-appt-edit-${appointment.id}-start`}>
+                    <IconInput
+                      id={`ra-appt-edit-${appointment.id}-start`}
+                      icon="clock"
+                      aria-label="Starts at"
+                      type="datetime-local"
+                      value={apptEditStart}
+                      onChange={(event) => setApptEditStart(event.target.value)}
+                      required
+                    />
+                  </Field>
+                  <Field label="Ends" id={`ra-appt-edit-${appointment.id}-end`}>
+                    <IconInput
+                      id={`ra-appt-edit-${appointment.id}-end`}
+                      icon="clock"
+                      aria-label="Ends at"
+                      type="datetime-local"
+                      value={apptEditEnd}
+                      onChange={(event) => setApptEditEnd(event.target.value)}
+                    />
+                  </Field>
+                </div>
+                <Field label="Location or link" id={`ra-appt-edit-${appointment.id}-location`} help="Where it happens — a room, a Zoom link, a phone number.">
+                  <IconInput
+                    id={`ra-appt-edit-${appointment.id}-location`}
+                    icon="map_pin"
+                    aria-label="Location or link"
+                    value={apptEditLocation}
+                    onChange={(event) => setApptEditLocation(event.target.value)}
+                    placeholder="e.g. Zoom — link in the invite"
+                  />
+                </Field>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="secondary" disabled={busy} onClick={() => setEditingApptId(null)}>Cancel</Button>
+                  <Button type="submit" variant="primary" icon="check" loading={busy} disabled={busy || !apptEditTitle.trim() || !apptEditStart}>
+                    Save
+                  </Button>
+                </div>
+              </form>
+            ) : appointment.locationOrLink ? (
               <p className="mt-1.5 flex items-center gap-1.5 pl-9 text-xs text-muted-foreground">
                 <Icon name="map_pin" size={11} className="shrink-0" />
                 <span className="truncate">{appointment.locationOrLink}</span>
               </p>
             ) : null}
             <div className="mt-2 flex items-center justify-end border-t border-border/70 pt-1.5">
+              {mayEditAppt ? (
+                <button
+                  type="button"
+                  aria-label={editingApptId === appointment.id ? "Cancel editing appointment" : "Edit appointment"}
+                  disabled={busy}
+                  onClick={() => startAppointmentEdit(appointment)}
+                  className="mr-2 flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                >
+                  <Icon name={editingApptId === appointment.id ? "close" : "edit"} size={12} />
+                  {editingApptId === appointment.id ? "Cancel" : "Edit"}
+                </button>
+              ) : null}
               <button type="button" onClick={() => toggleComments(appointment.id)} aria-expanded={apptOpen} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                 <Icon name={apptOpen ? "no_comment" : "comment"} size={12} />
                 {apptOpen ? "Hide comments" : "Comments"}

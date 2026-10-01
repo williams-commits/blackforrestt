@@ -112,11 +112,22 @@ export async function convertLead(ctx: ScopedContext, leadId: string, input: Con
     }
   }
 
-  const convertedStatus = await prisma.recordStatus.findFirst({
-    where: { appliesTo: "LEAD", name: "Converted" },
-  });
+  // The converted state is resolved by CATEGORY, not name — statuses are
+  // admin-editable data, so "Converted" can be renamed (or lost to seed
+  // drift) while the CONVERTED category stays the semantic signal the rest
+  // of the code reads (record banner, status chips). Name is kept as a
+  // legacy fallback; a database with neither still converts — the status is
+  // provisioned on the fly instead of blocking the whole feature on seeding.
+  let convertedStatus =
+    (await prisma.recordStatus.findFirst({ where: { appliesTo: "LEAD", category: "CONVERTED" } })) ??
+    (await prisma.recordStatus.findFirst({ where: { appliesTo: "LEAD", name: "Converted" } }));
   if (!convertedStatus) {
-    throw new CrmError("No 'Converted' lead status configured — seed the database.", 400);
+    convertedStatus = await prisma.recordStatus
+      .create({ data: { name: "Converted", appliesTo: "LEAD", category: "CONVERTED", sortOrder: 90 } })
+      .catch(() =>
+        // Lost a create race with a concurrent conversion — read the winner.
+        prisma.recordStatus.findFirstOrThrow({ where: { appliesTo: "LEAD", name: "Converted" } }),
+      );
   }
   const contactDefaultStatus = await prisma.recordStatus.findFirst({
     where: { appliesTo: "CONTACT", isDefault: true },

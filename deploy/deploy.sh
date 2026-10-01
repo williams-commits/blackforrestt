@@ -3,6 +3,17 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE=(docker compose --env-file "$ROOT/.env.production" -f "$ROOT/deploy/docker-compose.prod.yml")
 
+# Optional argument scopes the deploy to ONE domain family — its registry
+# key (e.g. `gbfxs`) or a served host (e.g. gbfxs.com), as in
+# `make deploy gbfxs`. Renders/routes ONLY that family's site file and
+# skips DEPLOY_DOMAINS env persistence entirely (one-shot scope).
+DEPLOY_SCOPE="${1:-}"
+DEPLOY_SCOPE_ARGS=()
+if [[ -n "$DEPLOY_SCOPE" ]]; then
+  DEPLOY_SCOPE_ARGS=(--domains "$DEPLOY_SCOPE")
+  echo "Deploy scope: $DEPLOY_SCOPE (single domain family)"
+fi
+
 [[ -f "$ROOT/.env.production" ]] || { echo "Missing $ROOT/.env.production" >&2; exit 1; }
 command -v docker >/dev/null || { echo "Docker is required." >&2; exit 1; }
 
@@ -43,7 +54,7 @@ docker run --rm \
   -v "$ROOT/.env.production:/app/.env.production:ro" \
   -v "$ROOT/deploy/caddy:/app/deploy/caddy" \
   blckforest-render:tmp \
-  node scripts/platform.mjs caddy render --env-file /app/.env.production --out /app/deploy/caddy/render/Caddyfile
+  node scripts/platform.mjs caddy render --env-file /app/.env.production --out /app/deploy/caddy/render/Caddyfile ${DEPLOY_SCOPE_ARGS[@]+"${DEPLOY_SCOPE_ARGS[@]}"}
 CADDY_HASH_AFTER="$(sha256sum "$CADDYFILE" | cut -d' ' -f1)"
 CADDY_CHANGED=false
 if [[ "$CADDY_HASH_BEFORE" != "$CADDY_HASH_AFTER" ]]; then
@@ -76,7 +87,9 @@ fi
 # family. Translate non-empty DOMAIN/DOMAIN_2/DOMAIN_3 slots into
 # DEPLOY_DOMAINS (persisted) so the render only routes configured families.
 DEPLOY_DOMAINS_CFG="$(grep -E '^DEPLOY_DOMAINS=' .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' || :)"
-if [[ -z "$DEPLOY_DOMAINS_CFG" ]]; then
+if [[ -n "$DEPLOY_SCOPE" ]]; then
+  echo "One-shot scope active ($DEPLOY_SCOPE) — skipping DEPLOY_DOMAINS derivation."
+elif [[ -z "$DEPLOY_DOMAINS_CFG" ]]; then
   SLOTS="$(grep -E '^DOMAIN(_[0-9]+)?=' .env.production | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' | grep -v '^$' || :)"
   if [[ -n "$SLOTS" ]]; then
     DEPLOY_DOMAINS_CFG="$(echo "$SLOTS" | paste -sd, -)"

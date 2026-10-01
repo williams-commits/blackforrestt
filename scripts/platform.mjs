@@ -78,21 +78,18 @@ async function main() {
       // DEPLOY_DOMAINS scoping: read from the env file (or --domains flag).
       let domainsScope = null;
       const domainsFlag = flags.domains;
+      const { deploymentDomains, resolveDomainSelectors, loadDomains } = await import("./platform/lib/deploy-config.mjs");
       if (domainsFlag && domainsFlag !== true) {
-        // explicit comma list: resolve keys against the registry (via tsx)
-        const { execFileSync } = await import("node:child_process");
-        const keys = String(domainsFlag).split(",").map((k) => k.trim()).filter(Boolean);
-        const all = JSON.parse(execFileSync(process.execPath,
-          ["--import", "tsx", "--eval",
-           `import { DOMAINS } from ${JSON.stringify(join(ROOT, "src/domains/.generated/domains.ts"))};console.log(JSON.stringify(DOMAINS));`],
-          { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }));
-        const resolved = keys.map((k) => all.find((d) => d.key === k)).filter(Boolean);
-        if (resolved.length === 0) { console.error(`platform: --domains lists no known keys: ${keys.join(", ")}`); return 1; }
-        domainsScope = resolved;
+        // Explicit comma list (one-shot deploy scope from `make deploy <key>`):
+        // selectors may be registry KEYS or served HOSTS; unknown names fail
+        // loudly — a typo must never silently widen the scope.
+        const selectors = String(domainsFlag).split(",").map((k) => k.trim()).filter(Boolean);
+        domainsScope = resolveDomainSelectors(loadDomains(), selectors);
       } else {
-        // DEPLOY_DOMAINS from the env file (default: all registry domains)
-        const { deploymentDomains } = await import("./platform/lib/deploy-config.mjs");
-        try { domainsScope = deploymentDomains(envFile); } catch { domainsScope = null; }
+        // DEPLOY_DOMAINS from the env file. UNSET = all registry domains
+        // (local-dev convenience). Set-but-unmatched THROWS — never fall
+        // back to "all" when an explicit scope exists.
+        domainsScope = deploymentDomains(envFile);
       }
       // FIRST-DEPLOY SEED: every in-scope registry domain gets its site file
       // if missing — existing files are never overwritten (per-domain edits

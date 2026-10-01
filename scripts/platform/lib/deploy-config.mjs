@@ -36,19 +36,40 @@ export function envValue(envFile, name) {
   return value.replace(/^"|"$/g, "").replace(/\/+$/, "").trim();
 }
 
-/** The domains this deployment serves: DEPLOY_DOMAINS env (comma list)
- *  restricts the registry; default = all registered domains. */
+/** Resolve a list of domain selectors against the registry. A selector may
+ *  be a registry KEY ("gbfxs") or a served HOST ("gbfxs.com") — hosts are
+ *  accepted because DOMAIN/DOMAIN_N env slots naturally hold hosts.
+ *  Every selector must resolve; unknown names fail loudly (never silently
+ *  widen the deployment scope). */
+export function resolveDomainSelectors(all, selectors) {
+  const byKey = new Map(all.map((domain) => [domain.key, domain]));
+  const selected = [];
+  const unmatched = [];
+  for (const selector of selectors) {
+    const domain = byKey.get(selector)
+      ?? all.find((d) => d.hosts.includes(selector));
+    if (domain) selected.push(domain);
+    else unmatched.push(selector);
+  }
+  if (unmatched.length > 0) {
+    throw new Error(
+      `Unknown domain selector(s): ${unmatched.join(", ")}. ` +
+      `Known keys: ${all.map((d) => d.key).join(", ")}. ` +
+      `Selectors may be registry keys (gbfxs) or served hosts (gbfxs.com).`
+    );
+  }
+  return selected;
+}
+
+/** The domains this deployment serves: DEPLOY_DOMAINS env (comma list of
+ *  keys or hosts) restricts the registry; UNSET = all registered domains
+ *  (local-dev convenience). Set-but-unmatched is a hard error. */
 export function deploymentDomains(envFile) {
   const all = loadDomains();
   const scoped = envValue(envFile, "DEPLOY_DOMAINS")
     .split(",").map((entry) => entry.trim()).filter(Boolean);
   if (scoped.length === 0) return all;
-  const byKey = new Map(all.map((domain) => [domain.key, domain]));
-  const selected = scoped.map((key) => byKey.get(key)).filter(Boolean);
-  if (selected.length === 0) {
-    throw new Error(`DEPLOY_DOMAINS lists no known domain keys: ${scoped.join(", ")}`);
-  }
-  return selected;
+  return resolveDomainSelectors(all, scoped);
 }
 
 /** Every public host one domain serves: apex(es), www redirect, trade host. */

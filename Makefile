@@ -20,8 +20,13 @@ build: ## Build production images (app + malware-scanner)
 build-no-cache: ## Build without Docker layer cache (after big changes)
 	$(DC) build --no-cache app malware-scanner
 
-deploy: ## Full deploy: build, migrate, seed, preflight, start (deploy.sh)
-	bash $(ROOT)/deploy/deploy.sh
+deploy: ## Full deploy (optionally scoped: make deploy gbfxs)
+	bash $(ROOT)/deploy/deploy.sh $(filter-out $@,$(MAKECMDGOALS))
+
+# Swallow extra goals after `make deploy <domain>` so make does not treat
+# the domain key as a missing file target.
+%:
+	@:
 
 update: ## Routine update: pull code, rebuild app + crm, restart both + caddy
 	git pull && $(DC) build app crm && $(DC) up -d app crm caddy

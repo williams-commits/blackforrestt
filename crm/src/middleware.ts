@@ -1,11 +1,39 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { auth } from "@/auth";
+import { getToken } from "next-auth/jwt";
 import { consumeApiMutation, consumeLoginAttempt } from "@/server/security/rateLimit";
 import { logger } from "@/server/observability";
 
-// The auth() wrapper decodes the session JWT (jose, no DB hit) so decisions
-// are made on a VERIFIED session — never on mere cookie presence. This
-// matters when a cookie was encrypted under a previous AUTH_SECRET: an
+// Session decoding uses getToken (read-only JWE decode of the session
+// cookie) instead of the auth() middleware wrapper. The wrapper runs the
+// full Auth.js core in the Node.js middleware runtime, which constructs the
+// internal request and disturbs the body stream — every authenticated
+// multipart upload then died in the route's request.formData() with
+// "Response body object should not be disturbed or locked" (production
+// standalone only; dev middleware doesn't share the stream, which is why it
+// never reproduced locally). getToken touches no body. Deleted/disabled
+// users are still rejected where it counts: the jwt() callback re-validates
+// on page renders and guard.ts re-reads the user from the database on
+// every API call.
+
+// Must match the cookie name configured in auth.ts (Auth.js v5 derives the
+// JWE salt from it).
+const SESSION_COOKIE =
+  process.env.NODE_ENV === "production" ? "__Secure-crm.session-token" : "crm.session-token";
+
+/** Decode the session JWT; null when absent or undecodable (secret rotation
+ *  decodes to no session — same contract the auth() wrapper provided). */
+async function sessionToken(req: NextRequest) {
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) return null;
+  try {
+    return await getToken({ req, secret, salt: SESSION_COOKIE, cookieName: SESSION_COOKIE });
+  } catch {
+    return null;
+  }
+}
+
+// The session JWT decode is deliberately cookie-only ("jose, no DB hit").
+// This matters when a cookie was encrypted under a previous AUTH_SECRET: an
 // undecryptable cookie decodes to no session, the user is sent to /login,
 // and signing in issues a fresh cookie. With a cookie-presence check the
 // user would bounce between / (needs session) and /login (sees a cookie)
@@ -66,12 +94,13 @@ function mutationOriginAllowed(request: NextRequest): boolean {
   }
 }
 
-const authHandler = auth((req) => {
+async function authHandler(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
   const isPublic = PUBLIC_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
-  const hasSession = Boolean(req.auth?.user?.id);
+  const token = await sessionToken(req);
+  const hasSession = Boolean(token?.id);
 
   if (isPublic) {
     // A genuinely signed-in user has no business on the login page; a stale
@@ -105,7 +134,7 @@ const authHandler = auth((req) => {
     return withSecurityHeaders(NextResponse.redirect(url, 307));
   }
   return withSecurityHeaders(NextResponse.next());
-});
+}
 
 export default async function middleware(req: NextRequest) {
   const start = Date.now();
@@ -139,7 +168,7 @@ export default async function middleware(req: NextRequest) {
   } else if (ASSET_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix))) {
     response = NextResponse.next();
   } else {
-    response = (await authHandler(req, { params: Promise.resolve({}) })) as NextResponse;
+    response = await authHandler(req);
   }
   response.headers.set("x-response-time-ms", String(Date.now() - start));
   // Structured request log — every non-asset request, one JSON line.

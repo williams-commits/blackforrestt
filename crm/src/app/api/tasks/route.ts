@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       status: params.get("status") ?? undefined,
       priority: params.get("priority") ?? undefined,
       due: params.get("due") ?? "all",
-      mine: params.get("mine") ?? "1",
+      mine: params.get("mine") ?? undefined,
       subjectType: params.get("subjectType") ?? undefined,
       subjectId: params.get("subjectId") ?? undefined,
     });

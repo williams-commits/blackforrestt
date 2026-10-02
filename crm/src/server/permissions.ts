@@ -136,3 +136,17 @@ export function permissionsForRoleKey(key: RoleKey): readonly Permission[] {
   if (!definition) throw new Error(`Unknown role key: ${key}`);
   return definition.permissions;
 }
+
+/**
+ * The permission set an actor is ENFORCED against. SUPER_ADMIN resolves to
+ * the full code-level catalog regardless of its RolePermission rows: the
+ * role is code-defined by contract, and DB rows drift (deploys roll schema
+ * + an additive grant script, so a row added to the catalog after a live
+ * seed would otherwise silently strip superadmin abilities — comments and
+ * note-edit vanished exactly this way). Every other role is strictly its
+ * rows, so Roles-UI customizations stay authoritative.
+ */
+export function effectivePermissions(roleKey: string, rows: readonly string[]): Permission[] {
+  if (roleKey === "SUPER_ADMIN") return [...ALL_PERMISSIONS];
+  return [...rows] as Permission[];
+}

@@ -90,6 +90,36 @@ test("admin sees everything via mine=0", async () => {
   }
 });
 
+test("ownership filter narrows admins too: mine=1 is own ∪ shared, mine=0 is everything", async () => {
+  const rep = await repContext();
+  const admin = await adminContext();
+  // Visible to the admin ONLY through the all-seeing path: owned by rep,
+  // not shared with the admin.
+  const task = await createTask(rep, { title: "Ownership: admin narrowing" });
+
+  try {
+    // "Everyone" and the no-param default (the /tasks landing view) see it.
+    assert.ok((await list(admin, "0")).rows.some((row) => row.id === task.id), "admin mine=0 sees it");
+    const noParam = await listTasks(admin, { page: 1, pageSize: 50 }, { due: "all" });
+    assert.ok(noParam.rows.some((row) => row.id === task.id), "absent mine defaults admins to everything");
+
+    // "My & shared" narrows admins as well — the task is neither theirs nor
+    // shared with them, so it must disappear from that view.
+    assert.equal(
+      (await list(admin, "1")).rows.some((row) => row.id === task.id),
+      false,
+      "admin mine=1 excludes rep-owned unshared task",
+    );
+
+    // Share it with the admin as a tagged viewer — "My & shared" picks it up.
+    await updateTask(admin, task.id, { viewerUserIds: [admin.userId] });
+    assert.ok((await list(admin, "1")).rows.some((row) => row.id === task.id), "admin mine=1 includes tasks shared with them");
+  } finally {
+    await prisma.taskViewer.deleteMany({ where: { taskId: task.id } }).catch(() => undefined);
+    await prisma.task.delete({ where: { id: task.id } }).catch(() => undefined);
+  }
+});
+
 test("team viewer tag grants access to every team member", async () => {
   const admin = await adminContext();
   const rep = await repContext();

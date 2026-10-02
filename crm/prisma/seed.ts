@@ -14,6 +14,10 @@
  *   Email/name/password via CRM_ADMIN_EMAIL / CRM_ADMIN_NAME /
  *   CRM_ADMIN_PASSWORD; if no password is given a strong one is generated
  *   and printed once. An existing admin's password is never overwritten.
+ *
+ * Permission rollout (--roles): syncs system-role permission rows from
+ * ROLE_DEFINITIONS additively (never removes) — the deploy path for new
+ * permissions on existing databases. Nothing else is touched.
  */
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
@@ -22,7 +26,15 @@ import { ROLE_DEFINITIONS } from "../src/server/permissions";
 
 const DEMO_PASSWORD = "ChangeMe123!";
 
-async function seedRoles() {
+/**
+ * Sync system-role permission rows to ROLE_DEFINITIONS.
+ *  - "exact" (default): adds missing AND removes extra — system roles track
+ *    the code-level permission set precisely.
+ *  - "additive" (--roles): adds missing only, never removes — the deploy
+ *    rollout path, so permission customizations made through the Roles UI
+ *    always survive.
+ */
+async function seedRoles(mode: "exact" | "additive" = "exact") {
   for (const definition of ROLE_DEFINITIONS) {
     const role = await prisma.role.upsert({
       where: { key: definition.key },
@@ -49,13 +61,15 @@ async function seedRoles() {
         await prisma.rolePermission.create({ data: { roleId: role.id, permission } });
       }
     }
-    // System roles track the code-level permission set exactly.
-    const allowed = new Set<string>(definition.permissions);
-    for (const entry of existing) {
-      if (!allowed.has(entry.permission)) {
-        await prisma.rolePermission.delete({
-          where: { roleId_permission: { roleId: role.id, permission: entry.permission } },
-        });
+    if (mode === "exact") {
+      // System roles track the code-level permission set exactly.
+      const allowed = new Set<string>(definition.permissions);
+      for (const entry of existing) {
+        if (!allowed.has(entry.permission)) {
+          await prisma.rolePermission.delete({
+            where: { roleId_permission: { roleId: role.id, permission: entry.permission } },
+          });
+        }
       }
     }
   }
@@ -454,6 +468,15 @@ async function seedAdminOnly() {
 }
 
 async function main() {
+  // --roles: pure permission rollout for existing databases (deploy path).
+  // Additive only — new catalog permissions reach every system role without
+  // touching Roles-UI customizations, users, or demo data.
+  if (process.argv.includes("--roles")) {
+    console.log("Syncing CRM role permissions (additive — never removes)…");
+    await seedRoles("additive");
+    console.log("CRM role permissions are up to date.");
+    return;
+  }
   const adminOnly = process.argv.includes("--admin-only");
   console.log(adminOnly ? "Seeding CRM (admin-only bootstrap)…" : "Seeding CRM…");
   await seedRoles();

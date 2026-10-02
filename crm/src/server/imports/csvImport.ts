@@ -6,6 +6,7 @@ import { appendActivity } from "@/server/activity";
 import { normalizeEmail, normalizePhone, normalizeText } from "@/server/normalize";
 import { notify } from "@/server/notifications";
 import { assignedScopeWhere, ownerScopeWhere } from "@/server/scope";
+import { effectivePermissions } from "@/server/permissions";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
@@ -489,7 +490,10 @@ async function processImportJob(jobId: string): Promise<void> {
     name: user.name,
     roleKey: user.role.key,
     scope: user.role.scope,
-    permissions: user.role.permissions.map((entry) => entry.permission) as never,
+    permissions: effectivePermissions(
+      user.role.key,
+      user.role.permissions.map((entry) => entry.permission),
+    ) as never,
     ip: null,
     teamIds: await visibleTeamIds(user.id, user.role.scope),
   };

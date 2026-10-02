@@ -227,6 +227,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           : [];
 
   const visibleColumnCount = config.columns.filter((column) => !hiddenColumns.includes(column.key)).length;
+  // Tasks' "Everyone" ownership option is an admin affordance — scoped roles
+  // can never widen past their owner ∪ shared set, so the control would lie.
+  const canSeeEveryTask = me?.roleKey === "SUPER_ADMIN" || me?.roleKey === "ADMIN";
   const hasRowActions = can.edit || can.delete || can.task;
   const tableColumnCount = visibleColumnCount + (can.bulk ? 1 : 0) + (hasRowActions ? 1 : 0);
 
@@ -720,7 +723,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             aria-label="Search"
             className="h-7 text-xs"
           />
-          {config.filters.map((filter) => {
+          {config.filters
+            .filter((filter) => !(object === "tasks" && filter.name === "mine" && !canSeeEveryTask))
+            .map((filter) => {
             const filterOptions = filter.optionsFrom ? options[filter.optionsFrom] : (filter.options ?? []);
             return (
               <Select

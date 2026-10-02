@@ -321,7 +321,7 @@ export const RECORD_UI: Record<ObjectKey, RecordUiConfig> = {
         type: "select",
         options: [
           { value: "1", label: "My & shared" },
-          { value: "0", label: "Everyone (admins)" },
+          { value: "0", label: "Everyone" },
         ],
       },
     ],

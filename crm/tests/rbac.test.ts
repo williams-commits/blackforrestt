@@ -9,7 +9,7 @@ import { createAppointment } from "../src/server/records/appointments";
 import { linkTag } from "../src/server/records/tags";
 import { subjectPermission } from "../src/server/records/subjects";
 import { convertLead } from "../src/server/records/conversion";
-import { ALL_PERMISSIONS, PERMISSION_CATEGORIES } from "../src/server/permissions";
+import { ALL_PERMISSIONS, PERMISSION_CATEGORIES, effectivePermissions } from "../src/server/permissions";
 
 /**
  * Authorization + scope suite: the permission matrix and row visibility
@@ -350,4 +350,17 @@ test("record status permission is enforced per module", async () => {
   await prisma.customer.delete({ where: { id: customer.id } });
   await prisma.account.delete({ where: { id: account.id } });
   await prisma.contact.delete({ where: { id: contact.id } });
+});
+
+test("effectivePermissions: SUPER_ADMIN resolves from the code catalog, not DB rows", async () => {
+  // Row drift on a live database (seeded before a permission existed) must
+  // never strip superadmin abilities — guard.ts enforces against THIS set.
+  const drifted = effectivePermissions("SUPER_ADMIN", ["LEADS_VIEW"]);
+  assert.equal(drifted.length, ALL_PERMISSIONS.length, "superadmin gets the full catalog");
+  assert.ok(drifted.includes("COMMENTS_CREATE"), "catalog permissions present despite missing rows");
+  assert.ok(effectivePermissions("SUPER_ADMIN", []).length > 0, "even empty rows grant the catalog");
+
+  // Everyone else is strictly their rows — Roles-UI customizations rule.
+  assert.deepEqual(effectivePermissions("REP", ["LEADS_VIEW"]), ["LEADS_VIEW"]);
+  assert.deepEqual(effectivePermissions("VIEWER", []), []);
 });

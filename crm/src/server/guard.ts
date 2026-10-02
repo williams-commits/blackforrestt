@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { auth } from "@/auth";
 import { prisma } from "@/server/db";
 import { logger } from "@/server/observability";
-import type { Permission } from "@/server/permissions";
+import { effectivePermissions, type Permission } from "@/server/permissions";
 
 /** Authorization/domain error carrying an HTTP-compatible status and,
  *  optionally, structured details (e.g. duplicate matches for 409s). */
@@ -49,7 +49,10 @@ export async function requirePermission(permission: Permission): Promise<CrmCont
     throw new CrmError("Forbidden — an active CRM account is required", 403);
   }
 
-  const permissions = user.role.permissions.map((entry) => entry.permission) as Permission[];
+  const permissions = effectivePermissions(
+    user.role.key,
+    user.role.permissions.map((entry) => entry.permission),
+  );
   const ip = (await headers()).get("x-client-ip");
   if (!permissions.includes(permission)) {
     // Authorization failures are security signals — always logged.
@@ -76,7 +79,10 @@ export async function requireAnyPermission(...required: Permission[]): Promise<C
   });
   if (!user || user.status !== "ACTIVE") throw new CrmError("Forbidden — an active CRM account is required", 403);
 
-  const permissions = user.role.permissions.map((entry) => entry.permission) as Permission[];
+  const permissions = effectivePermissions(
+    user.role.key,
+    user.role.permissions.map((entry) => entry.permission),
+  );
   const granted = required.find((permission) => permissions.includes(permission));
   const ip = (await headers()).get("x-client-ip");
   if (!granted) {

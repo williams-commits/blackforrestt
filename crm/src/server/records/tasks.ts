@@ -23,6 +23,14 @@ export function canSeeAllTasks(ctx: ScopedContext): boolean {
 /** Where-fragment for READS (list, detail, commenting). */
 export function taskVisibleWhere(ctx: ScopedContext): Prisma.TaskWhereInput {
   if (canSeeAllTasks(ctx)) return {};
+  return taskOwnedOrSharedWhere(ctx);
+}
+
+/** Owner ∪ tagged-viewer fragment (users + teams). Unlike taskVisibleWhere
+ *  this never short-circuits for admins — the list's "My & shared" filter
+ *  narrows admins to the same set (their own tasks plus tasks shared with
+ *  them), which is the point of the option. */
+function taskOwnedOrSharedWhere(ctx: ScopedContext): Prisma.TaskWhereInput {
   return {
     OR: [
       { ownerUserId: ctx.userId },
@@ -81,7 +89,7 @@ export const TaskFilters = z.object({
   status: z.enum(["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
   priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).optional(),
   due: z.enum(["overdue", "today", "week", "upcoming", "all"]).default("all"),
-  mine: z.enum(["0", "1"]).default("1"),
+  mine: z.enum(["0", "1"]).optional(),
   subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"]).optional(),
   subjectId: z.string().trim().min(5).optional(),
 });
@@ -95,13 +103,15 @@ export async function listTasks(
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
   const weekAhead = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  // Visibility: owner ∪ tagged viewers (users/teams) — admins additionally
-  // see everything via mine=0 ("Everyone"). For non-admins, mine=0 and
-  // mine=1 return the same visible set (the UI hides "Everyone" for them).
-  const visibility = taskVisibleWhere(ctx);
-  const mineWhere: Prisma.TaskWhereInput = canSeeAllTasks(ctx) && filters.mine === "0"
-    ? {}
-    : visibility;
+  // Ownership filter: "My & shared" (mine=1) narrows to the owner ∪ tagged
+  // viewer set — ADMINS INCLUDED; "Everyone" (mine=0, offered to admins only
+  // by the UI) lifts the restriction. When the param is absent the default
+  // is per role: admins land on everything (the /tasks view), scoped roles
+  // on their visible set — which is also the ceiling they can never widen
+  // past, no matter what the client sends.
+  const requestedMine = filters.mine ?? (canSeeAllTasks(ctx) ? "0" : "1");
+  const mineWhere: Prisma.TaskWhereInput =
+    requestedMine === "0" && canSeeAllTasks(ctx) ? {} : taskOwnedOrSharedWhere(ctx);
 
   const where: Prisma.TaskWhereInput = {
     ...mineWhere,

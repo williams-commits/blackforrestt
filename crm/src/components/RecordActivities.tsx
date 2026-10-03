@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -15,6 +15,9 @@ import { renderRichText } from "@/lib/richText";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Icon } from "@/components/Icon";
+import { useTabSession } from "@/components/useTabSession";
+import { cn } from "@/lib/utils";
+import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
 
 /** Compact semantic chip for a raw status string (task/apointment states). */
 function StatusChip({ value }: { value: string }) {
@@ -64,9 +67,37 @@ interface SubjectTask {
   dueAt: string | null;
   priority: string;
   status: string;
+  owner?: { id: string; name: string };
 }
 
 type SubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
+
+/** Merge base + appended pages, dropping ids the base already carries
+ *  (a refresh can shift page boundaries while extra pages are loaded). */
+function dedupeById<T extends { id: string }>(base: T[], extra: T[]): T[] {
+  const seen = new Set(base.map((item) => item.id));
+  return [...base, ...extra.filter((item) => !seen.has(item.id))];
+}
+
+/** Shared per-strip "Load more" row — self-hides once everything is loaded
+ *  and captions the progress enterprise-style ("Showing 8 of 34"). */
+function LoadMoreRow({ onClick, loading, shown, total }: { onClick: () => void; loading: boolean; shown: number; total: number | null }) {
+  if (total !== null && shown >= total) {
+    return shown > 0 ? (
+      <p className="pt-1 text-center text-[11px] tabular-nums text-muted-foreground">Showing all {shown}</p>
+    ) : null;
+  }
+  return (
+    <div className="flex flex-col items-center gap-1 pt-1.5">
+      <Button type="button" variant="secondary" className="btn-sm" loading={loading} onClick={onClick}>
+        Load more
+      </Button>
+      {total !== null ? (
+        <span className="text-[11px] tabular-nums text-muted-foreground">Showing {shown} of {total}</span>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * Record-scoped activity panel: add a note, create a follow-up task, or
@@ -81,6 +112,8 @@ export function RecordActivities({
   subjectLabel,
   notes,
   appointments,
+  notesTotal,
+  appointmentsTotal,
   canAddNote,
   canCreateTask,
   canScheduleAppointment,
@@ -90,6 +123,10 @@ export function RecordActivities({
   subjectLabel: string;
   notes: SubjectNote[];
   appointments: SubjectAppointment[];
+  /** Unpaginated totals from the server render — drive the tab chips and
+   *  the "Showing X of Y" load-more captions. */
+  notesTotal?: number;
+  appointmentsTotal?: number;
   canAddNote: boolean;
   canCreateTask: boolean;
   canScheduleAppointment: boolean;
@@ -104,9 +141,17 @@ export function RecordActivities({
   const [error, setError] = useState<string | null>(null);
   const [showTask, setShowTask] = useState(false);
   const [showAppointment, setShowAppointment] = useState(false);
-  const [activeTab, setActiveTab] = useState<"notes" | "tasks" | "appointments">("notes");
+  // Active strip tab persists per record — a refresh reopens the same strip.
+  const [activeTab, setActiveTab] = useTabSession(
+    `activities:${subjectType}:${subjectId}`,
+    "notes",
+    (value) => value === "notes" || value === "tasks" || value === "appointments",
+  );
+  const tasksLoadedRef = useRef(false);
   const [tasks, setTasks] = useState<SubjectTask[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
+  const [tasksTotal, setTasksTotal] = useState<number | null>(null);
+  const [tasksPage, setTasksPage] = useState(1);
   const [taskTitle, setTaskTitle] = useState(`Follow up: ${subjectLabel}`);
   const [taskDue, setTaskDue] = useState("");
   const [apptTitle, setApptTitle] = useState(`Meeting: ${subjectLabel}`);
@@ -136,16 +181,39 @@ export function RecordActivities({
   const [apptEditEnd, setApptEditEnd] = useState("");
   const [apptEditLocation, setApptEditLocation] = useState("");
 
-  const visibleNotes = notes.map((note) => (notePatches[note.id] ? { ...note, ...notePatches[note.id] } : note));
-  const visibleAppointments = appointments.map((appointment) => (apptPatches[appointment.id] ? { ...appointment, ...apptPatches[appointment.id] } : appointment));
+  // Paginated strips: the server render seeds page 1 of notes and schedule;
+  // "Load more" appends pages through the subject endpoints. Totals drive
+  // the tab chips and the "Showing X of Y" captions.
+  const [extraNotes, setExtraNotes] = useState<SubjectNote[]>([]);
+  const [loadedNotesTotal, setLoadedNotesTotal] = useState<number | null>(notesTotal ?? null);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [extraAppointments, setExtraAppointments] = useState<SubjectAppointment[]>([]);
+  const [loadedAppointmentsTotal, setLoadedAppointmentsTotal] = useState<number | null>(appointmentsTotal ?? null);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(false);
+
+  const allNotes = useMemo(() => dedupeById(notes, extraNotes), [notes, extraNotes]);
+  const allAppointments = useMemo(() => dedupeById(appointments, extraAppointments), [appointments, extraAppointments]);
+
+  // Server re-renders (router.refresh) re-seed page 1 — keep totals in sync.
+  useEffect(() => { if (notesTotal !== undefined) setLoadedNotesTotal(notesTotal); }, [notesTotal]);
+  useEffect(() => { if (appointmentsTotal !== undefined) setLoadedAppointmentsTotal(appointmentsTotal); }, [appointmentsTotal]);
+
+  const visibleNotes = useMemo(
+    () => allNotes.map((note) => (notePatches[note.id] ? { ...note, ...notePatches[note.id] } : note)),
+    [allNotes, notePatches],
+  );
+  const visibleAppointments = useMemo(
+    () => allAppointments.map((appointment) => (apptPatches[appointment.id] ? { ...appointment, ...apptPatches[appointment.id] } : appointment)),
+    [allAppointments, apptPatches],
+  );
 
   // Batch comment-count badges for the visible work items (notes,
   // appointments, loaded tasks). Re-runs on the realtime refresh so other
   // users' comments bump the badges live.
   const refreshCommentCounts = useCallback(async () => {
     const groups = [
-      { type: "NOTE" as const, ids: notes.map((note) => note.id) },
-      { type: "APPOINTMENT" as const, ids: appointments.map((appointment) => appointment.id) },
+      { type: "NOTE" as const, ids: visibleNotes.map((note) => note.id) },
+      { type: "APPOINTMENT" as const, ids: visibleAppointments.map((appointment) => appointment.id) },
       { type: "TASK" as const, ids: tasks.map((task) => task.id) },
     ];
     for (const group of groups) {
@@ -158,7 +226,7 @@ export function RecordActivities({
         if (payload?.data) setCommentCounts((current) => ({ ...current, ...payload.data }));
       } catch { /* badges are best-effort */ }
     }
-  }, [notes, appointments, tasks]);
+  }, [visibleNotes, visibleAppointments, tasks]);
 
   useEffect(() => {
     void refreshCommentCounts();
@@ -199,14 +267,68 @@ export function RecordActivities({
     window.setTimeout(() => router.refresh(), 150);
   }
 
-  async function loadTasks() {
+  // A session-restored "tasks" tab must still fetch its list — the strip
+  // renders server-empty until loadTasks runs. One fetch per mount.
+  useEffect(() => {
+    if (activeTab === "tasks" && !tasksLoadedRef.current) {
+      tasksLoadedRef.current = true;
+      void loadTasks();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  async function loadTasks(page = 1) {
     setTasksLoading(true);
     try {
-      const response = await fetch(`/api/tasks?subjectType=${subjectType}&subjectId=${subjectId}&mine=0&due=all&pageSize=50`);
-      const body = await response.json().catch(() => null) as { data?: SubjectTask[] } | null;
-      setTasks(response.ok ? body?.data ?? [] : []);
+      const response = await fetch(`/api/tasks?subjectType=${subjectType}&subjectId=${subjectId}&mine=0&due=all&page=${page}&pageSize=${ACTIVITY_STRIP_PAGE_SIZE}`);
+      const body = await response.json().catch(() => null) as { data?: SubjectTask[]; meta?: { total?: number } } | null;
+      if (!response.ok || !body?.data) {
+        if (page === 1) setTasks([]);
+        return;
+      }
+      setTasks((current) => (page === 1 ? body!.data! : dedupeById(current, body!.data!)));
+      setTasksPage(page);
+      if (typeof body.meta?.total === "number") setTasksTotal(body.meta.total);
     } finally {
       setTasksLoading(false);
+    }
+  }
+
+  async function loadMoreNotes() {
+    setNotesLoading(true);
+    try {
+      const page = Math.floor(visibleNotes.length / ACTIVITY_STRIP_PAGE_SIZE) + 1;
+      const response = await fetch(`/api/notes?subjectType=${subjectType}&subjectId=${subjectId}&page=${page}&pageSize=${ACTIVITY_STRIP_PAGE_SIZE}`);
+      const body = await response.json().catch(() => null) as { data?: SubjectNote[]; meta?: { total?: number } } | null;
+      if (!response.ok || !body?.data) {
+        toast.error("Could not load more notes");
+        return;
+      }
+      setExtraNotes((current) => dedupeById(current, body!.data!));
+      if (typeof body.meta?.total === "number") setLoadedNotesTotal(body.meta.total);
+    } catch {
+      toast.error("Could not load more notes");
+    } finally {
+      setNotesLoading(false);
+    }
+  }
+
+  async function loadMoreAppointments() {
+    setAppointmentsLoading(true);
+    try {
+      const page = Math.floor(visibleAppointments.length / ACTIVITY_STRIP_PAGE_SIZE) + 1;
+      const response = await fetch(`/api/appointments?subjectType=${subjectType}&subjectId=${subjectId}&page=${page}&pageSize=${ACTIVITY_STRIP_PAGE_SIZE}`);
+      const body = await response.json().catch(() => null) as { data?: SubjectAppointment[]; meta?: { total?: number } } | null;
+      if (!response.ok || !body?.data) {
+        toast.error("Could not load more appointments");
+        return;
+      }
+      setExtraAppointments((current) => dedupeById(current, body!.data!));
+      if (typeof body.meta?.total === "number") setLoadedAppointmentsTotal(body.meta.total);
+    } catch {
+      toast.error("Could not load more appointments");
+    } finally {
+      setAppointmentsLoading(false);
     }
   }
 
@@ -551,9 +673,7 @@ export function RecordActivities({
         <Tabs
           value={activeTab}
           onValueChange={(key) => {
-            const next = key as typeof activeTab;
-            setActiveTab(next);
-            if (next === "tasks" && tasks.length === 0) void loadTasks();
+            setActiveTab(key as typeof activeTab);
           }}
         >
           <div className="border-b border-border bg-muted">
@@ -562,7 +682,7 @@ export function RecordActivities({
               aria-label="Related activity"
               className="h-auto w-full justify-stretch gap-0 p-0"
             >
-            {[{ key: "notes" as const, label: "Notes", icon: "note", count: notes.length }, { key: "tasks" as const, label: "Tasks", icon: "square_check", count: tasks.length }, { key: "appointments" as const, label: "Schedule", icon: "calendar", count: appointments.length }].map((tab) => (
+            {[{ key: "notes" as const, label: "Notes", icon: "note", count: loadedNotesTotal ?? visibleNotes.length }, { key: "tasks" as const, label: "Tasks", icon: "square_check", count: tasksTotal ?? tasks.length }, { key: "appointments" as const, label: "Schedule", icon: "calendar", count: loadedAppointmentsTotal ?? visibleAppointments.length }].map((tab) => (
               <TabsTrigger
                 key={tab.key}
                 value={tab.key}
@@ -579,7 +699,8 @@ export function RecordActivities({
           </div>
         </Tabs>
         <div className="p-3 bg-accent/30">
-          {activeTab === "notes" ? visibleNotes.length === 0 ? <EmptyHint icon="note" text="No notes yet — add context for everyone working this record." /> : <ul className="space-y-2.5">{visibleNotes.map((note) => {
+          {activeTab === "notes" ? visibleNotes.length === 0 ? <EmptyHint icon="note" text="No notes yet — add context for everyone working this record." /> : (<>
+          <ul className="space-y-2.5">{visibleNotes.map((note) => {
           const noteCount = commentCounts[note.id] ?? 0;
           const noteOpen = Boolean(openComments[note.id]);
           const mayEditNote = Boolean(me && (note.author.id === me.userId || me.canEditNotes));
@@ -654,20 +775,32 @@ export function RecordActivities({
                 <CommentsSection subjectType="NOTE" subjectId={note.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount onCount={(count) => setCommentCounts((current) => ({ ...current, [note.id]: count }))} />
               </div>
             ) : null}
-          </li>);})}</ul> : null}
-          {activeTab === "tasks" ? tasksLoading ? <Skeleton className="h-12 w-full" /> : tasks.length === 0 ? <EmptyHint icon="square_check" text="No related tasks yet — create a follow-up above." /> : <ul className="space-y-2.5">{tasks.map((task) => {
+          </li>);})}</ul>
+          <LoadMoreRow onClick={() => void loadMoreNotes()} loading={notesLoading} shown={visibleNotes.length} total={loadedNotesTotal} />
+          </>): null}
+          {activeTab === "tasks" ? tasksLoading ? (
+            <div className="space-y-2.5">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          ) : tasks.length === 0 ? <EmptyHint icon="square_check" text="No related tasks yet — create a follow-up above." /> : (<>
+          <ul className="space-y-2.5">{tasks.map((task) => {
           const taskCount = commentCounts[task.id] ?? 0;
           const taskOpen = Boolean(openComments[task.id]);
+          const overdue = task.dueAt ? new Date(task.dueAt).getTime() < Date.now() : false;
           return (
           <li key={task.id} className="group rounded-lg border border-border bg-card p-3 shadow-xs transition-colors hover:border-border/80 hover:bg-muted/30">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
               <span className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon name="square_check" size={14} /></span>
+                <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-md", task.priority === "URGENT" ? "bg-(--error-bg) text-(--error)" : task.priority === "HIGH" ? "bg-(--warning-bg) text-(--warning)" : "bg-primary/10 text-primary")}>
+                  <Icon name={task.priority === "URGENT" ? "alert" : task.priority === "HIGH" ? "clock" : "square_check"} size={14} />
+                </span>
                 <Link href={`/tasks/${task.id}`} className="min-w-0 truncate font-medium text-foreground hover:text-primary hover:underline">{task.title}</Link>
               </span>
               <span className="flex shrink-0 items-center gap-1.5">
+                {task.owner ? <span title={`Owner: ${task.owner.name}`}><Initials name={task.owner.name} size="xs" /></span> : null}
                 {task.dueAt ? (
-                  <span className="badge badge-neutral gap-1"><Icon name="calendar" size={11} />{new Date(task.dueAt).toLocaleDateString()}</span>
+                  <span className={cn("badge gap-1 tabular-nums", overdue ? "badge-error" : "badge-neutral")}><Icon name="calendar" size={11} />{new Date(task.dueAt).toLocaleDateString()}</span>
                 ) : (
                   <span className="text-xs text-muted-foreground">No due date</span>
                 )}
@@ -690,8 +823,11 @@ export function RecordActivities({
                 <CommentsSection subjectType="TASK" subjectId={task.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount onCount={(count) => setCommentCounts((current) => ({ ...current, [task.id]: count }))} />
               </div>
             ) : null}
-          </li>);})}</ul> : null}
-          {activeTab === "appointments" ? visibleAppointments.length === 0 ? <EmptyHint icon="calendar" text="No appointments yet — schedule one above." /> : <ul className="space-y-2.5">{visibleAppointments.map((appointment) => {
+          </li>);})}</ul>
+          {!tasksLoading ? <LoadMoreRow onClick={() => void loadTasks(tasksPage + 1)} loading={tasksLoading} shown={tasks.length} total={tasksTotal} /> : null}
+          </>): null}
+          {activeTab === "appointments" ? visibleAppointments.length === 0 ? <EmptyHint icon="calendar" text="No appointments yet — schedule one above." /> : (<>
+          <ul className="space-y-2.5">{visibleAppointments.map((appointment) => {
           const apptCount = commentCounts[appointment.id] ?? 0;
           const apptOpen = Boolean(openComments[appointment.id]);
           const mayEditAppt = Boolean(me?.canEditAppointments);
@@ -803,7 +939,9 @@ export function RecordActivities({
                 <CommentsSection subjectType="APPOINTMENT" subjectId={appointment.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount onCount={(count) => setCommentCounts((current) => ({ ...current, [appointment.id]: count }))} />
               </div>
             ) : null}
-          </li>);})}</ul> : null}
+          </li>);})}</ul>
+          <LoadMoreRow onClick={() => void loadMoreAppointments()} loading={appointmentsLoading} shown={visibleAppointments.length} total={loadedAppointmentsTotal} />
+          </>): null}
         </div>
       </div>
     </div>

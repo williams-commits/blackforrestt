@@ -63,14 +63,6 @@ const TYPE_ICONS: Record<string, string> = {
   TASK_CANCELLED: "x_circle",
 };
 
-const SUBJECT_PATH: Record<string, string> = {
-  LEAD: "leads",
-  CONTACT: "contacts",
-  ACCOUNT: "accounts",
-  CUSTOMER: "customers",
-  OPPORTUNITY: "opportunities",
-};
-
 /** Home widgets: my task counters + in-app notifications with mark-all-read. */
 export function HomeWidgets() {
   const [openCount, setOpenCount] = useState<number | null>(null);
@@ -145,7 +137,9 @@ export function HomeWidgets() {
           ) : (
             <ul className="divide-y divide-border">
               {tasks.map((task) => {
-                const href = task.subjectType && task.subjectId && SUBJECT_PATH[task.subjectType] ? `/${SUBJECT_PATH[task.subjectType]}/${task.subjectId}` : "/tasks?mine=1";
+                // Exact page: a task row opens the TASK, not the record it
+                // happens to be attached to.
+                const href = `/tasks/${task.id}`;
                 const overdue = task.dueAt ? new Date(task.dueAt).getTime() < Date.now() : false;
                 return (
                   <li key={task.id}>

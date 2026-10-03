@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTabSession } from "@/components/useTabSession";
 
 /* Badge tone helpers — semantic tones stay on theme tokens so the NEUTRAL
    palette maps them; no raw brand hexes. */
@@ -700,6 +701,14 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
 
 export function PeopleTab({ canManage }: { canManage: boolean }) {
   const branding = useCrmBranding();
+  // The profile drawer's tab persists for the browser session: an admin
+  // auditing users reopens the drawer on the tab they work from, and the
+  // choice survives refreshes. "smtp" only validates for managers.
+  const [profileDrawerTab, setProfileDrawerTab] = useTabSession(
+    "admin:people-drawer",
+    "profile",
+    (value) => value === "profile" || value === "workspace" || value === "activity" || (canManage && value === "smtp"),
+  );
   const [users, setUsers] = useState<Array<{
     id: string; email: string; name: string; status: string; lastLoginAt: string | null;
     role: { key: string; name: string };
@@ -1040,7 +1049,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
             </span>
           </div>
 
-          <Tabs key={selectedUser.id} defaultValue="profile" className="mt-4">
+          <Tabs key={selectedUser.id} value={profileDrawerTab} onValueChange={setProfileDrawerTab} className="mt-4">
             <TabsList variant="line">
               <TabsTrigger value="profile">Profile</TabsTrigger>
               <TabsTrigger value="workspace">Workspace</TabsTrigger>

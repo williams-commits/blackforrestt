@@ -6,6 +6,7 @@ import { appendActivity } from "@/server/activity";
 import { notify, subjectNotificationContext } from "@/server/notifications";
 import { resolveSubject, subjectPermission } from "@/server/records/subjects";
 import { visibleOwnerIds } from "@/server/scope";
+import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
 import type { ScopedContext } from "@/server/records/leads";
 
 /** Appointments: scheduled interactions tied to a record. */
@@ -83,13 +84,34 @@ export async function createAppointment(ctx: ScopedContext, input: z.infer<typeo
 export function listAppointmentsBySubject(
   subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
   subjectId: string,
-  take = 10,
+  take = ACTIVITY_STRIP_PAGE_SIZE,
 ) {
   return prisma.appointment.findMany({
     where: { subjectType, subjectId },
     orderBy: { startAt: "asc" },
     take,
   });
+}
+
+/** Paginated schedule for the record-page strip ("Load more"): soonest
+ *  first, with the unpaginated total for the "Showing X of Y" caption.
+ *  Scope is the caller's job — the route resolves the subject first. */
+export async function listAppointmentsBySubjectPage(
+  subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
+  subjectId: string,
+  page: number,
+  pageSize: number,
+): Promise<{ rows: Awaited<ReturnType<typeof listAppointmentsBySubject>>; total: number }> {
+  const [rows, total] = await Promise.all([
+    prisma.appointment.findMany({
+      where: { subjectType, subjectId },
+      orderBy: { startAt: "asc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.appointment.count({ where: { subjectType, subjectId } }),
+  ]);
+  return { rows, total };
 }
 
 export function upcomingAppointmentsForUser(userId: string, take = 10) {

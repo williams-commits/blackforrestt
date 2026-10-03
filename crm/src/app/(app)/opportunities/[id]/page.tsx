@@ -4,8 +4,9 @@ import { CrmError } from "@/server/guard";
 import { getOpportunity } from "@/server/records/opportunities";
 import { scopedContext } from "@/server/records/leads";
 import { listTimeline } from "@/server/activity";
-import { listNotesBySubject } from "@/server/records/notes";
-import { listAppointmentsBySubject } from "@/server/records/appointments";
+import { listNotesBySubjectPage } from "@/server/records/notes";
+import { listAppointmentsBySubjectPage } from "@/server/records/appointments";
+import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
 import { Timeline } from "@/components/Timeline";
 import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
@@ -35,8 +36,8 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
   let events: Awaited<ReturnType<typeof listTimeline>> = [];
   let tags: Awaited<ReturnType<typeof listTagsForSubject>> = [];
   let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
-  let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
-  let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
+  let notes: Awaited<ReturnType<typeof listNotesBySubjectPage>> = { rows: [], total: 0 };
+  let appointments: Awaited<ReturnType<typeof listAppointmentsBySubjectPage>> = { rows: [], total: 0 };
   let canViewEmails = false;
   let canEdit = false;
   let canAddNote = false;
@@ -51,8 +52,8 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
     events = await listTimeline("OPPORTUNITY", id);
     tags = await listTagsForSubject(ctx, "OPPORTUNITY", id);
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "OPPORTUNITY");
-    notes = await listNotesBySubject("OPPORTUNITY", id);
-    appointments = await listAppointmentsBySubject("OPPORTUNITY", id);
+    notes = await listNotesBySubjectPage("OPPORTUNITY", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
+    appointments = await listAppointmentsBySubjectPage("OPPORTUNITY", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
     canViewEmails = ctx.permissions.includes("EMAILS_VIEW");
     const capabilities = getRecordCapabilities("OPPORTUNITY", ctx.permissions);
     canEdit = capabilities.canEdit;
@@ -115,7 +116,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
           <RecordPageTabs
             tabs={[
               { key: "overview", label: "Overview" },
-              { key: "activity", label: "Activity", count: notes.length + appointments.length },
+              { key: "activity", label: "Activity", count: notes.total + appointments.total },
               { key: "files", label: "Files" },
               ...(canViewEmails ? [{ key: "emails", label: "Emails" }] : []),
             ]}
@@ -174,8 +175,10 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                 canAddNote={canAddNote}
                 canCreateTask={canCreateTask}
                 canScheduleAppointment={canScheduleAppointment}
-                notes={notes.map((note) => ({ id: note.id, body: note.body, createdAt: note.createdAt.toISOString(), editedAt: note.editedAt?.toISOString() ?? null, author: note.author }))}
-                appointments={appointments.map((appointment) => ({ id: appointment.id, title: appointment.title, startAt: appointment.startAt.toISOString(), endAt: appointment.endAt?.toISOString() ?? null, status: appointment.status, locationOrLink: appointment.locationOrLink }))}
+                notes={notes.rows.map((note) => ({ id: note.id, body: note.body, createdAt: note.createdAt.toISOString(), editedAt: note.editedAt?.toISOString() ?? null, author: note.author }))}
+                notesTotal={notes.total}
+                appointments={appointments.rows.map((appointment) => ({ id: appointment.id, title: appointment.title, startAt: appointment.startAt.toISOString(), endAt: appointment.endAt?.toISOString() ?? null, status: appointment.status, locationOrLink: appointment.locationOrLink }))}
+                appointmentsTotal={appointments.total}
               />
             </div>
           </section>

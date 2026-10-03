@@ -7,6 +7,7 @@ import { CrmError, requireCapability } from "@/server/guard";
 import { notify, subjectNotificationContext } from "@/server/notifications";
 import { resolveSubject, subjectPermission } from "@/server/records/subjects";
 import { sanitizeEmailHtml, htmlToText } from "@/server/emailHtml";
+import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
@@ -167,7 +168,7 @@ async function ownerOfSubject(
 export function listNotesBySubject(
   subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
   subjectId: string,
-  take = 25,
+  take = ACTIVITY_STRIP_PAGE_SIZE,
 ) {
   return prisma.note.findMany({
     where: { subjectType, subjectId },
@@ -175,6 +176,29 @@ export function listNotesBySubject(
     take,
     include: { author: { select: { id: true, name: true } } },
   });
+}
+
+/** Paginated notes for the record-page strip ("Load more"): newest first,
+ *  with the unpaginated total so the UI can show "Showing X of Y". Scope is
+ *  the caller's job — the route resolves the subject through the scoped
+ *  service before calling this. */
+export async function listNotesBySubjectPage(
+  subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY",
+  subjectId: string,
+  page: number,
+  pageSize: number,
+): Promise<{ rows: NoteRow[]; total: number }> {
+  const [rows, total] = await Promise.all([
+    prisma.note.findMany({
+      where: { subjectType, subjectId },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: { author: { select: { id: true, name: true } } },
+    }),
+    prisma.note.count({ where: { subjectType, subjectId } }),
+  ]);
+  return { rows, total };
 }
 
 export type NoteRow = Prisma.NoteGetPayload<{ include: { author: { select: { id: true; name: true } } } }>;

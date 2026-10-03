@@ -4,8 +4,9 @@ import { prisma } from "@/server/db";
 import { CrmError } from "@/server/guard";
 import { getLead, scopedContext } from "@/server/records/leads";
 import { listTimeline } from "@/server/activity";
-import { listNotesBySubject } from "@/server/records/notes";
-import { listAppointmentsBySubject } from "@/server/records/appointments";
+import { listNotesBySubjectPage } from "@/server/records/notes";
+import { listAppointmentsBySubjectPage } from "@/server/records/appointments";
+import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
 import { Timeline } from "@/components/Timeline";
 import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
@@ -37,8 +38,8 @@ export default async function LeadDetailPage({ params }: PageProps) {
   let campaigns: Array<{ campaign: { name: string } }> = [];
   let tags: Awaited<ReturnType<typeof listTagsForSubject>> = [];
   let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
-  let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
-  let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
+  let notes: Awaited<ReturnType<typeof listNotesBySubjectPage>> = { rows: [], total: 0 };
+  let appointments: Awaited<ReturnType<typeof listAppointmentsBySubjectPage>> = { rows: [], total: 0 };
   let canViewEmails = false;
   let canEdit = false;
   let canAddNote = false;
@@ -58,8 +59,8 @@ export default async function LeadDetailPage({ params }: PageProps) {
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "LEAD", subjectId: id }, include: { campaign: true } });
     tags = await listTagsForSubject(ctx, "LEAD", id);
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "LEAD");
-    notes = await listNotesBySubject("LEAD", id);
-    appointments = await listAppointmentsBySubject("LEAD", id);
+    notes = await listNotesBySubjectPage("LEAD", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
+    appointments = await listAppointmentsBySubjectPage("LEAD", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
     canViewEmails = ctx.permissions.includes("EMAILS_VIEW");
     const capabilities = getRecordCapabilities("LEAD", ctx.permissions);
     canEdit = capabilities.canEdit;
@@ -84,8 +85,8 @@ export default async function LeadDetailPage({ params }: PageProps) {
     lead.status.category === "LOST" ? "error" :
     lead.status.category === "INVALID" ? "warning" : "brand";
 
-  const noteCount = notes.length;
-  const appointmentCount = appointments.length;
+  const noteCount = notes.total;
+  const appointmentCount = appointments.total;
 
   return (
     <div className="mx-auto max-w-6xl space-y-4" data-module="leads">
@@ -187,14 +188,16 @@ export default async function LeadDetailPage({ params }: PageProps) {
                   canAddNote={canAddNote}
                   canCreateTask={canCreateTask}
                   canScheduleAppointment={canScheduleAppointment}
-                  notes={notes.map((note) => ({
+                  notesTotal={notes.total}
+                  appointmentsTotal={appointments.total}
+                  notes={notes.rows.map((note) => ({
                     id: note.id,
                     body: note.body,
                     createdAt: note.createdAt.toISOString(),
                     editedAt: note.editedAt?.toISOString() ?? null,
                     author: note.author,
                   }))}
-                  appointments={appointments.map((appointment) => ({
+                  appointments={appointments.rows.map((appointment) => ({
                     id: appointment.id,
                     title: appointment.title,
                     startAt: appointment.startAt.toISOString(),

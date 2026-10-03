@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { prisma, repContext, rep2Context, viewerContext, managerContext, adminContext, makeLead, assertThrows } from "./helpers";
-import { createNote, updateNote } from "../src/server/records/notes";
-import { createAppointment, updateAppointment } from "../src/server/records/appointments";
+import { createNote, updateNote, listNotesBySubjectPage } from "../src/server/records/notes";
+import { createAppointment, updateAppointment, listAppointmentsBySubjectPage } from "../src/server/records/appointments";
 
 /**
  * Note + appointment edit coverage: authorization (author-or-NOTES_EDIT for
@@ -107,6 +107,47 @@ test("empty note bodies are rejected on edit", async () => {
     assert.equal(unchanged.editedAt, null, "editedAt untouched after failed edit");
   } finally {
     await prisma.note.deleteMany({ where: { id: noteId } }).catch(() => undefined);
+    await prisma.lead.delete({ where: { id: leadId } }).catch(() => undefined);
+  }
+});
+
+test("notes and schedule strips paginate with totals", async () => {
+  const rep = await repContext();
+  const leadId = await makeLead(rep, "strip-pagination");
+  const noteIds: string[] = [];
+  const apptIds: string[] = [];
+  try {
+    for (let i = 0; i < 12; i += 1) {
+      const note = await createNote(rep, { body: `Strip note ${i}`, subjectType: "LEAD", subjectId: leadId });
+      noteIds.push(note.id);
+      const appointment = await createAppointment(rep, {
+        title: `Strip meeting ${i}`,
+        startAt: new Date(Date.now() + (i + 1) * 3_600_000),
+        subjectType: "LEAD",
+        subjectId: leadId,
+      });
+      apptIds.push(appointment.id);
+      // Distinct createdAt stamps — a tight loop can tie and make the
+      // newest-first page order unstable.
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+
+    const notesP1 = await listNotesBySubjectPage("LEAD", leadId, 1, 8);
+    assert.equal(notesP1.total, 12, "note total is unpaginated");
+    assert.equal(notesP1.rows.length, 8, "page size respected");
+    assert.equal(notesP1.rows[0]!.body, "Strip note 11", "newest first");
+    const notesP2 = await listNotesBySubjectPage("LEAD", leadId, 2, 8);
+    assert.equal(notesP2.rows.length, 4, "remainder page");
+
+    const apptsP1 = await listAppointmentsBySubjectPage("LEAD", leadId, 1, 8);
+    assert.equal(apptsP1.total, 12, "appointment total is unpaginated");
+    assert.equal(apptsP1.rows.length, 8, "page size respected");
+    assert.equal(apptsP1.rows[0]!.title, "Strip meeting 0", "soonest first");
+    const apptsP2 = await listAppointmentsBySubjectPage("LEAD", leadId, 2, 8);
+    assert.equal(apptsP2.rows.length, 4, "remainder page");
+  } finally {
+    await prisma.note.deleteMany({ where: { id: { in: noteIds } } }).catch(() => undefined);
+    await prisma.appointment.deleteMany({ where: { id: { in: apptIds } } }).catch(() => undefined);
     await prisma.lead.delete({ where: { id: leadId } }).catch(() => undefined);
   }
 });

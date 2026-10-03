@@ -87,8 +87,8 @@ test("global search covers relation columns and campaigns", async () => {
   assert.ok(statusHits.some((hit) => hit.objectType === "LEAD"), "status-name match returns lead hits");
   const campaignHits = await pgSearch.search(admin, "Q3 Outreach", 5);
   assert.ok(
-    campaignHits.some((hit) => hit.objectType === "CAMPAIGN" && hit.url === "/campaigns"),
-    "campaigns are searchable globally",
+    campaignHits.some((hit) => hit.objectType === "CAMPAIGN" && hit.url === `/campaigns/${hit.id}`),
+    "campaigns are searchable globally and link to the exact campaign page",
   );
 });
 

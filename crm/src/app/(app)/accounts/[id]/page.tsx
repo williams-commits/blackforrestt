@@ -6,8 +6,9 @@ import { CrmError } from "@/server/guard";
 import { getAccount } from "@/server/records/accounts";
 import { scopedContext } from "@/server/records/leads";
 import { listTimeline } from "@/server/activity";
-import { listNotesBySubject } from "@/server/records/notes";
-import { listAppointmentsBySubject } from "@/server/records/appointments";
+import { listNotesBySubjectPage } from "@/server/records/notes";
+import { listAppointmentsBySubjectPage } from "@/server/records/appointments";
+import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
 import { Timeline } from "@/components/Timeline";
 import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
@@ -40,8 +41,8 @@ export default async function AccountDetailPage({ params }: PageProps) {
   let campaigns: Array<{ campaign: { name: string } }> = [];
   let tags: Awaited<ReturnType<typeof listTagsForSubject>> = [];
   let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
-  let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
-  let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
+  let notes: Awaited<ReturnType<typeof listNotesBySubjectPage>> = { rows: [], total: 0 };
+  let appointments: Awaited<ReturnType<typeof listAppointmentsBySubjectPage>> = { rows: [], total: 0 };
   let canViewEmails = false;
   let canEdit = false;
   let canAddNote = false;
@@ -60,8 +61,8 @@ export default async function AccountDetailPage({ params }: PageProps) {
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "ACCOUNT", subjectId: id }, include: { campaign: true } });
     tags = await listTagsForSubject(ctx, "ACCOUNT", id);
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "ACCOUNT");
-    notes = await listNotesBySubject("ACCOUNT", id);
-    appointments = await listAppointmentsBySubject("ACCOUNT", id);
+    notes = await listNotesBySubjectPage("ACCOUNT", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
+    appointments = await listAppointmentsBySubjectPage("ACCOUNT", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
     canViewEmails = ctx.permissions.includes("EMAILS_VIEW");
     const capabilities = getRecordCapabilities("ACCOUNT", ctx.permissions);
     canEdit = capabilities.canEdit;
@@ -118,7 +119,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
               { key: "overview", label: "Overview" },
               { key: "contacts", label: "Contacts", count: account.contacts.length },
               { key: "opportunities", label: "Opportunities", count: relatedOpportunities.length },
-              { key: "activity", label: "Activity", count: notes.length + appointments.length },
+              { key: "activity", label: "Activity", count: notes.total + appointments.total },
               { key: "files", label: "Files" },
               ...(canViewEmails ? [{ key: "emails", label: "Emails" }] : []),
             ]}
@@ -248,8 +249,10 @@ export default async function AccountDetailPage({ params }: PageProps) {
                 canAddNote={canAddNote}
                 canCreateTask={canCreateTask}
                 canScheduleAppointment={canScheduleAppointment}
-                notes={notes.map((note) => ({ id: note.id, body: note.body, createdAt: note.createdAt.toISOString(), editedAt: note.editedAt?.toISOString() ?? null, author: note.author }))}
-                appointments={appointments.map((appointment) => ({ id: appointment.id, title: appointment.title, startAt: appointment.startAt.toISOString(), endAt: appointment.endAt?.toISOString() ?? null, status: appointment.status, locationOrLink: appointment.locationOrLink }))}
+                notes={notes.rows.map((note) => ({ id: note.id, body: note.body, createdAt: note.createdAt.toISOString(), editedAt: note.editedAt?.toISOString() ?? null, author: note.author }))}
+                notesTotal={notes.total}
+                appointments={appointments.rows.map((appointment) => ({ id: appointment.id, title: appointment.title, startAt: appointment.startAt.toISOString(), endAt: appointment.endAt?.toISOString() ?? null, status: appointment.status, locationOrLink: appointment.locationOrLink }))}
+                appointmentsTotal={appointments.total}
               />
             </div>
           </section>

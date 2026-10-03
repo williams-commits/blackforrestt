@@ -6,8 +6,9 @@ import { CrmError } from "@/server/guard";
 import { getContact } from "@/server/records/contacts";
 import { scopedContext } from "@/server/records/leads";
 import { listTimeline } from "@/server/activity";
-import { listNotesBySubject } from "@/server/records/notes";
-import { listAppointmentsBySubject } from "@/server/records/appointments";
+import { listNotesBySubjectPage } from "@/server/records/notes";
+import { listAppointmentsBySubjectPage } from "@/server/records/appointments";
+import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
 import { Timeline } from "@/components/Timeline";
 import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
@@ -38,8 +39,8 @@ export default async function ContactDetailPage({ params }: PageProps) {
   let events: Awaited<ReturnType<typeof listTimeline>> = [];
   let tags: Awaited<ReturnType<typeof listTagsForSubject>> = [];
   let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
-  let notes: Awaited<ReturnType<typeof listNotesBySubject>> = [];
-  let appointments: Awaited<ReturnType<typeof listAppointmentsBySubject>> = [];
+  let notes: Awaited<ReturnType<typeof listNotesBySubjectPage>> = { rows: [], total: 0 };
+  let appointments: Awaited<ReturnType<typeof listAppointmentsBySubjectPage>> = { rows: [], total: 0 };
   let relatedOpportunities: Array<{
     id: string;
     name: string;
@@ -67,8 +68,8 @@ export default async function ContactDetailPage({ params }: PageProps) {
     events = await listTimeline("CONTACT", id);
     tags = await listTagsForSubject(ctx, "CONTACT", id);
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "CONTACT");
-    notes = await listNotesBySubject("CONTACT", id);
-    appointments = await listAppointmentsBySubject("CONTACT", id);
+    notes = await listNotesBySubjectPage("CONTACT", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
+    appointments = await listAppointmentsBySubjectPage("CONTACT", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
     relatedOpportunities = await listRelatedOpportunities(
       ctx,
       { contactId: id, ...(contact.accountId ? { accountId: contact.accountId } : {}) },
@@ -131,7 +132,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
             tabs={[
               { key: "overview", label: "Overview" },
               { key: "opportunities", label: "Opportunities", count: relatedOpportunities.length },
-              { key: "activity", label: "Activity", count: notes.length + appointments.length },
+              { key: "activity", label: "Activity", count: notes.total + appointments.total },
               { key: "files", label: "Files" },
               ...(canViewEmails ? [{ key: "emails", label: "Emails" }] : []),
             ]}
@@ -207,8 +208,10 @@ export default async function ContactDetailPage({ params }: PageProps) {
                 canAddNote={canAddNote}
                 canCreateTask={canCreateTask}
                 canScheduleAppointment={canScheduleAppointment}
-                notes={notes.map((note) => ({ id: note.id, body: note.body, createdAt: note.createdAt.toISOString(), editedAt: note.editedAt?.toISOString() ?? null, author: note.author }))}
-                appointments={appointments.map((appointment) => ({ id: appointment.id, title: appointment.title, startAt: appointment.startAt.toISOString(), endAt: appointment.endAt?.toISOString() ?? null, status: appointment.status, locationOrLink: appointment.locationOrLink }))}
+                notes={notes.rows.map((note) => ({ id: note.id, body: note.body, createdAt: note.createdAt.toISOString(), editedAt: note.editedAt?.toISOString() ?? null, author: note.author }))}
+                notesTotal={notes.total}
+                appointments={appointments.rows.map((appointment) => ({ id: appointment.id, title: appointment.title, startAt: appointment.startAt.toISOString(), endAt: appointment.endAt?.toISOString() ?? null, status: appointment.status, locationOrLink: appointment.locationOrLink }))}
+                appointmentsTotal={appointments.total}
               />
             </div>
           </section>

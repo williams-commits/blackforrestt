@@ -232,7 +232,7 @@ export const pgSearch: SearchProvider = {
         id: campaign.id,
         label: campaign.name,
         subtitle: campaign.owner?.name ?? campaign.source ?? null,
-        url: "/campaigns",
+        url: `/campaigns/${campaign.id}`,
       });
     }
 
@@ -255,7 +255,8 @@ export const pgSearch: SearchProvider = {
           id: note.id,
           label: note.body.length > 60 ? `${note.body.slice(0, 60)}…` : note.body,
           subtitle: `note on ${entryType.toLowerCase()}`,
-          url: `/${entryType.toLowerCase()}s/${note.subjectId}`,
+          // Land on the Activity tab — that is where the matched note lives.
+          url: `/${entryType.toLowerCase()}s/${note.subjectId}?tab=activity`,
         });
       }
     };

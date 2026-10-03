@@ -79,23 +79,77 @@ function dedupeById<T extends { id: string }>(base: T[], extra: T[]): T[] {
   return [...base, ...extra.filter((item) => !seen.has(item.id))];
 }
 
-/** Shared per-strip "Load more" row — self-hides once everything is loaded
- *  and captions the progress enterprise-style ("Showing 8 of 34"). */
+const RICH_TEXT_CLASSES = "wrap-break-words text-[13px] leading-relaxed text-foreground [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6";
+
+/**
+ * Rich note body with a Salesforce-style "View more" for long content:
+ * clamped to 4 lines, with the toggle shown only when the content actually
+ * overflows (measured, not guessed from character counts).
+ */
+function NoteBody({ html }: { html: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setExpanded(false);
+    setOverflowing(false);
+  }, [html]);
+
+  useEffect(() => {
+    if (expanded) return;
+    const el = bodyRef.current;
+    if (!el) return;
+    const check = () => setOverflowing(el.scrollHeight > el.clientHeight + 2);
+    check();
+    const raf = requestAnimationFrame(check);
+    return () => cancelAnimationFrame(raf);
+  }, [html, expanded]);
+
+  return (
+    <div className="mt-1.5">
+      <div
+        ref={bodyRef}
+        className={cn(RICH_TEXT_CLASSES, !expanded && "line-clamp-4")}
+        dangerouslySetInnerHTML={{ __html: renderRichText(html) }}
+      />
+      {overflowing || expanded ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="mt-1 text-xs font-semibold text-primary transition-colors hover:underline"
+        >
+          {expanded ? "Show less" : "View more"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/** Shared per-strip "Load more" bar — a full-width list footer in the
+ *  Salesforce "Show more" pattern: self-hides when everything is loaded. */
 function LoadMoreRow({ onClick, loading, shown, total }: { onClick: () => void; loading: boolean; shown: number; total: number | null }) {
   if (total !== null && shown >= total) {
     return shown > 0 ? (
-      <p className="pt-1 text-center text-[11px] tabular-nums text-muted-foreground">Showing all {shown}</p>
+      <li className="bg-muted/30 py-1.5 text-center text-[11px] tabular-nums text-muted-foreground rounded-2xl marker:none m-2">
+        Showing all {shown}
+      </li>
     ) : null;
   }
   return (
-    <div className="flex flex-col items-center gap-1 pt-1.5">
-      <Button type="button" variant="secondary" className="btn-sm" loading={loading} onClick={onClick}>
-        Load more
-      </Button>
-      {total !== null ? (
-        <span className="text-[11px] tabular-nums text-muted-foreground">Showing {shown} of {total}</span>
-      ) : null}
-    </div>
+    <li className="rounded-2xl marker:none m-2">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={loading}
+        className="w-full py-2 text-center text-xs font-semibold text-primary transition-colors hover:bg-muted/50 disabled:opacity-60"
+      >
+        {loading ? "Loading…" : "Load more"}
+        {total !== null ? (
+          <span className="ml-1.5 font-normal tabular-nums text-muted-foreground">— showing {shown} of {total}</span>
+        ) : null}
+      </button>
+    </li>
   );
 }
 
@@ -700,12 +754,12 @@ export function RecordActivities({
         </Tabs>
         <div className="p-3 bg-accent/30">
           {activeTab === "notes" ? visibleNotes.length === 0 ? <EmptyHint icon="note" text="No notes yet — add context for everyone working this record." /> : (<>
-          <ul className="space-y-2.5">{visibleNotes.map((note) => {
+          <ul className="m-0! p-0! [&>li]:list-none! divide-y divide-border/70 overflow-hidden rounded-lg border border-border bg-card">{visibleNotes.map((note, index) => {
           const noteCount = commentCounts[note.id] ?? 0;
           const noteOpen = Boolean(openComments[note.id]);
           const mayEditNote = Boolean(me && (note.author.id === me.userId || me.canEditNotes));
           return (
-          <li key={note.id} className="group rounded-lg border border-border bg-card p-3 shadow-xs transition-colors hover:border-border/80 hover:bg-muted/30">
+          <li key={note.id} className={cn("group px-3 py-3 transition-colors hover:bg-muted/40", index % 2 === 1 && "bg-muted/30")}>
             <div className="flex items-start gap-3">
               <Initials name={note.author.name} size="sm" />
               <div className="min-w-0 flex-1">
@@ -714,10 +768,12 @@ export function RecordActivities({
                   <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                     <Icon name="note" size={10} /> Note
                   </span>
-                  <time className="ml-auto text-[11px] text-muted-foreground" dateTime={note.createdAt} title={absoluteTime(note.createdAt)}>
-                    {relativeTime(note.createdAt)}
-                  </time>
-                  {note.editedAt ? <span className="rounded-full bg-muted px-1.5 py-px text-[10px] font-medium text-muted-foreground" title={absoluteTime(note.editedAt)}>edited</span> : null}
+                  <span className="ml-auto flex items-center gap-1.5">
+                    <time className="text-[11px] text-muted-foreground" dateTime={note.createdAt} title={absoluteTime(note.createdAt)}>
+                      {relativeTime(note.createdAt)}
+                    </time>
+                    {note.editedAt ? <span className="rounded-full bg-muted px-1.5 py-px text-[10px] font-medium text-muted-foreground" title={absoluteTime(note.editedAt)}>edited</span> : null}
+                  </span>
                 </div>
                 {editingNoteId === note.id ? (
                   <div className="mt-2 space-y-2" role="group" aria-label="Edit note">
@@ -740,43 +796,41 @@ export function RecordActivities({
                     </div>
                   </div>
                 ) : (
-                  <div
-                    className="mt-1.5 wrap-break-words text-[13px] leading-relaxed text-foreground [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
-                    dangerouslySetInnerHTML={{ __html: renderRichText(note.body) }}
-                  />
+                  <NoteBody html={note.body} />
                 )}
+                <div className="mt-1 flex items-center gap-1">
+                  {mayEditNote ? (
+                    <button
+                      type="button"
+                      aria-label={editingNoteId === note.id ? "Cancel editing note" : "Edit note"}
+                      disabled={busy}
+                      onClick={() => startNoteEdit(note)}
+                      className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                    >
+                      <Icon name={editingNoteId === note.id ? "close" : "edit"} size={12} />
+                      {editingNoteId === note.id ? "Cancel" : "Edit"}
+                    </button>
+                  ) : null}
+                  <button type="button" onClick={() => toggleComments(note.id)} aria-expanded={noteOpen} className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                    <Icon name={noteOpen ? "no_comment" : "comment"} size={12} />
+                    {noteOpen ? "Hide comments" : "Comments"}
+                    {noteCount > 0 ? (
+                      <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold tabular-nums text-primary">{noteCount}</span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/70 tabular-nums">0</span>
+                    )}
+                  </button>
+                </div>
+                {noteOpen && me ? (
+                  <div className="mt-2 rounded-md bg-muted/40 p-2.5">
+                    <CommentsSection subjectType="NOTE" subjectId={note.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount onCount={(count) => setCommentCounts((current) => ({ ...current, [note.id]: count }))} />
+                  </div>
+                ) : null}
               </div>
             </div>
-            <div className="mt-2 flex items-center justify-end gap-2 border-t border-border/70 pt-1.5">
-              {mayEditNote ? (
-                <button
-                  type="button"
-                  aria-label={editingNoteId === note.id ? "Cancel editing note" : "Edit note"}
-                  disabled={busy}
-                  onClick={() => startNoteEdit(note)}
-                  className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
-                >
-                  <Icon name={editingNoteId === note.id ? "close" : "edit"} size={12} />
-                  {editingNoteId === note.id ? "Cancel" : "Edit"}
-                </button>
-              ) : null}
-              <button type="button" onClick={() => toggleComments(note.id)} aria-expanded={noteOpen} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <Icon name={noteOpen ? "no_comment" : "comment"} size={12} />
-                {noteOpen ? "Hide comments" : "Comments"}
-                {noteCount > 0 ? (
-                  <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold tabular-nums text-primary">{noteCount}</span>
-                ) : (
-                  <span className="text-[10px] text-muted-foreground/70 tabular-nums">0</span>
-                )}
-              </button>
-            </div>
-            {noteOpen && me ? (
-              <div className="mt-2.5 border-t border-border/70 pt-2.5">
-                <CommentsSection subjectType="NOTE" subjectId={note.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount onCount={(count) => setCommentCounts((current) => ({ ...current, [note.id]: count }))} />
-              </div>
-            ) : null}
-          </li>);})}</ul>
+          </li>);})}
           <LoadMoreRow onClick={() => void loadMoreNotes()} loading={notesLoading} shown={visibleNotes.length} total={loadedNotesTotal} />
+          </ul>
           </>): null}
           {activeTab === "tasks" ? tasksLoading ? (
             <div className="space-y-2.5">
@@ -784,163 +838,169 @@ export function RecordActivities({
               <Skeleton className="h-16 w-full" />
             </div>
           ) : tasks.length === 0 ? <EmptyHint icon="square_check" text="No related tasks yet — create a follow-up above." /> : (<>
-          <ul className="space-y-2.5">{tasks.map((task) => {
+          <ul className="m-0! p-0! [&>li]:list-none! divide-y divide-border/70 overflow-hidden rounded-lg border border-border bg-card">{tasks.map((task, index) => {
           const taskCount = commentCounts[task.id] ?? 0;
           const taskOpen = Boolean(openComments[task.id]);
           const overdue = task.dueAt ? new Date(task.dueAt).getTime() < Date.now() : false;
           return (
-          <li key={task.id} className="group rounded-lg border border-border bg-card p-3 shadow-xs transition-colors hover:border-border/80 hover:bg-muted/30">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              <span className="flex min-w-0 flex-1 items-center gap-2">
-                <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-md", task.priority === "URGENT" ? "bg-(--error-bg) text-(--error)" : task.priority === "HIGH" ? "bg-(--warning-bg) text-(--warning)" : "bg-primary/10 text-primary")}>
-                  <Icon name={task.priority === "URGENT" ? "alert" : task.priority === "HIGH" ? "clock" : "square_check"} size={14} />
-                </span>
-                <Link href={`/tasks/${task.id}`} className="min-w-0 truncate font-medium text-foreground hover:text-primary hover:underline">{task.title}</Link>
+          <li key={task.id} className={cn("group px-3 py-3 transition-colors hover:bg-muted/40", index % 2 === 1 && "bg-muted/30")}>
+            <div className="flex items-start gap-3">
+              <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-md", task.priority === "URGENT" ? "bg-(--error-bg) text-(--error)" : task.priority === "HIGH" ? "bg-(--warning-bg) text-(--warning)" : "bg-primary/10 text-primary")}>
+                <Icon name={task.priority === "URGENT" ? "alert" : task.priority === "HIGH" ? "clock" : "square_check"} size={15} />
               </span>
-              <span className="flex shrink-0 items-center gap-1.5">
-                {task.owner ? <span title={`Owner: ${task.owner.name}`}><Initials name={task.owner.name} size="xs" /></span> : null}
-                {task.dueAt ? (
-                  <span className={cn("badge gap-1 tabular-nums", overdue ? "badge-error" : "badge-neutral")}><Icon name="calendar" size={11} />{new Date(task.dueAt).toLocaleDateString()}</span>
-                ) : (
-                  <span className="text-xs text-muted-foreground">No due date</span>
-                )}
-                <StatusChip value={task.status} />
-              </span>
-            </div>
-            <div className="mt-2 flex items-center justify-end border-t border-border/70 pt-1.5">
-              <button type="button" onClick={() => toggleComments(task.id)} aria-expanded={taskOpen} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <Icon name={taskOpen ? "no_comment" : "comment"} size={12} />
-                {taskOpen ? "Hide comments" : "Comments"}
-                {taskCount > 0 ? (
-                  <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold tabular-nums text-primary">{taskCount}</span>
-                ) : (
-                  <span className="text-[10px] text-muted-foreground/70 tabular-nums">0</span>
-                )}
-              </button>
-            </div>
-            {taskOpen && me ? (
-              <div className="mt-2.5 border-t border-border/70 pt-2.5">
-                <CommentsSection subjectType="TASK" subjectId={task.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount onCount={(count) => setCommentCounts((current) => ({ ...current, [task.id]: count }))} />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <Link href={`/tasks/${task.id}`} className="min-w-0 truncate text-[13px] font-medium text-foreground hover:text-primary hover:underline">{task.title}</Link>
+                  <span className="ml-auto flex shrink-0 items-center gap-1.5">
+                    {task.owner ? <span title={`Owner: ${task.owner.name}`}><Initials name={task.owner.name} size="xs" /></span> : null}
+                    {task.dueAt ? (
+                      <span className={cn("badge gap-1 tabular-nums", overdue ? "badge-error" : "badge-neutral")}><Icon name="calendar" size={11} />{new Date(task.dueAt).toLocaleDateString()}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">No due date</span>
+                    )}
+                    <StatusChip value={task.status} />
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center gap-1">
+                  <button type="button" onClick={() => toggleComments(task.id)} aria-expanded={taskOpen} className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                    <Icon name={taskOpen ? "no_comment" : "comment"} size={12} />
+                    {taskOpen ? "Hide comments" : "Comments"}
+                    {taskCount > 0 ? (
+                      <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold tabular-nums text-primary">{taskCount}</span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/70 tabular-nums">0</span>
+                    )}
+                  </button>
+                </div>
+                {taskOpen && me ? (
+                  <div className="mt-2 rounded-md bg-muted/40 p-2.5">
+                    <CommentsSection subjectType="TASK" subjectId={task.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount onCount={(count) => setCommentCounts((current) => ({ ...current, [task.id]: count }))} />
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </li>);})}</ul>
+            </div>
+          </li>);})}
           {!tasksLoading ? <LoadMoreRow onClick={() => void loadTasks(tasksPage + 1)} loading={tasksLoading} shown={tasks.length} total={tasksTotal} /> : null}
+          </ul>
           </>): null}
           {activeTab === "appointments" ? visibleAppointments.length === 0 ? <EmptyHint icon="calendar" text="No appointments yet — schedule one above." /> : (<>
-          <ul className="space-y-2.5">{visibleAppointments.map((appointment) => {
+          <ul className="m-0! p-0! [&>li]:list-none! divide-y divide-border/70 overflow-hidden rounded-lg border border-border bg-card">{visibleAppointments.map((appointment, index) => {
           const apptCount = commentCounts[appointment.id] ?? 0;
           const apptOpen = Boolean(openComments[appointment.id]);
           const mayEditAppt = Boolean(me?.canEditAppointments);
           return (
-          <li key={appointment.id} className="group rounded-lg border border-border bg-card p-3 shadow-xs transition-colors hover:border-border/80 hover:bg-muted/30">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon name="calendar" size={14} /></span>
-                <span className="truncate font-medium text-foreground">{appointment.title}</span>
-              </span>
-              <span className="ml-auto flex shrink-0 flex-wrap items-center gap-1.5">
-                <time className="text-xs text-muted-foreground" dateTime={appointment.startAt} title={absoluteTime(appointment.startAt)}>
-                  {new Date(appointment.startAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
-                </time>
-                <StatusChip value={appointment.status} />
-              </span>
-            </div>
-            {editingApptId === appointment.id ? (
-              <form
-                method="post"
-                onSubmit={(event) => { event.preventDefault(); void saveAppointmentEdit(appointment.id); }}
-                className="mt-2.5 space-y-2.5 rounded-md border border-border bg-background/60 p-2.5"
-                role="group"
-                aria-label="Edit appointment"
-              >
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <Field label="What" required id={`ra-appt-edit-${appointment.id}-title`}>
-                    <IconInput
-                      id={`ra-appt-edit-${appointment.id}-title`}
-                      icon="calendar"
-                      aria-label="Appointment title"
-                      value={apptEditTitle}
-                      onChange={(event) => setApptEditTitle(event.target.value)}
-                      placeholder="e.g. Onboarding call"
-                      required
-                      minLength={2}
-                    />
-                  </Field>
-                  <Field label="Starts" required id={`ra-appt-edit-${appointment.id}-start`}>
-                    <IconInput
-                      id={`ra-appt-edit-${appointment.id}-start`}
-                      icon="clock"
-                      aria-label="Starts at"
-                      type="datetime-local"
-                      value={apptEditStart}
-                      onChange={(event) => setApptEditStart(event.target.value)}
-                      required
-                    />
-                  </Field>
-                  <Field label="Ends" id={`ra-appt-edit-${appointment.id}-end`}>
-                    <IconInput
-                      id={`ra-appt-edit-${appointment.id}-end`}
-                      icon="clock"
-                      aria-label="Ends at"
-                      type="datetime-local"
-                      value={apptEditEnd}
-                      onChange={(event) => setApptEditEnd(event.target.value)}
-                    />
-                  </Field>
+          <li key={appointment.id} className={cn("group px-3 py-3 transition-colors hover:bg-muted/40", index % 2 === 1 && "bg-muted/30")}>
+            <div className="flex items-start gap-3">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon name="calendar" size={15} /></span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="truncate text-[13px] font-medium text-foreground">{appointment.title}</span>
+                  <span className="ml-auto flex shrink-0 flex-wrap items-center gap-1.5">
+                    <time className="text-xs text-muted-foreground" dateTime={appointment.startAt} title={absoluteTime(appointment.startAt)}>
+                      {new Date(appointment.startAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                    </time>
+                    <StatusChip value={appointment.status} />
+                  </span>
                 </div>
-                <Field label="Location or link" id={`ra-appt-edit-${appointment.id}-location`} help="Where it happens — a room, a Zoom link, a phone number.">
-                  <IconInput
-                    id={`ra-appt-edit-${appointment.id}-location`}
-                    icon="map_pin"
-                    aria-label="Location or link"
-                    value={apptEditLocation}
-                    onChange={(event) => setApptEditLocation(event.target.value)}
-                    placeholder="e.g. Zoom — link in the invite"
-                  />
-                </Field>
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="secondary" disabled={busy} onClick={() => setEditingApptId(null)}>Cancel</Button>
-                  <Button type="submit" variant="primary" icon="check" loading={busy} disabled={busy || !apptEditTitle.trim() || !apptEditStart}>
-                    Save
-                  </Button>
+                {editingApptId === appointment.id ? (
+                  <form
+                    method="post"
+                    onSubmit={(event) => { event.preventDefault(); void saveAppointmentEdit(appointment.id); }}
+                    className="mt-2.5 space-y-2.5 rounded-md border border-border bg-background/60 p-2.5"
+                    role="group"
+                    aria-label="Edit appointment"
+                  >
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <Field label="What" required id={`ra-appt-edit-${appointment.id}-title`}>
+                        <IconInput
+                          id={`ra-appt-edit-${appointment.id}-title`}
+                          icon="calendar"
+                          aria-label="Appointment title"
+                          value={apptEditTitle}
+                          onChange={(event) => setApptEditTitle(event.target.value)}
+                          placeholder="e.g. Onboarding call"
+                          required
+                          minLength={2}
+                        />
+                      </Field>
+                      <Field label="Starts" required id={`ra-appt-edit-${appointment.id}-start`}>
+                        <IconInput
+                          id={`ra-appt-edit-${appointment.id}-start`}
+                          icon="clock"
+                          aria-label="Starts at"
+                          type="datetime-local"
+                          value={apptEditStart}
+                          onChange={(event) => setApptEditStart(event.target.value)}
+                          required
+                        />
+                      </Field>
+                      <Field label="Ends" id={`ra-appt-edit-${appointment.id}-end`}>
+                        <IconInput
+                          id={`ra-appt-edit-${appointment.id}-end`}
+                          icon="clock"
+                          aria-label="Ends at"
+                          type="datetime-local"
+                          value={apptEditEnd}
+                          onChange={(event) => setApptEditEnd(event.target.value)}
+                        />
+                      </Field>
+                    </div>
+                    <Field label="Location or link" id={`ra-appt-edit-${appointment.id}-location`} help="Where it happens — a room, a Zoom link, a phone number.">
+                      <IconInput
+                        id={`ra-appt-edit-${appointment.id}-location`}
+                        icon="map_pin"
+                        aria-label="Location or link"
+                        value={apptEditLocation}
+                        onChange={(event) => setApptEditLocation(event.target.value)}
+                        placeholder="e.g. Zoom — link in the invite"
+                      />
+                    </Field>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="secondary" disabled={busy} onClick={() => setEditingApptId(null)}>Cancel</Button>
+                      <Button type="submit" variant="primary" icon="check" loading={busy} disabled={busy || !apptEditTitle.trim() || !apptEditStart}>
+                        Save
+                      </Button>
+                    </div>
+                  </form>
+                ) : appointment.locationOrLink ? (
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Icon name="map_pin" size={11} className="shrink-0" />
+                    <span className="truncate">{appointment.locationOrLink}</span>
+                  </p>
+                ) : null}
+                <div className="mt-1 flex items-center gap-1">
+                  {mayEditAppt ? (
+                    <button
+                      type="button"
+                      aria-label={editingApptId === appointment.id ? "Cancel editing appointment" : "Edit appointment"}
+                      disabled={busy}
+                      onClick={() => startAppointmentEdit(appointment)}
+                      className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                    >
+                      <Icon name={editingApptId === appointment.id ? "close" : "edit"} size={12} />
+                      {editingApptId === appointment.id ? "Cancel" : "Edit"}
+                    </button>
+                  ) : null}
+                  <button type="button" onClick={() => toggleComments(appointment.id)} aria-expanded={apptOpen} className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                    <Icon name={apptOpen ? "no_comment" : "comment"} size={12} />
+                    {apptOpen ? "Hide comments" : "Comments"}
+                    {apptCount > 0 ? (
+                      <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold tabular-nums text-primary">{apptCount}</span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/70 tabular-nums">0</span>
+                    )}
+                  </button>
                 </div>
-              </form>
-            ) : appointment.locationOrLink ? (
-              <p className="mt-1.5 flex items-center gap-1.5 pl-9 text-xs text-muted-foreground">
-                <Icon name="map_pin" size={11} className="shrink-0" />
-                <span className="truncate">{appointment.locationOrLink}</span>
-              </p>
-            ) : null}
-            <div className="mt-2 flex items-center justify-end border-t border-border/70 pt-1.5">
-              {mayEditAppt ? (
-                <button
-                  type="button"
-                  aria-label={editingApptId === appointment.id ? "Cancel editing appointment" : "Edit appointment"}
-                  disabled={busy}
-                  onClick={() => startAppointmentEdit(appointment)}
-                  className="mr-2 flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
-                >
-                  <Icon name={editingApptId === appointment.id ? "close" : "edit"} size={12} />
-                  {editingApptId === appointment.id ? "Cancel" : "Edit"}
-                </button>
-              ) : null}
-              <button type="button" onClick={() => toggleComments(appointment.id)} aria-expanded={apptOpen} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <Icon name={apptOpen ? "no_comment" : "comment"} size={12} />
-                {apptOpen ? "Hide comments" : "Comments"}
-                {apptCount > 0 ? (
-                  <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold tabular-nums text-primary">{apptCount}</span>
-                ) : (
-                  <span className="text-[10px] text-muted-foreground/70 tabular-nums">0</span>
-                )}
-              </button>
-            </div>
-            {apptOpen && me ? (
-              <div className="mt-2.5 border-t border-border/70 pt-2.5">
-                <CommentsSection subjectType="APPOINTMENT" subjectId={appointment.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount onCount={(count) => setCommentCounts((current) => ({ ...current, [appointment.id]: count }))} />
+                {apptOpen && me ? (
+                  <div className="mt-2 rounded-md bg-muted/40 p-2.5">
+                    <CommentsSection subjectType="APPOINTMENT" subjectId={appointment.id} initial={[]} canComment={me.canComment} canManage={me.canManage} currentUserId={me.userId} compact lazyMount onCount={(count) => setCommentCounts((current) => ({ ...current, [appointment.id]: count }))} />
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </li>);})}</ul>
+            </div>
+          </li>);})}
           <LoadMoreRow onClick={() => void loadMoreAppointments()} loading={appointmentsLoading} shown={visibleAppointments.length} total={loadedAppointmentsTotal} />
+          </ul>
           </>): null}
         </div>
       </div>

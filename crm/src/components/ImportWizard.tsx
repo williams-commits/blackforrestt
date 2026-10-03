@@ -372,7 +372,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           ]}
         />
 
-        <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_0.7fr]">
           <Card className="gap-0 overflow-hidden py-0">
             <CardHeader className="flex-col items-start gap-0 border-b py-5">
               <div>
@@ -437,7 +437,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
           { label: "Destination", value: selectedObjectLabel, tone: "success" },
         ]}
       />
-      <div className="grid gap-x-6 gap-y-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-4">
         {IMPORT_STEPS.map((entry, index) => {
           const stepNumber = index + 1;
           const active = step === stepNumber;
@@ -468,7 +468,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
       <FormError message={error} />
 
       {step === 1 ? (
-        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <Card className="gap-0 space-y-5 p-6">
             <div>
               <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Start import</CardTitle>
@@ -594,7 +594,7 @@ export function ImportWizard({ hasPermission }: { hasPermission: boolean }) {
 
       {step === 2 ? (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[0.9fr_1.1fr]">
           <Card className="gap-0 overflow-hidden py-0">
             <CardHeader className="flex-col items-start gap-0 border-b py-3">
               <div className="min-w-0">

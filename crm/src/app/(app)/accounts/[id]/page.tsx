@@ -112,7 +112,7 @@ export default async function AccountDetailPage({ params }: PageProps) {
         <RecordDetailActions object="accounts" row={account as unknown as Record<string, unknown>} canEdit={canEdit} canDelete={canDelete} canAssign={canAssign} canChangeStatus={canChangeStatus} />
       </HighlightsPanel>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0">
           <RecordPageTabs
             tabs={[

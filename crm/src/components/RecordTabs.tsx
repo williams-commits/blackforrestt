@@ -38,7 +38,9 @@ export function RecordTabs({
   onTabChange: (key: string) => void;
 }) {
   return (
-    <Tabs value={activeTab} onValueChange={onTabChange}>
+    // min-w-0: the scrollable TabsList's min-content must not widen the
+    // page on narrow screens (measured 694px of forced overflow at 390px).
+    <Tabs value={activeTab} onValueChange={onTabChange} className="min-w-0">
       <TabsList
         variant="line"
         aria-label="Record sections"

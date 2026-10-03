@@ -729,6 +729,7 @@ export function RecordActivities({
           onValueChange={(key) => {
             setActiveTab(key as typeof activeTab);
           }}
+          className="min-w-0"
         >
           <div className="border-b border-border bg-muted">
             <TabsList

@@ -118,7 +118,7 @@ export default async function TaskDetailPage({ params }: PageProps) {
         <TaskDetailActions taskId={task.id} status={task.status} canEdit={canEdit} task={task} />
       </HighlightsPanel>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0">
           <RecordPageTabs
             tabs={[

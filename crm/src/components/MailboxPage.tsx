@@ -222,7 +222,7 @@ export function MailboxPage() {
         />
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[13rem_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[13rem_minmax(0,1fr)]">
         {/* Folder rail — quiet rows, active row on muted */}
         <Card className="gap-0 p-2">
           <div role="tablist" aria-label="Mailbox folders" className="flex gap-1 overflow-x-auto lg:flex-col">
@@ -252,7 +252,7 @@ export function MailboxPage() {
         </Card>
 
         <Card className="gap-0 overflow-hidden py-0">
-          <div className="grid lg:grid-cols-[360px_1fr]">
+          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr]">
           {/* List */}
           <div className="max-h-[70vh] divide-y divide-border overflow-y-auto border-b border-border lg:border-b-0 lg:border-r">
             {loading && rows.length === 0 ? (

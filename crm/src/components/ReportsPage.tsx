@@ -259,7 +259,7 @@ export function ReportsPage() {
         </Modal>
       ) : null}
 
-      <div className={cn("grid gap-4", !builderOpen && "lg:grid-cols-[16rem_1fr]")}>
+      <div className={cn("grid grid-cols-1 gap-4", !builderOpen && "lg:grid-cols-[16rem_1fr]")}>
         <Card className={cn("gap-0 p-2", builderOpen && "hidden")}>
           <nav className="space-y-1" aria-label="Report library">
             {libraryLoading ? (

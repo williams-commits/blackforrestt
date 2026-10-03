@@ -90,8 +90,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
         {/* ── Content area ── */}
         <main
-          className="min-w-0 flex-1 animate-fade"
-          style={{ maxWidth: "var(--content-max)", width: "100%", margin: "0 auto", padding: "var(--space-6)" }}
+          className="min-w-0 flex-1 w-full px-3 py-4 animate-fade sm:px-6 sm:py-6"
+          style={{ maxWidth: "var(--content-max)", margin: "0 auto" }}
         >
           {children}
         </main>

@@ -14,6 +14,7 @@ interface NotificationRow {
   type: string;
   payload: Record<string, unknown>;
   readAt: string | null;
+  toastedAt?: string | null;
   createdAt: string;
 }
 
@@ -33,6 +34,7 @@ const TYPE_LABELS: Record<string, string> = {
   NOTE_ADDED: "New note",
   TASK_COMPLETED: "Task completed",
   TASK_CANCELLED: "Task cancelled",
+  COMMENT_ADDED: "New comment",
 };
 
 function notificationTitle(notification: NotificationRow): string {
@@ -57,12 +59,24 @@ export function NotificationBell() {
       const body = (await response.json()) as { data?: NotificationRow[]; meta?: { unread?: number } };
       const nextNotifications = body.data ?? [];
       const previousIds = knownIds.current;
+      // Toast cadence (trading-platform pattern): toast unread notifications
+      // that were never toasted, then acknowledge them server-side — the
+      // unread badge survives the toast and steers the user to the history.
+      const freshToasts: string[] = [];
       if (previousIds) {
         for (const notification of nextNotifications) {
-          if (!previousIds.has(notification.id) && !notification.readAt) {
+          if (!previousIds.has(notification.id) && !notification.readAt && !notification.toastedAt) {
+            freshToasts.push(notification.id);
             toast.info(notificationTitle(notification));
           }
         }
+      }
+      if (freshToasts.length > 0) {
+        void fetch("/api/notifications", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: freshToasts, toasted: true }),
+        }).catch(() => undefined);
       }
       knownIds.current = new Set(nextNotifications.map((notification) => notification.id));
       setNotifications(nextNotifications);
@@ -78,9 +92,32 @@ export function NotificationBell() {
 
   useEffect(() => {
     void refresh();
-    const interval = window.setInterval(() => void refresh(), 30_000);
+    // Steady-state poll is the cheap unread-count query; the full list (with
+    // its server sweeps and toasts) loads when unread grows, on window focus,
+    // or on the realtime signal — the trading-platform toast cadence.
+    const lastUnread = { value: null as number | null };
+    async function pollCounts() {
+      try {
+        const response = await fetch("/api/notifications?scope=counts", { cache: "no-store" });
+        if (!response.ok) return;
+        const body = (await response.json().catch(() => null)) as { data?: { unread?: number } } | null;
+        const unread = Number(body?.data?.unread);
+        if (!Number.isFinite(unread)) return;
+        const previous = lastUnread.value;
+        lastUnread.value = unread;
+        if (previous === null ? unread > 0 : unread > previous) void refresh();
+      } catch {
+        // Non-critical; retry on the next tick.
+      }
+    }
+    void pollCounts();
+    const countsTimer = window.setInterval(() => void pollCounts(), 12_000);
+    const listTimer = window.setInterval(() => void refresh(), 60_000);
     const onFocus = () => {
-      if (document.visibilityState === "visible") void refresh();
+      if (document.visibilityState === "visible") {
+        void pollCounts();
+        void refresh();
+      }
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -91,7 +128,8 @@ export function NotificationBell() {
     const onRealtimeNotification = () => void refresh();
     window.addEventListener("crm:notifications-refresh", onRealtimeNotification);
     return () => {
-      window.clearInterval(interval);
+      window.clearInterval(countsTimer);
+      window.clearInterval(listTimer);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
       document.removeEventListener("keydown", onKeyDown);
@@ -151,7 +189,16 @@ export function NotificationBell() {
               {notifications.slice(0, 12).map((notification) => {
                 const href = notificationHref(notification);
                 const content = <><p className="text-xs font-semibold">{notificationTitle(notification)}</p><p className="mt-1 text-[10px] text-muted-foreground"><time dateTime={notification.createdAt} title={absoluteTime(notification.createdAt)}>{relativeTime(notification.createdAt)}</time></p></>;
-                return <li key={notification.id} className={cn("border-b border-border px-4 py-3 last:border-0", notification.readAt ? "text-muted-foreground" : "bg-muted text-foreground")}><Link href={href} onClick={() => setOpen(false)} className="block hover:opacity-75">{content}</Link></li>;
+                // Clicking a notification marks it read and navigates — the
+                // "Mark all read" control stays for bulk clearing.
+                const openAndMarkRead = () => {
+                  setOpen(false);
+                  if (notification.readAt) return;
+                  setNotifications((current) => current.map((row) => (row.id === notification.id ? { ...row, readAt: new Date().toISOString() } : row)));
+                  setUnread((current) => Math.max(0, current - 1));
+                  void fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: notification.id, read: true }) }).catch(() => undefined);
+                };
+                return <li key={notification.id} className={cn("border-b border-border px-4 py-3 last:border-0", notification.readAt ? "text-muted-foreground" : "bg-muted text-foreground")}><Link href={href} onClick={openAndMarkRead} className="block hover:opacity-75">{content}</Link></li>;
               })}
             </ul>
           )}

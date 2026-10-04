@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Icon } from "@/components/Icon";
 import { useTabSession } from "@/components/useTabSession";
+import { PresenceDot, usePresence } from "@/components/Presence";
 import { cn } from "@/lib/utils";
 import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
 
@@ -202,6 +203,8 @@ export function RecordActivities({
     (value) => value === "notes" || value === "tasks" || value === "appointments",
   );
   const tasksLoadedRef = useRef(false);
+  // Team presence: green dot beside authors/owners who are online now.
+  const { online: onlineUsers } = usePresence();
   const [tasks, setTasks] = useState<SubjectTask[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [tasksTotal, setTasksTotal] = useState<number | null>(null);
@@ -766,6 +769,7 @@ export function RecordActivities({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                   <span className="text-[13px] font-semibold text-foreground">{note.author.name}</span>
+                  <PresenceDot online={onlineUsers.has(note.author.id)} title={`${note.author.name} is online`} />
                   <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                     <Icon name="note" size={10} /> Note
                   </span>
@@ -853,7 +857,12 @@ export function RecordActivities({
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <Link href={`/tasks/${task.id}`} className="min-w-0 truncate text-[13px] font-medium text-foreground hover:text-primary hover:underline">{task.title}</Link>
                   <span className="ml-auto flex shrink-0 items-center gap-1.5">
-                    {task.owner ? <span title={`Owner: ${task.owner.name}`}><Initials name={task.owner.name} size="xs" /></span> : null}
+                    {task.owner ? (
+                      <span title={`Owner: ${task.owner.name}`} className="flex items-center gap-1">
+                        <Initials name={task.owner.name} size="xs" />
+                        <PresenceDot online={onlineUsers.has(task.owner.id)} title={`${task.owner.name} is online`} />
+                      </span>
+                    ) : null}
                     {task.dueAt ? (
                       <span className={cn("badge gap-1 tabular-nums", overdue ? "badge-error" : "badge-neutral")}><Icon name="calendar" size={11} />{new Date(task.dueAt).toLocaleDateString()}</span>
                     ) : (

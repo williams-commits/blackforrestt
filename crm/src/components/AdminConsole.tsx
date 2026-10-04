@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PresenceDot, usePresence } from "@/components/Presence";
 import { useTabSession } from "@/components/useTabSession";
 
 /* Badge tone helpers — semantic tones stay on theme tokens so the NEUTRAL
@@ -709,6 +710,8 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
     "profile",
     (value) => value === "profile" || value === "workspace" || value === "activity" || (canManage && value === "smtp"),
   );
+  // Team presence: green dot beside users who are online right now.
+  const { online: onlineUsers } = usePresence();
   const [users, setUsers] = useState<Array<{
     id: string; email: string; name: string; status: string; lastLoginAt: string | null;
     role: { key: string; name: string };
@@ -962,7 +965,7 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
             ) : filteredUsers.map((user) => (
               <TR key={user.id} className={selectedUserId === user.id ? "bg-muted" : undefined}>
                 {canManage ? <TD className="px-3 py-2"><Checkbox aria-label={`Select ${user.name}`} checked={selectedIds.includes(user.id)} onCheckedChange={(checked) => setSelectedIds((current) => checked ? [...current, user.id] : current.filter((id) => id !== user.id))} /></TD> : null}
-                <TD className="px-3 py-2"><button type="button" onClick={() => setSelectedUserId(user.id)} className="flex items-center gap-3 text-left"><Initials name={user.name} size="md" /><span><span className="block font-medium hover:text-primary">{user.name}</span><span className="block text-xs text-(--text-tertiary)">{user.email}</span></span></button></TD>
+                <TD className="px-3 py-2"><button type="button" onClick={() => setSelectedUserId(user.id)} className="flex items-center gap-3 text-left"><span className="relative"><Initials name={user.name} size="md" /><span className="absolute -right-0.5 -top-0.5"><PresenceDot online={onlineUsers.has(user.id)} title={`${user.name} is online`} /></span></span><span><span className="block font-medium hover:text-primary">{user.name}</span><span className="block text-xs text-(--text-tertiary)">{user.email}</span></span></button></TD>
                 <TD>
                   {canManage ? (
                     <Select value={user.role.key} onValueChange={(value) => void patchUser(user.id, { roleKey: value })}>

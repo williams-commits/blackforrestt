@@ -42,6 +42,22 @@ function taskOwnedOrSharedWhere(ctx: ScopedContext): Prisma.TaskWhereInput {
   };
 }
 
+/**
+ * Total tasks a strip would show for one subject (open + in progress,
+ * scoped exactly like the list: admins count everything, scoped roles
+ * count their owner ∪ shared set). Feeds the Activity tab chip.
+ */
+export async function countSubjectTasks(ctx: ScopedContext, subjectType: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY", subjectId: string): Promise<number> {
+  return prisma.task.count({
+    where: {
+      subjectType,
+      subjectId,
+      status: { in: ["OPEN", "IN_PROGRESS"] },
+      ...(canSeeAllTasks(ctx) ? {} : taskOwnedOrSharedWhere(ctx)),
+    },
+  });
+}
+
 /** Where-fragment for EDITS: the owner or an admin — tagged viewers are
  *  view-only by design ("users that view the task, not as owners"). */
 export function taskEditableWhere(ctx: ScopedContext): Prisma.TaskWhereInput {

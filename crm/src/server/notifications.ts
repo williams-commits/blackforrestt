@@ -319,3 +319,18 @@ export async function markNotificationRead(userId: string, id: string, read: boo
   });
   return result.count > 0;
 }
+
+/**
+ * Mark notifications as toasted (the ephemeral toast was shown). Mirrors the
+ * trading platform: toasting is decoupled from reading — the unread badge
+ * survives the toast and still steers the user to the notification center.
+ * `toastedAt` is durable so toasts never re-fire across reloads.
+ */
+export async function markToasted(userId: string, ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const result = await prisma.notification.updateMany({
+    where: { id: { in: ids }, recipientUserId: userId, toastedAt: null },
+    data: { toastedAt: new Date() },
+  });
+  return result.count;
+}

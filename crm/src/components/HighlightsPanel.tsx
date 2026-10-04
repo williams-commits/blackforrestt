@@ -1,8 +1,20 @@
+"use client";
+
 /**
  * Highlights panel — the Salesforce-signature colored strip at the top of
  * every record page showing the 4–6 most important fields at a glance.
+ *
+ * Collapsible: the chevron in the banner header hides/shows the field grid.
+ * The choice persists per record for the browser session (sessionStorage),
+ * matching the tab-session behavior — a refresh reopens the banner exactly
+ * as it was left. The header row (title, badge, record actions) always
+ * stays visible.
  */
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { Icon } from "@/components/Icon";
+import { readTabSession, writeTabSession } from "@/components/useTabSession";
 
 export function HighlightsPanel({
   title,
@@ -15,6 +27,25 @@ export function HighlightsPanel({
   fields: Array<{ label: string; value: React.ReactNode }>;
   children?: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const storageKey = `highlight:${pathname}`;
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Restore after mount (SSR-safe): a record left collapsed reopens collapsed.
+  useEffect(() => {
+    setCollapsed(readTabSession(storageKey, (value) => value === "collapsed") === "collapsed");
+  }, [storageKey]);
+
+  function toggleCollapsed() {
+    setCollapsed((current) => {
+      const next = !current;
+      writeTabSession(storageKey, next ? "collapsed" : "expanded");
+      return next;
+    });
+  }
+
+  const collapsible = fields.length > 0;
+
   return (
     <div className="highlights no-print">
       <div className="flex items-start justify-between gap-4">
@@ -39,9 +70,9 @@ export function HighlightsPanel({
               </Badge>
             ) : null}
           </div>
-          {fields.length > 0 ? (
+          {fields.length > 0 && !collapsed ? (
             <div
-              className="mt-4 grid gap-x-6 gap-y-3 border-t pt-3"
+              className="mt-4 grid gap-x-6 gap-y-3 border-t pt-3 animate-fade"
               style={{ borderColor: "var(--accent-border)", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}
             >
               {fields.map((field) => (
@@ -53,7 +84,21 @@ export function HighlightsPanel({
             </div>
           ) : null}
         </div>
-        {children ? <div className="flex max-w-full shrink-0 flex-wrap items-start justify-end gap-2">{children}</div> : null}
+        <div className="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+          {children ? children : null}
+          {collapsible ? (
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-expanded={!collapsed}
+              aria-label={collapsed ? "Show record details" : "Hide record details"}
+              title={collapsed ? "Show record details" : "Hide record details"}
+              className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Icon name={collapsed ? "chevron_down" : "chevron_up"} size={16} />
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );

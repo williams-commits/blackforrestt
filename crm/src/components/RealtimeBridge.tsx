@@ -3,7 +3,8 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-/** Refresh the current authorized view when the server records a mutation. */
+/** Refresh the current authorized view when the server records a mutation,
+ *  and heartbeat presence while the CRM is open. */
 export function RealtimeBridge() {
   const router = useRouter();
   const lastRefresh = useRef<string | null>(null);
@@ -24,6 +25,15 @@ export function RealtimeBridge() {
       source.close();
     };
   }, [router]);
+
+  // Presence heartbeat: while the CRM is open the user is "online" (90s
+  // server window) — team presence dots and platform linkage read it.
+  useEffect(() => {
+    const beat = () => void fetch("/api/presence", { method: "POST" }).catch(() => undefined);
+    beat();
+    const timer = window.setInterval(beat, 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return null;
 }

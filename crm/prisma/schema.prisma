@@ -167,6 +167,7 @@ model User {
   status       UserStatus @default(ACTIVE)
   roleId       String
   lastLoginAt  DateTime?
+  lastSeenAt   DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -878,6 +879,7 @@ model Notification {
   type            NotificationType
   payload         Json
   readAt          DateTime?
+  toastedAt       DateTime?
   createdAt       DateTime         @default(now())
 
   @@index([recipientUserId, readAt, createdAt])

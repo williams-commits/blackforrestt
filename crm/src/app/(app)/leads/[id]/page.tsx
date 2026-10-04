@@ -6,6 +6,7 @@ import { getLead, scopedContext } from "@/server/records/leads";
 import { listTimeline } from "@/server/activity";
 import { listNotesBySubjectPage } from "@/server/records/notes";
 import { listAppointmentsBySubjectPage } from "@/server/records/appointments";
+import { countSubjectTasks } from "@/server/records/tasks";
 import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
 import { Timeline } from "@/components/Timeline";
 import { ActivityComposer } from "@/components/ActivityComposer";
@@ -40,6 +41,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
   let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
   let notes: Awaited<ReturnType<typeof listNotesBySubjectPage>> = { rows: [], total: 0 };
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubjectPage>> = { rows: [], total: 0 };
+  let taskCount = 0;
   let canViewEmails = false;
   let canEdit = false;
   let canAddNote = false;
@@ -61,6 +63,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "LEAD");
     notes = await listNotesBySubjectPage("LEAD", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
     appointments = await listAppointmentsBySubjectPage("LEAD", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
+    taskCount = await countSubjectTasks(ctx, "LEAD", id);
     canViewEmails = ctx.permissions.includes("EMAILS_VIEW");
     const capabilities = getRecordCapabilities("LEAD", ctx.permissions);
     canEdit = capabilities.canEdit;
@@ -145,7 +148,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
           <RecordPageTabs
             tabs={[
               { key: "overview", label: "Overview" },
-              { key: "activity", label: "Activity", count: noteCount + appointmentCount },
+              { key: "activity", label: "Activity", count: noteCount + appointmentCount + taskCount },
               { key: "files", label: "Files" },
               ...(canViewEmails ? [{ key: "emails", label: "Emails" }] : []),
             ]}

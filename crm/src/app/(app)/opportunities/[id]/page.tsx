@@ -6,6 +6,7 @@ import { scopedContext } from "@/server/records/leads";
 import { listTimeline } from "@/server/activity";
 import { listNotesBySubjectPage } from "@/server/records/notes";
 import { listAppointmentsBySubjectPage } from "@/server/records/appointments";
+import { countSubjectTasks } from "@/server/records/tasks";
 import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
 import { Timeline } from "@/components/Timeline";
 import { ActivityComposer } from "@/components/ActivityComposer";
@@ -37,6 +38,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
   let tags: Awaited<ReturnType<typeof listTagsForSubject>> = [];
   let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
   let notes: Awaited<ReturnType<typeof listNotesBySubjectPage>> = { rows: [], total: 0 };
+  let taskCount = 0;
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubjectPage>> = { rows: [], total: 0 };
   let canViewEmails = false;
   let canEdit = false;
@@ -54,6 +56,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "OPPORTUNITY");
     notes = await listNotesBySubjectPage("OPPORTUNITY", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
     appointments = await listAppointmentsBySubjectPage("OPPORTUNITY", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
+    taskCount = await countSubjectTasks(ctx, "OPPORTUNITY", id);
     canViewEmails = ctx.permissions.includes("EMAILS_VIEW");
     const capabilities = getRecordCapabilities("OPPORTUNITY", ctx.permissions);
     canEdit = capabilities.canEdit;
@@ -116,7 +119,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
           <RecordPageTabs
             tabs={[
               { key: "overview", label: "Overview" },
-              { key: "activity", label: "Activity", count: notes.total + appointments.total },
+              { key: "activity", label: "Activity", count: notes.total + appointments.total + taskCount },
               { key: "files", label: "Files" },
               ...(canViewEmails ? [{ key: "emails", label: "Emails" }] : []),
             ]}

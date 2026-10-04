@@ -291,7 +291,7 @@ textarea {
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-secondary);
-  text-transform: uppercase;
+  text-transform: Capitalized;
   letter-spacing: 0.05em;
 }
 

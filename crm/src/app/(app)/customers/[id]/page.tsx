@@ -7,6 +7,7 @@ import { scopedContext } from "@/server/records/leads";
 import { listTimeline } from "@/server/activity";
 import { listNotesBySubjectPage } from "@/server/records/notes";
 import { listAppointmentsBySubjectPage } from "@/server/records/appointments";
+import { countSubjectTasks } from "@/server/records/tasks";
 import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
 import { Timeline } from "@/components/Timeline";
 import { ActivityComposer } from "@/components/ActivityComposer";
@@ -41,6 +42,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
   let tags: Awaited<ReturnType<typeof listTagsForSubject>> = [];
   let cfDefs: Awaited<ReturnType<typeof listCustomFields>> = [];
   let notes: Awaited<ReturnType<typeof listNotesBySubjectPage>> = { rows: [], total: 0 };
+  let taskCount = 0;
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubjectPage>> = { rows: [], total: 0 };
   let platform: Awaited<ReturnType<typeof client360>> = null;
   let campaigns: Array<{ campaign: { name: string } }> = [];
@@ -62,6 +64,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
     cfDefs = (await listCustomFields(true)).filter((def) => def.objectType === "CUSTOMER");
     notes = await listNotesBySubjectPage("CUSTOMER", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
     appointments = await listAppointmentsBySubjectPage("CUSTOMER", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
+    taskCount = await countSubjectTasks(ctx, "CUSTOMER", id);
     platform = customer.platformUserId ? await client360(customer.platformUserId) : null;
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "CUSTOMER", subjectId: id }, include: { campaign: true } });
     canViewEmails = ctx.permissions.includes("EMAILS_VIEW");
@@ -121,7 +124,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             tabs={[
               { key: "overview", label: "Overview" },
               { key: "platform", label: "Platform" },
-              { key: "activity", label: "Activity", count: notes.total + appointments.total },
+              { key: "activity", label: "Activity", count: notes.total + appointments.total + taskCount },
               { key: "files", label: "Files" },
               ...(canViewEmails ? [{ key: "emails", label: "Emails" }] : []),
             ]}

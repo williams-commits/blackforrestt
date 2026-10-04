@@ -10,6 +10,7 @@ import { listAppointmentsBySubjectPage } from "@/server/records/appointments";
 import { countSubjectTasks } from "@/server/records/tasks";
 import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
 import { Timeline } from "@/components/Timeline";
+import { PlatformPresenceBadge } from "@/components/PlatformPresenceBadge";
 import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
 import { RecordPageTabs } from "@/components/RecordPageTabs";
@@ -186,9 +187,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                         <span style={{ color: "var(--text-tertiary)" }}> · registered {new Date(platform.user.registeredAt).toLocaleDateString()}</span>
                       </p>
                       <p className="mt-1 text-[11px]">
-                        <span style={{ color: platform.presence.online ? "var(--success)" : "var(--text-tertiary)" }}>
-                          {platform.presence.online ? "online now" : "offline"}
-                        </span>
+                        <PlatformPresenceBadge customerId={customer.id} initialOnline={platform.presence.online} />
                       </p>
                     </div>
                     <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>

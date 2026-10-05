@@ -69,13 +69,13 @@ export function Th({
     <>
       {children}
       {indicator && (
-        <span className={`ml-1 text-[8px] ${active ? "text-brand" : "text-text-faint"}`}>{indicator}</span>
+        <span className={`ml-1 text-(length:--term-text-2xs) ${active ? "text-brand" : "text-text-faint"}`}>{indicator}</span>
       )}
     </>
   );
   if (!sortable) {
     return (
-      <th className={`px-3 py-2 text-[10px] font-medium uppercase tracking-wide text-text-faint ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}>
+      <th className={`px-3 py-2 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}>
         {content}
       </th>
     );
@@ -83,7 +83,7 @@ export function Th({
   return (
     <th
       aria-sort={active ? (sort!.direction === "asc" ? "ascending" : "descending") : "none"}
-      className={`px-3 py-2 text-[10px] font-medium uppercase tracking-wide ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
+      className={`px-3 py-2 text-(length:--term-text-2xs) font-medium uppercase tracking-wide ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
     >
       <button
         type="button"
@@ -110,7 +110,7 @@ export function Td({
   return (
     <td
       colSpan={colSpan}
-      className={`px-3 py-2 text-xs tnum ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
+      className={`px-3 py-2 text-(length:--term-text-sm) tnum ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
     >
       {children}
     </td>
@@ -120,7 +120,7 @@ export function Td({
 export function EmptyRow({ colSpan, label }: { colSpan: number; label: string }) {
   return (
     <tr>
-      <td colSpan={colSpan} className="px-3 py-8 text-center text-xs text-text-faint">
+      <td colSpan={colSpan} className="px-3 py-8 text-center text-(length:--term-text-sm) text-text-faint">
         {label}
       </td>
     </tr>
@@ -136,7 +136,7 @@ export function TotalsRow({ cells }: { cells: Array<{ label?: string; value?: st
         <td
           key={i}
           colSpan={cell.colSpan}
-          className={`px-3 py-2 text-xs font-semibold tnum ${cell.align === "right" ? "text-right" : "text-left"} ${cell.className ?? ""}`}
+          className={`px-3 py-2 text-(length:--term-text-sm) font-semibold tnum ${cell.align === "right" ? "text-right" : "text-left"} ${cell.className ?? ""}`}
         >
           {cell.label ?? cell.value ?? ""}
         </td>
@@ -160,7 +160,7 @@ export function FilterChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full border px-2.5 py-1 text-[10px] font-medium transition ${
+      className={`rounded-full border px-2.5 py-1 text-(length:--term-text-2xs) font-medium transition ${
         active ? "border-brand bg-brand text-white" : "border-border bg-canvas text-text-muted hover:border-brand/40 hover:text-text"
       }`}
     >
@@ -188,7 +188,7 @@ export function TableSearch({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       aria-label={label}
-      className="h-8 min-w-40 flex-1 rounded border border-border bg-canvas px-2.5 text-xs outline-none focus:border-brand sm:max-w-56"
+      className="h-8 min-w-40 flex-1 rounded border border-border bg-canvas px-2.5 text-(length:--term-text-sm) outline-none focus:border-brand sm:max-w-56"
     />
   );
 }

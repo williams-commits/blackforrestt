@@ -7,13 +7,11 @@ import { Hero, StatBar } from "./sections/Top";
 import { BentoSection } from "./sections/Bento";
 import { MarketsSection } from "./sections/Markets";
 import { MoversSection } from "./sections/Middle";
-import {
-  IntelligenceSection,
-  ShowcaseSection,
-  TrustSection,
-  StepsBand,
-  FinalCta,
-} from "./sections/Bottom";
+import { IntelligenceSection } from "./sections/Intelligence";
+import { ShowcaseSection } from "./sections/Showcase";
+import { TrustSection } from "./sections/Trust";
+import { StepsBand } from "./sections/StepsBand";
+import { FinalCta } from "./sections/FinalCta";
 import { TestimonialsSection } from "./sections/Testimonials";
 
 /**

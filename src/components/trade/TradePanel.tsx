@@ -162,11 +162,11 @@ export function TradePanel({ instrument }: Props) {
             <div className="flex items-center gap-2">
               <InstrumentIcon symbol={instrument.symbol} size={24} />
               <h2 className="text-base font-bold tracking-tight">{instrument.symbol}</h2>
-              <span className="text-[8px] font-semibold uppercase px-1.5 py-0.5 rounded bg-brand-soft text-brand">
+              <span className="text-(length:--term-text-2xs) font-semibold uppercase px-1.5 py-0.5 rounded bg-brand-soft text-brand">
                 {instrument.category}
               </span>
             </div>
-            <p className="text-[10px] text-text-faint mt-0.5">{instrument.name}</p>
+            <p className="text-(length:--term-text-2xs) text-text-faint mt-0.5">{instrument.name}</p>
           </div>
         </div>
 
@@ -179,7 +179,7 @@ export function TradePanel({ instrument }: Props) {
               role="tab"
               aria-selected={type === t}
               onClick={() => { setType(t); clearMessages(); }}
-              className={`flex-1 py-2.5 text-[11px] font-medium rounded-md transition-all ${
+              className={`flex-1 py-2.5 text-(length:--term-text-xs) font-medium rounded-md transition-all ${
                 type === t
                   ? "bg-canvas text-text shadow-sm"
                   : "text-text-muted hover:text-text"
@@ -196,20 +196,20 @@ export function TradePanel({ instrument }: Props) {
         <div className="grid grid-cols-2 gap-2">
           {/* Sell / Bid */}
           <div className="flex flex-col items-center justify-center bg-down/5 border border-down/20 rounded-lg py-2.5">
-            <span className="text-[10px] font-semibold uppercase text-down tracking-wide">Sell</span>
+            <span className="text-(length:--term-text-2xs) font-semibold uppercase text-down tracking-wide">Sell</span>
             <span className="text-lg font-bold tnum text-down leading-tight mt-0.5">
               {fmtPrice(bid, instrument.digits)}
             </span>
           </div>
           {/* Buy / Ask */}
           <div className="flex flex-col items-center justify-center bg-up/5 border border-up/20 rounded-lg py-2.5">
-            <span className="text-[10px] font-semibold uppercase text-up tracking-wide">Buy</span>
+            <span className="text-(length:--term-text-2xs) font-semibold uppercase text-up tracking-wide">Buy</span>
             <span className="text-lg font-bold tnum text-up leading-tight mt-0.5">
               {fmtPrice(ask, instrument.digits)}
             </span>
           </div>
         </div>
-        <div className="flex items-center justify-center gap-3 mt-2 text-[10px] text-text-faint">
+        <div className="flex items-center justify-center gap-3 mt-2 text-(length:--term-text-2xs) text-text-faint">
           <span>Spread <span className="tnum text-text-muted font-medium">{fmtPrice(spread, instrument.digits)}</span></span>
           <span className="w-px h-3 bg-border" />
           <span>Pip <span className="tnum text-text-muted font-medium">{instrument.pipSize}</span></span>
@@ -218,7 +218,7 @@ export function TradePanel({ instrument }: Props) {
 
       {/* ── Volume ─────────────────────────────────────────────────────────── */}
       <div className="px-4 pb-3">
-        <label htmlFor={volumeId} className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Volume (lots)</label>
+        <label htmlFor={volumeId} className="text-(length:--term-text-2xs) font-medium text-text-muted uppercase tracking-wide">Volume (lots)</label>
         <div className="relative mt-1">
           <input
             id={volumeId}
@@ -238,7 +238,7 @@ export function TradePanel({ instrument }: Props) {
               key={v}
               type="button"
               onClick={() => { setVolume(v.toFixed(2)); clearMessages(); }}
-              className={`h-9 text-[10px] rounded-md font-medium transition-colors ${
+              className={`h-9 text-(length:--term-text-2xs) rounded-md font-medium transition-colors ${
                 volume === v.toFixed(2)
                   ? "bg-brand text-white"
                   : "bg-panel-2 text-text-muted hover:text-text hover:bg-panel-3"
@@ -254,7 +254,7 @@ export function TradePanel({ instrument }: Props) {
       {type === "STRIKE" && (
         <div className="px-4 pb-3 space-y-2">
           <div>
-            <label htmlFor={strikeId} className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Strike Rate</label>
+            <label htmlFor={strikeId} className="text-(length:--term-text-2xs) font-medium text-text-muted uppercase tracking-wide">Strike Rate</label>
             <input
               id={strikeId}
               type="number"
@@ -266,7 +266,7 @@ export function TradePanel({ instrument }: Props) {
             />
           </div>
           <div>
-            <label className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Expiry</label>
+            <label className="text-(length:--term-text-2xs) font-medium text-text-muted uppercase tracking-wide">Expiry</label>
             <div className="grid grid-cols-4 gap-1 mt-1">
               {[1, 5, 15, 30].map((m) => (
                 <button
@@ -274,7 +274,7 @@ export function TradePanel({ instrument }: Props) {
                   type="button"
                   aria-pressed={expiryMinutes === String(m)}
                   onClick={() => { setExpiryMinutes(String(m)); clearMessages(); }}
-                  className={`h-9 text-[10px] rounded-md font-medium transition-colors ${
+                  className={`h-9 text-(length:--term-text-2xs) rounded-md font-medium transition-colors ${
                     expiryMinutes === String(m)
                       ? "bg-brand text-white"
                       : "bg-panel-2 text-text-muted hover:text-text hover:bg-panel-3"
@@ -296,7 +296,7 @@ export function TradePanel({ instrument }: Props) {
             aria-expanded={showSLTP}
             aria-controls="risk-controls"
             onClick={() => setShowSLTP((v) => !v)}
-            className="flex items-center justify-between w-full text-[10px] font-medium text-text-muted uppercase tracking-wide hover:text-text transition-colors py-1"
+            className="flex items-center justify-between w-full text-(length:--term-text-2xs) font-medium text-text-muted uppercase tracking-wide hover:text-text transition-colors py-1"
           >
             <span>Stop Loss / Take Profit</span>
             <svg
@@ -315,7 +315,7 @@ export function TradePanel({ instrument }: Props) {
             <div id="risk-controls" className="grid grid-cols-2 gap-2 mt-1.5">
               <div>
                 <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-down">SL</span>
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-(length:--term-text-2xs) font-semibold text-down">SL</span>
                   <label htmlFor={stopLossId} className="sr-only">Stop-loss rate</label>
                   <input
                     id={stopLossId}
@@ -330,7 +330,7 @@ export function TradePanel({ instrument }: Props) {
               </div>
               <div>
                 <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-up">TP</span>
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-(length:--term-text-2xs) font-semibold text-up">TP</span>
                   <label htmlFor={takeProfitId} className="sr-only">Take-profit rate</label>
                   <input
                     id={takeProfitId}
@@ -363,7 +363,7 @@ export function TradePanel({ instrument }: Props) {
         </div>
       </div>
 
-      <div className="mx-4 mb-2 rounded-lg border border-border-soft bg-panel-2/60 px-3 py-2 text-[10px]" role="status" aria-live="polite">
+      <div className="mx-4 mb-2 rounded-lg border border-border-soft bg-panel-2/60 px-3 py-2 text-(length:--term-text-2xs)" role="status" aria-live="polite">
         <span className="font-semibold text-text">Order lifecycle: </span>
         {status === "submitting" && <span className="text-brand">Pending provider acceptance</span>}
         {status === "accepted" && <span className="text-up">Accepted and open{lastAcceptedAt ? ` at ${new Date(lastAcceptedAt).toLocaleTimeString()}` : ""}</span>}
@@ -373,7 +373,7 @@ export function TradePanel({ instrument }: Props) {
 
       {/* ── Error ──────────────────────────────────────────────────────────── */}
       {(validationError || error) && (
-        <div role="alert" className="mx-4 mb-2 text-[11px] text-down bg-down/10 border border-down/30 rounded-lg px-3 py-2">
+        <div role="alert" className="mx-4 mb-2 text-(length:--term-text-xs) text-down bg-down/10 border border-down/30 rounded-lg px-3 py-2">
           {validationError ?? error}
         </div>
       )}
@@ -386,17 +386,17 @@ export function TradePanel({ instrument }: Props) {
           <Button variant="sell" size="md" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting sell order" onClick={() => submit("SELL")} className="h-16 rounded-lg">
             <span className="flex flex-col items-center leading-tight">
               <span className="text-sm font-bold uppercase tracking-wide">Sell</span>
-              <span className="text-[11px] font-normal opacity-90 tnum">{fmtPrice(bid, instrument.digits)}</span>
+              <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{fmtPrice(bid, instrument.digits)}</span>
             </span>
           </Button>
           <Button variant="buy" size="md" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting buy order" onClick={() => submit("BUY")} className="h-16 rounded-lg">
             <span className="flex flex-col items-center leading-tight">
               <span className="text-sm font-bold uppercase tracking-wide">Buy</span>
-              <span className="text-[11px] font-normal opacity-90 tnum">{fmtPrice(ask, instrument.digits)}</span>
+              <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{fmtPrice(ask, instrument.digits)}</span>
             </span>
           </Button>
         </div>
-        <p className="text-center text-[9px] text-text-faint mt-2">
+        <p className="text-center text-(length:--term-text-2xs) text-text-faint mt-2">
           {!hasFreshQuote ? "Orders disabled — waiting for a fresh quote" : type === "CFD" ? "CFD market order — accepted at the displayed executable rate" : `Strike order — settles in ${expiryMinutes} min`}
         </p>
       </div>
@@ -407,8 +407,8 @@ export function TradePanel({ instrument }: Props) {
 function SummaryRow({ label, value, valueClass = "" }: { label: string; value: string; valueClass?: string }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[11px] text-text-muted">{label}</span>
-      <span className={`text-[11px] tnum text-text ${valueClass}`}>{value}</span>
+      <span className="text-(length:--term-text-xs) text-text-muted">{label}</span>
+      <span className={`text-(length:--term-text-xs) tnum text-text ${valueClass}`}>{value}</span>
     </div>
   );
 }

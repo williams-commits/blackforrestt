@@ -132,7 +132,7 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
             </select>
             <div className="flex items-center gap-1">
               <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="From date" className="h-8 rounded border border-border bg-canvas px-2 text-xs text-text-muted outline-none focus:border-brand" />
-              <span className="text-[10px] text-text-faint">→</span>
+              <span className="text-(length:--term-text-2xs) text-text-faint">→</span>
               <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="To date" className="h-8 rounded border border-border bg-canvas px-2 text-xs text-text-muted outline-none focus:border-brand" />
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -142,7 +142,7 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
                 </FilterChip>
               ))}
             </div>
-            <span className="ml-auto text-[10px] text-text-faint tnum">{rows.length} shown</span>
+            <span className="ml-auto text-(length:--term-text-2xs) text-text-faint tnum">{rows.length} shown</span>
             <CsvExportButton filename="transactions" columns={["Date", "Type", "Description", "Reference", "Status", "Amount"]} rows={csvRows} disabled={rows.length === 0} />
           </>
         }
@@ -215,20 +215,20 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
 
 function TypeBadge({ type }: { type: Txn["type"] }) {
   const map: Record<Txn["type"], string> = {
-    DEPOSIT: "bg-up/10 text-up", WITHDRAW: "bg-down/10 text-down", BONUS: "bg-brand-soft text-brand",
+    DEPOSIT: "bg-(--term-success-bg) text-(--term-success-fg)", WITHDRAW: "bg-(--term-danger-bg) text-(--term-danger-fg)", BONUS: "bg-(--term-warning-bg) text-(--term-warning-fg)",
     ADJUSTMENT: "bg-panel-3 text-text-muted", COMMISSION: "bg-panel-3 text-text-muted", SWAP: "bg-panel-3 text-text-muted",
-    TRADE_PNL: "bg-brand-soft text-brand", FEE: "bg-down/10 text-down", REVERSAL: "bg-panel-3 text-text-muted",
-    NEGATIVE_BALANCE_PROTECTION: "bg-up/10 text-up",
+    TRADE_PNL: "bg-(--term-warning-bg) text-(--term-warning-fg)", FEE: "bg-(--term-danger-bg) text-(--term-danger-fg)", REVERSAL: "bg-panel-3 text-text-muted",
+    NEGATIVE_BALANCE_PROTECTION: "bg-(--term-success-bg) text-(--term-success-fg)",
   };
-  return <span className={`rounded px-1.5 py-0.5 text-[10px] ${map[type]}`}>{type}</span>;
+  return <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) ${map[type]}`}>{type}</span>;
 }
 
 function StatusBadge({ status }: { status: Txn["status"] }) {
   const map: Record<Txn["status"], string> = {
-    COMPLETED: "bg-up/10 text-up", PENDING: "bg-brand-soft text-brand", REJECTED: "bg-down/10 text-down",
+    COMPLETED: "bg-(--term-success-bg) text-(--term-success-fg)", PENDING: "bg-(--term-warning-bg) text-(--term-warning-fg)", REJECTED: "bg-(--term-danger-bg) text-(--term-danger-fg)",
     CANCELLED: "bg-panel-3 text-text-muted", REVERSED: "bg-brand/10 text-brand border border-brand/30",
   };
-  return <span className={`rounded px-1.5 py-0.5 text-[10px] ${map[status]}`}>{status}</span>;
+  return <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) ${map[status]}`}>{status}</span>;
 }
 
 /**

@@ -134,7 +134,7 @@ export function MessagesTab() {
     <div className="flex h-[min(70vh,32rem)] flex-col rounded-lg border border-border bg-canvas">
       <div className="border-b border-border-soft px-4 py-3">
         <h2 className="text-sm font-semibold">Support chat</h2>
-        <p className="text-[11px] text-text-muted">Talk directly with our team — replies land here and in your notifications.</p>
+        <p className="text-(length:--term-text-xs) text-text-muted">Talk directly with our team — replies land here and in your notifications.</p>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
@@ -148,12 +148,12 @@ export function MessagesTab() {
           return (
             <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[80%] ${mine ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
-                <span className={`px-1 text-[9px] font-semibold uppercase tracking-wide ${mine ? "text-text-faint" : "text-text-muted"}`}>
+                <span className={`px-1 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide ${mine ? "text-text-faint" : "text-text-muted"}`}>
                   {mine ? "You" : `Support · ${message.senderName}`}
                 </span>
                 <div className={`rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${mine ? "bg-brand text-white" : "bg-panel-2 text-text"}`}>
                   {message.body}
-                  <div className={`mt-1 flex items-center justify-end gap-1.5 text-[9px] ${mine ? "text-white/60" : "text-text-faint"}`}>
+                  <div className={`mt-1 flex items-center justify-end gap-1.5 text-(length:--term-text-2xs) ${mine ? "text-white/60" : "text-text-faint"}`}>
                     <span className="tnum">{fmtDateTime(message.createdAt)}</span>
                     {mine && <span aria-label={message.readAt ? "Read by support" : "Not yet read"}>{message.readAt ? "✓✓ Read" : "✓ Sent"}</span>}
                   </div>
@@ -204,7 +204,7 @@ function OperatorInbox({ threads }: { threads: { threads: ThreadRow[]; totalUnre
     <div className="rounded-lg border border-border bg-canvas">
       <div className="border-b border-border-soft px-4 py-3">
         <h2 className="text-sm font-semibold">Support inbox</h2>
-        <p className="text-[11px] text-text-muted">
+        <p className="text-(length:--term-text-xs) text-text-muted">
           You&apos;re signed in as an operator. Customer conversations are handled from the Operations console — they never appear as your personal messages.
         </p>
       </div>
@@ -215,7 +215,7 @@ function OperatorInbox({ threads }: { threads: { threads: ThreadRow[]; totalUnre
         >
           Open Operations console
           {threads && threads.totalUnread > 0 && (
-            <span className="rounded-full bg-white/25 px-1.5 py-0.5 text-[10px] font-bold">{threads.totalUnread} unread</span>
+            <span className="rounded-full bg-white/25 px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold">{threads.totalUnread} unread</span>
           )}
         </Link>
       </div>
@@ -230,14 +230,14 @@ function OperatorInbox({ threads }: { threads: { threads: ThreadRow[]; totalUnre
                   <div className="flex items-center gap-2">
                     <span className="truncate text-xs font-medium">{thread.name ?? thread.email ?? thread.userId}</span>
                     {thread.unread > 0 && (
-                      <span className="rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">{thread.unread} new</span>
+                      <span className="rounded-full bg-brand px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-white">{thread.unread} new</span>
                     )}
                   </div>
-                  <div className="truncate text-[10px] text-text-faint">
+                  <div className="truncate text-(length:--term-text-2xs) text-text-faint">
                     {thread.status === "AWAITING_REPLY" ? "Waiting for a reply" : "Replied"} · {thread.lastMessage || "—"}
                   </div>
                 </div>
-                <span className="shrink-0 text-[9px] text-text-faint tnum">{thread.lastMessageAt ? fmtDateTime(thread.lastMessageAt) : ""}</span>
+                <span className="shrink-0 text-(length:--term-text-2xs) text-text-faint tnum">{thread.lastMessageAt ? fmtDateTime(thread.lastMessageAt) : ""}</span>
               </li>
             ))}
           </ul>
@@ -248,7 +248,7 @@ function OperatorInbox({ threads }: { threads: { threads: ThreadRow[]; totalUnre
         </p>
       )}
       {threads && awaiting.length > 0 && (
-        <p className="border-t border-border-soft px-4 py-2 text-[10px] text-text-muted">
+        <p className="border-t border-border-soft px-4 py-2 text-(length:--term-text-2xs) text-text-muted">
           {awaiting.length} conversation{awaiting.length === 1 ? "" : "s"} waiting for a reply.
         </p>
       )}

@@ -253,14 +253,14 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
         aria-current={active ? "page" : undefined}
         className={`flex items-center gap-2 whitespace-nowrap text-xs font-medium transition ${
           sidebar
-            ? `w-full rounded-md px-3 py-2 text-left ${active ? "bg-brand-soft text-brand" : "text-text-muted hover:bg-panel-2 hover:text-text"}`
+            ? `w-full rounded-md px-3 py-2 text-left ${active ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "text-text-muted hover:bg-panel-2 hover:text-text"}`
             : `border-b-2 px-3 py-2.5 ${active ? "border-brand text-brand" : "border-transparent text-text-muted hover:text-text"}`
         }`}
       >
         {tabIcon && <TabIcon icon={tabIcon} />}
         <span>{item.label}</span>
         {badge != null && badge > 0 && (
-          <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${active ? "bg-brand text-white" : "bg-brand-soft text-brand"}`}>
+          <span className={`rounded-full px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold ${active ? "bg-brand text-white" : "bg-(--term-warning-bg) text-(--term-warning-fg)"}`}>
             {badge}
           </span>
         )}
@@ -277,7 +277,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
             <p className="mt-1 text-xs text-text-muted">Signed in as {userName}. Every command is role-gated and audit chained.</p>
           </div>
           <div className="flex flex-wrap justify-end gap-1.5" aria-label="Active administrative roles">
-            {roles.map((role) => <span key={role} className="rounded bg-brand-soft px-2 py-1 text-[10px] font-semibold text-brand">{role.replaceAll("_", " ")}</span>)}
+            {roles.map((role) => <span key={role} className="rounded bg-brand-soft px-2 py-1 text-(length:--term-text-2xs) font-semibold text-brand">{role.replaceAll("_", " ")}</span>)}
           </div>
         </div>
       </section>
@@ -291,7 +291,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
               if (items.length === 0) return null;
               return (
                 <div key={section.label}>
-                  <p className="mb-1 px-3 text-[9px] font-bold uppercase tracking-wider text-text-faint">{section.label}</p>
+                  <p className="mb-1 px-3 text-(length:--term-text-2xs) font-bold uppercase tracking-wider text-text-faint">{section.label}</p>
                   <div className="space-y-0.5">
                     {items.map((item) => tabButton(item, true))}
                   </div>
@@ -378,7 +378,7 @@ function OverviewPanel() {
   const resource = useResource<OverviewResponse>("/api/admin/overview", 15_000);
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><div className="rounded-lg border border-brand/30 bg-brand-soft p-3 text-xs text-brand"><strong>Environment.</strong> Execution provider: {resource.data.environment.executionProvider}; market data: {resource.data.environment.marketDataMode}.</div><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{Object.entries(resource.data.stats).map(([key, value]) => {
               const StatGlyph = OVERVIEW_STAT_ICONS[key];
-              return <div key={key} className="rounded-lg border border-border bg-canvas p-4"><div className="flex items-center gap-1.5 text-[10px] uppercase text-text-faint">{StatGlyph && <StatGlyph size={12} strokeWidth={1.75} aria-hidden />}{key.replaceAll(/([A-Z])/g, " $1")}</div><div className="mt-1 text-2xl font-semibold tnum">{value.toLocaleString("en-US")}</div></div>;
+              return <div key={key} className="rounded-lg border border-border bg-canvas p-4"><div className="flex items-center gap-1.5 text-(length:--term-text-2xs) uppercase text-text-faint">{StatGlyph && <StatGlyph size={12} strokeWidth={1.75} aria-hidden />}{key.replaceAll(/([A-Z])/g, " $1")}</div><div className="mt-1 text-2xl font-semibold tnum">{value.toLocaleString("en-US")}</div></div>;
             })}</div></div>}</ModuleState>;
 }
 
@@ -437,12 +437,12 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat, onProposeRole }: 
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <TableSearch value={search} onChange={setSearch} placeholder="Search email, name, or account number…" label="Search users" />
             {needle && (
-              <span className="text-[10px] text-text-faint tnum" aria-live="polite">
+              <span className="text-(length:--term-text-2xs) text-text-faint tnum" aria-live="polite">
                 {users.length} match{users.length === 1 ? "" : "es"}{searchPending ? " · searching…" : ""}
               </span>
             )}
             {truncated && !debouncedSearch && (
-              <span className="text-[10px] text-brand">showing first {resource.data.users.length} of {resource.data.total} — refine your search</span>
+              <span className="text-(length:--term-text-2xs) text-brand">showing first {resource.data.users.length} of {resource.data.total} — refine your search</span>
             )}
           </div>
           <PaginatedUsers
@@ -540,7 +540,7 @@ function PaginatedUsers({
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-canvas">
       <div className="flex min-h-9 items-center gap-2 border-b border-border bg-panel-2 px-3 py-1.5">
-        <span className="text-[10px] text-text-faint tnum">{sortedUsers.length} users</span>
+        <span className="text-(length:--term-text-2xs) text-text-faint tnum">{sortedUsers.length} users</span>
         <CsvExportButton
           filename="users"
           columns={["Name", "Email", "Account", "Status", "KYC", "Security", "Roles", "Balance", "Equity", "Positions", "Created", "Last active", "Location"]}
@@ -573,7 +573,7 @@ function PaginatedUsers({
                   <div className="text-text-faint">
                     {user.email ?? "—"} · #{user.accountNo ?? "—"}
                     {user.brandDomain && (
-                      <span className="ml-1.5 rounded bg-brand-soft px-1 py-0.5 text-[9px] font-semibold text-brand">{user.brandDomain}</span>
+                      <span className="ml-1.5 rounded bg-brand-soft px-1 py-0.5 text-(length:--term-text-2xs) font-semibold text-brand">{user.brandDomain}</span>
                     )}
                   </div>
                 </td>
@@ -818,7 +818,7 @@ function UserBalanceDialog({
                 </label>
                 <Button type="submit" variant={action === "CREDIT" ? "buy" : "sell"} loading={busy} loadingLabel="Posting adjustment">{action === "CREDIT" ? "Post top-up" : "Post deduction"}</Button>
               </div>
-              <p className="mt-2 text-[11px] text-text-muted">Deductions cannot exceed the user’s available balance. Margin and pending withdrawals are never silently consumed.</p>
+              <p className="mt-2 text-(length:--term-text-xs) text-text-muted">Deductions cannot exceed the user’s available balance. Margin and pending withdrawals are never silently consumed.</p>
             </form>
             {error ? <p role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error}</p> : null}
             {notice ? <p role="status" className="rounded border border-up/30 bg-up/10 px-3 py-2 text-xs text-up">{notice}</p> : null}
@@ -852,7 +852,7 @@ function UserBalanceDialog({
 }
 
 function MetricCard({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border border-border bg-canvas p-3"><div className="text-[10px] uppercase tracking-wide text-text-faint">{label}</div><div className="mt-1 text-lg font-semibold tnum">{value}</div></div>;
+  return <div className="rounded-lg border border-border bg-canvas p-3"><div className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">{label}</div><div className="mt-1 text-lg font-semibold tnum">{value}</div></div>;
 }
 
 function formatUsd(value: string | number): string {
@@ -954,7 +954,7 @@ function LedgerPanel() {
         </div>
       )}
       <CsvExportButton filename="ledger" columns={["Reference", "Kind", "Status", "User", "Account", "Effective", "Direction", "Account name", "Account code", "Asset", "Amount"]} rows={csvRows} disabled={filtered.length === 0} />
-      <span className="text-[10px] text-text-faint tnum" aria-live="polite">
+      <span className="text-(length:--term-text-2xs) text-text-faint tnum" aria-live="polite">
         {filtering ? `${filtered.length} of ${all.length} postings` : `${all.length} postings`}
       </span>
     </div>
@@ -969,13 +969,13 @@ function LedgerPanel() {
             <details key={item.id} className="rounded-lg border border-border bg-canvas">
               <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 hover:bg-panel-2">
                 <span className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${ledgerKindTone(item.kind)}`}>{item.kind.replaceAll("_", " ")}</span>
+                  <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold ${ledgerKindTone(item.kind)}`}>{item.kind.replaceAll("_", " ")}</span>
                   <span className="truncate font-mono text-xs font-medium" title={item.reference}>{item.reference}</span>
-                  <span className="text-[11px] text-text-faint">{fmtDateTime(item.effectiveAt)}</span>
+                  <span className="text-(length:--term-text-xs) text-text-faint">{fmtDateTime(item.effectiveAt)}</span>
                 </span>
                 <span className="flex items-center gap-2 text-xs">
                   <span className="max-w-45 truncate text-text-muted" title={item.user?.email ?? undefined}>{item.user?.email ?? item.user?.accountNo ?? "system"}</span>
-                  <span className="rounded bg-panel-2 px-1.5 py-0.5 text-[10px] font-medium text-text-muted">{item.status}</span>
+                  <span className="rounded bg-panel-2 px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium text-text-muted">{item.status}</span>
                   {[...creditTotals.entries()].map(([asset, total]) => (
                     <span key={asset} className={`tnum font-semibold ${ledgerKindTextTone(item.kind)}`}>{asset} {fmtExecNumber(total.toFixed(8))}</span>
                   ))}
@@ -987,7 +987,7 @@ function LedgerPanel() {
                   {item.entries.map((entry) => (
                     <div key={entry.id} className="flex items-center justify-between gap-2 rounded bg-panel-2 px-2 py-1 text-xs">
                       <span className="flex min-w-0 items-center gap-2">
-                        <span className={`rounded px-1 py-0.5 text-[9px] font-bold ${entry.direction === "DEBIT" ? "bg-down/10 text-down" : "bg-up/10 text-up"}`}>{entry.direction}</span>
+                        <span className={`rounded px-1 py-0.5 text-(length:--term-text-2xs) font-bold ${entry.direction === "DEBIT" ? "bg-(--term-danger-bg) text-(--term-danger-fg)" : "bg-(--term-success-bg) text-(--term-success-fg)"}`}>{entry.direction}</span>
                         <span className="truncate" title={`${entry.account.name} (${entry.account.code})`}>{entry.account.name}</span>
                       </span>
                       <span className="shrink-0 font-medium tnum">{entry.asset} {fmtExecNumber(entry.amount)}</span>
@@ -1184,7 +1184,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
 
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div>
     <SectionHeader title="Execution and position surveillance" description={resource.data.providerWarning} onRefresh={() => void resource.refresh()} />
-    <div className="mb-3 flex flex-wrap gap-2 text-xs"><span className="rounded bg-brand-soft px-2 py-1 text-brand">{resource.data.executionMode}</span><span className="rounded bg-panel-2 px-2 py-1">Feed: {resource.data.marketDataMode}</span><span className={`rounded px-2 py-1 ${resource.data.engineReady ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>Engine {resource.data.engineReady ? "ready" : "starting"}</span></div>
+    <div className="mb-3 flex flex-wrap gap-2 text-xs"><span className="rounded bg-brand-soft px-2 py-1 text-brand">{resource.data.executionMode}</span><span className="rounded bg-panel-2 px-2 py-1">Feed: {resource.data.marketDataMode}</span><span className={`rounded px-2 py-1 ${resource.data.engineReady ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}`}>Engine {resource.data.engineReady ? "ready" : "starting"}</span></div>
     {error && <p role="alert" className="mb-3 rounded bg-down/10 p-2 text-xs text-down">{error}</p>}
     <div className="mb-3 flex flex-wrap items-center gap-2">
       <TableSearch value={search} onChange={setSearch} placeholder="Search symbol, email, or account number…" label="Search executions" />
@@ -1200,7 +1200,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
         rows={csvRows}
         disabled={filtered.length === 0}
       />
-      <span className="text-[10px] text-text-faint tnum" aria-live="polite">
+      <span className="text-(length:--term-text-2xs) text-text-faint tnum" aria-live="polite">
         {filtering
           ? `${filtered.length} of ${allPositions.length} positions`
           : `${allPositions.length} positions · ${userCount} user${userCount === 1 ? "" : "s"}`}
@@ -1230,7 +1230,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
                   {group.accountNo && group.accountNo !== group.label ? <span className="text-text-faint">#{group.accountNo}</span> : null}
                 </span>
                 <span className="flex flex-wrap items-center gap-2 text-text-muted tnum">
-                  {group.open > 0 && <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand">{group.open} open</span>}
+                  {group.open > 0 && <span className="rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-brand">{group.open} open</span>}
                   <span>
                     {(() => {
                       const total = userTotals.get(group.key) ?? group.positions.length;
@@ -1286,9 +1286,9 @@ function ExecutionPositionCard({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-sm font-semibold">{position.symbol}</span>
-            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${position.side === "BUY" ? "bg-up/15 text-up" : "bg-down/15 text-down"}`}>{position.side}</span>
-            <span className="rounded bg-panel-2 px-1.5 py-0.5 text-[10px] font-medium text-text-muted">{position.type ?? "CFD"}</span>
-            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${position.status === "OPEN" ? "bg-brand-soft text-brand" : "bg-panel-3 text-text-muted"}`}>{position.status}</span>
+            <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold ${position.side === "BUY" ? "bg-up/15 text-up" : "bg-down/15 text-down"}`}>{position.side}</span>
+            <span className="rounded bg-panel-2 px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium text-text-muted">{position.type ?? "CFD"}</span>
+            <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold ${position.status === "OPEN" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-panel-3 text-text-muted"}`}>{position.status}</span>
           </div>
           <div className="mt-1 text-xs text-text-muted">
             {fmtExecNumber(position.volume)} lots @ {fmtExecNumber(position.openRate ?? "0")}
@@ -1351,7 +1351,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
     setBusy(id); setError(null);
     try { await requestJson(`/api/admin/support/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status, resolutionNote }) }); await resource.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update case."); } finally { setBusy(null); }
   }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex justify-between"><SectionHeader title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} />{canManage && <Button loading={busy === "create"} onClick={() => void createCase()}>New case</Button>}</div>{error && <p role="alert" className="mb-3 rounded bg-down/10 p-2 text-xs text-down">{error}</p>}<div className="space-y-2">{resource.data.cases.map((item) => <article key={item.id} className="rounded-lg border border-border bg-canvas p-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="text-xs text-text-faint">{item.reference} · {item.priority} · {item.category}{item.brandDomain && <span className="ml-1.5 rounded bg-brand-soft px-1 py-px text-[9px] font-semibold text-brand">{item.brandDomain}</span>}</div><h3 className="mt-1 text-sm font-medium">{item.subject}</h3><p className="mt-1 max-w-3xl text-xs text-text-muted">{item.description}</p></div><div className="text-right"><span className="text-xs font-medium">{item.status}</span>{canManage && item.status !== "RESOLVED" && item.status !== "CLOSED" && <div className="mt-2 flex gap-2"><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "IN_PROGRESS")} className="rounded border border-border px-2 py-1 text-xs">Assign to me</button><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "RESOLVED")} className="rounded bg-brand px-2 py-1 text-xs text-white">Resolve</button></div>}</div></div></article>)}{resource.data.cases.length === 0 && <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">No support cases.</div>}</div>{commandDialog}</div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex justify-between"><SectionHeader title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} />{canManage && <Button loading={busy === "create"} onClick={() => void createCase()}>New case</Button>}</div>{error && <p role="alert" className="mb-3 rounded bg-down/10 p-2 text-xs text-down">{error}</p>}<div className="space-y-2">{resource.data.cases.map((item) => <article key={item.id} className="rounded-lg border border-border bg-canvas p-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="text-xs text-text-faint">{item.reference} · {item.priority} · {item.category}{item.brandDomain && <span className="ml-1.5 rounded bg-brand-soft px-1 py-px text-(length:--term-text-2xs) font-semibold text-brand">{item.brandDomain}</span>}</div><h3 className="mt-1 text-sm font-medium">{item.subject}</h3><p className="mt-1 max-w-3xl text-xs text-text-muted">{item.description}</p></div><div className="text-right"><span className="text-xs font-medium">{item.status}</span>{canManage && item.status !== "RESOLVED" && item.status !== "CLOSED" && <div className="mt-2 flex gap-2"><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "IN_PROGRESS")} className="rounded border border-border px-2 py-1 text-xs">Assign to me</button><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "RESOLVED")} className="rounded bg-brand px-2 py-1 text-xs text-white">Resolve</button></div>}</div></div></article>)}{resource.data.cases.length === 0 && <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">No support cases.</div>}</div>{commandDialog}</div>}</ModuleState>;
 }
 
 interface InstrumentRow extends Record<string, unknown> { symbol: string; name: string; category: string; active: boolean; marginPerLot: string; commissionPerLot: string; swapLongPips: string; swapShortPips: string; feedSymbol: string | null }
@@ -1423,12 +1423,12 @@ function HealthCard({ name, status, latencyMs, detail, error }: { name: string; 
         <p className="text-xs font-semibold">{name}</p>
         <span className="flex items-center gap-1.5">
           <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden />
-          <span className={`text-[10px] font-bold ${tone}`}>{status}</span>
+          <span className={`text-(length:--term-text-2xs) font-bold ${tone}`}>{status}</span>
         </span>
       </div>
-      {latencyMs != null && <p className="mt-2 text-lg font-semibold tnum">{latencyMs}<span className="ml-0.5 text-[10px] font-normal text-text-faint">ms</span></p>}
-      {detail && <p className="mt-1 text-[11px] text-text-muted">{detail}</p>}
-      {error && <p className="mt-1 text-[11px] text-down">{error}</p>}
+      {latencyMs != null && <p className="mt-2 text-lg font-semibold tnum">{latencyMs}<span className="ml-0.5 text-(length:--term-text-2xs) font-normal text-text-faint">ms</span></p>}
+      {detail && <p className="mt-1 text-(length:--term-text-xs) text-text-muted">{detail}</p>}
+      {error && <p className="mt-1 text-(length:--term-text-xs) text-down">{error}</p>}
     </div>
   );
 }
@@ -1517,10 +1517,10 @@ function ChangesPanel({
               <article key={item.id} className="rounded-lg border border-border bg-canvas p-3">
                 <div className="flex flex-wrap justify-between gap-3">
                   <div>
-                    <div className="text-[10px] text-text-faint">{item.domain} · {item.status} · {new Date(item.createdAt).toLocaleString()}</div>
+                    <div className="text-(length:--term-text-2xs) text-text-faint">{item.domain} · {item.status} · {new Date(item.createdAt).toLocaleString()}</div>
                     <h3 className="mt-1 text-sm font-medium">{item.action} · {item.entityType} {item.entityId ?? ""}</h3>
-                    <pre className="mt-2 max-w-3xl overflow-auto rounded bg-panel-2 p-2 text-[10px]">{JSON.stringify(item.payload, null, 2)}</pre>
-                    <div className="mt-1 text-[10px] text-text-faint">Maker: {item.requestedById}{item.reviewedById ? ` · Checker: ${item.reviewedById}` : ""}</div>
+                    <pre className="mt-2 max-w-3xl overflow-auto rounded bg-panel-2 p-2 text-(length:--term-text-2xs)">{JSON.stringify(item.payload, null, 2)}</pre>
+                    <div className="mt-1 text-(length:--term-text-2xs) text-text-faint">Maker: {item.requestedById}{item.reviewedById ? ` · Checker: ${item.reviewedById}` : ""}</div>
                   </div>
                   {item.canReview && item.status === "PENDING" && (
                     <div className="flex gap-2">

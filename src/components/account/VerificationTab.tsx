@@ -110,7 +110,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
       <section aria-labelledby="verification-checklist-heading" className="rounded-lg border border-border bg-canvas p-4">
         <div className="flex items-center justify-between gap-3">
           <h3 id="verification-checklist-heading" className="text-sm font-medium">Verification checklist</h3>
-          <span className="text-[10px] font-semibold tnum text-text-muted">{progress}% complete</span>
+          <span className="text-(length:--term-text-2xs) font-semibold tnum text-text-muted">{progress}% complete</span>
         </div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-panel-3" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Verification progress">
           <div className={`h-full rounded-full transition-all ${progress === 100 ? "bg-up" : "bg-brand"}`} style={{ width: `${progress}%` }} />
@@ -151,7 +151,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
               max={dateYearsAgo(18)}
             />
             <div>
-              <label htmlFor="country-field" className="mb-1 block text-[11px] text-text-muted">Country</label>
+              <label htmlFor="country-field" className="mb-1 block text-(length:--term-text-xs) text-text-muted">Country</label>
               <select
                 id="country-field"
                 name="country"
@@ -173,7 +173,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
           </div>
 
           <div>
-            <label htmlFor={docTypeId} className="mb-1 block text-[11px] text-text-muted">
+            <label htmlFor={docTypeId} className="mb-1 block text-(length:--term-text-xs) text-text-muted">
               Document type
             </label>
             <select
@@ -190,7 +190,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
                 {ADDRESS_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
               </optgroup>
             </select>
-            <p className="mt-1 text-[10px] text-text-faint">The selected type must show as Verified above before submission.</p>
+            <p className="mt-1 text-(length:--term-text-2xs) text-text-faint">The selected type must show as Verified above before submission.</p>
           </div>
 
           {error ? (
@@ -213,7 +213,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
       {status === "PENDING" && kyc && (
         <section aria-labelledby="pending-summary-heading" className="rounded-lg border border-border bg-canvas p-6">
           <h3 id="pending-summary-heading" className="text-sm font-medium">Submitted details</h3>
-          <p className="mt-1 text-[11px] text-text-faint">Under compliance review — this is what we received.</p>
+          <p className="mt-1 text-(length:--term-text-xs) text-text-faint">Under compliance review — this is what we received.</p>
           <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
             <SummaryRow label="Name" value={[kyc.firstName, kyc.lastName].filter(Boolean).join(" ")} />
             <SummaryRow label="Document type" value={kyc.docType ?? "—"} />
@@ -319,7 +319,7 @@ function Field({
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-[11px] text-text-muted">
+      <label htmlFor={id} className="mb-1 block text-(length:--term-text-xs) text-text-muted">
         {label}
       </label>
       <input

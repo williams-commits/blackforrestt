@@ -139,11 +139,11 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
                   </button>
 
                   {/* Quick stats */}
-                  <div className="flex items-center gap-3 text-[11px] shrink-0">
+                  <div className="flex items-center gap-3 text-(length:--term-text-xs) shrink-0">
                     {tags.length > 0 && (
                       <div className="hidden md:flex items-center gap-1">
                         {tags.map((tag) => (
-                          <span key={tag} className="rounded bg-brand-soft px-1.5 py-0.5 text-[9px] font-semibold text-brand">{tag}</span>
+                          <span key={tag} className="rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold text-brand">{tag}</span>
                         ))}
                       </div>
                     )}
@@ -155,7 +155,7 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
                     {canManage && <EditGroupButton group={g} onSaved={() => void refresh()} />}
                     <button
                       onClick={() => setSelected(g.id)}
-                      className="rounded-md bg-panel-2 px-3 py-1 text-[11px] font-medium text-text hover:bg-panel-3 transition"
+                      className="rounded-md bg-panel-2 px-3 py-1 text-(length:--term-text-xs) font-medium text-text hover:bg-panel-3 transition"
                     >
                       Open →
                     </button>
@@ -215,7 +215,7 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
                           />
                         </div>
                       ) : (
-                        <span className="text-[11px] text-text-faint">Using global defaults — no overrides configured</span>
+                        <span className="text-(length:--term-text-xs) text-text-faint">Using global defaults — no overrides configured</span>
                       )}
                     </CollapsibleSection>
 
@@ -260,23 +260,23 @@ function GroupMemberPreview({ groupId }: { groupId: string }) {
       </div>
     );
   }
-  if (!members || members.length === 0) return <p className="text-[11px] text-text-faint">No members</p>;
+  if (!members || members.length === 0) return <p className="text-(length:--term-text-xs) text-text-faint">No members</p>;
 
   const totalBalance = members.reduce((s, m) => s + m.user.balance, 0);
   return (
     <div>
       <div className="flex items-center gap-3 mb-1.5">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-text-faint">Members</p>
-        <span className="text-[10px] text-text-faint">Total balance: ${totalBalance.toFixed(2)}</span>
+        <p className="text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">Members</p>
+        <span className="text-(length:--term-text-2xs) text-text-faint">Total balance: ${totalBalance.toFixed(2)}</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {members.slice(0, 8).map((m, i) => (
-          <span key={i} className="rounded-full bg-panel-2 border border-border px-2 py-0.5 text-[10px] text-text-muted">
+          <span key={i} className="rounded-full bg-panel-2 border border-border px-2 py-0.5 text-(length:--term-text-2xs) text-text-muted">
             {m.user.name ?? m.user.email ?? "Unknown"}
           </span>
         ))}
         {members.length > 8 && (
-          <span className="rounded-full bg-panel-2 border border-border px-2 py-0.5 text-[10px] text-text-faint">
+          <span className="rounded-full bg-panel-2 border border-border px-2 py-0.5 text-(length:--term-text-2xs) text-text-faint">
             +{members.length - 8} more
           </span>
         )}
@@ -458,12 +458,12 @@ function AddMemberButton({ groupId, onAdded, existingIds }: { groupId: string; o
                   <div key={u.id} className="flex items-center justify-between border-b border-border-soft px-3 py-2 last:border-0">
                     <div className="min-w-0">
                       <div className="text-xs font-medium truncate">{u.name ?? "Unknown"}</div>
-                      <div className="text-[10px] text-text-faint truncate">{u.email} · {u.accountNo ?? "—"}</div>
+                      <div className="text-(length:--term-text-2xs) text-text-faint truncate">{u.email} · {u.accountNo ?? "—"}</div>
                     </div>
                     <button
                       onClick={() => already ? undefined : void add(u.id)}
                       disabled={already || adding === u.id}
-                      className={`shrink-0 rounded-md px-3 py-1 text-[11px] font-medium transition ${
+                      className={`shrink-0 rounded-md px-3 py-1 text-(length:--term-text-xs) font-medium transition ${
                         already ? "bg-panel-2 text-text-faint cursor-default" : "bg-brand text-white hover:brightness-110 disabled:opacity-50"
                       }`}
                     >
@@ -667,11 +667,11 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
             <table className="w-full text-sm">
               <thead className="bg-panel-2 text-text-faint">
                 <tr>
-                  <th className="px-3 py-2 text-left text-[10px] uppercase">Name</th>
-                  <th className="px-3 py-2 text-left text-[10px] uppercase">Account</th>
-                  <th className="px-3 py-2 text-right text-[10px] uppercase">Balance</th>
-                  <th className="px-3 py-2 text-right text-[10px] uppercase">Equity</th>
-                  <th className="px-3 py-2 text-right text-[10px] uppercase hidden md:table-cell">P/L</th>
+                  <th className="px-3 py-2 text-left text-(length:--term-text-2xs) uppercase">Name</th>
+                  <th className="px-3 py-2 text-left text-(length:--term-text-2xs) uppercase">Account</th>
+                  <th className="px-3 py-2 text-right text-(length:--term-text-2xs) uppercase">Balance</th>
+                  <th className="px-3 py-2 text-right text-(length:--term-text-2xs) uppercase">Equity</th>
+                  <th className="px-3 py-2 text-right text-(length:--term-text-2xs) uppercase hidden md:table-cell">P/L</th>
                   {canManage && <th className="px-3 py-2"></th>}
                 </tr>
               </thead>
@@ -683,7 +683,7 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
                         {!m.user.verified && <span className="h-1.5 w-1.5 rounded-full bg-down" title="Unverified" />}
                         <div>
                           <div className="text-xs font-medium">{m.user.name ?? "—"}</div>
-                          <div className="text-[10px] text-text-faint">{m.user.email}</div>
+                          <div className="text-(length:--term-text-2xs) text-text-faint">{m.user.email}</div>
                         </div>
                       </div>
                     </td>
@@ -697,7 +697,7 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
                       <td className="px-3 py-2">
                         <button
                           onClick={() => confirmRemove(m.user.id, m.user.name ?? m.user.email ?? "this member")}
-                          className="text-[10px] text-text-muted hover:text-down transition"
+                          className="text-(length:--term-text-2xs) text-text-muted hover:text-down transition"
                         >
                           Remove
                         </button>
@@ -910,8 +910,8 @@ function SettingsPreview({ settings }: { settings: Record<string, unknown> }) {
   }
   return (
     <div className="rounded-lg border border-border bg-panel px-4 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-text-faint mb-2">Active Settings</p>
-      <pre className="text-[10px] font-mono text-text-muted overflow-x-auto">{JSON.stringify(settings, null, 2)}</pre>
+      <p className="text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint mb-2">Active Settings</p>
+      <pre className="text-(length:--term-text-2xs) font-mono text-text-muted overflow-x-auto">{JSON.stringify(settings, null, 2)}</pre>
     </div>
   );
 }
@@ -930,7 +930,7 @@ function CollapsibleSection({ title, defaultOpen = false, children }: { title: s
           className={`text-text-faint transition-transform shrink-0 ${open ? "rotate-90" : ""}`}>
           <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-text-faint">{title}</span>
+        <span className="text-(length:--term-text-xs) font-semibold uppercase tracking-wide text-text-faint">{title}</span>
       </button>
       {open && <div className="px-3 pb-3 pt-1">{children}</div>}
     </div>
@@ -968,10 +968,10 @@ function SettingsCategory({ label, items }: { label: string; items: Array<{ labe
   if (items.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 py-1 border-b border-border-soft last:border-0">
-      <span className="text-[10px] font-bold uppercase tracking-wide text-text-faint w-28 shrink-0">{label}</span>
+      <span className="text-(length:--term-text-2xs) font-bold uppercase tracking-wide text-text-faint w-28 shrink-0">{label}</span>
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (
-          <span key={item.label} className="inline-flex items-center gap-1 text-[10px]">
+          <span key={item.label} className="inline-flex items-center gap-1 text-(length:--term-text-2xs)">
             <span className="text-text-muted">{item.label}:</span>
             {item.isBool ? (
               <span className={`rounded px-1.5 py-0.5 font-semibold ${item.boolVal ? "bg-up/15 text-up" : "bg-down/15 text-down"}`}>

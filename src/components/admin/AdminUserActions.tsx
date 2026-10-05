@@ -291,7 +291,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
   return (
     <>
       <div className="flex items-center justify-end gap-1.5">
-        <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase ${state === "active" ? "bg-up/10 text-up" : state === "suspended" ? "bg-brand-soft text-brand" : "bg-down/10 text-down"}`}>
+        <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold uppercase ${state === "active" ? "bg-(--term-success-bg) text-(--term-success-fg)" : state === "suspended" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}`}>
           {state}
         </span>
         <button
@@ -410,7 +410,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                       {copiedValue ? "✓ Copied" : "Copy"}
                     </button>
                   </div>
-                  <p className="text-[10px] text-text-faint">
+                  <p className="text-(length:--term-text-2xs) text-text-faint">
                     Case-sensitive, 6 characters. Deliver it to the user through a secure channel — the user should
                     change it after signing in (Account → Security).
                   </p>
@@ -422,7 +422,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
               </>
             ) : (
               <>
-                <div className={`rounded border px-3 py-2 text-xs ${resetResult.sent ? "border-up/30 bg-up/10 text-up" : "border-brand/30 bg-brand-soft text-brand"}`}>
+                <div className={`rounded border px-3 py-2 text-xs ${resetResult.sent ? "border-up/30 bg-(--term-success-bg) text-(--term-success-fg)" : "border-brand/30 bg-(--term-warning-bg) text-(--term-warning-fg)"}`}>
                   {resetResult.sent
                     ? `Reset link emailed to ${user.email}.`
                     : "Email delivery is not configured — use the link below."}
@@ -439,13 +439,13 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                         readOnly
                         value={resetResult.previewUrl}
                         onClick={(e) => (e.target as HTMLInputElement).select()}
-                        className="h-9 min-w-0 flex-1 rounded border border-border bg-panel px-2 font-mono text-[11px] outline-none"
+                        className="h-9 min-w-0 flex-1 rounded border border-border bg-panel px-2 font-mono text-(length:--term-text-xs) outline-none"
                       />
                       <button type="button" onClick={() => void copyValue(resetResult.previewUrl!)} className="shrink-0 rounded border border-border px-3 text-xs hover:bg-panel-2">
                         {copiedValue ? "✓ Copied" : "Copy"}
                       </button>
                     </div>
-                    <p className="text-[10px] text-text-faint">Hand this to the user through a secure channel — anyone with the link can set the password.</p>
+                    <p className="text-(length:--term-text-2xs) text-text-faint">Hand this to the user through a secure channel — anyone with the link can set the password.</p>
                   </div>
                 )}
               </>
@@ -492,7 +492,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 placeholder="GDPR erasure request, fraud cleanup, or compliance reference…"
                 className="w-full rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand resize-none"
               />
-              <p className="mt-2 text-[11px] text-down">
+              <p className="mt-2 text-(length:--term-text-xs) text-down">
                 This cannot be undone. The account, positions, transactions, documents, and chat history are
                 destroyed immediately. The audit entry recording this deletion is permanent. Accounts that ever
                 moved funds are protected by the ledger and will be refused.
@@ -544,7 +544,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
               <label className="mb-1 block text-xs font-medium" htmlFor="status-note">Note (optional, shown to the user in-app)</label>
               <textarea id="status-note" maxLength={500} rows={4} value={note} onChange={(e) => setNote(e.target.value)} className="w-full rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand" />
               {(user.suspendedAt || user.blockedAt || user.deletedAt) && (
-                <p className="mt-2 text-[10px] text-text-faint">
+                <p className="mt-2 text-(length:--term-text-2xs) text-text-faint">
                   Since: {fmtDateTime(user.suspendedAt ?? user.blockedAt ?? user.deletedAt!)}
                 </p>
               )}
@@ -576,7 +576,7 @@ function MenuItemRow({ onSelect, label, hint, tone = "text-text", icon }: { onSe
       {icon}
       <span className={`min-w-0 flex-1 ${tone}`}>
         <span className="block font-medium">{label}</span>
-        {hint && <span className="block text-[9px] text-text-faint">{hint}</span>}
+        {hint && <span className="block text-(length:--term-text-2xs) text-text-faint">{hint}</span>}
       </span>
     </button>
   );

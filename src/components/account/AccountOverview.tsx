@@ -75,7 +75,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
                 <button
                   type="button"
                   onClick={onOpenVerification}
-                  className="text-[10px] font-semibold text-brand hover:underline"
+                  className="text-(length:--term-text-2xs) font-semibold text-brand hover:underline"
                 >
                   <span className="inline-flex items-center gap-1">{kyc?.status === "REJECTED" ? "Resubmit" : "Start"}<ArrowRight size={11} strokeWidth={2} aria-hidden /></span>
                 </button>
@@ -83,7 +83,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
             </dd>
           </div>
           {kyc?.status === "REJECTED" && kyc.note && (
-            <p className="text-[10px] leading-snug text-down" title={kyc.note}>
+            <p className="text-(length:--term-text-2xs) leading-snug text-down" title={kyc.note}>
               Reason: {kyc.note}
             </p>
           )}
@@ -95,13 +95,13 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
       <div className="bg-canvas border border-border rounded-lg p-5">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-medium text-text-muted uppercase">Equity</h3>
-          <span className="text-[10px] text-text-faint">All values in USD</span>
+          <span className="text-(length:--term-text-2xs) text-text-faint">All values in USD</span>
         </div>
         <p className="mt-2 text-3xl font-semibold tnum leading-tight">{money(metrics.equity)}</p>
         <p className={`mt-1 text-xs font-medium tnum ${floatingUp ? "text-up" : "text-down"}`}>
           {floatingUp ? "▲" : "▼"} {money(Math.abs(floating))} floating P/L
         </p>
-        <p className="mt-1 text-[10px] text-text-faint">Equity = balance + floating P/L on open positions.</p>
+        <p className="mt-1 text-(length:--term-text-2xs) text-text-faint">Equity = balance + floating P/L on open positions.</p>
 
         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border-soft pt-3">
           <StatSmall icon={<Wallet size={12} strokeWidth={1.75} aria-hidden />} label="Balance" value={money(metrics.balance)} hint="Settled funds: approved deposits/withdrawals and closed-trade P/L. Excludes floating P/L." />
@@ -111,13 +111,13 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
         </div>
         <div className="mt-3 border-t border-border-soft pt-3">
           <div className="flex items-center justify-between">
-            <span className="flex items-center text-[11px] text-text-faint">Margin Level<InfoHint text={`Margin level = equity ÷ margin. Below ${marginWarningPercent}% is a warning; below 100% risks a margin call.`} /></span>
+            <span className="flex items-center text-(length:--term-text-xs) text-text-faint">Margin Level<InfoHint text={`Margin level = equity ÷ margin. Below ${marginWarningPercent}% is a warning; below 100% risks a margin call.`} /></span>
             <span className={`text-sm font-semibold tnum ${mlTone}`}>
               {ml != null ? `${ml.toFixed(2)}%` : "—"}
             </span>
           </div>
           {ml != null && ml < 125 && (
-            <p className={`mt-1 text-[10px] ${ml < 100 ? "text-down" : "text-brand"}`}>
+            <p className={`mt-1 text-(length:--term-text-2xs) ${ml < 100 ? "text-down" : "text-brand"}`}>
               {ml < 100 ? "Margin call territory — reduce exposure or deposit funds." : "Approaching margin thresholds — monitor open positions."}
             </p>
           )}
@@ -131,7 +131,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
           <span className="text-xs tnum font-semibold">{money(walletTotal)}</span>
         </div>
         {walletLocked > 0 && (
-          <p className="text-[10px] text-text-faint">{money(walletLocked)} locked in pending operations</p>
+          <p className="text-(length:--term-text-2xs) text-text-faint">{money(walletLocked)} locked in pending operations</p>
         )}
         <div className="space-y-2">
           {wallets.map((w) => (
@@ -141,7 +141,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
                 <div>
                   <div className="text-sm font-medium">{w.asset}</div>
                   {w.locked > 0 && (
-                    <div className="text-[11px] text-text-muted">
+                    <div className="text-(length:--term-text-xs) text-text-muted">
                       <Tooltip text="Reserved for pending withdrawals and open positions.">{w.locked.toFixed(2)} locked</Tooltip>
                     </div>
                   )}
@@ -149,7 +149,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
               </div>
               <div className="text-right">
                 <div className="text-sm tnum">{w.free.toFixed(2)}</div>
-                <div className="text-[10px] text-text-faint">
+                <div className="text-(length:--term-text-2xs) text-text-faint">
                   <Tooltip text="Free funds available to withdraw or trade.">available</Tooltip>
                 </div>
               </div>
@@ -186,12 +186,12 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
 function KycStatusChip({ status }: { status: "NOT_SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED" }) {
   const styles: Record<typeof status, { className: string; label: string }> = {
     NOT_SUBMITTED: { className: "bg-panel-3 text-text-muted", label: "Not submitted" },
-    PENDING: { className: "bg-brand-soft text-brand", label: "Under review" },
-    APPROVED: { className: "bg-up/10 text-up", label: "Verified" },
-    REJECTED: { className: "bg-down/10 text-down", label: "Rejected" },
+    PENDING: { className: "bg-(--term-warning-bg) text-(--term-warning-fg)", label: "Under review" },
+    APPROVED: { className: "bg-(--term-success-bg) text-(--term-success-fg)", label: "Verified" },
+    REJECTED: { className: "bg-(--term-danger-bg) text-(--term-danger-fg)", label: "Rejected" },
   };
   const { className, label } = styles[status];
-  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${className}`}>{label}</span>;
+  return <span className={`rounded-full px-2 py-0.5 text-(length:--term-text-2xs) font-semibold ${className}`}>{label}</span>;
 }
 
 function Row({ label, value, valueClass = "" }: { label: string; value: string; valueClass?: string }) {
@@ -206,7 +206,7 @@ function Row({ label, value, valueClass = "" }: { label: string; value: string; 
 function StatSmall({ label, value, hint, icon }: { label: string; value: string; hint?: string; icon?: React.ReactNode }) {
   return (
     <div>
-      <div className="flex items-center gap-1 text-[11px] text-text-faint">{icon}{label}{hint && <InfoHint text={hint} />}</div>
+      <div className="flex items-center gap-1 text-(length:--term-text-xs) text-text-faint">{icon}{label}{hint && <InfoHint text={hint} />}</div>
       <div className="text-sm tnum">{value}</div>
     </div>
   );

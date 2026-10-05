@@ -43,19 +43,19 @@ interface PaymentView {
 const PAGE_SIZE = 10;
 
 const STATUS_STYLES: Record<PaymentView["status"], string> = {
-  PENDING: "bg-brand-soft text-brand",
+  PENDING: "bg-(--term-warning-bg) text-(--term-warning-fg)",
   AWAITING_APPROVAL: "bg-brand/10 text-brand border border-brand/30",
-  APPROVED: "bg-up/10 text-up",
-  REJECTED: "bg-down/10 text-down",
+  APPROVED: "bg-(--term-success-bg) text-(--term-success-fg)",
+  REJECTED: "bg-(--term-danger-bg) text-(--term-danger-fg)",
   CANCELLED: "bg-panel-3 text-text-muted",
   REVERSED: "bg-panel-3 text-text-muted border border-border",
 };
 
 const PROOF_STYLES: Record<PaymentProofView["status"], string> = {
-  CLEAN: "bg-up/10 text-up",
-  PENDING_SCAN: "bg-brand-soft text-brand",
-  BLOCKED: "bg-down/10 text-down",
-  QUARANTINED: "bg-down/10 text-down",
+  CLEAN: "bg-(--term-success-bg) text-(--term-success-fg)",
+  PENDING_SCAN: "bg-(--term-warning-bg) text-(--term-warning-fg)",
+  BLOCKED: "bg-(--term-danger-bg) text-(--term-danger-fg)",
+  QUARANTINED: "bg-(--term-danger-bg) text-(--term-danger-fg)",
 };
 
 function formatBytes(bytes: number): string {
@@ -189,7 +189,7 @@ export function PaymentTimeline() {
           <p className="mt-1 text-xs text-text-muted">Deposit proofs are required and verified before finance review. Optional withdrawal supporting documents use the same private quarantine and scanning workflow.</p>
         </div>
         {pendingCount > 0 && (
-          <span className="rounded-full border border-brand/30 bg-brand-soft px-2.5 py-1 text-[10px] font-semibold text-brand">
+          <span className="rounded-full border border-brand/30 bg-brand-soft px-2.5 py-1 text-(length:--term-text-2xs) font-semibold text-brand">
             {pendingCount} awaiting review
           </span>
         )}
@@ -249,11 +249,11 @@ export function PaymentTimeline() {
                         className="mt-1.5 inline-flex items-center gap-1 text-xs text-brand hover:underline"
                       >
                         {expandedId === request.id ? "Hide full details" : "Show full details"}
-                        <span aria-hidden className="text-[9px]">{expandedId === request.id ? "▲" : "▼"}</span>
+                        <span aria-hidden className="text-(length:--term-text-2xs)">{expandedId === request.id ? "▲" : "▼"}</span>
                       </button>
                     )}
                   </div>
-                    <span className={`rounded px-2 py-1 text-[10px] font-medium ${STATUS_STYLES[request.status]}`}>
+                    <span className={`rounded px-2 py-1 text-(length:--term-text-2xs) font-medium ${STATUS_STYLES[request.status]}`}>
                       {request.status.replaceAll("_", " ")}
                     </span>
                   </div>
@@ -270,7 +270,7 @@ export function PaymentTimeline() {
                     )}
                     {request.proofs.map((proof) => (
                       <Tooltip key={proof.id} text={`${proof.declaredMime} · ${formatBytes(proof.sizeBytes)} · ${fmtDateTime(proof.uploadedAt)}`}>
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] ${PROOF_STYLES[proof.status]}`}>
+                        <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) ${PROOF_STYLES[proof.status]}`}>
                           Proof · {proof.status.replaceAll("_", " ").toLowerCase()} · {formatBytes(proof.sizeBytes)}
                         </span>
                       </Tooltip>

@@ -184,7 +184,7 @@ export function PaymentsReview({
                         onClick={() => toggleExpanded(item.id)}
                         aria-expanded={expandedIds.has(item.id)}
                         aria-label={expandedIds.has(item.id) ? "Hide full payment details" : "Show full payment details"}
-                        className="rounded px-1.5 py-1 text-[10px] text-text-faint hover:bg-panel-3 hover:text-brand"
+                        className="rounded px-1.5 py-1 text-(length:--term-text-2xs) text-text-faint hover:bg-panel-3 hover:text-brand"
                       >
                         {expandedIds.has(item.id) ? "▲" : "▼"}
                       </button>
@@ -192,8 +192,8 @@ export function PaymentsReview({
                   </td>
                   <td className="px-3 py-3 text-text-muted">{new Date(item.createdAt).toLocaleString()}</td>
                   <td className="px-3 py-3"><div className="font-medium">{item.user.name ?? item.user.email ?? "Unknown"}</div><div className="text-text-faint">#{item.user.accountNo ?? "—"} · {item.user.verified ? "Verified" : "Unverified"}</div></td>
-                  <td className="px-3 py-3"><span className={`rounded px-1.5 py-0.5 ${item.type === "DEPOSIT" ? "bg-up/10 text-up" : "bg-brand-soft text-brand"}`}>{item.type}</span></td>
-                  <td className="px-3 py-3"><div>{item.methodLabel}</div><div className="text-[10px] text-text-faint">{item.methodDetailsSummary ?? "Details unavailable"}</div></td>
+                  <td className="px-3 py-3"><span className={`rounded px-1.5 py-0.5 ${item.type === "DEPOSIT" ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-warning-bg) text-(--term-warning-fg)"}`}>{item.type}</span></td>
+                  <td className="px-3 py-3"><div>{item.methodLabel}</div><div className="text-(length:--term-text-2xs) text-text-faint">{item.methodDetailsSummary ?? "Details unavailable"}</div></td>
                   <td className="px-3 py-3 text-right font-semibold tnum">{item.asset} {item.amount}</td>
                   <td className="px-3 py-3 text-text-muted">{item.userReference ?? "—"}</td>
                   <td className="px-3 py-3">
@@ -204,7 +204,7 @@ export function PaymentsReview({
                       {canPrepare && <Button size="sm" variant="ghost" disabled={busy === item.id} onClick={() => decide(item.id, "REJECT")}>Reject</Button>}
                       {!canPrepare && !canApprove && <span className="text-text-faint">Read only</span>}
                     </div>
-                    <div className="mt-1 text-right text-[10px] text-text-faint">
+                    <div className="mt-1 text-right text-(length:--term-text-2xs) text-text-faint">
                       {item.type === "DEPOSIT" && item.method !== "CARD"
                         ? `Proof: ${item.proofs.some((proof) => proof.status === "CLEAN") ? "clean" : "missing"}`
                         : item.methodDetailsSummary ?? item.beneficiarySummary ?? "Destination missing"}
@@ -215,7 +215,7 @@ export function PaymentsReview({
                 {expandedIds.has(item.id) && item.methodDetails && (
                   <tr className="bg-panel-2/30">
                     <td colSpan={8} className="px-4 py-3">
-                      <p className="mb-2 text-[10px] uppercase tracking-wide text-text-faint">Full payment details</p>
+                      <p className="mb-2 text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">Full payment details</p>
                       <MethodDetailsGrid details={item.methodDetails} />
                     </td>
                   </tr>

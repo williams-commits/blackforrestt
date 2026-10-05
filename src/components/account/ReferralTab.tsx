@@ -163,10 +163,10 @@ export function ReferralTab() {
             <table className="w-full text-sm">
               <thead className="bg-panel-2 text-text-faint">
                 <tr>
-                  <th className="px-3 py-2 text-left text-[10px] uppercase">User</th>
-                  <th className="px-3 py-2 text-left text-[10px] uppercase hidden sm:table-cell">Date</th>
-                  <th className="px-3 py-2 text-center text-[10px] uppercase">Status</th>
-                  <th className="px-3 py-2 text-right text-[10px] uppercase">Reward</th>
+                  <th className="px-3 py-2 text-left text-(length:--term-text-2xs) uppercase">User</th>
+                  <th className="px-3 py-2 text-left text-(length:--term-text-2xs) uppercase hidden sm:table-cell">Date</th>
+                  <th className="px-3 py-2 text-center text-(length:--term-text-2xs) uppercase">Status</th>
+                  <th className="px-3 py-2 text-right text-(length:--term-text-2xs) uppercase">Reward</th>
                 </tr>
               </thead>
               <tbody>
@@ -174,15 +174,15 @@ export function ReferralTab() {
                   <tr key={r.id} className="border-t border-border-soft">
                     <td className="px-3 py-2">
                       <div className="text-xs font-medium">{r.referred.name ?? "Unknown"}</div>
-                      <div className="text-[10px] text-text-faint">{r.referred.email}</div>
+                      <div className="text-(length:--term-text-2xs) text-text-faint">{r.referred.email}</div>
                     </td>
                     <td className="px-3 py-2 text-xs text-text-muted hidden sm:table-cell">
                       {fmtDate(r.createdAt)}
                     </td>
                     <td className="px-3 py-2 text-center">
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                      <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold ${
                         r.status === "COMPLETED" ? "bg-up/15 text-up" :
-                        r.status === "PENDING" ? "bg-brand-soft text-brand" :
+                        r.status === "PENDING" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" :
                         "bg-down/15 text-down"
                       }`}>
                         {r.status === "COMPLETED" ? "Completed" : r.status === "PENDING" ? "Pending" : "Rejected"}
@@ -205,7 +205,7 @@ export function ReferralTab() {
 function StatCard({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
   return (
     <div className="rounded-lg border border-border bg-canvas p-3">
-      <div className="text-[10px] uppercase text-text-faint">{label}</div>
+      <div className="text-(length:--term-text-2xs) uppercase text-text-faint">{label}</div>
       <div className={`mt-1 text-lg font-bold tnum ${highlight ? "text-up" : "text-text"}`}>{value}</div>
     </div>
   );

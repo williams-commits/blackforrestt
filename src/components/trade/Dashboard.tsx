@@ -49,7 +49,7 @@ export function Dashboard({
   }, [initialInterval, setInterval]);
 
   return (
-    <div className="trade-workspace flex min-h-dvh w-full flex-col overflow-x-hidden bg-canvas md:h-dvh md:overflow-hidden lg:h-screen">
+    <div className="trade-workspace terminal-ui flex min-h-dvh w-full flex-col overflow-x-hidden bg-canvas md:h-dvh md:overflow-hidden lg:h-screen">
       <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} walletAddresses={walletAddresses} marginWarningPercent={marginWarningPercent} onOpenAssets={() => setAssetModalOpen(true)} />
       <MarketStatusBanner marketDataMode={marketDataMode} wsStatus={status} />
 

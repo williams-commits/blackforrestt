@@ -36,7 +36,7 @@ export function MarketStatusBanner({
     <div
       role="status"
       aria-live="polite"
-      className={`flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 border-b px-3 py-1 text-[10px] ${offline || stale ? "border-down/30 bg-down/10 text-down" : "border-brand/30 bg-brand-soft text-brand"}`}
+      className={`flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 border-b px-3 py-1 text-(length:--term-text-2xs) ${offline || stale ? "border-down/30 bg-down/10 text-down" : "border-brand/30 bg-brand-soft text-brand"}`}
     >
       <span className="flex items-center gap-x-1">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">

@@ -18,11 +18,11 @@ export function AccountReconciliationStatus({ status }: { status: Reconciliation
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="account-reconciliation-heading" className="text-sm font-semibold">Account integrity and reconciliation</h2>
-          <p className="mt-1 text-[11px] text-text-muted">
+          <p className="mt-1 text-(length:--term-text-xs) text-text-muted">
             Independent checks compare ledger balances, wallet projections, position settlement, and payment records.
           </p>
         </div>
-        <span role="status" className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${stateClass}`}>{state}</span>
+        <span role="status" className={`rounded-full border px-2.5 py-1 text-(length:--term-text-2xs) font-semibold ${stateClass}`}>{state}</span>
       </div>
 
       <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -53,7 +53,7 @@ export function AccountReconciliationStatus({ status }: { status: Reconciliation
 function Metric({ label, value, alert = false }: { label: string; value: string; alert?: boolean }) {
   return (
     <div className="rounded border border-border-soft bg-panel-2/50 p-2.5">
-      <dt className="text-[9px] uppercase tracking-wide text-text-faint">{label}</dt>
+      <dt className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">{label}</dt>
       <dd className={`mt-1 text-xs font-semibold ${alert ? "text-down" : "text-text"}`}>{value}</dd>
     </div>
   );

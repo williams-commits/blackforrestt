@@ -23,9 +23,9 @@ export function StatCard({
     tone === "up" ? "text-up" : tone === "down" ? "text-down" : tone === "warn" ? "text-brand" : "text-text";
   const body = (
     <>
-      <p className="text-[10px] font-medium uppercase tracking-wide text-text-faint">{label}</p>
+      <p className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">{label}</p>
       <p className={`mt-1 text-lg font-semibold tnum leading-tight ${toneClass}`}>{value}</p>
-      {hint && <p className="mt-1 text-[10px] text-text-faint">{hint}</p>}
+      {hint && <p className="mt-1 text-(length:--term-text-2xs) text-text-faint">{hint}</p>}
     </>
   );
   if (onClick) {

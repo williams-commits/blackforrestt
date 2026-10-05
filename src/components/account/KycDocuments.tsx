@@ -149,14 +149,14 @@ export function KycDocuments() {
     <section className="space-y-4 rounded-lg border border-border bg-canvas p-4 sm:p-6">
       <div>
         <h3 className="text-sm font-medium">Identity and proof-of-address documents</h3>
-        <p className="mt-1 text-[11px] text-text-faint">
+        <p className="mt-1 text-(length:--term-text-xs) text-text-faint">
           Upload at least one identity document and one proof-of-address document. Files are scanned and sealed in private storage.
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] sm:items-end">
         <div>
-          <label htmlFor={selectId} className="mb-1 block text-[11px] text-text-muted">Document type</label>
+          <label htmlFor={selectId} className="mb-1 block text-(length:--term-text-xs) text-text-muted">Document type</label>
           <select
             id={selectId}
             value={selectedType}
@@ -172,7 +172,7 @@ export function KycDocuments() {
           </select>
         </div>
         <div>
-          <label htmlFor={fileId} className="mb-1 block text-[11px] text-text-muted">File</label>
+          <label htmlFor={fileId} className="mb-1 block text-(length:--term-text-xs) text-text-muted">File</label>
           <input
             id={fileId}
             type="file"
@@ -195,7 +195,7 @@ export function KycDocuments() {
             <article key={type.value} className="flex min-w-0 items-center justify-between gap-3 rounded border border-border-soft p-3">
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">{type.label}</div>
-                <div className="truncate text-[11px] text-text-faint">
+                <div className="truncate text-(length:--term-text-xs) text-text-faint">
                   {latest ? `${statusLabel(latest.status)} · ${fmtSize(latest.sizeBytes)}${latest.sha256 ? ` · ${latest.sha256.slice(0, 10)}…` : ""}` : "Not uploaded"}
                 </div>
               </div>

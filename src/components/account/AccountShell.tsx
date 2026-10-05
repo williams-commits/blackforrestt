@@ -287,21 +287,21 @@ export function AccountShell(props: Props) {
     const iconEl = icon ? <TabIcon key="icon" icon={icon} /> : null;
     const badgeFor: Record<string, React.ReactNode> = {};
     if (item.key === "positions" && openPositionCount > 0) {
-      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-panel-3 px-1.5 py-0.5 text-[9px] font-bold text-text-muted">{openPositionCount}</span>;
+      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-panel-3 px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-text-muted">{openPositionCount}</span>;
     }
     if (item.key === "verification" && verificationNeeded) {
-      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">!</span>;
+      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-white">!</span>;
     }
     // Unread badges — after a toast fires these steer the user to the tab that
     // holds the history (toasts no longer consume the unread state).
     if (item.key === "notifications" && unreadNotifications > 0) {
-      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>;
+      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>;
     }
     if (item.key === "messages" && unreadMessages > 0) {
-      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">{unreadMessages > 99 ? "99+" : unreadMessages}</span>;
+      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-white">{unreadMessages > 99 ? "99+" : unreadMessages}</span>;
     }
     if (item.key === "support" && openSupportCases > 0) {
-      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-panel-3 px-1.5 py-0.5 text-[9px] font-bold text-text-muted">{openSupportCases}</span>;
+      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-panel-3 px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-text-muted">{openSupportCases}</span>;
     }
     const badge = badgeFor[item.key];
     if (!iconEl && !badge) return item;
@@ -337,7 +337,7 @@ export function AccountShell(props: Props) {
       ) : (
         <div className="mb-5 flex items-center gap-2 rounded-lg border border-up/25 bg-up/5 px-3 py-2">
           <span className="h-2 w-2 rounded-full bg-up" aria-hidden />
-          <p className="text-[11px] text-text-muted">
+          <p className="text-(length:--term-text-xs) text-text-muted">
             Account integrity verified — balances, positions, and payments reconciled.
           </p>
         </div>

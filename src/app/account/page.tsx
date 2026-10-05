@@ -152,7 +152,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const unreadMessages = isOperator ? teamUnread.totalUnread : customerUnread;
 
   return (
-    <div className="min-h-screen bg-panel">
+    <div className="terminal-ui min-h-screen bg-panel">
       <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-canvas px-3 py-1 sm:flex-nowrap sm:px-4">
         <Logo />
         {/* Visible on every breakpoint — previously hidden below lg, which left

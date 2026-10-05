@@ -336,6 +336,66 @@ body {
   }
 }
 
+/* ── Terminal density & semantic tokens (authenticated app shells) ─────────
+   Scoped to `.terminal-ui` — the trading terminal, account portal, and
+   admin console. Marketing/(content) pages never carry the class, so
+   landing surfaces are untouched by the terminal redesign. Everything is
+   additive: components opt in during the sweep; nothing changes until
+   they reference these tokens. */
+.terminal-ui {
+  /* Data type scale — replaces per-component arbitrary px (9/10/11). */
+  --term-text-2xs: 10px; /* tickers, badge counts, table meta */
+  --term-text-xs: 11px;  /* dense table cells, axis labels */
+  --term-text-sm: 12px;  /* inputs, secondary controls */
+  --term-text-md: 13px;  /* body copy / default */
+
+  /* Row density for tables and docks. */
+  --term-row-sm: 28px;
+  --term-row-md: 34px;
+  --term-row-lg: 40px;
+
+  /* Semantic status pairs (bg / fg / border) — WCAG-checked on canvas and
+     panel. Mirrors the CRM's semantic tone model so both apps read alike. */
+  --term-success-bg: #e6f4ea;
+  --term-success-fg: #1e6b34;
+  --term-success-border: #bfe3c8;
+  --term-danger-bg: #fdeaea;
+  --term-danger-fg: #b02525;
+  --term-danger-border: #f3c1c1;
+  --term-warning-bg: #fdf3e0;
+  --term-warning-fg: #8a5a10;
+  --term-warning-border: #f0d9ac;
+  --term-info-bg: #e8f1fb;
+  --term-info-fg: #1d5a9e;
+  --term-info-border: #c4dcf2;
+
+  /* Fixed dark console band (admin operations header) — intentionally dark
+     in BOTH themes, same model as --color-surface-dark. Replaces the raw
+     slate-palette utilities so the console reads through the token system. */
+  --term-console-bg: #0f172a;
+  --term-console-fg: #f1f5f9;
+  --term-console-muted: #94a3b8;
+  --term-console-soft: #cbd5e1;
+  --term-console-border: #334155;
+  --term-console-active: #1e293b;
+}
+
+html.dim .terminal-ui {
+  /* Same semantics, lifted for dark canvases (AA on #0e1116/#161b22). */
+  --term-success-bg: #12291a;
+  --term-success-fg: #69c98a;
+  --term-success-border: #1f4530;
+  --term-danger-bg: #331a1c;
+  --term-danger-fg: #f08a8a;
+  --term-danger-border: #54282c;
+  --term-warning-bg: #33280f;
+  --term-warning-fg: #e5b95f;
+  --term-warning-border: #55431c;
+  --term-info-bg: #14273c;
+  --term-info-fg: #7db6ea;
+  --term-info-border: #224363;
+}
+
 /* ── Trade terminal scaling on large desktop monitors ─────────────────────
    The terminal uses small fixed px sizes (10–12px fonts, 340px panels) tuned
    for laptop densities. On large/high-resolution monitors running at native

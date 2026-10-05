@@ -173,7 +173,7 @@ export function SettingsTab({ user }: { user: User }) {
       <form onSubmit={changePassword} className="space-y-4 rounded-lg border border-border bg-canvas p-6">
         <div>
           <h3 className="text-sm font-medium">Change password</h3>
-          <p className="mt-1 text-[11px] text-text-faint">
+          <p className="mt-1 text-(length:--term-text-xs) text-text-faint">
             Use at least 6 characters.
           </p>
         </div>
@@ -217,7 +217,7 @@ export function SettingsTab({ user }: { user: User }) {
           minLength={PASSWORD_MIN_LENGTH}
           maxLength={128}
         />
-        <label className="flex w-fit cursor-pointer items-center gap-2 text-[11px] text-text-muted">
+        <label className="flex w-fit cursor-pointer items-center gap-2 text-(length:--term-text-xs) text-text-muted">
           <input
             type="checkbox"
             checked={showPasswords}
@@ -252,8 +252,8 @@ function NoticeView({ notice }: { notice: Notice }) {
       role={notice.kind === "err" ? "alert" : "status"}
       className={`rounded border px-3 py-2 text-xs ${
         notice.kind === "ok"
-          ? "border-up/30 bg-up/10 text-up"
-          : "border-down/30 bg-down/10 text-down"
+          ? "border-up/30 bg-(--term-success-bg) text-(--term-success-fg)"
+          : "border-down/30 bg-(--term-danger-bg) text-(--term-danger-fg)"
       }`}
     >
       {notice.text}
@@ -283,7 +283,7 @@ function Field({
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-[11px] text-text-muted">
+      <label htmlFor={id} className="mb-1 block text-(length:--term-text-xs) text-text-muted">
         {label}
       </label>
       <input
@@ -312,7 +312,7 @@ function ReadonlyField({
 }) {
   return (
     <div>
-      <div className="mb-1 text-[11px] text-text-muted">{label}</div>
+      <div className="mb-1 text-(length:--term-text-xs) text-text-muted">{label}</div>
       <div className="flex h-10 items-center rounded border border-border bg-panel-2 px-3 text-sm text-text-muted">
         <span className={valueClass}>{value}</span>
       </div>

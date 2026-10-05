@@ -52,7 +52,7 @@ export function AccountUserMenu({
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand">{initial}</span>
           <span className="min-w-0 hidden sm:block">
             <span className="block truncate text-xs font-medium text-text">{displayName}</span>
-            <span className="block truncate text-[10px] text-text-faint">#{accountNo ?? "—"}</span>
+            <span className="block truncate text-(length:--term-text-2xs) text-text-faint">#{accountNo ?? "—"}</span>
           </span>
           <span aria-hidden="true" className={`text-xs text-text-muted transition-transform}`}>
             <ChevronIcon open={open} />
@@ -65,7 +65,7 @@ export function AccountUserMenu({
         <div role="menu" className="absolute right-0 z-50 mt-1 w-64 overflow-hidden rounded-lg border border-border bg-canvas shadow-xl">
           <div className="border-b border-border bg-panel-2/60 px-4 py-3">
             <div className="truncate text-xs font-semibold">{displayName}</div>
-            <div className="truncate text-[10px] text-text-faint">{email}</div>
+            <div className="truncate text-(length:--term-text-2xs) text-text-faint">{email}</div>
           </div>
           <div className="p-1 text-xs">
             <AccountMenuLink href="/account" label="My account" onSelect={() => setOpen(false)} icon={<AccountIcon />} />

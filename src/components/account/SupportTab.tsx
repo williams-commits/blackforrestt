@@ -21,9 +21,9 @@ interface SupportCase {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  OPEN: "bg-brand-soft text-brand",
+  OPEN: "bg-(--term-warning-bg) text-(--term-warning-fg)",
   IN_PROGRESS: "bg-brand/15 text-brand",
-  WAITING_CUSTOMER: "bg-up/10 text-up",
+  WAITING_CUSTOMER: "bg-(--term-success-bg) text-(--term-success-fg)",
   RESOLVED: "bg-up/15 text-up",
   CLOSED: "bg-panel-2 text-text-faint",
 };
@@ -158,11 +158,11 @@ export function SupportTab() {
               {(["OPEN", "IN_PROGRESS", "WAITING_CUSTOMER"] as const).map((st) => {
                 const n = cases.filter((c) => c.status === st).length;
                 if (!n) return null;
-                return <span key={st} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[st]}`}>{n} {STATUS_LABELS[st]}</span>;
+                return <span key={st} className={`rounded-full px-2 py-0.5 text-(length:--term-text-2xs) font-semibold ${STATUS_STYLES[st]}`}>{n} {STATUS_LABELS[st]}</span>;
               })}
               {(() => {
                 const done = cases.filter((c) => c.status === "RESOLVED" || c.status === "CLOSED").length;
-                return done > 0 ? <span className="rounded-full bg-panel-3 px-2 py-0.5 text-[10px] font-semibold text-text-muted">{done} resolved</span> : null;
+                return done > 0 ? <span className="rounded-full bg-panel-3 px-2 py-0.5 text-(length:--term-text-2xs) font-semibold text-text-muted">{done} resolved</span> : null;
               })()}
             </span>
           )}
@@ -195,7 +195,7 @@ export function SupportTab() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs text-text-faint">{c.reference}</span>
-                    <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[c.status] ?? "bg-panel-3 text-text-muted"}`}>
+                    <span className={`rounded px-2 py-0.5 text-(length:--term-text-2xs) font-semibold ${STATUS_STYLES[c.status] ?? "bg-panel-3 text-text-muted"}`}>
                       {STATUS_LABELS[c.status] ?? c.status}
                     </span>
                   </div>
@@ -209,7 +209,7 @@ export function SupportTab() {
                   </p>
                 )}
                 {c.status === "WAITING_CUSTOMER" && (
-                  <p className="mt-2 text-[11px] font-medium text-up">Awaiting your response — reply via chat or update this case.</p>
+                  <p className="mt-2 text-(length:--term-text-xs) font-medium text-up">Awaiting your response — reply via chat or update this case.</p>
                 )}
               </li>
             ))}

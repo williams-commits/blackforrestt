@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForexStore } from "@/lib/store";
 import { closePosition } from "@/hooks/useOpenPosition";
+import { useMemo } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { TerminalTable } from "@/components/trade/TerminalTable";
 import { toast } from "@/lib/toast";
 import { fmtPrice, fmtNum } from "@/lib/format";
 import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";
@@ -43,7 +46,7 @@ export function PositionsTable({ instruments }: Props) {
           <TabButton active={tab === "open"} onClick={() => setTab("open")}>
             Open Positions
             {positions.length > 0 && (
-              <span className="ml-1 text-[9px] bg-brand text-white rounded-full px-1.5 py-px font-medium">
+              <span className="ml-1 text-(length:--term-text-2xs) bg-brand text-white rounded-full px-1.5 py-px font-medium">
                 {positions.length}
               </span>
             )}
@@ -55,8 +58,8 @@ export function PositionsTable({ instruments }: Props) {
         {tab === "open" && positions.length > 0 && (
           <div className="ml-auto flex items-center gap-3">
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-text-faint uppercase">Floating P/L</span>
-              <span className={`text-[12px] font-bold tnum ${totalFloating >= 0 ? "text-up" : "text-down"}`}>
+              <span className="text-(length:--term-text-2xs) text-text-faint uppercase">Floating P/L</span>
+              <span className={`text-(length:--term-text-sm) font-bold tnum ${totalFloating >= 0 ? "text-up" : "text-down"}`}>
                 {totalFloating >= 0 ? "+" : ""}{fmtNum(totalFloating, 2)} USD
               </span>
             </div>
@@ -122,14 +125,14 @@ function EmptyState({ title, hint }: { title: string; hint?: string }) {
         <path d="M3 9h18M9 21V9" />
       </svg>
       <span className="text-xs">{title}</span>
-      {hint && <span className="text-[10px] text-text-faint">{hint}</span>}
+      {hint && <span className="text-(length:--term-text-2xs) text-text-faint">{hint}</span>}
     </div>
   );
 }
 
 function SideBadge({ side, type }: { side: "BUY" | "SELL"; type: "CFD" | "STRIKE" }) {
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+    <span className={`inline-flex items-center gap-1 text-(length:--term-text-2xs) font-semibold px-1.5 py-0.5 rounded ${
       side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"
     }`}>
       {side === "BUY" ? "▲" : "▼"} {type === "STRIKE" ? "STRIKE" : "CFD"} {side}
@@ -177,9 +180,9 @@ function OpenPositionCards({
               <div className="flex items-center gap-2">
                 <SideBadge side={p.side} type={p.type} />
                 <span className="text-sm font-bold">{p.symbol}</span>
-                <span className="text-[11px] text-text-faint tnum">{fmtNum(p.volume, 2)}</span>
+                <span className="text-(length:--term-text-xs) text-text-faint tnum">{fmtNum(p.volume, 2)}</span>
               </div>
-              <div className="mt-0.5 flex items-center gap-1.5 text-[10px] tnum text-text-faint">
+              <div className="mt-0.5 flex items-center gap-1.5 text-(length:--term-text-2xs) tnum text-text-faint">
                 <span>{fmtPrice(p.openRate, digits)}</span>
                 <span aria-hidden>→</span>
                 <span className="font-medium text-text-muted">{fmtPrice(p.currentRate, digits)}</span>
@@ -191,7 +194,7 @@ function OpenPositionCards({
               <span className={`text-sm font-bold tnum ${up ? "text-up" : "text-down"}`}>
                 {up ? "+" : ""}{fmtNum(p.netProfit, 2)}
               </span>
-              <span className="text-[9px] uppercase tracking-wide text-text-faint">P/L USD</span>
+              <span className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">P/L USD</span>
             </div>
             <button
               type="button"
@@ -209,7 +212,9 @@ function OpenPositionCards({
   );
 }
 
-/** Open positions tab (md+) — live data from WS store. */
+/** Open positions tab (md+) — live WS data on TerminalTable (TanStack core).
+ *  Row clicks navigate via the built-in interactive-descendant guard, so the
+ *  per-row Close button and SymbolLinks never double-fire. */
 function OpenPositionsTable({
   positions,
   digitsFor,
@@ -223,68 +228,45 @@ function OpenPositionsTable({
 }) {
   const router = useRouter();
   const close = makeCloseHandler(busy, setBusy);
-  if (positions.length === 0) {
-    return <EmptyState title="No open positions" hint="Use the trade panel to open a position" />;
-  }
+
+  const columns = useMemo<ColumnDef<PositionView, unknown>[]>(
+    () => [
+      { accessorKey: "openedAt", header: "Time", meta: { cellClass: "hidden sm:table-cell", headerClass: "hidden sm:table-cell" }, cell: (info) => <span className="tnum text-text-muted">{fmtTime(info.getValue() as number)}</span> },
+      { id: "type", header: "Type", cell: (info) => { const p = info.row.original; return <SideBadge side={p.side} type={p.type} />; } },
+      { accessorKey: "symbol", header: "Asset", cell: (info) => <span className="font-semibold"><SymbolLink symbol={info.getValue() as string} /></span> },
+      { accessorKey: "volume", header: "Volume", meta: { cellClass: "text-right", headerClass: "text-right" }, cell: (info) => <span className="tnum">{fmtNum(info.getValue() as number, 2)}</span> },
+      { accessorKey: "openRate", header: "Open Rate", meta: { cellClass: "text-right", headerClass: "text-right" }, cell: (info) => <span className="tnum">{fmtPrice(info.getValue() as number, digitsFor(info.row.original.symbol))}</span> },
+      { id: "stopLoss", header: "S/L", meta: { cellClass: "text-right hidden md:table-cell", headerClass: "text-right hidden md:table-cell" }, cell: (info) => { const p = info.row.original; return <span className="tnum text-text-muted">{p.stopLoss != null ? fmtPrice(p.stopLoss, digitsFor(p.symbol)) : "—"}</span>; } },
+      { id: "takeProfit", header: "T/P", meta: { cellClass: "text-right hidden md:table-cell", headerClass: "text-right hidden md:table-cell" }, cell: (info) => { const p = info.row.original; return <span className="tnum text-text-muted">{p.takeProfit != null ? fmtPrice(p.takeProfit, digitsFor(p.symbol)) : "—"}</span>; } },
+      { accessorKey: "swap", header: "Swap", meta: { cellClass: "text-right hidden lg:table-cell", headerClass: "text-right hidden lg:table-cell" }, cell: (info) => <span className="tnum text-text-muted">{fmtNum(info.getValue() as number, 2)}</span> },
+      { id: "commission", header: "Commission", meta: { cellClass: "text-right hidden lg:table-cell", headerClass: "text-right hidden lg:table-cell" }, cell: (info) => <span className="tnum text-text-muted">{fmtNum((info.row.original as PositionView).commission + (info.row.original as PositionView).tradingCommission, 2)}</span> },
+      { accessorKey: "currentRate", header: "Current", meta: { cellClass: "text-right", headerClass: "text-right" }, cell: (info) => <span className="tnum">{fmtPrice(info.getValue() as number, digitsFor(info.row.original.symbol))}</span> },
+      { id: "netProfit", header: "Net P/L", meta: { cellClass: "text-right", headerClass: "text-right" }, cell: (info) => { const p = info.row.original; const up = p.netProfit >= 0; return <span className={`tnum font-bold ${up ? "text-up" : "text-down"}`}>{up ? "+" : ""}{fmtNum(p.netProfit, 2)}</span>; } },
+      { id: "close", header: "", cell: (info) => { const p = info.row.original; return (
+        <button
+          disabled={busy === p.id}
+          aria-label={`Close ${p.symbol} position`}
+          onClick={(event) => { event.stopPropagation(); void close(p); }}
+          className="flex h-8 w-8 items-center justify-center rounded border border-border text-text-muted hover:text-down hover:border-down/50 hover:bg-down/10 disabled:opacity-50 transition-colors text-xs"
+        >
+          {busy === p.id ? "…" : "✕"}
+        </button>
+      ); } },
+    ],
+    // close/busy are stable per render set; digitsFor identity is stable upstream
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [busy, digitsFor],
+  );
 
   return (
-    <div className="min-w-max">
-    <table className="w-full">
-      <thead className="sticky top-0 bg-panel-2 z-10">
-        <tr>
-          <Th className="hidden sm:table-cell">Time</Th>
-          <Th>Type</Th>
-          <Th>Asset</Th>
-          <Th className="text-right">Volume</Th>
-          <Th className="text-right">Open Rate</Th>
-          <Th className="text-right hidden md:table-cell">S/L</Th>
-          <Th className="text-right hidden md:table-cell">T/P</Th>
-          <Th className="text-right hidden lg:table-cell">Swap</Th>
-          <Th className="text-right hidden lg:table-cell">Commission</Th>
-          <Th className="text-right">Current</Th>
-          <Th className="text-right">Net P/L</Th>
-          <Th></Th>
-        </tr>
-      </thead>
-      <tbody>
-        {positions.map((p, idx) => {
-          const digits = digitsFor(p.symbol);
-          const up = p.netProfit >= 0;
-          return (
-            <tr
-              key={p.id}
-              onClick={rowNavigate(router, p.symbol)}
-              className={`cursor-pointer border-t border-border-soft hover:bg-panel-2/50 transition-colors ${idx % 2 === 1 ? "bg-panel/30" : ""}`}
-            >
-              <Td className="text-text-muted tnum hidden sm:table-cell">{fmtTime(p.openedAt)}</Td>
-              <Td><SideBadge side={p.side} type={p.type} /></Td>
-              <Td className="font-semibold"><SymbolLink symbol={p.symbol} /></Td>
-              <Td className="text-right tnum">{fmtNum(p.volume, 2)}</Td>
-              <Td className="text-right tnum">{fmtPrice(p.openRate, digits)}</Td>
-              <Td className="text-right tnum text-text-muted hidden md:table-cell">{p.stopLoss != null ? fmtPrice(p.stopLoss, digits) : "—"}</Td>
-              <Td className="text-right tnum text-text-muted hidden md:table-cell">{p.takeProfit != null ? fmtPrice(p.takeProfit, digits) : "—"}</Td>
-              <Td className="text-right tnum text-text-muted hidden lg:table-cell">{fmtNum(p.swap, 2)}</Td>
-              <Td className="text-right tnum text-text-muted hidden lg:table-cell">{fmtNum(p.commission + p.tradingCommission, 2)}</Td>
-              <Td className="text-right tnum">{fmtPrice(p.currentRate, digits)}</Td>
-              <Td className={`text-right tnum font-bold ${up ? "text-up" : "text-down"}`}>
-                {up ? "+" : ""}{fmtNum(p.netProfit, 2)}
-              </Td>
-              <Td>
-                <button
-                  disabled={busy === p.id}
-                  aria-label={`Close ${p.symbol} position`}
-                  onClick={() => void close(p)}
-                  className="flex h-8 w-8 items-center justify-center rounded border border-border text-text-muted hover:text-down hover:border-down/50 hover:bg-down/10 disabled:opacity-50 transition-colors text-xs"
-                >
-                  {busy === p.id ? "…" : "✕"}
-                </button>
-              </Td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-    </div>
+    <TerminalTable
+      ariaLabel="Open positions"
+      data={positions}
+      columns={columns}
+      minWidth={980}
+      onRowClick={(p) => router.push(`/trade/${p.symbol}`)}
+      emptyState={<EmptyState title="No open positions" hint="Use the trade panel to open a position" />}
+    />
   );
 }
 
@@ -388,9 +370,9 @@ function HistoryCards({ digitsFor }: { digitsFor: (s: string) => number }) {
                 <div className="flex items-center gap-2">
                   <SideBadge side={p.side} type={p.type} />
                   <span className="text-sm font-bold">{p.symbol}</span>
-                  <span className="text-[11px] text-text-faint tnum">{fmtNum(p.volume, 2)}</span>
+                  <span className="text-(length:--term-text-xs) text-text-faint tnum">{fmtNum(p.volume, 2)}</span>
                 </div>
-                <div className="mt-0.5 flex items-center gap-1.5 text-[10px] tnum text-text-faint">
+                <div className="mt-0.5 flex items-center gap-1.5 text-(length:--term-text-2xs) tnum text-text-faint">
                   <span>{fmtTime(p.closedAt ?? p.openedAt)}</span>
                   <span aria-hidden>·</span>
                   <span>{fmtPrice(p.openRate, digits)}</span>
@@ -402,7 +384,7 @@ function HistoryCards({ digitsFor }: { digitsFor: (s: string) => number }) {
                 <span className={`text-sm font-bold tnum ${up ? "text-up" : "text-down"}`}>
                   {up ? "+" : ""}{fmtNum(p.netProfit, 2)}
                 </span>
-                <span className="text-[9px] uppercase tracking-wide text-text-faint">USD</span>
+                <span className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">USD</span>
               </div>
             </li>
           );
@@ -414,7 +396,7 @@ function HistoryCards({ digitsFor }: { digitsFor: (s: string) => number }) {
             type="button"
             disabled={loadingMore}
             onClick={() => void loadHistory(nextCursor, true)}
-            className="rounded border border-border bg-canvas px-4 py-2 text-[11px] font-medium hover:border-brand disabled:opacity-50"
+            className="rounded border border-border bg-canvas px-4 py-2 text-(length:--term-text-xs) font-medium hover:border-brand disabled:opacity-50"
           >
             {loadingMore ? "Loading…" : "Load 25 more"}
           </button>
@@ -424,68 +406,47 @@ function HistoryCards({ digitsFor }: { digitsFor: (s: string) => number }) {
   );
 }
 
-/** Trade history tab (md+) — fetches closed positions from the API. */
+/** Trade history tab (md+) — TerminalTable (TanStack core; virtualizes
+ *  automatically once history grows past the threshold). */
 function HistoryTable({ digitsFor }: { digitsFor: (s: string) => number }) {
   const router = useRouter();
   const { history, loading, loadingMore, nextCursor, error, loadHistory } = useHistoryData();
 
-  if (loading || error || history.length === 0) {
-    return <HistoryEmptyState loading={loading} error={error} retry={() => void loadHistory()} />;
-  }
+  const columns = useMemo<ColumnDef<PositionView, unknown>[]>(
+    () => [
+      { accessorKey: "closedAt", header: "Closed Time", cell: (info) => <span className="tnum text-text-muted">{fmtTime((info.row.original as PositionView).closedAt ?? (info.row.original as PositionView).openedAt)}</span> },
+      { id: "type", header: "Type", cell: (info) => { const p = info.row.original; return <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold ${p.side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>{p.side === "BUY" ? "▲" : "▼"} {p.side}</span>; } },
+      { accessorKey: "symbol", header: "Asset", cell: (info) => <SymbolLink symbol={info.getValue() as string} /> },
+      { accessorKey: "volume", header: "Volume", meta: { cellClass: "text-right" }, cell: (info) => <span className="tnum">{fmtNum(info.getValue() as number, 2)}</span> },
+      { accessorKey: "openRate", header: "Open Rate", meta: { cellClass: "text-right" }, cell: (info) => <span className="tnum">{fmtPrice(info.getValue() as number, digitsFor(info.row.original.symbol))}</span> },
+      { accessorKey: "currentRate", header: "Close Rate", meta: { cellClass: "text-right" }, cell: (info) => <span className="tnum">{fmtPrice(info.getValue() as number, digitsFor(info.row.original.symbol))}</span> },
+      { accessorKey: "swap", header: "Swap", meta: { cellClass: "text-right" }, cell: (info) => <span className="tnum text-text-muted">{fmtNum(info.getValue() as number, 2)}</span> },
+      { id: "commission", header: "Commission", meta: { cellClass: "text-right" }, cell: (info) => <span className="tnum text-text-muted">{fmtNum((info.row.original as PositionView).commission + (info.row.original as PositionView).tradingCommission, 2)}</span> },
+      { id: "result", header: "Result", meta: { cellClass: "text-right" }, cell: (info) => { const up = (info.row.original as PositionView).netProfit >= 0; const v = info.row.original.netProfit; return <span className={`tnum font-bold ${up ? "text-up" : "text-down"}`}>{up ? "+" : ""}{fmtNum(v, 2)}</span>; } },
+    ],
+    [digitsFor],
+  );
 
   return (
-    <div className="min-w-max">
-      <table className="w-full">
-        <thead className="sticky top-0 bg-panel-2 z-10">
-          <tr>
-            <Th>Closed Time</Th>
-            <Th>Type</Th>
-            <Th>Asset</Th>
-            <Th className="text-right">Volume</Th>
-            <Th className="text-right">Open Rate</Th>
-            <Th className="text-right">Close Rate</Th>
-            <Th className="text-right">Swap</Th>
-            <Th className="text-right">Commission</Th>
-            <Th className="text-right">Result</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {history.map((p, idx) => {
-            const digits = digitsFor(p.symbol);
-            const up = p.netProfit >= 0;
-            return (
-              <tr
-                key={p.id}
-                onClick={rowNavigate(router, p.symbol)}
-                className={`cursor-pointer border-t border-border-soft hover:bg-panel-2/50 transition-colors ${idx % 2 === 1 ? "bg-panel/30" : ""}`}
-              >
-                <Td className="text-text-muted tnum">{fmtTime(p.closedAt ?? p.openedAt)}</Td>
-                <Td><span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${p.side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>{p.side === "BUY" ? "▲" : "▼"} {p.side}</span></Td>
-                <Td className="font-semibold"><SymbolLink symbol={p.symbol} /></Td>
-                <Td className="text-right tnum">{fmtNum(p.volume, 2)}</Td>
-                <Td className="text-right tnum">{fmtPrice(p.openRate, digits)}</Td>
-                <Td className="text-right tnum">{fmtPrice(p.currentRate, digits)}</Td>
-                <Td className="text-right tnum text-text-muted">{fmtNum(p.swap, 2)}</Td>
-                <Td className="text-right tnum text-text-muted">{fmtNum(p.commission + p.tradingCommission, 2)}</Td>
-                <Td className={`text-right tnum font-bold ${up ? "text-up" : "text-down"}`}>{up ? "+" : ""}{fmtNum(p.netProfit, 2)}</Td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      {nextCursor ? (
-        <div className="sticky left-0 flex justify-center border-t border-border bg-panel-2 p-2">
+    <TerminalTable
+      ariaLabel="Trade history"
+      data={history}
+      columns={columns}
+      onRowClick={(p) => rowNavigate(router, p.symbol)({ stopPropagation: () => undefined, target: null, currentTarget: null } as unknown as Parameters<ReturnType<typeof rowNavigate>>[0])}
+      emptyState={<HistoryEmptyState loading={loading} error={error} retry={() => void loadHistory()} />}
+      footer={nextCursor ? (
+        <div className="flex justify-center border-t border-border bg-panel-2 p-2">
           <button
             type="button"
             disabled={loadingMore}
             onClick={() => void loadHistory(nextCursor, true)}
-            className="rounded border border-border bg-canvas px-4 py-1.5 text-[10px] font-medium hover:border-brand disabled:opacity-50"
+            className="rounded border border-border bg-canvas px-4 py-1.5 text-(length:--term-text-2xs) font-medium hover:border-brand disabled:opacity-50"
           >
             {loadingMore ? "Loading…" : "Load 25 more"}
           </button>
         </div>
-      ) : null}
-    </div>
+      ) : undefined}
+    />
   );
 }
 
@@ -493,7 +454,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return (
     <button
       onClick={onClick}
-      className={`flex items-center px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${
+      className={`flex items-center px-2.5 py-1 text-(length:--term-text-xs) font-medium rounded transition-colors ${
         active ? "bg-canvas text-text shadow-sm border border-border" : "text-text-muted hover:text-text"
       }`}
     >
@@ -502,12 +463,6 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
-function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
-  return <th className={`text-left font-medium text-text-faint text-[9px] uppercase tracking-wide px-2 py-1.5 whitespace-nowrap ${className}`}>{children}</th>;
-}
-function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
-  return <td className={`px-2 py-1 text-[11px] whitespace-nowrap ${className}`}>{children}</td>;
-}
 
 function fmtTime(ms: number): string {
   return new Date(ms).toLocaleString("en-GB", {

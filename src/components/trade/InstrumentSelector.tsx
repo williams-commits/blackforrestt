@@ -54,12 +54,12 @@ export function InstrumentSelector({ activeSymbol }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search"
-            className="w-full h-6 bg-canvas border border-border rounded pl-6 pr-2 text-[11px] outline-none focus:border-brand placeholder:text-text-faint"
+            className="w-full h-6 bg-canvas border border-border rounded pl-6 pr-2 text-(length:--term-text-xs) outline-none focus:border-brand placeholder:text-text-faint"
           />
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-1.5 py-0.5 text-[9px] text-text-faint uppercase border-y border-border-soft bg-panel-2">
+      <div className="flex items-center justify-between px-1.5 py-0.5 text-(length:--term-text-2xs) text-text-faint uppercase border-y border-border-soft bg-panel-2">
         <span>Symbol</span>
         <span>{total}</span>
       </div>
@@ -70,7 +70,7 @@ export function InstrumentSelector({ activeSymbol }: Props) {
           if (items.length === 0) return null;
           return (
             <li key={cat}>
-              <div className="px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-text-faint bg-canvas sticky top-0 z-10 border-b border-border-soft">
+              <div className="px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint bg-canvas sticky top-0 z-10 border-b border-border-soft">
                 {CATEGORY_LABEL[cat]}
               </div>
               {items.map((i) => {
@@ -86,15 +86,15 @@ export function InstrumentSelector({ activeSymbol }: Props) {
                       <div className="flex items-center gap-1.5 min-w-0">
                         <InstrumentIcon symbol={i.symbol} size={16} />
                         <div className="min-w-0">
-                          <div className="text-[11px] font-semibold truncate leading-tight">{i.name}</div>
-                          <div className="text-[9px] text-text-faint truncate leading-tight flex items-center gap-1">
+                          <div className="text-(length:--term-text-xs) font-semibold truncate leading-tight">{i.name}</div>
+                          <div className="text-(length:--term-text-2xs) text-text-faint truncate leading-tight flex items-center gap-1">
                             <span>{i.symbol}</span>
                             <span aria-hidden="true">·</span>
                             <span>{fmtPrice(i.mid, i.digits)}</span>
                           </div>
                         </div>
                       </div>
-                      <div className={`text-[9px] tnum font-medium leading-tight ${up ? "text-up" : "text-down"}`}>
+                      <div className={`text-(length:--term-text-2xs) tnum font-medium leading-tight ${up ? "text-up" : "text-down"}`}>
                         {fmtPct(i.changePct)}
                       </div>
                     </button>

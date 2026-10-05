@@ -715,8 +715,8 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
         <div className="flex min-w-0 flex-wrap items-center gap-2 px-3 py-2 sm:py-0">
           <InstrumentIcon symbol={instrument.symbol} size={20} />
           <span className="text-sm font-bold tracking-tight">{instrument.symbol}</span>
-          <span className="text-[10px] font-medium text-text-faint">{instrument.name}</span>
-          <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[9px] font-medium uppercase text-brand">
+          <span className="text-(length:--term-text-2xs) font-medium text-text-faint">{instrument.name}</span>
+          <span className="rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium uppercase text-brand">
             {instrument.category}
           </span>
           {/* Live price + session change — the TradingView-style anchor the eye
@@ -727,7 +727,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
                 {fmtPrice(latestOhlc.close, instrument.digits)}
               </span>
               {instrument.changePct !== 0 && (
-                <span className={`text-[10px] font-semibold tnum leading-none ${instrument.changePct > 0 ? "text-up" : "text-down"}`}>
+                <span className={`text-(length:--term-text-2xs) font-semibold tnum leading-none ${instrument.changePct > 0 ? "text-up" : "text-down"}`}>
                   {instrument.changePct > 0 ? "▲" : "▼"} {Math.abs(instrument.changePct).toFixed(2)}%
                 </span>
               )}
@@ -737,14 +737,14 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
             <button
               type="button"
               onClick={onOpenAssets}
-              className="flex items-center gap-1.5 rounded px-1.5 py-1 text-[10px] text-text-muted transition-colors hover:bg-panel-3 hover:text-text"
+              className="flex items-center gap-1.5 rounded px-1.5 py-1 text-(length:--term-text-2xs) text-text-muted transition-colors hover:bg-panel-3 hover:text-text"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg> 
-              <span className="text-[10px] font-semibold">Asset</span>
+              <span className="text-(length:--term-text-2xs) font-semibold">Asset</span>
             </button>
           ) : null}
           {ohlc ? (
-            <div className="hidden min-w-0 items-center gap-2 text-[10px] tnum md:flex">
+            <div className="hidden min-w-0 items-center gap-2 text-(length:--term-text-2xs) tnum md:flex">
               <OhlcField label="O" value={ohlc.open} up={ohlc.up} digits={instrument.digits} />
               <OhlcField label="H" value={ohlc.high} up={ohlc.up} digits={instrument.digits} />
               <OhlcField label="L" value={ohlc.low} up={ohlc.up} digits={instrument.digits} />
@@ -763,7 +763,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
               aria-pressed={interval === timeframe}
               aria-label={`Use ${timeframe} timeframe`}
               onClick={() => selectTimeframe(timeframe)}
-              className={`shrink-0 rounded px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+              className={`shrink-0 rounded px-3 py-1.5 text-(length:--term-text-xs) font-semibold transition-colors ${
                 interval === timeframe ? "bg-brand text-white" : "text-text-muted hover:bg-panel-3 hover:text-text"
               }`}
             >
@@ -839,7 +839,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
               aria-pressed={interval === timeframe}
               aria-label={`Use ${timeframe} timeframe`}
               onClick={() => selectTimeframe(timeframe)}
-              className={`shrink-0 rounded px-2 py-1 text-[10px] font-semibold transition-colors ${
+              className={`shrink-0 rounded px-2 py-1 text-(length:--term-text-2xs) font-semibold transition-colors ${
                 interval === timeframe ? "bg-brand text-white" : "text-text-muted hover:bg-panel-3 hover:text-text"
               }`}
             >
@@ -850,7 +850,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
       </div>
 
       {ohlc ? (
-        <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-border-soft px-3 py-1 text-[10px] tnum md:hidden">
+        <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-border-soft px-3 py-1 text-(length:--term-text-2xs) tnum md:hidden">
           <OhlcField label="O" value={ohlc.open} up={ohlc.up} digits={instrument.digits} />
           <OhlcField label="H" value={ohlc.high} up={ohlc.up} digits={instrument.digits} />
           <OhlcField label="L" value={ohlc.low} up={ohlc.up} digits={instrument.digits} />
@@ -886,26 +886,26 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
         <>
           <button type="button" className="fixed inset-0 z-9998 cursor-default" aria-label="Close indicators menu" onClick={() => setShowIndicators(false)} />
           <div className="fixed z-9999 min-w-48 rounded border border-border bg-canvas py-1 shadow-xl" style={{ top: indicatorPos.top, right: indicatorPos.right }}>
-            <div className="px-3 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-wide text-text-faint">Overlays</div>
-            <button type="button" role="menuitemcheckbox" aria-checked={showMA} onClick={toggleMA} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
+            <div className="px-3 pb-1 pt-1.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">Overlays</div>
+            <button type="button" role="menuitemcheckbox" aria-checked={showMA} onClick={toggleMA} className="flex w-full items-center justify-between px-3 py-2 text-(length:--term-text-xs) hover:bg-panel-2">
               <span>SMA ({maPeriod})</span>
               <span className={`h-3 w-3 rounded border ${showMA ? "border-brand bg-brand" : "border-border"}`} />
             </button>
-            <button type="button" role="menuitemcheckbox" aria-checked={showEMA} onClick={toggleEMA} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
+            <button type="button" role="menuitemcheckbox" aria-checked={showEMA} onClick={toggleEMA} className="flex w-full items-center justify-between px-3 py-2 text-(length:--term-text-xs) hover:bg-panel-2">
               <span>EMA ({emaPeriod})</span>
               <span className={`h-3 w-3 rounded border ${showEMA ? "border-brand bg-brand" : "border-border"}`} />
             </button>
-            <button type="button" role="menuitemcheckbox" aria-checked={showBollinger} onClick={toggleBollinger} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
+            <button type="button" role="menuitemcheckbox" aria-checked={showBollinger} onClick={toggleBollinger} className="flex w-full items-center justify-between px-3 py-2 text-(length:--term-text-xs) hover:bg-panel-2">
               <span>Bollinger ({bollingerPeriod}, {bollingerStdDev}σ)</span>
               <span className={`h-3 w-3 rounded border ${showBollinger ? "border-brand bg-brand" : "border-border"}`} />
             </button>
             <div className="mx-3 my-1 border-t border-border-soft" />
-            <div className="px-3 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-wide text-text-faint">Oscillators</div>
-            <button type="button" role="menuitemcheckbox" aria-checked={showRSI} onClick={toggleRSI} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
+            <div className="px-3 pb-1 pt-1.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">Oscillators</div>
+            <button type="button" role="menuitemcheckbox" aria-checked={showRSI} onClick={toggleRSI} className="flex w-full items-center justify-between px-3 py-2 text-(length:--term-text-xs) hover:bg-panel-2">
               <span>RSI ({rsiPeriod})</span>
               <span className={`h-3 w-3 rounded border ${showRSI ? "border-brand bg-brand" : "border-border"}`} />
             </button>
-            <button type="button" role="menuitemcheckbox" aria-checked={showMACD} onClick={toggleMACD} className="flex w-full items-center justify-between px-3 py-2 text-[11px] hover:bg-panel-2">
+            <button type="button" role="menuitemcheckbox" aria-checked={showMACD} onClick={toggleMACD} className="flex w-full items-center justify-between px-3 py-2 text-(length:--term-text-xs) hover:bg-panel-2">
               <span>MACD (12, 26, 9)</span>
               <span className={`h-3 w-3 rounded border ${showMACD ? "border-brand bg-brand" : "border-border"}`} />
             </button>
@@ -935,7 +935,7 @@ function ChartButton({
       aria-pressed={active || undefined}
       title={label}
       onClick={onClick}
-      className={`shrink-0 rounded px-2 py-1 text-[10px] font-medium transition-colors ${
+      className={`shrink-0 rounded px-2 py-1 text-(length:--term-text-2xs) font-medium transition-colors ${
         active ? "bg-brand-soft text-brand" : "text-text-muted hover:bg-panel-3 hover:text-text"
       }`}
     >
@@ -948,7 +948,7 @@ function ChartButton({
  *  and a remove (✕) handle that detaches the indicator from the chart. */
 function LegendChip({ color, label, value, onRemove }: { color: string; label: string; value: string | null; onRemove: () => void }) {
   return (
-    <span className="pointer-events-auto flex items-center gap-1.5 rounded border border-border-soft bg-canvas/85 px-1.5 py-0.5 text-[10px] tnum shadow-sm backdrop-blur-sm">
+    <span className="pointer-events-auto flex items-center gap-1.5 rounded border border-border-soft bg-canvas/85 px-1.5 py-0.5 text-(length:--term-text-2xs) tnum shadow-sm backdrop-blur-sm">
       <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
       <span className="font-medium text-text-muted">{label}</span>
       {value != null && <span className="text-text">{value}</span>}
@@ -956,7 +956,7 @@ function LegendChip({ color, label, value, onRemove }: { color: string; label: s
         type="button"
         aria-label={`Remove ${label} indicator`}
         onClick={onRemove}
-        className="rounded p-1 text-[9px] leading-none text-text-faint transition-colors hover:bg-down/10 hover:text-down"
+        className="rounded p-1 text-(length:--term-text-2xs) leading-none text-text-faint transition-colors hover:bg-down/10 hover:text-down"
       >
         {xIcon()}
       </button>

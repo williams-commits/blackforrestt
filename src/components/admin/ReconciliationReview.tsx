@@ -245,7 +245,7 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
             <article key={item.id} className="rounded border border-border bg-canvas p-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="flex flex-wrap gap-2 text-[11px]">
+                  <div className="flex flex-wrap gap-2 text-(length:--term-text-xs)">
                     <span className={item.severity === "CRITICAL" ? "text-down font-semibold" : "text-text-muted"}>{item.severity}</span>
                     <span>{item.feedKind}</span><span>{item.status}</span><span>{new Date(item.detectedAt).toLocaleString()}</span>
                   </div>

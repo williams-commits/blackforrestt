@@ -256,7 +256,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               aria-label="Search conversations"
               className="w-full rounded border border-border bg-panel px-2.5 py-1.5 text-xs outline-none focus-visible:border-brand"
             />
-            <label className="flex items-center gap-1.5 text-[10px] text-text-muted">
+            <label className="flex items-center gap-1.5 text-(length:--term-text-2xs) text-text-muted">
               <input type="checkbox" checked={unreadOnly} onChange={(event) => setUnreadOnly(event.target.checked)} className="accent-brand" />
               Unread only
             </label>
@@ -277,24 +277,24 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className={`truncate text-xs ${threadRow.unread > 0 ? "font-semibold" : "font-medium"}`}>{threadRow.name ?? "Unnamed"}</span>
-                  <span className="shrink-0 text-[9px] text-text-faint tnum">{threadRow.lastMessageAt ? fmtDateTime(threadRow.lastMessageAt) : ""}</span>
+                  <span className="shrink-0 text-(length:--term-text-2xs) text-text-faint tnum">{threadRow.lastMessageAt ? fmtDateTime(threadRow.lastMessageAt) : ""}</span>
                 </div>
-                <div className="truncate text-[10px] text-text-faint">
+                <div className="truncate text-(length:--term-text-2xs) text-text-faint">
                   {threadRow.email ?? "—"} · #{threadRow.accountNo ?? "—"}
-                  {threadRow.brandDomain && <span className="ml-1 rounded bg-brand-soft px-1 py-px text-[8px] font-semibold text-brand">{threadRow.brandDomain}</span>}
+                  {threadRow.brandDomain && <span className="ml-1 rounded bg-brand-soft px-1 py-px text-(length:--term-text-2xs) font-semibold text-brand">{threadRow.brandDomain}</span>}
                 </div>
                 <div className="mt-1 flex items-center gap-1.5">
                   <span
-                    className={`shrink-0 rounded px-1 py-px text-[8px] font-bold uppercase tracking-wide ${
+                    className={`shrink-0 rounded px-1 py-px text-(length:--term-text-2xs) font-bold uppercase tracking-wide ${
                       threadRow.status === "AWAITING_REPLY" ? "bg-brand/15 text-brand" : "bg-panel-3 text-text-muted"
                     }`}
                   >
                     {threadRow.status === "AWAITING_REPLY" ? "Awaiting reply" : "Replied"}
                   </span>
                   {threadRow.unread > 0 && (
-                    <span className="shrink-0 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">{threadRow.unread}</span>
+                    <span className="shrink-0 rounded-full bg-brand px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-white">{threadRow.unread}</span>
                   )}
-                  <span className={`truncate text-[10px] ${threadRow.lastFromAdmin ? "text-text-muted" : "text-text font-medium"}`}>
+                  <span className={`truncate text-(length:--term-text-2xs) ${threadRow.lastFromAdmin ? "text-text-muted" : "text-text font-medium"}`}>
                     {threadRow.lastFromAdmin ? "You: " : ""}{threadRow.lastMessage || "(no messages)"}
                   </span>
                 </div>
@@ -311,19 +311,19 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                 <div className="min-w-0">
                   <div className="truncate text-xs font-semibold">{thread?.user ? (thread.user.name ?? thread.user.email ?? activeUser.label) : activeUser.label}</div>
                   {thread?.user && (
-                    <div className="truncate text-[10px] text-text-faint">{thread.user.email ?? "—"} · #{thread.user.accountNo ?? "—"}</div>
+                    <div className="truncate text-(length:--term-text-2xs) text-text-faint">{thread.user.email ?? "—"} · #{thread.user.accountNo ?? "—"}</div>
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setDeleteOpen(true)}
-                    className="text-[10px] font-medium text-down/80 hover:text-down hover:underline underline-offset-2"
+                    className="text-(length:--term-text-2xs) font-medium text-down/80 hover:text-down hover:underline underline-offset-2"
                     title="Permanently delete this conversation (audited)"
                   >
                     delete
                   </button>
-                  <button type="button" onClick={() => { setActiveUser(null); setThread(null); }} className="text-[10px] text-text-faint hover:text-text">close</button>
+                  <button type="button" onClick={() => { setActiveUser(null); setThread(null); }} className="text-(length:--term-text-2xs) text-text-faint hover:text-text">close</button>
                 </div>
               </div>
               <div
@@ -335,7 +335,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               >
                 {threadLoading && !thread && <div className="space-y-2" role="status" aria-label="Loading thread"><Skeleton className="h-8 w-2/3" /><Skeleton className="h-8 w-1/2" /><Skeleton className="h-8 w-3/4" /></div>}
                 {thread && thread.hasMore && (
-                  <button type="button" onClick={loadEarlier} className="mx-auto block rounded border border-border px-2.5 py-1 text-[10px] text-text-muted hover:text-text">
+                  <button type="button" onClick={loadEarlier} className="mx-auto block rounded border border-border px-2.5 py-1 text-(length:--term-text-2xs) text-text-muted hover:text-text">
                     Load earlier messages
                   </button>
                 )}
@@ -345,10 +345,10 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                   return (
                     <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                       <div className={`max-w-[80%] ${mine ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
-                        <span className={`px-1 text-[9px] font-semibold uppercase tracking-wide ${mine ? "text-text-faint" : "text-text-muted"}`}>{label}</span>
+                        <span className={`px-1 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide ${mine ? "text-text-faint" : "text-text-muted"}`}>{label}</span>
                         <div className={`rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${mine ? "bg-brand text-white" : "bg-panel-2 text-text"}`}>
                           {message.body}
-                          <div className={`mt-1 flex items-center justify-end gap-1.5 text-[9px] tnum ${mine ? "text-white/60" : "text-text-faint"}`}>
+                          <div className={`mt-1 flex items-center justify-end gap-1.5 text-(length:--term-text-2xs) tnum ${mine ? "text-white/60" : "text-text-faint"}`}>
                             <span>{fmtDateTime(message.createdAt)}</span>
                             {mine && <span aria-label={message.readAt ? "Read by customer" : "Not yet read"}>{message.readAt ? "✓ Read" : "✓ Sent"}</span>}
                           </div>

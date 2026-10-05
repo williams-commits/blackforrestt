@@ -119,7 +119,7 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
             <option value="ALL">All symbols</option>
             {symbols.map((symbol) => <option key={symbol} value={symbol}>{symbol}</option>)}
           </select>
-          <span className="ml-auto text-[10px] text-text-faint tnum">
+          <span className="ml-auto text-(length:--term-text-2xs) text-text-faint tnum">
             {rows.length} shown · Net P/L {allFilteredProfit >= 0 ? "+" : ""}{allFilteredProfit.toFixed(2)}
             {capped && (
               <Tooltip text="The server loads the most recent positions first.">
@@ -163,11 +163,11 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
                 </span>
               </Td>
               <Td>
-                <span className={`rounded px-1.5 py-0.5 text-[10px] ${position.status === "OPEN" ? "bg-brand-soft text-brand" : "bg-panel-3 text-text-muted"}`}>
+                <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) ${position.status === "OPEN" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-panel-3 text-text-muted"}`}>
                   {position.status}
                 </span>
               </Td>
-              <Td className="text-[11px] text-text-muted">{fmtDateTime(position.openedAt)}</Td>
+              <Td className="text-(length:--term-text-xs) text-text-muted">{fmtDateTime(position.openedAt)}</Td>
             </tr>
           );
         })}

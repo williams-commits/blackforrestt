@@ -142,7 +142,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
           where the user already is. */}
       <div className="flex items-center gap-2.5 px-3 shrink-0 h-full">
         <Logo inverted={theme === "dim"} />
-        <span className="hidden sm:inline-block text-[10px] font-semibold text-brand bg-brand-soft px-1.5 py-0.5 rounded">TRADE</span>
+        <span className="hidden sm:inline-block text-(length:--term-text-2xs) font-semibold text-brand bg-brand-soft px-1.5 py-0.5 rounded">TRADE</span>
       </div>
 
       {/* Assets button — md+ only. On phones the chart header already has an
@@ -151,7 +151,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
         <button
           type="button"
           onClick={onOpenAssets}
-          className="hidden md:flex items-center gap-1.5 px-3 h-full text-[11px] font-medium text-text-muted hover:text-text hover:bg-panel-2 border-r border-border transition-colors shrink-0"
+          className="hidden md:flex items-center gap-1.5 px-3 h-full text-(length:--term-text-xs) font-medium text-text-muted hover:text-text hover:bg-panel-2 border-r border-border transition-colors shrink-0"
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -195,7 +195,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
           dropdown on phones — this row stays minimal: dot + avatar. */}
       <div className="ml-auto flex shrink-0 items-center gap-2 px-2 sm:px-3">
         <ConnectionDot status={wsStatus} />
-        <span className="text-[11px] text-text-muted tnum hidden lg:inline">{clock}</span>
+        <span className="text-(length:--term-text-xs) text-text-muted tnum hidden lg:inline">{clock}</span>
         <span className="hidden sm:block">
           <ThemeToggle className="h-8 w-8" />
         </span>
@@ -246,14 +246,14 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
               </span>
               <div className="min-w-0">
                 <div className="text-xs font-semibold truncate">{userName}</div>
-                <div className="text-[10px] text-text-faint truncate">{session?.user?.email}</div>
+                <div className="text-(length:--term-text-2xs) text-text-faint truncate">{session?.user?.email}</div>
               </div>
             </div>
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-[9px] text-text-faint uppercase">Account</span>
-              <span className="text-[10px] tnum font-medium">{account?.accountNo ?? "—"}</span>
+              <span className="text-(length:--term-text-2xs) text-text-faint uppercase">Account</span>
+              <span className="text-(length:--term-text-2xs) tnum font-medium">{account?.accountNo ?? "—"}</span>
               {session?.user?.role === "admin" && (
-                <span className="ml-auto text-[8px] px-1.5 py-0.5 rounded bg-brand-soft text-brand font-semibold uppercase">Admin</span>
+                <span className="ml-auto text-(length:--term-text-2xs) px-1.5 py-0.5 rounded bg-brand-soft text-brand font-semibold uppercase">Admin</span>
               )}
             </div>
           </div>
@@ -333,8 +333,8 @@ function Metric({
 }) {
   return (
     <div className={`flex flex-col gap-0 shrink-0 leading-tight ${className}`}>
-      <span className="text-[10px] text-text-faint leading-none mb-0.5">{label}</span>
-      <span className={`text-[12px] tnum leading-none font-medium ${valueClass}`}>{value}</span>
+      <span className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint leading-none mb-0.5">{label}</span>
+      <span className={`text-(length:--term-text-md) tnum leading-none font-semibold ${valueClass}`}>{value}</span>
     </div>
   );
 }
@@ -369,7 +369,7 @@ function MenuItem({
       <span className={danger ? "text-down" : "text-text-muted"}>{icon}</span>
       <span className="flex-1">
         <span className="font-medium block">{label}</span>
-        {hint && <span className="text-[9px] text-text-faint">{hint}</span>}
+        {hint && <span className="text-(length:--term-text-2xs) text-text-faint">{hint}</span>}
       </span>
     </button>
   );

@@ -49,7 +49,7 @@ export function Tabs({
 
   return (
     <div className={`flex items-center border-b border-border ${className}`}>
-      <div className="flex" role="tablist" aria-label={label}>
+      <div className="flex gap-1" role="tablist" aria-label={label}>
         {tabs.map((tab, index) => {
           const selected = active === tab.key;
           return (
@@ -62,10 +62,10 @@ export function Tabs({
               disabled={tab.disabled}
               onClick={() => onChange(tab.key)}
               onKeyDown={(event) => onKeyDown(event, index)}
-              className={`-mb-px border-b-2 px-3 py-2 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-brand disabled:opacity-40 ${
+              className={`-mb-px border-b-2 px-3.5 py-2.5 text-(length:--term-text-sm) transition-colors focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-brand disabled:opacity-40 ${
                 selected
-                  ? "border-brand text-text"
-                  : "border-transparent text-text-muted hover:text-text"
+                  ? "border-brand font-semibold text-text"
+                  : "border-transparent font-medium text-text-muted hover:text-text"
               }`}
             >
               {tab.label}

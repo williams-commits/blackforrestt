@@ -176,7 +176,7 @@ export function SecurityCenter() {
       {/* ── Header ── */}
       <div>
         <h3 className="text-sm font-medium">Security center</h3>
-        <p className="mt-1 text-[11px] text-text-faint">
+        <p className="mt-1 text-(length:--term-text-xs) text-text-faint">
           MFA: {enabled ? `enabled · ${remaining} recovery codes remaining` : "not enabled"}
         </p>
       </div>
@@ -221,7 +221,7 @@ export function SecurityCenter() {
         <div className="flex items-center justify-between">
           <div>
             <h4 className="text-xs font-semibold text-text">Active sessions</h4>
-            <p className="text-[11px] text-text-faint">
+            <p className="text-(length:--term-text-xs) text-text-faint">
               {sessions.length} device{sessions.length === 1 ? "" : "s"} signed in
             </p>
           </div>
@@ -275,17 +275,17 @@ export function SecurityCenter() {
                         : `${session.browser} on ${session.os}`}
                     </span>
                     {session.current && (
-                      <span className="shrink-0 rounded-full bg-brand/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-brand">
+                      <span className="shrink-0 rounded-full bg-brand/15 px-2 py-0.5 text-(length:--term-text-2xs) font-bold uppercase tracking-wide text-brand">
                         This device
                       </span>
                     )}
                     {session.mfaVerifiedAt && !session.current && (
-                      <span className="shrink-0 rounded-full bg-up/10 px-1.5 py-0.5 text-[9px] font-semibold text-up">
+                      <span className="shrink-0 rounded-full bg-up/10 px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold text-up">
                         MFA
                       </span>
                     )}
                   </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-text-faint">
+                  <div className="mt-0.5 flex items-center gap-2 text-(length:--term-text-xs) text-text-faint">
                     <span>{formatRelative(session.lastSeenAt)}</span>
                     <span className="text-border">·</span>
                     <span className="capitalize">{session.deviceType}</span>
@@ -297,7 +297,7 @@ export function SecurityCenter() {
                     type="button"
                     onClick={() => void revoke(session.id)}
                     disabled={revokingId === session.id}
-                    className="shrink-0 rounded-md border border-border px-3 py-1.5 text-[11px] font-medium text-text-muted transition hover:border-down/40 hover:text-down disabled:opacity-50"
+                    className="shrink-0 rounded-md border border-border px-3 py-1.5 text-(length:--term-text-xs) font-medium text-text-muted transition hover:border-down/40 hover:text-down disabled:opacity-50"
                   >
                     {revokingId === session.id ? "Revoking…" : "Revoke"}
                   </button>

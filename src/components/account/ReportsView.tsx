@@ -91,7 +91,7 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
 
       {/* Server mode: dates are submitted with the filter form and applied to
           the table, pagination, and summary alike. Local mode: live filtering. */}
-      <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-muted">
+      <div className="flex flex-wrap items-center gap-2 text-(length:--term-text-xs) text-text-muted">
         <label className="flex items-center gap-1">
           From
           <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="Closed after" className="h-8 rounded border border-border bg-canvas px-2 text-xs outline-none focus:border-brand" />
@@ -113,14 +113,14 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
         <form action="/reports" method="get" className="flex flex-wrap items-end gap-3">
           {fromDate && <input type="hidden" name="from" value={fromDate} />}
           {toDate && <input type="hidden" name="to" value={toDate} />}
-          <label className="grid gap-1 text-[11px] text-text-muted">
+          <label className="grid gap-1 text-(length:--term-text-xs) text-text-muted">
             Symbol
             <select name="symbol" defaultValue={symbol} className="h-9 rounded border border-border bg-canvas px-2 text-sm outline-none focus:border-brand">
               <option value="ALL">All symbols</option>
               {symbols.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
-          <label className="grid gap-1 text-[11px] text-text-muted">
+          <label className="grid gap-1 text-(length:--term-text-xs) text-text-muted">
             Side
             <select name="side" defaultValue={side} className="h-9 rounded border border-border bg-canvas px-2 text-sm outline-none focus:border-brand">
               <option value="ALL">All sides</option>
@@ -182,7 +182,7 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
                   <Td className="text-right tnum text-text-muted">{fmtSigned(row.swap)}</Td>
                   <Td className="text-right tnum text-text-muted">{fmtSigned(-row.commission)}</Td>
                   <Td className={`text-right tnum font-medium ${up ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</Td>
-                  <Td className="text-[11px] text-text-faint">{fmtDateTime(row.closedAt)}</Td>
+                  <Td className="text-(length:--term-text-xs) text-text-faint">{fmtDateTime(row.closedAt)}</Td>
                 </tr>
               );
             })}
@@ -237,11 +237,11 @@ function ReportPageLink({ server, page, disabled, children }: { server: ReportSe
 }
 
 function Card({ label, value, valueClass = "", sub }: { label: string; value: string; valueClass?: string; sub?: string }) {
-  return <div className="rounded-lg border border-border bg-canvas p-4"><div className="text-[11px] uppercase text-text-faint">{label}</div><div className={`mt-1 text-xl font-semibold tnum ${valueClass}`}>{value}</div>{sub && <div className="mt-0.5 text-[11px] text-text-faint">{sub}</div>}</div>;
+  return <div className="rounded-lg border border-border bg-canvas p-4"><div className="text-(length:--term-text-xs) uppercase text-text-faint">{label}</div><div className={`mt-1 text-xl font-semibold tnum ${valueClass}`}>{value}</div>{sub && <div className="mt-0.5 text-(length:--term-text-xs) text-text-faint">{sub}</div>}</div>;
 }
 function ExtremCard({ title, row, positive, emptyLabel = "—" }: { title: string; row: ReportRow | null; positive: boolean; emptyLabel?: string }) {
-  return <div className="rounded-lg border border-border bg-canvas p-4"><div className="mb-2 text-[11px] uppercase text-text-faint">{title}</div>{row ? <div className="flex items-center justify-between"><div className="flex items-center gap-2"><InstrumentIcon symbol={row.symbol} size={18} /><div><div className="text-sm font-medium">{row.symbol}</div><div className="text-[11px] text-text-muted">{row.side} · {row.volume.toFixed(2)} lots</div></div></div><div className={`text-lg font-semibold tnum ${positive ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</div></div> : <div className="text-xs text-text-faint">{emptyLabel}</div>}</div>;
+  return <div className="rounded-lg border border-border bg-canvas p-4"><div className="mb-2 text-(length:--term-text-xs) uppercase text-text-faint">{title}</div>{row ? <div className="flex items-center justify-between"><div className="flex items-center gap-2"><InstrumentIcon symbol={row.symbol} size={18} /><div><div className="text-sm font-medium">{row.symbol}</div><div className="text-(length:--term-text-xs) text-text-muted">{row.side} · {row.volume.toFixed(2)} lots</div></div></div><div className={`text-lg font-semibold tnum ${positive ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</div></div> : <div className="text-xs text-text-faint">{emptyLabel}</div>}</div>;
 }
-function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <th className={`whitespace-nowrap px-3 py-2 text-left text-[10px] font-medium uppercase text-text-faint ${className}`}>{children}</th>; }
+function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <th className={`whitespace-nowrap px-3 py-2 text-left text-(length:--term-text-2xs) font-medium uppercase text-text-faint ${className}`}>{children}</th>; }
 function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <td className={`whitespace-nowrap px-3 py-2 text-xs ${className}`}>{children}</td>; }
 function fmtSigned(value: number): string { return `${value >= 0 ? "+" : ""}${value.toFixed(2)}`; }

@@ -120,7 +120,7 @@ export function AssetModal({ open, onClose, activeSymbol }: Props) {
                 aria-selected={selected}
                 tabIndex={selected ? 0 : -1}
                 onClick={() => setTab(item.key)}
-                className={`whitespace-nowrap rounded-md px-3 py-1.5 text-[11px] font-medium transition-colors focus-visible:outline focus-visible:outline-brand ${
+                className={`whitespace-nowrap rounded-md px-3 py-1.5 text-(length:--term-text-xs) font-medium transition-colors focus-visible:outline focus-visible:outline-brand ${
                   selected ? "bg-brand text-white" : "text-text-muted hover:bg-panel-2 hover:text-text"
                 }`}
               >
@@ -202,14 +202,14 @@ function AssetCard({
             {quote ? <span className="text-text-faint"> / {quote}</span> : null}
           </span>
         </div>
-        <span className="text-[8px] font-medium uppercase text-text-faint">{instrument.category}</span>
+        <span className="text-(length:--term-text-2xs) font-medium uppercase text-text-faint">{instrument.category}</span>
       </div>
-      <span className="truncate text-[9px] text-text-faint">{instrument.name}</span>
+      <span className="truncate text-(length:--term-text-2xs) text-text-faint">{instrument.name}</span>
       <div className="mt-auto flex items-baseline justify-between gap-2">
         <span className={`text-sm font-bold tnum ${up ? "text-up" : "text-down"}`}>
           {fmtPrice(instrument.mid, instrument.digits)}
         </span>
-        <span className={`text-[10px] font-medium tnum ${up ? "text-up" : "text-down"}`}>
+        <span className={`text-(length:--term-text-2xs) font-medium tnum ${up ? "text-up" : "text-down"}`}>
           {fmtPct(instrument.changePct)}
         </span>
       </div>

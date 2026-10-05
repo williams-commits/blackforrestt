@@ -327,8 +327,8 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
               exact-match highlights; manual entry clears the selection) ── */}
           <div>
             <div className="flex items-baseline justify-between">
-              <label htmlFor={amountId} className="text-[11px] font-medium text-text-muted">Amount</label>
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-text-faint">USD</span>
+              <label htmlFor={amountId} className="text-(length:--term-text-xs) font-medium text-text-muted">Amount</label>
+              <span className="text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">USD</span>
             </div>
             <div className="relative mt-1">
               <span aria-hidden className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-medium text-text-faint">$</span>
@@ -364,13 +364,13 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                 );
               })}
             </div>
-            <p className="mt-1.5 text-[11px] text-text-faint" aria-live="polite">
+            <p className="mt-1.5 text-(length:--term-text-xs) text-text-faint" aria-live="polite">
               {amountPreviewText}
             </p>
           </div>
 
           <div>
-            <label htmlFor={methodId} className="mb-1 block text-[11px] text-text-muted">Method</label>
+            <label htmlFor={methodId} className="mb-1 block text-(length:--term-text-xs) text-text-muted">Method</label>
             <select id={methodId} value={method} onChange={(event) => changeMethod(event.target.value as PaymentMethod)} className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm">
               {enabledMethods.map((m) => (
                 <option key={m} value={m}>{methodLabel(m)}</option>
@@ -381,8 +381,8 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
           <fieldset className="space-y-3 rounded border border-border-soft p-3 sm:p-4">
             <legend className="px-1 text-xs font-medium">{isDeposit ? "Payment source" : "Withdrawal destination"} · {methodLabel(method)}</legend>
             {method === "CARD" && <>
-              <p className="text-[11px] text-text-faint">For PCI safety, never enter a full card number or CVV. Only the brand and final four digits are collected.</p>
-              {!isDeposit && <p className="text-[11px] text-text-faint">Card withdrawals are refunds: use the original verified card deposit reference — the brand and last four digits must match an approved card deposit on your account.</p>}
+              <p className="text-(length:--term-text-xs) text-text-faint">For PCI safety, never enter a full card number or CVV. Only the brand and final four digits are collected.</p>
+              {!isDeposit && <p className="text-(length:--term-text-xs) text-text-faint">Card withdrawals are refunds: use the original verified card deposit reference — the brand and last four digits must match an approved card deposit on your account.</p>}
               <input required maxLength={120} value={card.cardholderName} onChange={(e) => setCard((v) => ({...v, cardholderName:e.target.value}))} placeholder="Cardholder name" aria-label="Cardholder name" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" />
               <div className="grid grid-cols-2 gap-2"><select value={card.cardBrand} onChange={(e) => setCard((v)=>({...v,cardBrand:e.target.value}))} aria-label="Card brand" className="h-10 rounded border border-border bg-canvas px-3 text-sm"><option>VISA</option><option>MASTERCARD</option><option>AMEX</option><option>OTHER</option></select><input required inputMode="numeric" pattern="\d{4}" maxLength={4} value={card.last4} onChange={(e)=>setCard((v)=>({...v,last4:e.target.value.replace(/\D/g,"").slice(0,4)}))} placeholder="Last 4 digits" aria-label="Last four card digits" className="h-10 rounded border border-border bg-canvas px-3 text-sm" /></div>
               {isDeposit && <input required maxLength={160} value={card.providerReference} onChange={(e) => setCard((v)=>({...v,providerReference:e.target.value}))} placeholder="Card processor transaction reference" aria-label="Card processor transaction reference" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" />}
@@ -396,7 +396,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
             {method === "CRYPTO" && <>
               {isDeposit && walletAddresses.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-[11px] text-text-muted">Send to a platform wallet</p>
+                  <p className="text-(length:--term-text-xs) text-text-muted">Send to a platform wallet</p>
                   <div className="space-y-1.5" role="radiogroup" aria-label="Platform deposit wallet">
                     {walletAddresses.map((wallet, index) => (
                       <button
@@ -418,7 +418,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                               {wallet.asset} · {wallet.network}
                               {wallet.label ? <span className="text-text-faint"> · {wallet.label}</span> : null}
                             </span>
-                            <span className="block truncate font-mono text-[11px] text-text-faint">{wallet.address}</span>
+                            <span className="block truncate font-mono text-(length:--term-text-xs) text-text-faint">{wallet.address}</span>
                           </span>
                         </span>
                         <span className={`h-3.5 w-3.5 shrink-0 rounded-full border-2 transition ${
@@ -434,7 +434,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                         label={`Deposit address for ${selectedWallet.asset} on ${selectedWallet.network}`}
                       />
                       <div className="flex min-w-0 flex-1 flex-col gap-2 self-stretch">
-                        <p className="text-[11px] font-medium text-text-muted">
+                        <p className="text-(length:--term-text-xs) font-medium text-text-muted">
                           Pay <span className="font-semibold text-text">{selectedWallet.asset}</span> on{" "}
                           <span className="font-semibold text-text">{selectedWallet.network}</span> only
                         </p>
@@ -448,14 +448,14 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                         <button
                           type="button"
                           onClick={() => void copyDepositAddress()}
-                          className="h-9 shrink-0 rounded-md bg-brand px-3 text-[11px] font-semibold text-white transition hover:brightness-110"
+                          className="h-9 shrink-0 rounded-md bg-brand px-3 text-(length:--term-text-xs) font-semibold text-white transition hover:brightness-110"
                         >
                           {copied ? "✓ Copied" : "Copy address"}
                         </button>
                       </div>
                     </div>
                   )}
-                  <p className="text-[11px] text-text-faint">Send only {selectedWallet?.asset ?? cryptoDetails.asset} on {selectedWallet?.network ?? cryptoDetails.network} to this address, then paste the transaction hash below.</p>
+                  <p className="text-(length:--term-text-xs) text-text-faint">Send only {selectedWallet?.asset ?? cryptoDetails.asset} on {selectedWallet?.network ?? cryptoDetails.network} to this address, then paste the transaction hash below.</p>
                 </div>
               )}
               {/* Withdrawals: asset + network are locked to the supported set
@@ -510,7 +510,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
           {!isDeposit && needsStepUp && <div className="space-y-3 rounded border border-brand/30 bg-brand-soft p-3"><p className="text-xs text-text-muted">Confirm this withdrawal with your password and authenticator or recovery code.</p><input type="password" required maxLength={128} value={currentPassword} onChange={(e)=>setCurrentPassword(e.target.value)} autoComplete="current-password" placeholder="Current password" aria-label="Current password" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /><input type="text" required maxLength={64} value={mfaCode} onChange={(e)=>setMfaCode(e.target.value)} autoComplete="one-time-code" placeholder="Authenticator or recovery code" aria-label="Authenticator or recovery code" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /></div>}
 
           <div>
-            <label htmlFor={proofId} className="mb-1 block text-[11px] text-text-muted">
+            <label htmlFor={proofId} className="mb-1 block text-(length:--term-text-xs) text-text-muted">
               {isDeposit ? (method === "CARD" ? "Payment receipt (optional)" : "Payment proof (required)") : "Supporting document (optional)"}
             </label>
             <input
@@ -521,7 +521,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
               onChange={(event)=>{const input = event.currentTarget; void prepareProofFile(input.files?.[0] ?? null, input); invalidateRequestKey();}}
               className="block w-full rounded border border-border bg-canvas p-2 text-xs file:mr-3 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-2 file:text-xs"
             />
-            <p className="mt-1 text-[11px] text-text-faint">
+            <p className="mt-1 text-(length:--term-text-xs) text-text-faint">
               {isDeposit && method === "CARD"
                 ? "A receipt is optional for card deposits — finance verifies the card processor reference. JPEG, PNG, or PDF, maximum 1 MB."
                 : "JPEG, PNG, or PDF, maximum 1 MB. Images over the limit are resized automatically; PDFs must already be under 1 MB. Files are quarantined, scanned, and stored privately."}
@@ -531,7 +531,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
           {progress && <p role="status" className="rounded border border-brand/20 bg-brand-soft px-3 py-2 text-xs text-text-muted">{progress}</p>}
           {error && <div role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error}</div>}
           <Button type="submit" variant={isDeposit ? "buy" : "sell"} loading={loading} loadingLabel={progress ?? (isDeposit ? "Submitting deposit" : "Submitting withdrawal")} className="w-full">{isDeposit ? "Submit deposit" : "Submit withdrawal"}</Button>
-          <p className="text-center text-[11px] text-text-faint">Requests are not settled automatically. Finance review, reconciliation, and provider confirmation remain required.</p>
+          <p className="text-center text-(length:--term-text-xs) text-text-faint">Requests are not settled automatically. Finance review, reconciliation, and provider confirmation remain required.</p>
         </form>
       </div>
     </Dialog>

@@ -18,7 +18,7 @@ export function ConnectionDot({ status }: { status: SocketStatus }) {
   const state = STATES[status];
 
   return (
-    <div className="flex items-center gap-1.5 text-[11px]" role="status" aria-live="polite">
+    <div className="flex items-center gap-1.5 text-(length:--term-text-xs)" role="status" aria-live="polite">
       <span
         className={`relative flex h-2.5 w-2.5 items-center justify-center ${state.ring} rounded-full`}
         title={state.label}

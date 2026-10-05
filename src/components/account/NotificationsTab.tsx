@@ -29,16 +29,16 @@ const GROUP_LABELS: Record<string, string> = {
 };
 
 const TYPE_TONES: Record<string, string> = {
-  ADMIN_MESSAGE: "bg-brand-soft text-brand",
-  ADMIN_BROADCAST: "bg-brand-soft text-brand",
-  ADMIN_CHAT: "bg-brand-soft text-brand",
-  CUSTOMER_MESSAGE: "bg-brand-soft text-brand",
-  TRADE_OPENED: "bg-brand-soft text-brand",
+  ADMIN_MESSAGE: "bg-(--term-warning-bg) text-(--term-warning-fg)",
+  ADMIN_BROADCAST: "bg-(--term-warning-bg) text-(--term-warning-fg)",
+  ADMIN_CHAT: "bg-(--term-warning-bg) text-(--term-warning-fg)",
+  CUSTOMER_MESSAGE: "bg-(--term-warning-bg) text-(--term-warning-fg)",
+  TRADE_OPENED: "bg-(--term-warning-bg) text-(--term-warning-fg)",
   TRADE_CLOSED: "bg-panel-3 text-text-muted",
-  ACCOUNT_STATUS: "bg-down/10 text-down",
-  PAYMENT_APPROVED: "bg-up/10 text-up",
-  PAYMENT_REJECTED: "bg-down/10 text-down",
-  PAYMENT_PREPARED: "bg-brand-soft text-brand",
+  ACCOUNT_STATUS: "bg-(--term-danger-bg) text-(--term-danger-fg)",
+  PAYMENT_APPROVED: "bg-(--term-success-bg) text-(--term-success-fg)",
+  PAYMENT_REJECTED: "bg-(--term-danger-bg) text-(--term-danger-fg)",
+  PAYMENT_PREPARED: "bg-(--term-warning-bg) text-(--term-warning-fg)",
   PAYMENT_CANCELLED: "bg-panel-3 text-text-muted",
   PAYMENT_REVERSED: "bg-panel-3 text-text-muted",
 };
@@ -135,7 +135,7 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
         </div>
         {unreadCount > 0 && (
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-white">{unreadCount} unread</span>
+            <span className="rounded-full bg-brand px-2 py-0.5 text-(length:--term-text-2xs) font-semibold text-white">{unreadCount} unread</span>
             <Button type="button" size="sm" loading={busy} onClick={() => void markAllRead()}><CheckCheck size={12} strokeWidth={2} aria-hidden /> Mark all read</Button>
           </div>
         )}
@@ -166,15 +166,15 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${TYPE_TONES[item.type] ?? "bg-panel-3 text-text-muted"}`}>
+                <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold ${TYPE_TONES[item.type] ?? "bg-panel-3 text-text-muted"}`}>
                   {item.type.replaceAll("_", " ").toLowerCase()}
                 </span>
                 <span className="text-sm font-medium">{item.title}</span>
               </div>
-              <span className="text-[10px] text-text-faint tnum">{fmtDateTime(item.createdAt)}</span>
+              <span className="text-(length:--term-text-2xs) text-text-faint tnum">{fmtDateTime(item.createdAt)}</span>
             </div>
             <p className="mt-1.5 line-clamp-2 text-xs text-text-muted leading-relaxed whitespace-pre-wrap">{item.body}</p>
-            {!item.readAt && <span className="mt-1 inline-block text-[10px] font-semibold text-brand">● unread — open to mark read</span>}
+            {!item.readAt && <span className="mt-1 inline-block text-(length:--term-text-2xs) font-semibold text-brand">● unread — open to mark read</span>}
           </button>
           </li>
         ))}
@@ -197,10 +197,10 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
         {selected && (
           <div className="space-y-4 px-5 py-4">
             <div className="flex items-center gap-2">
-              <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${TYPE_TONES[selected.type] ?? "bg-panel-3 text-text-muted"}`}>
+              <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold ${TYPE_TONES[selected.type] ?? "bg-panel-3 text-text-muted"}`}>
                 {selected.type.replaceAll("_", " ").toLowerCase()}
               </span>
-              {!selected.readAt && <span className="text-[10px] font-semibold text-brand">● unread</span>}
+              {!selected.readAt && <span className="text-(length:--term-text-2xs) font-semibold text-brand">● unread</span>}
             </div>
             <p className="text-sm leading-relaxed whitespace-pre-wrap">{selected.body}</p>
             <div className="flex flex-wrap justify-end gap-2">

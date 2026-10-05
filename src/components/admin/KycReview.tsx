@@ -206,7 +206,7 @@ export function KycReview({
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-xs font-medium uppercase text-text-faint">Pending review · oldest first</h2>
-            <span className="text-[10px] text-text-faint tnum" aria-live="polite">
+            <span className="text-(length:--term-text-2xs) text-text-faint tnum" aria-live="polite">
               {needle ? `${filteredPending.length}/${pending.length}` : pending.length}
             </span>
           </div>
@@ -227,12 +227,12 @@ export function KycReview({
                     <span className="text-sm font-medium">
                       {s.firstName} {s.lastName}
                     </span>
-                    <span className="text-[10px] text-text-faint">{s.submittedAt ? fmtAgo(s.submittedAt) : ""}</span>
+                    <span className="text-(length:--term-text-2xs) text-text-faint">{s.submittedAt ? fmtAgo(s.submittedAt) : ""}</span>
                   </div>
                   <div className="text-xs text-text-muted">
                     {s.user.email} · #{s.user.accountNo ?? "—"}
                   </div>
-                  <div className="text-[11px] text-text-faint mt-0.5">{s.docType} · {s.country}</div>
+                  <div className="text-(length:--term-text-xs) text-text-faint mt-0.5">{s.docType} · {s.country}</div>
                 </button>
               ))}
               {filteredPending.length === 0 && (
@@ -260,7 +260,7 @@ export function KycReview({
                     {selected.user.email} · Account #{selected.user.accountNo ?? "—"}
                   </p>
                 </div>
-                <span className="text-xs px-2 py-1 rounded bg-brand-soft text-brand font-medium">PENDING</span>
+                <span className="text-xs px-2 py-1 rounded bg-(--term-warning-bg) text-(--term-warning-fg) font-medium">PENDING</span>
               </div>
 
               <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
@@ -288,16 +288,16 @@ export function KycReview({
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="min-w-0">
                             <div className="text-sm font-medium">{doc.docType}</div>
-                            <div className="text-[11px] text-text-faint">
+                            <div className="text-(length:--term-text-xs) text-text-faint">
                               {fmtSize(doc.sizeBytes)}
                               {doc.sha256 ? ` · ${doc.sha256.slice(0, 12)}…` : ""}
                               {doc.detectedMime ? ` · ${doc.detectedMime}` : ""}
                             </div>
                           </div>
-                          <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                          <span className={`text-(length:--term-text-2xs) px-2 py-0.5 rounded font-medium ${
                             doc.status === "CLEAN" ? "bg-up/15 text-up"
                             : doc.status === "BLOCKED" ? "bg-down/15 text-down"
-                            : "bg-brand-soft text-brand"
+                            : "bg-(--term-warning-bg) text-(--term-warning-fg)"
                           }`}>
                             {doc.status}
                           </span>
@@ -341,7 +341,7 @@ export function KycReview({
                     ))}
                   </ul>
                 )}
-                <p className="mt-2 text-[11px] text-text-faint">
+                <p className="mt-2 text-(length:--term-text-xs) text-text-faint">
                   Access is logged with your identity and reason. Downloads open in a new tab from a short-lived signed URL.
                 </p>
                 {manualDocUrl && (
@@ -412,7 +412,7 @@ export function KycReview({
           <div className="flex flex-wrap items-center justify-between gap-2 mt-8 mb-2">
             <h2 className="text-xs font-medium uppercase text-text-faint">Recent decisions</h2>
             {reviewedTotalResolved > reviewed.length && (
-              <span className="text-[10px] text-brand">showing {reviewed.length} most recent of {reviewedTotalResolved}</span>
+              <span className="text-(length:--term-text-2xs) text-brand">showing {reviewed.length} most recent of {reviewedTotalResolved}</span>
             )}
           </div>
           <div className="overflow-hidden rounded-lg border border-border bg-canvas">
@@ -424,10 +424,10 @@ export function KycReview({
                     <span className="text-xs text-text-muted ml-2">{s.user.email}</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${s.status === "APPROVED" ? "bg-up/15 text-up" : "bg-down/15 text-down"}`}>
+                    <span className={`text-(length:--term-text-2xs) px-2 py-0.5 rounded font-medium ${s.status === "APPROVED" ? "bg-up/15 text-up" : "bg-down/15 text-down"}`}>
                       {s.status}
                     </span>
-                    <span className="text-[11px] text-text-faint">{s.reviewedAt ? fmtAgo(s.reviewedAt) : ""}</span>
+                    <span className="text-(length:--term-text-xs) text-text-faint">{s.reviewedAt ? fmtAgo(s.reviewedAt) : ""}</span>
                   </div>
                 </div>
               ))}
@@ -457,7 +457,7 @@ function Stat({ label, value, cls = "" }: { label: string; value: number; cls?: 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[11px] text-text-faint uppercase">{label}</dt>
+      <dt className="text-(length:--term-text-xs) text-text-faint uppercase">{label}</dt>
       <dd className="mt-0.5">{value}</dd>
     </div>
   );

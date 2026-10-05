@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Pagination } from "@/components/ui/Pagination";
@@ -47,44 +48,41 @@ const TYPE_TONES: Record<string, string> = {
  *  Rows open a detail modal (mark-as-read for unread items; chat threads
  *  deep-link to the Messages tab). Auto-syncs while visible. */
 export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: () => void; onOpenMessages?: () => void }) {
-  const [items, setItems] = useState<NotificationRow[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<NotificationRow | null>(null);
   const [group, setGroup] = useState("all");
-  const [groupCounts, setGroupCounts] = useState<Record<string, number>>({ all: 0, messages: 0, payments: 0, trades: 0, account: 0 });
+  const queryClient = useQueryClient();
 
-  const load = useCallback(async () => {
-    setError(null);
-    try {
+  // Server state via react-query: 15s auto-sync while the tab is visible
+  // (interval pauses in background tabs) + immediate refetch whenever the
+  // shell's badge watcher reports new activity.
+  const { data, isPending, error: queryError } = useQuery({
+    queryKey: ["account-notifications", page, group],
+    queryFn: async () => {
       const response = await fetch(`/api/notifications?scope=all&limit=${PAGE_SIZE}&offset=${(page - 1) * PAGE_SIZE}${group !== "all" ? `&group=${group}` : ""}`, { cache: "no-store" });
-      const data = await response.json().catch(() => null) as { notifications?: NotificationRow[]; unreadCount?: number; groupCounts?: Record<string, number>; error?: string } | null;
-      if (!response.ok) throw new Error(data?.error ?? "Unable to load notifications.");
-      setItems(data?.notifications ?? []);
-      setUnreadCount(data?.unreadCount ?? 0);
-      if (data?.groupCounts) setGroupCounts(data.groupCounts);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to load notifications.");
-    } finally {
-      setLoading(false);
-    }
-  }, [page, group]);
+      const payload = await response.json().catch(() => null) as { notifications?: NotificationRow[]; unreadCount?: number; groupCounts?: Record<string, number>; error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error ?? "Unable to load notifications.");
+      return {
+        items: payload?.notifications ?? [],
+        unreadCount: payload?.unreadCount ?? 0,
+        groupCounts: payload?.groupCounts ?? { all: 0, messages: 0, payments: 0, trades: 0, account: 0 },
+      };
+    },
+    refetchInterval: 15_000,
+    staleTime: 10_000,
+  });
+  const items = data?.items ?? [];
+  const unreadCount = data?.unreadCount ?? 0;
+  const groupCounts = data?.groupCounts ?? { all: 0, messages: 0, payments: 0, trades: 0, account: 0 };
+  const loading = isPending;
+  const error = queryError instanceof Error ? queryError.message : null;
 
   useEffect(() => {
-    void load();
-    // Auto-sync: silent poll while visible + immediate refresh when the
-    // shell's badge watcher detects activity (new notification elsewhere).
-    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 15_000);
-    const onCountsChanged = () => void load();
+    const onCountsChanged = () => void queryClient.invalidateQueries({ queryKey: ["account-notifications"] });
     window.addEventListener("blckforest:counts-changed", onCountsChanged);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("blckforest:counts-changed", onCountsChanged);
-    };
-  }, [load]);
+    return () => window.removeEventListener("blckforest:counts-changed", onCountsChanged);
+  }, [queryClient]);
 
   async function markRead(id: string) {
     try {
@@ -93,26 +91,24 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ids: [id] }),
       });
-      setItems((current) => current.map((item) => (item.id === id ? { ...item, readAt: new Date().toISOString() } : item)));
-      setUnreadCount((count) => Math.max(0, count - 1));
+      void queryClient.invalidateQueries({ queryKey: ["account-notifications"] });
       onActivity?.();
     } catch {
-      setError("Unable to mark the notification read.");
+      // Failure surfaces via the invalidated query's own error state.
     }
   }
 
   async function markAllRead() {
     setBusy(true);
-    setError(null);
     try {
       await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ all: true }),
       });
-      await load();
+      await queryClient.invalidateQueries({ queryKey: ["account-notifications"] });
     } catch {
-      setError("Unable to mark notifications read.");
+      // Failure surfaces via the invalidated query's own error state.
     } finally {
       setBusy(false);
     }

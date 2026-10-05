@@ -8,6 +8,7 @@ import { SectionBackdrop } from "../visuals/SectionBackdrop"
 export function FinalCta({ content, ctaBackground }: { content: FinalCtaContent; ctaBackground?: string }) {
   return (
     <section id="final-cta" className="ag-section-compact relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
+      <div className="ag-mesh" aria-hidden="true" />
       {ctaBackground ? <SectionBackdrop
         src={ctaBackground}
         opacity={0.5}

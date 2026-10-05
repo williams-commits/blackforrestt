@@ -22,6 +22,7 @@ import type { InstrumentView } from "@/lib/types";
 export function Hero({ content, instruments, heroBackground }: { content: GbfxsHeroContent; instruments: InstrumentView[]; heroBackground?: string }) {
   return (
     <section id="hero" className="relative scroll-mt-24 overflow-hidden bg-[#0a0a0b]">
+      <div className="ag-mesh" aria-hidden="true" />
       {heroBackground ? <SectionBackdrop
         src={heroBackground}
         opacity={0.8}

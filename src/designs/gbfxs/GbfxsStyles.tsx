@@ -38,8 +38,18 @@ export function GbfxsStyles() {
       .ag-container { margin-inline: auto; width: 100%; max-width: 1280px; padding-inline: 1.25rem; }
       @media (min-width: 1024px) { .ag-container { padding-inline: 2.5rem; } }
 
-      .ag-section { padding-block: 6rem; }
-      @media (min-width: 1024px) { .ag-section { padding-block: 8.5rem; } }
+      .ag-section { padding-block: 6.5rem; }
+      @media (min-width: 1024px) { .ag-section { padding-block: 9.5rem; } }
+      /* Ambient mesh — layered amber radials for depth behind statement
+         sections (B register). Applied on an absolute inset-0 div inside a
+         relative section; pointer-events-none by design. */
+      .ag-mesh {
+        position: absolute; inset: 0; pointer-events: none;
+        background:
+          radial-gradient(38% 46% at 18% 8%, rgba(240, 185, 11, 0.14), transparent 68%),
+          radial-gradient(30% 38% at 82% 22%, rgba(237, 165, 14, 0.10), transparent 70%),
+          radial-gradient(44% 52% at 62% 96%, rgba(255, 213, 96, 0.07), transparent 72%);
+      }
       /* Compact rhythm for statement sections (Intelligence, FinalCta) —
          tighter than ag-section, unified where ad-hoc py-* values lived. */
       .ag-section-compact { padding-block: 6rem; }

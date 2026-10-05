@@ -6,6 +6,7 @@ import { WalletModal } from "./WalletModal";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { Button } from "@/components/ui/Button";
 import { ArrowDownToLine, ArrowRight, ArrowUpFromLine, Lock, Plus, Unlock, Wallet } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { InfoHint } from "@/components/ui/InfoHint";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { fmtDate } from "@/lib/dates";
@@ -155,7 +156,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
               </div>
             </div>
           ))}
-          {wallets.length === 0 && <div className="text-xs text-text-faint py-4 text-center">No wallets.</div>}
+          {wallets.length === 0 && <EmptyState compact icon={<Wallet size={18} />} title="No wallets yet" hint="Fund your account to open your first wallet." />}
         </div>
         <div className={`grid gap-2 mt-4 ${depositUiEnabled ? "grid-cols-2" : "grid-cols-1"}`}>
           {depositUiEnabled && (

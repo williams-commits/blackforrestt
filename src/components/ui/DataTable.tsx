@@ -1,5 +1,8 @@
 "use client";
 
+import { Inbox } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
+
 import type { ReactNode } from "react";
 
 /**
@@ -120,8 +123,8 @@ export function Td({
 export function EmptyRow({ colSpan, label }: { colSpan: number; label: string }) {
   return (
     <tr>
-      <td colSpan={colSpan} className="px-3 py-8 text-center text-(length:--term-text-sm) text-text-faint">
-        {label}
+      <td colSpan={colSpan} className="p-0">
+        <EmptyState compact icon={<Inbox size={18} />} title={label} />
       </td>
     </tr>
   );

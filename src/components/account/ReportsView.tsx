@@ -1,5 +1,7 @@
 "use client";
 
+import { TrendingDown, TrendingUp } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -240,7 +242,7 @@ function Card({ label, value, valueClass = "", sub }: { label: string; value: st
   return <div className="rounded-lg border border-border bg-canvas p-4"><div className="text-(length:--term-text-xs) uppercase text-text-faint">{label}</div><div className={`mt-1 text-xl font-semibold tnum ${valueClass}`}>{value}</div>{sub && <div className="mt-0.5 text-(length:--term-text-xs) text-text-faint">{sub}</div>}</div>;
 }
 function ExtremCard({ title, row, positive, emptyLabel = "—" }: { title: string; row: ReportRow | null; positive: boolean; emptyLabel?: string }) {
-  return <div className="rounded-lg border border-border bg-canvas p-4"><div className="mb-2 text-(length:--term-text-xs) uppercase text-text-faint">{title}</div>{row ? <div className="flex items-center justify-between"><div className="flex items-center gap-2"><InstrumentIcon symbol={row.symbol} size={18} /><div><div className="text-sm font-medium">{row.symbol}</div><div className="text-(length:--term-text-xs) text-text-muted">{row.side} · {row.volume.toFixed(2)} lots</div></div></div><div className={`text-lg font-semibold tnum ${positive ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</div></div> : <div className="text-xs text-text-faint">{emptyLabel}</div>}</div>;
+  return <div className="rounded-lg border border-border bg-canvas p-4"><div className="mb-2 text-(length:--term-text-xs) uppercase text-text-faint">{title}</div>{row ? <div className="flex items-center justify-between"><div className="flex items-center gap-2"><InstrumentIcon symbol={row.symbol} size={18} /><div><div className="text-sm font-medium">{row.symbol}</div><div className="text-(length:--term-text-xs) text-text-muted">{row.side} · {row.volume.toFixed(2)} lots</div></div></div><div className={`text-lg font-semibold tnum ${positive ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</div></div> : <EmptyState compact icon={positive ? <TrendingUp size={16} /> : <TrendingDown size={16} />} title={emptyLabel} />}</div>;
 }
 function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <th className={`whitespace-nowrap px-3 py-2 text-left text-(length:--term-text-2xs) font-medium uppercase text-text-faint ${className}`}>{children}</th>; }
 function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <td className={`whitespace-nowrap px-3 py-2 text-xs ${className}`}>{children}</td>; }

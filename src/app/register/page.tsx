@@ -240,7 +240,7 @@ export default function RegisterPage() {
             </div>
           ) : <form onSubmit={submit} className="w-full" aria-describedby={error ? errorId : undefined}>
             <div className="mb-4">
-              <label htmlFor={nameId} className="block text-[11px] text-text-muted mb-1">
+              <label htmlFor={nameId} className="mb-1.5 block text-xs font-medium text-text-muted">
                 {t("fullName")}
               </label>
               <input
@@ -251,11 +251,11 @@ export default function RegisterPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 autoComplete="name"
-                className="w-full h-10 bg-canvas border border-border rounded px-3 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+                className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
               />
             </div>
             <div className="mb-4">
-              <label htmlFor={emailId} className="block text-[11px] text-text-muted mb-1">
+              <label htmlFor={emailId} className="mb-1.5 block text-xs font-medium text-text-muted">
                 {t("email")}
               </label>
               <input
@@ -267,11 +267,11 @@ export default function RegisterPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 inputMode="email"
-                className="w-full h-10 bg-canvas border border-border rounded px-3 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+                className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
               />
             </div>
             <div className="mb-4">
-              <label htmlFor={passwordId} className="block text-[11px] text-text-muted mb-1">
+              <label htmlFor={passwordId} className="mb-1.5 block text-xs font-medium text-text-muted">
                 {t("password")}
               </label>
               <PasswordInput
@@ -283,7 +283,7 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
                 aria-describedby={`${passwordId}-hint`}
-                className="w-full h-10 bg-canvas border border-border rounded px-3 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+                className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
               />
               <p id={`${passwordId}-hint`} className="mt-1 text-[10px] text-text-faint">
                 {t("pwdHint")}
@@ -291,7 +291,7 @@ export default function RegisterPage() {
               <PasswordStrength password={password} className="mt-1.5" />
             </div>
             <div className="mb-4">
-              <label htmlFor={confirmId} className="block text-[11px] text-text-muted mb-1">
+              <label htmlFor={confirmId} className="mb-1.5 block text-xs font-medium text-text-muted">
                 {t("confirmPassword")}
               </label>
               <PasswordInput
@@ -302,7 +302,7 @@ export default function RegisterPage() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 autoComplete="new-password"
-                className="w-full h-10 bg-canvas border border-border rounded px-3 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+                className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
               />
             </div>
 

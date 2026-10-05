@@ -103,7 +103,7 @@ function LoginForm() {
   return (
     <form onSubmit={submit} className="w-full max-w-sm" aria-describedby={error ? errorId : undefined}>
       <div className="mb-5">
-        <label htmlFor={emailId} className="block text-[11px] text-text-muted mb-1">
+        <label htmlFor={emailId} className="mb-1.5 block text-xs font-medium text-text-muted">
           {t("email")}
         </label>
         <input
@@ -115,11 +115,11 @@ function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
           inputMode="email"
-          className="w-full h-10 bg-canvas border border-border rounded px-3 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+          className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
         />
       </div>
       <div className="mb-5">
-        <label htmlFor={passwordId} className="block text-[11px] text-text-muted mb-1">
+        <label htmlFor={passwordId} className="mb-1.5 block text-xs font-medium text-text-muted">
           {t("password")}
         </label>
         <PasswordInput
@@ -129,11 +129,11 @@ function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
-          className="w-full h-10 bg-canvas border border-border rounded px-3 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+          className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
         />
       </div>
       <div className="mb-5">
-        <label htmlFor={mfaId} className="block text-[11px] text-text-muted mb-1">
+        <label htmlFor={mfaId} className="mb-1.5 block text-xs font-medium text-text-muted">
           {t("mfa")}
         </label>
         <input
@@ -145,7 +145,7 @@ function LoginForm() {
           autoComplete="one-time-code"
           inputMode="numeric"
           placeholder={t("mfaPlaceholder")}
-          className="w-full h-10 bg-canvas border border-border rounded px-3 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+          className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
         />
       </div>
 

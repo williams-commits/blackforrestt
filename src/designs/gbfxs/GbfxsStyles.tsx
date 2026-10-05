@@ -46,9 +46,13 @@ export function GbfxsStyles() {
       @media (min-width: 1024px) { .ag-section-compact { padding-block: 9rem; } }
 
       .ag-card {
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0) 42%), var(--ag-card);
-        border: 1px solid var(--ag-border-soft);
-        border-radius: 12px;
+        /* Glass register — translucent surface over the dark canvas with a
+           blur; the top gradient keeps the light-from-above cue. */
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012) 42%), rgba(255, 255, 255, 0.02);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 16px;
       }
       .ag-card-hover { transition: border-color 220ms ease, transform 220ms ease, background-color 220ms ease; }
       .ag-card-hover:hover { border-color: rgba(240, 185, 11, 0.48); transform: translateY(-2px); }
@@ -60,8 +64,12 @@ export function GbfxsStyles() {
         transition: filter 200ms ease, transform 200ms ease, background-color 200ms ease;
         /* min-height: 44px; */
       }
-      .ag-btn-primary { background: var(--ag-accent); color: #0d0d0f; }
-      .ag-btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+      .ag-btn-primary {
+        background: linear-gradient(135deg, #f0b90b, #f5c451 55%, #eda50e);
+        color: #0d0d0f;
+        box-shadow: 0 8px 24px -10px rgba(240, 185, 11, 0.55);
+      }
+      .ag-btn-primary:hover { filter: brightness(1.07); transform: translateY(-1px); box-shadow: 0 10px 28px -10px rgba(240, 185, 11, 0.7); }
       /* Ink button — the dark counterpart for yellow surfaces, where the
          yellow primary would disappear into the background. */
       .ag-btn-ink { background: #0d0d0f; color: #f1f3ef; }
@@ -82,13 +90,13 @@ export function GbfxsStyles() {
       .ag-eyebrow-ink { color: rgba(13, 13, 15, 0.66); }
       /* Hero display scale — the one place the type gets genuinely large. */
       .ag-display {
-        font-size: clamp(2.75rem, 5.6vw, 4.75rem);
-        font-weight: 400; letter-spacing: -0.032em; line-height: 1.03;
+        font-size: clamp(2.9rem, 6vw, 5.25rem);
+        font-weight: 550; letter-spacing: -0.036em; line-height: 1.02;
         color: var(--ag-text);
       }
       .ag-h2 {
-        font-size: clamp(2rem, 3.3vw, 2.9rem);
-        font-weight: 400; letter-spacing: -0.024em; line-height: 1.08; color: var(--ag-text);
+        font-size: clamp(2.1rem, 3.5vw, 3.1rem);
+        font-weight: 520; letter-spacing: -0.028em; line-height: 1.07; color: var(--ag-text);
       }
       .ag-sub { color: var(--ag-text-2); font-size: 1.125rem; line-height: 1.65; }
       /* Body/bullet scale — the missing step between ag-sub and UI text;

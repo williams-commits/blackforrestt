@@ -112,7 +112,7 @@ export function MarketsSection({
               </h3>
               <ul className="mt-5 space-y-3 sm:mt-6 sm:space-y-3.5">
                 {panel.bullets.map((bullet) => (
-                  <li key={bullet} className="flex items-start gap-3 text-[13.5px] leading-relaxed text-[#0d0d0f]/82 sm:text-[14.5px]">
+                  <li key={bullet} className="ag-body flex items-start gap-3 text-[#0d0d0f]/82">
                     <span className="mt-1.75 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0d0d0f]" aria-hidden />
                     {bullet}
                   </li>

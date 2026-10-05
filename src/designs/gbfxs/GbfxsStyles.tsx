@@ -91,6 +91,9 @@ export function GbfxsStyles() {
         font-weight: 400; letter-spacing: -0.024em; line-height: 1.08; color: var(--ag-text);
       }
       .ag-sub { color: var(--ag-text-2); font-size: 1.125rem; line-height: 1.65; }
+      /* Body/bullet scale — the missing step between ag-sub and UI text;
+         replaces the 13.5/14.5/15px ad-hoc bullet and quote sizes. */
+      .ag-body { font-size: 15px; line-height: 1.7; }
       /* Ink-on-yellow text ramp — overrides for the ag-* voice classes on
          accent-yellow surfaces (declared after them so same-specificity
          source order wins without !important). */

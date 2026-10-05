@@ -21,7 +21,7 @@ export function IntelligenceSection({ content }: { content: IntelligenceContent 
           <p className="ag-sub ag-ink-sub mt-4 max-w-lg">{content.subtitle}</p>
           <ul className="mt-8 space-y-3.5">
             {content.bullets.map((bullet) => (
-              <li key={bullet} className="flex items-start gap-3 text-[14.5px] leading-relaxed text-[#0d0d0f]/84">
+              <li key={bullet} className="ag-body flex items-start gap-3 text-[#0d0d0f]/84">
                 <Check size={16} strokeWidth={2.5} className="mt-0.5 shrink-0 text-[#0d0d0f]" aria-hidden />
                 {bullet}
               </li>

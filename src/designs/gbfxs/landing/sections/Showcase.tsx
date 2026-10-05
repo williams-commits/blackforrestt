@@ -17,7 +17,7 @@ export function ShowcaseSection({ content }: { content: ShowcaseContent }) {
             {content.bullets.map((bullet, index) => (
               <li key={bullet} className="flex items-start gap-4">
                 <span className="ag-stepnum shrink-0 pt-1">{String(index + 1).padStart(2, "0")}</span>
-                <span className="text-[15px] leading-relaxed text-[#a9a9ae]">{bullet}</span>
+                <span className="ag-body text-[#a9a9ae]">{bullet}</span>
               </li>
             ))}
           </ul>

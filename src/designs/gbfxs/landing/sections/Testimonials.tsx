@@ -74,7 +74,7 @@ export function TestimonialsSection({ content }: { content: TestimonialsContent 
                     className="h-14 w-14 rounded-full border border-white/15 object-cover"
                   />
                   <blockquote className="mt-5 flex-1">
-                    <p className="text-[14.5px] leading-relaxed text-[#f1f3ef]/90">“{item.quote}”</p>
+                    <p className="ag-body text-[#f1f3ef]/90">“{item.quote}”</p>
                   </blockquote>
                   <div className="mt-5">
                     <StoryStats returns={item.returns} trades={item.trades} label={content.statLabels} />
@@ -102,7 +102,7 @@ export function TestimonialsSection({ content }: { content: TestimonialsContent 
                   />
                   <div className="min-w-0 flex-1">
                     <blockquote className="flex-1">
-                      <p className="text-[14.5px] leading-relaxed text-[#f1f3ef]/90">“{wide.quote}”</p>
+                      <p className="ag-body text-[#f1f3ef]/90">“{wide.quote}”</p>
                     </blockquote>
                     <div className="mt-4 flex flex-wrap items-end justify-between gap-4 border-t border-white/10 pt-4">
                       <figcaption className="flex items-center gap-3">

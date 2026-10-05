@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Clock } from "lucide-react";
 import { InstrumentLogo } from "@/components/landing/InstrumentLogo";
+import { Reveal } from "@/components/landing/Reveal";
 import { useInstruments } from "@/components/landing/useInstruments";
 import type { MarketsBoardContent } from "@/content/contracts";
 import type { InstrumentCategory, InstrumentView } from "@/lib/types";
@@ -63,7 +64,7 @@ export function MarketsSection({
     >
       <div className="ag-container relative">
         {/* Section header — the general pitch, with the explore CTA right */}
-        <div className="flex flex-wrap items-end justify-between gap-6">
+        <Reveal className="flex flex-wrap items-end justify-between gap-6">
           <div className="max-w-2xl">
             <span className="ag-eyebrow">{content.eyebrow}</span>
             <h2 className="ag-h2 mt-4 text-balance">{content.title}</h2>
@@ -72,7 +73,7 @@ export function MarketsSection({
           <Link href="/tools/informers" className="ag-btn ag-btn-ghost shrink-0">
             {content.ctaLabel} <ArrowRight size={15} strokeWidth={2} aria-hidden />
           </Link>
-        </div>
+        </Reveal>
 
         {/* Category pills — one per asset class in the feed */}
         <div className="mt-10 flex flex-wrap gap-2" role="tablist" aria-label={content.eyebrow}>

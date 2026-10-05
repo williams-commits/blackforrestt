@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { CircleCheck } from "lucide-react";
 
@@ -37,46 +38,47 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export function SupportTab() {
-  const [cases, setCases] = useState<SupportCase[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   // New case form state
   const [subject, setSubject] = useState<string>(CATEGORIES[0]);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [successRef, setSuccessRef] = useState("");
+  // Submit failures are action errors, distinct from the query error.
+  const [actionError, setActionError] = useState("");
 
-  async function loadCases() {
-    try {
+  const queryClient = useQueryClient();
+
+  // Server state via react-query: 30s auto-sync (pauses in background tabs);
+  // the shell's badge watcher invalidates when a case changes status.
+  const { data, isPending, error: queryError } = useQuery({
+    queryKey: ["account-support-cases"],
+    queryFn: async () => {
       const res = await fetch("/api/support/cases", { cache: "no-store" });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setCases(data.cases ?? []);
-    } catch {
-      setError("Couldn't load your support cases. Please refresh.");
-    } finally {
-      setLoading(false);
-    }
-  }
+      if (!res.ok) throw new Error("Couldn't load your support cases. Please refresh.");
+      const payload = await res.json() as { cases?: SupportCase[] };
+      return payload.cases ?? [];
+    },
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+  });
+  const cases = data ?? [];
+  const loading = isPending;
+  const loadCases = useCallback(
+    async () => void queryClient.invalidateQueries({ queryKey: ["account-support-cases"] }),
+    [queryClient],
+  );
 
   useEffect(() => {
-    loadCases();
-    // Auto-sync: silent poll while visible + immediate refresh when the
-    // shell's badge watcher detects activity (a case changed status, etc.).
-    const timer = window.setInterval(() => { if (!document.hidden) void loadCases(); }, 30_000);
-    const onCountsChanged = () => void loadCases();
+    const onCountsChanged = () => void queryClient.invalidateQueries({ queryKey: ["account-support-cases"] });
     window.addEventListener("blckforest:counts-changed", onCountsChanged);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("blckforest:counts-changed", onCountsChanged);
-    };
-  }, []);
+    return () => window.removeEventListener("blckforest:counts-changed", onCountsChanged);
+  }, [queryClient]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    setError("");
+    setActionError("");
     setSuccessRef("");
     try {
       const res = await fetch("/api/support/cases", {
@@ -91,11 +93,12 @@ export function SupportTab() {
         return;
       }
       const data = await res.json();
+      setActionError("");
       setSuccessRef(data.reference);
       setMessage("");
       await loadCases();
     } catch {
-      setError("Network error. Please try again.");
+      setActionError("Network error. Please try again.");
     }
     setSubmitting(false);
   }
@@ -138,7 +141,7 @@ export function SupportTab() {
               placeholder="Describe your issue or question…"
             />
           </div>
-          {error && <p className="rounded-lg border border-down/30 bg-down/10 px-3 py-2 text-sm text-down">{error}</p>}
+          {(queryError instanceof Error ? queryError.message : actionError) && <p className="rounded-lg border border-down/30 bg-down/10 px-3 py-2 text-sm text-down">{queryError instanceof Error ? queryError.message : actionError}</p>}
           <button
             type="submit"
             disabled={submitting || message.trim().length < 10}

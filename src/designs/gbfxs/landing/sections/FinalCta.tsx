@@ -7,7 +7,7 @@ import { SectionBackdrop } from "../visuals/SectionBackdrop"
 
 export function FinalCta({ content, ctaBackground }: { content: FinalCtaContent; ctaBackground?: string }) {
   return (
-    <section id="final-cta" className="relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
+    <section id="final-cta" className="ag-section-compact relative scroll-mt-24 overflow-hidden bg-[#0d0d0f]">
       {ctaBackground ? <SectionBackdrop
         src={ctaBackground}
         opacity={0.5}
@@ -21,7 +21,7 @@ export function FinalCta({ content, ctaBackground }: { content: FinalCtaContent;
         className="pointer-events-none absolute inset-0"
         style={{ background: "radial-gradient(60% 55% at 50% 0%, rgba(13, 15, 15,0.5), transparent 72%)" }}
       />
-      <div className="ag-container relative py-28 lg:py-36">
+      <div className="ag-container relative">
         <Reveal>
           <div className="mx-auto max-w-3xl text-center">
             <span className="ag-eyebrow">{content.eyebrow}</span>

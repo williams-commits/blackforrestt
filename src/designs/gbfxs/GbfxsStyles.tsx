@@ -40,6 +40,10 @@ export function GbfxsStyles() {
 
       .ag-section { padding-block: 6rem; }
       @media (min-width: 1024px) { .ag-section { padding-block: 8.5rem; } }
+      /* Compact rhythm for statement sections (Intelligence, FinalCta) —
+         tighter than ag-section, unified where ad-hoc py-* values lived. */
+      .ag-section-compact { padding-block: 6rem; }
+      @media (min-width: 1024px) { .ag-section-compact { padding-block: 9rem; } }
 
       .ag-card {
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0) 42%), var(--ag-card);

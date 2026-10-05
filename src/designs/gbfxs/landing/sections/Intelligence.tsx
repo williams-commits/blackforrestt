@@ -7,13 +7,13 @@ import { Reveal } from "@/components/landing/Reveal"
 
 export function IntelligenceSection({ content }: { content: IntelligenceContent }) {
   return (
-    <section id="intelligence" className="ag-cell-yellow relative scroll-mt-24 overflow-hidden">
+    <section id="intelligence" className="ag-cell-yellow ag-section-compact relative scroll-mt-24 overflow-hidden">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
         style={{ background: "radial-gradient(80% 55% at 92% -10%, rgba(255,255,255,0.32), transparent 62%)" }}
       />
-      <div className="ag-container relative grid items-center gap-10 py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:py-34">
+      <div className="ag-container relative grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
         {/* Narrative + checklist */}
         <Reveal>
           <span className="ag-eyebrow ag-eyebrow-ink">{content.eyebrow}</span>

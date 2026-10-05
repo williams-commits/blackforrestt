@@ -88,7 +88,7 @@ export function SupportTab() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        setError(body.error || "Couldn't submit your case. Please try again.");
+        setActionError(body.error || "Couldn't submit your case. Please try again.");
         setSubmitting(false);
         return;
       }

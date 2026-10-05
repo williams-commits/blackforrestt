@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { toast } from "@/lib/toast";
 import {
@@ -44,27 +45,29 @@ function statusLabel(status: string): string {
 export function KycDocuments() {
   const selectId = useId();
   const fileId = useId();
-  const [documents, setDocuments] = useState<DocumentView[]>([]);
   const [selectedType, setSelectedType] = useState<KycDocumentType>("PASSPORT");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [busyDocId, setBusyDocId] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    try {
+  const queryClient = useQueryClient();
+  // Server state via react-query; uploads/deletes invalidate.
+  const { data, error: queryError } = useQuery({
+    queryKey: ["account-kyc-documents"],
+    queryFn: async () => {
       const response = await fetch("/api/kyc/documents", { cache: "no-store" });
-      const data = (await response.json().catch(() => null)) as { documents?: DocumentView[]; error?: string } | null;
-      if (!response.ok) throw new Error(data?.error ?? "Could not load documents.");
-      setDocuments(data?.documents ?? []);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not load documents.");
-    }
-  }, []);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+      const payload = (await response.json().catch(() => null)) as { documents?: DocumentView[]; error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error ?? "Could not load documents.");
+      return payload?.documents ?? [];
+    },
+    staleTime: 60_000,
+  });
+  const documents = useMemo(() => data ?? [], [data]);
+  const refresh = useCallback(
+    async () => { await queryClient.invalidateQueries({ queryKey: ["account-kyc-documents"] }); },
+    [queryClient],
+  );
 
   const latestByType = useMemo(() => {
     const map = new Map<string, DocumentView>();
@@ -186,7 +189,7 @@ export function KycDocuments() {
         </Button>
       </div>
 
-      {error && <p role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error}</p>}
+      {(error ?? (queryError instanceof Error ? queryError.message : null)) && <p role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error ?? (queryError instanceof Error ? queryError.message : null)}</p>}
 
       <div className="grid gap-2 sm:grid-cols-2">
         {KYC_DOCUMENT_TYPES.map((type) => {

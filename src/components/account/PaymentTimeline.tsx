@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -65,46 +66,45 @@ function formatBytes(bytes: number): string {
 }
 
 export function PaymentTimeline() {
-  const [requests, setRequests] = useState<PaymentView[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Action failures (cancel) are distinct from query failures — local only.
+  const [actionError, setActionError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState<"ALL" | "DEPOSIT" | "WITHDRAWAL">("ALL");
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const keys = useRef(new Map<string, string>());
 
+  // Server state via react-query: 30s auto-sync (pauses in background tabs);
+  // ledger pushes (fund approvals/rejections/reversals) invalidate immediately.
+  const queryClient = useQueryClient();
+  const { data, isPending, error: queryError } = useQuery({
+    queryKey: ["account-payments"],
+    queryFn: async () => {
+      const response = await fetch("/api/wallet/payments", { cache: "no-store" });
+      const payload = await response.json().catch(() => null) as { requests?: PaymentView[]; error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error ?? "Unable to load payment requests.");
+      return payload?.requests ?? [];
+    },
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+  });
+  const requests = useMemo(() => data ?? [], [data]);
+  const loading = isPending;
+  const error = queryError instanceof Error ? queryError.message : null;
   const refresh = useCallback(async () => {
-    const response = await fetch("/api/wallet/payments", { cache: "no-store" });
-    const data = await response.json().catch(() => null) as { requests?: PaymentView[]; error?: string } | null;
-    if (!response.ok) throw new Error(data?.error ?? "Unable to load payment requests.");
-    setRequests(data?.requests ?? []);
-  }, []);
+    await queryClient.invalidateQueries({ queryKey: ["account-payments"] });
+  }, [queryClient]);
 
-  useEffect(() => {
-    void refresh()
-      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Unable to load payments."))
-      .finally(() => setLoading(false));
-  }, [refresh]);
-
-  // Auto-sync: poll every 30s while visible so statuses update live.
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (!document.hidden) void refresh().catch(() => undefined);
-    }, 30_000);
-    return () => window.clearInterval(timer);
-  }, [refresh]);
-
-  // Fund approvals/rejections/reversals arrive as ledger pushes — refresh
-  // immediately instead of waiting for the 30s poll.
+  // Ledger pushes arrive as realtime events — refresh immediately instead of
+  // waiting for the 30s poll.
   useEffect(() => {
     let pending: ReturnType<typeof setTimeout> | null = null;
     const handleRealtime = (event: Event) => {
       const message = (event as CustomEvent<ServerMessage>).detail;
       if (message?.type !== "account" || message.reason !== "ledger") return;
       if (pending) clearTimeout(pending);
-      pending = setTimeout(() => void refresh().catch(() => undefined), 250);
+      pending = setTimeout(() => void refresh(), 250);
     };
     window.addEventListener("blckforest:realtime", handleRealtime);
     return () => {
@@ -129,16 +129,16 @@ export function PaymentTimeline() {
 
   async function upload(requestId: string, file: File) {
     setBusy(requestId);
-    setError(null);
+
     try {
       if (await isHeicFile(file)) {
-        setError("iPhone HEIC photos aren’t supported. Convert the photo to JPEG or PNG (or take a screenshot of it) and try again.");
+        setActionError("iPhone HEIC photos aren’t supported. Convert the photo to JPEG or PNG (or take a screenshot of it) and try again.");
         return;
       }
       // Oversized JPEG/PNG images are resized locally; PDFs must already fit.
       const prepared = await compressProofImage(file, PAYMENT_PROOF_MAX_BYTES);
       if (prepared.size > PAYMENT_PROOF_MAX_BYTES) {
-        setError("The supporting document must be 1 MB or smaller. Images are resized automatically — export a smaller PDF or a more compressed image.");
+        setActionError("The supporting document must be 1 MB or smaller. Images are resized automatically — export a smaller PDF or a more compressed image.");
         return;
       }
       const body = new FormData();
@@ -149,9 +149,10 @@ export function PaymentTimeline() {
       const finalized = await fetch(`/api/wallet/payment-proofs/${uploadData.proofId}/finalize`, { method: "POST" });
       const finalizeData = await finalized.json().catch(() => null) as { error?: string } | null;
       if (!finalized.ok) throw new Error(finalizeData?.error ?? "Proof verification failed.");
+      setActionError(null);
       await refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to upload the proof.");
+      setActionError(cause instanceof Error ? cause.message : "Unable to upload the proof.");
     } finally {
       setBusy(null);
     }
@@ -159,7 +160,7 @@ export function PaymentTimeline() {
 
   async function cancel(requestId: string) {
     setBusy(requestId);
-    setError(null);
+
     const key = keys.current.get(requestId) ?? crypto.randomUUID();
     keys.current.set(requestId, key);
     try {
@@ -171,9 +172,10 @@ export function PaymentTimeline() {
       if (!response.ok) throw new Error(data?.error ?? "Unable to cancel payment request.");
       keys.current.delete(requestId);
       setConfirmCancelId(null);
+      setActionError(null);
       await refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to cancel payment request.");
+      setActionError(cause instanceof Error ? cause.message : "Unable to cancel payment request.");
     } finally {
       setBusy(null);
     }
@@ -195,7 +197,7 @@ export function PaymentTimeline() {
         )}
       </div>
 
-      {error && <p role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error}</p>}
+      {(error ?? actionError) && <p role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error ?? actionError}</p>}
 
       <div className="flex items-center gap-1.5">
         {(["ALL", "DEPOSIT", "WITHDRAWAL"] as const).map((value) => (

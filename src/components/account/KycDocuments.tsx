@@ -159,12 +159,12 @@ export function KycDocuments() {
 
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] sm:items-end">
         <div>
-          <label htmlFor={selectId} className="mb-1 block text-(length:--term-text-xs) text-text-muted">Document type</label>
+          <label htmlFor={selectId} className="mb-1.5 block text-(length:--term-text-xs) font-medium text-text-muted">Document type</label>
           <select
             id={selectId}
             value={selectedType}
             onChange={(event) => setSelectedType(event.target.value as KycDocumentType)}
-            className="h-10 w-full rounded border border-border bg-canvas px-2 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+            className="h-11 w-full rounded border border-border bg-canvas px-2 text-sm outline-none transition-colors hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
           >
             <optgroup label="Identity">
               {IDENTITY_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
@@ -175,13 +175,13 @@ export function KycDocuments() {
           </select>
         </div>
         <div>
-          <label htmlFor={fileId} className="mb-1 block text-(length:--term-text-xs) text-text-muted">File</label>
+          <label htmlFor={fileId} className="mb-1.5 block text-(length:--term-text-xs) font-medium text-text-muted">File</label>
           <input
             id={fileId}
             type="file"
             accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
             onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-            className="block h-10 w-full rounded border border-border bg-canvas px-2 py-1.5 text-xs file:mr-3 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-1 file:text-xs"
+            className="block h-11 w-full rounded border border-border bg-canvas px-2 py-1.5 text-xs transition-colors hover:border-text-faint file:mr-3 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-1 file:text-xs file:text-text-muted"
           />
         </div>
         <Button type="button" variant="brand" loading={loading} loadingLabel="Uploading" onClick={() => void upload()} className="h-10">

@@ -295,7 +295,7 @@ function Field({
         required={required}
         minLength={minLength}
         maxLength={maxLength}
-        className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm outline-none focus:border-brand focus-visible:ring-1 focus-visible:ring-brand"
+        className="h-11 w-full rounded border border-border bg-canvas px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus:border-brand focus-visible:ring-1 focus-visible:ring-brand"
       />
     </div>
   );

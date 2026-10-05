@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { fmtDate } from "@/lib/dates";
@@ -23,54 +24,39 @@ interface ReferralData {
 
 /** Referrals tab — share link, stats, and referral history. */
 export function ReferralTab() {
-  const [data, setData] = useState<ReferralData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const queryClient = useQueryClient();
 
-  const refresh = useCallback(async (options: { silent?: boolean } = {}) => {
-    if (!options.silent) setLoading(true);
-    try {
+  // Server state via react-query: 30s auto-sync (pauses in background tabs).
+  // A referral completes when the referred user's first deposit is approved —
+  // ledger pushes invalidate immediately so rewards update without a reload.
+  const { data, isPending, error: queryError } = useQuery({
+    queryKey: ["account-referrals"],
+    queryFn: async () => {
       const res = await fetch("/api/referrals", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load referrals");
-      const json = await res.json();
-      setData(json);
-      setError(null);
-    } catch (e) {
-      // Silent (background) refreshes keep the last good data on screen.
-      if (!options.silent) setError(e instanceof Error ? e.message : "Unable to load referrals.");
-    } finally {
-      if (!options.silent) setLoading(false);
-    }
-  }, []);
+      return (await res.json()) as ReferralData;
+    },
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+  });
+  const loading = isPending && !data;
+  const error = queryError instanceof Error ? queryError.message : null;
 
-  useEffect(() => { void refresh(); }, [refresh]);
-
-  // Auto-sync: a referral completes when the referred user's first deposit is
-  // approved — poll while visible so status/rewards update without a reload.
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (!document.hidden) void refresh({ silent: true }).catch(() => undefined);
-    }, 30_000);
-    return () => window.clearInterval(timer);
-  }, [refresh]);
-
-  // Referral bonuses land as ledger pushes (deposit approval credits both
-  // sides) — refresh immediately instead of waiting for the 30s poll.
   useEffect(() => {
     let pending: ReturnType<typeof setTimeout> | null = null;
     const handleRealtime = (event: Event) => {
       const message = (event as CustomEvent<ServerMessage>).detail;
       if (message?.type !== "account" || message.reason !== "ledger") return;
       if (pending) clearTimeout(pending);
-      pending = setTimeout(() => void refresh({ silent: true }).catch(() => undefined), 250);
+      pending = setTimeout(() => void queryClient.invalidateQueries({ queryKey: ["account-referrals"] }), 250);
     };
     window.addEventListener("blckforest:realtime", handleRealtime);
     return () => {
       window.removeEventListener("blckforest:realtime", handleRealtime);
       if (pending) clearTimeout(pending);
     };
-  }, [refresh]);
+  }, [queryClient]);
 
   const copyLink = async () => {
     if (!data) return;
@@ -109,7 +95,7 @@ export function ReferralTab() {
     return (
       <div className="rounded-lg border border-down/30 bg-down/10 p-5 text-center">
         <p className="text-sm text-down">{error}</p>
-        <Button type="button" size="sm" variant="ghost" className="mt-3" onClick={() => void refresh()}>
+        <Button type="button" size="sm" variant="ghost" className="mt-3" onClick={() => void queryClient.invalidateQueries({ queryKey: ["account-referrals"] })}>
           Retry
         </Button>
       </div>

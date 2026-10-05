@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForexStore } from "@/lib/store";
 import { closePosition } from "@/hooks/useOpenPosition";
 import { useMemo } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { TerminalTable } from "@/components/trade/TerminalTable";
 import { toast } from "@/lib/toast";
@@ -270,54 +271,47 @@ function OpenPositionsTable({
   );
 }
 
-/** Trade-history data loading — shared by the phone cards and the md+ table. */
+/** Trade-history data loading — shared by the phone cards and the md+ table.
+ *  useInfiniteQuery holds the cursor pages; refetches preserve the loaded
+ *  depth, so "Load 25 more" context survives background syncs. */
 function useHistoryData() {
-  const [history, setHistory] = useState<PositionView[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  // True once the user pages past the first 25 rows ("Load 25 more"). The
-  // auto-sync poll below must not run in that state — it fetches page 1 and
-  // would yank the browsed list back to the newest 25 rows every 30 seconds.
+  // True once the user pages past the first 25 rows — the auto-sync poll
+  // must not run in that state; a refetch would pull every loaded page back
+  // to the newest rows and yank the browsed context.
   const pagedRef = useRef(false);
 
-  const loadHistory = useCallback(async (cursor?: string, append = false) => {
-    pagedRef.current = append;
-    if (append) setLoadingMore(true);
-    else setLoading(true);
-    setError(null);
-    try {
+  const { data, isPending, isFetchingNextPage, error: queryError, fetchNextPage, refetch } = useInfiniteQuery({
+    queryKey: ["trade-history"],
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams({ status: "CLOSED", limit: "25" });
-      if (cursor) params.set("cursor", cursor);
+      if (pageParam) params.set("cursor", pageParam);
       const response = await fetch(`/api/positions?${params.toString()}`, { cache: "no-store" });
       if (!response.ok) throw new Error(`History request failed with status ${response.status}`);
-      const data = (await response.json()) as { positions?: PositionView[]; nextCursor?: string | null };
-      const rows = data.positions ?? [];
-      setHistory((current) => (append ? [...current, ...rows] : rows));
-      setNextCursor(data.nextCursor ?? null);
-    } catch {
-      setError("Trade history could not be loaded.");
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, []);
+      const payload = (await response.json()) as { positions?: PositionView[]; nextCursor?: string | null };
+      return { rows: payload.positions ?? [], nextCursor: payload.nextCursor ?? null };
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    // Auto-sync so newly closed positions appear without a manual refresh —
+    // paused in hidden tabs natively, and off once the user pages back.
+    refetchInterval: () => (document.hidden || pagedRef.current ? false : 30_000),
+    staleTime: 20_000,
+  });
 
-  useEffect(() => {
-    void loadHistory();
-  }, [loadHistory]);
+  const history = useMemo(() => data?.pages.flatMap((page) => page.rows) ?? [], [data]);
+  const nextCursor = data?.pages.at(-1)?.nextCursor ?? null;
+  const loading = isPending;
+  const loadingMore = isFetchingNextPage;
+  const error = queryError ? "Trade history could not be loaded." : null;
 
-  // Auto-sync: poll every 30s so newly closed positions appear without manual
-  // refresh. Skipped while hidden or once the user has paged into older
-  // history — reloading page 1 there would discard their scrolled context.
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (document.hidden || pagedRef.current) return;
-      void loadHistory().catch(() => undefined);
-    }, 30_000);
-    return () => window.clearInterval(timer);
-  }, [loadHistory]);
+  const loadHistory = useCallback(
+    async (cursor?: string, append = false) => {
+      pagedRef.current = append;
+      if (append || cursor) await fetchNextPage();
+      else await refetch();
+    },
+    [fetchNextPage, refetch],
+  );
 
   return { history, loading, loadingMore, nextCursor, error, loadHistory };
 }

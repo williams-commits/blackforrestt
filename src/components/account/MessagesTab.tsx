@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Send } from "lucide-react";
@@ -38,52 +39,45 @@ type Inbox =
  *  summary instead — their replies belong in the Operations console. Polls
  *  every 15s while visible. */
 export function MessagesTab() {
-  const [inbox, setInbox] = useState<Inbox | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Send failures are action errors, distinct from the query error.
+  const [actionError, setActionError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async (options: { background?: boolean } = {}) => {
-    try {
-      // Background polls (?poll=1) fetch WITHOUT marking the thread read —
-      // the unread badge is only consumed when the customer is looking at
-      // the conversation (this tab open and the window visible).
-      const viewing = typeof document === "undefined" || !document.hidden;
-      const poll = options.background || !viewing ? "?poll=1" : "";
+  // Server state via react-query: 8s auto-sync keeps read receipts feeling
+  // live ("✓ Sent" flips to "✓ Read" shortly after the other side opens the
+  // chat). The interval pauses in hidden tabs natively; the queryFn only
+  // marks the thread read when the window is VISIBLE (?poll=1 fetches
+  // without consuming the unread badge) — the badge is only spent while the
+  // customer is actually looking at the conversation. Window-focus refetch
+  // and badge-watcher invalidation come from react-query defaults + the
+  // effect below.
+  const { data: inbox, isPending, error: queryError, refetch } = useQuery({
+    queryKey: ["account-messages"],
+    queryFn: async () => {
+      const poll = document.hidden ? "?poll=1" : "";
       const response = await fetch(`/api/messages${poll}`, { cache: "no-store" });
       const data = await response.json().catch(() => null) as (Inbox & { error?: string }) | null;
       if (!response.ok) throw new Error(data?.error ?? "Unable to load messages.");
       if (!data || (data.role !== "customer" && data.role !== "operator")) {
         throw new Error("Unexpected response from the server.");
       }
-      setInbox(data);
-      setError(null);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to load messages.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return data;
+    },
+    refetchInterval: 8_000,
+    staleTime: 5_000,
+  });
+  const loading = isPending;
+  const error = queryError instanceof Error ? queryError.message : null;
+  const load = useCallback(async () => { await refetch(); }, [refetch]);
 
+  // The shell's badge watcher reports new activity — reload immediately.
   useEffect(() => {
-    void load();
-    // Auto-sync: poll while visible (8s keeps read receipts feeling live —
-    // "✓ Sent" flips to "✓ Read" shortly after the other side opens the
-    // chat), refresh on window focus, and reload immediately when the
-    // shell's badge watcher detects new activity.
-    const timer = window.setInterval(() => { if (!document.hidden) void load({ background: true }); }, 8_000);
-    const onCountsChanged = () => void load({ background: true });
-    const onFocus = () => void load({ background: true });
+    const onCountsChanged = () => void refetch();
     window.addEventListener("blckforest:counts-changed", onCountsChanged);
-    window.addEventListener("focus", onFocus);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("blckforest:counts-changed", onCountsChanged);
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [load]);
+    return () => window.removeEventListener("blckforest:counts-changed", onCountsChanged);
+  }, [refetch]);
 
   const messageCount = inbox?.role === "customer" ? inbox.messages.length : 0;
   useEffect(() => {
@@ -95,7 +89,6 @@ export function MessagesTab() {
     const body = draft.trim();
     if (!body || sending || inbox?.role !== "customer") return;
     setSending(true);
-    setError(null);
     try {
       const response = await fetch("/api/messages", {
         method: "POST",
@@ -105,9 +98,10 @@ export function MessagesTab() {
       const data = await response.json().catch(() => null) as { error?: string } | null;
       if (!response.ok) throw new Error(data?.error ?? "Unable to send the message.");
       setDraft("");
+      setActionError(null);
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to send the message.");
+      setActionError(cause instanceof Error ? cause.message : "Unable to send the message.");
     } finally {
       setSending(false);
     }
@@ -165,9 +159,9 @@ export function MessagesTab() {
         <div ref={bottomRef} />
       </div>
 
-      {error && (
+      {(error ?? actionError) && (
         <div role="alert" className="mx-4 mb-2 flex items-center justify-between gap-2 rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">
-          <span>{error}</span>
+          <span>{error ?? actionError}</span>
           <button type="button" onClick={() => void load()} className="shrink-0 font-medium underline underline-offset-2">Retry</button>
         </div>
       )}

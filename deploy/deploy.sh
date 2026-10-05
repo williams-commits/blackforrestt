@@ -83,9 +83,9 @@ if [[ -n "$CRM_DOMAIN_CFG" ]]; then
 fi
 
 # ── Deploy scope for the new domain-manifest system ──────────────────────────
-# The registry lists every domain family; DOMAIN slots left empty disable a
-# family. Translate non-empty DOMAIN/DOMAIN_2/DOMAIN_3 slots into
-# DEPLOY_DOMAINS (persisted) so the render only routes configured families.
+# The registry lists every domain family; legacy env DOMAIN slots left empty
+# disable a family. Translate any non-empty legacy slot into DEPLOY_DOMAINS
+# (persisted) so the render only routes configured families.
 DEPLOY_DOMAINS_CFG="$(grep -E '^DEPLOY_DOMAINS=' .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' || :)"
 if [[ -n "$DEPLOY_SCOPE" ]]; then
   echo "One-shot scope active ($DEPLOY_SCOPE) — skipping DEPLOY_DOMAINS derivation."

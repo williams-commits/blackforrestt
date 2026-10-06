@@ -15,11 +15,19 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // Repo root (deploy/, Makefile) — the app moved into apps/web in Phase 9.
 const REPO = join(ROOT, "..", "..");
-const SITE_MARKER = /([a-z0-9.-]+)\s*\{\s*\n\s*import app-site/g;
+import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
+const SITE_MARKER = /([a-z0-9.-]+)\s*\{\s*\n\s*import (?:app|trade)-site/g;
 
 function loadDomains(): TestDomain[] {
-  const script = `import { DOMAINS } from ${JSON.stringify(join(ROOT, "src/domains/.generated/domains.ts"))};console.log(JSON.stringify(DOMAINS));`;
-  return JSON.parse(execFileSync(process.execPath, ["--import", "tsx", "--eval", script], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }));
+  // require via the tsx loader keeps ESM interop intact (dynamic import in
+  // this CJS-compiled test file cannot be awaited at module top level).
+  const require = createRequire(import.meta.url);
+  require("tsx/cjs");
+  const mod = require(pathToFileURL(join(ROOT, "src/domains/.generated/domains.ts")).href) as {
+    DOMAINS: TestDomain[];
+  };
+  return mod.DOMAINS;
 }
 
 async function lib(): Promise<typeof import("../scripts/platform/lib/deploy-config.mjs")> {
@@ -44,7 +52,7 @@ function siteHosts(caddyfile: string) {
 
 test("deploy gbfxs → blackforrest unchanged, present, and the merged config stays valid", async () => {
   const { renderDomainSite, renderCaddyfile } = await lib();
-  const domains = loadDomains();
+  const domains = await loadDomains();
   const envFile = join(ROOT, ".env"); // local env; email passed explicitly
   const dir = join(ROOT, ".tmp-deploy-test-sites");
   try {
@@ -67,8 +75,9 @@ test("deploy gbfxs → blackforrest unchanged, present, and the merged config st
     assert.equal(after.blackforrest, before.blackforrest, "blackforrest site file byte-identical");
     assert.ok(siteHosts(after.caddy).has("blackforrestt.com"), "blackforrest still routed (reachable)");
     assert.ok(siteHosts(after.caddy).has("trade.blackforrestt.com"), "blackforrest trade host still routed");
+    assert.ok(/trade\.blackforrestt\.com \{\n  import trade-site/.test(after.caddy), "trade host routed to the TRADE container");
     assert.ok(siteHosts(after.caddy).has("gbfxs.com"), "gbfxs updated + routed");
-    assert.equal((after.caddy.match(/import app-site/g) ?? []).length, (before.caddy.match(/import app-site/g) ?? []).length, "same block count — nothing dropped");
+    assert.equal((after.caddy.match(/import (app|trade)-site/g) ?? []).length, (before.caddy.match(/import (app|trade)-site/g) ?? []).length, "same block count — nothing dropped");
     assert.ok(after.caddy.startsWith("# GENERATED FILE"), "merged config is generated (not source of truth)");
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -77,7 +86,7 @@ test("deploy gbfxs → blackforrest unchanged, present, and the merged config st
 
 test("deploy blackforrest → gbfxs unchanged (symmetric)", async () => {
   const { renderDomainSite, renderCaddyfile } = await lib();
-  const domains = loadDomains();
+  const domains = await loadDomains();
   const envFile = join(ROOT, ".env");
   const dir = join(ROOT, ".tmp-deploy-test-sites");
   try {

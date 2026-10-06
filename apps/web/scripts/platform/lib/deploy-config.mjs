@@ -3,7 +3,6 @@
  * manifests (via a TSX import of the generated registry). ONE source of
  * truth for hosts, trade hosts, and site routing. No numbered domain slots.
  */
-import { execFileSync } from "node:child_process";
 import { readFileSync, existsSync, writeFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";

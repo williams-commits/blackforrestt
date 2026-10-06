@@ -8,7 +8,7 @@
  * explicit --confirm). deploy writes ONLY the selected domain's site file —
  * other deployed domains are never touched.
  */
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, readdirSync, statSync,
   cpSync, renameSync, copyFileSync,
@@ -21,12 +21,6 @@ import { pathToFileURL } from "node:url";
 /** Repo root — deploy/ (caddy templates, rendered sites) lives here since
  *  the Phase 9 move of the app into apps/web. */
 function repoRoot(ROOT) { return join(ROOT, "..", ".."); }
-
-function runTsx(script, cwd) {
-  return execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script], {
-    cwd, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"],
-  });
-}
 
 async function loadDomainRegistry(ROOT) {
   // In-process dynamic import — this CLI already runs under tsx, so the

@@ -1,0 +1,415 @@
+@import "tailwindcss";
+
+/*
+  blckforest design tokens — light forex broker theme.
+  White canvas, layered pale panels, hairline borders, orange brand accent.
+  Up/Buy = green, Down/Sell = red.
+*/
+@theme {
+  --color-canvas: #ffffff;
+  --color-panel: #f6f7f9;
+  --color-panel-2: #eef1f4;
+  --color-panel-3: #e2e7ec;
+  --color-border: #d5dbe3;
+  --color-border-soft: #e7ebef;
+
+  --color-up: #2b8a3e;
+  --color-down: #e03131;
+  --color-brand: #fd7e14;
+  --color-brand-soft: #ffe8cc;
+
+  --color-text: #17202a;
+  /* muted/faint both clear WCAG AA (4.5:1) on canvas and panels — faint
+     carried table headers, timestamps and hints at ~2.5:1 before. */
+  --color-text-muted: #5b6673;
+  --color-text-faint: #66707e;
+
+  --font-mono: var(--font-mono-loaded), "SF Mono", "JetBrains Mono", "Roboto Mono", ui-monospace, monospace;
+  --font-sans: var(--font-sans-loaded), "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-serif: var(--font-serif-loaded), "Newsreader", Georgia, "Times New Roman", serif;
+
+  --radius-panel: 4px;
+
+  --shadow-panel: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-card: 0 12px 32px rgba(16, 24, 40, 0.10);
+
+  /* A fixed dark surface for intentionally-inverted regions (the marketing
+     footer). Deliberately NOT derived from --color-text, which flips between
+     themes — this stays dark in both light and dim so the footer reads as a
+     stable dark band with white text in either mode. */
+  --color-surface-dark: #17202a;
+}
+
+:root {
+  color-scheme: light;
+}
+
+/*
+  Dim mode — site-wide token swap.
+  The same utilities (bg-canvas, text-text, border-border, …) reskin the whole
+  app (landing, trade terminal, account, admin) by redefining the underlying
+  CSS variables under a `.dim` class on <html>. No `dark:` class churn needed.
+  Brand/up/down hues are kept, slightly desaturated for the darker canvas.
+*/
+html.dim {
+  color-scheme: dark;
+  --color-canvas: #0e1116;
+  --color-panel: #161b22;
+  --color-panel-2: #1c232c;
+  --color-panel-3: #2a323d;
+  --color-border: #2a323d;
+  --color-border-soft: #222932;
+  --color-up: #4cba6a;
+  --color-down: #f15b5b;
+  --color-brand: #fd9444;
+  --color-brand-soft: #3a2410;
+  --color-text: #e6edf3;
+  --color-text-muted: #9aa7b4;
+  --color-text-faint: #78828f;
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.45);
+  /* In dim mode the footer darkens further so it still reads as a distinct
+     band against the (already dark) canvas. */
+  --color-surface-dark: #06090d;
+}
+
+/* Serif prose for long-form / editorial copy. Pairs with mono labels & data. */
+.font-prose {
+  font-family: var(--font-serif);
+  font-feature-settings: "kern", "liga";
+  font-weight: 500;
+}
+
+/*
+  Global Forex Services app accent — the two-tone identity on light app surfaces
+  (login/register/recovery, account, admin on the gbfxs family).
+  Binance-yellow (#f0b90b) fails WCAG as TEXT on white (~1.7:1), so filled
+  brand surfaces take the yellow with dark ink (#181a20 — the landing's
+  primary-button treatment), while text/link accents keep the deep gold
+  (--color-brand). Scoped by the host class set in the root layout — the
+  primary brand never matches these rules.
+*/
+.gbfxs-app .bg-brand {
+  background-color: #f0b90b;
+  color: #181a20;
+}
+
+/*
+  Scroll-reveal motion primitive (toggled by components/landing/Reveal).
+  Content fades up once as it enters the viewport; disabled entirely for
+  reduced-motion users so the primitive is safe to use anywhere.
+*/
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 450ms ease, transform 450ms ease;
+}
+.reveal.reveal-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/*
+  Editorial prose container used by content pages (ArticleLayout). Serif body for
+  readability, with measured spacing and themed links / lists / quotes. Replaces
+  the previously-undefined `prose-content` class so all education / legal /
+  analytics / about copy inherits the same typographic system as the landing page.
+*/
+.prose-content {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--color-text);
+  font-weight: 500;
+}
+.prose-content p {
+  margin: 0;
+}
+.prose-content > section + section,
+.prose-content > * + * {
+  margin-top: 1.25rem;
+}
+.prose-content a {
+  color: var(--color-brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-content a:hover {
+  filter: brightness(1.1);
+}
+.prose-content strong,
+.prose-content b {
+  font-weight: 700;
+  color: var(--color-text);
+}
+.prose-content ul,
+.prose-content ol {
+  padding-left: 1.25rem;
+}
+.prose-content ul {
+  list-style: disc;
+}
+.prose-content ol {
+  list-style: decimal;
+}
+.prose-content li::marker {
+  color: var(--color-brand);
+}
+.prose-content code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: var(--color-panel-2);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.prose-content blockquote {
+  border-left: 3px solid var(--color-brand);
+  padding-left: 1rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-brand-soft);
+  color: var(--color-text);
+}
+
+/* Numeric / price cells use tabular figures. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Light, subtle scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-panel-3) transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-panel-3);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Range slider (leverage / volume) styled to the theme. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-panel-3);
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  cursor: pointer;
+  border: 2px solid var(--color-canvas);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  cursor: pointer;
+  border: 2px solid var(--color-canvas);
+}
+
+button[type="button"], button{
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Skeleton shimmer — premium loading placeholder sweep (theme-aware). */
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--color-panel) 40%,
+    var(--color-panel-3) 50%,
+    var(--color-panel) 60%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+/* Modal entrance animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Keyboard users can bypass repeated navigation across public, account, trade,
+   and administrative shells. Each primary page exposes #main-content. */
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 10000;
+  transform: translateY(-200%);
+  border-radius: 0.375rem;
+  background: var(--color-brand);
+  color: white;
+  padding: 0.625rem 0.875rem;
+  font-weight: 600;
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* Mobile trading workspaces use dynamic viewport units and safe-area insets. */
+@supports (min-height: 100dvh) {
+  .min-h-dvh {
+    min-height: 100dvh;
+  }
+}
+
+html {
+  min-width: 320px;
+  overflow-x: hidden;
+}
+
+/* NOTE: overflow-x must live on `html` only. Setting it on `body` as well
+   turns the body into a nested scroll container — the viewport then never
+   scrolls, window.scrollY stays 0, and every window-scroll listener dies
+   (navbar background on scroll, StickyCta, TOC scroll-spy). `html`'s rule
+   propagates to the viewport and already clips horizontal overflow. */
+body {
+  min-width: 320px;
+}
+
+@media (max-width: 639px) {
+  button,
+  a,
+  input,
+  select {
+    touch-action: manipulation;
+  }
+
+  table {
+    font-size: 11px;
+  }
+}
+
+/* ── Terminal density & semantic tokens (authenticated app shells) ─────────
+   Scoped to `.terminal-ui` — the trading terminal, account portal, and
+   admin console. Marketing/(content) pages never carry the class, so
+   landing surfaces are untouched by the terminal redesign. Everything is
+   additive: components opt in during the sweep; nothing changes until
+   they reference these tokens. */
+.terminal-ui {
+  /* Data type scale — replaces per-component arbitrary px (9/10/11). */
+  --term-text-2xs: 10px; /* tickers, badge counts, table meta */
+  --term-text-xs: 11px;  /* dense table cells, axis labels */
+  --term-text-sm: 12px;  /* inputs, secondary controls */
+  --term-text-md: 13px;  /* body copy / default */
+
+  /* Row density for tables and docks. */
+  --term-row-sm: 28px;
+  --term-row-md: 34px;
+  --term-row-lg: 40px;
+
+  /* Semantic status pairs (bg / fg / border) — WCAG-checked on canvas and
+     panel. Mirrors the CRM's semantic tone model so both apps read alike. */
+  --term-success-bg: #e6f4ea;
+  --term-success-fg: #1e6b34;
+  --term-success-border: #bfe3c8;
+  --term-danger-bg: #fdeaea;
+  --term-danger-fg: #b02525;
+  --term-danger-border: #f3c1c1;
+  --term-warning-bg: #fdf3e0;
+  --term-warning-fg: #8a5a10;
+  --term-warning-border: #f0d9ac;
+  --term-info-bg: #e8f1fb;
+  --term-info-fg: #1d5a9e;
+  --term-info-border: #c4dcf2;
+
+  /* Fixed dark console band (admin operations header) — intentionally dark
+     in BOTH themes, same model as --color-surface-dark. Replaces the raw
+     slate-palette utilities so the console reads through the token system. */
+  --term-console-bg: #0f172a;
+  --term-console-fg: #f1f5f9;
+  --term-console-muted: #94a3b8;
+  --term-console-soft: #cbd5e1;
+  --term-console-border: #334155;
+  --term-console-active: #1e293b;
+}
+
+html.dim .terminal-ui {
+  /* Same semantics, lifted for dark canvases (AA on #0e1116/#161b22). */
+  --term-success-bg: #12291a;
+  --term-success-fg: #69c98a;
+  --term-success-border: #1f4530;
+  --term-danger-bg: #331a1c;
+  --term-danger-fg: #f08a8a;
+  --term-danger-border: #54282c;
+  --term-warning-bg: #33280f;
+  --term-warning-fg: #e5b95f;
+  --term-warning-border: #55431c;
+  --term-info-bg: #14273c;
+  --term-info-fg: #7db6ea;
+  --term-info-border: #224363;
+}
+
+/* ── Trade terminal scaling on large desktop monitors ─────────────────────
+   The terminal uses small fixed px sizes (10–12px fonts, 340px panels) tuned
+   for laptop densities. On large/high-resolution monitors running at native
+   scaling those pixels render physically tiny. Standardized CSS `zoom` scales
+   the whole workspace while viewport units (dvh/vh) still fill the screen, so
+   the layout stays a fixed-viewport app. MacBook-class widths are untouched. */
+@media (min-width: 1800px) and (min-height: 1000px) {
+  .trade-workspace {
+    zoom: 1.1;
+  }
+}
+
+@media (min-width: 2400px) and (min-height: 1300px) {
+  .trade-workspace {
+    zoom: 1.25;
+  }
+}

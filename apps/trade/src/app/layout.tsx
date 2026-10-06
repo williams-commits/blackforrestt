@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
+import { Providers } from "@/components/providers";
 import { getLocale, getMessages } from "next-intl/server";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "BlackForest Trade",
@@ -12,9 +14,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const messages = await getMessages();
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body style={{ background: "#0e1116", color: "#e6edf3", fontFamily: "system-ui, sans-serif", margin: 0 }}>
+      <body className="bg-canvas text-text antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          {children}
+          <Providers>{children}</Providers>
         </NextIntlClientProvider>
       </body>
     </html>

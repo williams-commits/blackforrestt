@@ -172,7 +172,7 @@ services:
   crm:
     image: ${CRM_IMAGE:-blckforest-crm:latest}
     build:
-      context: ../crm
+      context: ../../apps/crm
       dockerfile: Dockerfile
     restart: unless-stopped
     # Same file as the app service, resolved relative to this compose file

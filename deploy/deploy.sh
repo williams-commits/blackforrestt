@@ -47,10 +47,10 @@ fi
 # the host only needs Docker (no host Node), same pattern as crm-seed below.
 # Repo pieces the render reads/writes are bind-mounted over the image's /app
 # copy so the output always matches the checked-out manifests + env file.
-docker build --target builder -t blckforest-render:tmp "$ROOT" >/dev/null
+docker build --target builder -t blckforest-render:tmp "$ROOT/apps/web" >/dev/null
 docker run --rm \
-  -v "$ROOT/scripts:/app/scripts:ro" \
-  -v "$ROOT/src/domains/.generated:/app/src/domains/.generated:ro" \
+  -v "$ROOT/apps/web/scripts:/app/scripts:ro" \
+  -v "$ROOT/apps/web/src/domains/.generated:/app/src/domains/.generated:ro" \
   -v "$ROOT/.env.production:/app/.env.production:ro" \
   -v "$ROOT/deploy/caddy:/app/deploy/caddy" \
   blckforest-render:tmp \
@@ -120,7 +120,7 @@ for required_image in "$MINIO_SERVER_IMAGE" "$MINIO_MC_IMAGE"; do
   fi
 done
 
-"${COMPOSE[@]}" build --pull app malware-scanner crm
+"${COMPOSE[@]}" build --pull app trade malware-scanner crm
 # clamav starts early so signature downloads overlap with the migrate/seed steps.
 "${COMPOSE[@]}" up -d postgres redis minio minio-init clamav
 "${COMPOSE[@]}" run --rm app npx prisma migrate deploy

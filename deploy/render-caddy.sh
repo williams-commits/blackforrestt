@@ -17,10 +17,10 @@ if [[ -d "$out" ]]; then rm -rf "$out"; fi
 
 # Render inside the repo's builder-stage container — the host needs only
 # Docker (no host Node), matching deploy.sh's render step.
-docker build --target builder -t blckforest-render:tmp "$ROOT" >/dev/null
+docker build --target builder -t blckforest-render:tmp "$ROOT/apps/web" >/dev/null
 docker run --rm \
-  -v "$ROOT/scripts:/app/scripts:ro" \
-  -v "$ROOT/src/domains/.generated:/app/src/domains/.generated:ro" \
+  -v "$ROOT/apps/web/scripts:/app/scripts:ro" \
+  -v "$ROOT/apps/web/src/domains/.generated:/app/src/domains/.generated:ro" \
   -v "$ENV_FILE:/app/.env.production:ro" \
   -v "$ROOT/deploy/caddy:/app/deploy/caddy" \
   blckforest-render:tmp \

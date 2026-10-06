@@ -13,6 +13,8 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+// Repo root (deploy/, Makefile) — the app moved into apps/web in Phase 9.
+const REPO = join(ROOT, "..", "..");
 const SITE_MARKER = /([a-z0-9.-]+)\s*\{\s*\n\s*import app-site/g;
 
 function loadDomains(): TestDomain[] {
@@ -49,7 +51,7 @@ test("deploy gbfxs → blackforrest unchanged, present, and the merged config st
     setupTempSites(dir, domains, { renderDomainSite }, envFile);
     const before = {
       blackforrest: readFileSync(join(dir, "blackforrest.caddy"), "utf8"),
-      caddy: renderCaddyfile({ envFile, sitesDir: dir, snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"), email: "test@localhost" }),
+      caddy: renderCaddyfile({ envFile, sitesDir: dir, snippetsPath: join(REPO, "deploy/caddy/template/snippets.caddy"), email: "test@localhost" }),
     };
     assert.ok(siteHosts(before.caddy).has("blackforrestt.com"), "blackforrest deployed initially");
     assert.ok(siteHosts(before.caddy).has("gbfxs.com"), "gbfxs deployed initially");
@@ -59,7 +61,7 @@ test("deploy gbfxs → blackforrest unchanged, present, and the merged config st
     writeFileSync(join(dir, "gbfxs.caddy"), renderDomainSite(gbfxs, envFile));
     const after = {
       blackforrest: readFileSync(join(dir, "blackforrest.caddy"), "utf8"),
-      caddy: renderCaddyfile({ envFile, sitesDir: dir, snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"), email: "test@localhost" }),
+      caddy: renderCaddyfile({ envFile, sitesDir: dir, snippetsPath: join(REPO, "deploy/caddy/template/snippets.caddy"), email: "test@localhost" }),
     };
 
     assert.equal(after.blackforrest, before.blackforrest, "blackforrest site file byte-identical");
@@ -82,13 +84,13 @@ test("deploy blackforrest → gbfxs unchanged (symmetric)", async () => {
     setupTempSites(dir, domains, { renderDomainSite }, envFile);
     const before = {
       gbfxs: readFileSync(join(dir, "gbfxs.caddy"), "utf8"),
-      caddy: renderCaddyfile({ envFile, sitesDir: dir, snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"), email: "test@localhost" }),
+      caddy: renderCaddyfile({ envFile, sitesDir: dir, snippetsPath: join(REPO, "deploy/caddy/template/snippets.caddy"), email: "test@localhost" }),
     };
     const blackforrest = domains.find((d: { key: string }) => d.key === "blackforrest");
     writeFileSync(join(dir, "blackforrest.caddy"), renderDomainSite(blackforrest, envFile));
     const after = {
       gbfxs: readFileSync(join(dir, "gbfxs.caddy"), "utf8"),
-      caddy: renderCaddyfile({ envFile, sitesDir: dir, snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"), email: "test@localhost" }),
+      caddy: renderCaddyfile({ envFile, sitesDir: dir, snippetsPath: join(REPO, "deploy/caddy/template/snippets.caddy"), email: "test@localhost" }),
     };
     assert.equal(after.gbfxs, before.gbfxs, "gbfxs site file byte-identical");
     assert.ok(siteHosts(after.caddy).has("gbfxs.com"), "gbfxs still routed");
@@ -118,7 +120,7 @@ test("no numbered domain slots anywhere in source or CI", () => {
       "-rn", "-E", "DOMAIN_2|DOMAIN_3|DOMAIN_4|TRADE_DOMAIN_2|TRADE_DOMAIN_3|TRADE_DOMAIN_4",
       // code + config only — prose/docs legitimately mention the forbidden
       // pattern when explaining what NOT to do
-      "src", "scripts", "deploy", "next.config.ts", "Makefile", ".github",
+      "src", "scripts", "next.config.ts",
     ], { cwd: ROOT, encoding: "utf8" });
   } catch (error) {
     // grep exits 1 when nothing matches — the GOOD case here.

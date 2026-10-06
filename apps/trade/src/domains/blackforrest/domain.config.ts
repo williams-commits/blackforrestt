@@ -1,0 +1,36 @@
+/**
+ * BLACKFOREST domain configuration — the platform's primary brand family
+ * (Black Forest Digital / blackforrestt.com).
+ *
+ * One domain = one explicit configuration. This file declares everything the
+ * code layer knows about the family: its apex hosts, design selections, and
+ * brand identity defaults. The operational env layer (BRAND_DOMAINS,
+ * BRAND_OVERRIDES, DOMAIN_N/TRADE_DOMAIN_N) still overrides every value at
+ * runtime — see src/platform/registry.ts for the precedence rules.
+ *
+ * MUST stay a pure data module (type-only imports): it is composed into
+ * registry.ts, which next.config.ts and the middleware also load.
+ */
+import type { DomainDefinition } from "@/platform/registry";
+
+/** Primary brand identity defaults mirror the env fallbacks in
+ *  src/lib/branding.ts (which already defaults every field), so this entry
+ *  intentionally carries only what code should assert: designs + trade host. */
+export const BLACKFOREST_DOMAIN: DomainDefinition = {
+  key: "blackforrest",
+  // First-class host: blackforrestt.com (canonical; also the platform default).
+  hosts: ["blackforrestt.com"],
+  landingDesign: "default",
+  publicDesign: "default",
+  tradeEnabled: true,
+  // Explicit package refs (validated by `platform domain validate`).
+  content: { landing: "content/landing", public: "content/public" },
+  navigation: "navigation",
+  seo: "seo",
+  assets: "assets",
+  brand: {
+    // Explicit per C6: key ≠ brand.name ≠ hosts — never inferred.
+    name: "Black Forest Digital",
+  },
+  features: { trading: true, informers: true },
+};

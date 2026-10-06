@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3101",
+    "dev": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev -p 3101",
     "build": "next build",
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
@@ -38,5 +38,8 @@
     "@types/react-dom": "^19.0.2",
     "@types/node": "^22.10.5",
     "tsx": "^4.19.2"
+  },
+  "optionalDependencies": {
+    "@next/swc-darwin-arm64": "15.5.23"
   }
 }

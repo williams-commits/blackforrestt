@@ -88,12 +88,27 @@ Backend  → NEVER imports landing/public implementations
 - `domain deploy <key>` touches only that domain's file.
 - Optional `DEPLOY_DOMAINS` scopes a deployment to selected registry domains.
 
-## CRM boundary (verified, not assumed)
+## Application boundaries (Turborepo monorepo, verified not assumed)
 
-CRM (`crm/`) is a separate Next.js application with its own Prisma schema and
-its own database (`blckforest_crm`). The trading platform uses `blackforrestt`.
-They share only the same Postgres server and an HTTP bridge
-(`/api/internal/crm/*`, read-only). CRM was NOT touched by this migration.
+Three apps under `apps/`, one deploy pipeline (`deploy/` compose + Caddy):
+
+- **`apps/web/`** — marketing only: the domain-manifest rendering layer
+  (`src/platform/`), domain + design packages, public APIs (instruments,
+  analysis, calendar, news, contact). Middleware redirects authenticated
+  paths to `trade.<domain>`. Owns the domain CLI (`scripts/platform.mjs`);
+  deploy artifacts (`deploy/`) live at the repo root and the CLI reaches
+  them via `ROOT/../..`.
+- **`apps/trade/`** — the trading platform: terminal, account portal, admin
+  console, engine + WS server, trader auth. Own copy of the trading Prisma
+  schema, DIRECT access to `blackforrestt`. Serves `/api/internal/crm/*`.
+- **`apps/crm/`** — CRM with its own DB (`blckforest_crm`);
+  `PLATFORM_BRIDGE_URL` → `http://trade:3000`.
+
+Data: web and trade share the `blackforrestt` database (web reads public
+instruments; trade owns writes + the engine). CRM is fully separate. Shared
+client code (UI kit, i18n, ws client) is deliberately DUPLICATED per app;
+`packages/` extraction is a tracked follow-up — cross-app `@/` imports do
+not resolve and must not be invented.
 
 ## AI onboarding
 

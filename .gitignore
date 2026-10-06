@@ -34,4 +34,5 @@ deploy/profiles/*/
 !deploy/profiles/_template/
 # Transient domain-create staging dirs (CLI-owned, never commit)
 src/domains/.staging-*/
-.zcodeignore.turbo/
+.zcodeignore
+.turbo/

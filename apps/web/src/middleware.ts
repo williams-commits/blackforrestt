@@ -161,8 +161,16 @@ function domainRedirect(req: Request): NextResponse | null {
   // "www." (registry normalizeHost).
   const apex = normalizeHost(requestHost(req));
 
-  // Local development: don't redirect localhost / 127.0.0.1 / IP literals.
+  // Local development: trade/auth routes live in the EXTRACTED trade app
+  // (apps/trade, default http://localhost:3101) — forward to it instead of
+  // 404ing. Everything else stays on the web origin (no host redirects).
   if (isLocalHost(apex)) {
+    const incomingLocal = new URL(req.url);
+    const localPath = `${incomingLocal.pathname}${incomingLocal.search}`;
+    if (TRADE_DOMAIN_PREFIXES.some((p) => incomingLocal.pathname === p || incomingLocal.pathname.startsWith(`${p}/`))) {
+      const tradeOrigin = process.env.TRADE_DEV_ORIGIN ?? "http://localhost:3101";
+      return NextResponse.redirect(new URL(localPath, tradeOrigin), 307);
+    }
     return null;
   }
 

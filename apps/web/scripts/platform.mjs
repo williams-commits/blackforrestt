@@ -73,8 +73,8 @@ async function main() {
       // resolve (not join): an absolute --env-file (e.g. a container mount
       // path) must not be concatenated under ROOT.
       const envFile = resolve(ROOT, flags["env-file"] ?? ".env.production");
-      const sitesDir = join(ROOT, "deploy/caddy/render/sites");
-      const out = resolve(ROOT, flags.out ?? join(ROOT, "deploy/caddy/render/Caddyfile"));
+      const sitesDir = join(ROOT, "..", "..", "deploy/caddy/render/sites");
+      const out = resolve(ROOT, flags.out ?? join(ROOT, "..", "..", "deploy/caddy/render/Caddyfile"));
       // DEPLOY_DOMAINS scoping: read from the env file (or --domains flag).
       let domainsScope = null;
       const domainsFlag = flags.domains;
@@ -84,12 +84,12 @@ async function main() {
         // selectors may be registry KEYS or served HOSTS; unknown names fail
         // loudly — a typo must never silently widen the scope.
         const selectors = String(domainsFlag).split(",").map((k) => k.trim()).filter(Boolean);
-        domainsScope = resolveDomainSelectors(loadDomains(), selectors);
+        domainsScope = resolveDomainSelectors(await loadDomains(), selectors);
       } else {
         // DEPLOY_DOMAINS from the env file. UNSET = all registry domains
         // (local-dev convenience). Set-but-unmatched THROWS — never fall
         // back to "all" when an explicit scope exists.
-        domainsScope = deploymentDomains(envFile);
+        domainsScope = await deploymentDomains(envFile);
       }
       // FIRST-DEPLOY SEED: every in-scope registry domain gets its site file
       // if missing — existing files are never overwritten (per-domain edits
@@ -109,7 +109,7 @@ async function main() {
       const output = renderCaddyfile({
         envFile,
         sitesDir,
-        snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"),
+        snippetsPath: join(ROOT, "..", "..", "deploy/caddy/template/snippets.caddy"),
         outPath: out,
         email: flags.email,
         domains: domainsScope,

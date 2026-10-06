@@ -14,27 +14,31 @@ import {
   cpSync, renameSync, copyFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 // ── shared helpers ──────────────────────────────────────────────────────────
 
+/** Repo root — deploy/ (caddy templates, rendered sites) lives here since
+ *  the Phase 9 move of the app into apps/web. */
+function repoRoot(ROOT) { return join(ROOT, "..", ".."); }
+
 function runTsx(script, cwd) {
-  return execFileSync(process.execPath, ["--import", "tsx", "--eval", script], {
+  return execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script], {
     cwd, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"],
   });
 }
 
-function loadDomainRegistry(ROOT) {
-  const out = runTsx(
-    `import { DOMAINS } from ${JSON.stringify(join(ROOT, "src/domains/.generated/domains.ts"))};` +
-    `console.log(JSON.stringify(DOMAINS));`, ROOT);
-  return JSON.parse(out);
+async function loadDomainRegistry(ROOT) {
+  // In-process dynamic import — this CLI already runs under tsx, so the
+  // generated registry loads as real ESM (the --eval child-process route
+  // CJS-ified absolute-path imports after the Phase 9 move into apps/web).
+  const mod = await import(pathToFileURL(join(ROOT, "src/domains/.generated/domains.ts")).href);
+  return structuredClone(mod.DOMAINS);
 }
 
-function loadDesignKeys(ROOT) {
-  const out = runTsx(
-    `import { DESIGN_MANIFESTS } from ${JSON.stringify(join(ROOT, "src/designs/.generated/designs.ts"))};` +
-    `console.log(JSON.stringify(Object.keys(DESIGN_MANIFESTS)));`, ROOT);
-  return JSON.parse(out);
+async function loadDesignKeys(ROOT) {
+  const mod = await import(pathToFileURL(join(ROOT, "src/designs/.generated/designs.ts")).href);
+  return Object.keys(mod.DESIGN_MANIFESTS);
 }
 
 const HOST_RE = /^(?=.{1,253}$)[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
@@ -78,11 +82,11 @@ function sleepSync(ms) {
 
 // ── validate ────────────────────────────────────────────────────────────────
 
-export function validate({ positional, flags }, { ROOT }) {
+export async function validate({ positional, flags }, { ROOT }) {
   const key = flags.key ?? positional[0];
   if (flags.help) { console.log("usage: platform domain validate <key>"); return 0; }
   if (!key) { console.log("usage: platform domain validate <key>"); return 1; }
-  const problems = validateDomain(key, ROOT);
+  const problems = await validateDomain(key, ROOT);
   if (problems.length > 0) {
     for (const problem of problems) console.error(`✗ ${problem.area}: ${problem.message}`);
     console.error(`\nDomain "${key}" is INVALID (${problems.length} problem${problems.length === 1 ? "" : "s"}).`);
@@ -92,10 +96,10 @@ export function validate({ positional, flags }, { ROOT }) {
   return 0;
 }
 
-export function validateDomain(key, ROOT) {
+export async function validateDomain(key, ROOT) {
   const problems = [];
   const add = (area, message) => problems.push({ area, message });
-  const domains = loadDomainRegistry(ROOT);
+  const domains = await loadDomainRegistry(ROOT);
   const domain = domains.find((entry) => entry.key === key);
   const domainDir = join(ROOT, "src/domains", key);
   if (!domain) { add("manifest", `no domain "${key}" in the registry (known: ${domains.map((d) => d.key).join(", ")})`); return problems; }
@@ -139,7 +143,7 @@ export function validateDomain(key, ROOT) {
   }
 
   // designs
-  const designs = loadDesignKeys(ROOT);
+  const designs = await loadDesignKeys(ROOT);
   if (!designs.includes(domain.landingDesign)) add("landing design", `"${domain.landingDesign}" not in registry [${designs.join(", ")}]`);
   if (!designs.includes(domain.publicDesign)) add("public design", `"${domain.publicDesign}" not in registry [${designs.join(", ")}]`);
 
@@ -195,12 +199,12 @@ export async function doctor({ positional, flags }, { ROOT }) {
   if (!key) { console.log("usage: platform domain doctor <key> [--json]"); return 1; }
   const checks = [];
   const record = (name, ok, detail = "") => checks.push({ name, ok, detail });
-  const domains = loadDomainRegistry(ROOT);
+  const domains = await loadDomainRegistry(ROOT);
   const domain = domains.find((entry) => entry.key === key);
   if (!domain) {
     record("Manifest", false, `domain "${key}" not found`);
   } else {
-    const problems = validateDomain(key, ROOT);
+    const problems = await validateDomain(key, ROOT);
     const byArea = new Map(problems.map((p) => [p.area, p.message]));
     record("Manifest", !byArea.has("manifest"), byArea.get("manifest") ?? "");
     record("Domain key", KEY_RE.test(domain.key), KEY_RE.test(domain.key) ? "" : "invalid key syntax");
@@ -234,7 +238,7 @@ export async function doctor({ positional, flags }, { ROOT }) {
       try {
         // Actually RENDER the site block and verify it contains the domain's hosts
         const domainDir = join(ROOT, "src/domains", key);
-        if (!existsSync(join(ROOT, "deploy/caddy/template/snippets.caddy")) || !existsSync(domainDir)) return false;
+        if (!existsSync(join(repoRoot(ROOT), "deploy/caddy/template/snippets.caddy")) || !existsSync(domainDir)) return false;
         // lazy import avoids circular dependency at module load
         return true; // placeholder — see the actual render below
       } catch { return false; }
@@ -243,7 +247,7 @@ export async function doctor({ positional, flags }, { ROOT }) {
       // Real Caddy check: render the domain's site block and verify hosts.
       try {
         const { renderDomainSite } = await import("./deploy-config.mjs");
-        const domains = loadDomainRegistry(ROOT);
+        const domains = await loadDomainRegistry(ROOT);
         const d = domains.find((entry) => entry.key === key);
         const block = renderDomainSite(d, join(ROOT, ".env"));
         const prodHosts = d.hosts.filter((h) => !h.endsWith(".localhost"));
@@ -259,8 +263,8 @@ export async function doctor({ positional, flags }, { ROOT }) {
     record("Domain isolation", !byArea.has("dependencies") && !byArea.has("branding leakage"));
     // deployment state: site file existence + Caddyfile currency (local-only;
     // remote production health is NOT CHECKABLE from the CLI)
-    const siteFile = join(ROOT, "deploy/caddy/render/sites", `${key}.caddy`);
-    const caddyfilePath = join(ROOT, "deploy/caddy/render/Caddyfile");
+    const siteFile = join(repoRoot(ROOT), "deploy/caddy/render/sites", `${key}.caddy`);
+    const caddyfilePath = join(repoRoot(ROOT), "deploy/caddy/render/Caddyfile");
     if (existsSync(siteFile)) {
       const inMerged = existsSync(caddyfilePath) && readFileSync(caddyfilePath, "utf8").includes(domain.hosts[0]);
       record("Deployment state", inMerged, inMerged ? "site file deployed + present in merged Caddyfile" : "site file exists but NOT in merged Caddyfile — run caddy render");
@@ -289,7 +293,7 @@ export async function dev({ positional, flags }, { ROOT, fail }) {
   const key = flags.key ?? positional[0];
   if (flags.help) { console.log("usage: platform domain dev <key>"); return 0; }
   if (!key) { console.log("usage: platform domain dev <key>"); return 1; }
-  const domains = loadDomainRegistry(ROOT);
+  const domains = await loadDomainRegistry(ROOT);
   const domain = domains.find((entry) => entry.key === key);
   if (!domain) return fail(`unknown domain "${key}"`);
   const hosts = domain.hosts.map((host) => host.endsWith(".localhost") ? host : `${host.split(".")[0]}.localhost`);
@@ -311,7 +315,7 @@ export async function test({ positional, flags }, { ROOT }) {
   const key = flags.key ?? positional[0];
   if (flags.help) { console.log("usage: platform domain test <key> [--live]"); return 0; }
   if (!key) { console.log("usage: platform domain test <key> [--live]"); return 1; }
-  const validateCode = validate({ positional: [key], flags: {} }, { ROOT });
+  const validateCode = await validate({ positional: [key], flags: {} }, { ROOT });
   if (validateCode !== 0) return validateCode;
   console.log(`\nRunning architecture/isolation suites (domain scope: ${key})…`);
   const child = spawnSync(process.execPath,
@@ -362,15 +366,15 @@ export async function deploy({ positional, flags }, { ROOT, fail }) {
   const key = flags.key ?? positional[0];
   if (flags.help) { console.log("usage: platform domain deploy <key> [--dry-run] [--apply] [--env-file <path>]"); return 0; }
   if (!key) { console.log("usage: platform domain deploy <key> [--dry-run] [--apply] [--env-file <path>]"); return 1; }
-  const domains = loadDomainRegistry(ROOT);
+  const domains = await loadDomainRegistry(ROOT);
   const domain = domains.find((entry) => entry.key === key);
   if (!domain) return fail(`unknown domain "${key}"`);
-  const validateCode = validate({ positional: [key], flags: {} }, { ROOT });
+  const validateCode = await validate({ positional: [key], flags: {} }, { ROOT });
   if (validateCode !== 0) { console.error("deploy aborted: domain failed validation."); return 1; }
 
   const { renderDomainSite, renderCaddyfile } = await import("./deploy-config.mjs");
   const envFile = join(ROOT, flags["env-file"] ?? ".env.production");
-  const sitesDir = join(ROOT, "deploy/caddy/render/sites");
+  const sitesDir = join(repoRoot(ROOT), "deploy/caddy/render/sites");
   const siteFile = join(sitesDir, `${key}.caddy`);
 
   // Write ONLY this domain's site file; every other site file is untouched.
@@ -384,17 +388,17 @@ export async function deploy({ positional, flags }, { ROOT, fail }) {
     console.log(siteBlock);
     let merged;
     try {
-      merged = renderCaddyfile({ envFile, sitesDir, snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"), email: flags.email });
+      merged = renderCaddyfile({ envFile, sitesDir, snippetsPath: join(repoRoot(ROOT), "deploy/caddy/template/snippets.caddy"), email: flags.email });
     } catch {
-      merged = renderCaddyfile({ envFile, sitesDir, snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"), email: flags.email ?? "dry-run@localhost" });
+      merged = renderCaddyfile({ envFile, sitesDir, snippetsPath: join(repoRoot(ROOT), "deploy/caddy/template/snippets.caddy"), email: flags.email ?? "dry-run@localhost" });
     }
     console.log(`Merged Caddyfile: ${(merged.match(/import app-site/g) ?? []).length} site blocks, other domains preserved:\n` +
       readdirSync(sitesDir).filter((f) => f.endsWith(".caddy") && f !== `${key}.caddy`).map((f) => `  ✓ ${f}`).join("\n"));
     return 0;
   }
   writeFileSync(siteFile, siteBlock);
-  const caddyfilePath = join(ROOT, "deploy/caddy/render/Caddyfile");
-  const merged = renderCaddyfile({ envFile, sitesDir, snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"), outPath: caddyfilePath, email: flags.email ?? "deploy@localhost" });
+  const caddyfilePath = join(repoRoot(ROOT), "deploy/caddy/render/Caddyfile");
+  const merged = renderCaddyfile({ envFile, sitesDir, snippetsPath: join(repoRoot(ROOT), "deploy/caddy/template/snippets.caddy"), outPath: caddyfilePath, email: flags.email ?? "deploy@localhost" });
 
   // ── Configuration validation (deterministic; uses Docker, no host caddy dep) ──
   const caddyCheck = spawnSync("docker", [
@@ -413,7 +417,7 @@ export async function deploy({ positional, flags }, { ROOT, fail }) {
     // Roll back the site file write
     if (!siteExisted) rmSync(siteFile, { force: true });
     else writeFileSync(siteFile, siteFileBackup);
-    renderCaddyfile({ envFile, sitesDir, snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"), outPath: caddyfilePath, email: flags.email ?? "deploy@localhost" });
+    renderCaddyfile({ envFile, sitesDir, snippetsPath: join(repoRoot(ROOT), "deploy/caddy/template/snippets.caddy"), outPath: caddyfilePath, email: flags.email ?? "deploy@localhost" });
     console.error("  Deployment NOT committed — site file rolled back, Caddyfile restored.");
     return 2;
   } else {
@@ -433,7 +437,7 @@ export async function deploy({ positional, flags }, { ROOT, fail }) {
       // Symmetric rollback with the Caddy-validation path
       if (!siteExisted) rmSync(siteFile, { force: true });
       else writeFileSync(siteFile, siteFileBackup);
-      renderCaddyfile({ envFile, sitesDir, snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"), outPath: caddyfilePath, email: flags.email ?? "deploy@localhost" });
+      renderCaddyfile({ envFile, sitesDir, snippetsPath: join(repoRoot(ROOT), "deploy/caddy/template/snippets.caddy"), outPath: caddyfilePath, email: flags.email ?? "deploy@localhost" });
       console.error("  Deployment NOT committed — site file rolled back, Caddyfile restored.");
       return 2;
     } else {
@@ -593,7 +597,7 @@ export async function create({ flags }, { ROOT, fail }) {
 
     // 4. verify the deployment profile renders + full domain validation
     const { renderDomainSite } = await import("./deploy-config.mjs");
-    const domains = loadDomainRegistry(ROOT);
+    const domains = await loadDomainRegistry(ROOT);
     const staged = domains.find((entry) => entry.key === key);
     if (!staged) throw new Error("new domain not loadable from the generated registry");
     const profile = renderDomainSite(staged, join(ROOT, ".env.production"));
@@ -602,7 +606,7 @@ export async function create({ flags }, { ROOT, fail }) {
     if (!host.endsWith(".localhost") && !profile.includes(host)) {
       throw new Error("deployment profile did not include the host");
     }
-    const problems = validateDomain(key, ROOT);
+    const problems = await validateDomain(key, ROOT);
     if (problems.length > 0) throw new Error(`validation failed:\n${problems.map((p) => `  ✗ ${p.area}: ${p.message}`).join("\n")}`);
 
     console.log(`✓ Domain package        src/domains/${key}/`);
@@ -648,7 +652,7 @@ export async function remove({ positional, flags }, { ROOT, fail }) {
   const key = flags.key ?? positional[0];
   if (flags.help) { console.log("usage: platform domain remove <key> [--confirm] [--force]"); return 0; }
   if (!key) { console.log("usage: platform domain remove <key> [--confirm] [--force]"); return 1; }
-  const domains = loadDomainRegistry(ROOT);
+  const domains = await loadDomainRegistry(ROOT);
   const domain = domains.find((entry) => entry.key === key);
   if (!domain) return fail(`unknown domain "${key}"`);
   if (domains.length <= 1) return fail("refusing: the last registered domain cannot be removed");
@@ -690,7 +694,7 @@ export async function remove({ positional, flags }, { ROOT, fail }) {
     console.error("Run: npm run domain:remove -- " + key + " --confirm");
     return 1;
   }
-  const siteFile = join(ROOT, "deploy/caddy/render/sites", `${key}.caddy`);
+  const siteFile = join(repoRoot(ROOT), "deploy/caddy/render/sites", `${key}.caddy`);
   const siteDeployed = existsSync(siteFile);
   if (siteDeployed && !flags.force) {
     console.error(`\n✗ "${key}" has a DEPLOYED site file. Removing it takes the domain offline.`);
@@ -704,7 +708,7 @@ export async function remove({ positional, flags }, { ROOT, fail }) {
   const domainSnapshot = snapshotDir(join(ROOT, "src/domains", key));
   const brandsSnapshot = snapshotDir(join(ROOT, "public/brands", key));
   let caddyfileBefore = null;
-  const caddyfilePath = join(ROOT, "deploy/caddy/render/Caddyfile");
+  const caddyfilePath = join(repoRoot(ROOT), "deploy/caddy/render/Caddyfile");
   if (existsSync(caddyfilePath)) caddyfileBefore = readFileSync(caddyfilePath, "utf8");
   let siteFileContent = null;
   if (siteDeployed) siteFileContent = readFileSync(siteFile, "utf8");
@@ -746,8 +750,8 @@ export async function remove({ positional, flags }, { ROOT, fail }) {
   try {
     renderCaddyfile({
       envFile: join(ROOT, flags["env-file"] ?? ".env.production"),
-      sitesDir: join(ROOT, "deploy/caddy/render/sites"),
-      snippetsPath: join(ROOT, "deploy/caddy/template/snippets.caddy"),
+      sitesDir: join(repoRoot(ROOT), "deploy/caddy/render/sites"),
+      snippetsPath: join(repoRoot(ROOT), "deploy/caddy/template/snippets.caddy"),
       outPath: caddyfilePath,
     });
   } catch (error) {

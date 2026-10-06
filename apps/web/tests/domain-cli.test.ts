@@ -16,6 +16,8 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+// Repo root — deploy/ lives at the monorepo root since Phase 9.
+const REPO = join(ROOT, "..", "..");
 const PLATFORM = join(ROOT, "scripts/platform.mjs");
 const GEN = [
   "src/domains/.generated/domains.ts",
@@ -24,7 +26,7 @@ const GEN = [
 ];
 
 function run(args: string[]) {
-  return spawnSync("node", [PLATFORM, ...args], { cwd: ROOT, encoding: "utf8", timeout: 180_000 });
+  return spawnSync("node", ["--import", "tsx", PLATFORM, ...args], { cwd: ROOT, encoding: "utf8", timeout: 180_000 });
 }
 
 function snapshotGen(): Record<string, string> {
@@ -81,7 +83,7 @@ test("create: refuses when brand assets already exist (pre-check, not rollback)"
 });
 
 test("deploy-preservation: deploy gbfxs → blackforrest site file byte-identical", () => {
-  const sitesDir = join(ROOT, "deploy/caddy/render/sites");
+  const sitesDir = join(REPO, "deploy/caddy/render/sites");
   const bfFile = join(sitesDir, "blackforrest.caddy");
   if (!existsSync(bfFile)) {
     run(["domain", "deploy", "blackforrest"]); // seed
@@ -94,7 +96,7 @@ test("deploy-preservation: deploy gbfxs → blackforrest site file byte-identica
 });
 
 test("deploy-preservation: deploy blackforrest → gbfxs site file byte-identical (symmetric)", () => {
-  const sitesDir = join(ROOT, "deploy/caddy/render/sites");
+  const sitesDir = join(REPO, "deploy/caddy/render/sites");
   const gfFile = join(sitesDir, "gbfxs.caddy");
   if (!existsSync(gfFile)) {
     run(["domain", "deploy", "gbfxs"]); // seed
@@ -114,7 +116,7 @@ test("DEPLOY_DOMAINS scoping: --domains=gbfxs renders only gbfxs site blocks", (
   assert.ok(!output.includes("blackforrestt.com {"), "blackforrestt NOT routed when scoped to gbfxs");
   assert.ok(!output.includes("import app-site") === false, "has at least one site block");
   // Site files on disk are PRESERVED (not deleted)
-  assert.ok(existsSync(join(ROOT, "deploy/caddy/render/sites/blackforrest.caddy")), "blackforrest site file preserved on disk");
+  assert.ok(existsSync(join(REPO, "deploy/caddy/render/sites/blackforrest.caddy")), "blackforrest site file preserved on disk");
 });
 
 test("DEPLOY_DOMAINS scoping: no scope → all domains", () => {

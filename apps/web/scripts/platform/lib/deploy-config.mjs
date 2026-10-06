@@ -6,22 +6,16 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, existsSync, writeFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
 /** Import the generated domain registry through tsx (pure data, no React). */
-export function loadDomains() {
-  const script = `
-    import { DOMAINS } from ${JSON.stringify(join(ROOT, "src/domains/.generated/domains.ts"))};
-    console.log(JSON.stringify(DOMAINS));
-  `;
-  const out = execFileSync(
-    process.execPath,
-    ["--import", "tsx", "--eval", script],
-    { cwd: ROOT, encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] },
-  );
-  return JSON.parse(out);
+export async function loadDomains() {
+  // In-process dynamic import (the CLI runs under tsx): the --eval child
+  // route CJS-ified absolute-path static imports after the Phase 9 move.
+  const mod = await import(pathToFileURL(join(ROOT, "src/domains/.generated/domains.ts")).href);
+  return structuredClone(mod.DOMAINS);
 }
 
 /** Read one env value from a production env file (last wins, quotes stripped). */
@@ -64,8 +58,8 @@ export function resolveDomainSelectors(all, selectors) {
 /** The domains this deployment serves: DEPLOY_DOMAINS env (comma list of
  *  keys or hosts) restricts the registry; UNSET = all registered domains
  *  (local-dev convenience). Set-but-unmatched is a hard error. */
-export function deploymentDomains(envFile) {
-  const all = loadDomains();
+export async function deploymentDomains(envFile) {
+  const all = await loadDomains();
   const scoped = envValue(envFile, "DEPLOY_DOMAINS")
     .split(",").map((entry) => entry.trim()).filter(Boolean);
   if (scoped.length === 0) return all;

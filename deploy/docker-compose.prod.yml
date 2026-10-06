@@ -169,6 +169,36 @@ services:
     networks: [backend, egress]
 
   # CRM module — standalone Next.js app on the crm.<domain> subdomain.
+  # ── Trade app — the extracted trading platform (terminal, account portal,
+  #     admin console, engine + WS server, trader auth) on trade.<domain>. ──
+  trade:
+    image: ${TRADE_IMAGE:-blckforest-trade:latest}
+    build:
+      context: ../../apps/trade
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../.env.production
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-blackforrestt}:${POSTGRES_PASSWORD}@postgres:5432/blackforrestt}
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      AUTH_TRUST_HOST: "true"
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      PLATFORM_BRIDGE_TOKEN: ${CRM_BRIDGE_TOKEN:-}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [backend, egress]
+
   crm:
     image: ${CRM_IMAGE:-blckforest-crm:latest}
     build:
@@ -189,7 +219,7 @@ services:
       AUTH_URL: ${AUTH_URL_CRM:-}
       AUTH_SECRET: ${AUTH_SECRET_CRM:-}
       AUTH_TRUST_HOST: "true"
-      PLATFORM_BRIDGE_URL: http://app:3000
+      PLATFORM_BRIDGE_URL: http://trade:3000
       PLATFORM_BRIDGE_TOKEN: ${CRM_BRIDGE_TOKEN:-}
       ATTACHMENT_STORAGE_DIR: /app/uploads/attachments
     healthcheck:

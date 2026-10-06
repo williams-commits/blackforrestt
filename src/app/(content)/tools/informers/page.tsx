@@ -1,3 +1,4 @@
+import { familyTradeHost } from "@/platform/registry";
 import { InformersWidget } from "@/components/landing/InformersWidget";
 import { ArticleLayout } from "@/platform/composition";
 import { getTranslations } from "next-intl/server";
@@ -18,9 +19,12 @@ export async function generateMetadata() {
 export default async function InformersPage() {
   const brand = await currentBrandProfile();
   const t = await getTranslations("informers");
+  // /widgets/ticker lives on the extracted trade app — embeds point at the
+  // family's trade host (trade.<domain>), not the marketing origin.
+  const tradeHost = familyTradeHost(brand.domain);
   return (
     <ArticleLayout eyebrow={t("eyebrow")} title={t("title")} description={t("description")}>
-      <InformersWidget domain={brand.domain} />
+      <InformersWidget domain={`https://${tradeHost ?? brand.domain}`} />
     </ArticleLayout>
   );
 }

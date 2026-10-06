@@ -97,7 +97,7 @@ export function renderDomainSite(domain, envFile) {
     lines.push(`${apex} {`, "  import app-site", "}", "");
     lines.push(`# www → ${apex}`, `www.${apex} {`, `  redir https://${apex}{uri} permanent`, "}", "");
     if (domain.tradeEnabled) {
-      lines.push(`# trade host (${domain.key})`, `${tradeSub}.${apex} {`, "  import app-site", "}", "");
+      lines.push(`# trade host (${domain.key})`, `${tradeSub}.${apex} {`, "  import trade-site", "}", "");
     }
   }
   return lines.join("\n") + "\n";

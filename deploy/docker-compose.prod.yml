@@ -126,7 +126,7 @@ services:
   app:
     image: ${APP_IMAGE:-blckforest-app:latest}
     build:
-      context: ..
+      context: ../apps/web
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}

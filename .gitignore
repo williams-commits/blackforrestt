@@ -36,3 +36,4 @@ deploy/profiles/*/
 src/domains/.staging-*/
 .zcodeignore
 .turbo/
+apps/web/.env

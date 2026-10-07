@@ -27,7 +27,7 @@ const isMarketingPath = (pathname: string) =>
   MARKETING_PREFIXES.some((p) => pathname === p || (p !== "/" && pathname.startsWith(`${p}/`)));
 
 function isLocalHost(host: string): boolean {
-  return /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(host);
+  return /(^|\.)(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(host);
 }
 
 export function middleware(req: NextRequest) {

@@ -164,7 +164,10 @@ function domainRedirect(req: Request): NextResponse | null {
   // Local development: trade/auth routes live in the EXTRACTED trade app
   // (apps/trade, default http://localhost:3101) — forward to it instead of
   // 404ing. Everything else stays on the web origin (no host redirects).
-  if (isLocalHost(apex)) {
+  // *.localhost dev hosts (gbfxs.localhost etc.) behave like plain localhost:
+  // brand resolution still works via the registry hosts lists, but host-based
+  // redirects never fire — trade/auth paths forward to the local trade app.
+  if (isLocalHost(apex) || apex.endsWith(".localhost")) {
     const incomingLocal = new URL(req.url);
     const localPath = `${incomingLocal.pathname}${incomingLocal.search}`;
     if (TRADE_DOMAIN_PREFIXES.some((p) => incomingLocal.pathname === p || incomingLocal.pathname.startsWith(`${p}/`))) {

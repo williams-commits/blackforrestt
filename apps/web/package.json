@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev -p 3000",
+    "dev": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 node --env-file-if-exists=.env --import tsx server.ts",
     "build": "next build",
-    "start": "next start -p 3000",
+    "start": "NODE_ENV=production node --env-file-if-exists=.env --import tsx server.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
     "test:unit": "npm run test:domains && npm run test:engine && npm run test:ws-protocol && npm run test:auth-client && npm run test:enterprise-ui-admin && npm run test:payment-methods && npm run test:email-templates",

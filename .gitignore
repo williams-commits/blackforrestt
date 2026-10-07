@@ -37,3 +37,4 @@ src/domains/.staging-*/
 .zcodeignore
 .turbo/
 apps/web/.env
+apps/trade/.env

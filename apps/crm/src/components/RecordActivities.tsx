@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CommentsSection } from "@/components/CommentsSection";
 import { Initials } from "@/components/Initials";
 import { Button } from "@/components/ui";
@@ -19,6 +20,8 @@ import { useTabSession } from "@/components/useTabSession";
 import { PresenceDot, usePresence } from "@/components/Presence";
 import { cn } from "@/lib/utils";
 import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
+import { apiGet } from "@/lib/apiClient";
+import { queryKeys } from "@/lib/queryKeys";
 
 /** Compact semantic chip for a raw status string (task/apointment states). */
 function StatusChip({ value }: { value: string }) {
@@ -72,6 +75,14 @@ interface SubjectTask {
 }
 
 type SubjectType = "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY";
+
+const OBJECT_PATH: Record<SubjectType, string> = {
+  LEAD: "leads",
+  CONTACT: "contacts",
+  ACCOUNT: "accounts",
+  CUSTOMER: "customers",
+  OPPORTUNITY: "opportunities",
+};
 
 /** Merge base + appended pages, dropping ids the base already carries
  *  (a refresh can shift page boundaries while extra pages are loaded). */
@@ -215,13 +226,6 @@ export function RecordActivities({
   const [apptStart, setApptStart] = useState("");
   const [apptLocation, setApptLocation] = useState("");
   // Comment capabilities resolve per user (client fetch — same as RecordListPage).
-  const [me, setMe] = useState<{
-    userId: string;
-    canComment: boolean;
-    canManage: boolean;
-    canEditNotes: boolean;
-    canEditAppointments: boolean;
-  } | null>(null);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
 
@@ -292,29 +296,52 @@ export function RecordActivities({
     return () => window.removeEventListener("crm:realtime-refresh", onRealtime);
   }, [refreshCommentCounts]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const response = await fetch("/api/me");
-        const body = (await response.json().catch(() => null)) as {
-          data?: { userId: string; permissions?: string[] };
-        } | null;
-        if (cancelled || !response.ok || !body?.data) return;
-        const permissions = body.data.permissions ?? [];
-        setMe({
-          userId: body.data.userId,
-          canComment: permissions.includes("COMMENTS_CREATE"),
-          canManage: permissions.includes("COMMENTS_MANAGE"),
-          canEditNotes: permissions.includes("NOTES_EDIT"),
-          canEditAppointments: permissions.includes("APPOINTMENTS_EDIT"),
-        });
-      } catch {
-        // Comment affordance stays hidden — the server still enforces authz.
+  // Comment capabilities resolve per user through the shared ["me"] cache.
+  const meQuery = useQuery({
+    queryKey: queryKeys.me,
+    queryFn: () => apiGet<{ data?: { userId: string; permissions?: string[] } }>("/api/me"),
+    select: (body) => {
+      const permissions = body.data?.permissions ?? [];
+      return {
+        userId: body.data?.userId ?? "",
+        canComment: permissions.includes("COMMENTS_CREATE"),
+        canManage: permissions.includes("COMMENTS_MANAGE"),
+        canEditNotes: permissions.includes("NOTES_EDIT"),
+        canEditAppointments: permissions.includes("APPOINTMENTS_EDIT"),
+      };
+    },
+    // The server still enforces authz — a failed probe just hides affordances.
+    retry: false,
+  });
+  const me = meQuery.data ?? null;
+
+  const queryClient = useQueryClient();
+
+  // Note creation rides a mutation with targeted invalidation: this
+  // subject's activity strips, the subject object's record lists (counts
+  // and last-contact columns), the dashboard KPIs (activity7d), and the
+  // notifications family (the record's owner gets a NOTE_ADDED). The
+  // server-rendered strips still re-seed through router.refresh().
+  const addNoteMutation = useMutation({
+    mutationFn: async (html: string) => {
+      const response = await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: html, subjectType, subjectId }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Could not add note.");
       }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+      return response.json();
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.activities.all(subjectType, subjectId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.records.all(OBJECT_PATH[subjectType]) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.root });
+    },
+  });
 
   const toggleComments = useCallback((id: string) => {
     setOpenComments((previous) => ({ ...previous, [id]: !previous[id] }));
@@ -396,24 +423,14 @@ export function RecordActivities({
     setError(null);
     setBusy(true);
     try {
-      const response = await fetch("/api/notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: noteHtml, subjectType, subjectId }),
-      });
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        const message = body?.error ?? "Could not add note.";
-        setError(message);
-        toast.error("Note not added", { description: message });
-        return;
-      }
+      await addNoteMutation.mutateAsync(noteHtml);
       noteEditorRef.current?.clear();
       toast.success("Note added", { description: `Note added to ${subjectLabel}.` });
       refreshAfterToast();
-    } catch {
-      setError("Could not add note.");
-      toast.error("Note not added", { description: "Check your connection and try again." });
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "Could not add note.";
+      setError(message);
+      toast.error("Note not added", { description: message });
     } finally {
       noteBusyRef.current = false;
       setBusy(false);

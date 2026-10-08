@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -11,12 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { apiGet } from "@/lib/apiClient";
+import { queryKeys } from "@/lib/queryKeys";
 
 /**
  * Viewer management for one task (owner or admin only). Users and whole
  * teams tagged here can VIEW the task (list, detail, comments) without
  * being owners — they cannot edit it. Saves are replace-all PATCHes, so
- * the chip list is the single source of truth.
+ * the chip list is the single source of truth. Directories and the save
+ * ride the shared query caches.
  */
 export function TaskViewersPanel({
   taskId,
@@ -30,24 +34,28 @@ export function TaskViewersPanel({
   canManage: boolean;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [viewerUserIds, setViewerUserIds] = useState(initialUsers.map((user) => user.id));
   const [viewerTeamIds, setViewerTeamIds] = useState(initialTeams.map((team) => team.id));
-  const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
-  const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([]);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!canManage) return;
-    void fetch("/api/users").then((r) => r.ok ? r.json() : null).then((b) => setUsers((b?.data ?? []).map((u: { id: string; name: string }) => ({ id: u.id, name: u.name })))).catch(() => setUsers([]));
-    void fetch("/api/teams").then((r) => r.ok ? r.json() : null).then((b) => setTeams((b?.data ?? []).map((t: { id: string; name: string }) => ({ id: t.id, name: t.name })))).catch(() => setTeams([]));
-  }, [canManage]);
+  const usersQuery = useQuery({
+    queryKey: queryKeys.directories.users,
+    queryFn: () => apiGet<{ data: Array<{ id: string; name: string }> }>("/api/users"),
+    enabled: canManage,
+    select: (body) => (body.data ?? []).map((user) => ({ id: user.id, name: user.name })),
+  });
+  const teamsQuery = useQuery({
+    queryKey: queryKeys.directories.teams,
+    queryFn: () => apiGet<{ data: Array<{ id: string; name: string }> }>("/api/teams"),
+    enabled: canManage,
+    select: (body) => (body.data ?? []).map((team) => ({ id: team.id, name: team.name })),
+  });
+  const users = usersQuery.data ?? [];
+  const teams = teamsQuery.data ?? [];
 
-  async function save(nextUserIds: string[], nextTeamIds: string[]) {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
+  const saveMutation = useMutation({
+    mutationFn: async ({ users: nextUserIds, teams: nextTeamIds }: { users: string[]; teams: string[] }) => {
       const response = await fetch(`/api/tasks/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -55,20 +63,30 @@ export function TaskViewersPanel({
       });
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-        const message = payload?.error ?? "Could not save viewers.";
-        setError(message);
-        toast.error("Viewers not saved", { description: message });
-        return;
+        throw new Error(payload?.error ?? "Could not save viewers.");
       }
-      setViewerUserIds(nextUserIds);
-      setViewerTeamIds(nextTeamIds);
+      return { users: nextUserIds, teams: nextTeamIds };
+    },
+    onSuccess: (saved) => {
+      setViewerUserIds(saved.users);
+      setViewerTeamIds(saved.teams);
       toast.success("Viewers saved", { description: "The task's viewer list is updated." });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.viewers(taskId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.root });
       window.setTimeout(() => router.refresh(), 150);
-    } catch {
-      setError("Could not save viewers.");
-    } finally {
-      setBusy(false);
-    }
+    },
+    onError: (caught) => {
+      const message = caught instanceof Error ? caught.message : "Could not save viewers.";
+      setError(message);
+      toast.error("Viewers not saved", { description: message });
+    },
+  });
+  const busy = saveMutation.isPending;
+
+  async function save(nextUserIds: string[], nextTeamIds: string[]) {
+    if (busy) return;
+    setError(null);
+    await saveMutation.mutateAsync({ users: nextUserIds, teams: nextTeamIds }).catch(() => undefined);
   }
 
   const userById = new Map(users.map((user) => [user.id, user.name]));

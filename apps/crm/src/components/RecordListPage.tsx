@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RECORD_UI, type ObjectKey, type RecordObjectKey } from "@/lib/recordUi";
+import { apiGet } from "@/lib/apiClient";
+import { queryKeys } from "@/lib/queryKeys";
 
 /** Module icon per object — mirrors the sidebar nav vocabulary. */
 const OBJECT_ICON: Record<ObjectKey, string> = {
@@ -140,10 +143,11 @@ function formatDate(value: string, withTime: boolean): string {
 
 export function RecordListPage({ object }: { object: ObjectKey }) {
   const config = RECORD_UI[object];
+  const queryClient = useQueryClient();
   const [me, setMe] = useState<MeContext | null>(null);
-  const [rows, setRows] = useState<ListResponse["data"]>([]);
-  const [meta, setMeta] = useState<ListResponse["meta"]>({ page: 1, pageSize: 25, total: 0 });
-  const [loading, setLoading] = useState(true);
+  // Records ride the shared ["records", object, filter] cache — page/filter
+  // changes fetch fresh, back-navigation renders the cached page instantly,
+  // and mutations elsewhere in the app invalidate ["records", object].
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("");
@@ -360,6 +364,63 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   // dynamic pages without a Suspense boundary). A deep-linked context wins
   // over the restored session.
   const [subjectFilter, setSubjectFilter] = useState<{ type: string; id: string; label: string } | null>(null);
+
+  // Records ride the shared ["records", object, filter] cache — page/filter
+  // changes fetch fresh, back-navigation renders the cached page instantly,
+  // and mutations elsewhere in the app invalidate ["records", object].
+  const recordsFilter = useMemo(() => {
+    const filter: Record<string, unknown> = { page, pageSize };
+    if (debouncedSearch) filter.q = debouncedSearch;
+    if (sort) {
+      filter.sort = sort;
+      filter.order = order;
+    }
+    if (subjectFilter) {
+      filter.subjectType = subjectFilter.type;
+      filter.subjectId = subjectFilter.id;
+    }
+    for (const [key, value] of Object.entries(filters)) {
+      if (value) filter[key] = value;
+    }
+    return filter;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedSearch, sort, order, subjectFilter, filters]);
+
+  const recordsQuery = useQuery({
+    queryKey: queryKeys.records.list(object, recordsFilter),
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (debouncedSearch) params.set("q", debouncedSearch);
+      if (sort) {
+        params.set("sort", sort);
+        params.set("order", order);
+      }
+      for (const [key, value] of Object.entries(filters)) {
+        if (value) params.set(key, value);
+      }
+      if (subjectFilter) {
+        params.set("subjectType", subjectFilter.type);
+        params.set("subjectId", subjectFilter.id);
+      }
+      return apiGet<ListResponse>(`/api/${object}?${params.toString()}`);
+    },
+    enabled: hydrated,
+    placeholderData: (previous) => previous,
+  });
+  const rows = useMemo(() => recordsQuery.data?.data ?? [], [recordsQuery.data]);
+  const meta = useMemo(
+    () => recordsQuery.data?.meta ?? { page: 1, pageSize: 25, total: 0 },
+    [recordsQuery.data],
+  );
+  const loading = recordsQuery.isPending || (recordsQuery.isFetching && recordsQuery.isPlaceholderData);
+  const queryError = recordsQuery.isError
+    ? recordsQuery.error instanceof Error
+      ? recordsQuery.error.message
+      : "Unable to load records."
+    : null;
+  // Selection deliberately survives fetches (it's a Set of ids, valid across
+  // pages) — bulk actions clear it once they complete.
+
   const pendingEditIdRef = useRef<string | null>(null);
   const deepLinkedRef = useRef(false);
   useEffect(() => {
@@ -428,39 +489,12 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     });
   }, [hydrated, object, page, pageSize, search, sort, order, filters, hiddenColumns, density, activeView, selected]);
 
+  /** The component's refresh verb, unchanged for every existing call site
+   *  (bulk actions, realtime, inline edits, drawer saves) — now a targeted
+   *  invalidation of this object's cached pages instead of a raw fetch. */
   const fetchRows = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-      if (debouncedSearch) params.set("q", debouncedSearch);
-      if (sort) {
-        params.set("sort", sort);
-        params.set("order", order);
-      }
-      for (const [key, value] of Object.entries(filters)) {
-        if (value) params.set(key, value);
-      }
-      if (subjectFilter) {
-        params.set("subjectType", subjectFilter.type);
-        params.set("subjectId", subjectFilter.id);
-      }
-      const response = await fetch(`/api/${object}?${params.toString()}`);
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error ?? `Request failed (${response.status})`);
-      }
-      const body = (await response.json()) as ListResponse;
-      setRows(body.data);
-      setMeta(body.meta);
-      // Selection deliberately survives fetches (it's a Set of ids, valid
-      // across pages) — bulk actions clear it once they complete.
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Unable to load records.");
-    } finally {
-      setLoading(false);
-    }
-  }, [object, page, pageSize, debouncedSearch, filters, sort, order, subjectFilter]);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.records.all(object) });
+  }, [queryClient, object]);
 
   useEffect(() => {
     void fetch("/api/me")
@@ -490,10 +524,8 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       .catch(() => setAllTags([]));
   }, [can.tags]);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    void fetchRows();
-  }, [fetchRows, hydrated]);
+  // No mount-fetch effect: the records query auto-runs once `hydrated`
+  // flips its `enabled` flag, after the session snapshot restores filters.
 
   useEffect(() => {
     const refresh = () => void fetchRows();
@@ -1222,10 +1254,10 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
                   </TD>
                 </TR>
               ))
-            ) : loadError ? (
+            ) : queryError ?? loadError ? (
               <TR>
                 <TD colSpan={tableColumnCount}>
-                  <EmptyState tone="error" title={loadError} className="py-8" action={
+                  <EmptyState tone="error" title={queryError ?? loadError ?? "Unable to load records."} className="py-8" action={
                     <Button variant="secondary" icon="refresh" onClick={() => void fetchRows()}>
                       Retry
                     </Button>

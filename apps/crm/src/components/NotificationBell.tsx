@@ -1,13 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { notificationHref } from "@/lib/notificationLink";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { relativeTime, absoluteTime } from "@/lib/time";
+import { apiGet } from "@/lib/apiClient";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface NotificationRow {
   id: string;
@@ -16,6 +19,11 @@ interface NotificationRow {
   readAt: string | null;
   toastedAt?: string | null;
   createdAt: string;
+}
+
+interface NotificationListResponse {
+  data: NotificationRow[];
+  meta: { unread: number };
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -43,99 +51,97 @@ function notificationTitle(notification: NotificationRow): string {
   return typeof subject === "string" ? `${label}: ${subject}` : label;
 }
 
+/** Patch the shared ["notifications","recent"] cache after a local
+ *  read/toast acknowledgement, so the badge and every mounted consumer
+ *  agree without waiting for a refetch. */
+function patchRecentCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  patch: (rows: NotificationRow[], unread: number) => { rows: NotificationRow[]; unread: number },
+) {
+  queryClient.setQueryData<NotificationListResponse>(queryKeys.notifications.recent, (current) => {
+    if (!current) return current;
+    const next = patch(current.data ?? [], current.meta?.unread ?? 0);
+    return { ...current, data: next.rows, meta: { ...current.meta, unread: next.unread } };
+  });
+}
+
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
-  const [unread, setUnread] = useState(0);
-  const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const knownIds = useRef<Set<string> | null>(null);
+  const queryClient = useQueryClient();
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/notifications", { cache: "no-store" });
-      if (!response.ok) return;
-      const body = (await response.json()) as { data?: NotificationRow[]; meta?: { unread?: number } };
-      const nextNotifications = body.data ?? [];
-      const previousIds = knownIds.current;
-      // Toast cadence (trading-platform pattern): toast unread notifications
-      // that were never toasted, then acknowledge them server-side — the
-      // unread badge survives the toast and steers the user to the history.
-      const freshToasts: string[] = [];
-      if (previousIds) {
-        for (const notification of nextNotifications) {
-          if (!previousIds.has(notification.id) && !notification.readAt && !notification.toastedAt) {
-            freshToasts.push(notification.id);
-            toast.info(notificationTitle(notification));
-          }
+  // Full list: mounted with the bell's lifetime, steady-state 60s poll —
+  // exactly the cadence the manual implementation ran.
+  const listQuery = useQuery({
+    queryKey: queryKeys.notifications.recent,
+    queryFn: () => apiGet<NotificationListResponse>("/api/notifications"),
+    refetchInterval: 60_000,
+  });
+  const notifications = listQuery.data?.data ?? [];
+  const unread = listQuery.data?.meta.unread ?? 0;
+  const loading = listQuery.isPending;
+
+  // Cheap unread-count poll (12s): when unread grows, pull the full list so
+  // toasts and the dropdown stay fresh — the growth trigger the manual code
+  // implemented by hand.
+  const countsQuery = useQuery({
+    queryKey: queryKeys.notifications.counts,
+    queryFn: () => apiGet<{ data: { unread: number } }>("/api/notifications?scope=counts"),
+    refetchInterval: 12_000,
+  });
+  const lastUnread = useRef<number | null>(null);
+  useEffect(() => {
+    const unreadNow = countsQuery.data?.data.unread;
+    if (typeof unreadNow !== "number") return;
+    const previous = lastUnread.current;
+    lastUnread.current = unreadNow;
+    if (previous === null ? unreadNow > 0 : unreadNow > previous) {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.recent });
+    }
+  }, [countsQuery.data, queryClient]);
+
+  // Toast cadence (trading-platform pattern): toast unread notifications
+  // that were never toasted, then acknowledge them server-side — the unread
+  // badge survives the toast and steers the user to the history.
+  useEffect(() => {
+    const nextNotifications = listQuery.data?.data;
+    if (!nextNotifications) return;
+    const previousIds = knownIds.current;
+    const freshToasts: string[] = [];
+    if (previousIds) {
+      for (const notification of nextNotifications) {
+        if (!previousIds.has(notification.id) && !notification.readAt && !notification.toastedAt) {
+          freshToasts.push(notification.id);
+          toast.info(notificationTitle(notification));
         }
       }
-      if (freshToasts.length > 0) {
-        void fetch("/api/notifications", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids: freshToasts, toasted: true }),
-        }).catch(() => undefined);
-      }
-      knownIds.current = new Set(nextNotifications.map((notification) => notification.id));
-      setNotifications(nextNotifications);
-      setUnread(body.meta?.unread ?? 0);
-    } catch {
-      // Notification polling is non-critical. Network hiccups, a restarting
-      // dev server, or an expired session must not create an unhandled client
-      // error every 30 seconds; the next poll will retry automatically.
-    } finally {
-      setLoading(false);
     }
-  }, []);
+    knownIds.current = new Set(nextNotifications.map((notification) => notification.id));
+    if (freshToasts.length > 0) {
+      void fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: freshToasts, toasted: true }),
+      }).catch(() => undefined);
+    }
+  }, [listQuery.data]);
 
+  // Realtime signal from the SSE bridge — same contract as before.
   useEffect(() => {
-    void refresh();
-    // Steady-state poll is the cheap unread-count query; the full list (with
-    // its server sweeps and toasts) loads when unread grows, on window focus,
-    // or on the realtime signal — the trading-platform toast cadence.
-    const lastUnread = { value: null as number | null };
-    async function pollCounts() {
-      try {
-        const response = await fetch("/api/notifications?scope=counts", { cache: "no-store" });
-        if (!response.ok) return;
-        const body = (await response.json().catch(() => null)) as { data?: { unread?: number } } | null;
-        const unread = Number(body?.data?.unread);
-        if (!Number.isFinite(unread)) return;
-        const previous = lastUnread.value;
-        lastUnread.value = unread;
-        if (previous === null ? unread > 0 : unread > previous) void refresh();
-      } catch {
-        // Non-critical; retry on the next tick.
-      }
-    }
-    void pollCounts();
-    const countsTimer = window.setInterval(() => void pollCounts(), 12_000);
-    const listTimer = window.setInterval(() => void refresh(), 60_000);
-    const onFocus = () => {
-      if (document.visibilityState === "visible") {
-        void pollCounts();
-        void refresh();
-      }
+    const onRealtimeNotification = () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.root });
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
-    document.addEventListener("keydown", onKeyDown);
-    const onRealtimeNotification = () => void refresh();
     window.addEventListener("crm:notifications-refresh", onRealtimeNotification);
+    document.addEventListener("keydown", onKeyDown);
     return () => {
-      window.clearInterval(countsTimer);
-      window.clearInterval(listTimer);
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
-      document.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("crm:notifications-refresh", onRealtimeNotification);
+      document.removeEventListener("keydown", onKeyDown);
     };
-  }, [refresh]);
+  }, [queryClient]);
 
   useEffect(() => {
     function onClickOutside(event: MouseEvent) {
@@ -146,15 +152,18 @@ export function NotificationBell() {
   }, []);
 
   async function markAllRead() {
+    // Optimistic: badge and list update instantly; failure reverts via refetch.
+    const previous = queryClient.getQueryData<NotificationListResponse>(queryKeys.notifications.recent);
+    patchRecentCache(queryClient, (rows) => ({
+      rows: rows.map((notification) => ({ ...notification, readAt: new Date().toISOString() })),
+      unread: 0,
+    }));
     try {
       const response = await fetch("/api/notifications", { method: "PATCH" });
-      if (!response.ok) {
-        toast.error("Could not mark notifications as read — try again.");
-        return;
-      }
-      setNotifications((previous) => previous.map((notification) => ({ ...notification, readAt: new Date().toISOString() })));
-      setUnread(0);
+      if (!response.ok) throw new Error("failed");
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.counts });
     } catch {
+      queryClient.setQueryData(queryKeys.notifications.recent, previous);
       toast.error("Could not mark notifications as read — try again.");
     }
   }
@@ -166,7 +175,7 @@ export function NotificationBell() {
         size="icon"
         onClick={() => {
           setOpen((previous) => !previous);
-          if (!open) void refresh();
+          if (!open) void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.recent });
         }}
         className="relative rounded-full text-muted-foreground"
         title={unread > 0 ? `${unread} unread notifications` : "Notifications"}
@@ -194,9 +203,13 @@ export function NotificationBell() {
                 const openAndMarkRead = () => {
                   setOpen(false);
                   if (notification.readAt) return;
-                  setNotifications((current) => current.map((row) => (row.id === notification.id ? { ...row, readAt: new Date().toISOString() } : row)));
-                  setUnread((current) => Math.max(0, current - 1));
-                  void fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: notification.id, read: true }) }).catch(() => undefined);
+                  patchRecentCache(queryClient, (rows, unreadCount) => ({
+                    rows: rows.map((row) => (row.id === notification.id ? { ...row, readAt: new Date().toISOString() } : row)),
+                    unread: Math.max(0, unreadCount - 1),
+                  }));
+                  void fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: notification.id, read: true }) })
+                    .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.counts }))
+                    .catch(() => undefined);
                 };
                 return <li key={notification.id} className={cn("border-b border-border px-4 py-3 last:border-0", notification.readAt ? "text-muted-foreground" : "bg-muted text-foreground")}><Link href={href} onClick={openAndMarkRead} className="block hover:opacity-75">{content}</Link></li>;
               })}

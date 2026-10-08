@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { Button, EmptyState } from "@/components/ui";
@@ -14,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { relativeTime, absoluteTime } from "@/lib/time";
 import { useTableSession, writeTableSession } from "@/components/useTableSession";
 import { notificationHref } from "@/lib/notificationLink";
+import { apiGet } from "@/lib/apiClient";
+import { queryKeys } from "@/lib/queryKeys";
 
 type NotificationRow = { id: string; type: string; payload: Record<string, unknown>; readAt: string | null; createdAt: string };
 type ResponseData = { data: NotificationRow[]; meta: { unread: number; total: number; page: number; pageSize: number; hasMore: boolean } };
@@ -41,12 +44,10 @@ function dayLabel(iso: string): string {
 }
 
 export function NotificationCenter() {
-  const [data, setData] = useState<ResponseData | null>(null);
+  const queryClient = useQueryClient();
   const [read, setRead] = useState("all");
   const [type, setType] = useState("");
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   // Refresh-proof state: read tab, type filter, page.
@@ -71,21 +72,20 @@ export function NotificationCenter() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, page, read, type]);
 
-  const load = useCallback(async () => {
-    setLoading(true); setError(null);
-    try {
+  // The filtered list rides the shared notifications cache — the bell's
+  // optimistic patches and mutations invalidate this family too.
+  const filter = { read, type, page };
+  const { data, isPending, isError, error, refetch } = useQuery({
+    queryKey: queryKeys.notifications.center(filter),
+    queryFn: () => {
       const params = new URLSearchParams({ read, page: String(page), pageSize: "25" });
       if (type) params.set("type", type);
-      const response = await fetch(`/api/notifications?${params.toString()}`, { cache: "no-store" });
-      const body = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(body?.error ?? "Unable to load notifications.");
-      setData(body as ResponseData);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to load notifications.");
-    } finally { setLoading(false); }
-  }, [page, read, type]);
-
-  useEffect(() => { if (!hydrated) return; void load(); }, [load, hydrated]);
+      return apiGet<ResponseData>(`/api/notifications?${params.toString()}`);
+    },
+    enabled: hydrated,
+    placeholderData: (previous) => previous,
+  });
+  const loading = isPending && !data;
   const rows = useMemo(() => data?.data ?? [], [data]);
   const types = useMemo(() => [...new Set(rows.map((row) => row.type))], [rows]);
   const groupedRows = useMemo(() => rows.reduce<Array<{ label: string; rows: NotificationRow[] }>>((groups, row) => {
@@ -97,16 +97,28 @@ export function NotificationCenter() {
   }, []), [rows]);
 
   async function setReadState(row: NotificationRow, nextRead: boolean) {
-    setData((current) => current ? { ...current, data: current.data.map((item) => item.id === row.id ? { ...item, readAt: nextRead ? new Date().toISOString() : null } : item) } : current);
+    // Optimistic on this page's cache; the PATCH failure path refetches.
+    const key = queryKeys.notifications.center(filter);
+    const previous = queryClient.getQueryData<ResponseData>(key);
+    queryClient.setQueryData<ResponseData>(key, (current) =>
+      current
+        ? { ...current, data: current.data.map((item) => (item.id === row.id ? { ...item, readAt: nextRead ? new Date().toISOString() : null } : item)) }
+        : current,
+    );
     const response = await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: row.id, read: nextRead }) });
-    if (!response.ok) void load();
+    if (!response.ok) {
+      queryClient.setQueryData(key, previous);
+      void refetch();
+    } else {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.counts });
+    }
   }
 
   async function markAllRead() {
     const response = await fetch("/api/notifications", { method: "PATCH" });
     if (response.ok) {
       toast.success("All caught up", { description: "Every notification marked as read." });
-      void load();
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.root });
     }
   }
 
@@ -132,7 +144,7 @@ export function NotificationCenter() {
           </SelectContent>
         </Select>
       </div>
-      {error ? <div className="m-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error} <button type="button" onClick={() => void load()} className="ml-2 font-semibold underline">Retry</button></div> : null}
+      {isError ? <div className="m-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error instanceof Error ? error.message : "Unable to load notifications."} <button type="button" onClick={() => void refetch()} className="ml-2 font-semibold underline">Retry</button></div> : null}
       {loading && rows.length === 0 ? <div className="space-y-3 p-5">{[1, 2, 3, 4].map((item) => <Skeleton key={item} className="h-16 rounded-md" />)}</div> : rows.length === 0 ? <EmptyState icon="check_circle" title="You are all caught up" description="Meaningful assignments, reminders, and system events will appear here." className="py-8" /> : <div>{groupedRows.map((group) => <section key={group.label} aria-label={group.label}><h2 className="border-b border-border bg-muted px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{group.label}</h2><ul className="divide-y divide-border">{group.rows.map((row) => <li key={row.id} className={cn("flex gap-4 p-4 transition-colors hover:bg-muted/50", row.readAt ? "" : "bg-muted")}><div className={cn("mt-1 h-2.5 w-2.5 shrink-0 rounded-full", row.readAt ? "border border-border" : "bg-foreground")} /><div className="min-w-0 flex-1"><Link href={notificationHref(row)} onClick={() => { if (!row.readAt) void setReadState(row, true); }} className="font-medium hover:underline">{titleFor(row)}</Link><p className="mt-1 text-xs text-muted-foreground"><time dateTime={row.createdAt} title={absoluteTime(row.createdAt)}>{relativeTime(row.createdAt)}</time></p></div><button type="button" onClick={() => void setReadState(row, !row.readAt)} className="shrink-0 text-xs font-medium hover:underline">{row.readAt ? "Mark unread" : "Mark read"}</button></li>)}</ul></section>)}</div>}
       {data && (data.meta.page > 1 || data.meta.hasMore) ? <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs text-muted-foreground"><Button variant="secondary" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</Button><span>Page {page}</span><Button variant="secondary" size="sm" icon="chevron_right" disabled={!data.meta.hasMore || loading} onClick={() => setPage((value) => value + 1)}>Next</Button></div> : null}
     </Card>

@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/Icon";
 import { Button, Section } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { relativeTime, absoluteTime } from "@/lib/time";
 import { notificationHref } from "@/lib/notificationLink";
+import { apiGet } from "@/lib/apiClient";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface NotificationRow {
   id: string;
@@ -63,53 +65,39 @@ const TYPE_ICONS: Record<string, string> = {
   TASK_CANCELLED: "x_circle",
 };
 
-/** Home widgets: my task counters + in-app notifications with mark-all-read. */
+/** Home widgets: my task counters + in-app notifications with mark-all-read.
+ *  Both flows ride the shared TanStack caches — ["tasks","widget"] and the
+ *  ["notifications"] family — so bell/center mutations refresh them too. */
 export function HomeWidgets() {
-  const [openCount, setOpenCount] = useState<number | null>(null);
-  const [overdueCount, setOverdueCount] = useState<number | null>(null);
-  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
-  const [tasks, setTasks] = useState<TaskRow[]>([]);
-  const [unread, setUnread] = useState(0);
+  const queryClient = useQueryClient();
 
-  const refresh = useCallback(async () => {
-    const tasks = await fetch("/api/tasks?mine=1").then((r) => (r.ok ? r.json() : null));
-    if (tasks) {
-      setOpenCount(tasks.meta.openCount);
-      setOverdueCount(tasks.meta.overdueCount);
-      setTasks((tasks.data as TaskRow[]).slice(0, 4));
-    }
-    const notes = await fetch("/api/notifications").then((r) => (r.ok ? r.json() : null));
-    if (notes) {
-      setNotifications(notes.data);
-      setUnread(notes.meta.unread);
-    }
-  }, []);
+  const tasksQuery = useQuery({
+    queryKey: queryKeys.tasks.widget,
+    queryFn: () =>
+      apiGet<{ data: TaskRow[]; meta: { openCount: number; overdueCount: number } }>("/api/tasks?mine=1"),
+  });
+  const openCount = tasksQuery.data?.meta.openCount ?? null;
+  const overdueCount = tasksQuery.data?.meta.overdueCount ?? null;
+  const tasks = tasksQuery.data?.data.slice(0, 4) ?? [];
 
-  useEffect(() => {
-    void refresh();
-    // Re-read on tab focus so counters/notifications reflect changes made
-    // elsewhere while the dashboard sat in a background tab.
-    const onFocus = () => {
-      if (document.visibilityState === "visible") void refresh();
-    };
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
-    };
-  }, [refresh]);
+  const notificationsQuery = useQuery({
+    queryKey: queryKeys.notifications.recent,
+    queryFn: () => apiGet<{ data: NotificationRow[]; meta: { unread: number } }>("/api/notifications"),
+  });
+  const notifications = notificationsQuery.data?.data ?? [];
+  const unread = notificationsQuery.data?.meta.unread ?? 0;
 
-  async function markAllRead() {
-    const response = await fetch("/api/notifications", { method: "PATCH" });
-    if (!response.ok) {
-      toast.error("Could not mark notifications as read — try again.");
-      return;
-    }
-    toast.success("All caught up");
-    setNotifications((previous) => previous.map((n) => ({ ...n, readAt: new Date().toISOString() })));
-    setUnread(0);
-  }
+  const markAllRead = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/notifications", { method: "PATCH" });
+      if (!response.ok) throw new Error("Could not mark notifications as read — try again.");
+    },
+    onSuccess: () => {
+      toast.success("All caught up");
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.root });
+    },
+    onError: () => toast.error("Could not mark notifications as read — try again."),
+  });
 
   return (
     <div className="grid gap-8 lg:grid-cols-2">
@@ -176,7 +164,7 @@ export function HomeWidgets() {
             {unread > 0 ? <Badge>{unread} unread</Badge> : null}
             <Link href="/notifications" className="text-xs font-medium text-muted-foreground hover:text-foreground">View all</Link>
             {unread > 0 ? (
-              <Button variant="secondary" size="sm" icon="check" onClick={() => void markAllRead()}>
+              <Button variant="secondary" size="sm" icon="check" disabled={markAllRead.isPending} onClick={() => markAllRead.mutate()}>
                 Mark all read
               </Button>
             ) : null}

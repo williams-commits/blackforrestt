@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { Icon } from "@/components/Icon";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiGet } from "@/lib/apiClient";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface DashboardData {
   scope: string;
@@ -27,25 +29,20 @@ function money(minor: string | number): string {
   });
 }
 
-/** Scope-aware KPI strip for the home page. */
+/** Scope-aware KPI strip for the home page. Cached under ["dashboard"] —
+ *  activity/record mutations invalidate it, and back-navigation shows the
+ *  cached cards instantly while a background refetch runs. */
 export function DashboardCards() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    void fetch("/api/dashboards")
-      .then((response) => {
-        if (!response.ok) throw new Error("Dashboard request failed");
-        return response.json();
-      })
-      .then((body) => setData(body?.data ?? null))
-      .catch(() => setError(true));
-  }, []);
+  const { data, isError, refetch } = useQuery({
+    queryKey: queryKeys.dashboard,
+    queryFn: () => apiGet<{ data: DashboardData }>("/api/dashboards"),
+    select: (body) => body.data,
+  });
 
   if (!data) {
     return (
       <div className="space-y-3">
-        {error ? <div role="alert" className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"><span>Dashboard metrics are temporarily unavailable.</span><button type="button" onClick={() => window.location.reload()} className="font-semibold underline">Retry</button></div> : null}
+        {isError ? <div role="alert" className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"><span>Dashboard metrics are temporarily unavailable.</span><button type="button" onClick={() => void refetch()} className="font-semibold underline">Retry</button></div> : null}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {[0, 1, 2, 3, 4, 5, 6].map((index) => (
           <Skeleton key={index} className="h-24 rounded-xl" />

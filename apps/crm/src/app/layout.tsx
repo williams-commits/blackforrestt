@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { crmBranding } from "@/lib/branding";
 import { BrandingProvider } from "@/components/BrandingProvider";
+import { QueryProvider } from "@/components/QueryProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +32,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-screen antialiased">
-        <BrandingProvider value={branding}>{children}</BrandingProvider>
+        <QueryProvider>
+          <BrandingProvider value={branding}>{children}</BrandingProvider>
+        </QueryProvider>
         <Toaster />
       </body>
     </html>

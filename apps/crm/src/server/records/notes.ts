@@ -46,6 +46,22 @@ export async function createNote(ctx: ScopedContext, input: z.infer<typeof Creat
   const body = preparedBody(input.body);
   const plain = htmlToText(input.body);
   const subject = await resolveSubject(ctx, input.subjectType, input.subjectId);
+  return writeNoteForSubject(ctx, subject, body, plain);
+}
+
+/**
+ * The per-record write shared by single and bulk note creation: the
+ * transaction (note + lead lastContactAt + activity + audit) and the
+ * owner notification. Callers have already checked the ADD_NOTE
+ * capability, sanitized the body, and resolved the subject through the
+ * scope-enforcing service.
+ */
+async function writeNoteForSubject(
+  ctx: ScopedContext,
+  subject: { type: "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER" | "OPPORTUNITY"; id: string; label: string },
+  body: string,
+  plain: string,
+) {
   const note = await prisma.$transaction(async (tx) => {
     const note = await tx.note.create({
       data: {
@@ -93,6 +109,62 @@ export async function createNote(ctx: ScopedContext, input: z.infer<typeof Creat
     });
   }
   return note;
+}
+
+export const BulkCreateNotes = z.object({
+  body: z.string().trim().min(1).max(20_000),
+  subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"]),
+  subjectIds: z.array(z.string().trim().min(5)).min(1).max(500),
+});
+
+export interface BulkNoteFailure {
+  subjectId: string;
+  message: string;
+  status: number;
+}
+
+export interface BulkNotesResult {
+  requestedCount: number;
+  createdCount: number;
+  notes: Array<{ id: string; subjectId: string }>;
+  failures: BulkNoteFailure[];
+}
+
+/**
+ * Bulk note creation: the same body on many records of one subject type.
+ * Reuses the single-note pipeline record by record — capability is checked
+ * once up front and the body is sanitized once; each record still resolves
+ * through its scope-enforcing service (an out-of-scope record fails that
+ * record, it never silently skips) and each note carries its own activity,
+ * audit, and owner-notification side effects. Records are written in
+ * independent transactions so one failure cannot roll back the others;
+ * callers get explicit created/failed counts.
+ */
+export async function createNotesBulk(
+  ctx: ScopedContext,
+  input: z.infer<typeof BulkCreateNotes>,
+): Promise<BulkNotesResult> {
+  requireCapability(ctx, subjectPermission(input.subjectType, "ADD_NOTE"));
+  const body = preparedBody(input.body);
+  const plain = htmlToText(input.body);
+  const uniqueIds = [...new Set(input.subjectIds)];
+
+  const notes: BulkNotesResult["notes"] = [];
+  const failures: BulkNoteFailure[] = [];
+  for (const subjectId of uniqueIds) {
+    try {
+      const subject = await resolveSubject(ctx, input.subjectType, subjectId);
+      const note = await writeNoteForSubject(ctx, subject, body, plain);
+      notes.push({ id: note.id, subjectId });
+    } catch (error) {
+      failures.push({
+        subjectId,
+        message: error instanceof CrmError ? error.message : "Could not add note.",
+        status: error instanceof CrmError ? error.status : 500,
+      });
+    }
+  }
+  return { requestedCount: uniqueIds.length, createdCount: notes.length, notes, failures };
 }
 
 /**

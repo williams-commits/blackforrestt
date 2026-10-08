@@ -19,7 +19,7 @@
     "test:conversion": "node --env-file-if-exists=.env --import tsx --test tests/conversion.test.ts",
     "test:import": "node --env-file-if-exists=.env --import tsx --test tests/import.test.ts",
     "test:platform": "node --env-file-if-exists=.env --import tsx --test tests/platform.test.ts",
-    "test:all": "npm run test:rbac && npm run test:search && npm run test:conversion && npm run test:import && npm run test:emails && npm run test:platform && npm run test:workflow && npm run test:comments && npm run test:activities && npm run test:links && npm run test:live && npm run test:visibility",
+    "test:all": "npm run test:rbac && npm run test:search && npm run test:conversion && npm run test:import && npm run test:emails && npm run test:platform && npm run test:workflow && npm run test:comments && npm run test:activities && npm run test:links && npm run test:live && npm run test:visibility && npm run test:notes-bulk",
     "test:workflow": "node --env-file-if-exists=.env --import tsx --test tests/workflow.test.ts",
     "test:emails": "node --env-file-if-exists=.env --import tsx --test tests/emails.test.ts",
     "db:seed:admin": "node --env-file-if-exists=.env --import tsx prisma/seed.ts --admin-only",
@@ -27,7 +27,8 @@
     "test:activities": "node --env-file-if-exists=.env --import tsx --test tests/activities-edit.test.ts",
     "test:links": "node --env-file-if-exists=.env --import tsx --test tests/notification-link.test.ts",
     "test:live": "node --env-file-if-exists=.env --import tsx --test tests/notifications-live.test.ts",
-    "test:visibility": "node --env-file-if-exists=.env --import tsx --test tests/tasks-visibility.test.ts"
+    "test:visibility": "node --env-file-if-exists=.env --import tsx --test tests/tasks-visibility.test.ts",
+    "test:notes-bulk": "node --env-file-if-exists=.env --import tsx --test tests/notes-bulk.test.ts"
   },
   "prisma": {
     "seed": "node --env-file-if-exists=.env --import tsx prisma/seed.ts"

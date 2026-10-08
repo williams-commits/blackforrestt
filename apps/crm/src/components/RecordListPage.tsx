@@ -42,6 +42,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BulkNoteDrawer } from "@/components/BulkNoteDrawer";
+
+/** Record-object key → notes/activities subject type (mirrors the bulk engine's CONFIGS). */
+const SUBJECT_TYPE_BY_OBJECT: Record<RecordObjectKey, "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER"> = {
+  leads: "LEAD",
+  contacts: "CONTACT",
+  accounts: "ACCOUNT",
+  customers: "CUSTOMER",
+};
 
 interface MeContext {
   userId: string;
@@ -142,6 +151,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [noteOpen, setNoteOpen] = useState(false);
   const [formMode, setFormMode] = useState<"closed" | "create" | "edit">("closed");
   const [editRow, setEditRow] = useState<Record<string, unknown> | null>(null);
   const [options, setOptions] = useState<OptionSource>(EMPTY_OPTIONS);
@@ -187,20 +197,14 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       const create = permissions.includes("CAMPAIGNS_CREATE");
       const edit = permissions.includes("CAMPAIGNS_EDIT");
       const remove = permissions.includes("CAMPAIGNS_DELETE");
-      return { create, edit, delete: remove, assign: false, classify: false, potential: false, tags: false, task: false, export: false, bulk: edit || remove };
+      return { create, edit, delete: remove, assign: false, classify: false, potential: false, tags: false, task: false, note: false, export: false, bulk: edit || remove };
     }
     if (object === "tasks") {
       const create = permissions.includes("TASKS_CREATE");
       const edit = permissions.includes("TASKS_EDIT");
-      return { create, edit, delete: false, assign: false, classify: false, potential: false, tags: false, task: false, export: false, bulk: edit };
+      return { create, edit, delete: false, assign: false, classify: false, potential: false, tags: false, task: false, note: false, export: false, bulk: edit };
     }
-    const subjectType: Record<RecordObjectKey, "LEAD" | "CONTACT" | "ACCOUNT" | "CUSTOMER"> = {
-      leads: "LEAD",
-      contacts: "CONTACT",
-      accounts: "ACCOUNT",
-      customers: "CUSTOMER",
-    };
-    const caps = getRecordCapabilities(subjectType[object as RecordObjectKey], permissions);
+    const caps = getRecordCapabilities(SUBJECT_TYPE_BY_OBJECT[object as RecordObjectKey], permissions);
     return {
       create: caps.canCreate,
       edit: caps.canEdit,
@@ -210,8 +214,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       potential: caps.canChangePotentialStatus,
       tags: caps.canManageTags,
       task: caps.canCreateTask,
+      note: caps.canAddNote,
       export: caps.canExport,
-      bulk: caps.canEdit || caps.canDelete || caps.canAssign || caps.canChangeStatus || caps.canManageTags || caps.canCreateTask,
+      bulk: caps.canEdit || caps.canDelete || caps.canAssign || caps.canChangeStatus || caps.canManageTags || caps.canCreateTask || caps.canAddNote,
     };
   }, [me, object]);
 
@@ -996,6 +1001,18 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               Create task…
             </Button>
           ) : null}
+          {isRecordObject && can.note ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              icon="note"
+              disabled={bulkBusy}
+              onClick={() => setNoteOpen(true)}
+            >
+              Add note…
+            </Button>
+          ) : null}
           {mergeableObject && can.delete && selected.size >= 2 && selected.size <= 10 ? (
             <Button
               type="button"
@@ -1021,6 +1038,20 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           </Button>
           {bulkError ? <span className="text-(--error)">{bulkError}</span> : null}
         </div>
+      ) : null}
+
+      {noteOpen && isRecordObject ? (
+        <BulkNoteDrawer
+          open={noteOpen}
+          subjectType={SUBJECT_TYPE_BY_OBJECT[object as RecordObjectKey]}
+          selectedIds={[...selected]}
+          recordLabel={config.singular.toLowerCase()}
+          onClose={() => setNoteOpen(false)}
+          onSuccess={async () => {
+            setSelected(new Set());
+            await fetchRows();
+          }}
+        />
       ) : null}
 
       {mergeOpen && mergeCandidates.length >= 2 ? (

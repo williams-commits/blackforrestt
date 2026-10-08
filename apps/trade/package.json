@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 node --env-file-if-exists=.env --import tsx server.ts",
-    "build": "next build",
+    "build": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 next build",
     "start": "NODE_ENV=production node --env-file-if-exists=.env --import tsx server.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
@@ -37,7 +37,9 @@
     "@types/react": "^19.0.4",
     "@types/react-dom": "^19.0.2",
     "@types/node": "^22.10.5",
-    "tsx": "^4.19.2"
+    "tsx": "^4.19.2",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^15.1.4"
   },
   "optionalDependencies": {
     "@next/swc-darwin-arm64": "15.5.23"

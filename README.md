@@ -1,84 +1,88 @@
-# Black Forest Digital platform
+# BlackForest platform
 
-A Next.js 15, Auth.js, Prisma/PostgreSQL and WebSocket trading-platform release
-candidate with public landing pages, an authenticated client portal, simulated
-trading terminal, double-entry accounting, manual payment operations, secure
-KYC storage workflow, MFA/security controls, reconciliation, and an admin
-console with seven-role RBAC, maker-checker governance, immutable domain audit, and role-aware enterprise workflows.
+A Turborepo monorepo running three Next.js applications over shared
+PostgreSQL / Redis / MinIO infrastructure:
 
-## Start locally
+| App | Path | What it is | Dev port |
+|---|---|---|---|
+| **web** | `apps/web` | Marketing: multi-domain landing + content pages (domain/design platform system, domain CLI) | 3000 |
+| **trade** | `apps/trade` | Trading platform: terminal, account portal, admin console, engine + WebSocket server, trader auth | 3101 |
+| **crm** | `apps/crm` | CRM: standalone app, own database (`blckforest_crm`), own auth, read-only HTTP bridge to trade | 3100 |
 
-See the [local development section of the deployment guide](docs/DEPLOYMENT.md#local-development).
+- `web` and `trade` share the `blackforrestt` database (web reads; trade owns
+  writes + the trading engine). `crm` is fully separate.
+- The CRM ↔ trade integration is a one-directional, read-only, token-gated
+  HTTP bridge (`PLATFORM_BRIDGE_URL` → trade's `/api/internal/crm/*`).
+- Shared client code is deliberately duplicated per app; extraction into
+  `packages/` is a tracked follow-up. The `packages/*` npm-workspaces glob is
+  reserved for that — **no shared packages exist today**.
+
+## Local development
+
+1. Start the dev infrastructure (repo root):
+
+   ```bash
+   docker compose up -d postgres redis minio minio-init
+   ```
+
+2. Run the app dev servers:
+
+   ```bash
+   make dev    # all three apps via turbo (web :3000, crm :3100, trade :3101)
+   ```
+
+   or per app: `npm run dev --workspace apps/web` (likewise for trade/crm).
+   Each app reads its own `.env` — `apps/web/.env` and `apps/trade/.env`
+   symlink the repo root `.env`; `apps/crm/.env` is separate.
+
+## Verification
+
+From the repo root (fans out to all apps via turbo):
+
+```bash
+npm run lint        # ESLint (zero warnings enforced)
+npm run typecheck   # TypeScript strict
+npm run build       # production builds
+npm test            # unit tests — apps defining test:unit (currently web only)
+npm run test:all    # DB-backed suites — apps defining test:all (currently crm only)
+```
+
+Current test coverage, stated plainly:
+
+| App | Unit | Integration / DB-backed |
+|---|---|---|
+| web | ✅ via `npm test` (engine, WS protocol, auth client, domains/registry gates, …) | ✅ `npm run test:integration --workspace apps/web` (needs local Postgres/Redis/MinIO) |
+| crm | — | ✅ `make test-crm` (needs seeded local `blckforest_crm`) |
+| trade | ❌ no test suite yet — tracked follow-up | ❌ |
+
+CI ([`.github/workflows/verify.yml`](.github/workflows/verify.yml)) runs
+install → prisma generate → lint → typecheck → build → `turbo run test:unit`
+on every push/PR. DB-backed suites are not wired into CI yet (tracked
+follow-up); the legacy Phase 8 harness sits unwired in
+`apps/web/scripts/phase8/`.
 
 ## Deployment, Docker, and operations
 
-See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — the single source of truth for
-first-time deployment, routine updates, operations, backup/restore, and
-troubleshooting (including the health-check cascade, seed requirements, and
-env-file flags).
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — the single source of truth
+for first-time deployment, routine updates, operations, backup/restore, and
+troubleshooting. Production stack: `deploy/docker-compose.prod.yml` + Caddy
+(`gbfxs.com` → web, `trade.<domain>` → trade, `crm.<domain>` → crm).
 
-## Phase 8 verification
+Common operations: `make deploy`, `make update` (rebuilds web + trade + crm),
+`make health`, `make diagnose`, `make backup` / `make restore`,
+`make auth-doctor` (Auth.js readiness, inside the web container),
+`make preflight` (production env posture — the same gate deploy.sh runs).
 
-The verification harness has three fail-closed levels:
+## What this codebase is
 
-```bash
-npm ci
-npm run phase8:verify                 # schema, types, lint, build, unit, release scan
-npm run phase8:verify:integration     # plus PostgreSQL, Redis, migration/restore
-npm run e2e:install
-npm run phase8:verify:full            # plus browser, accessibility, HTTP load, WS soak
-```
-
-The full mode requires customer/admin credentials (via `E2E_DEMO_EMAIL` /
-`E2E_DEMO_PASSWORD` and `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`) and a reachable
-application. Set `PHASE8_START_SERVER=true` to let the orchestrator start and
-stop a development server, or provide an already-running staging endpoint.
-
-GitHub Actions runs the complete simulation matrix from
-`.github/workflows/phase8-verification.yml` and retains the generated evidence.
-
-## Current release classification
-
-This codebase is an enterprise-oriented trading platform. The repository
-implements an **internal dealing-desk broker**: the engine fills positions at
-the quoted bid/ask and posts commission, swap, margin, and PnL to a
-double-entry ledger. Finnhub is used as the live market-data feed, with a
-graceful fallback to an internal price feed when no key is configured.
-
-As of 2026-07-30, the **static Phase 8 gate passes locally with zero failures**
-(`npm run phase8:verify`): source contract, Prisma validate, typecheck, lint,
-build, the unit suite, and the release-archive build + scan all exit 0 (evidence
-in `artifacts/phase8/verification-matrix.json`). The **integration and full
-modes remain PENDING** until PostgreSQL, Redis, and MinIO are running so the
-runtime gates (PostgreSQL/Redis integration, Playwright/a11y, HTTP load,
-WebSocket soak) can execute.
-
-Production activation still requires licensed broker execution and market data,
-approved payment and KYC operations, production secrets/KMS, independent
-penetration testing, legal/regulatory approval, backups, monitoring, failover,
-and operational sign-off.
-
-## Authentication readiness
-
-Before investigating a failed login, run:
-
-```bash
-npm run auth:doctor
-```
-
-The command verifies the public Auth.js origin, PostgreSQL and identity
-migrations, the SecuritySession/AdminRoleAssignment tables, and Redis.
-
-## Release hardening guides
-
-- [`docs/RELEASE_HARDENING_REPORT.md`](docs/RELEASE_HARDENING_REPORT.md) maps the latest mobile, deployment, login, market-data, pagination and chart changes to verification evidence.
-- [`docs/ENVIRONMENT_VARIABLES.md`](docs/ENVIRONMENT_VARIABLES.md) explains every runtime, deployment and verification environment variable.
-- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) provides the live Docker/Caddy deployment and operations procedure.
-- Local authentication/reconciliation recovery: `npm run local:repair`.
-- Finnhub live-price plus simulated-history behavior is controlled by `MARKET_DATA_MODE` and `FINNHUB_CANDLE_MODE`.
-- Browser regressions cover mobile navigation, scrollable/paginated assets, professional chart sizing, and timeframe persistence.
-
-## Payment and email operations
+An enterprise-oriented internal dealing-desk broker: the engine fills
+positions at the quoted bid/ask and posts commission, swap, margin, and PnL
+to a double-entry ledger. Market data via configurable feeds (simulation by
+default; Finnhub and others supported). Production activation still requires
+licensed broker execution and market data, approved payment and KYC
+operations, production secrets/KMS, independent penetration testing, and
+operational sign-off.
 
 - [Deposit and withdrawal workflows](docs/PAYMENT_WORKFLOWS.md)
 - [Email activation and template design](docs/EMAIL_SETUP.md)
+- [Environment variables](docs/ENVIRONMENT_VARIABLES.md)

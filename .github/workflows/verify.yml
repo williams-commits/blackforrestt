@@ -1,0 +1,63 @@
+# Monorepo verification — the current, honest gate for apps/web + apps/trade + apps/crm.
+#
+# Deliberate scope (repository-plumbing repair, 2026-10):
+# - apps/trade has NO test suite yet — for trade this workflow only proves
+#   lint + typecheck + build. A trade test harness is a tracked follow-up.
+# - apps/web integration tests and apps/crm `test:all` need Postgres/Redis
+#   (and MinIO for the KYC suite) plus seeded databases; they are NOT wired
+#   into CI yet. DB-backed CI is a tracked follow-up.
+# - The legacy Phase 8 harness survives unwired under apps/web/scripts/phase8/
+#   (verify.mjs still references scripts removed by the monorepo extraction,
+#   e.g. build:clean, phase67:verify:source, e2e:typecheck). It is not run
+#   here; revive it only after re-adding those scripts.
+# - Builds need no secrets: CRM's auth.ts supplies a throwaway AUTH_SECRET
+#   when NEXT_PHASE=phase-production-build, and web/trade read env lazily.
+
+name: Verify
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, typecheck, build, unit tests (all apps)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e450dabe0009e67214ff5f5449ce83dd # v6.0.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4011 # v6.4.0
+        with:
+          node-version: 22.16.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma clients
+        run: npx turbo run db:generate
+
+      - name: Lint (all apps)
+        run: npx turbo run lint
+
+      - name: Typecheck (all apps)
+        run: npx turbo run typecheck
+
+      - name: Build (all apps)
+        run: npx turbo run build
+
+      - name: Unit tests (apps defining test:unit — currently web only)
+        run: npx turbo run test:unit

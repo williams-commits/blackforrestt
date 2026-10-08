@@ -74,16 +74,21 @@ directory (the Makefile resolves its own root).
 
 | Command | What it does |
 |---|---|
-| `make caddy-render` | Re-render `deploy/caddy/render/Caddyfile` from the domain manifests (one site file per deployed domain in `deploy/caddy/render/sites/`). Prefer the CLI per domain: `npm run domain:deploy -- <key>` (validated, preserves other domains; `--apply` recreates caddy + health-checks). |
+| `make caddy-render` | Re-render `deploy/caddy/render/Caddyfile` from the domain manifests (one site file per deployed domain in `deploy/caddy/render/sites/`). Prefer the CLI per domain: `npm run platform -- domain deploy <key>` (from `apps/web`; validated, preserves other domains; `--apply` recreates caddy + health-checks). |
 | `make caddy-validate` | Validate the rendered config with the official Caddy image. |
 
 ### Local development
 
+Local infrastructure (Postgres/Redis/MinIO) comes from the repo-root
+`docker-compose.yml`; the apps run on the host.
+
 | Command | What it does |
 |---|---|
-| `make dev` | Platform dev server at `http://localhost:3000`. |
-| `make test` / `make test-fast` | Full / quick test matrices. |
-| `make lint` / `make typecheck` | ESLint (zero warnings) / TypeScript strict. |
+| `docker compose up -d postgres redis minio minio-init` | Start the shared dev infrastructure (repo root). |
+| `make dev` | All three app dev servers via turbo — web `:3000`, crm `:3100`, trade `:3101`. |
+| `make stop` | Stop the local dev servers on those three ports. |
+| `make test` / `make test-crm` / `make test-fast` | Unit tests via turbo (currently web only) / CRM DB-backed suites / quick web suites (needs local Postgres). |
+| `make lint` / `make typecheck` | ESLint (zero warnings) / TypeScript strict — all apps via turbo. |
 
 ---
 

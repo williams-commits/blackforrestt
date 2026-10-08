@@ -4,9 +4,9 @@ DC := docker compose --env-file $(ROOT)/.env.production -f $(ROOT)/deploy/docker
 # .PHONY is required: e.g. the deploy/ directory would otherwise make Make
 # consider the "deploy" target already up to date and silently skip its recipe.
 .PHONY: help build build-no-cache deploy update restart-app only-env dev dev-gbfxs dev-open-gbfxs stop \
-        ps logs log-app log-caddy log-crm health diagnose preflight auth-doctor env-verify \
+        ps logs log-app log-caddy log-crm log-trade health diagnose preflight auth-doctor env-verify \
         psql crm-psql studio migrate crm-migrate seed crm-seed crm-grant promote-admin \
-        backup restore test test-fast lint typecheck \
+        backup restore test test-fast test-crm lint typecheck \
         caddy-render caddy-validate down
 
 help: ## Show this help
@@ -14,11 +14,11 @@ help: ## Show this help
 
 # ── Deploy & lifecycle ────────────────────────────────────────────────────────
 
-build: ## Build production images (app + malware-scanner)
-	$(DC) build app malware-scanner
+build: ## Build production images (web + trade + crm + malware-scanner)
+	$(DC) build app trade crm malware-scanner
 
 build-no-cache: ## Build without Docker layer cache (after big changes)
-	$(DC) build --no-cache app malware-scanner
+	$(DC) build --no-cache app trade crm malware-scanner
 
 deploy: ## Full deploy (optionally scoped: make deploy gbfxs)
 	bash $(ROOT)/deploy/deploy.sh $(filter-out $@,$(MAKECMDGOALS))
@@ -28,24 +28,24 @@ deploy: ## Full deploy (optionally scoped: make deploy gbfxs)
 %:
 	@:
 
-update: ## Routine update: pull code, rebuild app + crm, restart both + caddy
-	git pull && $(DC) build app crm && $(DC) up -d app crm caddy
+update: ## Routine update: pull code, rebuild web + trade + crm, restart + caddy
+	git pull && $(DC) build app trade crm && $(DC) up -d app trade crm caddy
 
 restart-app: ## Restart the app container only (no rebuild, no seed)
 	$(DC) restart app
 
-only-env: ## Recreate app + crm from .env.production changes (no rebuild)
-	$(DC) up -d --no-deps --force-recreate app crm
+only-env: ## Recreate web + trade + crm from .env.production changes (no rebuild)
+	$(DC) up -d --no-deps --force-recreate app trade crm
 
 down: ## Stop the whole production stack
 	$(DC) down
 
 # ── Local development ─────────────────────────────────────────────────────────
 
-dev: ## Run the Next.js dev server (primary brand at http://localhost:3000)
+dev: ## Run all app dev servers via turbo (web :3000, crm :3100, trade :3101)
 	npm run dev
 
-dev-gbfxs: ## Dev server + open the GBFXS brand (http://gbfxs.localhost:3000)
+dev-gbfxs: ## Dev servers + GBFXS brand (http://gbfxs.localhost:3000)
 	npm run dev
 
 dev-open-gbfxs: ## Open the GBFXS local site in your browser (server must be running)
@@ -53,8 +53,10 @@ dev-open-gbfxs: ## Open the GBFXS local site in your browser (server must be run
 	@echo "BlackForest → http://localhost:3000"
 	@if command -v open >/dev/null 2>&1; then open http://gbfxs.localhost:3000; fi
 
-stop: ## Stop whatever is running on port 3000
-	npm run stop:server
+stop: ## Stop local dev servers (web :3000, crm :3100, trade :3101)
+	@for port in 3000 3100 3101; do \
+	  lsof -ti tcp:$$port | xargs kill 2>/dev/null || true; \
+	done
 
 # ── Status & logs ─────────────────────────────────────────────────────────────
 
@@ -72,6 +74,9 @@ log-caddy: ## Tail caddy (proxy/TLS) logs
 
 log-crm: ## Tail CRM app logs
 	$(DC) logs -f crm
+
+log-trade: ## Tail trade app logs
+	$(DC) logs -f trade
 
 diagnose: ## Layer-by-layer outage diagnostic (seed, logs, health, ports)
 	@echo "=== 1. Is deploy.sh current (has seed + CRM steps)? ==="
@@ -94,7 +99,7 @@ auth-doctor: ## Verify Auth.js origin, DB, identities, admins, Redis
 	$(DC) exec app npm run auth:doctor
 
 env-verify: ## Check .env.production for leftover placeholders
-	@grep -nE "replace-with|resend_api_key_goes_here|ChangeMe" $(ROOT)/.env.production && { echo "[FAIL] placeholders remain — fix before deploying"; exit 1; } || echo "[OK] no placeholders found
+	@grep -nE "replace-with|resend_api_key_goes_here|ChangeMe" $(ROOT)/.env.production && { echo "[FAIL] placeholders remain — fix before deploying"; exit 1; } || echo "[OK] no placeholders found"
 
 health: ## Hit the public health endpoint
 	curl -sS https://$(shell grep -E '^DOMAIN=' $(ROOT)/.env.production | head -1 | cut -d= -f2)/api/health; echo
@@ -102,7 +107,7 @@ health: ## Hit the public health endpoint
 # ── Database & admin operations ──────────────────────────────────────────────
 
 psql: ## Interactive PostgreSQL shell in the postgres container
-	$(DC) exec postgres psql -U $${POSTGRES_USER:-blckforest} -d $${POSTGRES_DB:-blckforest}
+	$(DC) exec postgres psql -U $${POSTGRES_USER:-blackforrestt} -d $${POSTGRES_DB:-blackforrestt}
 
 studio: ## Prisma Studio on 127.0.0.1:5555 (SSH-tunnel: ssh -L 5555:localhost:5555 host)
 	$(DC) run --rm --no-deps -p 127.0.0.1:5555:5555 app npx prisma studio --hostname 0.0.0.0 --port 5555
@@ -166,11 +171,14 @@ restore: ## Restore from backup (DESTRUCTIVE — deploy/restore.sh)
 
 # ── Validation ───────────────────────────────────────────────────────────────
 
-test: ## Full test matrix: unit + integration
-	npm run test:unit && npm run test:integration
+test: ## Unit tests via turbo (apps that define test:unit — currently web only)
+	npm test
 
-test-fast: ## Quick suites: multibrand + admin + payments + email
-	npm run test:multibrand && npm run test:admin && npm run test:payments && npm run test:email-templates
+test-crm: ## CRM service-layer suites (needs local Postgres blckforest_crm)
+	cd $(ROOT)/apps/crm && npm run test:all
+
+test-fast: ## Quick web suites: multibrand + admin + payments + email (needs local Postgres)
+	cd $(ROOT)/apps/web && npm run test:multibrand && npm run test:admin && npm run test:payments && npm run test:email-templates
 
 lint: ## ESLint (zero warnings enforced)
 	npm run lint

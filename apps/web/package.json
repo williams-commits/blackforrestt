@@ -13,6 +13,8 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "node --env-file-if-exists=.env --import tsx prisma/seed.ts",
+    "auth:doctor": "node --env-file-if-exists=.env scripts/auth/doctor.mjs",
+    "production:check": "node scripts/production/preflight.mjs",
     "platform": "node --env-file-if-exists=.env --import tsx scripts/platform.mjs",
     "test:engine": "node --env-file-if-exists=.env --import tsx --test tests/positionEngine.test.ts",
     "test:ws-protocol": "node --env-file-if-exists=.env --import tsx --test tests/wsProtocol.test.ts",

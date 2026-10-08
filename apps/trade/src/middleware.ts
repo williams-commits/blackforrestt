@@ -49,6 +49,8 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  runtime: "nodejs" as const,
+  // Plain string literal — Next's static segment-config reader cannot parse
+  // `as const` assertions here and fails the production build.
+  runtime: "nodejs",
   matcher: ["/:path*"],
 };

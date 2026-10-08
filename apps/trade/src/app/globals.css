@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /*
   blckforest design tokens — light forex broker theme.
@@ -43,6 +44,61 @@
 
 :root {
   color-scheme: light;
+}
+
+/* ── shadcn token bridge ─────────────────────────────────────────────────────
+   Trade uses the repo's shadcn-based primitives (the CRM's radix-nova set).
+   Stock shadcn primitives speak the shadcn token vocabulary (bg-background,
+   bg-popover, text-muted-foreground, border-input, ring-ring, …). Instead of
+   forking every primitive, those tokens are ALIASED here to the platform
+   palette. The aliases resolve through var(--color-*), so the `.dim` class
+   swap above reskins shadcn primitives exactly like the rest of the app —
+   light/dim consistency with zero `dark:` churn. */
+:root {
+  --background: var(--color-canvas);
+  --foreground: var(--color-text);
+  --primary: var(--color-brand);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-panel-2);
+  --secondary-foreground: var(--color-text);
+  --muted: var(--color-panel-2);
+  --muted-foreground: var(--color-text-muted);
+  --accent: var(--color-panel-3);
+  --accent-foreground: var(--color-text);
+  --destructive: var(--color-down);
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-brand);
+  --popover: var(--color-panel);
+  --popover-foreground: var(--color-text);
+  --card: var(--color-canvas);
+  --card-foreground: var(--color-text);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  /* Compact radius scale anchored on the platform panel radius (4px). */
+  --radius-sm: calc(var(--radius-panel) - 2px);
+  --radius-md: var(--radius-panel);
+  --radius-lg: calc(var(--radius-panel) + 2px);
+  --radius-xl: calc(var(--radius-panel) + 4px);
 }
 
 /*

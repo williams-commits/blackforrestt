@@ -2,20 +2,27 @@
 
 import { type InputHTMLAttributes, forwardRef } from "react";
 
+import { cn } from "@/lib/utils";
+
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   suffix?: string;
 }
 
 /** Compact numeric-friendly input used in the order form. */
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { className = "", suffix, ...rest },
+  { className, suffix, ...rest },
   ref,
 ) {
   return (
-    <div className="relative flex items-center">
+    <div className="relative flex items-center" data-slot="input-wrapper">
       <input
         ref={ref}
-        className={`h-9 w-full rounded border border-border bg-canvas px-2 text-sm text-text outline-none placeholder:text-text-faint focus:border-brand focus-visible:ring-1 focus-visible:ring-brand tnum ${suffix ? "pr-12" : ""} ${className}`}
+        data-slot="input"
+        className={cn(
+          "h-9 w-full rounded border border-border bg-canvas px-2 text-sm text-text outline-none placeholder:text-text-faint focus:border-brand focus-visible:ring-1 focus-visible:ring-brand tnum",
+          suffix && "pr-12",
+          className,
+        )}
         {...rest}
       />
       {suffix ? (

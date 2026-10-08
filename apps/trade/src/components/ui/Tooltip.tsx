@@ -1,14 +1,17 @@
-import type { ReactNode } from "react";
+"use client";
 
-/** Shared hover/focus tooltip bubble styles (see Tooltip and InfoHint). */
-const BUBBLE_BASE =
-  "pointer-events-none absolute left-1/2 z-50 w-44 -translate-x-1/2 rounded border border-border bg-panel-2 p-2 text-center text-[11px] leading-snug text-text-muted opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100";
+import { type ReactNode } from "react";
+import { Tooltip as TooltipPrimitive } from "radix-ui";
 
-/** Wrap any inline element with a styled tooltip revealed on hover or focus.
- *  Use placement="bottom" for elements near the top of the viewport (navbars,
- *  header bars) so the bubble isn't clipped by the screen edge.
- *  Replaces native title-attribute tooltips, which show nothing on many
- *  setups (long delay, suppressed hovers, all touch devices). */
+import { cn } from "@/lib/utils";
+
+/*
+  Wrap any inline element with a styled tooltip revealed on hover or focus,
+  now powered by Radix (collision-aware placement, Escape dismiss) with the
+  same instant-open bubble look. Replaces native title-attribute tooltips,
+  which show nothing on many setups (long delay, suppressed hovers, all
+  touch devices).
+*/
 export function Tooltip({
   text,
   children,
@@ -18,13 +21,29 @@ export function Tooltip({
   children: ReactNode;
   placement?: "top" | "bottom";
 }) {
-  const placementClasses = placement === "bottom" ? "top-full mt-1.5" : "bottom-full mb-1.5";
   return (
-    <span className="group relative inline-flex min-w-0 max-w-full">
-      {children}
-      <span role="tooltip" className={`${BUBBLE_BASE} ${placementClasses}`}>
-        {text}
-      </span>
-    </span>
+    <TooltipPrimitive.Provider delayDuration={0}>
+      <TooltipPrimitive.Root>
+        <TooltipPrimitive.Trigger asChild>
+          {/* Single wrapper element so ANY children shape works (text,
+              fragments, multiple nodes) — Radix's asChild requires exactly
+              one element, and call sites pass plain strings. */}
+          <span className="inline-flex min-w-0 max-w-full">{children}</span>
+        </TooltipPrimitive.Trigger>
+        <TooltipPrimitive.Portal>
+          <TooltipPrimitive.Content
+            side={placement}
+            sideOffset={6}
+            data-slot="tooltip-content"
+            className={cn(
+              "z-50 w-44 rounded border border-border bg-panel-2 p-2 text-center text-[11px] leading-snug text-text-muted shadow-lg",
+              "data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
+            )}
+          >
+            {text}
+          </TooltipPrimitive.Content>
+        </TooltipPrimitive.Portal>
+      </TooltipPrimitive.Root>
+    </TooltipPrimitive.Provider>
   );
 }

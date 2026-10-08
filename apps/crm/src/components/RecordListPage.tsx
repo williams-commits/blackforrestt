@@ -34,7 +34,7 @@ import { useTableSession, writeTableSession } from "@/components/useTableSession
 import { useConfirmDialog, usePromptDialog } from "@/components/Dialogs";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
 import { Modal } from "@/components/Modal";
-import { IconInput, SearchInput } from "@/components/form";
+import { SearchInput } from "@/components/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +45,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useIsDesktop } from "@/lib/useMediaQuery";
 import { BulkNoteDrawer } from "@/components/BulkNoteDrawer";
 
 /** Record-object key → notes/activities subject type (mirrors the bulk engine's CONFIGS). */
@@ -57,6 +75,7 @@ const SUBJECT_TYPE_BY_OBJECT: Record<RecordObjectKey, "LEAD" | "CONTACT" | "ACCO
 
 interface MeContext {
   userId: string;
+  name: string;
   roleKey: string;
   permissions: string[];
 }
@@ -171,11 +190,17 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       id: string;
       name: string;
       shared: boolean;
+      userId: string;
       config: { q?: string; filters?: Record<string, string> };
       user?: { name: string };
     }>
   >([]);
+  // Save-view dialog state (the dialog replaces the old inline
+  // "Name this view" input that lived permanently in the toolbar).
+  const [saveViewOpen, setSaveViewOpen] = useState(false);
   const [viewName, setViewName] = useState("");
+  const [viewShared, setViewShared] = useState(false);
+  const [viewSaving, setViewSaving] = useState(false);
   const [activeView, setActiveView] = useState("all");
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
@@ -236,6 +261,9 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           : [];
 
   const visibleColumnCount = config.columns.filter((column) => !hiddenColumns.includes(column.key)).length;
+  // Long config placeholders (e.g. "Search all fields — name, email, phone…")
+  // truncate mid-word on phones; a short object-scoped one fits every width.
+  const isDesktop = useIsDesktop();
   // Tasks' "Everyone" ownership option is an admin affordance — scoped roles
   // can never widen past their owner ∪ shared set, so the control would lie.
   const canSeeEveryTask = me?.roleKey === "SUPER_ADMIN" || me?.roleKey === "ADMIN";
@@ -247,7 +275,13 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     ...(isRecordObject ? [{ key: "mine", label: `My ${config.title}` }] : []),
     { key: "recent", label: "Recently Added" },
     ...(object === "leads" ? [{ key: "unassigned", label: "Unassigned" }] : []),
-    ...views.map((v) => ({ key: `saved:${v.id}`, label: v.name, isSaved: true })),
+    ...views.map((v) => ({
+      key: `saved:${v.id}`,
+      label: v.name,
+      isSaved: true,
+      isMine: v.userId === me?.userId,
+      owner: v.shared && v.userId !== me?.userId ? (v.user?.name ?? "teammate") : undefined,
+    })),
   ];
 
   /** Set the search AND flush the debounce — for view switches, chips, and
@@ -283,6 +317,65 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
         applySearch(view.config.q ?? "");
         setFilters(view.config.filters ?? {});
       }
+    }
+  }
+
+  async function refreshViews() {
+    const body = await fetch(`/api/views?objectType=${object.toUpperCase().slice(0, -1)}`)
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      .catch(() => ({ data: [] as typeof views }));
+    setViews(body?.data ?? []);
+  }
+
+  /** Save the current search + filters as a named view (the toolbar
+   *  "Save view" dialog submits here). */
+  async function saveCurrentView() {
+    const name = viewName.trim();
+    if (!name || viewSaving) return;
+    setViewSaving(true);
+    try {
+      const response = await fetch("/api/views", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          objectType: object.toUpperCase().slice(0, -1),
+          name,
+          config: { q: search, filters },
+          shared: viewShared,
+        }),
+      });
+      if (!response.ok) throw new Error("save failed");
+      toast.success("View saved", {
+        description: `“${name}” is one click away in the Saved Views menu.`,
+      });
+      setSaveViewOpen(false);
+      setViewName("");
+      setViewShared(false);
+      await refreshViews();
+    } catch {
+      toast.error("Unable to save view", { description: "Please try again." });
+    } finally {
+      setViewSaving(false);
+    }
+  }
+
+  /** Delete one of the user's own saved views (trash affordance in the
+   *  Saved Views menu). The API only ever deletes views the caller owns. */
+  async function deleteSavedView(key: string) {
+    const view = views.find((v) => `saved:${v.id}` === key);
+    if (!view || view.userId !== me?.userId) return;
+    const ok = await confirm({
+      title: "Delete view",
+      message: `“${view.name}” will be removed${view.shared ? " for everyone it was shared with" : " from your views"}. This cannot be undone.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    const response = await fetch(`/api/views?id=${view.id}`, { method: "DELETE" });
+    if (response.ok) {
+      toast.success("View deleted", { description: `“${view.name}” was removed.` });
+      if (activeView === key) handleViewChange("all");
+      await refreshViews();
     }
   }
 
@@ -719,6 +812,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           views={presetViews}
           activeView={activeView}
           onViewChange={handleViewChange}
+          onDeleteView={isRecordObject ? (key) => void deleteSavedView(key) : undefined}
           totalCount={meta.total}
           showHeader={false}
         />
@@ -756,7 +850,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               // page 1 immediately (the fetch still waits for the debounce).
               setPage(1);
             }}
-            placeholder={config.searchPlaceholder}
+            placeholder={isDesktop ? config.searchPlaceholder : `Search ${config.title.toLowerCase()}…`}
             aria-label="Search"
             className="h-7 text-xs"
           />
@@ -789,108 +883,60 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           })}
         </form>
         <div className="flex items-center gap-2 border-l border-border pl-2">
-          {isRecordObject && views.length > 0 ? (
-            <Select
-              defaultValue="__all__"
-              onValueChange={(value) => {
-                const view = views.find((entry) => entry.id === value);
-                if (!view) return;
-                applySearch(view.config.q ?? "");
-                setFilters(view.config.filters ?? {});
-                setPage(1);
-              }}
-            >
-              <SelectTrigger size="sm" aria-label="Saved views" className="w-auto text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent position="popper">
-                <SelectItem value="__all__">Saved views…</SelectItem>
-                {views.map((view) => (
-                  <SelectItem key={view.id} value={view.id}>
-                    {view.name}
-                    {view.shared ? " (shared)" : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null}
-          <details className="group relative hidden sm:block">
-            <summary className="flex h-8 cursor-pointer list-none items-center gap-2 rounded-md border border-input bg-card px-2 text-xs font-medium hover:bg-muted">
-              Columns
-              <span className="text-(--text-tertiary)">{visibleColumnCount}/{config.columns.length}</span>
-            </summary>
-            <div
-              className="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-border bg-card p-2 shadow-lg"
-              role="menu"
-            >
-              <p className="px-2 pb-2 text-xs font-medium text-muted-foreground">Visible columns</p>
-              <div className="max-h-72 space-y-1 overflow-auto">
-                {config.columns.map((column) => {
-                  const checked = !hiddenColumns.includes(column.key);
-                  return (
-                    <label
-                      key={column.key}
-                      htmlFor={`column-${column.key}`}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-                    >
-                      <Checkbox
-                        id={`column-${column.key}`}
-                        checked={checked}
-                        disabled={checked && visibleColumnCount <= 1}
-                        onCheckedChange={(next) => {
-                          setHiddenColumns((prev) =>
-                            next
-                              ? prev.filter((key) => key !== column.key)
-                              : [...prev, column.key],
-                          );
-                        }}
-                      />
-                      <span>{column.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          </details>
-          {isRecordObject ? (
-            <>
-              <IconInput
-                aria-label="View name"
-                icon="tag"
-                placeholder="Name this view"
-                value={viewName}
-                onChange={(event) => setViewName(event.target.value)}
-                className="h-7 w-32 text-xs"
-              />
+          {/* Column visibility — a real menu on every viewport. (This used to
+              be a native <details> popover that was hidden on phones, so
+              mobile had no way to manage columns at all.) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
                 variant="secondary"
                 size="sm"
-                icon="check"
-                disabled={!viewName}
-                onClick={async () => {
-                  const response = await fetch("/api/views", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      objectType: object.toUpperCase().slice(0, -1),
-                      name: viewName,
-                      config: { q: search, filters },
-                      shared: false,
-                    }),
-                  });
-                  if (response.ok) {
-                    toast.success("View saved", { description: `"${viewName}" is available in the view bar.` });
-                    setViewName("");
-                    const refreshed = await fetch(
-                      `/api/views?objectType=${object.toUpperCase().slice(0, -1)}`,
-                    ).then((r) => (r.ok ? r.json() : { data: [] }));
-                    setViews(refreshed.data);
-                  }
-                }}
+                icon="columns"
+                aria-label={`Columns — ${visibleColumnCount} of ${config.columns.length} visible`}
               >
-                Save view
+                <span className="hidden sm:inline">Columns</span>
+                <span className="tabular-nums text-(--text-tertiary)">
+                  {visibleColumnCount}/{config.columns.length}
+                </span>
               </Button>
-            </>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-h-80 w-48 overflow-y-auto">
+              <DropdownMenuLabel className="flex items-center justify-between text-xs">
+                Visible columns
+                <span className="font-normal tabular-nums text-muted-foreground">
+                  {visibleColumnCount}/{config.columns.length}
+                </span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {config.columns.map((column) => {
+                const checked = !hiddenColumns.includes(column.key);
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={column.key}
+                    checked={checked}
+                    disabled={checked && visibleColumnCount <= 1}
+                    // Keep the menu open across toggles — column management
+                    // is a multi-item task, not a one-shot choice.
+                    onSelect={(event) => event.preventDefault()}
+                    onCheckedChange={(next) => {
+                      setHiddenColumns((prev) =>
+                        next
+                          ? prev.filter((key) => key !== column.key)
+                          : [...prev, column.key],
+                      );
+                    }}
+                    className="text-[13px]"
+                  >
+                    {column.label}
+                  </DropdownMenuCheckboxItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {isRecordObject ? (
+            <Button variant="secondary" size="sm" icon="bookmark" onClick={() => setSaveViewOpen(true)}>
+              Save view
+            </Button>
           ) : null}
         </div>
       </div>
@@ -900,10 +946,10 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           <span className="font-medium">{selected.size} selected</span>
           {object === "tasks" && can.edit ? (
             <>
-              <Button type="button" variant="secondary" size="sm" icon="check" loading={bulkBusy} disabled={bulkBusy} onClick={() => void runBulk("complete", {})}>
+              <Button type="button" variant="secondary" size="sm" icon="check" loading={bulkBusy} disabled={bulkBusy} className="max-sm:min-h-9" onClick={() => void runBulk("complete", {})}>
                 Complete
               </Button>
-              <Button type="button" variant="secondary" size="sm" icon="close" loading={bulkBusy} disabled={bulkBusy} onClick={() => void runBulk("cancel", {})}>
+              <Button type="button" variant="secondary" size="sm" icon="close" loading={bulkBusy} disabled={bulkBusy} className="max-sm:min-h-9" onClick={() => void runBulk("cancel", {})}>
                 Cancel
               </Button>
             </>
@@ -976,6 +1022,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               variant="destructive"
               size="sm"
               icon="trash"
+              className="max-sm:min-h-9"
               loading={bulkBusy}
               disabled={bulkBusy}
               onClick={async () => {
@@ -1018,6 +1065,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               variant="secondary"
               size="sm"
               icon="square_check"
+              className="max-sm:min-h-9"
               loading={bulkBusy}
               disabled={bulkBusy}
               onClick={async () => {
@@ -1039,6 +1087,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               variant="secondary"
               size="sm"
               icon="note"
+              className="max-sm:min-h-9"
               disabled={bulkBusy}
               onClick={() => setNoteOpen(true)}
             >
@@ -1063,6 +1112,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             variant="secondary"
             size="sm"
             icon="close"
+            className="max-sm:min-h-9"
             disabled={bulkBusy}
             onClick={() => setSelected(new Set())}
           >
@@ -1553,6 +1603,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             type="button"
             variant="secondary"
             size="sm"
+            className="max-sm:min-h-9"
             disabled={meta.page <= 1 || loading}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
@@ -1563,6 +1614,7 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
             variant="secondary"
             size="sm"
             icon="chevron_right"
+            className="max-sm:min-h-9"
             disabled={meta.page >= totalPages || loading}
             onClick={() => setPage((p) => p + 1)}
           >
@@ -1582,6 +1634,99 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           onClose={() => setFormMode("closed")}
         />
       ) : null}
+
+      {/* ── Save view dialog ──
+          Replaces the old permanently-mounted "Name this view" input pair:
+          one premium action opens a focused dialog that also surfaces the
+          share-with-team capability the inline flow kept hidden. */}
+      <Dialog
+        open={saveViewOpen}
+        onOpenChange={(next) => {
+          setSaveViewOpen(next);
+          if (!next && !viewSaving) {
+            setViewName("");
+            setViewShared(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden>
+                <Icon name="bookmark" size={13} />
+              </span>
+              Save this view
+            </DialogTitle>
+            <DialogDescription>
+              {(() => {
+                const parts: string[] = [];
+                if (search.trim()) parts.push(`search “${search.trim()}”`);
+                const active = Object.values(filters).filter(Boolean).length;
+                if (active > 0) parts.push(`${active} filter${active === 1 ? "" : "s"}`);
+                return parts.length > 0
+                  ? `Captures ${parts.join(" and ")} for one-click access from the Saved Views menu.`
+                  : "Keeps this list one click away in the Saved Views menu.";
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="save-view-name" className="text-sm font-medium">
+                View name
+              </label>
+              <Input
+                id="save-view-name"
+                autoFocus
+                maxLength={80}
+                value={viewName}
+                onChange={(event) => setViewName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void saveCurrentView();
+                  }
+                }}
+                placeholder="e.g. Enterprise warm leads"
+                aria-describedby="save-view-name-hint"
+              />
+              <p id="save-view-name-hint" className="text-xs text-muted-foreground">
+                {viewName.length}/80 characters
+              </p>
+            </div>
+            <label
+              htmlFor="save-view-shared"
+              className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-muted/40 p-3 transition-colors hover:bg-muted"
+            >
+              <Checkbox
+                id="save-view-shared"
+                checked={viewShared}
+                onCheckedChange={(next) => setViewShared(next === true)}
+                className="mt-0.5"
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">Share with team</span>
+                <span className="block text-xs text-muted-foreground">
+                  Everyone in your org can open this view. Only you can edit or delete it.
+                </span>
+              </span>
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="tertiary" onClick={() => setSaveViewOpen(false)} disabled={viewSaving}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              icon="check"
+              loading={viewSaving}
+              disabled={!viewName.trim() || viewSaving}
+              onClick={() => void saveCurrentView()}
+            >
+              Save view
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {confirmDialog}
       {promptDialog}

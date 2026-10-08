@@ -1,6 +1,6 @@
 "use client";
 
-import { Inbox } from "lucide-react";
+import { Inbox, Search } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, TableCell, TableHead } from "@/components/ui/table";
 
@@ -166,8 +166,10 @@ export function FilterChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full border px-2.5 py-1 text-(length:--term-text-2xs) font-medium transition ${
-        active ? "border-brand bg-brand text-white" : "border-border bg-canvas text-text-muted hover:border-brand/40 hover:text-text"
+      className={`rounded-full border px-2.5 py-1 text-(length:--term-text-2xs) font-medium whitespace-nowrap transition active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+        active
+          ? "border-brand bg-brand text-white"
+          : "border-border bg-canvas text-text-muted hover:border-brand/40 hover:text-text"
       }`}
     >
       {children}
@@ -175,7 +177,7 @@ export function FilterChip({
   );
 }
 
-/** Compact toolbar search input. */
+/** Compact toolbar search input — full-width row on phones, bounded on sm+. */
 export function TableSearch({
   value,
   onChange,
@@ -188,13 +190,20 @@ export function TableSearch({
   label: string;
 }) {
   return (
-    <input
-      type="search"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      aria-label={label}
-      className="h-8 min-w-40 flex-1 rounded border border-border bg-canvas px-2.5 text-(length:--term-text-sm) outline-none focus:border-brand sm:max-w-56"
-    />
+    <div className="relative w-full sm:w-auto sm:min-w-48 sm:max-w-56">
+      <Search
+        size={14}
+        aria-hidden
+        className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-faint"
+      />
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={label}
+        className="h-8 w-full rounded-md border border-border bg-canvas pl-8 pr-2.5 text-(length:--term-text-sm) text-text outline-none transition placeholder:text-text-faint focus:border-brand focus:ring-2 focus:ring-brand/25"
+      />
+    </div>
   );
 }

@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   BarChart3,
   Bell,
+  Bookmark,
   Box,
   Building2,
   Calendar,
@@ -15,6 +16,7 @@ import {
   ChevronUp,
   Circle,
   Clock,
+  Columns3,
   Download,
   ExternalLink,
   FileText,
@@ -121,6 +123,8 @@ const ICONS: Record<string, LucideIcon> = {
   grid: LayoutGrid,
   tag: Tag,
   sliders: SlidersHorizontal,
+  bookmark: Bookmark,
+  columns: Columns3,
 
   // Misc
   list: List,

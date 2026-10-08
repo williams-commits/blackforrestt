@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CircleCheck } from "lucide-react";
 
 const CATEGORIES = ["General enquiry", "Account & verification", "Deposits & withdrawals", "Technical issue", "Partnership"] as const;
@@ -119,15 +120,16 @@ export function SupportTab() {
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Subject</label>
-            <select
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="h-10 w-full rounded border border-border bg-canvas px-2 text-sm outline-none focus:border-brand"
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+            <Select value={subject} onValueChange={setSubject}>
+              <SelectTrigger aria-label="Subject" className="h-10 w-full rounded px-2 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Message</label>

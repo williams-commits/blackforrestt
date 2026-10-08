@@ -2,13 +2,15 @@
 
 import { Inbox } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Table, TableCell, TableHead } from "@/components/ui/table";
 
 import type { ReactNode } from "react";
 
 /**
  * Shared data-table kit for the account portal and admin console.
  * One card shell, one header/cell style, built-in sortable headers.
- * Replaces the three copy-pasted Th/Td sets and ReferralTab's hand-rolled cells.
+ * Element primitives (Table/TableHead/TableCell) come from ui/table — the
+ * shadcn base — with the terminal's dense spacing applied as overrides.
  */
 
 export function TableShell({
@@ -32,11 +34,9 @@ export function TableShell({
           {toolbar}
         </div>
       )}
-      <div className="overflow-x-auto overscroll-x-contain">
-        <table className="w-full" style={{ minWidth: `${minWidth}px` }}>
-          {children}
-        </table>
-      </div>
+      <Table className="w-full" style={{ minWidth: `${minWidth}px` }}>
+        {children}
+      </Table>
       {footer}
     </div>
   );
@@ -78,15 +78,18 @@ export function Th({
   );
   if (!sortable) {
     return (
-      <th className={`px-3 py-2 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}>
+      <TableHead
+        aria-sort={undefined}
+        className={`h-auto border-0 px-3 py-2 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
+      >
         {content}
-      </th>
+      </TableHead>
     );
   }
   return (
-    <th
+    <TableHead
       aria-sort={active ? (sort!.direction === "asc" ? "ascending" : "descending") : "none"}
-      className={`px-3 py-2 text-(length:--term-text-2xs) font-medium uppercase tracking-wide ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
+      className={`h-auto border-0 px-3 py-2 text-(length:--term-text-2xs) font-medium uppercase tracking-wide ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
     >
       <button
         type="button"
@@ -95,7 +98,7 @@ export function Th({
       >
         {content}
       </button>
-    </th>
+    </TableHead>
   );
 }
 
@@ -111,21 +114,21 @@ export function Td({
   colSpan?: number;
 }) {
   return (
-    <td
+    <TableCell
       colSpan={colSpan}
-      className={`px-3 py-2 text-(length:--term-text-sm) tnum ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
+      className={`border-0 px-3 py-2 text-(length:--term-text-sm) tnum ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
     >
       {children}
-    </td>
+    </TableCell>
   );
 }
 
 export function EmptyRow({ colSpan, label }: { colSpan: number; label: string }) {
   return (
     <tr>
-      <td colSpan={colSpan} className="p-0">
+      <TableCell colSpan={colSpan} className="p-0">
         <EmptyState compact icon={<Inbox size={18} />} title={label} />
-      </td>
+      </TableCell>
     </tr>
   );
 }
@@ -136,13 +139,13 @@ export function TotalsRow({ cells }: { cells: Array<{ label?: string; value?: st
   return (
     <tr className="bg-panel-2/60">
       {cells.map((cell, i) => (
-        <td
+        <TableCell
           key={i}
           colSpan={cell.colSpan}
-          className={`px-3 py-2 text-(length:--term-text-sm) font-semibold tnum ${cell.align === "right" ? "text-right" : "text-left"} ${cell.className ?? ""}`}
+          className={`border-0 px-3 py-2 text-(length:--term-text-sm) font-semibold tnum ${cell.align === "right" ? "text-right" : "text-left"} ${cell.className ?? ""}`}
         >
           {cell.label ?? cell.value ?? ""}
-        </td>
+        </TableCell>
       ))}
     </tr>
   );

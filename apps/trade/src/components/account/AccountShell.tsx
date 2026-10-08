@@ -17,6 +17,7 @@ import type { InstrumentView, PositionView } from "@/lib/types";
 import { useForexStore } from "@/lib/store";
 import type { ServerMessage } from "@/lib/ws/client";
 import { Tabs } from "@/components/ui/Tabs";
+import { Badge } from "@/components/ui/badge";
 import { ACCOUNT_TAB_ICONS, TabIcon } from "@/components/ui/tabIcons";
 import { ScrollFade } from "@/components/ui/ScrollFade";
 import { useBrand } from "@/components/providers";
@@ -287,21 +288,21 @@ export function AccountShell(props: Props) {
     const iconEl = icon ? <TabIcon key="icon" icon={icon} /> : null;
     const badgeFor: Record<string, React.ReactNode> = {};
     if (item.key === "positions" && openPositionCount > 0) {
-      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-panel-3 px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-text-muted">{openPositionCount}</span>;
+      badgeFor[item.key] = <Badge variant="secondary" className="ml-1.5 bg-panel-3 px-1.5 font-bold text-text-muted">{openPositionCount}</Badge>;
     }
     if (item.key === "verification" && verificationNeeded) {
-      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-white">!</span>;
+      badgeFor[item.key] = <Badge className="ml-1.5 px-1.5 font-bold">!</Badge>;
     }
     // Unread badges — after a toast fires these steer the user to the tab that
     // holds the history (toasts no longer consume the unread state).
     if (item.key === "notifications" && unreadNotifications > 0) {
-      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>;
+      badgeFor[item.key] = <Badge className="ml-1.5 px-1.5 font-bold">{unreadNotifications > 99 ? "99+" : unreadNotifications}</Badge>;
     }
     if (item.key === "messages" && unreadMessages > 0) {
-      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-white">{unreadMessages > 99 ? "99+" : unreadMessages}</span>;
+      badgeFor[item.key] = <Badge className="ml-1.5 px-1.5 font-bold">{unreadMessages > 99 ? "99+" : unreadMessages}</Badge>;
     }
     if (item.key === "support" && openSupportCases > 0) {
-      badgeFor[item.key] = <span className="ml-1.5 rounded-full bg-panel-3 px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-text-muted">{openSupportCases}</span>;
+      badgeFor[item.key] = <Badge variant="secondary" className="ml-1.5 bg-panel-3 px-1.5 font-bold text-text-muted">{openSupportCases}</Badge>;
     }
     const badge = badgeFor[item.key];
     if (!iconEl && !badge) return item;

@@ -7,6 +7,7 @@ import { toast } from "@/lib/toast";
 import { fmtPrice, fmtNum } from "@/lib/format";
 import type { InstrumentView, PositionSide } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { isExecutableQuote, quoteAgeMs } from "@/lib/marketFreshness";
 
@@ -220,7 +221,7 @@ export function TradePanel({ instrument }: Props) {
       <div className="px-4 pb-3">
         <label htmlFor={volumeId} className="text-(length:--term-text-2xs) font-medium text-text-muted uppercase tracking-wide">Volume (lots)</label>
         <div className="relative mt-1">
-          <input
+          <Input
             id={volumeId}
             type="number"
             inputMode="decimal"
@@ -229,7 +230,7 @@ export function TradePanel({ instrument }: Props) {
             max="100"
             value={volume}
             onChange={(e) => { setVolume(e.target.value); clearMessages(); }}
-            className="w-full h-11 bg-canvas border border-border rounded-lg px-3 text-sm tnum font-semibold outline-none focus:border-brand transition-colors"
+            className="h-11 rounded-lg px-3 font-semibold transition-colors"
           />
         </div>
         <div className="grid grid-cols-4 gap-1 mt-1.5">
@@ -255,14 +256,14 @@ export function TradePanel({ instrument }: Props) {
         <div className="px-4 pb-3 space-y-2">
           <div>
             <label htmlFor={strikeId} className="text-(length:--term-text-2xs) font-medium text-text-muted uppercase tracking-wide">Strike Rate</label>
-            <input
+            <Input
               id={strikeId}
               type="number"
               inputMode="decimal"
               value={strikeRate}
               onChange={(e) => { setStrikeRate(e.target.value); clearMessages(); }}
               placeholder={`Market: ${fmtPrice(ask, instrument.digits)}`}
-              className="w-full h-10 bg-canvas border border-border rounded-lg px-3 text-sm tnum outline-none focus:border-brand placeholder:text-text-faint transition-colors mt-1"
+              className="mt-1 h-10 rounded-lg px-3 transition-colors"
             />
           </div>
           <div>
@@ -317,14 +318,14 @@ export function TradePanel({ instrument }: Props) {
                 <div className="relative">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-(length:--term-text-2xs) font-semibold text-down">SL</span>
                   <label htmlFor={stopLossId} className="sr-only">Stop-loss rate</label>
-                  <input
+                  <Input
                     id={stopLossId}
                     type="number"
                     inputMode="decimal"
                     value={stopLoss}
                     onChange={(e) => { setStopLoss(e.target.value); clearMessages(); }}
                     placeholder="—"
-                    className="w-full h-11 bg-canvas border border-border rounded-lg pl-7 pr-2 text-xs tnum outline-none focus:border-brand placeholder:text-text-faint transition-colors"
+                    className="h-11 rounded-lg pl-7 pr-2 text-xs transition-colors"
                   />
                 </div>
               </div>
@@ -332,14 +333,14 @@ export function TradePanel({ instrument }: Props) {
                 <div className="relative">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-(length:--term-text-2xs) font-semibold text-up">TP</span>
                   <label htmlFor={takeProfitId} className="sr-only">Take-profit rate</label>
-                  <input
+                  <Input
                     id={takeProfitId}
                     type="number"
                     inputMode="decimal"
                     value={takeProfit}
                     onChange={(e) => { setTakeProfit(e.target.value); clearMessages(); }}
                     placeholder="—"
-                    className="w-full h-11 bg-canvas border border-border rounded-lg pl-7 pr-2 text-xs tnum outline-none focus:border-brand placeholder:text-text-faint transition-colors"
+                    className="h-11 rounded-lg pl-7 pr-2 text-xs transition-colors"
                   />
                 </div>
               </div>

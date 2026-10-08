@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" role="img" aria-label="Palladium">
+  <defs>
+    <radialGradient id="d" cx="38%" cy="30%" r="80%"><stop offset="0%" stop-color="#f4f2ef"/><stop offset="50%" stop-color="#c9c4bd"/><stop offset="100%" stop-color="#827971"/></radialGradient>
+    <linearGradient id="dr" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0ece7"/><stop offset="100%" stop-color="#968d83"/></linearGradient>
+  </defs>
+  <circle cx="20" cy="20" r="19" fill="url(#d)" stroke="#655c53" stroke-width="1.4"/>
+  <circle cx="20" cy="20" r="14.5" fill="none" stroke="url(#dr)" stroke-width="1.6"/>
+  <text x="20" y="25.6" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="12" fill="#4d453c" letter-spacing="0.5">PD</text>
+</svg>

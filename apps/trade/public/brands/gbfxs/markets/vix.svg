@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" role="img" aria-label="VIX volatility index">
+  <defs><radialGradient id="v" cx="38%" cy="30%" r="80%"><stop offset="0%" stop-color="#4c4370"/><stop offset="60%" stop-color="#2f2a49"/><stop offset="100%" stop-color="#1b1830"/></radialGradient></defs>
+  <circle cx="20" cy="20" r="19" fill="url(#v)" stroke="#131022" stroke-width="1.4"/>
+  <path d="M11 25.5 15.5 18l3 3.6L23 14l3.4 5.2" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11 29.5h18" stroke="#4c4370" stroke-width="1.2" stroke-linecap="round"/>
+</svg>

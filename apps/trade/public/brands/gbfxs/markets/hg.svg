@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" role="img" aria-label="Copper">
+  <defs>
+    <radialGradient id="c" cx="38%" cy="30%" r="80%"><stop offset="0%" stop-color="#f0b27f"/><stop offset="50%" stop-color="#c97b4a"/><stop offset="100%" stop-color="#8a4b22"/></radialGradient>
+    <linearGradient id="cr" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#eab489"/><stop offset="100%" stop-color="#9c5a2c"/></linearGradient>
+  </defs>
+  <circle cx="20" cy="20" r="19" fill="url(#c)" stroke="#6f3c1a" stroke-width="1.4"/>
+  <circle cx="20" cy="20" r="14.5" fill="none" stroke="url(#cr)" stroke-width="1.6"/>
+  <text x="20" y="25.6" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="12" fill="#5c3113" letter-spacing="0.5">CU</text>
+</svg>

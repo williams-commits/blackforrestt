@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { emitCrmEvent } from "@/server/crmEvents";
 import { prisma } from "@/server/db";
 import { requireAdmin, AdminError } from "@/server/admin";
 import { queueUserEmail } from "@/server/email/service";
@@ -47,6 +48,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const newStatus = parsed.data.action === "APPROVE" ? "APPROVED" : "REJECTED";
+  let existingUserId: string | null = null;
   const result = await prisma.$transaction(async (tx) => {
     const existing = await tx.kycSubmission.findUnique({
       where: { id },
@@ -54,6 +56,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
     if (!existing) return "NOT_FOUND" as const;
     if (existing.status !== "PENDING") return "CONFLICT" as const;
+    existingUserId = existing.userId;
 
     await tx.kycSubmission.update({
       where: { id },
@@ -79,6 +82,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
   if (result === "CONFLICT") {
     return NextResponse.json({ error: "This KYC submission has already been reviewed." }, { status: 409 });
+  }
+  if (result === "UPDATED" && existingUserId) {
+    // The CRM resolves the platform user and notifies the customer's owner.
+    emitCrmEvent({
+      type: "kyc.status_changed",
+      platformUserId: existingUserId,
+      payload: { status: newStatus.toLowerCase() },
+    });
   }
   return NextResponse.json({ ok: true, id, status: newStatus });
 }

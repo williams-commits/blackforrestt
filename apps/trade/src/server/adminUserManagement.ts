@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { randomInt } from "node:crypto";
 import { prisma } from "./db";
+import { emitCrmEvent } from "./crmEvents";
 import { appendAuditEvent } from "./ledger";
 import { hashPassword } from "../auth";
 import {
@@ -109,6 +110,11 @@ export async function setUserAccountStatus(input: {
   if (input.action !== "RESTORE" && input.action !== "UNSUSPEND" && input.action !== "UNBLOCK") {
     void hub.pushActivityCounts(input.userId).catch(() => undefined);
   }
+  emitCrmEvent({
+    type: "account.state_changed",
+    platformUserId: input.userId,
+    payload: { state: state.toLowerCase() },
+  });
   return { state };
 }
 

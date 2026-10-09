@@ -6,6 +6,7 @@ import { Modal } from "@/components/Modal";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
 import { SmartTips } from "@/components/SmartTips";
 import { Button, EmptyState, Section } from "@/components/ui";
+import { UnifiedActivationReport } from "@/components/UnifiedActivationReport";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FormActions, IconInput, IconSelectTrigger } from "@/components/form";
 import { Label } from "@/components/ui/label";
@@ -199,6 +200,7 @@ export function ReportsPage() {
       />
       <WorkspaceQuickNav />
       <SmartTips context="records" />
+      <UnifiedActivationReport />
 
       {builderOpen ? (
         <Modal title="Build a report" onClose={() => setBuilderOpen(false)} size="lg">

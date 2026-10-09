@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
@@ -35,6 +36,7 @@ export function PlatformLinkPanel({
   canEdit: boolean;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [lookup, setLookup] = useState<LookupState>({ status: "idle" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -96,6 +98,7 @@ export function PlatformLinkPanel({
         return;
       }
       toast.success("Platform account linked", { description: "KYC, wallets, and payments now show on this customer." });
+      void queryClient.invalidateQueries({ queryKey: ["customers", customerId] });
       router.refresh();
     } finally {
       setBusy(false);
@@ -147,6 +150,7 @@ export function PlatformLinkPanel({
 /** Unlink control for an already-linked customer. */
 export function PlatformUnlinkButton({ customerId }: { customerId: string }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   return (
@@ -166,6 +170,7 @@ export function PlatformUnlinkButton({ customerId }: { customerId: string }) {
           try {
             await fetch(`/api/customers/${customerId}/link`, { method: "DELETE" });
             toast.success("Platform account unlinked");
+            void queryClient.invalidateQueries({ queryKey: ["customers", customerId] });
             router.refresh();
           } finally {
             setBusy(false);

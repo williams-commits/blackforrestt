@@ -10,7 +10,6 @@ import { listAppointmentsBySubjectPage } from "@/server/records/appointments";
 import { countSubjectTasks } from "@/server/records/tasks";
 import { ACTIVITY_STRIP_PAGE_SIZE } from "@/lib/activityStrip";
 import { Timeline } from "@/components/Timeline";
-import { PlatformPresenceBadge } from "@/components/PlatformPresenceBadge";
 import { ActivityComposer } from "@/components/ActivityComposer";
 import { HighlightsPanel } from "@/components/HighlightsPanel";
 import { RecordPageTabs } from "@/components/RecordPageTabs";
@@ -19,14 +18,13 @@ import { TagEditor } from "@/components/TagEditor";
 import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
 import { listTagsForSubject } from "@/server/records/tags";
 import { listCustomFields } from "@/server/records/customFields";
-import { client360 } from "@/server/platformBridge";
 import { RecordActivities } from "@/components/RecordActivities";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { RecordDetailActions } from "@/components/RecordDetailActions";
-import { PlatformLinkPanel, PlatformUnlinkButton } from "@/components/PlatformLinkPanel";
+import { PlatformUnlinkButton } from "@/components/PlatformLinkPanel";
+import { TradingAccountCard, TradingAccountDetails } from "@/components/TradingAccountPanel";
 import { RecordWorkspaceTabs } from "@/components/RecordWorkspaceTabs";
 import { WorkspaceQuickNav } from "@/components/WorkspaceQuickNav";
-import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
 import { getRecordCapabilities } from "@/lib/recordCapabilities";
 
 import { DetailField } from "@/components/DetailOverview";
@@ -45,7 +43,6 @@ export default async function CustomerDetailPage({ params }: PageProps) {
   let notes: Awaited<ReturnType<typeof listNotesBySubjectPage>> = { rows: [], total: 0 };
   let taskCount = 0;
   let appointments: Awaited<ReturnType<typeof listAppointmentsBySubjectPage>> = { rows: [], total: 0 };
-  let platform: Awaited<ReturnType<typeof client360>> = null;
   let campaigns: Array<{ campaign: { name: string } }> = [];
   let canViewEmails = false;
   let canEdit = false;
@@ -66,7 +63,6 @@ export default async function CustomerDetailPage({ params }: PageProps) {
     notes = await listNotesBySubjectPage("CUSTOMER", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
     appointments = await listAppointmentsBySubjectPage("CUSTOMER", id, 1, ACTIVITY_STRIP_PAGE_SIZE);
     taskCount = await countSubjectTasks(ctx, "CUSTOMER", id);
-    platform = customer.platformUserId ? await client360(customer.platformUserId) : null;
     campaigns = await prisma.campaignMember.findMany({ where: { subjectType: "CUSTOMER", subjectId: id }, include: { campaign: true } });
     canViewEmails = ctx.permissions.includes("EMAILS_VIEW");
     const capabilities = getRecordCapabilities("CUSTOMER", ctx.permissions);
@@ -84,6 +80,11 @@ export default async function CustomerDetailPage({ params }: PageProps) {
     if (error instanceof CrmError && error.status === 404) redirect("/customers");
     throw error;
   }
+
+  // Cross-module link back to the trading platform (env-gated: hidden
+  // entirely when PLATFORM_TRADE_URL is not configured, like the bridge).
+  const tradeBase = process.env.PLATFORM_TRADE_URL?.replace(/\/$/, "");
+  const tradeUrl = tradeBase && customer?.platformUserId ? `${tradeBase}/admin` : null;
 
   return (
     <div className="mx-auto max-w-6xl space-y-4" data-module="customers">
@@ -167,91 +168,13 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           {/* Platform bridge */}
           <section className="card">
             <div className="card-header">
-              <h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="plug" size={13} /></span>Platform (read-only bridge)</h2>
+              <h2 className="card-title flex items-center gap-2"><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon name="plug" size={13} /></span>Platform</h2>
               {customer.platformUserId && canEdit ? (
                 <PlatformUnlinkButton customerId={customer.id} />
               ) : null}
             </div>
             <div className="card-body">
-              {customer.platformUserId ? (
-                platform ? (
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Account</p>
-                      <p className="mt-1 text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>{platform.user.name ?? platform.user.email ?? "—"}</p>
-                      <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>{platform.user.email}</p>
-                      <p className="mt-1 text-[11px]">
-                        <span style={{ color: platform.user.state === "ACTIVE" ? "var(--success)" : "var(--error)" }}>
-                          {platform.user.state.toLowerCase()}
-                        </span>
-                        <span style={{ color: "var(--text-tertiary)" }}> · registered {new Date(platform.user.registeredAt).toLocaleDateString()}</span>
-                      </p>
-                      <p className="mt-1 text-[11px]">
-                        <PlatformPresenceBadge customerId={customer.id} initialOnline={platform.presence.online} />
-                      </p>
-                    </div>
-                    <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>KYC</p>
-                      <p className="mt-1 text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>
-                        {platform.kyc?.status.replaceAll("_", " ").toLowerCase() ?? "not submitted"}
-                      </p>
-                      {platform.kyc?.submittedAt ? (
-                        <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
-                          submitted {new Date(platform.kyc.submittedAt).toLocaleDateString()}
-                        </p>
-                      ) : null}
-                      <p className="mt-1 text-[11px]" style={{ color: "var(--text-secondary)" }}>{platform.openPositions} open position(s)</p>
-                    </div>
-                    {platform.positions.length > 0 ? (
-                      <div className="sm:col-span-3">
-                        <div className="mb-1 flex items-center justify-between"><p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Live positions</p><span className="badge badge-success">{platform.positions.length} open</span></div>
-                        <div className="overflow-x-auto"><Table><THead><TR><TH>Symbol</TH><TH>Side</TH><TH>Volume</TH><TH>Open</TH><TH>Mark</TH><TH>Net P/L</TH></TR></THead><TBody>{platform.positions.map((position) => <TR key={position.id}><TD className="font-medium">{position.symbol}</TD><TD><span className={`badge ${position.side === "BUY" ? "badge-success" : "badge-error"}`}>{position.side}</span></TD><TD>{position.volume}</TD><TD>{position.openRate}</TD><TD>{position.currentRate}</TD><TD className={Number(position.netProfit) >= 0 ? "text-(--success)" : "text-(--error)"}>{Number(position.netProfit).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TD></TR>)}</TBody></Table></div>
-                      </div>
-                    ) : null}
-                    <div className="card" style={{ padding: "var(--space-3)", background: "var(--bg-subtle)" }}>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Wallets</p>
-                      {platform.wallets.length === 0 ? (
-                        <p className="mt-1 text-[13px]" style={{ color: "var(--text-tertiary)" }}>No wallets.</p>
-                      ) : (
-                        <ul className="mt-1 space-y-0.5 text-[13px]">
-                          {platform.wallets.map((wallet) => (
-                            <li key={wallet.asset} className="flex justify-between">
-                              <span>{wallet.asset}</span>
-                              <span style={{ color: "var(--text-secondary)" }}>
-                                {Number(wallet.free).toLocaleString()} free
-                                {Number(wallet.locked) > 0 ? ` · ${Number(wallet.locked).toLocaleString()} locked` : ""}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                    {platform.payments.length > 0 ? (
-                      <div className="sm:col-span-3">
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>Recent payments</p>
-                        <Table>
-                          <TBody>
-                            {platform.payments.map((payment) => (
-                              <TR key={payment.id}>
-                                <TD>{new Date(payment.createdAt).toLocaleDateString()}</TD>
-                                <TD>{payment.type.toLowerCase()}</TD>
-                                <TD>{Number(payment.amount).toLocaleString()} {payment.asset}</TD>
-                                <TD style={{ color: "var(--text-secondary)" }}>{payment.status.toLowerCase()}</TD>
-                              </TR>
-                            ))}
-                          </TBody>
-                        </Table>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <p className="text-[13px]" style={{ color: "var(--warning)" }}>
-                    Linked, but the platform bridge is unavailable right now — refresh later.
-                  </p>
-                )
-              ) : (
-                <PlatformLinkPanel customerId={customer.id} customerEmail={customer.email} canEdit={canEdit} />
-              )}
+              <TradingAccountDetails customerId={id} customerEmail={customer.email} canEdit={canEdit} />
             </div>
           </section>
 
@@ -288,7 +211,8 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         </div>
 
         {/* Timeline sidebar */}
-        <aside className="no-print">
+        <aside className="no-print space-y-4">
+          <TradingAccountCard customerId={id} tradeUrl={tradeUrl} />
           <div className="card lg:sticky lg:top-17">
             <div className="card-header">
               <h2 className="card-title flex items-center gap-1.5"><Icon name="clock" size={14} className="text-muted-foreground" />Timeline</h2>

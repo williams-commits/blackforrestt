@@ -29,7 +29,10 @@ export type NotifiableType =
   | "STAGE_CHANGED"
   | "NOTE_ADDED"
   | "TASK_COMPLETED"
-  | "TASK_CANCELLED";
+  | "TASK_CANCELLED"
+  | "PAYMENT_STATUS_CHANGED"
+  | "KYC_STATUS_CHANGED"
+  | "ACCOUNT_STATE_CHANGED";
 
 export const NotificationQuery = z.object({
   read: z.enum(["all", "unread", "read"]).default("all"),
@@ -101,6 +104,21 @@ function emailFor(type: NotifiableType, payload: Record<string, unknown>): { sub
       return {
         subject: `CRM: Task cancelled — ${payload.title ?? "task"}`,
         text: `${payload.byName ?? "Someone"} cancelled "${payload.title ?? "a task"}" you are involved with.`,
+      };
+    case "PAYMENT_STATUS_CHANGED":
+      return {
+        subject: `CRM: ${payload.title ?? "Payment update"} — ${payload.label ?? "customer"}`,
+        text: `Trading platform update for ${payload.label ?? "your customer"}: ${payload.title ?? "payment status changed"}. Open the customer's Platform tab for details.`,
+      };
+    case "KYC_STATUS_CHANGED":
+      return {
+        subject: `CRM: KYC ${payload.status ?? "update"} — ${payload.label ?? "customer"}`,
+        text: `Trading platform update for ${payload.label ?? "your customer"}: KYC ${payload.status ?? "status changed"}. Open the customer's Platform tab for details.`,
+      };
+    case "ACCOUNT_STATE_CHANGED":
+      return {
+        subject: `CRM: Trading account ${payload.state ?? "changed"} — ${payload.label ?? "customer"}`,
+        text: `Trading platform update for ${payload.label ?? "your customer"}: account is now ${payload.state ?? "changed"}. Open the customer's Platform tab for details.`,
       };
     case "NOTE_ADDED":
       return {

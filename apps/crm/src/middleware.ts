@@ -41,7 +41,15 @@ async function sessionToken(req: NextRequest) {
 // "/api/emails/inbound" is the mail-provider webhook: it authenticates with
 // its own INBOUND_EMAIL_TOKEN bearer (constant-time checked in the route),
 // so it must pass the middleware without a CRM session.
-const PUBLIC_PREFIXES = ["/login", "/api/auth", "/api/health", "/api/emails/inbound"];
+const PUBLIC_PREFIXES = [
+  "/login",
+  "/api/auth",
+  "/api/health",
+  "/api/emails/inbound",
+  // Trade→CRM event ingest: bearer-token gated in the route (constant-time),
+  // same model as the inbound-email webhook above.
+  "/api/internal/trade/events",
+];
 
 // Asset paths must never pass through the auth wrapper: a redirect here
 // makes the browser load the login HTML for a <script src>, which surfaces

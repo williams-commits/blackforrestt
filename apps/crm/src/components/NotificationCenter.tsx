@@ -21,7 +21,7 @@ import { queryKeys } from "@/lib/queryKeys";
 type NotificationRow = { id: string; type: string; payload: Record<string, unknown>; readAt: string | null; createdAt: string };
 type ResponseData = { data: NotificationRow[]; meta: { unread: number; total: number; page: number; pageSize: number; hasMore: boolean } };
 
-const TYPE_LABELS: Record<string, string> = { RECORD_ASSIGNED: "Assignment", TASK_CREATED: "Task", TASK_DUE: "Task due", TASK_OVERDUE: "Overdue task", TASK_REMINDER: "Task reminder", APPOINTMENT_SCHEDULED: "Appointment", IMPORT_COMPLETED: "Import completed", IMPORT_FAILED: "Import failed", PLATFORM_USER_ONLINE: "Client activity", SYSTEM: "System", RECORD_STATUS_CHANGED: "Status changed", STAGE_CHANGED: "Stage changed", NOTE_ADDED: "Note added", TASK_COMPLETED: "Task completed", TASK_CANCELLED: "Task cancelled" };
+const TYPE_LABELS: Record<string, string> = { RECORD_ASSIGNED: "Assignment", TASK_CREATED: "Task", TASK_DUE: "Task due", TASK_OVERDUE: "Overdue task", TASK_REMINDER: "Task reminder", APPOINTMENT_SCHEDULED: "Appointment", IMPORT_COMPLETED: "Import completed", IMPORT_FAILED: "Import failed", PLATFORM_USER_ONLINE: "Client activity", SYSTEM: "System", RECORD_STATUS_CHANGED: "Status changed", STAGE_CHANGED: "Stage changed", NOTE_ADDED: "Note added", TASK_COMPLETED: "Task completed", TASK_CANCELLED: "Task cancelled", PAYMENT_STATUS_CHANGED: "Payment update", KYC_STATUS_CHANGED: "KYC update", ACCOUNT_STATE_CHANGED: "Trading account" };
 
 /** shadcn Select items cannot carry an empty string value — sentinel for
  *  "All event types". */

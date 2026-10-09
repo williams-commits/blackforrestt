@@ -38,6 +38,9 @@ const TYPE_LABELS: Record<string, string> = {
   NOTE_ADDED: "New note",
   TASK_COMPLETED: "Task completed",
   TASK_CANCELLED: "Task cancelled",
+  PAYMENT_STATUS_CHANGED: "Payment update",
+  KYC_STATUS_CHANGED: "KYC update",
+  ACCOUNT_STATE_CHANGED: "Trading account",
 };
 
 const TYPE_ICONS: Record<string, string> = {
@@ -56,6 +59,9 @@ const TYPE_ICONS: Record<string, string> = {
   NOTE_ADDED: "note",
   TASK_COMPLETED: "check_circle",
   TASK_CANCELLED: "x_circle",
+  PAYMENT_STATUS_CHANGED: "trending",
+  KYC_STATUS_CHANGED: "shield",
+  ACCOUNT_STATE_CHANGED: "plug",
 };
 
 /** Context layer — the team inbox. Rides the shared ["notifications"] cache

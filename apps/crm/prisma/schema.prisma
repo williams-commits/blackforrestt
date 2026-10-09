@@ -155,6 +155,9 @@ enum NotificationType {
   NOTE_ADDED
   TASK_COMPLETED
   TASK_CANCELLED
+  PAYMENT_STATUS_CHANGED
+  KYC_STATUS_CHANGED
+  ACCOUNT_STATE_CHANGED
 }
 
 // ──────────────────────── Identity & structure ────────────────────────
@@ -871,6 +874,20 @@ model ImportMapping {
 }
 
 // ─────────────────────── Platform, files, misc ───────────────────────
+
+// Cross-module event ledger — Trade pushes integration events here; the id
+// (the producer's event uuid) is the PRIMARY KEY, so duplicate delivery is
+// idempotent by construction. Rows only exist for ACCEPTED events (the
+// notification they produced is the durable record); unlinked users' events
+// are dropped without persisting any platform PII.
+model PlatformEventLog {
+  id              String   @id
+  type            String
+  platformUserId  String
+  receivedAt      DateTime @default(now())
+
+  @@index([platformUserId, receivedAt])
+}
 
 model Notification {
   id              String           @id @default(cuid())

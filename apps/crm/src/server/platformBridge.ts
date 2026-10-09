@@ -21,6 +21,21 @@ function bridgeConfig() {
   return { url, token, enabled: Boolean(url && token) };
 }
 
+async function bridgePost(path: string, body: unknown): Promise<Response | null> {
+  const { url, token, enabled } = bridgeConfig();
+  if (!enabled) return null;
+  try {
+    return await fetch(`${url}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(4000),
+    });
+  } catch {
+    return null; // platform unreachable — degrade, never crash the report
+  }
+}
+
 async function bridgeFetch(path: string): Promise<Response | null> {
   const { url, token, enabled } = bridgeConfig();
   if (!enabled) return null;
@@ -43,6 +58,16 @@ export interface PlatformUserSummary {
 }
 
 export interface Client360 {
+  version: number;
+  account: {
+    accountNo: string | null;
+    balance: number;
+    equity: number;
+    free: number;
+    margin: number;
+    marginLevel: number | null;
+    floatingPl: number;
+  } | null;
   user: {
     id: string;
     email: string | null;
@@ -114,6 +139,33 @@ export async function lookupPlatformUser(
   }
   const body = (await response.json()) as { data: PlatformUserSummary };
   return { found: true, user: body.data };
+}
+
+/** Aggregated trading summary for a set of linked platform users (≤500 per
+ *  call — chunk at the caller). Null when the bridge is disabled/unreachable;
+ *  callers render the "trading data unavailable" state instead of guessing. */
+export interface TradeActivationSummary {
+  version: number;
+  matchedAccounts: number;
+  deposited: number;
+  activeTraders: number;
+  volumeLots: string;
+  commissionRevenue: string;
+}
+
+export async function tradeActivationSummary(
+  platformUserIds: string[],
+  since: Date,
+): Promise<TradeActivationSummary | null> {
+  if (platformUserIds.length === 0) return null;
+  const response = await bridgePost("/api/internal/crm/reporting/summary", {
+    platformUserIds,
+    since: since.toISOString(),
+  });
+  if (response === null || !response.ok) return null;
+  const body = (await response.json()) as { data?: TradeActivationSummary };
+  if (!body.data || body.data.version !== 1) return null;
+  return body.data;
 }
 
 /** Fetch the client-360 payload for a linked customer; null when degraded. */

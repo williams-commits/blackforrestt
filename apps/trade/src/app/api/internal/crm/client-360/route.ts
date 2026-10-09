@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db";
 import { requireBridgeToken } from "@/server/crmBridge";
+import { Client360Response, CLIENT_360_VERSION } from "@/server/crmContracts";
 import { hub } from "@/server/engine/hub";
 
 export const runtime = "nodejs";
@@ -61,8 +62,36 @@ export async function GET(request: Request) {
   });
   const online = hub.onlineUserIds().has(user.id);
 
-  return NextResponse.json({
-    data: {
+  // Live account metrics from the engine projection. Metrics require the
+  // engine to have computed this user at least once — degrade to null (the
+  // CRM renders "unavailable") instead of failing the whole payload.
+  let account: {
+    accountNo: string | null;
+    balance: number;
+    equity: number;
+    free: number;
+    margin: number;
+    marginLevel: number | null;
+    floatingPl: number;
+  } | null = null;
+  try {
+    const metrics = await hub.readAccountMetrics(user.id);
+    account = {
+      accountNo: metrics.accountNo,
+      balance: Math.round(metrics.balance * 100) / 100,
+      equity: Math.round(metrics.equity * 100) / 100,
+      free: Math.round(metrics.free * 100) / 100,
+      margin: Math.round(metrics.margin * 100) / 100,
+      marginLevel: metrics.marginLevel == null ? null : Math.round(metrics.marginLevel * 100) / 100,
+      floatingPl: Math.round(metrics.floatingPl * 100) / 100,
+    };
+  } catch {
+    account = null;
+  }
+
+  const payload = {
+      version: CLIENT_360_VERSION,
+      account,
       user: {
         id: user.id,
         email: user.email,
@@ -104,6 +133,8 @@ export async function GET(request: Request) {
         netProfit: position.netProfit.toString(),
         openedAt: position.openedAt.toISOString(),
       })),
-    },
-  });
+  };
+  // Contract tripwire: the response must always satisfy the versioned
+  // schema — a parse failure here is a bug we want loud, not silent drift.
+  return NextResponse.json({ data: Client360Response.parse(payload) });
 }

@@ -34,6 +34,8 @@ export const queryKeys = {
   },
 
   record: (subjectType: string, subjectId: string) => ["record", subjectType, subjectId] as const,
+  /** Customer 360: live trading context for a linked platform user. */
+  tradingContext: (customerId: string) => ["customers", customerId, "trading-context"] as const,
 
   activities: {
     /** Root for one subject's activity strips (notes + tasks). */

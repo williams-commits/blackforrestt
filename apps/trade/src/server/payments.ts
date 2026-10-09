@@ -28,6 +28,7 @@ import {
 } from "./security/crypto";
 import { getScanner, type ScanStatus } from "./security/scanner";
 import { queueUserEmail } from "./email/service";
+import { emitCrmEvent } from "./crmEvents";
 import { resolveUserSettings } from "./userSettings";
 import { PAYMENT_PROOF_MAX_BYTES } from "@/lib/paymentProofs";
 
@@ -548,6 +549,15 @@ export async function preparePayment(input: {
       body: "Your payment request has passed initial finance review and awaits approval.",
       paymentRequestId: request.id,
     });
+    emitCrmEvent({
+      type: "payment.requires_review",
+      platformUserId: request.userId,
+      payload: {
+        paymentType: request.type.toLowerCase(),
+        amount: request.amount.toFixed(2),
+        asset: request.asset,
+      },
+    });
     return { status: "AWAITING_APPROVAL", replayed: false };
   });
 }
@@ -658,6 +668,16 @@ export async function approvePayment(input: {
       body: "Your payment request has been approved by finance.",
       paymentRequestId: request.id,
     });
+    emitCrmEvent({
+      type: "payment.status_changed",
+      platformUserId: request.userId,
+      payload: {
+        status: "approved",
+        paymentType: request.type.toLowerCase(),
+        amount: amount.toFixed(2),
+        asset: request.asset,
+      },
+    });
     return { status: "APPROVED", replayed: false };
   });
 }
@@ -715,6 +735,16 @@ export async function rejectPayment(input: {
       title: `${request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} rejected`,
       body: note,
       paymentRequestId: request.id,
+    });
+    emitCrmEvent({
+      type: "payment.status_changed",
+      platformUserId: request.userId,
+      payload: {
+        status: "rejected",
+        paymentType: request.type.toLowerCase(),
+        amount: request.amount.toFixed(2),
+        asset: request.asset,
+      },
     });
     return { status: "REJECTED", replayed: false };
   });

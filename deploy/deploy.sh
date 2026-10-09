@@ -72,7 +72,7 @@ if [[ -n "$CRM_DOMAIN_CFG" ]]; then
   # (which stays mode 600) instead of failing the deploy: AUTH_SECRET_CRM
   # signs CRM sessions, CRM_ENCRYPTION_KEY encrypts per-user SMTP passwords,
   # CRM_BRIDGE_TOKEN is the shared platform ↔ CRM read-only secret.
-  for var in AUTH_SECRET_CRM CRM_ENCRYPTION_KEY CRM_BRIDGE_TOKEN; do
+  for var in AUTH_SECRET_CRM CRM_ENCRYPTION_KEY CRM_BRIDGE_TOKEN TRADE_EVENTS_TOKEN; do
     value="$(grep -E "^${var}=" .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' || :)"
     if [[ -z "$value" ]]; then
       generated="$(openssl rand -hex 32)"

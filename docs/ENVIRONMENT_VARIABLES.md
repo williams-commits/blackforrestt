@@ -216,6 +216,9 @@ npm run dev
 | `CRM_BRIDGE_TOKEN` | Platform (main app) | **Secret.** Shared bearer token the CRM presents to the platform's `/api/internal/crm/*` read-only bridge. Unset = bridge disabled (503). |
 | `PLATFORM_BRIDGE_URL` | CRM | Base URL of the platform's internal bridge the CRM calls for client-360 data. |
 | `PLATFORM_BRIDGE_TOKEN` | CRM | **Secret.** Bearer token the CRM sends to the platform bridge (same value as the platform's `CRM_BRIDGE_TOKEN`). |
+| `TRADE_EVENTS_TOKEN` | Trade (as `CRM_EVENTS_TOKEN`) + CRM | **Secret.** Shared bearer token for the Trade → CRM event push (`/api/internal/trade/events`): trade presents it, CRM verifies it in constant time. Unset = cross-module notifications disabled (silent no-op on trade, 503 on CRM ingest). |
+| `CRM_EVENTS_URL` | Trade | Base URL of the CRM for the event push (compose default `http://crm:3000`). Trade-only. |
+| `PLATFORM_TRADE_URL` | CRM | Optional public base URL of the trading app; enables "Open trading account" links on customer pages. Unset = links hidden. |
 
 ## CRM email and storage
 

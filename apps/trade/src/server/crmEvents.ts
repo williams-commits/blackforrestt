@@ -32,10 +32,6 @@ function eventsConfig() {
   return { url, token, enabled: Boolean(url && token) };
 }
 
-export function crmEventsEnabled(): boolean {
-  return eventsConfig().enabled;
-}
-
 export function emitCrmEvent(event: CrmEvent): void {
   const { url, token, enabled } = eventsConfig();
   if (!enabled) return;

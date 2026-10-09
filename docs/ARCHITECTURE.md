@@ -104,6 +104,19 @@ Three apps under `apps/`, one deploy pipeline (`deploy/` compose + Caddy):
 - **`apps/crm/`** — CRM with its own DB (`blckforest_crm`);
   `PLATFORM_BRIDGE_URL` → `http://trade:3000`.
 
+**CRM ↔ Trade integration layer** (explicit contracts only — never shared
+databases, never cross-app Prisma access): the link is
+`Customer.platformUserId` → trade `User.id`, operator-confirmed and
+audited. CRM → Trade: read-only, token-gated bridge
+(`/api/internal/crm/{lookup,client-360,presence,reporting/summary}` — the
+last is the aggregated reporting endpoint; responses versioned via zod
+contracts in `trade/src/server/crmContracts.ts`). Trade → CRM: event push
+to `/api/internal/trade/events` (bearer `TRADE_EVENTS_TOKEN`), idempotent
+via the `PlatformEventLog` primary key, dropped for unlinked users,
+owner-routed into CRM notifications. Composed surfaces: the customer
+Trading account panel (`/api/customers/[id]/trading-context`) and the
+unified funnel report (`/api/reports/unified/activation`).
+
 Data: web and trade share the `blackforrestt` database (web reads public
 instruments; trade owns writes + the engine). CRM is fully separate. Shared
 client code (UI kit, i18n, ws client) is deliberately DUPLICATED per app;

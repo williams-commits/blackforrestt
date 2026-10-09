@@ -186,6 +186,10 @@ services:
       AUTH_TRUST_HOST: "true"
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       PLATFORM_BRIDGE_TOKEN: ${CRM_BRIDGE_TOKEN:-}
+      # Cross-module events: trade pushes payment/KYC/account events to the
+      # CRM ingest endpoint (same reverse-direction secret the CRM checks).
+      CRM_EVENTS_URL: http://crm:3000
+      CRM_EVENTS_TOKEN: ${TRADE_EVENTS_TOKEN:-}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
       interval: 15s
@@ -221,6 +225,11 @@ services:
       AUTH_TRUST_HOST: "true"
       PLATFORM_BRIDGE_URL: http://trade:3000
       PLATFORM_BRIDGE_TOKEN: ${CRM_BRIDGE_TOKEN:-}
+      # Gate for the Trade → CRM event ingest (/api/internal/trade/events).
+      TRADE_EVENTS_TOKEN: ${TRADE_EVENTS_TOKEN:-}
+      # Optional cross-navigation: "Open trading account" links on customer
+      # pages stay hidden while unset.
+      PLATFORM_TRADE_URL: ${PLATFORM_TRADE_URL:-}
       ATTACHMENT_STORAGE_DIR: /app/uploads/attachments
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]

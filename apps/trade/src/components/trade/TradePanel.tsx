@@ -7,6 +7,7 @@ import { toast } from "@/lib/toast";
 import { fmtPrice, fmtNum } from "@/lib/format";
 import type { InstrumentView, PositionSide } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
+import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Input } from "@/components/ui/Input";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { isExecutableQuote, quoteAgeMs } from "@/lib/marketFreshness";
@@ -233,21 +234,16 @@ export function TradePanel({ instrument }: Props) {
             className="h-11 rounded-lg px-3 font-semibold transition-colors"
           />
         </div>
-        <div className="grid grid-cols-4 gap-1 mt-1.5">
-          {[0.01, 0.1, 0.5, 1].map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => { setVolume(v.toFixed(2)); clearMessages(); }}
-              className={`h-9 text-(length:--term-text-2xs) rounded-md font-medium transition-colors ${
-                volume === v.toFixed(2)
-                  ? "bg-brand text-white"
-                  : "bg-panel-2 text-text-muted hover:text-text hover:bg-panel-3"
-              }`}
-            >
-              {v}
-            </button>
-          ))}
+        <div className="mt-1.5">
+          <ChipGroup
+            ariaLabel="Quick volume select"
+            className="grid grid-cols-4"
+            chipClassName="w-full"
+            size="md"
+            value={volume}
+            onChange={(v) => { setVolume(v); clearMessages(); }}
+            options={[0.01, 0.1, 0.5, 1].map((v) => ({ value: v.toFixed(2), label: v }))}
+          />
         </div>
       </div>
 
@@ -268,23 +264,15 @@ export function TradePanel({ instrument }: Props) {
           </div>
           <div>
             <label className="text-(length:--term-text-2xs) font-medium text-text-muted uppercase tracking-wide">Expiry</label>
-            <div className="grid grid-cols-4 gap-1 mt-1">
-              {[1, 5, 15, 30].map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  aria-pressed={expiryMinutes === String(m)}
-                  onClick={() => { setExpiryMinutes(String(m)); clearMessages(); }}
-                  className={`h-9 text-(length:--term-text-2xs) rounded-md font-medium transition-colors ${
-                    expiryMinutes === String(m)
-                      ? "bg-brand text-white"
-                      : "bg-panel-2 text-text-muted hover:text-text hover:bg-panel-3"
-                  }`}
-                >
-                  {m}m
-                </button>
-              ))}
-            </div>
+            <ChipGroup
+              ariaLabel="Strike expiry"
+              className="grid grid-cols-4"
+              chipClassName="w-full"
+              size="md"
+              value={expiryMinutes}
+              onChange={(m) => { setExpiryMinutes(String(m)); clearMessages(); }}
+              options={[1, 5, 15, 30].map((m) => ({ value: String(m), label: `${m}m` }))}
+            />
           </div>
         </div>
       )}

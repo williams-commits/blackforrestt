@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Pagination } from "@/components/ui/Pagination";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -195,10 +196,12 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
           <p className="text-xs text-text-muted mt-1">Replay-safe ledger, projection, position and payment checks.</p>
         </div>
         <div className="flex gap-2">
-          <button type="button" onClick={() => void refresh()} className="px-3 py-2 rounded border border-border text-xs hover:bg-panel-2">Refresh</button>
-          {canManage && <button type="button" disabled={busy !== null} onClick={() => void runNow()} className="px-3 py-2 rounded bg-brand text-white text-xs disabled:opacity-50">
-            {busy === "run" ? "Running…" : "Run now"}
-          </button>}
+          <Button size="sm" onClick={() => void refresh()}>Refresh</Button>
+          {canManage && (
+            <Button size="sm" variant="brand" loading={busy === "run"} loadingLabel="Running reconciliation" disabled={busy !== null} onClick={() => void runNow()}>
+              Run now
+            </Button>
+          )}
           {canManage && (blocks.length > 0 || cases.length > 0) && (
             <button
               type="button"
@@ -253,8 +256,8 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
                   {(item.expectedValue || item.actualValue) && <p className="text-xs text-text-muted mt-1">Expected {item.expectedValue ?? "—"}; actual {item.actualValue ?? "—"}</p>}
                 </div>
                 {canManage && item.status !== "RESOLVED" && <div className="flex gap-2">
-                  {item.status === "OPEN" && <button type="button" disabled={busy !== null} onClick={() => void commandCase(item.id, "ACKNOWLEDGE")} className="px-2 py-1 rounded border border-border text-xs">Acknowledge</button>}
-                  <button type="button" disabled={busy !== null || item.blocks.length > 0} title={item.blocks.length > 0 ? "Release active blocks before resolving the case." : undefined} onClick={() => { setActionNote(""); setActionDialog({ kind: "resolve", id: item.id }); }} className="px-2 py-1 rounded bg-brand text-white text-xs disabled:opacity-40">Resolve</button>
+                  {item.status === "OPEN" && <Button size="sm" disabled={busy !== null} onClick={() => void commandCase(item.id, "ACKNOWLEDGE")}>Acknowledge</Button>}
+                  <Button size="sm" variant="brand" disabled={busy !== null || item.blocks.length > 0} title={item.blocks.length > 0 ? "Release active blocks before resolving the case." : undefined} onClick={() => { setActionNote(""); setActionDialog({ kind: "resolve", id: item.id }); }}>Resolve</Button>
                 </div>}
               </div>
             </article>

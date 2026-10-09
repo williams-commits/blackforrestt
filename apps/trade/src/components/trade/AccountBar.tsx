@@ -2,8 +2,7 @@
 
 import { FileText, LogOut, Minus, Plus, Settings, Shield, Sun, User } from "lucide-react";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -12,6 +11,12 @@ import { fmtNum, getFormatLocale } from "@/lib/format";
 import { ConnectionDot } from "./ConnectionDot";
 import { TradeSearchButton } from "@/components/GlobalSearchPalette";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/components/ThemeProvider";
 import { Logo } from "./Logo";
 import { WalletModal } from "@/components/account/WalletModal";
@@ -44,11 +49,6 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
   const [clock, setClock] = useState("");
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletMode, setWalletMode] = useState<"deposit" | "withdraw">("deposit");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState({ top: 0, right: 10 });
-  const [menuMaxHeight, setMenuMaxHeight] = useState<number | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const tick = () => {
@@ -59,74 +59,6 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
   }, []);
-
-  // Position the dropdown relative to the trigger button (for portal).
-  function openMenu() {
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setMenuPos({ top: rect.bottom, right: window.innerWidth - rect.right });
-    }
-    setMenuMaxHeight(null);
-    setMenuOpen(true);
-  }
-
-  // Keep the dropdown inside the viewport: once rendered, measure it against
-  // the space under the trigger and flip it above the trigger when it would
-  // run past the bottom edge; clamp + internal scroll as the last resort.
-  useLayoutEffect(() => {
-    if (!menuOpen) return;
-    const menu = menuRef.current;
-    const trigger = triggerRef.current;
-    if (!menu || !trigger) return;
-    const rect = trigger.getBoundingClientRect();
-    const height = menu.offsetHeight;
-    const margin = 8;
-    const spaceBelow = window.innerHeight - rect.bottom - margin;
-    if (height <= spaceBelow) {
-      setMenuMaxHeight(null);
-      return;
-    }
-    const spaceAbove = rect.top - margin;
-    if (height <= spaceAbove) {
-      // Fits entirely above the trigger — open upwards.
-      setMenuPos((pos) => ({ ...pos, top: rect.top - height }));
-      setMenuMaxHeight(null);
-    } else {
-      // Nowhere near enough room: pin to the viewport edge and scroll inside.
-      const top = Math.max(margin, window.innerHeight - height - margin);
-      setMenuPos((pos) => ({ ...pos, top }));
-      setMenuMaxHeight(window.innerHeight - top - margin);
-    }
-  }, [menuOpen]);
-
-  // Close dropdown on outside click.
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node;
-      // Check both the trigger area and the portal'd dropdown.
-      if (
-        menuRef.current && !menuRef.current.contains(target) &&
-        triggerRef.current && !triggerRef.current.contains(target)
-      ) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpen]);
-
-  // Close on scroll/resize (position would be stale).
-  useEffect(() => {
-    if (!menuOpen) return;
-    const close = () => setMenuOpen(false);
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
-    return () => {
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
-    };
-  }, [menuOpen]);
 
   const floating = account?.floatingPl ?? 0;
   const floatingUp = floating >= 0;
@@ -203,45 +135,36 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
         </span>
       </div>
 
-      {/* User dropdown trigger — the name shows on phones too now that the
-          top row has room for it. */}
-      <div className="relative shrink-0 border-l border-border">
-        <button
-          type="button"
-          ref={triggerRef}
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-          aria-label="Open account menu"
-          onClick={() => (menuOpen ? setMenuOpen(false) : openMenu())}
-          className="flex items-center gap-2 h-11 px-2.5 sm:px-3 hover:bg-panel-2 transition-colors"
-        >
-          <span className="w-7 h-7 rounded-full bg-brand-soft flex items-center justify-center text-brand font-semibold text-xs">
-            {initial}
-          </span>
-          <span className="text-xs font-medium max-w-23 sm:max-w-30 truncate">{userName}</span>
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            className={`text-text-muted transition-transform ${menuOpen ? "rotate-180" : ""}`}
+      {/* User dropdown — Radix primitive (same as the account portal menu):
+          keyboard nav, typeahead, collision-aware placement, focus restore. */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label="Open account menu"
+            className="flex h-11 items-center gap-2 px-2.5 transition-colors hover:bg-panel-2 sm:px-3 in-data-[state=open]:bg-panel-2"
           >
-            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Dropdown panel — rendered via portal to escape header's overflow clipping */}
-      {menuOpen && typeof document !== "undefined" && createPortal(
-        <div
-          ref={menuRef}
-          className="fixed w-64 bg-canvas border border-border rounded-b-lg shadow-xl z-9999 overflow-hidden overflow-y-auto animate-[fadeIn_0.12s_ease-out]"
-          style={{ top: menuPos.top, right: menuPos.right, maxHeight: menuMaxHeight ?? undefined }}
-        >
+            <span className="w-7 h-7 rounded-full bg-brand-soft flex items-center justify-center text-brand font-semibold text-xs">
+              {initial}
+            </span>
+            <span className="text-xs font-medium max-w-23 sm:max-w-30 truncate">{userName}</span>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              aria-hidden="true"
+              className="text-text-muted transition-transform in-data-[state=open]:rotate-180"
+            >
+              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64 rounded-lg border border-border bg-canvas p-0 text-xs shadow-xl">
           {/* User header */}
-          <div className="px-4 py-3 border-b border-border bg-panel-2/50">
+          <div className="border-b border-border bg-panel-2/50 px-4 py-3">
             <div className="flex items-center gap-2.5">
               <span className="w-9 h-9 rounded-full bg-brand-soft flex items-center justify-center text-brand font-semibold">
                 {initial}
@@ -263,24 +186,24 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
           {/* Quick actions */}
           <div className="py-1">
             {depositUiEnabled && (
-              <MenuItem
-                onClick={() => { setMenuOpen(false); setWalletMode("deposit"); setWalletOpen(true); }}
+              <MenuAction
                 icon={<DepositIcon />}
                 label="Deposit"
                 hint="Fund your account"
+                onSelect={() => { setWalletMode("deposit"); setWalletOpen(true); }}
               />
             )}
-            <MenuItem
-              onClick={() => { setMenuOpen(false); setWalletMode("withdraw"); setWalletOpen(true); }}
+            <MenuAction
               icon={<WithdrawIcon />}
               label="Withdraw"
               hint="Request a payout"
+              onSelect={() => { setWalletMode("withdraw"); setWalletOpen(true); }}
             />
-            <MenuLink href="/account" onClick={() => setMenuOpen(false)} icon={<AccountIcon />} label="My Account" />
-            <MenuLink href="/reports" onClick={() => setMenuOpen(false)} icon={<ReportsIcon />} label="Trade Reports" />
-            <MenuLink href="/account?tab=settings" onClick={() => setMenuOpen(false)} icon={<SettingsIcon />} label="Settings" />
+            <MenuLink href="/account" icon={<AccountIcon />} label="My Account" />
+            <MenuLink href="/reports" icon={<ReportsIcon />} label="Trade Reports" />
+            <MenuLink href="/account?tab=settings" icon={<SettingsIcon />} label="Settings" />
             {session?.user?.role === "admin" && (
-              <MenuLink href="/admin" onClick={() => setMenuOpen(false)} icon={<AdminIcon />} label="Admin Console" />
+              <MenuLink href="/admin" icon={<AdminIcon />} label="Admin Console" />
             )}
           </div>
 
@@ -295,19 +218,20 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
           {/* Sign out */}
           <div className="border-t border-border py-1">
             {session?.user ? (
-              <MenuItem
-                onClick={() => { setMenuOpen(false); void signOut({ redirect: false }).then(() => { window.location.assign("/login"); }); }}
-                icon={<SignOutIcon />}
-                label="Sign out"
-                danger
-              />
+              <DropdownMenuItem
+                variant="destructive"
+                className="gap-3 rounded-none px-4 py-2 text-xs text-down focus:bg-down/10 focus:text-down"
+                onSelect={() => { void signOut({ redirect: false }).then(() => { window.location.assign("/login"); }); }}
+              >
+                <SignOutIcon />
+                <span className="font-medium">Sign out</span>
+              </DropdownMenuItem>
             ) : (
-              <MenuLink href="/login" onClick={() => setMenuOpen(false)} icon={<SignOutIcon />} label="Sign in" />
+              <MenuLink href="/login" icon={<SignOutIcon />} label="Sign in" />
             )}
           </div>
-        </div>,
-        document.body,
-      )}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <WalletModal
         open={walletOpen}
@@ -346,57 +270,41 @@ function fmtUsd(v: number | null | undefined): string {
   return v.toLocaleString(getFormatLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// ── Dropdown menu primitives ─────────────────────────────────────────────────
+// ── Dropdown menu helpers (Radix items with the terminal look) ───────────────
 
-function MenuItem({
-  onClick,
+function MenuAction({
   icon,
   label,
   hint,
-  danger,
+  onSelect,
 }: {
-  onClick: () => void;
   icon: React.ReactNode;
   label: string;
   hint?: string;
-  danger?: boolean;
+  onSelect: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-2 text-left text-xs transition-colors cursor-pointer ${
-        danger ? "text-down hover:bg-down/10" : "text-text hover:bg-panel-2"
-      }`}
+    <DropdownMenuItem
+      className="gap-3 rounded-none px-4 py-2 text-xs text-text focus:bg-panel-2 focus:text-text"
+      onSelect={onSelect}
     >
-      <span className={danger ? "text-down" : "text-text-muted"}>{icon}</span>
+      <span className="text-text-muted">{icon}</span>
       <span className="flex-1">
         <span className="font-medium block">{label}</span>
         {hint && <span className="text-(length:--term-text-2xs) text-text-faint">{hint}</span>}
       </span>
-    </button>
+    </DropdownMenuItem>
   );
 }
 
-function MenuLink({
-  href,
-  onClick,
-  icon,
-  label,
-}: {
-  href: string;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
+function MenuLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
   return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-2 text-xs text-text hover:bg-panel-2 transition-colors"
-    >
-      <span className="text-text-muted">{icon}</span>
-      <span className="font-medium">{label}</span>
-    </Link>
+    <DropdownMenuItem asChild className="gap-3 rounded-none px-4 py-2 text-xs text-text focus:bg-panel-2 focus:text-text">
+      <Link href={href}>
+        <span className="text-text-muted">{icon}</span>
+        <span className="font-medium">{label}</span>
+      </Link>
+    </DropdownMenuItem>
   );
 }
 

@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Dialog } from "@/components/ui/Dialog";
+import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Pagination } from "@/components/ui/Pagination";
 import { useForexStore } from "@/lib/store";
 import { fmtPct, fmtPrice } from "@/lib/format";
@@ -105,29 +106,14 @@ export function AssetModal({ open, onClose, activeSymbol }: Props) {
           </div>
         </div>
 
-        <div
-          role="tablist"
-          aria-label="Instrument categories"
-          className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-panel px-4 py-2 sm:px-5"
-        >
-          {TABS.map((item) => {
-            const selected = tab === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                tabIndex={selected ? 0 : -1}
-                onClick={() => setTab(item.key)}
-                className={`whitespace-nowrap rounded-md px-3 py-1.5 text-(length:--term-text-xs) font-medium transition-colors focus-visible:outline focus-visible:outline-brand ${
-                  selected ? "bg-brand text-white" : "text-text-muted hover:bg-panel-2 hover:text-text"
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
+        <div className="shrink-0 border-b border-border bg-panel px-4 py-2 sm:px-5">
+          <ChipGroup
+            ariaLabel="Instrument categories"
+            className="overflow-x-auto"
+            value={tab}
+            onChange={setTab}
+            options={TABS.map((item) => ({ value: item.key, label: item.label }))}
+          />
         </div>
 
         <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain p-3 sm:p-4">

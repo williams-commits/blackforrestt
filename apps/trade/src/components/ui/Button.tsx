@@ -18,6 +18,7 @@ const buttonVariants = cva(
       variant: {
         buy: "bg-up text-white hover:brightness-110 font-semibold",
         sell: "bg-down text-white hover:brightness-110 font-semibold",
+        destructive: "bg-down text-white hover:brightness-110 font-semibold",
         default: "bg-panel-3 text-text hover:bg-border border border-border",
         ghost: "bg-transparent text-text-muted hover:text-text hover:bg-panel-2",
         brand: "bg-brand text-white hover:brightness-110 font-semibold",

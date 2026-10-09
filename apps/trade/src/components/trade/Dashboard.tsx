@@ -61,11 +61,13 @@ export function Dashboard({
           className="relative min-h-75 bg-canvas p-1 sm:min-h-100 md:min-h-0"
         >
           <ChartPanel instrument={instrument} onOpenAssets={() => setAssetModalOpen(true)} />
-          {/* Mobile trade FAB — visible only below md (tablet gets the inline panel) */}
+          {/* Mobile trade FAB — visible only below md (tablet gets the inline
+              panel) and hidden while the order sheet is open so it doesn't
+              compete with the sheet's Sell/Buy footer. */}
           <button
             type="button"
             onClick={() => setMobileOrderOpen(true)}
-            className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-4 z-30 flex items-center gap-2 rounded-full bg-brand px-6 py-3.5 text-sm font-bold text-white shadow-2xl transition active:scale-95 md:hidden"
+            className={`fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-4 z-30 flex items-center gap-2 rounded-full bg-brand px-6 py-3.5 text-sm font-bold text-white shadow-2xl transition active:scale-95 md:hidden ${mobileOrderOpen ? "pointer-events-none opacity-0" : ""}`}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 17l6-6 4 4 8-8" /><path d="M21 7v6h-6" />

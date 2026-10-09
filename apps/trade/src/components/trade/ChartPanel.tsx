@@ -21,6 +21,7 @@ import {
   type UTCTimestamp,
   type LogicalRange,
 } from "lightweight-charts";
+import { ChipGroup } from "@/components/ui/ChipGroup";
 import { useForexStore } from "@/lib/store";
 import { TIMEFRAMES, type Candle, type CandleInterval, type InstrumentView } from "@/lib/types";
 import { fmtPrice } from "@/lib/format";
@@ -756,20 +757,13 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
 
         {/* Mobile: timeframes get priority row; desktop: all controls inline */}
         <div className="flex items-center gap-1 overflow-x-auto border-t border-border px-2 py-1.5 sm:hidden [scrollbar:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {TIMEFRAMES.map((timeframe) => (
-            <button
-              key={timeframe}
-              type="button"
-              aria-pressed={interval === timeframe}
-              aria-label={`Use ${timeframe} timeframe`}
-              onClick={() => selectTimeframe(timeframe)}
-              className={`shrink-0 rounded px-3 py-1.5 text-(length:--term-text-xs) font-semibold transition-colors ${
-                interval === timeframe ? "bg-brand text-white" : "text-text-muted hover:bg-panel-3 hover:text-text"
-              }`}
-            >
-              {timeframe}
-            </button>
-          ))}
+          <ChipGroup
+            ariaLabel="Chart timeframe"
+            size="sm"
+            value={interval}
+            onChange={selectTimeframe}
+            options={TIMEFRAMES.map((timeframe) => ({ value: timeframe, label: timeframe }))}
+          />
           <div className="mx-1 h-4 w-px shrink-0 bg-border" />
           <ChartButton label="Candlestick chart" active={chartType === "candles"} onClick={() => selectChartType("candles")}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -832,20 +826,13 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
             {fullscreen ? "Exit" : "Full"}
           </ChartButton>
           <div className="mx-1 h-4 w-px shrink-0 bg-border" />
-          {TIMEFRAMES.map((timeframe) => (
-            <button
-              key={timeframe}
-              type="button"
-              aria-pressed={interval === timeframe}
-              aria-label={`Use ${timeframe} timeframe`}
-              onClick={() => selectTimeframe(timeframe)}
-              className={`shrink-0 rounded px-2 py-1 text-(length:--term-text-2xs) font-semibold transition-colors ${
-                interval === timeframe ? "bg-brand text-white" : "text-text-muted hover:bg-panel-3 hover:text-text"
-              }`}
-            >
-              {timeframe}
-            </button>
-          ))}
+          <ChipGroup
+            ariaLabel="Chart timeframe"
+            size="sm"
+            value={interval}
+            onChange={selectTimeframe}
+            options={TIMEFRAMES.map((timeframe) => ({ value: timeframe, label: timeframe }))}
+          />
         </div>
       </div>
 

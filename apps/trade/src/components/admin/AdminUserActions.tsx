@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Ellipsis } from "lucide-react";
 import { ADMIN_ACTION_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
@@ -552,10 +553,10 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           )}
           {error && <p role="alert" className="rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">{error}</p>}
           <div className="flex justify-end gap-2">
-            <button type="button" disabled={busy} onClick={() => { setDialog(null); setError(null); }} className="rounded border border-border px-3 py-2 text-xs disabled:opacity-50">Cancel</button>
-            <button type="submit" disabled={busy} className={`rounded px-3 py-2 text-xs text-white disabled:opacity-50 ${dialog?.kind === "status" ? "bg-down" : "bg-brand"}`}>
+            <Button type="button" size="sm" disabled={busy} onClick={() => { setDialog(null); setError(null); }}>Cancel</Button>
+            <Button type="submit" size="sm" variant={dialog?.kind === "status" ? "destructive" : "brand"} disabled={busy} loading={busy}>
               {busy ? "Working…" : dialog?.kind === "notify" ? "Send notification" : dialog?.kind === "resetPassword" ? (resetMode === "temporary" ? "Generate password" : "Send reset link") : dialog?.kind === "forceSignOut" ? "Sign out everywhere" : dialog?.kind === "hardDelete" ? "Delete permanently" : "Confirm"}
-            </button>
+            </Button>
           </div>
         </form>
         )}

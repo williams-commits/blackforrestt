@@ -1351,8 +1351,8 @@ function ExecutionPositionCard({
           </div>
         </div>
         {canManage && position.status === "OPEN" && <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={busy} onClick={onSetProfit} className="rounded border border-border px-2.5 py-1.5 text-xs hover:bg-panel-2 disabled:opacity-50">Set P/L</button>
-          <button type="button" disabled={busy} onClick={onClose} className="rounded bg-down px-2.5 py-1.5 text-xs text-white disabled:opacity-50">Close</button>
+          <Button type="button" size="sm" disabled={busy} onClick={onSetProfit}>Set P/L</Button>
+          <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={onClose}>Close</Button>
         </div>}
       </div>
     </article>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/lib/toast";
@@ -382,9 +383,9 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                   aria-label="Reply message"
                   className="flex-1 resize-none rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand"
                 />
-                <button type="submit" disabled={sending || !draft.trim()} className="rounded bg-brand px-4 py-2 text-xs font-medium text-white disabled:opacity-50">
+                <Button type="submit" size="sm" variant="brand" disabled={sending || !draft.trim()}>
                   {sending ? "…" : "Send"}
-                </button>
+                </Button>
               </form>
             </>
           ) : (
@@ -425,7 +426,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
           {bError && <p role="alert" className="rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">{bError}</p>}
           {bResult && <p role="status" className="rounded border border-up/40 bg-up/10 px-3 py-2 text-xs text-up">{bResult}</p>}
           <div className="flex justify-end gap-2">
-            <button type="button" disabled={bBusy} onClick={() => setBroadcastOpen(false)} className="rounded border border-border px-3 py-2 text-xs disabled:opacity-50">Close</button>
+            <Button type="button" size="sm" disabled={bBusy} onClick={() => setBroadcastOpen(false)}>Close</Button>
             <button type="submit" disabled={bBusy} className="rounded bg-brand px-3 py-2 text-xs text-white disabled:opacity-50">{bBusy ? "Sending…" : "Send broadcast"}</button>
           </div>
         </form>

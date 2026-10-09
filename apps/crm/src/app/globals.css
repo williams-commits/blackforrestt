@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *, [data-theme="dark"] *));
 
 /* ═══════════════════════════════════════════════════════════════════════
    Black Forest CRM — Design System
@@ -138,7 +138,7 @@
   --sidebar-collapsed: 56px;
   --topbar-height: 52px;
   --content-max: 1440px;
-  --background: oklch(1 0 0);
+  --background: oklch(0.973 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -150,7 +150,7 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: oklch(0.52 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
@@ -260,7 +260,7 @@ textarea {
 }
 
 [data-theme="dark"] .card {
-  border-color: var(--border-default);
+  border-color: var(--border);
   box-shadow: none;
 }
 
@@ -278,9 +278,13 @@ textarea {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
+/* Card headers group by TONE, not by a rule: a muted band over the surface
+   beats a border-bottom and keeps dark mode free of stacked outlines. */
 .card-header {
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-subtle);
+  border-bottom: 1px solid transparent;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -895,7 +899,7 @@ select.input {
 .badge-warning { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
 .badge-error   { background: var(--error-bg); color: var(--error); border: 1px solid var(--error-border); }
 .badge-info    { background: var(--info-bg); color: var(--info); border: 1px solid var(--info-border); }
-.badge-neutral { background: var(--gray-100); color: var(--text-secondary); border: 1px solid var(--border-default); }
+.badge-neutral { background: var(--gray-100); color: var(--text-secondary); border: 1px solid transparent; }
 .badge-brand   { background: var(--bg-selected); color: var(--text-brand); border: 1px solid var(--brand-200); }
 
 /* ── Data table ── */
@@ -1556,7 +1560,10 @@ select.input {
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
+  /* Tonal-first dark: surfaces separate by elevation (0.145 app / 0.205
+     card), so outlines only need a whisper — 8% reads as an edge, not a
+     grid. Inputs keep the stronger 15% (--input) as a form affordance. */
+  --border: oklch(1 0 0 / 8%);
   --input: oklch(1 0 0 / 15%);
   --ring: #4ade80;
   --chart-1: #4ade80;

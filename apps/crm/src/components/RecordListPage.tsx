@@ -34,7 +34,6 @@ import { useTableSession, writeTableSession } from "@/components/useTableSession
 import { useConfirmDialog, usePromptDialog } from "@/components/Dialogs";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
 import { Modal } from "@/components/Modal";
-import { SearchInput } from "@/components/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -62,7 +61,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useIsDesktop } from "@/lib/useMediaQuery";
+import { openSearchPalette, type SearchScope } from "@/lib/searchPalette";
 import { BulkNoteDrawer } from "@/components/BulkNoteDrawer";
 
 /** Record-object key → notes/activities subject type (mirrors the bulk engine's CONFIGS). */
@@ -261,9 +260,8 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           : [];
 
   const visibleColumnCount = config.columns.filter((column) => !hiddenColumns.includes(column.key)).length;
-  // Long config placeholders (e.g. "Search all fields — name, email, phone…")
-  // truncate mid-word on phones; a short object-scoped one fits every width.
-  const isDesktop = useIsDesktop();
+  // Palette scope for this module ("leads" → LEAD, "campaigns" → CAMPAIGN…).
+  const searchScope = object.toUpperCase().slice(0, -1) as SearchScope;
   // Tasks' "Everyone" ownership option is an admin affordance — scoped roles
   // can never widen past their owner ∪ shared set, so the control would lie.
   const canSeeEveryTask = me?.roleKey === "SUPER_ADMIN" || me?.roleKey === "ADMIN";
@@ -528,6 +526,14 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       deepLinkedRef.current = true;
       pendingEditIdRef.current = params.get("edit");
     }
+    // `?q=` arrives from the global search palette's "Show results in table"
+    // action — it wins over the remembered session search.
+    const q = params.get("q");
+    if (q !== null) {
+      deepLinkedRef.current = true;
+      applySearch(q);
+      setPage(1);
+    }
     if (params.get("mine") === "1") {
       setFilters((previous) => (object === "tasks" ? { ...previous, mine: "1" } : previous));
     }
@@ -619,6 +625,22 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
 
   // No mount-fetch effect: the records query auto-runs once `hydrated`
   // flips its `enabled` flag, after the session snapshot restores filters.
+
+  // The search palette's "Show results in table" action: same-page client
+  // navigations with ?q= never remount this component, so the palette also
+  // announces the query here.
+  useEffect(() => {
+    function onModuleSearch(event: Event) {
+      const detail = (event as CustomEvent<{ object?: string; q?: string }>).detail;
+      if (detail?.object !== object || typeof detail.q !== "string") return;
+      applySearch(detail.q);
+      setPage(1);
+      setSelected(new Set());
+    }
+    window.addEventListener("crm:module-search", onModuleSearch);
+    return () => window.removeEventListener("crm:module-search", onModuleSearch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [object]);
 
   useEffect(() => {
     const refresh = () => void fetchRows();
@@ -821,16 +843,12 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <form
-          className="flex flex-1 items-center gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            // Enter commits the query immediately (no 300ms wait) and
-            // resets to page 1; the fetch effect picks up the change.
-            setDebouncedSearch(search);
-            setPage(1);
-          }}
-        >
+        {/* Module search opens the global palette pre-scoped to this object —
+            one search surface everywhere. "Show results in table" inside the
+            palette applies the query here via ?q=. The old inline filter
+            input is gone; table scoping still lives in the filter selects,
+            saved views, and the palette. */}
+        <div className="flex flex-1 items-center gap-2">
           <Button
             variant="tertiary"
             size="sm"
@@ -841,19 +859,18 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
           >
             <Icon name={density === "comfortable" ? "sliders" : "grid"} size={14} />
           </Button>
-          <SearchInput
-            type="search"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              // New query → the old page number is meaningless; drop to
-              // page 1 immediately (the fetch still waits for the debounce).
-              setPage(1);
-            }}
-            placeholder={isDesktop ? config.searchPlaceholder : `Search ${config.title.toLowerCase()}…`}
-            aria-label="Search"
-            className="h-7 text-xs"
-          />
+          <button
+            type="button"
+            onClick={() => openSearchPalette(searchScope)}
+            aria-label={`Search ${config.title.toLowerCase()} — opens global search`}
+            className="flex h-7 min-h-0 flex-1 items-center gap-2 rounded-md border border-input bg-transparent px-2.5 text-xs text-muted-foreground transition-colors outline-none select-none hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 max-sm:min-h-9 dark:bg-input/30 dark:hover:bg-input/50"
+          >
+            <Icon name="search" size={13} className="shrink-0 opacity-60" />
+            <span className="truncate">
+              {search.trim() ? search : `Search ${config.title.toLowerCase()}…`}
+            </span>
+            <kbd className="ml-auto hidden shrink-0 rounded border border-border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground sm:inline">/</kbd>
+          </button>
           {config.filters
             .filter((filter) => !(object === "tasks" && filter.name === "mine" && !canSeeEveryTask))
             .map((filter) => {
@@ -881,8 +898,10 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
               </Select>
             );
           })}
-        </form>
-        <div className="flex items-center gap-2 border-l border-border pl-2">
+        </div>
+        {/* Tools cluster — separated from the search zone by spacing alone
+            (the old hairline divider added a line without adding meaning). */}
+        <div className="flex items-center gap-2 pl-1">
           {/* Column visibility — a real menu on every viewport. (This used to
               be a native <details> popover that was hidden on phones, so
               mobile had no way to manage columns at all.) */}

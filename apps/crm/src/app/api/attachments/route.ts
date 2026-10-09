@@ -3,6 +3,7 @@ import { z } from "zod";
 import { attachFile, deleteAttachment, listAttachments } from "@/server/records/attachments";
 import { scopedContext } from "@/server/records/leads";
 import { handleRouteError } from "@/lib/api";
+import { ATTACHMENT_MAX_SIZE } from "@/lib/attachmentPolicy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,10 +39,26 @@ export async function GET(request: Request) {
   }
 }
 
-/** Upload (multipart form-data: file, subjectType, subjectId). */
+/** Upload (multipart form-data: file, subjectType, subjectId).
+ *  The content-length gate answers oversized bodies with a clean 413 —
+ *  parsing a too-large form would otherwise die deep in formData() and
+ *  surface as an opaque 500 (the long-standing "upload failed" report). */
 export async function POST(request: Request) {
   try {
-    const form = await request.formData();
+    const declaredLength = Number(request.headers.get("content-length") ?? 0);
+    if (declaredLength > ATTACHMENT_MAX_SIZE + 64 * 1024) {
+      return NextResponse.json(
+        { error: `File exceeds the ${ATTACHMENT_MAX_SIZE / (1024 * 1024)} MB limit.` },
+        { status: 413 },
+      );
+    }
+    const form = await request.formData().catch(() => null);
+    if (!form) {
+      return NextResponse.json(
+        { error: `Upload failed — the 10 MB per-file limit may have been exceeded.` },
+        { status: 413 },
+      );
+    }
     const file = form.get("file");
     const subjectType = String(form.get("subjectType") ?? "");
     const subjectId = String(form.get("subjectId") ?? "");

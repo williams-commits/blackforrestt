@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { Logo } from "@/components/trade/Logo";
 import { AccountShell } from "@/components/account/AccountShell";
 import { AccountUserMenu } from "@/components/account/AccountUserMenu";
+import { TradeSearchButton } from "@/components/GlobalSearchPalette";
 import type { InstrumentView } from "@/lib/types";
 import { ADDRESS_DOCUMENT_TYPES, IDENTITY_DOCUMENT_TYPES } from "@/lib/kyc";
 import { resolveUserSettings } from "@/server/userSettings";
@@ -163,6 +164,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           <Link href="/account" className="flex items-center gap-1 whitespace-nowrap text-text-muted hover:text-text font-bold">{AccountIcon()} Account</Link>
           <Link href="/reports" className="flex items-center gap-1 whitespace-nowrap text-text-muted hover:text-text">{ReportsIcon()} Reports</Link>
         </nav>
+        <TradeSearchButton className="ml-auto lg:ml-0" />
         <AccountUserMenu
           displayName={user.name ?? user.email ?? "Trader"}
           email={user.email ?? ""}

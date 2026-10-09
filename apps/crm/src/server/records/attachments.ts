@@ -5,27 +5,20 @@ import { CrmError, requireCapability } from "@/server/guard";
 import { appendAudit } from "@/server/audit";
 import { storage } from "@/server/storage";
 import { resolveSubject } from "@/server/records/subjects";
+import { ATTACHMENT_ALLOWED_TYPES, ATTACHMENT_MAX_SIZE } from "@/lib/attachmentPolicy";
 import type { ScopedContext } from "@/server/records/leads";
 
 /**
  * Record attachments. Uploads go through the storage abstraction, metadata
  * lands in Attachment, and every access re-resolves the subject through the
  * scope checker — attachments inherit record visibility exactly.
+ *
+ * Type/size limits live in lib/attachmentPolicy — one list shared with the
+ * client uploader so obvious rejections surface before the POST ever fires.
  */
 
-const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
-const ALLOWED_TYPES = [
-  "application/pdf",
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "text/plain",
-  "text/csv",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.ms-excel",
-  "application/msword",
-];
+const MAX_SIZE = ATTACHMENT_MAX_SIZE;
+const ALLOWED_TYPES: readonly string[] = ATTACHMENT_ALLOWED_TYPES;
 
 export const AttachFile = z.object({
   subjectType: z.enum(["LEAD", "CONTACT", "ACCOUNT", "CUSTOMER", "OPPORTUNITY"]),

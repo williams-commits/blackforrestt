@@ -183,7 +183,7 @@ export function NotificationBell() {
    *  bottom Sheet render identical content, so behavior can never drift. */
   const panel = (
     <>
-      <div className="flex items-center justify-between border-b border-border bg-muted px-4 py-3">
+      <div className="flex items-center justify-between bg-muted px-4 py-3">
         <div><p className="text-sm font-semibold">Notifications</p><p className="text-[11px] text-muted-foreground">{unread ? `${unread} unread` : "All caught up"}</p></div>
         {unread > 0 ? <button type="button" onClick={() => void markAllRead()} className="-my-1 inline-flex min-h-9 items-center px-2 text-[11px] font-semibold hover:underline">Mark all read</button> : null}
       </div>

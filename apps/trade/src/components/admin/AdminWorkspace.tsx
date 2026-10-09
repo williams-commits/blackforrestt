@@ -14,7 +14,7 @@ import { Dialog } from "@/components/ui/Dialog";
 import { useCommandDialog } from "@/components/ui/useCommandDialog";
 import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { Th, TableSearch, FilterChip, type SortDirection } from "@/components/ui/DataTable";
+import { TableSearch, FilterChip, type SortDirection } from "@/components/ui/DataTable";
 import { ADMIN_TAB_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
 import { CandlestickChart, Check, ClipboardCheck, CreditCard, IdCard, RefreshCw, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, Wallet, X } from "lucide-react";
 import { CsvExportButton } from "@/components/ui/CsvExport";
@@ -539,7 +539,7 @@ function PaginatedUsers({
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-canvas">
-      <div className="flex min-h-9 items-center gap-2 border-b border-border bg-panel-2 px-3 py-1.5">
+      <div className="flex min-h-9 flex-wrap items-center gap-2 border-b border-border bg-panel-2 px-3 py-1.5">
         <span className="text-(length:--term-text-2xs) text-text-faint tnum">{sortedUsers.length} users</span>
         <CsvExportButton
           filename="users"
@@ -547,67 +547,113 @@ function PaginatedUsers({
           rows={csvRows}
           disabled={sortedUsers.length === 0}
         />
+        {/* Sort lives in the toolbar now — the entity rows below trade the
+            sortable table header for a presentation-first layout. Clicking
+            the active chip again flips the direction. */}
+        <span className="ml-auto flex items-center gap-1.5" role="group" aria-label="Sort users">
+          {([
+            { key: "createdAt", label: "Newest" },
+            { key: "name", label: "Name" },
+            { key: "balance", label: "Balance" },
+            { key: "equity", label: "Equity" },
+            { key: "positions", label: "Positions" },
+          ] as const).map((option) => (
+            <FilterChip
+              key={option.key}
+              active={sort.key === option.key}
+              onClick={() => onSort(option.key)}
+            >
+              {option.label}
+              {sort.key === option.key ? (sort.direction === "asc" ? " ↑" : " ↓") : ""}
+            </FilterChip>
+          ))}
+        </span>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-275 text-left text-xs">
-          <thead className="sticky top-0 z-10 bg-panel-2 text-text-muted"><tr>
-            <Th sortKey="name" sort={sort} onSort={onSort}>Account</Th>
-            <Th>Verification</Th><Th>Security</Th><Th>Roles</Th>
-            <Th sortKey="balance" sort={sort} onSort={onSort} align="right">Balance</Th>
-            <Th sortKey="equity" sort={sort} onSort={onSort} align="right">Equity</Th>
-            <Th sortKey="positions" sort={sort} onSort={onSort}>Activity</Th>
-            <Th align="right">Actions</Th>
-          </tr></thead>
-          <tbody>
-            {visibleUsers.map((user) => (
-              <tr key={user.id} className="border-t border-border">
-                <td className="p-2">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${user.online ? "bg-up" : "bg-panel-3"}`}
-                      title={user.online ? "Online — live session" : "Offline"}
-                      aria-label={user.online ? "Online" : "Offline"}
-                    />
-                    <span className="font-medium">{user.name ?? "Unnamed"}</span>
-                  </div>
-                  <div className="text-text-faint">
-                    {user.email ?? "—"} · #{user.accountNo ?? "—"}
-                    {user.brandDomain && (
-                      <span className="ml-1.5 rounded bg-brand-soft px-1 py-0.5 text-(length:--term-text-2xs) font-semibold text-brand">{user.brandDomain}</span>
-                    )}
-                  </div>
-                </td>
-                <td className="p-2">{user.kyc?.status ?? "NOT SUBMITTED"}<div className={user.verified ? "text-up" : "text-text-faint"}>{user.verified ? "Verified" : "Unverified"}</div>{(user.kyc?.country || user.kyc?.city) && <div className="text-text-faint">{[user.kyc.city, user.kyc.country].filter(Boolean).join(", ")}</div>}</td>
-                <td className="p-2">MFA {user.mfaEnabledAt ? "enabled" : "off"}<div className={user.lockedUntil ? "text-down" : "text-text-faint"}>{user.lockedUntil ? "Locked" : `${user._count.securitySessions} session(s)`}</div></td>
-                <td className="p-2">{user.adminRoles.length ? user.adminRoles.map((role) => role.role).join(", ") : "Customer"}</td>
-                <td className="p-2 text-right tnum">{formatUsd(user.metrics?.balance ?? "0")}</td>
-                <td className="p-2 text-right tnum">{formatUsd(user.metrics?.equity ?? "0")}</td>
-                <td className="p-2">
-                  <div className={user._count.positions > 0 ? "font-medium text-up" : ""}>
-                    {user._count.positions} open{user.online ? "" : ""}
-                  </div>
-                  <div className={user._count.reconciliationBlocks ? "text-down" : "text-text-faint"}>{user._count.reconciliationBlocks} blocks</div>
-                  <div className="text-text-faint" title={user.lastActiveAt ?? undefined}>{user.lastActiveAt ? `active ${fmtAgo(user.lastActiveAt)}` : "never seen"}</div>
-                </td>
-                <td className="p-2 text-right">
-                  {(canManage || canAdjustBalance) && (
-                    <AdminUserActions
-                      user={user}
-                      onChanged={onChanged}
-                      onOpenChat={(u) => onOpenChat(users.find((candidate) => candidate.id === u.id) ?? user)}
-                      onManageBalance={canAdjustBalance ? (u) => onManageBalance(users.find((candidate) => candidate.id === u.id) ?? user) : undefined}
-                      onEditSettings={canAdjustBalance ? (u) => onEditSettings(users.find((candidate) => candidate.id === u.id) ?? user) : undefined}
-                      onProposeRole={onProposeRole ? (u, action) => onProposeRole(users.find((candidate) => candidate.id === u.id) ?? user, action) : undefined}
-                      canManage={canManage}
-                    />
-                  )}
-                </td>
-              </tr>
-            ))}
-            {users.length === 0 ? <tr><td colSpan={8} className="p-8 text-center text-text-muted">{emptyLabel ?? "No users found."}</td></tr> : null}
-          </tbody>
-        </table>
-      </div>
+      {/* Users as entity rows — identity first, key-values right, actions
+          last; stacks on phones instead of horizontal-scrolling a 275px
+          grid. Same data the CSV export carries. */}
+      <ul className="divide-y divide-border" aria-label="Users">
+        {visibleUsers.map((user) => (
+          <li key={user.id} className="flex flex-col gap-2.5 px-3 py-3 transition-colors hover:bg-panel-2/40 lg:flex-row lg:items-center lg:gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${user.online ? "bg-up" : "bg-panel-3"}`}
+                  title={user.online ? "Online — live session" : "Offline"}
+                  aria-label={user.online ? "Online" : "Offline"}
+                />
+                <span className="truncate text-xs font-medium text-text">{user.name ?? "Unnamed"}</span>
+                {!user.verified ? (
+                  <span className="rounded-full bg-panel-2 px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium text-text-muted">unverified</span>
+                ) : null}
+                {user.lockedUntil ? (
+                  <span className="rounded-full bg-down/10 px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium text-down">locked</span>
+                ) : null}
+                {user.adminRoles.length > 0 ? (
+                  <span className="rounded-full bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium text-brand">
+                    {user.adminRoles[0].role.toLowerCase()}
+                    {user.adminRoles.length > 1 ? ` +${user.adminRoles.length - 1}` : ""}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-0.5 truncate text-(length:--term-text-2xs) text-text-faint">
+                {user.email ?? "—"} · #{user.accountNo ?? "—"}
+                {user.brandDomain ? (
+                  <span className="ml-1.5 rounded bg-brand-soft px-1 py-0.5 font-semibold text-brand">{user.brandDomain}</span>
+                ) : null}
+              </p>
+            </div>
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3 lg:ml-auto lg:flex lg:flex-nowrap lg:gap-6 lg:pl-4">
+              <div className="min-w-0">
+                <dt className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">Verification</dt>
+                <dd className="mt-0.5 text-xs text-text">{user.kyc?.status ?? "NOT SUBMITTED"}</dd>
+                <dd className={`text-(length:--term-text-2xs) ${user.verified ? "text-up" : "text-text-faint"}`}>
+                  {user.verified ? "Verified" : "Unverified"}
+                  {(user.kyc?.country || user.kyc?.city) ? ` · ${[user.kyc.city, user.kyc.country].filter(Boolean).join(", ")}` : ""}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">Security</dt>
+                <dd className="mt-0.5 text-xs text-text">MFA {user.mfaEnabledAt ? "enabled" : "off"}</dd>
+                <dd className={`text-(length:--term-text-2xs) ${user.lockedUntil ? "text-down" : "text-text-faint"}`}>
+                  {user.lockedUntil ? "Locked" : `${user._count.securitySessions} session(s)`}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">Balance</dt>
+                <dd className="mt-0.5 text-xs tnum text-text">{formatUsd(user.metrics?.balance ?? "0")}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">Equity</dt>
+                <dd className="mt-0.5 text-xs tnum text-text">{formatUsd(user.metrics?.equity ?? "0")}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">Activity</dt>
+                <dd className={`mt-0.5 text-xs tnum ${user._count.positions > 0 ? "text-up" : "text-text"}`}>{user._count.positions} open</dd>
+                <dd className={`text-(length:--term-text-2xs) ${user._count.reconciliationBlocks ? "text-down" : "text-text-faint"}`}>
+                  {user._count.reconciliationBlocks} blocks · {user.lastActiveAt ? `active ${fmtAgo(user.lastActiveAt)}` : "never seen"}
+                </dd>
+              </div>
+            </dl>
+            {(canManage || canAdjustBalance) ? (
+              <div className="shrink-0 max-lg:self-end">
+                <AdminUserActions
+                  user={user}
+                  onChanged={onChanged}
+                  onOpenChat={(u) => onOpenChat(users.find((candidate) => candidate.id === u.id) ?? user)}
+                  onManageBalance={canAdjustBalance ? (u) => onManageBalance(users.find((candidate) => candidate.id === u.id) ?? user) : undefined}
+                  onEditSettings={canAdjustBalance ? (u) => onEditSettings(users.find((candidate) => candidate.id === u.id) ?? user) : undefined}
+                  onProposeRole={onProposeRole ? (u, action) => onProposeRole(users.find((candidate) => candidate.id === u.id) ?? user, action) : undefined}
+                  canManage={canManage}
+                />
+              </div>
+            ) : null}
+          </li>
+        ))}
+        {users.length === 0 ? (
+          <li className="p-8 text-center text-xs text-text-muted">{emptyLabel ?? "No users found."}</li>
+        ) : null}
+      </ul>
       <Pagination page={safePage} pageSize={pageSize} totalItems={sortedUsers.length} onPageChange={setPage} label="users" compact />
     </div>
   );

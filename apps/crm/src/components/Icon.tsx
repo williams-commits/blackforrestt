@@ -12,6 +12,7 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   ChevronUp,
   Circle,
@@ -103,6 +104,7 @@ const ICONS: Record<string, LucideIcon> = {
   close: X,
   chevron_down: ChevronDown,
   chevron_up: ChevronUp,
+  chevron_left: ChevronLeft,
   chevron_right: ChevronRight,
   external: ExternalLink,
 

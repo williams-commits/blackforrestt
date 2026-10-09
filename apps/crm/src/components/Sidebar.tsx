@@ -9,12 +9,16 @@ import { Button } from "@/components/ui";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSidebarCollapse } from "@/components/SidebarCollapse";
+import { openSearchPalette } from "@/lib/searchPalette";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
   href: string;
   label: string;
   icon: string;
+  /** Opens the global search palette instead of navigating (the /search
+   *  page stays reachable from the palette's "See all results"). */
+  opensSearchPalette?: boolean;
 }
 
 const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
@@ -50,7 +54,7 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
     label: "Insights",
     items: [
       { href: "/reports", label: "Reports", icon: "chart" },
-      { href: "/search", label: "Search", icon: "search" },
+      { href: "/search", label: "Search", icon: "search", opensSearchPalette: true },
       { href: "/docs", label: "Documentation", icon: "file" },
     ],
   },
@@ -77,7 +81,15 @@ function NavList({ onNavigate, collapsed }: { onNavigate?: () => void; collapsed
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={onNavigate}
+                onClick={(event) => {
+                  if (item.opensSearchPalette) {
+                    // The palette is the search surface; the full /search
+                    // page remains a drill-down from its results.
+                    event.preventDefault();
+                    openSearchPalette();
+                  }
+                  onNavigate?.();
+                }}
                 aria-current={active ? "page" : undefined}
                 aria-label={collapsed ? item.label : undefined}
                 className={cn(
@@ -114,7 +126,7 @@ function SidebarShell({ onNavigate, collapsed }: { onNavigate?: () => void; coll
       {/* Brand header */}
       <div
         className={cn(
-          "flex h-13 shrink-0 items-center border-b border-border",
+          "flex h-13 shrink-0 items-center",
           collapsed ? "justify-center px-0" : "justify-between px-4"
         )}
       >
@@ -190,7 +202,9 @@ export function Sidebar() {
         <aside
           data-slot="sidebar-rail"
           className={cn(
-            "hidden shrink-0 flex-col overflow-hidden border-r border-border bg-background transition-[width] duration-200 ease-in-out lg:flex",
+            // Borderless: the sidebar's surface tone against the app canvas
+            // carries the boundary (light gray canvas / dark elevation step).
+            "hidden shrink-0 flex-col overflow-hidden bg-background transition-[width] duration-200 ease-in-out lg:flex",
             collapsed ? "w-14" : "w-60"
           )}
         >

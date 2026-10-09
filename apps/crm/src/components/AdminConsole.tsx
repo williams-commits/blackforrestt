@@ -13,7 +13,6 @@ import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { Modal } from "@/components/Modal";
 import { Field, FormError, IconInput, IconSelectTrigger, SearchInput } from "@/components/form";
 import { useTableSession, writeTableSession } from "@/components/useTableSession";
-import { Table, THead, TBody, TR, TH, TD } from "@/components/table";
 import { PERMISSION_CATEGORIES } from "@/server/permissions";
 import { Button, Drawer, EmptyState } from "@/components/ui";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -27,6 +26,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PresenceDot, usePresence } from "@/components/Presence";
 import { useTabSession } from "@/components/useTabSession";
+import { EntityList } from "@/components/admin/EntityList";
+import { relativeTime } from "@/lib/time";
 
 /* Badge tone helpers — semantic tones stay on theme tokens so the NEUTRAL
    palette maps them; no raw brand hexes. */
@@ -51,27 +52,6 @@ function CardLabel({ children }: { children: React.ReactNode }) {
 
 function SetupFormModal({ title, onClose, children, size = "md" }: { title: string; onClose: () => void; children: React.ReactNode; size?: "sm" | "md" | "lg" | "xl" }) {
   return <Modal title={title} onClose={onClose} size={size}><div>{children}</div></Modal>;
-}
-
-function AdminTableSkeleton({ rows = 6, columns = 5 }: { rows?: number; columns?: number }) {
-  return (
-    <>
-      {[...Array(rows)].map((_, rowIndex) => (
-        <TR key={`admin-skeleton-row-${rowIndex}`}>
-          {[...Array(columns)].map((__, columnIndex) => (
-            <TD key={`admin-skeleton-cell-${rowIndex}-${columnIndex}`} className="px-3 py-3">
-              <Skeleton
-                style={{
-                  height: columnIndex === 0 ? 18 : 14,
-                  width: `${columnIndex === 0 ? 80 : 58 - (columnIndex % 3) * 8}%`,
-                }}
-              />
-            </TD>
-          ))}
-        </TR>
-      ))}
-    </>
-  );
 }
 
 function AdminCardGridSkeleton({ cards = 4 }: { cards?: number }) {
@@ -262,56 +242,61 @@ export function StatusesTab({ canManage }: { canManage: boolean }) {
         </form>
         </SetupFormModal>
       ) : null}
-      <div className="card table-responsive overflow-x-auto p-2 lg:p-0">
-        <Table>
-          <THead>
-            <TR>
-              <TH className="px-3 py-2 font-medium">Name</TH>
-              <TH className="px-3 py-2 font-medium">Object</TH>
-              <TH className="px-3 py-2 font-medium">Category</TH>
-              <TH className="px-3 py-2 font-medium">In use</TH>
-              <TH className="px-3 py-2 font-medium">Default</TH>
-              {canManage ? <TH className="px-3 py-2 text-right font-medium"><span className="sr-only">Actions</span></TH> : null}
-            </TR>
-          </THead>
-          <TBody>
-            {loading ? (
-              <AdminTableSkeleton rows={5} columns={canManage ? 6 : 5} />
-            ) : rows.map((row) => (
-              <TR key={row.id}>
-                <TD className="px-3 py-2 font-medium">
-                  <span className="flex items-center gap-2">
-                    {row.color ? <span className="size-2.5 shrink-0 rounded-full border border-black/10" style={{ background: row.color }} aria-hidden /> : null}
-                    {row.name}
-                  </span>
-                </TD>
-                <TD className="px-3 py-2"><Badge className="badge badge-neutral">{row.appliesTo.toLowerCase()}</Badge></TD>
-                <TD className="px-3 py-2"><Badge className="badge badge-neutral">{row.category.toLowerCase()}</Badge></TD>
-                <TD className="px-3 py-2 tabular-nums text-muted-foreground">{row._count.leads + row._count.contacts + row._count.customers}</TD>
-                <TD className="px-3 py-2">{row.isDefault ? <Badge className="badge badge-neutral">Default</Badge> : <span className="text-xs text-(--text-tertiary)">—</span>}</TD>
-                {canManage ? (
-                  <TD className="px-3 py-2 text-right">
-                    <div className="flex justify-end">
-                      <RowActions
-                        actions={[
-                          ...(!row.isDefault
-                            ? [{ label: "Make default", icon: "check", onClick: () => void makeDefault(row.id) }]
-                            : []),
-                          { label: "Delete", icon: "trash", destructive: true, onClick: () => void remove(row.id) },
-                        ]}
-                      />
-                    </div>
-                  </TD>
-                ) : null}
-              </TR>
-            ))}
-          </TBody>
-        </Table>
+      {/* Lifecycle statuses as swatch-led entity rows — color-first, with
+          usage counts and category chips instead of a flat grid. */}
+      <div className="card overflow-hidden">
+        <EntityList
+          label="Statuses"
+          loading={loading}
+          skeleton={Array.from({ length: 5 }).map((_, index) => (
+            <li key={index} className="flex items-center gap-4 px-4 py-3.5">
+              <span className="size-9 animate-pulse rounded-lg bg-muted" />
+              <span className="flex-1 space-y-1.5">
+                <span className="block h-3 w-36 animate-pulse rounded bg-muted" />
+                <span className="block h-2.5 w-24 animate-pulse rounded bg-muted" />
+              </span>
+              <span className="hidden h-3 w-16 animate-pulse rounded bg-muted sm:block" />
+            </li>
+          ))}
+          items={rows.map((row) => ({
+            id: row.id,
+            leading: row.color ? (
+              <span
+                className="flex size-9 items-center justify-center rounded-lg border border-black/5"
+                style={{ background: `${row.color}1f` }}
+                aria-hidden
+              >
+                <span className="size-3.5 rounded-full border border-black/10" style={{ background: row.color }} />
+              </span>
+            ) : undefined,
+            title: row.name,
+            badges: [
+              { label: row.appliesTo.toLowerCase(), tone: "info" as const },
+              { label: row.category.toLowerCase(), tone: row.category === "OPEN" ? ("neutral" as const) : row.category === "CONVERTED" ? ("success" as const) : row.category === "LOST" ? ("warning" as const) : ("error" as const) },
+              ...(row.isDefault ? [{ label: "Default", tone: "success" as const }] : []),
+            ],
+            meta: [
+              { label: "In use", value: (row._count.leads + row._count.contacts + row._count.customers).toLocaleString() },
+              { label: "Order", value: row.sortOrder },
+            ],
+            trailing: canManage ? (
+              <RowActions
+                actions={[
+                  ...(!row.isDefault
+                    ? [{ label: "Make default", icon: "check", onClick: () => void makeDefault(row.id) }]
+                    : []),
+                  { label: "Delete", icon: "trash", destructive: true, onClick: () => void remove(row.id) },
+                ]}
+              />
+            ) : undefined,
+          }))}
+          empty={<EmptyState icon="sliders" title="No statuses yet" description="Add the lifecycle stages your team works with." className="py-8" />}
+        />
       </div>
 
       {confirmDialog}
       <Card className="gap-0 overflow-hidden py-0">
-        <div className="flex items-center justify-between border-b border-border bg-muted px-4 py-3"><div><h2 className="text-sm font-semibold">Potential status</h2><p className="mt-0.5 text-xs text-(--text-tertiary)">Segment leads by commercial potential: Junior, Senior, Institutional, or VIP.</p></div>{canManage ? <Button variant="secondary" icon="plus" onClick={() => setShowPotentialForm(true)}>Add potential status</Button> : null}</div>
+        <div className="flex items-center justify-between bg-muted px-4 py-3"><div><h2 className="text-sm font-semibold">Potential status</h2><p className="mt-0.5 text-xs text-(--text-tertiary)">Segment leads by commercial potential: Junior, Senior, Institutional, or VIP.</p></div>{canManage ? <Button variant="secondary" icon="plus" onClick={() => setShowPotentialForm(true)}>Add potential status</Button> : null}</div>
         {showPotentialForm && canManage ? <SetupFormModal title="Add potential status" onClose={() => { setError(null); setShowPotentialForm(false); }}><form className="space-y-4" onSubmit={async (event) => { event.preventDefault(); setError(null); setPotentialBusy(true); try { const response = await fetch("/api/potential-statuses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: potentialName, sortOrder: potentialRows.length + 1 }) }); if (!response.ok) { setError("Could not create potential status."); return; } toast.success("Potential status created"); setPotentialName(""); setShowPotentialForm(false); void load(); } finally { setPotentialBusy(false); } }}><div><p className="form-section-title">Potential status</p><p className="form-section-help">Segment leads by commercial weight for prioritization and filtering.</p></div><Field label="Name" required id="potential-name" help="Ranks a lead's commercial weight — e.g. Junior, Senior, VIP."><IconInput id="potential-name" icon="tag" value={potentialName} onChange={(event) => setPotentialName(event.target.value)} required placeholder="e.g. VIP" /></Field><FormError message={error} /><div className="form-actions"><Button type="button" variant="secondary" onClick={() => { setError(null); setShowPotentialForm(false); }}>Cancel</Button><Button type="submit" variant="primary" icon="plus" loading={potentialBusy}>Add status</Button></div></form></SetupFormModal> : null}
         {loading ? <div className="p-3"><AdminCardGridSkeleton cards={4} /></div> : <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">{potentialRows.map((status) => {
           const leadCount = status._count?.leads ?? 0;
@@ -471,7 +456,7 @@ export function TagsTab({ canManage }: { canManage: boolean }) {
         </SetupFormModal>
       ) : null}
       <Card className="gap-0 overflow-hidden py-0">
-        <div className="flex flex-col gap-1 border-b border-border bg-muted px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1 bg-muted px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-sm font-semibold">Tag library</h2>
             <p className="mt-0.5 text-xs text-(--text-tertiary)">Use consistent labels to make records easier to filter and prioritize.</p>
@@ -643,56 +628,60 @@ export function FieldsTab({ canManage }: { canManage: boolean }) {
         </form>
         </SetupFormModal>
       ) : null}
-      <div className="card table-responsive overflow-x-auto p-2 lg:p-0">
-        <Table>
-          <THead>
-            <TR>
-              <TH className="px-3 py-2 font-medium">Object</TH>
-              <TH className="px-3 py-2 font-medium">Label</TH>
-              <TH className="px-3 py-2 font-medium">Key</TH>
-              <TH className="px-3 py-2 font-medium">Type</TH>
-              <TH className="px-3 py-2 font-medium">Options</TH>
-              <TH className="px-3 py-2 font-medium">State</TH>
-              {canManage ? <TH className="px-3 py-2 text-right font-medium"><span className="sr-only">Actions</span></TH> : null}
-            </TR>
-          </THead>
-          <TBody>
-            {loading ? (
-              <AdminTableSkeleton rows={6} columns={canManage ? 7 : 6} />
-            ) : rows.length === 0 ? (
-              <TR><TD colSpan={7}><EmptyState icon="list" title="No custom fields defined" description="Add a field above to capture business-specific details on records." className="py-6" /></TD></TR>
-            ) : (
-              rows.map((row) => (
-                <TR key={row.id}>
-                  <TD className="px-3 py-2">{row.objectType.toLowerCase()}</TD>
-                  <TD className="px-3 py-2 font-medium">{row.label}</TD>
-                  <TD className="px-3 py-2 font-mono text-xs">{row.key}</TD>
-                  <TD className="px-3 py-2 font-mono text-xs">{row.fieldType.replaceAll("_", " ").toLowerCase()}</TD>
-                  <TD className="px-3 py-2">
-                    {row.options && row.options.length > 0 ? (
-                      <span className="flex flex-wrap gap-1">
-                        {row.options.slice(0, 3).map((option) => <Badge key={option} className="badge badge-neutral">{option}</Badge>)}
-                        {row.options.length > 3 ? <span className="self-center text-xs text-(--text-tertiary)">+{row.options.length - 3} more</span> : null}
-                      </span>
-                    ) : "—"}
-                  </TD>
-                  <TD className="px-3 py-2"><Badge className="badge badge-neutral">{row.active ? "active" : "hidden"}</Badge></TD>
-                  {canManage ? (
-                    <TD className="px-3 py-2 text-right">
-                      <div className="flex justify-end">
-                        <RowActions
-                          actions={[
-                            { label: "Delete", icon: "trash", destructive: true, onClick: () => void remove(row.id) },
-                          ]}
-                        />
-                      </div>
-                    </TD>
-                  ) : null}
-                </TR>
-              ))
-            )}
-          </TBody>
-        </Table>
+      {/* Custom fields as type-led entity rows — label + key subtitle, type
+          and state chips, option previews inline. */}
+      <div className="card overflow-hidden">
+        <EntityList
+          label="Custom fields"
+          loading={loading}
+          skeleton={Array.from({ length: 6 }).map((_, index) => (
+            <li key={index} className="flex items-center gap-4 px-4 py-3.5">
+              <span className="size-9 animate-pulse rounded-lg bg-muted" />
+              <span className="flex-1 space-y-1.5">
+                <span className="block h-3 w-40 animate-pulse rounded bg-muted" />
+                <span className="block h-2.5 w-48 animate-pulse rounded bg-muted" />
+              </span>
+              <span className="hidden h-3 w-20 animate-pulse rounded bg-muted sm:block" />
+            </li>
+          ))}
+          items={rows.map((row) => ({
+            id: row.id,
+            leading: (
+              <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden>
+                <Icon name="grid" size={15} />
+              </span>
+            ),
+            title: row.label,
+            subtitle: (
+              <span className="font-mono text-[11px]">
+                {row.key} <span className="text-muted-foreground/60">·</span> {row.objectType.toLowerCase()}
+              </span>
+            ),
+            badges: [
+              { label: row.fieldType.replaceAll("_", " ").toLowerCase(), tone: "info" as const },
+              { label: row.active ? "active" : "hidden", tone: row.active ? ("success" as const) : ("neutral" as const) },
+            ],
+            meta: row.options && row.options.length > 0 ? [
+              {
+                label: "Options",
+                value: (
+                  <span className="flex flex-wrap gap-1">
+                    {row.options.slice(0, 3).map((option) => <Badge key={option} variant="outline">{option}</Badge>)}
+                    {row.options.length > 3 ? <span className="self-center text-xs text-muted-foreground">+{row.options.length - 3}</span> : null}
+                  </span>
+                ),
+              },
+            ] : [{ label: "Options", value: "—" }],
+            trailing: canManage ? (
+              <RowActions
+                actions={[
+                  { label: "Delete", icon: "trash", destructive: true, onClick: () => void remove(row.id) },
+                ]}
+              />
+            ) : undefined,
+          }))}
+          empty={<EmptyState icon="list" title="No custom fields defined" description="Add a field above to capture business-specific details on records." className="py-6" />}
+        />
       </div>
 
       {confirmDialog}
@@ -908,8 +897,11 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
         </form>
         </SetupFormModal>
       ) : null}
-      <div className="card table-responsive overflow-x-auto">
-        <div className="flex flex-col gap-3 border-b border-border bg-muted px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+      {/* People — presented as a premium entity list (avatar, status chips,
+          key/values) instead of a raw grid table; zones reflow on phones
+          instead of scrolling sideways. */}
+      <div className="card overflow-hidden">
+        <div className="flex flex-col gap-3 bg-muted px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h3 className="text-sm font-semibold">People</h3>
             <p className="mt-0.5 text-xs text-(--text-tertiary)">Roles, access, and activity across your workspace</p>
@@ -946,90 +938,114 @@ export function PeopleTab({ canManage }: { canManage: boolean }) {
             <Badge variant="outline">{filteredUsers.length} of {users.length}</Badge>
           </div>
         </div>
-        {canManage && selectedIds.length > 0 ? <div className="flex items-center justify-between border-b border-border bg-muted px-4 py-2 text-sm"><span>{selectedIds.length} selected</span><Button variant="destructive" size="sm" icon="x_circle" onClick={() => void suspendSelected()}>Suspend selected</Button></div> : null}
-        <Table>
-          <THead>
-            <TR>
-              {canManage ? <TH className="w-10 px-3 py-2"><Checkbox aria-label="Select all visible users" checked={filteredUsers.length > 0 && filteredUsers.every((user) => selectedIds.includes(user.id)) ? true : filteredUsers.some((user) => selectedIds.includes(user.id)) ? "indeterminate" : false} onCheckedChange={(checked) => setSelectedIds(checked === true ? filteredUsers.map((user) => user.id) : [])} /></TH> : null}
-              <TH className="px-3 py-2 font-medium">User</TH>
-              <TH className="px-3 py-2 font-medium">Role</TH>
-              <TH className="px-3 py-2 font-medium">Teams</TH>
-              <TH className="px-3 py-2 font-medium">Last login</TH>
-              <TH className="px-3 py-2 font-medium">Status</TH>
-              {canManage ? <TH className="px-3 py-2 text-right font-medium"><span className="sr-only">Actions</span></TH> : null}
-            </TR>
-          </THead>
-          <TBody>
-            {loading ? (
-              <AdminTableSkeleton rows={6} columns={canManage ? 6 : 5} />
-            ) : filteredUsers.map((user) => (
-              <TR key={user.id} className={selectedUserId === user.id ? "bg-muted" : undefined}>
-                {canManage ? <TD className="px-3 py-2"><Checkbox aria-label={`Select ${user.name}`} checked={selectedIds.includes(user.id)} onCheckedChange={(checked) => setSelectedIds((current) => checked ? [...current, user.id] : current.filter((id) => id !== user.id))} /></TD> : null}
-                <TD className="px-3 py-2"><button type="button" onClick={() => setSelectedUserId(user.id)} className="flex items-center gap-3 text-left"><span className="relative"><Initials name={user.name} size="md" /><span className="absolute -right-0.5 -top-0.5"><PresenceDot online={onlineUsers.has(user.id)} title={`${user.name} is online`} /></span></span><span><span className="block font-medium hover:text-primary">{user.name}</span><span className="block text-xs text-(--text-tertiary)">{user.email}</span></span></button></TD>
-                <TD>
+        {canManage && selectedIds.length > 0 ? <div className="flex items-center justify-between bg-muted px-4 py-2 text-sm"><span>{selectedIds.length} selected</span><Button variant="destructive" size="sm" icon="x_circle" onClick={() => void suspendSelected()}>Suspend selected</Button></div> : null}
+        <EntityList
+          label="Users"
+          loading={loading}
+          skeleton={Array.from({ length: 6 }).map((_, index) => (
+            <li key={index} className="flex items-center gap-4 px-4 py-3.5">
+              <span className="size-9 animate-pulse rounded-full bg-muted" />
+              <span className="flex-1 space-y-1.5">
+                <span className="block h-3 w-40 animate-pulse rounded bg-muted" />
+                <span className="block h-2.5 w-56 animate-pulse rounded bg-muted" />
+              </span>
+              <span className="hidden h-3 w-24 animate-pulse rounded bg-muted sm:block" />
+            </li>
+          ))}
+          empty={<EmptyState icon="users" title="No users match this view" description="Adjust the search or status filter." className="py-8" />}
+          items={filteredUsers.map((user) => {
+            const ownedRecords =
+              user._count.assignedLeads + user._count.ownedContacts + user._count.ownedAccounts +
+              user._count.ownedCustomers + user._count.ownedOpps + user._count.ownedTasks;
+            const teamNames = user.memberships.map((membership) => membership.team.name);
+            const status = user.status.charAt(0) + user.status.slice(1).toLowerCase();
+            return {
+              id: user.id,
+              onClick: () => setSelectedUserId(user.id),
+              selected: selectedUserId === user.id,
+              leading: (
+                <span className="flex items-center gap-2.5">
                   {canManage ? (
-                    <Select value={user.role.key} onValueChange={(value) => void patchUser(user.id, { roleKey: value })}>
-                      <SelectTrigger aria-label={`Role for ${user.name}`} size="sm" className="h-7 w-full max-w-40 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roles.map((role) => <SelectItem key={role.key} value={role.key}>{role.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  ) : user.role.name}
-                </TD>
-                <TD className="px-3 py-2 text-xs">{user.memberships.map((m) => m.team.name).join(", ") || "—"}</TD>
-                <TD className="px-3 py-2 whitespace-nowrap text-xs">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "never"}</TD>
-                <TD className="px-3 py-2"><Badge className="badge badge-neutral">{user.status.charAt(0) + user.status.slice(1).toLowerCase()}</Badge></TD>
-                {canManage ? (
-                  <TD className="px-3 py-2 text-right">
-                    <div className="flex justify-end">
-                      <RowActions
-                        actions={[
-                          { label: "View profile", icon: "users", onClick: () => setSelectedUserId(user.id) },
-                          {
-                            label: user.status === "ACTIVE" ? "Suspend access" : "Restore access",
-                            icon: user.status === "ACTIVE" ? "x_circle" : "play",
-                            onClick: () => void patchUser(user.id, { status: user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" }),
-                          },
-                          {
-                            label: "Delete",
-                            icon: "trash",
+                    <span onClick={(event) => event.stopPropagation()}>
+                      <Checkbox aria-label={`Select ${user.name}`} checked={selectedIds.includes(user.id)} onCheckedChange={(checked) => setSelectedIds((current) => checked ? [...current, user.id] : current.filter((id) => id !== user.id))} />
+                    </span>
+                  ) : null}
+                  <span className="relative">
+                    <Initials name={user.name} size="md" />
+                    <span className="absolute -right-0.5 -top-0.5"><PresenceDot online={onlineUsers.has(user.id)} title={`${user.name} is online`} /></span>
+                  </span>
+                </span>
+              ),
+              title: user.name,
+              subtitle: user.email,
+              badges: [
+                {
+                  label: status,
+                  tone: user.status === "ACTIVE" ? "success" : user.status === "SUSPENDED" ? "warning" : "neutral",
+                  dot: user.status === "ACTIVE" ? "var(--success)" : user.status === "SUSPENDED" ? "var(--warning)" : undefined,
+                },
+                { label: user.role.name, tone: "neutral" },
+              ],
+              meta: [
+                {
+                  label: "Teams",
+                  value: teamNames.length > 0 ? (
+                    <span className="flex flex-nowrap items-center gap-1">
+                      <Badge variant="outline">{teamNames[0]}</Badge>
+                      {teamNames.length > 1 ? <span className="text-xs text-muted-foreground">+{teamNames.length - 1}</span> : null}
+                    </span>
+                  ) : "—",
+                },
+                { label: "Last login", value: user.lastLoginAt ? relativeTime(user.lastLoginAt) : "Never" },
+                { label: "Records", value: ownedRecords > 0 ? ownedRecords.toLocaleString() : "—" },
+              ],
+              trailing: canManage ? (
+                <>
+                  <Select value={user.role.key} onValueChange={(value) => void patchUser(user.id, { roleKey: value })}>
+                    <SelectTrigger aria-label={`Role for ${user.name}`} size="sm" className="h-7 w-32 max-w-full text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((role) => <SelectItem key={role.key} value={role.key}>{role.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <RowActions
+                    actions={[
+                      { label: "View profile", icon: "users", onClick: () => setSelectedUserId(user.id) },
+                      {
+                        label: user.status === "ACTIVE" ? "Suspend access" : "Restore access",
+                        icon: user.status === "ACTIVE" ? "x_circle" : "play",
+                        onClick: () => void patchUser(user.id, { status: user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" }),
+                      },
+                      {
+                        label: "Delete",
+                        icon: "trash",
+                        destructive: true,
+                        onClick: async () => {
+                          const ok = await confirm({
+                            title: `Permanently delete "${user.name}"?`,
+                            message: `${user.email} — all owned records will be reassigned to you. This action cannot be undone.`,
+                            confirmLabel: "Delete user",
                             destructive: true,
-                            onClick: async () => {
-                              const ok = await confirm({
-                                title: `Permanently delete "${user.name}"?`,
-                                message: `${user.email} — all owned records will be reassigned to you. This action cannot be undone.`,
-                                confirmLabel: "Delete user",
-                                destructive: true,
-                              });
-                              if (!ok) return;
-                              const response = await fetch(`/api/admin/users?id=${user.id}`, { method: "DELETE" });
-                              if (!response.ok) {
-                                const body = (await response.json().catch(() => null)) as { error?: string } | null;
-                                setError(body?.error ?? "Delete failed.");
-                                return;
-                              }
-                              toast.success("User deleted");
-                              void load();
-                            },
-                          },
-                        ]}
-                      />
-                    </div>
-                  </TD>
-                ) : null}
-              </TR>
-            ))}
-            {!loading && filteredUsers.length === 0 ? (
-              <TR>
-                <TD colSpan={canManage ? 7 : 5}>
-                  <EmptyState icon="users" title="No users match this view" description="Adjust the search or status filter." className="py-8" />
-                </TD>
-              </TR>
-            ) : null}
-          </TBody>
-        </Table>
+                          });
+                          if (!ok) return;
+                          const response = await fetch(`/api/admin/users?id=${user.id}`, { method: "DELETE" });
+                          if (!response.ok) {
+                            const body = (await response.json().catch(() => null)) as { error?: string } | null;
+                            setError(body?.error ?? "Delete failed.");
+                            return;
+                          }
+                          toast.success("User deleted");
+                          void load();
+                        },
+                      },
+                    ]}
+                  />
+                </>
+              ) : undefined,
+            };
+          })}
+        />
       </div>
 
       {selectedUser ? (
@@ -1277,7 +1293,7 @@ export function RolesTab({ canManage = false }: { canManage?: boolean }) {
       {loading ? (
         <AdminCardGridSkeleton cards={3} />
       ) : selectedRole ? <Card className="gap-0 overflow-hidden py-0">
-        <div className="flex flex-col gap-3 border-b border-border bg-muted px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 bg-muted px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div><Label htmlFor="role-select">Role</Label><Select value={selectedRole.id} onValueChange={setSelectedRoleId}><IconSelectTrigger id="role-select" icon="shield" className="mt-1 min-w-56 w-full font-semibold sm:w-56"><SelectValue /></IconSelectTrigger><SelectContent>{roles.map((role) => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}</SelectContent></Select><p className="mt-2 text-xs text-muted-foreground">{selectedRole.description} · {selectedRole._count.users} assigned users · {selectedRole.scope.toLowerCase()} scope</p></div>
           <div className="w-full sm:w-64"><label htmlFor="permission-search" className="sr-only">Search permissions</label><SearchInput id="permission-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search permissions" /></div>
         </div>
@@ -1388,7 +1404,7 @@ export function SettingsTab() {
       </form>
       </SetupFormModal> : null}
       <Card className="gap-0 overflow-hidden py-0">
-        <div className="border-b border-border bg-muted px-4 py-3">
+        <div className="bg-muted px-4 py-3">
           <h2 className="text-sm font-semibold">Configured values</h2>
           <p className="mt-0.5 text-xs text-(--text-tertiary)">Changes are applied across the workspace.</p>
         </div>
@@ -1480,41 +1496,54 @@ export function AuditTab() {
         subtitle="Review configuration and record changes across your workspace."
         metrics={[{ label: "Entries", value: total, tone: "brand" }, { label: "Page", value: page, tone: "info" }, { label: "Page size", value: pageSize, tone: "success" }]}
       />
-      <div className="card table-responsive overflow-x-auto">
-        <div className="flex items-center justify-between border-b border-border bg-muted px-4 py-3">
+      {/* Activity timeline — actor-led story lines instead of a grid: who
+          did what, to which object, when. Same data, read like a feed. */}
+      <div className="card overflow-hidden">
+        <div className="flex items-center justify-between bg-muted px-4 py-3">
           <div><h2 className="text-sm font-semibold">Recent activity</h2><p className="mt-0.5 text-xs text-(--text-tertiary)">Append-only history of important changes.</p></div>
           <Badge className="badge badge-neutral">{total} entries</Badge>
         </div>
-        <Table>
-          <THead>
-            <TR>
-              <TH className="px-3 py-2 font-medium">When</TH>
-              <TH className="px-3 py-2 font-medium">Actor</TH>
-              <TH className="px-3 py-2 font-medium">Action</TH>
-              <TH className="px-3 py-2 font-medium">Object</TH>
-            </TR>
-          </THead>
-          <TBody>
-            {loading ? (
-              <AdminTableSkeleton rows={8} columns={4} />
-            ) : entries.map((entry) => (
-              <TR key={entry.id}>
-                <TD className="px-3 py-2 whitespace-nowrap text-xs text-muted-foreground">
-                  {new Date(entry.createdAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "medium" })}
-                </TD>
-                <TD className="px-3 py-2"><span className="flex items-center gap-1.5">{entry.actor?.name ? <><Initials name={entry.actor.name} size="xs" /><span className="font-medium">{entry.actor.name}</span></> : <span className="font-medium">System</span>}</span></TD>
-                <TD className="px-3 py-2"><Badge className="badge badge-neutral whitespace-nowrap">{entry.action.replaceAll("_", " ").toLowerCase()}</Badge></TD>
-                <TD className="px-3 py-2 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">{entry.objectType.toLowerCase()}</span>
-                  {entry.objectId ? ` · …${entry.objectId.slice(-6)}` : ""}
-                </TD>
-              </TR>
-            ))}
-            {!loading && entries.length === 0 ? (
-              <TR><TD colSpan={4}><EmptyState icon="clock" title="No audit entries yet" description="Configuration and record changes will appear here as they happen." className="py-6" /></TD></TR>
-            ) : null}
-          </TBody>
-        </Table>
+        <ol aria-label="Audit timeline" className="divide-y divide-border">
+          {loading ? (
+            Array.from({ length: 8 }).map((_, index) => (
+              <li key={index} className="flex items-center gap-3.5 px-4 py-3">
+                <span className="size-8 animate-pulse rounded-full bg-muted" />
+                <span className="flex-1 space-y-1.5">
+                  <span className="block h-3 w-56 animate-pulse rounded bg-muted" />
+                  <span className="block h-2.5 w-32 animate-pulse rounded bg-muted" />
+                </span>
+                <span className="hidden h-2.5 w-20 animate-pulse rounded bg-muted sm:block" />
+              </li>
+            ))
+          ) : entries.map((entry) => (
+            <li key={entry.id} className="flex items-start gap-3.5 px-4 py-3.5 transition-colors hover:bg-muted/40">
+              {entry.actor?.name ? (
+                <Initials name={entry.actor.name} size="sm" />
+              ) : (
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden>
+                  <Icon name="settings" size={13} />
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] leading-snug">
+                  <span className="font-medium text-foreground">{entry.actor?.name ?? "System"}</span>{" "}
+                  <span className="text-muted-foreground">{entry.action.replaceAll("_", " ").toLowerCase()}</span>{" "}
+                  <Badge variant="outline">{entry.objectType.toLowerCase()}</Badge>
+                  {entry.objectId ? <span className="ml-1 font-mono text-[10px] text-muted-foreground/70">…{entry.objectId.slice(-6)}</span> : null}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground" title={new Date(entry.createdAt).toLocaleString()}>
+                  {relativeTime(entry.createdAt)}
+                </p>
+              </div>
+              <time className="hidden shrink-0 pt-0.5 text-xs tabular-nums text-muted-foreground sm:block" dateTime={entry.createdAt}>
+                {new Date(entry.createdAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "medium" })}
+              </time>
+            </li>
+          ))}
+          {!loading && entries.length === 0 ? (
+            <li className="px-4"><EmptyState icon="clock" title="No audit entries yet" description="Configuration and record changes will appear here as they happen." className="py-6" /></li>
+          ) : null}
+        </ol>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
         <span>

@@ -43,7 +43,6 @@ export function SmartTips({ context = "dashboard" }: { context?: keyof typeof TI
   const [dismissed, setDismissed] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [tip, setTip] = useState<SmartTip>(tips[tipIndex(context, tips.length)]);
-  const [carouselKey, setCarouselKey] = useState(0);
   const storageKey = `crm-smart-tip-dismissed:${context}`;
 
   useEffect(() => {
@@ -66,23 +65,18 @@ export function SmartTips({ context = "dashboard" }: { context?: keyof typeof TI
     setDismissed(true);
   }
 
-  function rotate() {
-    setTip((current) => tips[(tips.findIndex((item) => item.id === current.id) + 1) % tips.length]);
-    setCarouselKey((value) => value + 1);
-  }
-
   useEffect(() => {
     if (dismissed || collapsed || tips.length < 2) return;
     const timer = window.setInterval(() => {
       setTip((current) => tips[(tips.findIndex((item) => item.id === current.id) + 1) % tips.length]);
     }, 7000);
     return () => window.clearInterval(timer);
-  }, [carouselKey, collapsed, dismissed, tips]);
+  }, [collapsed, dismissed, tips]);
 
   if (dismissed) return null;
 
   return (
-    <aside className="animate-fade rounded-xl border border-border bg-muted p-4 text-foreground" aria-label="Smart tips">
+    <aside className="animate-fade rounded-xl border border-transparent bg-muted p-4 text-foreground" aria-label="Smart tips">
       {collapsed ? (
         <button type="button" onClick={() => setCollapsed(false)} className="flex w-full items-center justify-between text-left">
           <span className="flex items-center gap-2 text-sm font-semibold text-foreground"><Icon name="lightbulb" size={15} /> Smart tips</span>
@@ -95,14 +89,12 @@ export function SmartTips({ context = "dashboard" }: { context?: keyof typeof TI
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-foreground">{tip.label}</p>
             <div className="flex items-center gap-1">
-              <span className="mr-1 text-xs tabular-nums text-muted-foreground" aria-hidden>{tips.findIndex((entry) => entry.id === tip.id) + 1}/{tips.length}</span>
-              <Button variant="tertiary" size="icon-sm" onClick={rotate} aria-label="Show another tip" title="Show another tip"><Icon name="refresh" size={14} /></Button>
               <Button variant="tertiary" size="icon-sm" onClick={() => setCollapsed(true)} aria-label="Collapse smart tips" title="Collapse smart tips"><Icon name="chevron_up" size={14} /></Button>
               <Button variant="tertiary" size="icon-sm" onClick={dismiss} aria-label="Dismiss tips" title="Dismiss tips"><Icon name="close" size={14} /></Button>
             </div>
           </div>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{tip.text}</p>
-          {tip.href ? <Link href={tip.href} className="mt-1 inline-block text-xs font-semibold text-foreground hover:underline">{tip.action ?? "Open"} →</Link> : null}
+          {tip.href ? <Link href={tip.href} className="mt-1 inline-block text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">{tip.action ?? "Open"} →</Link> : null}
         </div>
       </div>
       )}

@@ -10,6 +10,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useForexStore } from "@/lib/store";
 import { fmtNum, getFormatLocale } from "@/lib/format";
 import { ConnectionDot } from "./ConnectionDot";
+import { TradeSearchButton } from "@/components/GlobalSearchPalette";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useTheme } from "@/components/ThemeProvider";
 import { Logo } from "./Logo";
@@ -191,9 +192,10 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
         <Metric label="CREDIT" value={fmtUsd(account?.credit)} className="hidden md:flex" />
       </div>
 
-      {/* Connection + clock + theme toggle. The theme toggle lives in the user
-          dropdown on phones — this row stays minimal: dot + avatar. */}
+      {/* Connection + clock + search + theme toggle. The theme toggle lives in the user
+          dropdown on phones — this row stays minimal: dot + search + avatar. */}
       <div className="ml-auto flex shrink-0 items-center gap-2 px-2 sm:px-3">
+        <TradeSearchButton />
         <ConnectionDot status={wsStatus} />
         <span className="text-(length:--term-text-xs) text-text-muted tnum hidden lg:inline">{clock}</span>
         <span className="hidden sm:block">

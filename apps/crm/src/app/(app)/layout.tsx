@@ -37,11 +37,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex min-h-screen" style={{ background: "var(--bg-app)" }}>
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
-        {/* ── Top bar ── */}
+        {/* ── Top bar ──
+            Borderless: the surface tone against the app canvas separates the
+            chrome; the hairline shadow keeps it above scrolling content. */}
         <header
-          className="sticky top-0 z-30 flex h-13 shrink-0 items-center justify-between gap-4 border-b px-4 lg:px-6"
+          className="sticky top-0 z-30 flex h-13 shrink-0 items-center justify-between gap-4 px-4 lg:px-6"
           style={{
-            borderColor: "var(--border-default)",
             background: "var(--bg-surface)",
             boxShadow: "var(--shadow-subtle)",
           }}

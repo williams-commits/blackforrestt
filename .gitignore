@@ -39,3 +39,5 @@ src/domains/.staging-*/
 apps/web/.env
 apps/trade/.env
 fixes
+.agents/
+skills-lock.json

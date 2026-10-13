@@ -727,7 +727,7 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
     <div
       ref={panelRef}
       data-testid="professional-chart-panel"
-      className={`flex h-full min-h-112 flex-col overflow-hidden bg-canvas shadow-panel lg:min-h-0 ${fullscreen ? "rounded-none" : "rounded-md"}`}
+      className={`flex h-full min-h-112 flex-col overflow-hidden bg-canvas shadow-panel lg:min-h-0 ${fullscreen ? "rounded-none" : "rounded-xl"}`}
     >
       <div className="flex shrink-0 flex-col bg-panel-2 sm:flex-row sm:items-center">
         <div className="flex min-w-0 flex-wrap items-center gap-2 px-3 py-2 sm:py-0">

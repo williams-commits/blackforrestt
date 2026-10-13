@@ -61,7 +61,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
       {/* Equity hero + identity */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Equity presentation — the financial anchor of the portal */}
-        <section aria-label="Account equity" className="rounded-lg border border-border bg-canvas p-5 sm:p-6">
+        <section aria-label="Account equity" className="rounded-xl border border-border bg-canvas p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="text-xs font-medium uppercase tracking-wide text-text-muted">Equity</div>
@@ -110,7 +110,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
         </section>
 
         {/* Identity + verification — compact companion column */}
-        <section aria-label="Profile and verification" className="rounded-lg border border-border bg-canvas p-5">
+        <section aria-label="Profile and verification" className="rounded-xl border border-border bg-canvas p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand">
               <span className="text-lg font-semibold">{(user.name || user.email)[0]?.toUpperCase()}</span>
@@ -148,7 +148,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
       </div>
 
       {/* Wallets — asset rows, not boxed per-cell */}
-      <section aria-label="Wallet balances" className="rounded-lg border border-border bg-canvas p-5">
+      <section aria-label="Wallet balances" className="rounded-xl border border-border bg-canvas p-5 shadow-sm">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-base font-semibold">Wallets</h2>
           <span className="text-sm tnum font-semibold">{money(walletTotal)} <span className="font-normal text-text-faint">total</span></span>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Textarea";
 import { Send } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { fmtDateTime } from "@/lib/dates";
@@ -167,7 +168,7 @@ export function MessagesTab() {
       )}
 
       <form onSubmit={send} className="flex items-end gap-2 border-t border-border-soft p-3">
-        <textarea
+        <Textarea
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
@@ -180,7 +181,7 @@ export function MessagesTab() {
           maxLength={4000}
           placeholder="Type a message… (Enter to send, Shift+Enter for a new line)"
           aria-label="Message body"
-          className="flex-1 resize-none rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+          className="flex-1 resize-none"
         />
         <Button type="submit" size="sm" variant="brand" loading={sending} disabled={!draft.trim()}><Send size={12} strokeWidth={2} aria-hidden /> Send</Button>
       </form>

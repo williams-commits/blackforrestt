@@ -8,7 +8,7 @@ import { fmtPrice, fmtNum } from "@/lib/format";
 import type { InstrumentView, PositionSide } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { ChipGroup } from "@/components/ui/ChipGroup";
-import { Tabs } from "@/components/ui/Tabs";
+import { SimpleTabs as Tabs } from "@/components/ui/Tabs";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { isExecutableQuote, quoteAgeMs } from "@/lib/marketFreshness";
 import { Input } from "@/components/ui/Input";
@@ -421,13 +421,13 @@ export function TradePanel({ instrument, onSwitchInstrument }: Props) {
               (especially in the mobile bottom sheet). ──────────────────── */}
       <div className="sticky bottom-0 z-10 mt-auto bg-canvas shadow-lift px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="sell" size="md" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting sell order" onClick={() => submit("SELL")} className={`h-16 rounded-lg ${armed === "SELL" ? "ring-2 ring-down ring-offset-2 ring-offset-canvas" : ""}`}>
+          <Button variant="sell" size="default" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting sell order" onClick={() => submit("SELL")} className={`h-16 rounded-lg ${armed === "SELL" ? "ring-2 ring-down ring-offset-2 ring-offset-canvas" : ""}`}>
             <span className="flex flex-col items-center leading-tight">
               <span className="text-sm font-bold uppercase tracking-wide">Sell</span>
               <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{fmtPrice(bid, instrument.digits)}</span>
             </span>
           </Button>
-          <Button variant="buy" size="md" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting buy order" onClick={() => submit("BUY")} className={`h-16 rounded-lg ${armed === "BUY" ? "ring-2 ring-up ring-offset-2 ring-offset-canvas" : ""}`}>
+          <Button variant="buy" size="default" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting buy order" onClick={() => submit("BUY")} className={`h-16 rounded-lg ${armed === "BUY" ? "ring-2 ring-up ring-offset-2 ring-offset-canvas" : ""}`}>
             <span className="flex flex-col items-center leading-tight">
               <span className="text-sm font-bold uppercase tracking-wide">Buy</span>
               <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{fmtPrice(ask, instrument.digits)}</span>

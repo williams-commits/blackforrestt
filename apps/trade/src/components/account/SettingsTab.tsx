@@ -8,6 +8,7 @@ import { PASSWORD_MIN_LENGTH, isValidPassword } from "@/lib/passwordPolicy";
 import { SecurityCenter } from "./SecurityCenter";
 import { fmtDate } from "@/lib/dates";
 import { Input } from "@/components/ui/Input";
+import { Switch } from "@/components/ui/switch";
 
 interface User {
   id: string;
@@ -219,12 +220,7 @@ export function SettingsTab({ user }: { user: User }) {
           maxLength={128}
         />
         <label className="flex w-fit cursor-pointer items-center gap-2 text-(length:--term-text-xs) text-text-muted">
-          <input
-            type="checkbox"
-            checked={showPasswords}
-            onChange={(event) => setShowPasswords(event.target.checked)}
-            className="h-3.5 w-3.5 accent-brand"
-          />
+          <Switch checked={showPasswords} onCheckedChange={setShowPasswords} aria-label="Show passwords" />
           Show passwords
         </label>
 

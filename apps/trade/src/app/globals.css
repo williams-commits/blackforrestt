@@ -37,7 +37,7 @@
     Helvetica, Arial, sans-serif;
   --font-serif: var(--font-serif-loaded), "Newsreader", Georgia, "Times New Roman", serif;
 
-  --radius-panel: 4px;
+  --radius-panel: 8px;
 
   --shadow-panel: 0 1px 2px rgba(16, 24, 40, 0.06);
   --shadow-card: 0 12px 32px rgba(16, 24, 40, 0.10);
@@ -425,14 +425,14 @@ body {
    they reference these tokens. */
 .terminal-ui {
   /* Data type scale — replaces per-component arbitrary px (9/10/11). */
-  --term-text-2xs: 10px; /* tickers, badge counts, table meta */
-  --term-text-xs: 11px;  /* dense table cells, axis labels */
-  --term-text-sm: 12px;  /* inputs, secondary controls */
-  --term-text-md: 13px;  /* body copy / default */
+  --term-text-2xs: 11px; /* tickers, badge counts, table meta */
+  --term-text-xs: 12px;  /* dense table cells, axis labels */
+  --term-text-sm: 13px;  /* inputs, secondary controls */
+  --term-text-md: 14px;  /* body copy / default */
 
   /* Row density for tables and docks. */
-  --term-row-sm: 28px;
-  --term-row-md: 34px;
+  --term-row-sm: 32px;
+  --term-row-md: 38px;
   --term-row-lg: 40px;
 
   /* Semantic status pairs (bg / fg / border) — WCAG-checked on canvas and

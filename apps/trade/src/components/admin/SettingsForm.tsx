@@ -5,6 +5,7 @@ import type { WalletAddressEntry } from "@/server/userSettings";
 import { validateDepositAddress } from "@/lib/paymentNetworks";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
+import { Switch } from "@/components/ui/switch";
 
 /**
  * Reusable settings form for both group settings and per-user profile overrides.
@@ -427,14 +428,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
   return (
     <label className="flex items-center justify-between cursor-pointer">
       <span className="text-xs text-text">{label}</span>
-      <button
-        type="button"
-        onClick={() => onChange(!checked)}
-        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${checked ? "bg-brand" : "bg-panel-3"}`}
-        aria-pressed={checked}
-      >
-        <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-canvas shadow-sm transition-transform duration-150 ${checked ? "translate-x-4" : "translate-x-0"}`} />
-      </button>
+      <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
     </label>
   );
 }

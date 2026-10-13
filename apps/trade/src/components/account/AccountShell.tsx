@@ -370,7 +370,7 @@ export function AccountShell(props: Props) {
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
       {/* Desktop sidebar — grouped account navigation */}
       <aside className="hidden lg:block">
-        <div className="sticky top-20 rounded-lg border border-border bg-canvas p-2">
+        <div className="sticky top-20 rounded-xl border border-border bg-canvas p-2 shadow-sm">
           {navSection(selectTab)}
         </div>
       </aside>

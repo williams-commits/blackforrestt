@@ -114,7 +114,7 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
         <ConnectionDot status={wsStatus} />
         <span className="text-(length:--term-text-xs) text-text-muted tnum hidden lg:inline">{clock}</span>
         <span className="hidden sm:block">
-          <ThemeToggle className="h-8 w-8" />
+          <ThemeToggle />
         </span>
       </div>
 
@@ -204,7 +204,7 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
           <div className="flex items-center gap-3 bg-panel-2/40 px-4 py-2 text-xs text-text">
             <span className="text-text-muted"><ThemeIcon /></span>
             <span className="flex-1 font-medium">Dim mode</span>
-            <ThemeToggle className="h-7 w-7" />
+            <ThemeToggle />
           </div>
 
           {/* Sign out */}

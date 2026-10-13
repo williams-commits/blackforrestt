@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Pagination } from "@/components/ui/Pagination";
-import { Dialog } from "@/components/ui/Dialog";
+import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { CheckCheck } from "lucide-react";
 import { FilterChip } from "@/components/ui/DataTable";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";

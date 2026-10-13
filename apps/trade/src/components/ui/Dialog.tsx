@@ -1,87 +1,213 @@
-"use client";
+"use client"
 
-import { type ReactNode } from "react";
-import { Dialog as DialogPrimitive } from "radix-ui";
+import * as React from "react"
+import { cn } from "cn"
+import { XIcon } from "lucide-react"
+import { Dialog as DialogPrimitive } from "radix-ui"
 
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/Button"
 
-/*
-  Accessible modal dialog on Radix (the repo's shadcn approach). Radix
-  provides the focus trap, Escape handling, focus restore, scroll lock and
-  aria wiring that this component previously hand-rolled. The public API
-  (open/onClose/icon/title/description/children/className/closeLabel) and
-  the terminal styling are unchanged — mobile renders full-bleed, sm+
-  centers as a bordered canvas panel.
-*/
-
-interface DialogProps {
-  open: boolean;
-  onClose: () => void;
-  icon?: ReactNode;
-  title: ReactNode;
-  children: ReactNode;
-  description?: ReactNode;
-  className?: string;
-  closeLabel?: string;
+function DialogRoot({
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Root>) {
+  return <DialogPrimitive.Root data-slot="dialog" {...props} />
 }
 
-export function Dialog({
+function DialogTrigger({
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
+  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
+}
+
+function DialogPortal({
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Portal>) {
+  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
+}
+
+function DialogClose({
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Close>) {
+  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
+}
+
+function DialogOverlay({
+  className,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+  return (
+    <DialogPrimitive.Overlay
+      data-slot="dialog-overlay"
+      className={cn(
+        "fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function DialogContent({
+  className,
+  children,
+  showCloseButton = true,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Content> & {
+  showCloseButton?: boolean
+}) {
+  return (
+    <DialogPortal data-slot="dialog-portal">
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        data-slot="dialog-content"
+        className={cn(
+          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
+          className
+        )}
+        {...props}
+      >
+        {children}
+        {showCloseButton && (
+          <DialogPrimitive.Close
+            data-slot="dialog-close"
+            className="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+          >
+            <XIcon />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        )}
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  )
+}
+
+function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dialog-header"
+      className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
+      {...props}
+    />
+  )
+}
+
+function DialogFooter({
+  className,
+  showCloseButton = false,
+  children,
+  ...props
+}: React.ComponentProps<"div"> & {
+  showCloseButton?: boolean
+}) {
+  return (
+    <div
+      data-slot="dialog-footer"
+      className={cn(
+        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      {showCloseButton && (
+        <DialogPrimitive.Close asChild>
+          <Button variant="outline">Close</Button>
+        </DialogPrimitive.Close>
+      )}
+    </div>
+  )
+}
+
+function DialogTitle({
+  className,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Title>) {
+  return (
+    <DialogPrimitive.Title
+      data-slot="dialog-title"
+      className={cn("text-lg leading-none font-semibold", className)}
+      {...props}
+    />
+  )
+}
+
+function DialogDescription({
+  className,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Description>) {
+  return (
+    <DialogPrimitive.Description
+      data-slot="dialog-description"
+      className={cn("text-sm text-muted-foreground", className)}
+      {...props}
+    />
+  )
+}
+
+export {
+  DialogRoot,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
+}
+
+/* ── Legacy Dialog API compat ──────────────────────────────────────────────
+   The app's dialogs use the simple API (open/onClose/title/description).
+   This wrapper renders them on the shadcn compound Dialog, keeping the
+   mobile full-bleed / desktop-centered behavior the flows rely on. */
+export function SimpleDialog({
   open,
   onClose,
   icon,
   title,
   description,
   children,
-  className,
+  className = "",
   closeLabel = "Close dialog",
-}: DialogProps) {
+}: {
+  open: boolean;
+  onClose: () => void;
+  icon?: React.ReactNode;
+  title: React.ReactNode;
+  description?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+  closeLabel?: string;
+}) {
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay
-          data-slot="dialog-overlay"
-          className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
-        />
-        <DialogPrimitive.Content
-          data-slot="dialog-content"
-          className={cn(
-            "fixed left-1/2 top-1/2 z-50 flex h-dvh max-h-dvh w-full -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-none border border-border bg-canvas shadow-2xl outline-none sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-lg data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-            className,
-          )}
-        >
-          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-4 py-3 sm:px-5 sm:py-4">
-            <div>
-              <DialogPrimitive.Title className="text-sm font-semibold text-text">
-                <span className="mr-2 inline-flex align-[-2px] text-text-muted">{icon}</span>
-                {title}
-              </DialogPrimitive.Title>
-              {description ? (
-                <DialogPrimitive.Description className="mt-1 text-xs text-text-muted">
-                  {description}
-                </DialogPrimitive.Description>
-              ) : null}
-            </div>
-            <DialogPrimitive.Close
-              aria-label={closeLabel}
-              className="flex items-center rounded-lg p-1 text-2xl leading-none text-text-faint hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
-            >
-              <span aria-hidden="true">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="h-5 w-5"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </span>
-            </DialogPrimitive.Close>
+    <DialogRoot open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent className={className} aria-describedby={description ? undefined : "legacy-dialog-desc"}>
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-4 py-3 sm:px-5 sm:py-4">
+          <div>
+            <DialogTitle className="text-sm font-semibold text-text">
+              {icon ? <span className="mr-2 inline-flex align-[-2px] text-text-muted">{icon}</span> : null}
+              {title}
+            </DialogTitle>
+            {description ? (
+              <DialogDescription id="legacy-dialog-desc" className="mt-1 text-xs text-text-muted">
+                {description}
+              </DialogDescription>
+            ) : null}
           </div>
-          {children}
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+          <DialogClose
+            aria-label={closeLabel}
+            className="flex items-center rounded-lg p-1 text-2xl leading-none text-text-faint transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
+          >
+            <span aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </span>
+          </DialogClose>
+        </div>
+        {children}
+      </DialogContent>
+    </DialogRoot>
   );
 }

@@ -34,7 +34,7 @@ export function AccountUserMenu({
   return (
     <div className="ml-auto">
       <div className="flex items-center gap-2">
-        <ThemeToggle className="h-8 w-8" />
+        <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger
             asChild

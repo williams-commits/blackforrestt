@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
+import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 
 /**
  * Confirmation dialog for destructive or consequential actions.

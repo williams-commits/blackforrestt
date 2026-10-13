@@ -379,7 +379,7 @@ export function KycReview({
               {canDecide ? <div className="mt-5 flex flex-col sm:flex-row gap-3">
                 <Button
                   variant="buy"
-                  size="md"
+                  size="default"
                   loading={loading === "APPROVE"}
                   loadingLabel="Approving submission"
                   disabled={loading !== null}
@@ -390,7 +390,7 @@ export function KycReview({
                 </Button>
                 <Button
                   variant="sell"
-                  size="md"
+                  size="default"
                   loading={loading === "REJECT"}
                   loadingLabel="Rejecting submission"
                   disabled={loading !== null || rejectNote.trim().length < 3}

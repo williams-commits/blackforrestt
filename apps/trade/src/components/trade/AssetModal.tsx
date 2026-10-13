@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Dialog } from "@/components/ui/Dialog";
+import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Pagination } from "@/components/ui/Pagination";
 import { useForexStore } from "@/lib/store";

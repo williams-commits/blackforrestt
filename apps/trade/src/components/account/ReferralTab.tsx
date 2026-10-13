@@ -146,7 +146,7 @@ export function ReferralTab() {
             <p className="text-sm text-text-muted">No referrals yet. Share your link to start earning.</p>
           </div>
         ) : (
-          <ul className="rounded-lg border border-border bg-canvas">
+          <ul className="rounded-xl border border-border bg-canvas shadow-sm">
             {data.referrals.map((r) => (
               <li key={r.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-border-soft px-4 py-3 last:border-b-0 hover:bg-panel-2 md:grid-cols-[minmax(0,2fr)_1fr_1fr_1fr] md:gap-3">
                 <div className="min-w-0">

@@ -10,7 +10,7 @@ import { GroupsPanel } from "./GroupsPanel";
 import { SettingsForm, type UserSettingsConfig } from "./SettingsForm";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
-import { Dialog } from "@/components/ui/Dialog";
+import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { useCommandDialog } from "@/components/ui/useCommandDialog";
 import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Skeleton } from "@/components/ui/Skeleton";

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Search } from "lucide-react";
-import { Dialog } from "@/components/ui/Dialog";
+import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { useForexStore } from "@/lib/store";
 import type { InstrumentCategory } from "@/lib/types";

@@ -26,7 +26,7 @@ export function RecordShell({
   ariaLabel: string;
 }) {
   return (
-    <section aria-label={ariaLabel} className="overflow-hidden rounded-lg border border-border bg-canvas">
+    <section aria-label={ariaLabel} className="overflow-hidden rounded-xl border border-border bg-canvas shadow-sm">
       {toolbar && (
         <div className="flex min-h-10 flex-wrap items-center gap-2 border-b border-border bg-panel-2 px-3 py-2">
           {toolbar}

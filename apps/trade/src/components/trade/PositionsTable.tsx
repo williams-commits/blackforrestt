@@ -10,7 +10,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { TerminalTable } from "@/components/trade/TerminalTable";
 import { toast } from "@/lib/toast";
-import { Tabs } from "@/components/ui/Tabs";
+import { SimpleTabs as Tabs } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
 import { fmtPrice, fmtNum } from "@/lib/format";
 import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";

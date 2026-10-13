@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Textarea } from "@/components/ui/Textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CircleCheck } from "lucide-react";
 
@@ -133,14 +134,15 @@ export function SupportTab() {
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Message</label>
-            <textarea
+            <Textarea
               required
               minLength={10}
               rows={4}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="w-full resize-none rounded border border-border bg-canvas px-3 py-2 text-sm outline-none focus:border-brand"
+              className="resize-none"
               placeholder="Describe your issue or question…"
+              aria-label="Message"
             />
           </div>
           {(queryError instanceof Error ? queryError.message : actionError) && <p className="rounded-lg border border-down/30 bg-down/10 px-3 py-2 text-sm text-down">{queryError instanceof Error ? queryError.message : actionError}</p>}

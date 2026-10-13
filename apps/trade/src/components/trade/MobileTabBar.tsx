@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Activity, CandlestickChart, User } from "lucide-react";
+import { Activity, CandlestickChart, FileText, TrendingUpDown, User } from "lucide-react";
 import { useForexStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -77,6 +77,7 @@ function MobileTabBarInner() {
   ];
   const rightItems = [
     { href: "/account", label: "Account", Icon: User, active: onAccount && !positionsActive },
+    { href: "/reports", label: "Reports", Icon: FileText, active: pathname === "/reports" },
   ];
 
   const navLink = (item: { href: string; label: string; Icon: typeof User; active: boolean }) => (
@@ -98,39 +99,41 @@ function MobileTabBarInner() {
       aria-label="Primary"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-canvas pb-[env(safe-area-inset-bottom)] shadow-panel md:hidden"
     >
-      <ul className="grid grid-cols-4 items-end">
+      <ul className="grid grid-cols-5">
         {navItems.map((item) => (
-          <li key={item.label} className="flex-1">{navLink(item)}</li>
+          <li key={item.label}>{navLink(item)}</li>
         ))}
-        {/* Center Trade action — the web FAB relocated into the bar: raised
-            brand pill with the same arrow glyph; opens the order ticket. */}
-        <li className="flex flex-1 justify-center">
+        {/* Center Trade action — the fifth, in-flow center button. Same job
+            and brand styling as the web FAB (brand fill + arrow glyph), sized
+            and aligned with the nav items around it. */}
+        <li>
           <button
             type="button"
             onClick={openTrade}
             aria-label={onTrade ? "Open order ticket" : `Trade ${symbol ?? "instruments"}`}
             aria-haspopup="dialog"
-            className={cn(
-              "-translate-y-4 flex h-14 w-14 items-center justify-center rounded-full border-4 border-canvas bg-brand text-white shadow-2xl transition active:scale-95 focus-visible:outline-2 focus-visible:outline-brand",
-              onTrade && "ring-2 ring-brand/40 ring-offset-2 ring-offset-canvas",
-            )}
+            className="flex min-h-14 w-full flex-col items-center justify-center gap-0.5 px-1 transition focus-visible:outline-2 focus-visible:outline-brand active:scale-95"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M3 17l6-6 4 4 8-8" /><path d="M21 7v6h-6" />
-            </svg>
+            <span className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white shadow-sm transition",
+              onTrade && "ring-2 ring-brand/40",
+            )}>
+              <TrendingUpDown size={16} strokeWidth={2} aria-hidden />
+            </span>
+            <span className="text-(length:--term-text-2xs) font-semibold text-brand">Trade</span>
           </button>
         </li>
         {rightItems.map((item) => (
-          <li key={item.label} className="flex-1">{navLink(item)}</li>
+          <li key={item.label}>{navLink(item)}</li>
         ))}
       </ul>
     </nav>
   );
 }
 
-/** Phone bottom navigation (<md): Markets / Positions / Account plus the
- *  raised center Trade action. The Trade destination is an action, not a
- *  route link — it opens the order ticket like the web FAB. Tablet and
+/** Phone bottom navigation (<md): five in-flow destinations — Markets,
+ *  Positions, Trade (center action), Account, Reports. Trade opens the order
+ *  ticket like the web FAB rather than linking to a route. Tablet and
  *  desktop keep their inline navigation. Fixed above the safe area; pages
  *  add matching bottom padding so content is never covered. */
 export function MobileTabBar() {

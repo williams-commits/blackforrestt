@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
-import { hub } from "@/server/engine/hub";
-import { prisma, resolveUserId } from "@/server/db";
+import { resolveUserId } from "@/server/db";
+import { listInstrumentViews } from "@/server/instruments";
 import { Dashboard } from "@/components/trade/Dashboard";
 import { TIMEFRAMES, type CandleInterval, type InstrumentView } from "@/lib/types";
 import { getMarketDataMode } from "@/server/engine/marketDataMode";
@@ -32,34 +32,9 @@ function resolveInterval(value: string | string[] | undefined): CandleInterval |
     : null;
 }
 
-async function getInstruments(): Promise<InstrumentView[]> {
-  if (hub.isReady()) {
-    return hub.listInstruments().map((s) => hub.instrumentView(s));
-  }
-  // Fallback: static list from the DB (no live quote).
-  const rows = await prisma.instrument.findMany({ where: { active: true } });
-  return rows.map((r) => ({
-    symbol: r.symbol,
-    name: r.name,
-    category: r.category,
-    base: r.base,
-    quote: r.quote,
-    digits: r.digits,
-    pipSize: Number(r.pipSize),
-    pipValue: Number(r.pipValue),
-    contractSize: Number(r.contractSize),
-    marginPerLot: Number(r.marginPerLot),
-    commissionPerLot: Number(r.commissionPerLot),
-    bid: Number(r.basePrice),
-    ask: Number(r.basePrice),
-    mid: Number(r.basePrice),
-    changePct: 0,
-  }));
-}
-
 export default async function TradePage({ params, searchParams }: PageProps) {
   const [{ symbol: symbolParam }, query] = await Promise.all([params, searchParams]);
-  const instruments = await getInstruments();
+  const instruments: InstrumentView[] = await listInstrumentViews();
 
   const instrument = instruments.find((i) => i.symbol.toUpperCase() === symbolParam.toUpperCase());
   if (!instrument) notFound();

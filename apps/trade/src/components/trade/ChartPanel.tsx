@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ZoomIn, ZoomOut } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import {
@@ -794,8 +795,8 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
             </svg>
           </ChartButton>
           <IndicatorsMenu groups={indicatorGroups} />
-          <ChartButton label="Zoom in" onClick={() => zoom("in")}>＋</ChartButton>
-          <ChartButton label="Zoom out" onClick={() => zoom("out")}>−</ChartButton>
+          <ChartButton label="Zoom in" onClick={() => zoom("in")}><ZoomIn size={14} strokeWidth={2} aria-hidden /></ChartButton>
+          <ChartButton label="Zoom out" onClick={() => zoom("out")}><ZoomOut size={14} strokeWidth={2} aria-hidden /></ChartButton>
           <ChartButton label="Fit all candles" onClick={() => fitChart()}>Fit</ChartButton>
           <ChartButton label={fullscreen ? "Exit full screen" : "Full screen"} active={fullscreen} onClick={() => void toggleFullscreen()}>
             {fullscreen ? "Exit" : "Full"}
@@ -818,8 +819,8 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
             </svg>
           </ChartButton>
           <IndicatorsMenu groups={indicatorGroups} />
-          <ChartButton label="Zoom in" onClick={() => zoom("in")}>＋</ChartButton>
-          <ChartButton label="Zoom out" onClick={() => zoom("out")}>−</ChartButton>
+          <ChartButton label="Zoom in" onClick={() => zoom("in")}><ZoomIn size={14} strokeWidth={2} aria-hidden /></ChartButton>
+          <ChartButton label="Zoom out" onClick={() => zoom("out")}><ZoomOut size={14} strokeWidth={2} aria-hidden /></ChartButton>
           <ChartButton label="Fit all candles" onClick={() => fitChart()}>Fit</ChartButton>
           <ChartButton label={fullscreen ? "Exit full screen" : "Full screen"} active={fullscreen} onClick={() => void toggleFullscreen()}>
             {fullscreen ? "Exit" : "Full"}

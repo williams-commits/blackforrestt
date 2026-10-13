@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useForexSocket } from "@/hooks/useForexSocket";
 import { useForexStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 import type { CandleInterval, InstrumentView } from "@/lib/types";
 import { AccountBar } from "./AccountBar";
 import { ChartPanel } from "./ChartPanel";
 import { TradePanel } from "./TradePanel";
 import { PositionsTable } from "./PositionsTable";
+import { InstrumentSelector } from "./InstrumentSelector";
 import { AssetModal } from "./AssetModal";
 import { Dialog } from "@/components/ui/Dialog";
 import { MarketStatusBanner } from "./MarketStatusBanner";
@@ -25,7 +28,13 @@ interface Props {
   marginWarningPercent?: number;
 }
 
-/** Responsive professional trading workspace. */
+const WATCHLIST_STORAGE_KEY = "blckforest:watchlist";
+const DOCK_STORAGE_KEY = "blckforest:dock";
+
+/** Responsive professional trading workspace. Desktop (lg+) is a deliberate
+ *  three-track grid — market discovery | chart (dominant, minmax(0,1fr)) |
+ *  execution ticket — over an activity dock; tablet keeps chart + ticket and
+ *  phones stack with the order sheet. */
 export function Dashboard({
   instrument,
   instruments,
@@ -38,9 +47,12 @@ export function Dashboard({
 }: Props) {
   const interval = useForexStore((state) => state.interval);
   const setInterval = useForexStore((state) => state.setInterval);
+  const applyInstruments = useForexStore((state) => state.applyInstruments);
   const { status } = useForexSocket(instrument.symbol, interval);
   const [assetModalOpen, setAssetModalOpen] = useState(false);
   const [mobileOrderOpen, setMobileOrderOpen] = useState(false);
+  const [watchlistOpen, setWatchlistOpen] = useState(true);
+  const [dockOpen, setDockOpen] = useState(true);
 
   useEffect(() => {
     if (initialInterval && initialInterval !== useForexStore.getState().interval) {
@@ -48,15 +60,87 @@ export function Dashboard({
     }
   }, [initialInterval, setInterval]);
 
+  // Hydrate the watchlist from the server-resolved list so the rail renders
+  // real instruments immediately; the socket's live list replaces it on connect.
+  useEffect(() => {
+    if (useForexStore.getState().instruments.length === 0 && instruments.length > 0) {
+      applyInstruments(instruments);
+    }
+  }, [instruments, applyInstruments]);
+
+  // Rail/dock collapse choices persist per workstation (defaults: open).
+  useEffect(() => {
+    const storedWatchlist = window.localStorage.getItem(WATCHLIST_STORAGE_KEY);
+    if (storedWatchlist != null) setWatchlistOpen(storedWatchlist !== "collapsed");
+    const storedDock = window.localStorage.getItem(DOCK_STORAGE_KEY);
+    if (storedDock != null) setDockOpen(storedDock !== "collapsed");
+  }, []);
+
+  const toggleWatchlist = () => {
+    setWatchlistOpen((open) => {
+      window.localStorage.setItem(WATCHLIST_STORAGE_KEY, open ? "collapsed" : "open");
+      return !open;
+    });
+  };
+
+  const toggleDock = () => {
+    setDockOpen((open) => {
+      window.localStorage.setItem(DOCK_STORAGE_KEY, open ? "collapsed" : "open");
+      return !open;
+    });
+  };
+
   return (
     <div className="trade-workspace terminal-ui flex min-h-dvh w-full flex-col overflow-x-hidden bg-canvas md:h-dvh md:overflow-hidden lg:h-screen">
       <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} walletAddresses={walletAddresses} marginWarningPercent={marginWarningPercent} onOpenAssets={() => setAssetModalOpen(true)} />
       <MarketStatusBanner marketDataMode={marketDataMode} wsStatus={status} />
 
-      {/* Chart + order panel — tablet (md) gets side-by-side, desktop (lg) gets
-          the full layout. No dividing lines: the shell surface (bg-panel)
-          separates the canvas chart card from the console column tonally. */}
-      <div className="grid grid-cols-1 gap-0 bg-panel md:min-h-0 md:flex-1 md:grid-cols-[minmax(0,1fr)_300px] lg:grid-cols-[minmax(0,1fr)_340px]">
+      {/* Chart + discovery rail + order panel — tablet (md) gets chart +
+          ticket side-by-side; desktop (lg) adds the market rail. The chart
+          always takes the dominant minmax(0,1fr) track. No dividing lines:
+          the shell surface (bg-panel) separates the canvas cards tonally. */}
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-0 bg-panel md:min-h-0 md:flex-1 md:grid-cols-[minmax(0,1fr)_300px]",
+          watchlistOpen
+            ? "lg:grid-cols-[240px_minmax(0,1fr)_340px]"
+            : "lg:grid-cols-[2.5rem_minmax(0,1fr)_340px]",
+        )}
+      >
+        {/* Market discovery rail — desktop only; collapses to a slim strip. */}
+        <aside className="hidden min-h-0 lg:block">
+          {watchlistOpen ? (
+            <div className="flex h-full flex-col bg-panel">
+              <InstrumentSelector
+                activeSymbol={instrument.symbol}
+                headerAction={
+                  <button
+                    type="button"
+                    onClick={toggleWatchlist}
+                    aria-label="Collapse market watchlist"
+                    title="Collapse watchlist"
+                    className="rounded p-1 text-text-muted transition-colors hover:bg-panel-3 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
+                  >
+                    <PanelLeftClose size={14} strokeWidth={2} aria-hidden />
+                  </button>
+                }
+              />
+            </div>
+          ) : (
+            <div className="flex h-full w-full flex-col items-center gap-1 bg-panel py-2">
+              <button
+                type="button"
+                onClick={toggleWatchlist}
+                aria-label="Expand market watchlist"
+                title="Markets"
+                className="rounded p-1.5 text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
+              >
+                <PanelLeftOpen size={15} strokeWidth={2} aria-hidden />
+              </button>
+            </div>
+          )}
+        </aside>
+
         <main
           id="main-content"
           tabIndex={-1}
@@ -84,9 +168,10 @@ export function Dashboard({
         </aside>
       </div>
 
-      {/* Positions dock — shorter on mobile to leave room for the chart + FAB */}
-      <div className="min-h-50 h-60 shrink-0 bg-panel sm:h-88 md:h-64 lg:h-70">
-        <PositionsTable instruments={instruments} />
+      {/* Activity dock — collapses to its tab strip on short laptops so the
+          chart and order controls keep their space. */}
+      <div className={cn("shrink-0 bg-panel", dockOpen ? "min-h-50 h-60 sm:h-88 md:h-64 lg:h-70" : "h-9")}>
+        <PositionsTable instruments={instruments} collapsed={!dockOpen} onToggleCollapsed={toggleDock} />
       </div>
 
       {/* Mobile bottom sheet order panel — slides up from bottom, partial height */}

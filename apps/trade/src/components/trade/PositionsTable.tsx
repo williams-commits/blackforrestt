@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useForexStore } from "@/lib/store";
 import { closePosition } from "@/hooks/useOpenPosition";
 import { useMemo } from "react";
@@ -17,21 +18,25 @@ import type { InstrumentView, PositionView } from "@/lib/types";
 
 interface Props {
   instruments: InstrumentView[];
+  /** Dock collapsed to its tab strip (short-laptop mode) — tables hidden. */
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 type Tab = "open" | "history";
 
 /**
- * Bottom dock — tabbed positions panel matching the reference design (copy.png).
+ * Bottom dock — tabbed activity panel.
  *
- * Two tabs:
+ * Two tabs (the engine exposes no separate working-orders feed — CFD/strike
+ * positions only — so no orders tab is fabricated):
  *   - "Open Positions" — live open positions with close button + floating P/L.
  *   - "Trade History" — closed positions (persisted from DB).
  *
  * Compact column set: Time, Type, Asset, Volume, Open Rate, Current Rate,
  * S/L, T/P, Swap, Commission, Profit, Close.
  */
-export function PositionsTable({ instruments }: Props) {
+export function PositionsTable({ instruments, collapsed = false, onToggleCollapsed }: Props) {
   const positions = useForexStore((s) => s.positions);
   const [busy, setBusy] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("open");
@@ -42,9 +47,9 @@ export function PositionsTable({ instruments }: Props) {
   const totalFloating = positions.reduce((s, p) => s + p.profit + p.swap, 0);
 
   return (
-    <div className="flex flex-col h-full bg-panel">
-      {/* Header: tabs + floating P/L */}
-      <div className="flex items-center h-8 px-2 bg-panel-2 shrink-0 gap-1">
+    <div className="flex h-full flex-col bg-panel">
+      {/* Header: tabs + floating P/L + collapse control */}
+      <div className="flex h-8 items-center bg-panel-2 px-2 shrink-0 gap-1">
         <Tabs
           variant="segmented"
           label="Positions dock"
@@ -55,7 +60,7 @@ export function PositionsTable({ instruments }: Props) {
                 <>
                   Open Positions
                   {positions.length > 0 && (
-                    <span className="ml-1 text-(length:--term-text-2xs) bg-brand text-white rounded-full px-1.5 py-px font-medium">
+                    <span className="ml-1 text-(length:--term-text-2xs) bg-canvas/25 rounded-full px-1.5 py-px font-medium">
                       {positions.length}
                     </span>
                   )}
@@ -77,33 +82,45 @@ export function PositionsTable({ instruments }: Props) {
             </div>
           </div>
         )}
+        {onToggleCollapsed && (
+          <button
+            type="button"
+            onClick={onToggleCollapsed}
+            aria-label={collapsed ? "Expand activity dock" : "Collapse activity dock"}
+            aria-expanded={!collapsed}
+            title={collapsed ? "Expand dock" : "Collapse dock"}
+            className={`rounded p-1 text-text-muted transition-colors hover:bg-panel-3 hover:text-text focus-visible:outline-2 focus-visible:outline-brand ${tab !== "open" || positions.length === 0 ? "ml-auto" : ""}`}
+          >
+            {collapsed ? <ChevronUp size={14} strokeWidth={2} aria-hidden /> : <ChevronDown size={14} strokeWidth={2} aria-hidden />}
+          </button>
+        )}
       </div>
 
-  {/* Table body — phones get full-width position cards (the close action is
-      always visible without horizontal scrolling); md+ keeps the dense table. */}
-  <div className="flex-1 min-h-0 overflow-auto">
-    {tab === "open" ? (
-      <>
-        <div className="md:hidden">
-          <OpenPositionCards positions={positions} digitsFor={digitsFor} busy={busy} setBusy={setBusy} />
+      {!collapsed && (
+        <div className="flex-1 min-h-0 overflow-auto">
+          {tab === "open" ? (
+            <>
+              <div className="md:hidden">
+                <OpenPositionCards positions={positions} digitsFor={digitsFor} busy={busy} setBusy={setBusy} />
+              </div>
+              <div className="hidden md:block">
+                <OpenPositionsTable positions={positions} digitsFor={digitsFor} busy={busy} setBusy={setBusy} />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="md:hidden">
+                <HistoryCards digitsFor={digitsFor} />
+              </div>
+              <div className="hidden md:block">
+                <HistoryTable digitsFor={digitsFor} />
+              </div>
+            </>
+          )}
         </div>
-        <div className="hidden md:block">
-          <OpenPositionsTable positions={positions} digitsFor={digitsFor} busy={busy} setBusy={setBusy} />
-        </div>
-      </>
-    ) : (
-      <>
-        <div className="md:hidden">
-          <HistoryCards digitsFor={digitsFor} />
-        </div>
-        <div className="hidden md:block">
-          <HistoryTable digitsFor={digitsFor} />
-        </div>
-      </>
-    )}
-  </div>
-</div>
-);
+      )}
+    </div>
+  );
 }
 
 /** Shared close action for a position: instant toast with the realized result,

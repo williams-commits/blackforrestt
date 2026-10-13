@@ -12,7 +12,7 @@ import { TradePanel } from "./TradePanel";
 import { MarketMarkers } from "./MarketMarkers";
 import { PositionsTable } from "./PositionsTable";
 import { InstrumentSelector } from "./InstrumentSelector";
-import { AssetModal } from "./AssetModal";
+import { InstrumentSwitcherSheet } from "./InstrumentSwitcherSheet";
 import { MarketStatusBanner } from "./MarketStatusBanner";
 import { MobileTabBar, OPEN_ORDER_EVENT, consumeOpenOrderFlag, rememberMobileSymbol } from "./MobileTabBar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -51,7 +51,7 @@ export function Dashboard({
   const setInterval = useForexStore((state) => state.setInterval);
   const applyInstruments = useForexStore((state) => state.applyInstruments);
   const { status } = useForexSocket(instrument.symbol, interval);
-  const [assetModalOpen, setAssetModalOpen] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
   const [mobileOrderOpen, setMobileOrderOpen] = useState(false);
   const [watchlistOpen, setWatchlistOpen] = useState(true);
   const [dockOpen, setDockOpen] = useState(true);
@@ -108,7 +108,7 @@ export function Dashboard({
 
   return (
     <div className="trade-workspace terminal-ui flex min-h-dvh w-full flex-col overflow-x-hidden bg-canvas md:h-dvh md:overflow-hidden lg:h-screen">
-      <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} walletAddresses={walletAddresses} marginWarningPercent={marginWarningPercent} onOpenAssets={() => setAssetModalOpen(true)} />
+      <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} walletAddresses={walletAddresses} marginWarningPercent={marginWarningPercent} />
       <MarketStatusBanner marketDataMode={marketDataMode} wsStatus={status} />
 
       {/* Chart + discovery rail + order panel — tablet (md) gets chart +
@@ -162,15 +162,15 @@ export function Dashboard({
           tabIndex={-1}
           className="relative min-h-75 p-1 sm:min-h-100 md:min-h-0"
         >
-          <ChartPanel instrument={instrument} onOpenAssets={() => setAssetModalOpen(true)} />
+          <ChartPanel instrument={instrument} onSwitchInstrument={() => setSwitcherOpen(true)} />
         </main>
 
         {/* Order column — live market context above the ticket; hidden on
-            phones (the sheet keeps the ticket focused), inline from md up */}
+            phones (the full-screen ticket covers it), inline from md up */}
         <aside className="hidden min-h-0 flex-col bg-panel md:flex">
           <MarketMarkers instrument={instrument} />
           <div className="min-h-0 flex-1">
-            <TradePanel instrument={instrument} />
+            <TradePanel instrument={instrument} onSwitchInstrument={() => setSwitcherOpen(true)} />
           </div>
         </aside>
       </div>
@@ -182,30 +182,29 @@ export function Dashboard({
         <PositionsTable instruments={instruments} collapsed={!dockOpen} onToggleCollapsed={toggleDock} />
       </div>
 
-      {/* Mobile order entry — purpose-built bottom sheet (side-anchored Radix
-          Sheet with slide-in, focus trap, Escape and scroll lock). The
-          panel's own footer pads env(safe-area-inset-bottom) so the Buy/Sell
-          actions stay clear of the home indicator. */}
+      {/* Mobile order entry — a dedicated full-screen ticket ("new screen"):
+          the sticky Trade button opens it, Escape/backdrop/close returns. The
+          panel's own footer pads env(safe-area-inset-bottom). */}
       <Sheet open={mobileOrderOpen} onOpenChange={setMobileOrderOpen}>
         <SheetContent
           side="bottom"
-          className="h-[92dvh] gap-0 rounded-t-2xl p-0 md:hidden sm:max-w-none"
+          className="top-0 h-dvh gap-0 rounded-none p-0 md:hidden sm:max-w-none"
         >
           <SheetHeader className="border-b border-border-soft pb-2 pt-3">
             <SheetTitle>Trade {instrument.symbol}</SheetTitle>
             <SheetDescription>Review the order details before submitting.</SheetDescription>
           </SheetHeader>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <TradePanel instrument={instrument} />
+            <TradePanel instrument={instrument} onSwitchInstrument={() => setSwitcherOpen(true)} />
           </div>
         </SheetContent>
       </Sheet>
 
       <MobileTabBar />
 
-      <AssetModal
-        open={assetModalOpen}
-        onClose={() => setAssetModalOpen(false)}
+      <InstrumentSwitcherSheet
+        open={switcherOpen}
+        onOpenChange={setSwitcherOpen}
         activeSymbol={instrument.symbol}
       />
     </div>

@@ -45,6 +45,29 @@ export function MarketMarkers({ instrument }: { instrument: InstrumentView }) {
     return { avgVolume, lastVolume, volumeMultiple, biggest: { pips: bestPips, up: bestUp } };
   }, [candles, instrument.pipSize]);
 
+  // Volume-by-price depth: real candle volumes aggregated into price buckets
+  // across the loaded window — a volume-profile view of where volume traded.
+  // (The engine exposes no exchange order book, so no DOM ladder is drawn.)
+  const depth = useMemo(() => {
+    if (candles.length < 5) return null;
+    let high = -Infinity;
+    let low = Infinity;
+    for (const candle of candles) {
+      if (candle.high > high) high = candle.high;
+      if (candle.low < low) low = candle.low;
+    }
+    const BUCKETS = 6;
+    const size = (high - low) / BUCKETS;
+    if (!(size > 0)) return null;
+    const volumes = new Array<number>(BUCKETS).fill(0);
+    for (const candle of candles) {
+      const index = Math.min(BUCKETS - 1, Math.max(0, Math.floor((candle.close - low) / size)));
+      volumes[index] += candle.volume;
+    }
+    const max = Math.max(...volumes);
+    return { low, size, volumes, max };
+  }, [candles]);
+
   const waiting = !quoteMatches && candles.length === 0;
 
   return (
@@ -124,6 +147,33 @@ export function MarketMarkers({ instrument }: { instrument: InstrumentView }) {
               tone={windowStats.biggest.up ? "up" : "down"}
               significant={false}
             />
+          )}
+
+          {/* Market depth — real volume-by-price profile of the loaded window.
+              The bucket holding the live price is highlighted. */}
+          {depth && (
+            <div>
+              <div className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">
+                Market depth · volume by price
+              </div>
+              <div className="mt-1 space-y-0.5" role="img" aria-label="Volume by price depth profile">
+                {depth.volumes.map((volume, index) => {
+                  const bucketLow = depth.low + index * depth.size;
+                  const bucketHigh = bucketLow + depth.size;
+                  const live = quoteMatches && quote!.mid >= bucketLow && quote!.mid < bucketHigh + (index === depth.volumes.length - 1 ? depth.size / 2 : 0);
+                  const width = depth.max > 0 ? Math.max(3, (volume / depth.max) * 100) : 3;
+                  return (
+                    <div key={index} className="flex items-center gap-1.5">
+                      <span className={`h-2 rounded-sm ${live ? "bg-brand" : "bg-panel-3"}`} style={{ width: `${width}%` }} aria-hidden="true" />
+                      <span className={`text-(length:--term-text-2xs) tnum ${live ? "font-semibold text-text" : "text-text-faint"}`}>
+                        {fmtPrice(bucketLow, instrument.digits)}
+                      </span>
+                      {live && <span className="text-(length:--term-text-2xs) font-semibold text-brand">live</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
       )}

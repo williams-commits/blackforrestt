@@ -11,7 +11,7 @@ import {
   type ReportRow,
   type ReportSummary,
 } from "@/components/account/ReportsView";
-import { CandlestickChart, User, FileText } from "lucide-react";
+import { CandlestickChart, FileText, User } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -186,10 +186,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
             bottom navigation covers Trade/Account/Markets and this page
             carries the bar too, so /reports is never a dead end on phones. */}
         <nav className="order-3 w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 hidden lg:flex">
-          <Link href="/trade/AUDCAD" className="flex items-center gap-1 text-text-muted hover:text-text shadow-lg transition-colors">
-          {TradeTerminal()} Trade Terminal</Link>
-          <Link href="/account" className="flex items-center gap-1 whitespace-nowrap text-text-muted hover:text-text">{AccountIcon()} Account</Link>
-          <Link href="/reports" className="flex items-center gap-1 whitespace-nowrap text-text-muted hover:text-text font-bold">{ReportsIcon()} Reports</Link>
+          <Link href="/trade/AUDCAD" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-text-muted transition-colors duration-150 hover:bg-panel-2 hover:text-text">
+            <CandlestickChart size={14} strokeWidth={2} aria-hidden /> Trade Terminal</Link>
+          <Link href="/account" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-text-muted transition-colors duration-150 hover:bg-panel-2 hover:text-text">
+            <User size={14} strokeWidth={2} aria-hidden /> Account</Link>
+          <Link href="/reports" aria-current="page" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 font-semibold text-text">
+            <FileText size={14} strokeWidth={2} aria-hidden /> Reports</Link>
         </nav>
         <AccountUserMenu
           displayName={user.name ?? user.email ?? "Trader"}
@@ -219,27 +221,5 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   );
 }
 
-const ic = "w-3.5 h-3.5";
 
-function TradeTerminal() {
-  return (
-    <span className="flex items-center bg-border rounded-md p-1 gap-1 text-[10px] font-semibold text-text-muted hover:text-text transition-colors">
-      <CandlestickChart size={14} strokeWidth={1.75} aria-hidden className={ic} />
-    </span>
-  );
-}
 
-function AccountIcon() {
-  return ( 
-    <span className="flex items-center bg-border rounded-md p-1 gap-1 text-[10px] font-semibold text-text-muted hover:text-text transition-colors">
-      <User size={14} strokeWidth={1.75} aria-hidden />
-    </span>
-  );
-}
-function ReportsIcon() {
-  return ( 
-    <span className="flex items-center bg-border rounded-md p-1 gap-1 text-[10px] font-semibold text-text-muted hover:text-text transition-colors">
-      <FileText size={14} strokeWidth={1.75} aria-hidden />
-    </span>
-  );
-}

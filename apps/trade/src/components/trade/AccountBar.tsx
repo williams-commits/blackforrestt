@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, LogOut, Minus, Plus, Settings, Shield, Sun, User } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, FileText, LogOut, Settings, Shield, Sun, User } from "lucide-react";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -11,6 +11,7 @@ import { fmtNum, getFormatLocale } from "@/lib/format";
 import { ConnectionDot } from "./ConnectionDot";
 import { TradeSearchButton } from "@/components/GlobalSearchPalette";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { TerminalNotifications } from "./TerminalNotifications";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +26,6 @@ import type { WalletAddressEntry } from "@/server/userSettings";
 
 interface Props {
   wsStatus: SocketStatus;
-  onOpenAssets?: () => void;
   depositUiEnabled?: boolean;
   disabledPaymentMethods?: string[];
   walletAddresses?: WalletAddressEntry[];
@@ -41,7 +41,7 @@ interface Props {
  * panel containing quick actions (Deposit, Account, Reports, Admin) and sign
  * out — instead of cluttering the header with inline links.
  */
-export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, disabledPaymentMethods = [], walletAddresses = [], marginWarningPercent = 125 }: Props) {
+export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentMethods = [], walletAddresses = [], marginWarningPercent = 125 }: Props) {
   const account = useForexStore((s) => s.account);
   const { data: session } = useSession();
   const { theme } = useTheme();
@@ -78,24 +78,6 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
         <span className="hidden sm:inline-block text-(length:--term-text-2xs) font-semibold text-brand bg-brand-soft px-1.5 py-0.5 rounded">TRADE</span>
       </div>
 
-      {/* Assets button — md+ only. On phones the chart header already has an
-          assets entry point; a second one here only crowded the top row. */}
-      {onOpenAssets && (
-        <button
-          type="button"
-          onClick={onOpenAssets}
-          className="hidden md:flex items-center gap-1.5 px-3 h-full text-(length:--term-text-xs) font-medium text-text-muted hover:text-text hover:bg-panel-2 transition-colors shrink-0"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="3" width="7" height="7" rx="1" />
-            <rect x="14" y="3" width="7" height="7" rx="1" />
-            <rect x="3" y="14" width="7" height="7" rx="1" />
-            <rect x="14" y="14" width="7" height="7" rx="1" />
-          </svg>
-          Assets
-        </button>
-      )}
-
       {/* Metrics strip — phones get one compact horizontally-scrollable row
           (an intentional data strip: every key metric reachable, no vertical
           bulk); sm+ keeps the single dense row. */}
@@ -128,6 +110,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
           dropdown on phones — this row stays minimal: dot + search + avatar. */}
       <div className="ml-auto flex shrink-0 items-center gap-2 px-2 sm:px-3">
         <TradeSearchButton />
+        <TerminalNotifications />
         <ConnectionDot status={wsStatus} />
         <span className="text-(length:--term-text-xs) text-text-muted tnum hidden lg:inline">{clock}</span>
         <span className="hidden sm:block">
@@ -142,12 +125,15 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
           <button
             type="button"
             aria-label="Open account menu"
-            className="flex h-11 items-center gap-2 px-2.5 transition-colors hover:bg-panel-2 sm:px-3 in-data-[state=open]:bg-panel-2"
+            className="flex h-11 items-center gap-2.5 rounded-md px-2 transition-colors duration-150 hover:bg-panel-2 sm:px-2.5 in-data-[state=open]:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand"
           >
-            <span className="w-7 h-7 rounded-full bg-brand-soft flex items-center justify-center text-brand font-semibold text-xs">
+            <span className="flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-white shadow-sm ring-2 ring-brand/25 transition-transform duration-150 in-data-[state=open]:scale-105">
               {initial}
             </span>
-            <span className="text-xs font-medium max-w-23 sm:max-w-30 truncate">{userName}</span>
+            <span className="hidden min-w-0 text-left sm:block">
+              <span className="block truncate text-xs font-semibold leading-tight">{userName}</span>
+              <span className="block text-(length:--term-text-2xs) tnum leading-tight text-text-faint">{account?.accountNo ?? "—"}</span>
+            </span>
             <svg
               width="12"
               height="12"
@@ -156,35 +142,36 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
               stroke="currentColor"
               strokeWidth="2.5"
               aria-hidden="true"
-              className="text-text-muted transition-transform in-data-[state=open]:rotate-180"
+              className="text-text-muted transition-transform duration-200 in-data-[state=open]:rotate-180"
             >
               <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64 rounded-lg border border-border bg-canvas p-0 text-xs shadow-xl">
-          {/* User header */}
-          <div className="bg-panel-2/50 px-4 py-3">
-            <div className="flex items-center gap-2.5">
-              <span className="w-9 h-9 rounded-full bg-brand-soft flex items-center justify-center text-brand font-semibold">
+        <DropdownMenuContent align="end" className="w-72 rounded-lg border border-border bg-canvas p-0 text-xs shadow-xl">
+          {/* User header — premium avatar treatment */}
+          <div className="bg-panel-2/50 px-4 py-3.5">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-base font-bold text-white shadow-sm ring-2 ring-brand/25">
                 {initial}
               </span>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">{userName}</div>
-                <div className="text-(length:--term-text-2xs) text-text-faint truncate">{session?.user?.email}</div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold">{userName}</div>
+                <div className="truncate text-(length:--term-text-2xs) text-text-faint">{session?.user?.email}</div>
               </div>
-            </div>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="text-(length:--term-text-2xs) text-text-faint uppercase">Account</span>
-              <span className="text-(length:--term-text-2xs) tnum font-medium">{account?.accountNo ?? "—"}</span>
               {session?.user?.role === "admin" && (
-                <span className="ml-auto text-(length:--term-text-2xs) px-1.5 py-0.5 rounded bg-brand-soft text-brand font-semibold uppercase">Admin</span>
+                <span className="shrink-0 rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold uppercase text-brand">Admin</span>
               )}
+            </div>
+            <div className="mt-2.5 flex items-center gap-2 border-t border-border-soft pt-2">
+              <span className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">Account</span>
+              <span className="text-(length:--term-text-2xs) tnum font-medium">{account?.accountNo ?? "—"}</span>
             </div>
           </div>
 
-          {/* Quick actions */}
-          <div className="py-1">
+          {/* Grouped actions */}
+          <div className="p-1.5">
+            <MenuGroupLabel>Money</MenuGroupLabel>
             {depositUiEnabled && (
               <MenuAction
                 icon={<DepositIcon />}
@@ -199,11 +186,16 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
               hint="Request a payout"
               onSelect={() => { setWalletMode("withdraw"); setWalletOpen(true); }}
             />
+
+            <MenuGroupLabel>Account</MenuGroupLabel>
             <MenuLink href="/account" icon={<AccountIcon />} label="My Account" />
             <MenuLink href="/reports" icon={<ReportsIcon />} label="Trade Reports" />
             <MenuLink href="/account?tab=settings" icon={<SettingsIcon />} label="Settings" />
             {session?.user?.role === "admin" && (
-              <MenuLink href="/admin" icon={<AdminIcon />} label="Admin Console" />
+              <>
+                <MenuGroupLabel>Operations</MenuGroupLabel>
+                <MenuLink href="/admin" icon={<AdminIcon />} label="Admin Console" />
+              </>
             )}
           </div>
 
@@ -216,11 +208,11 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
           </div>
 
           {/* Sign out */}
-          <div className="py-1">
+          <div className="p-1.5">
             {session?.user ? (
               <DropdownMenuItem
                 variant="destructive"
-                className="gap-3 rounded-none px-4 py-2 text-xs text-down focus:bg-down/10 focus:text-down"
+                className="gap-3 rounded-md px-3 py-2 text-xs text-down transition-colors duration-150 hover:bg-down/10 focus:bg-down/10 focus:text-down"
                 onSelect={() => { void signOut({ redirect: false }).then(() => { window.location.assign("/login"); }); }}
               >
                 <SignOutIcon />
@@ -272,6 +264,14 @@ function fmtUsd(v: number | null | undefined): string {
 
 // ── Dropdown menu helpers (Radix items with the terminal look) ───────────────
 
+function MenuGroupLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="px-3 pb-1 pt-2.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wider text-text-faint first:pt-1.5">
+      {children}
+    </div>
+  );
+}
+
 function MenuAction({
   icon,
   label,
@@ -285,10 +285,10 @@ function MenuAction({
 }) {
   return (
     <DropdownMenuItem
-      className="gap-3 rounded-none px-4 py-2 text-xs text-text focus:bg-panel-2 focus:text-text"
+      className="group gap-3 rounded-md px-3 py-2 text-xs text-text transition-colors duration-150 hover:bg-panel-2 focus:bg-panel-2 focus:text-text"
       onSelect={onSelect}
     >
-      <span className="text-text-muted">{icon}</span>
+      <span className="text-text-muted transition-colors duration-150 group-hover:text-text">{icon}</span>
       <span className="flex-1">
         <span className="font-medium block">{label}</span>
         {hint && <span className="text-(length:--term-text-2xs) text-text-faint">{hint}</span>}
@@ -299,9 +299,9 @@ function MenuAction({
 
 function MenuLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
   return (
-    <DropdownMenuItem asChild className="gap-3 rounded-none px-4 py-2 text-xs text-text focus:bg-panel-2 focus:text-text">
+    <DropdownMenuItem asChild className="group gap-3 rounded-md px-3 py-2 text-xs text-text transition-colors duration-150 hover:bg-panel-2 focus:bg-panel-2 focus:text-text">
       <Link href={href}>
-        <span className="text-text-muted">{icon}</span>
+        <span className="text-text-muted transition-colors duration-150 group-hover:text-text">{icon}</span>
         <span className="font-medium">{label}</span>
       </Link>
     </DropdownMenuItem>
@@ -313,10 +313,10 @@ function MenuLink({ href, icon, label }: { href: string; icon: React.ReactNode; 
 const ic = "w-3.5 h-3.5";
 
 function DepositIcon() {
-  return <Plus size={14} strokeWidth={2} aria-hidden className={ic} />;
+  return <ArrowDownToLine size={14} strokeWidth={2} aria-hidden className={ic} />;
 }
 function WithdrawIcon() {
-  return <Minus size={14} strokeWidth={2} aria-hidden className={ic} />;
+  return <ArrowUpFromLine size={14} strokeWidth={2} aria-hidden className={ic} />;
 }
 function AccountIcon() {
   return <User size={14} strokeWidth={2} aria-hidden className={ic} />;

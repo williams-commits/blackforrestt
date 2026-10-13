@@ -85,8 +85,8 @@ function MobileTabBarInner() {
       href={item.href}
       aria-current={item.active ? "page" : undefined}
       className={cn(
-        "flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-(length:--term-text-2xs) font-medium transition-colors focus-visible:outline-2 focus-visible:outline-brand",
-        item.active ? "text-brand" : "text-text-muted hover:text-text",
+        "mx-1 flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-(length:--term-text-2xs) font-medium transition-all duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-brand",
+        item.active ? "bg-brand-soft text-brand m-0.5" : "text-text-muted hover:text-text",
       )}
     >
       <item.Icon size={20} strokeWidth={2} aria-hidden />

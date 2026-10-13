@@ -349,8 +349,8 @@ export function AccountShell(props: Props) {
                     type="button"
                     onClick={() => onSelect(key)}
                     aria-current={active ? "true" : undefined}
-                    className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
-                      active ? "bg-brand-soft font-semibold text-text" : "text-text-muted hover:bg-panel-2 hover:text-text"
+                    className={`group flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-all duration-150 focus-visible:outline-2 focus-visible:outline-brand ${
+                      active ? "bg-brand-soft font-semibold text-text" : "text-text-muted hover:bg-panel-2 hover:text-text hover:translate-x-0.5"
                     }`}
                   >
                     {icon ? <TabIcon icon={icon} /> : null}

@@ -47,7 +47,8 @@ import {
 
 interface Props {
   instrument: InstrumentView;
-  onOpenAssets?: () => void;
+  /** Opens the instrument switcher slide-out (the identity button). */
+  onSwitchInstrument?: () => void;
 }
 
 type ChartType = "candles" | "line";
@@ -105,7 +106,7 @@ function volumeColors(dim: boolean) {
 }
 
 /** Professional responsive chart with persistent timeframe and trading controls. */
-export function ChartPanel({ instrument, onOpenAssets }: Props) {
+export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -730,12 +731,36 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
     >
       <div className="flex shrink-0 flex-col bg-panel-2 sm:flex-row sm:items-center">
         <div className="flex min-w-0 flex-wrap items-center gap-2 px-3 py-2 sm:py-0">
-          <InstrumentIcon symbol={instrument.symbol} size={20} />
-          <span className="text-sm font-bold tracking-tight">{instrument.symbol}</span>
-          <span className="text-(length:--term-text-2xs) font-medium text-text-faint">{instrument.name}</span>
-          <span className="rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium uppercase text-brand">
-            {instrument.category}
-          </span>
+          {/* Instrument identity IS the asset selector — tap to slide out the
+              switcher. */}
+          {onSwitchInstrument ? (
+            <button
+              type="button"
+              onClick={onSwitchInstrument}
+              aria-haspopup="dialog"
+              title="Switch instrument"
+              className="flex min-w-0 items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand"
+            >
+              <InstrumentIcon symbol={instrument.symbol} size={20} />
+              <span className="text-sm font-bold tracking-tight">{instrument.symbol}</span>
+              <span className="hidden min-w-0 truncate text-(length:--term-text-2xs) font-medium text-text-faint sm:inline">{instrument.name}</span>
+              <span className="rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium uppercase text-brand">
+                {instrument.category}
+              </span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true" className="shrink-0 text-text-faint">
+                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          ) : (
+            <>
+              <InstrumentIcon symbol={instrument.symbol} size={20} />
+              <span className="text-sm font-bold tracking-tight">{instrument.symbol}</span>
+              <span className="text-(length:--term-text-2xs) font-medium text-text-faint">{instrument.name}</span>
+              <span className="rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium uppercase text-brand">
+                {instrument.category}
+              </span>
+            </>
+          )}
           {/* Live price + session change — the TradingView-style anchor the eye
               goes to first. Color follows the live tick direction. */}
           {latestOhlc && (
@@ -750,16 +775,6 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
               )}
             </span>
           )}
-          {onOpenAssets ? (
-            <button
-              type="button"
-              onClick={onOpenAssets}
-              className="flex items-center gap-1.5 rounded px-1.5 py-1 text-(length:--term-text-2xs) text-text-muted transition-colors hover:bg-panel-3 hover:text-text"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg> 
-              <span className="text-(length:--term-text-2xs) font-semibold">Asset</span>
-            </button>
-          ) : null}
           {ohlc ? (
             <div className="hidden min-w-0 items-center gap-2 text-(length:--term-text-2xs) tnum md:flex">
               <OhlcField label="O" value={ohlc.open} up={ohlc.up} digits={instrument.digits} />

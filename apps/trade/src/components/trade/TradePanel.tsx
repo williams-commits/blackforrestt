@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/Input";
 
 interface Props {
   instrument: InstrumentView;
+  /** Opens the instrument switcher slide-out (the ticket's selector button). */
+  onSwitchInstrument?: () => void;
 }
 
 /**
@@ -27,9 +29,23 @@ interface Props {
  * Shows live bid/ask, volume with quick-select, margin/commission preview,
  * and prominent Sell/Buy buttons with the dealing rate.
  */
-export function TradePanel({ instrument }: Props) {
+export function TradePanel({ instrument, onSwitchInstrument }: Props) {
   const [type, setType] = useState<"CFD" | "STRIKE">("CFD");
   const [volume, setVolume] = useState("0.10");
+  // Quick order entry: remember the last-used size across visits so a
+  // returning trader is one tap away from a familiar ticket.
+  useEffect(() => {
+    const saved = window.localStorage.getItem("blckforest:quick-volume");
+    if (saved) setVolume(saved);
+  }, []);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("blckforest:quick-volume", volume);
+    } catch { /* storage unavailable */ }
+  }, [volume]);
+  // Armed side: tapping a live rate card focuses that side of the ticket —
+  // the matching submit button is emphasized. Arming never submits.
+  const [armed, setArmed] = useState<"BUY" | "SELL" | null>(null);
   const [strikeRate, setStrikeRate] = useState("");
   const [expiryMinutes, setExpiryMinutes] = useState("5");
   const [stopLoss, setStopLoss] = useState("");
@@ -158,20 +174,44 @@ export function TradePanel({ instrument }: Props) {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      {/* ── Instrument header ──────────────────────────────────────────────── */}
-      <div className="bg-panel-2/60 px-4 pt-4 pb-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <InstrumentIcon symbol={instrument.symbol} size={24} />
-              <h2 className="text-base font-bold tracking-tight">{instrument.symbol}</h2>
-              <span className="text-(length:--term-text-2xs) font-semibold uppercase px-1.5 py-0.5 rounded bg-brand-soft text-brand">
-                {instrument.category}
+      {/* ── Instrument header — the ticket's asset selector ──────────────── */}
+      <div className="bg-panel-2/60 px-3 pt-3 pb-3">
+        {onSwitchInstrument ? (
+          <button
+            type="button"
+            onClick={onSwitchInstrument}
+            aria-haspopup="dialog"
+            title="Switch instrument"
+            className="flex w-full items-center gap-2 rounded-lg bg-canvas px-3 py-2.5 text-left transition-colors hover:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand"
+          >
+            <InstrumentIcon symbol={instrument.symbol} size={24} />
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-2">
+                <span className="text-base font-bold tracking-tight">{instrument.symbol}</span>
+                <span className="text-(length:--term-text-2xs) font-semibold uppercase px-1.5 py-0.5 rounded bg-brand-soft text-brand">
+                  {instrument.category}
+                </span>
               </span>
+              <span className="block truncate text-(length:--term-text-2xs) text-text-faint">{instrument.name}</span>
+            </span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true" className="shrink-0 text-text-faint">
+              <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        ) : (
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <InstrumentIcon symbol={instrument.symbol} size={24} />
+                <h2 className="text-base font-bold tracking-tight">{instrument.symbol}</h2>
+                <span className="text-(length:--term-text-2xs) font-semibold uppercase px-1.5 py-0.5 rounded bg-brand-soft text-brand">
+                  {instrument.category}
+                </span>
+              </div>
+              <p className="text-(length:--term-text-2xs) text-text-faint mt-0.5">{instrument.name}</p>
             </div>
-            <p className="text-(length:--term-text-2xs) text-text-faint mt-0.5">{instrument.name}</p>
           </div>
-        </div>
+        )}
 
         {/* Trade type toggle — Radix Tabs (segmented): roving focus, arrow keys. */}
         <Tabs
@@ -188,23 +228,37 @@ export function TradePanel({ instrument }: Props) {
         />
       </div>
 
-      {/* ── Bid / Ask ──────────────────────────────────────────────────────── */}
+      {/* ── Bid / Ask — quick entry: tap a side to arm it ────────────────── */}
       <div className="px-4 py-3">
         <div className="grid grid-cols-2 gap-2">
           {/* Sell / Bid */}
-          <div className="flex flex-col items-center justify-center bg-down/10 rounded-lg py-2.5">
-            <span className="text-(length:--term-text-2xs) font-semibold uppercase text-down tracking-wide">Sell</span>
+          <button
+            type="button"
+            aria-pressed={armed === "SELL"}
+            onClick={() => setArmed((current) => (current === "SELL" ? null : "SELL"))}
+            className={`flex flex-col items-center justify-center rounded-lg bg-down/10 py-2.5 transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
+              armed === "SELL" ? "ring-2 ring-down" : "hover:bg-down/15"
+            }`}
+          >
+            <span className="text-(length:--term-text-2xs) font-semibold uppercase text-down tracking-wide">Sell{armed === "SELL" ? " · armed" : ""}</span>
             <span className="text-lg font-bold tnum text-down leading-tight mt-0.5">
               {fmtPrice(bid, instrument.digits)}
             </span>
-          </div>
+          </button>
           {/* Buy / Ask */}
-          <div className="flex flex-col items-center justify-center bg-up/10 rounded-lg py-2.5">
-            <span className="text-(length:--term-text-2xs) font-semibold uppercase text-up tracking-wide">Buy</span>
+          <button
+            type="button"
+            aria-pressed={armed === "BUY"}
+            onClick={() => setArmed((current) => (current === "BUY" ? null : "BUY"))}
+            className={`flex flex-col items-center justify-center rounded-lg bg-up/10 py-2.5 transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
+              armed === "BUY" ? "ring-2 ring-up" : "hover:bg-up/15"
+            }`}
+          >
+            <span className="text-(length:--term-text-2xs) font-semibold uppercase text-up tracking-wide">Buy{armed === "BUY" ? " · armed" : ""}</span>
             <span className="text-lg font-bold tnum text-up leading-tight mt-0.5">
               {fmtPrice(ask, instrument.digits)}
             </span>
-          </div>
+          </button>
         </div>
         <div className="flex items-center justify-center gap-3 mt-2 text-(length:--term-text-2xs) text-text-faint">
           <span>Spread <span className="tnum text-text-muted font-medium">{fmtPrice(spread, instrument.digits)}</span></span>
@@ -367,13 +421,13 @@ export function TradePanel({ instrument }: Props) {
               (especially in the mobile bottom sheet). ──────────────────── */}
       <div className="sticky bottom-0 z-10 mt-auto bg-canvas shadow-lift px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="sell" size="md" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting sell order" onClick={() => submit("SELL")} className="h-16 rounded-lg">
+          <Button variant="sell" size="md" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting sell order" onClick={() => submit("SELL")} className={`h-16 rounded-lg ${armed === "SELL" ? "ring-2 ring-down ring-offset-2 ring-offset-canvas" : ""}`}>
             <span className="flex flex-col items-center leading-tight">
               <span className="text-sm font-bold uppercase tracking-wide">Sell</span>
               <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{fmtPrice(bid, instrument.digits)}</span>
             </span>
           </Button>
-          <Button variant="buy" size="md" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting buy order" onClick={() => submit("BUY")} className="h-16 rounded-lg">
+          <Button variant="buy" size="md" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting buy order" onClick={() => submit("BUY")} className={`h-16 rounded-lg ${armed === "BUY" ? "ring-2 ring-up ring-offset-2 ring-offset-canvas" : ""}`}>
             <span className="flex flex-col items-center leading-tight">
               <span className="text-sm font-bold uppercase tracking-wide">Buy</span>
               <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{fmtPrice(ask, instrument.digits)}</span>
@@ -381,7 +435,7 @@ export function TradePanel({ instrument }: Props) {
           </Button>
         </div>
         <p className="text-center text-(length:--term-text-2xs) text-text-faint mt-2">
-          {!hasFreshQuote ? "Orders disabled — waiting for a fresh quote" : type === "CFD" ? "CFD market order — accepted at the displayed executable rate" : `Strike order — settles in ${expiryMinutes} min`}
+          {!hasFreshQuote ? "Orders disabled — waiting for a fresh quote" : armed ? `${armed === "BUY" ? "Buy" : "Sell"} armed — confirm with the highlighted button` : type === "CFD" ? "CFD market order — accepted at the displayed executable rate" : `Strike order — settles in ${expiryMinutes} min`}
         </p>
       </div>
     </div>

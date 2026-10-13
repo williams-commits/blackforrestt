@@ -2,6 +2,12 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* `dark:` utilities follow the app theme toggle (.dim on <html>) — not the
+   OS color-scheme preference, and not CRM's data-theme selector. Registry
+   primitives ship dark: utilities by default; without this binding they
+   would silently reskin off the toggle. */
+@custom-variant dark (&:is(html.dim, html.dim *));
+
 /*
   blckforest design tokens — light forex broker theme.
   White canvas, layered pale panels, hairline borders, orange brand accent.
@@ -75,6 +81,11 @@
   --accent: var(--color-panel-3);
   --accent-foreground: var(--color-text);
   --destructive: var(--color-down);
+  /* market-ink is the shared readable-on-bright-fill foreground (white on
+     the deep light-mode red #e03131 ≈ 4.5:1; dark ink on the brighter dim
+     red #f15b5b ≈ 5.7:1) — destructive fills share the down hue, so they
+     share its ink. */
+  --destructive-foreground: var(--color-market-ink);
   --border: var(--color-border);
   --input: var(--color-border);
   --ring: var(--color-brand);
@@ -96,6 +107,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-popover: var(--popover);
@@ -358,7 +370,7 @@ button[type="button"], button{
   transform: translateY(-200%);
   border-radius: 0.375rem;
   background: var(--color-brand);
-  color: white;
+  color: var(--color-brand-ink);
   padding: 0.625rem 0.875rem;
   font-weight: 600;
 }

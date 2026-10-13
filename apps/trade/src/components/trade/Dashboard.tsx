@@ -9,6 +9,7 @@ import type { CandleInterval, InstrumentView } from "@/lib/types";
 import { AccountBar } from "./AccountBar";
 import { ChartPanel } from "./ChartPanel";
 import { TradePanel } from "./TradePanel";
+import { MarketMarkers } from "./MarketMarkers";
 import { PositionsTable } from "./PositionsTable";
 import { InstrumentSelector } from "./InstrumentSelector";
 import { AssetModal } from "./AssetModal";
@@ -164,9 +165,13 @@ export function Dashboard({
           <ChartPanel instrument={instrument} onOpenAssets={() => setAssetModalOpen(true)} />
         </main>
 
-        {/* Order panel — hidden on phones (FAB opens bottom sheet), inline from md up */}
-        <aside className="hidden min-h-0 bg-panel md:block">
-          <TradePanel instrument={instrument} />
+        {/* Order column — live market context above the ticket; hidden on
+            phones (the sheet keeps the ticket focused), inline from md up */}
+        <aside className="hidden min-h-0 flex-col bg-panel md:flex">
+          <MarketMarkers instrument={instrument} />
+          <div className="min-h-0 flex-1">
+            <TradePanel instrument={instrument} />
+          </div>
         </aside>
       </div>
 

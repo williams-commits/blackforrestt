@@ -38,3 +38,4 @@ src/domains/.staging-*/
 .turbo/
 apps/web/.env
 apps/trade/.env
+fixes

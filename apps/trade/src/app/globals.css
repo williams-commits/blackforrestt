@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 /*
   blckforest design tokens — light forex broker theme.
@@ -14,7 +15,7 @@
   --color-border: #d5dbe3;
   --color-border-soft: #e7ebef;
 
-  --color-up: #2b8a3e;
+  --color-up: #267b38;
   --color-down: #e03131;
   --color-brand: #fd7e14;
   --color-brand-soft: #ffe8cc;
@@ -47,6 +48,11 @@
 
 :root {
   color-scheme: light;
+  /* Keep semantic text and filled controls on accessible foreground tokens. */
+  --color-brand-strong: #ad4a00;
+  --color-brand-ink: #17202a;
+  --color-market-ink: #ffffff;
+  --primary-foreground: var(--color-brand-ink);
 }
 
 /* ── shadcn token bridge ─────────────────────────────────────────────────────
@@ -61,7 +67,7 @@
   --background: var(--color-canvas);
   --foreground: var(--color-text);
   --primary: var(--color-brand);
-  --primary-foreground: #ffffff;
+  --primary-foreground: var(--color-brand-ink);
   --secondary: var(--color-panel-2);
   --secondary-foreground: var(--color-text);
   --muted: var(--color-panel-2);
@@ -122,6 +128,9 @@ html.dim {
   --color-up: #4cba6a;
   --color-down: #f15b5b;
   --color-brand: #fd9444;
+  --color-brand-strong: #fd9444;
+  --color-brand-ink: #0e1116;
+  --color-market-ink: #0e1116;
   --color-brand-soft: #3a2410;
   --color-text: #e6edf3;
   --color-text-muted: #9aa7b4;
@@ -472,4 +481,19 @@ html.dim .terminal-ui {
   .trade-workspace {
     zoom: 1.25;
   }
+}
+
+/* Accessible foregrounds for saturated trading actions. The bright brand
+   hue remains for filled surfaces, while smaller text uses a deeper tone in
+   light mode. Market buy/sell controls switch to dark ink on bright dim-mode
+   fills so their labels remain readable rather than relying on color alone. */
+.text-brand {
+  color: var(--color-brand-strong);
+}
+.bg-brand.text-white {
+  color: var(--color-brand-ink);
+}
+.bg-up.text-white,
+.bg-down.text-white {
+  color: var(--color-market-ink);
 }

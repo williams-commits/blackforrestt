@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 /** Product typeface (shadcn nova preset) — variable-loaded so tokens can
  * reference it. Falls back to the system stack when unavailable. */
-const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 
 const branding = crmBranding();
 

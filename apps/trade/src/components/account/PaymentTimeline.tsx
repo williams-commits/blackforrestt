@@ -210,7 +210,7 @@ export function PaymentTimeline() {
       {loading ? (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="space-y-2 rounded-lg border border-border bg-canvas p-4">
+            <div key={i} className="space-y-2 p-4">
               <Skeleton className="h-4 w-48" />
               <Skeleton className="h-3 w-64" />
               <Skeleton className="h-8 w-32" />
@@ -220,7 +220,7 @@ export function PaymentTimeline() {
       ) : (
         <>
           {filtered.length === 0 && (
-            <p className="rounded border border-border bg-canvas px-4 py-10 text-center text-xs text-text-muted">
+            <p className="px-4 py-10 text-center">
               No {typeFilter === "ALL" ? "payment requests" : typeFilter === "DEPOSIT" ? "deposits" : "withdrawals"} yet.
             </p>
           )}
@@ -235,7 +235,7 @@ export function PaymentTimeline() {
               const canUploadSupport = request.status === "PENDING"
                 && (proofRequired || request.type === "WITHDRAWAL" || (request.type === "DEPOSIT" && request.method === "CARD"));
               return (
-                <li key={request.id} className="rounded-lg border border-border bg-canvas p-4">
+                <li key={request.id} className="p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium">{request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} · {request.asset} {request.amount}</p>
@@ -261,7 +261,7 @@ export function PaymentTimeline() {
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {canUploadSupport && (
-                      <label className="inline-flex cursor-pointer items-center rounded border border-border px-3 py-1.5 text-xs text-brand hover:bg-panel-2">
+                      <label className="inline-flex cursor-pointer items-center text-brand hover:bg-panel-2">
                         <input type="file" accept="image/jpeg,image/png,application/pdf" className="sr-only" disabled={busy === request.id} onChange={(event) => {
                           const file = event.currentTarget.files?.[0];
                           if (file) void upload(request.id, file);

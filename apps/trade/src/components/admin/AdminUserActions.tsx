@@ -7,6 +7,7 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Ellipsis } from "lucide-react";
 import { ADMIN_ACTION_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
 import { fmtDateTime } from "@/lib/dates";
+import { Input } from "@/components/ui/Input";
 
 export interface ManagedUserRow {
   id: string;
@@ -302,7 +303,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           aria-expanded={menuOpen}
           aria-label={`Actions for ${user.name ?? user.email ?? user.id}`}
           onClick={() => (menuOpen ? setMenuOpen(false) : openMenu())}
-          className="flex h-6 w-7 items-center justify-center rounded border border-border text-text-muted hover:bg-panel-2 hover:text-text"
+          className="flex h-6 w-7 items-center justify-center hover:bg-panel-2 hover:text-text"
         >
           <TabIcon icon={Ellipsis} size={16} />
         </button>
@@ -314,7 +315,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           role="menu"
           aria-label={`Actions for ${user.name ?? user.email ?? user.id}`}
           onKeyDown={handleMenuKeyDown}
-          className="fixed z-9999 w-48 overflow-hidden overflow-y-auto rounded-lg border border-border bg-canvas py-1 shadow-xl"
+          className="fixed z-9999 w-48 overflow-hidden overflow-y-auto shadow-xl"
           style={{ top: menuPos.top, right: menuPos.right, maxHeight: menuMaxHeight ?? undefined }}
         >
           <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "notify" }); }} label="Notify" hint="Send an in-app notification" icon={<TabIcon icon={ADMIN_ACTION_ICONS.notify} />} />
@@ -327,14 +328,14 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           )}
           {onProposeRole && (
             <>
-              <div className="my-1 border-t border-border" />
+              <div className="my-1 border-t" />
               <MenuItemRow onSelect={() => { setMenuOpen(false); onProposeRole(user, "ASSIGN_ROLE"); }} label="Grant admin role" hint="Maker-checker approval" icon={<TabIcon icon={ADMIN_ACTION_ICONS.grantRole} />} />
               <MenuItemRow onSelect={() => { setMenuOpen(false); onProposeRole(user, "REVOKE_ROLE"); }} label="Revoke admin role" hint="Maker-checker approval" icon={<TabIcon icon={ADMIN_ACTION_ICONS.revokeRole} />} />
             </>
           )}
           {canManage && !user.isAdmin && (
             <>
-              <div className="my-1 border-t border-border" />
+              <div className="my-1 border-t" />
               <MenuItemRow
                 onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setResetResult(null); setResetMode("temporary"); setDialog({ kind: "resetPassword" }); }}
                 label="Reset password"
@@ -347,18 +348,18 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 hint="Revokes all active sessions"
                 icon={<TabIcon icon={ADMIN_ACTION_ICONS.forceSignOut} />}
               />
-              <div className="my-1 border-t border-border" />
+              <div className="my-1 border-t" />
               <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: statusAction }); }} label={STATUS_LABELS[statusAction].verb} tone={STATUS_LABELS[statusAction].tone} icon={<TabIcon icon={STATUS_ACTION_ICONS[statusAction]} />} />
               {secondaryAction && (
                 <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: secondaryAction }); }} label={STATUS_LABELS[secondaryAction].verb} tone="text-down" icon={<TabIcon icon={STATUS_ACTION_ICONS[secondaryAction]} />} />
               )}
               {deleteAction && (
                 <>
-                  <div className="my-1 border-t border-border" />
+                  <div className="my-1 border-t" />
                   <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: deleteAction }); }} label={STATUS_LABELS[deleteAction].verb} tone="text-down" hint="Soft-delete; restorable" icon={<TabIcon icon={STATUS_ACTION_ICONS[deleteAction]} />} />
               {state === "deleted" && (
                 <>
-                  <div className="my-1 border-t border-border" />
+                  <div className="my-1 border-t" />
                   <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "hardDelete" }); }} label="Delete permanently" tone="text-down" hint="Purges all records; irreversible" icon={<TabIcon icon={ADMIN_ACTION_ICONS.hardDelete} />} />
                 </>
               )}
@@ -406,8 +407,8 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <code className="min-w-0 flex-1 rounded border border-border bg-panel px-3 py-2.5 text-center font-mono text-xl font-bold tracking-widest">{resetResult.temporaryPassword}</code>
-                    <button type="button" onClick={() => void copyValue(resetResult.temporaryPassword)} className="shrink-0 rounded border border-border px-3 py-2.5 text-xs hover:bg-panel-2">
+                    <code className="min-w-0 flex-1 py-2.5 text-center font-mono text-xl font-bold tracking-widest">{resetResult.temporaryPassword}</code>
+                    <button type="button" onClick={() => void copyValue(resetResult.temporaryPassword)} className="shrink-0 py-2.5 hover:bg-panel-2">
                       {copiedValue ? "✓ Copied" : "Copy"}
                     </button>
                   </div>
@@ -436,13 +437,13 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                   <div className="space-y-2">
                     <label className="block text-xs font-medium">Single-use reset link</label>
                     <div className="flex gap-2">
-                      <input
+                      <Input
                         readOnly
                         value={resetResult.previewUrl}
                         onClick={(e) => (e.target as HTMLInputElement).select()}
-                        className="h-9 min-w-0 flex-1 rounded border border-border bg-panel px-2 font-mono text-(length:--term-text-xs) outline-none"
+                        className="min-w-0 flex-1 font-mono text-(length:--term-text-xs)"
                       />
-                      <button type="button" onClick={() => void copyValue(resetResult.previewUrl!)} className="shrink-0 rounded border border-border px-3 text-xs hover:bg-panel-2">
+                      <button type="button" onClick={() => void copyValue(resetResult.previewUrl!)} className="shrink-0 hover:bg-panel-2">
                         {copiedValue ? "✓ Copied" : "Copy"}
                       </button>
                     </div>
@@ -452,7 +453,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
               </>
             )}
             <div className="flex justify-end">
-              <button type="button" onClick={() => { setDialog(null); setError(null); setResetResult(null); }} className="rounded border border-border px-3 py-2 text-xs hover:bg-panel-2">Close</button>
+              <button type="button" onClick={() => { setDialog(null); setError(null); setResetResult(null); }} className="hover:bg-panel-2">Close</button>
             </div>
           </div>
         ) : (
@@ -472,11 +473,11 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
             <>
               <div>
                 <label className="mb-1 block text-xs font-medium" htmlFor="notify-title">Title</label>
-                <input id="notify-title" required minLength={3} maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand" />
+                <Input id="notify-title" required minLength={3} maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium" htmlFor="notify-body">Message</label>
-                <textarea id="notify-body" required minLength={3} maxLength={2000} rows={5} value={body} onChange={(e) => setBody(e.target.value)} className="w-full rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand" />
+                <textarea id="notify-body" required minLength={3} maxLength={2000} rows={5} value={body} onChange={(e) => setBody(e.target.value)} />
               </div>
             </>
           ) : dialog?.kind === "hardDelete" ? (
@@ -491,7 +492,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="GDPR erasure request, fraud cleanup, or compliance reference…"
-                className="w-full rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand resize-none"
+                className="resize-none"
               />
               <p className="mt-2 text-(length:--term-text-xs) text-down">
                 This cannot be undone. The account, positions, transactions, documents, and chat history are
@@ -543,7 +544,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           ) : (
             <div>
               <label className="mb-1 block text-xs font-medium" htmlFor="status-note">Note (optional, shown to the user in-app)</label>
-              <textarea id="status-note" maxLength={500} rows={4} value={note} onChange={(e) => setNote(e.target.value)} className="w-full rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand" />
+              <textarea id="status-note" maxLength={500} rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
               {(user.suspendedAt || user.blockedAt || user.deletedAt) && (
                 <p className="mt-2 text-(length:--term-text-2xs) text-text-faint">
                   Since: {fmtDateTime(user.suspendedAt ?? user.blockedAt ?? user.deletedAt!)}
@@ -572,7 +573,7 @@ function MenuItemRow({ onSelect, label, hint, tone = "text-text", icon }: { onSe
       role="menuitem"
       tabIndex={-1}
       onClick={onSelect}
-      className="flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs transition-colors hover:bg-panel-2 focus:bg-panel-2 focus:outline-none"
+      className="flex items-center gap-3 text-left transition-colors hover:bg-panel-2 focus:bg-panel-2 focus:outline-none"
     >
       {icon}
       <span className={`min-w-0 flex-1 ${tone}`}>

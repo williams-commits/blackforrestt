@@ -11,6 +11,7 @@ import {
   kycDocumentLabel,
   type KycDocumentType,
 } from "@/lib/kyc";
+import { NativeSelect } from "@/components/ui/NativeSelect";
 
 interface DocumentView {
   id: string;
@@ -149,7 +150,7 @@ export function KycDocuments() {
   }
 
   return (
-    <section className="space-y-4 rounded-lg border border-border bg-canvas p-4 sm:p-6">
+    <section className="space-y-4 p-4 sm:p-6">
       <div>
         <h3 className="text-sm font-medium">Identity and proof-of-address documents</h3>
         <p className="mt-1 text-(length:--term-text-xs) text-text-faint">
@@ -160,11 +161,11 @@ export function KycDocuments() {
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] sm:items-end">
         <div>
           <label htmlFor={selectId} className="mb-1.5 block text-(length:--term-text-xs) font-medium text-text-muted">Document type</label>
-          <select
+          <NativeSelect
             id={selectId}
             value={selectedType}
             onChange={(event) => setSelectedType(event.target.value as KycDocumentType)}
-            className="h-11 w-full rounded border border-border bg-canvas px-2 text-sm outline-none transition-colors hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+            className="h-11 transition-colors hover:border-text-faint focus-visible:ring-2 focus-visible:ring-brand/20"
           >
             <optgroup label="Identity">
               {IDENTITY_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
@@ -172,7 +173,7 @@ export function KycDocuments() {
             <optgroup label="Proof of address">
               {ADDRESS_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </optgroup>
-          </select>
+          </NativeSelect>
         </div>
         <div>
           <label htmlFor={fileId} className="mb-1.5 block text-(length:--term-text-xs) font-medium text-text-muted">File</label>
@@ -181,7 +182,7 @@ export function KycDocuments() {
             type="file"
             accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
             onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-            className="block h-11 w-full rounded border border-border bg-canvas px-2 py-1.5 text-xs transition-colors hover:border-text-faint file:mr-3 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-1 file:text-xs file:text-text-muted"
+            className="block h-11 transition-colors hover:border-text-faint file:mr-3 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-1 file:text-xs file:text-text-muted"
           />
         </div>
         <Button type="button" variant="brand" loading={loading} loadingLabel="Uploading" onClick={() => void upload()} className="h-10">
@@ -195,7 +196,7 @@ export function KycDocuments() {
         {KYC_DOCUMENT_TYPES.map((type) => {
           const latest = latestByType.get(type.value);
           return (
-            <article key={type.value} className="flex min-w-0 items-center justify-between gap-3 rounded border border-border-soft p-3">
+            <article key={type.value} className="flex min-w-0 items-center justify-between gap-3 border-border-soft p-3">
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">{type.label}</div>
                 <div className="truncate text-(length:--term-text-xs) text-text-faint">

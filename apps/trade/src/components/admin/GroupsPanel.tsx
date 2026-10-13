@@ -5,6 +5,8 @@ import { SettingsForm, type UserSettingsConfig } from "./SettingsForm";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/lib/toast";
+import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Input } from "@/components/ui/Input";
 
 interface Group {
   id: string;
@@ -97,7 +99,7 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
       {loading ? (
         <div className="space-y-2.5" role="status" aria-label="Loading groups">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="rounded-xl border border-border bg-canvas p-4">
+            <div key={i} className="rounded-xl p-4">
               <div className="flex items-center gap-3">
                 <Skeleton className="h-5 w-5 rounded-full" />
                 <div className="flex-1 space-y-1.5">
@@ -110,7 +112,7 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
           ))}
         </div>
       ) : groups.length === 0 ? (
-        <div className="rounded-xl border border-border bg-panel p-8 text-center">
+        <div className="rounded-xl p-8 text-center">
           <p className="text-sm text-text-muted">No groups yet. Create one to start managing users in bulk.</p>
         </div>
       ) : (
@@ -120,7 +122,7 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
             const tags = getSettingsSummary(g.settings);
             const hasSettings = Object.keys(g.settings).length > 0;
             return (
-              <div key={g.id} className="rounded-xl border border-border bg-canvas overflow-hidden">
+              <div key={g.id} className="rounded-xl overflow-hidden">
                 {/* Collapsible header row */}
                 <div className="flex items-center gap-3 p-4">
                   <button
@@ -271,12 +273,12 @@ function GroupMemberPreview({ groupId }: { groupId: string }) {
       </div>
       <div className="flex flex-wrap gap-1.5">
         {members.slice(0, 8).map((m, i) => (
-          <span key={i} className="rounded-full bg-panel-2 border border-border px-2 py-0.5 text-(length:--term-text-2xs) text-text-muted">
+          <span key={i} className="rounded-full py-0.5 text-(length:--term-text-2xs)">
             {m.user.name ?? m.user.email ?? "Unknown"}
           </span>
         ))}
         {members.length > 8 && (
-          <span className="rounded-full bg-panel-2 border border-border px-2 py-0.5 text-(length:--term-text-2xs) text-text-faint">
+          <span className="rounded-full py-0.5 text-(length:--term-text-2xs) text-text-faint">
             +{members.length - 8} more
           </span>
         )}
@@ -331,30 +333,30 @@ function EditGroupButton({ group, onSaved }: { group: Group; onSaved: () => void
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-md rounded-xl border border-border bg-canvas p-6 shadow-card" onClick={(e) => e.stopPropagation()}>
+          <div className="max-w-md rounded-xl p-6 shadow-card" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-base font-bold mb-4">Edit Group</h3>
             {err && <div className="mb-3 rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{err}</div>}
             <div className="space-y-3">
               <div>
                 <label className="block text-xs text-text-muted mb-1">Name</label>
-                <input value={name} onChange={(e) => setName(e.target.value)}
-                  className="w-full h-10 rounded-lg border border-border bg-canvas px-3 text-sm outline-none focus:border-brand" />
+                <Input value={name} onChange={(e) => setName(e.target.value)}
+                  className="h-10" />
               </div>
               <div>
                 <label className="block text-xs text-text-muted mb-1">Description</label>
-                <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Optional"
-                  className="w-full h-10 rounded-lg border border-border bg-canvas px-3 text-sm outline-none focus:border-brand" />
+                <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Optional"
+                  className="h-10" />
               </div>
               <div>
                 <label className="block text-xs text-text-muted mb-1">Color</label>
                 <div className="flex items-center gap-2">
-                  <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-9 w-12 rounded border border-border" />
+                  <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-12" />
                   <span className="text-xs text-text-muted font-mono">{color}</span>
                 </div>
               </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setOpen(false)} className="rounded-lg border border-border px-4 py-2 text-xs font-medium text-text-muted hover:text-text">Cancel</button>
+              <button onClick={() => setOpen(false)} className="px-4 font-medium hover:text-text">Cancel</button>
               <button onClick={() => void submit()} disabled={saving || name.length < 2}
                 className="rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50 transition">
                 {saving ? "Saving…" : "Save"}
@@ -430,21 +432,21 @@ function AddMemberButton({ groupId, onAdded, existingIds }: { groupId: string; o
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-md rounded-xl border border-border bg-canvas p-6 shadow-card" onClick={(e) => e.stopPropagation()}>
+          <div className="max-w-md rounded-xl p-6 shadow-card" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-base font-bold mb-4">Add Member</h3>
             {err && <div className="mb-3 rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{err}</div>}
             <div className="flex gap-2 mb-3">
-              <input
+              <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search by name, email, or account no…"
-                className="flex-1 h-9 rounded-lg border border-border bg-canvas px-3 text-sm outline-none focus:border-brand"
+                className="flex-1"
                 autoFocus
               />
-              <button onClick={() => void search(query)} className="rounded-lg bg-panel-2 border border-border px-3 text-xs font-medium hover:bg-panel-3">Search</button>
+              <button onClick={() => void search(query)} className="font-medium hover:bg-panel-3">Search</button>
             </div>
 
-            <div className="max-h-64 overflow-y-auto rounded-lg border border-border-soft">
+            <div className="max-h-64 overflow-y-auto border-border-soft">
               {searching && <p className="p-3 text-xs text-text-muted">Searching…</p>}
               {!searching && results.length === 0 && query.length >= 2 && (
                 <p className="p-3 text-xs text-text-muted">No users found.</p>
@@ -455,7 +457,7 @@ function AddMemberButton({ groupId, onAdded, existingIds }: { groupId: string; o
               {results.map((u) => {
                 const already = existingIds.includes(u.id);
                 return (
-                  <div key={u.id} className="flex items-center justify-between border-b border-border-soft px-3 py-2 last:border-0">
+                  <div key={u.id} className="flex items-center justify-between border-b border-border-soft last:border-0">
                     <div className="min-w-0">
                       <div className="text-xs font-medium truncate">{u.name ?? "Unknown"}</div>
                       <div className="text-(length:--term-text-2xs) text-text-faint truncate">{u.email} · {u.accountNo ?? "—"}</div>
@@ -475,7 +477,7 @@ function AddMemberButton({ groupId, onAdded, existingIds }: { groupId: string; o
             </div>
 
             <div className="mt-4 flex justify-end">
-              <button onClick={() => setOpen(false)} className="rounded-lg border border-border px-4 py-2 text-xs font-medium text-text-muted hover:text-text">Done</button>
+              <button onClick={() => setOpen(false)} className="px-4 font-medium hover:text-text">Done</button>
             </div>
           </div>
         </div>
@@ -530,30 +532,30 @@ function CreateGroupButton({ onCreated }: { onCreated: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
-      <div className="w-full max-w-md rounded-xl border border-border bg-canvas p-6 shadow-card" onClick={(e) => e.stopPropagation()}>
+      <div className="max-w-md rounded-xl p-6 shadow-card" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-base font-bold mb-4">Create Group</h3>
         {err && <div className="mb-3 rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{err}</div>}
         <div className="space-y-3">
           <div>
             <label className="block text-xs text-text-muted mb-1">Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VIP Traders"
-              className="w-full h-10 rounded-lg border border-border bg-canvas px-3 text-sm outline-none focus:border-brand" />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VIP Traders"
+              className="h-10" />
           </div>
           <div>
             <label className="block text-xs text-text-muted mb-1">Description (optional)</label>
-            <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Short description"
-              className="w-full h-10 rounded-lg border border-border bg-canvas px-3 text-sm outline-none focus:border-brand" />
+            <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Short description"
+              className="h-10" />
           </div>
           <div>
             <label className="block text-xs text-text-muted mb-1">Color</label>
             <div className="flex items-center gap-2">
-              <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-9 w-12 rounded border border-border" />
+              <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-12" />
               <span className="text-xs text-text-muted font-mono">{color}</span>
             </div>
           </div>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button onClick={() => setOpen(false)} className="rounded-lg border border-border px-4 py-2 text-xs font-medium text-text-muted hover:text-text">Cancel</button>
+          <button onClick={() => setOpen(false)} className="px-4 font-medium hover:text-text">Cancel</button>
           <button onClick={() => void submit()} disabled={saving || name.length < 2}
             className="rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50 transition">
             {saving ? "Creating…" : "Create"}
@@ -663,7 +665,7 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
         {detail.members.length === 0 ? (
           <p className="text-sm text-text-muted">No members yet.</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-border">
+          <div className="overflow-x-auto rounded-xl">
             <table className="w-full text-sm">
               <thead className="bg-panel-2 text-text-faint">
                 <tr>
@@ -728,18 +730,18 @@ function BulkActions({ groupId, groupName, memberCount }: { groupId: string; gro
   const [dialog, setDialog] = useState<"balance" | "pnl" | null>(null);
 
   return (
-    <div className="rounded-xl border border-border bg-panel/50 p-4">
+    <div className="rounded-xl bg-panel/50 p-4">
       <h4 className="text-xs font-bold uppercase tracking-wide text-text-faint mb-3">Bulk Actions ({memberCount} members)</h4>
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setDialog("balance")}
-          className="rounded-lg border border-border bg-canvas px-4 py-2 text-xs font-semibold text-text hover:bg-panel-2 transition"
+          className="px-4 font-semibold hover:bg-panel-2 transition"
         >
           Adjust All Balances
         </button>
         <button
           onClick={() => setDialog("pnl")}
-          className="rounded-lg border border-border bg-canvas px-4 py-2 text-xs font-semibold text-text hover:bg-panel-2 transition"
+          className="px-4 font-semibold hover:bg-panel-2 transition"
         >
           Set P/L for All Positions
         </button>
@@ -826,7 +828,7 @@ function BulkDialog({ title, subtitle, fields, endpoint, onClose }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl border border-border bg-canvas p-6 shadow-card" onClick={(e) => e.stopPropagation()}>
+      <div className="max-w-md rounded-xl p-6 shadow-card" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-base font-bold mb-1">{title}</h3>
         <p className="text-xs text-text-muted mb-4">{subtitle}</p>
         {err && <div className="mb-3 rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{err}</div>}
@@ -836,26 +838,24 @@ function BulkDialog({ title, subtitle, fields, endpoint, onClose }: {
             <div key={f.key}>
               <label className="block text-xs text-text-muted mb-1">{f.label}</label>
               {f.type === "select" ? (
-                <select
+                <NativeSelect
                   value={values[f.key]}
                   onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                  className="w-full h-9 rounded-lg border border-border bg-canvas px-2 text-sm outline-none focus:border-brand"
                 >
                   {f.options?.map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
+                </NativeSelect>
               ) : (
-                <input
+                <Input
                   type={f.type === "number" ? "number" : "text"}
                   value={values[f.key]}
                   onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                  className="w-full h-9 rounded-lg border border-border bg-canvas px-3 text-sm outline-none focus:border-brand"
                 />
               )}
             </div>
           ))}
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-xs font-medium text-text-muted hover:text-text">Close</button>
+          <button onClick={onClose} className="px-4 font-medium hover:text-text">Close</button>
           <button onClick={() => void submit()} disabled={saving}
             className="rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50 transition">
             {saving ? "Processing…" : "Execute"}
@@ -903,13 +903,13 @@ function SettingsPreview({ settings }: { settings: Record<string, unknown> }) {
   const keys = Object.keys(settings);
   if (keys.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-panel px-4 py-3">
+      <div className="px-4 py-3">
         <p className="text-xs text-text-muted">No custom settings configured — using global defaults.</p>
       </div>
     );
   }
   return (
-    <div className="rounded-lg border border-border bg-panel px-4 py-3">
+    <div className="px-4 py-3">
       <p className="text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint mb-2">Active Settings</p>
       <pre className="text-(length:--term-text-2xs) font-mono text-text-muted overflow-x-auto">{JSON.stringify(settings, null, 2)}</pre>
     </div>
@@ -921,7 +921,7 @@ function SettingsPreview({ settings }: { settings: Record<string, unknown> }) {
 function CollapsibleSection({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-lg border border-border-soft bg-canvas/50 overflow-hidden">
+    <div className="border-border-soft bg-canvas/50 overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-panel-2/50 transition"
@@ -967,7 +967,7 @@ function getCategoryItems(settings: Record<string, unknown>, category: string, f
 function SettingsCategory({ label, items }: { label: string; items: Array<{ label: string; value: string; isBool?: boolean; boolVal?: boolean }> }) {
   if (items.length === 0) return null;
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 py-1 border-b border-border-soft last:border-0">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border-soft last:border-0">
       <span className="text-(length:--term-text-2xs) font-bold uppercase tracking-wide text-text-faint w-28 shrink-0">{label}</span>
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (

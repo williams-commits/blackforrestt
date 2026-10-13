@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/trade/Logo";
+import { Input } from "@/components/ui/Input";
 
 export default function ForgotPasswordPage() {
   const t = useTranslations("auth");
@@ -45,11 +46,11 @@ export default function ForgotPasswordPage() {
         <div className="mb-6">
           <Logo className="text-lg" />
         </div>
-        <form onSubmit={submit} className="w-full bg-canvas border border-border rounded-lg p-6">
+        <form onSubmit={submit} className="w-full rounded-md border border-border bg-canvas p-6 shadow-panel">
         <h1 className="text-lg font-semibold">{t("resetH1")}</h1>
         <p className="text-xs text-text-muted mt-1 mb-5">{t("resetSub")}</p>
         <label className="text-xs text-text-muted" htmlFor="reset-email">{t("email")}</label>
-        <input id="reset-email" type="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1 mb-4 w-full h-10 border border-border rounded px-3 bg-canvas" />
+        <Input id="reset-email" type="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1 mb-4 h-10" />
         {message && <p role="status" className="text-xs text-up mb-3">{message}</p>}
         {previewUrl && <a href={previewUrl} className="block text-xs text-brand mb-3 hover:underline">{t("resetDevLink")}</a>}
         {error && <p role="alert" className="text-xs text-down mb-3">{error}</p>}

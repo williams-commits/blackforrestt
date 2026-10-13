@@ -6,6 +6,8 @@
     "dev": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 node --env-file-if-exists=.env --import tsx server.ts",
     "build": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 next build",
     "start": "NODE_ENV=production node --env-file-if-exists=.env --import tsx server.ts",
+    "stop:server": "lsof -ti:3101 | xargs kill -9",
+    "stop:clean": "lsof -ti :3101 | xargs kill -9; rm -rf .next && npm run dev",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
     "db:generate": "prisma generate",

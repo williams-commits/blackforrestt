@@ -153,8 +153,8 @@ export function UnifiedActivationReport() {
           />
           {trade?.available ? (
             <>
-              <Step label="Have deposited" value={trade.deposited ?? 0} hint="Approved deposits, all time" width={(trade.deposited ?? 0) / max} />
-              <Step label="Active traders" value={trade.activeTraders ?? 0} hint={`Opened a position in the last ${data.days} days`} width={(trade.activeTraders ?? 0) / max} />
+              <Step label="Have deposited" value={trade.deposited ?? 0} hint="Approved deposits, all time" width={(trade.deposited ?? 0) / max} tone={(trade.deposited ?? 0) === 0 ? "unavailable" : "default"} />
+              <Step label="Active traders" value={trade.activeTraders ?? 0} hint={`Opened a position in the last ${data.days} days`} width={(trade.activeTraders ?? 0) / max} tone={(trade.activeTraders ?? 0) === 0 ? "unavailable" : "default"} />
               <div className="flex flex-wrap gap-x-8 gap-y-2 pt-1">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Trading volume</p>

@@ -7,6 +7,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/lib/toast";
 import { fmtDateTime } from "@/lib/dates";
+import { Input } from "@/components/ui/Input";
 
 interface ThreadRow {
   userId: string;
@@ -247,15 +248,14 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
 
       <div className="grid gap-3 lg:grid-cols-[minmax(240px,340px)_minmax(0,1fr)]">
         {/* Thread list */}
-        <div className="flex max-h-144 flex-col rounded-lg border border-border bg-canvas">
+        <div className="flex max-h-144 flex-col">
           <div className="space-y-2 border-b border-border-soft p-2">
-            <input
+            <Input
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search name, email, account…"
               aria-label="Search conversations"
-              className="w-full rounded border border-border bg-panel px-2.5 py-1.5 text-xs outline-none focus-visible:border-brand"
             />
             <label className="flex items-center gap-1.5 text-(length:--term-text-2xs) text-text-muted">
               <input type="checkbox" checked={unreadOnly} onChange={(event) => setUnreadOnly(event.target.checked)} className="accent-brand" />
@@ -305,7 +305,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
         </div>
 
         {/* Chat pane */}
-        <div className="flex h-144 flex-col rounded-lg border border-border bg-canvas">
+        <div className="flex h-144 flex-col">
           {activeUser ? (
             <>
               <div className="flex items-start justify-between gap-2 border-b border-border-soft px-4 py-2.5">
@@ -336,7 +336,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               >
                 {threadLoading && !thread && <div className="space-y-2" role="status" aria-label="Loading thread"><Skeleton className="h-8 w-2/3" /><Skeleton className="h-8 w-1/2" /><Skeleton className="h-8 w-3/4" /></div>}
                 {thread && thread.hasMore && (
-                  <button type="button" onClick={loadEarlier} className="mx-auto block rounded border border-border px-2.5 py-1 text-(length:--term-text-2xs) text-text-muted hover:text-text">
+                  <button type="button" onClick={loadEarlier} className="mx-auto block text-(length:--term-text-2xs) hover:text-text">
                     Load earlier messages
                   </button>
                 )}
@@ -381,7 +381,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                   maxLength={4000}
                   placeholder="Reply… (Enter to send, Shift+Enter for a new line)"
                   aria-label="Reply message"
-                  className="flex-1 resize-none rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand"
+                  className="flex-1 resize-none"
                 />
                 <Button type="submit" size="sm" variant="brand" disabled={sending || !draft.trim()}>
                   {sending ? "…" : "Send"}
@@ -417,11 +417,11 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
         <form className="p-5 space-y-4" onSubmit={broadcast}>
           <div>
             <label className="mb-1 block text-xs font-medium" htmlFor="b-title">Title</label>
-            <input id="b-title" required minLength={3} maxLength={120} value={bTitle} onChange={(e) => setBTitle(e.target.value)} className="w-full rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand" />
+            <Input id="b-title" required minLength={3} maxLength={120} value={bTitle} onChange={(e) => setBTitle(e.target.value)} />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium" htmlFor="b-body">Message</label>
-            <textarea id="b-body" required minLength={3} maxLength={2000} rows={5} value={bBody} onChange={(e) => setBBody(e.target.value)} className="w-full rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand" />
+            <textarea id="b-body" required minLength={3} maxLength={2000} rows={5} value={bBody} onChange={(e) => setBBody(e.target.value)} />
           </div>
           {bError && <p role="alert" className="rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">{bError}</p>}
           {bResult && <p role="status" className="rounded border border-up/40 bg-up/10 px-3 py-2 text-xs text-up">{bResult}</p>}

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { fmtDate } from "@/lib/dates";
 import { Check, Copy } from "lucide-react";
 import type { ServerMessage } from "@/lib/ws/client";
+import { Input } from "@/components/ui/Input";
 
 interface ReferralData {
   code: string;
@@ -71,14 +72,14 @@ export function ReferralTab() {
   if (loading) {
     return (
       <div className="space-y-5" role="status" aria-label="Loading referrals">
-        <div className="space-y-3 rounded-lg border border-border bg-canvas p-5">
+        <div className="space-y-3 p-5">
           <Skeleton className="h-4 w-36" />
           <Skeleton className="h-3 w-72" />
           <Skeleton className="h-10 w-full" />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="rounded-lg border border-border bg-canvas p-4">
+            <div key={i} className="p-4">
               <Skeleton className="h-3 w-20" />
               <Skeleton className="mt-2 h-6 w-16" />
             </div>
@@ -106,14 +107,14 @@ export function ReferralTab() {
   return (
     <div className="space-y-5">
       {/* Share card */}
-      <div className="rounded-lg border border-border bg-canvas p-5">
+      <div className="p-5">
         <h3 className="text-sm font-bold mb-1">Your Referral Link</h3>
         <p className="text-xs text-text-muted mb-3">Share this link. When your referral makes their first deposit, you both earn a bonus.</p>
         <div className="flex items-center gap-2">
-          <input
+          <Input
             readOnly
             value={`https://${data.link}`}
-            className="flex-1 h-10 rounded-lg border border-border bg-panel px-3 text-xs font-mono outline-none"
+            className="flex-1 h-10 font-mono"
             onClick={(e) => (e.target as HTMLInputElement).select()}
           />
           <button
@@ -141,11 +142,11 @@ export function ReferralTab() {
       <div>
         <h3 className="text-sm font-bold mb-3">Referral History</h3>
         {data.referrals.length === 0 ? (
-          <div className="rounded-lg border border-border bg-canvas p-8 text-center">
+          <div className="p-8 text-center">
             <p className="text-sm text-text-muted">No referrals yet. Share your link to start earning.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border">
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-panel-2 text-text-faint">
                 <tr>
@@ -190,7 +191,7 @@ export function ReferralTab() {
 
 function StatCard({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
   return (
-    <div className="rounded-lg border border-border bg-canvas p-3">
+    <div className="p-3">
       <div className="text-(length:--term-text-2xs) uppercase text-text-faint">{label}</div>
       <div className={`mt-1 text-lg font-bold tnum ${highlight ? "text-up" : "text-text"}`}>{value}</div>
     </div>

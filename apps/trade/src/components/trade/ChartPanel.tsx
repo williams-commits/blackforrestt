@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import {
@@ -22,6 +21,14 @@ import {
   type LogicalRange,
 } from "lightweight-charts";
 import { ChipGroup } from "@/components/ui/ChipGroup";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useForexStore } from "@/lib/store";
 import { TIMEFRAMES, type Candle, type CandleInterval, type InstrumentView } from "@/lib/types";
 import { fmtPrice } from "@/lib/format";
@@ -66,6 +73,9 @@ function chartThemeOptions(dim: boolean) {
     layout: {
       background: { type: ColorType.Solid, color: dim ? "#0e1116" : "#ffffff" },
       textColor: dim ? "#9aa7b4" : "#6b7280",
+      // Pane dividers (RSI/MACD panes) follow the scale borders — the library
+      // default is a hard line that glares in dim mode.
+      panes: { separatorColor: dim ? "#2a323d" : "#dee2e6" },
     },
     grid: {
       vertLines: { color: dim ? "rgba(42,50,61,0.5)" : "rgba(222,226,230,0.55)" },
@@ -137,21 +147,8 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
   const [bollingerPeriod] = useState(20);
   const [bollingerStdDev] = useState(2);
   const [rsiPeriod] = useState(14);
-  const [showIndicators, setShowIndicators] = useState(false);
-  const [indicatorPos, setIndicatorPos] = useState({ top: 0, right: 0 });
   const [hoveredOhlc, setHoveredOhlc] = useState<DisplayOhlc | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
-
-  /** Toggle indicators menu — uses the clicked button's rect for positioning
-   * so it works correctly on both mobile and desktop strips. */
-  const toggleIndicators = (e: React.MouseEvent) => {
-    const target = e.currentTarget as HTMLElement;
-    if (!showIndicators && target) {
-      const rect = target.getBoundingClientRect();
-      setIndicatorPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
-    }
-    setShowIndicators((v) => !v);
-  };
 
   candlesRef.current = candles;
 
@@ -653,11 +650,11 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
     window.localStorage.setItem(CHART_TYPE_STORAGE_KEY, next);
   };
 
-  const toggleMA = () => { setShowMA((v) => { const n = !v; window.localStorage.setItem(MA_STORAGE_KEY, String(n)); return n; }); setShowIndicators(false); };
-  const toggleEMA = () => { setShowEMA((v) => { const n = !v; window.localStorage.setItem(EMA_STORAGE_KEY, String(n)); return n; }); setShowIndicators(false); };
-  const toggleBollinger = () => { setShowBollinger((v) => { const n = !v; window.localStorage.setItem(BB_STORAGE_KEY, String(n)); return n; }); setShowIndicators(false); };
-  const toggleRSI = () => { setShowRSI((v) => { const n = !v; window.localStorage.setItem(RSI_STORAGE_KEY, String(n)); return n; }); setShowIndicators(false); };
-  const toggleMACD = () => { setShowMACD((v) => { const n = !v; window.localStorage.setItem(MACD_STORAGE_KEY, String(n)); return n; }); setShowIndicators(false); };
+  const toggleMA = () => { setShowMA((v) => { const n = !v; window.localStorage.setItem(MA_STORAGE_KEY, String(n)); return n; }); };
+  const toggleEMA = () => { setShowEMA((v) => { const n = !v; window.localStorage.setItem(EMA_STORAGE_KEY, String(n)); return n; }); };
+  const toggleBollinger = () => { setShowBollinger((v) => { const n = !v; window.localStorage.setItem(BB_STORAGE_KEY, String(n)); return n; }); };
+  const toggleRSI = () => { setShowRSI((v) => { const n = !v; window.localStorage.setItem(RSI_STORAGE_KEY, String(n)); return n; }); };
+  const toggleMACD = () => { setShowMACD((v) => { const n = !v; window.localStorage.setItem(MACD_STORAGE_KEY, String(n)); return n; }); };
 
   const zoom = (direction: "in" | "out") => {
     const scale = chartRef.current?.timeScale();
@@ -706,13 +703,31 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
     legendChips.push({ color: "#2563eb", label: "MACD (12, 26, 9)", value: last ? last.macd.toFixed(instrument.digits) : null, onRemove: toggleMACD });
   }
 
+  const indicatorGroups: IndicatorGroup[] = [
+    {
+      group: "Overlays",
+      entries: [
+        { key: "sma", label: `SMA (${maPeriod})`, checked: showMA, toggle: toggleMA },
+        { key: "ema", label: `EMA (${emaPeriod})`, checked: showEMA, toggle: toggleEMA },
+        { key: "bb", label: `Bollinger (${bollingerPeriod}, ${bollingerStdDev}σ)`, checked: showBollinger, toggle: toggleBollinger },
+      ],
+    },
+    {
+      group: "Oscillators",
+      entries: [
+        { key: "rsi", label: `RSI (${rsiPeriod})`, checked: showRSI, toggle: toggleRSI },
+        { key: "macd", label: "MACD (12, 26, 9)", checked: showMACD, toggle: toggleMACD },
+      ],
+    },
+  ];
+
   return (
     <div
       ref={panelRef}
       data-testid="professional-chart-panel"
-      className={`flex h-full min-h-112 flex-col overflow-hidden border border-border bg-canvas shadow-panel lg:min-h-0 ${fullscreen ? "rounded-none" : "rounded-md"}`}
+      className={`flex h-full min-h-112 flex-col overflow-hidden bg-canvas shadow-panel lg:min-h-0 ${fullscreen ? "rounded-none" : "rounded-md"}`}
     >
-      <div className="flex shrink-0 flex-col border-b border-border bg-panel-2 sm:flex-row sm:items-center">
+      <div className="flex shrink-0 flex-col bg-panel-2 sm:flex-row sm:items-center">
         <div className="flex min-w-0 flex-wrap items-center gap-2 px-3 py-2 sm:py-0">
           <InstrumentIcon symbol={instrument.symbol} size={20} />
           <span className="text-sm font-bold tracking-tight">{instrument.symbol}</span>
@@ -756,7 +771,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
         </div>
 
         {/* Mobile: timeframes get priority row; desktop: all controls inline */}
-        <div className="flex items-center gap-1 overflow-x-auto border-t border-border px-2 py-1.5 sm:hidden [scrollbar:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex items-center gap-1 overflow-x-auto px-2 py-1.5 sm:hidden [scrollbar:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <ChipGroup
             ariaLabel="Chart timeframe"
             size="sm"
@@ -764,7 +779,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
             onChange={selectTimeframe}
             options={TIMEFRAMES.map((timeframe) => ({ value: timeframe, label: timeframe }))}
           />
-          <div className="mx-1 h-4 w-px shrink-0 bg-border" />
+          <div className="mx-1 h-4 w-px shrink-0 bg-panel-3" />
           <ChartButton label="Candlestick chart" active={chartType === "candles"} onClick={() => selectChartType("candles")}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M7 4v3M7 17v3M7 7v10" strokeLinecap="round" />
@@ -778,15 +793,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
               <path d="M4 17l5-6 4 3 7-9" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </ChartButton>
-          <ChartButton
-            label="Chart indicators"
-            active={showMA || showEMA || showBollinger || showRSI || showMACD}
-            onClick={toggleIndicators}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M4 16c3 0 4-8 7-8s4 8 7 8 2-4 2-4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </ChartButton>
+          <IndicatorsMenu groups={indicatorGroups} />
           <ChartButton label="Zoom in" onClick={() => zoom("in")}>＋</ChartButton>
           <ChartButton label="Zoom out" onClick={() => zoom("out")}>−</ChartButton>
           <ChartButton label="Fit all candles" onClick={() => fitChart()}>Fit</ChartButton>
@@ -796,7 +803,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
         </div>
 
         {/* Desktop: all controls inline (chart-type, indicators, zoom, fit, fullscreen, timeframes) */}
-        <div className="hidden min-w-0 items-center gap-1 overflow-x-auto border-t border-border px-2 py-1.5 sm:ml-auto sm:flex sm:border-l sm:border-t-0">
+        <div className="hidden min-w-0 items-center gap-1 overflow-x-auto px-2 py-1.5 sm:ml-auto sm:flex">
           <ChartButton label="Candlestick chart" active={chartType === "candles"} onClick={() => selectChartType("candles")}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M7 4v3M7 17v3M7 7v10" strokeLinecap="round" />
@@ -810,22 +817,14 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
               <path d="M4 17l5-6 4 3 7-9" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </ChartButton>
-          <ChartButton
-            label="Chart indicators"
-            active={showMA || showEMA || showBollinger || showRSI || showMACD}
-            onClick={toggleIndicators}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M4 16c3 0 4-8 7-8s4 8 7 8 2-4 2-4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </ChartButton>
+          <IndicatorsMenu groups={indicatorGroups} />
           <ChartButton label="Zoom in" onClick={() => zoom("in")}>＋</ChartButton>
           <ChartButton label="Zoom out" onClick={() => zoom("out")}>−</ChartButton>
           <ChartButton label="Fit all candles" onClick={() => fitChart()}>Fit</ChartButton>
           <ChartButton label={fullscreen ? "Exit full screen" : "Full screen"} active={fullscreen} onClick={() => void toggleFullscreen()}>
             {fullscreen ? "Exit" : "Full"}
           </ChartButton>
-          <div className="mx-1 h-4 w-px shrink-0 bg-border" />
+          <div className="mx-1 h-4 w-px shrink-0 bg-panel-3" />
           <ChipGroup
             ariaLabel="Chart timeframe"
             size="sm"
@@ -837,7 +836,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
       </div>
 
       {ohlc ? (
-        <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-border-soft px-3 py-1 text-(length:--term-text-2xs) tnum md:hidden">
+        <div className="flex shrink-0 items-center gap-2 overflow-x-auto bg-panel px-3 py-1 text-(length:--term-text-2xs) tnum md:hidden">
           <OhlcField label="O" value={ohlc.open} up={ohlc.up} digits={instrument.digits} />
           <OhlcField label="H" value={ohlc.high} up={ohlc.up} digits={instrument.digits} />
           <OhlcField label="L" value={ohlc.low} up={ohlc.up} digits={instrument.digits} />
@@ -852,7 +851,7 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
             otherwise render blank toolbars over nothing. */}
         {candles.length === 0 && (
           <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center" role="status" aria-live="polite">
-            <div className="flex items-center gap-2 rounded border border-border bg-canvas/90 px-3 py-2 text-xs text-text-muted shadow-card">
+            <div className="flex items-center gap-2 rounded bg-canvas/90 px-3 py-2 text-xs text-text-muted shadow-card">
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
               Loading price history…
             </div>
@@ -866,41 +865,56 @@ export function ChartPanel({ instrument, onOpenAssets }: Props) {
           </div>
         )}
       </div>
-
-      {/* Indicators portal — standalone (not nested in either control strip).
-          Position is set by toggleIndicators() from whichever button was clicked. */}
-      {showIndicators && typeof document !== "undefined" && createPortal(
-        <>
-          <button type="button" className="fixed inset-0 z-9998 cursor-default" aria-label="Close indicators menu" onClick={() => setShowIndicators(false)} />
-          <div className="fixed z-9999 min-w-48 rounded border border-border bg-canvas py-1 shadow-xl" style={{ top: indicatorPos.top, right: indicatorPos.right }}>
-            <div className="px-3 pb-1 pt-1.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">Overlays</div>
-            <button type="button" role="menuitemcheckbox" aria-checked={showMA} onClick={toggleMA} className="flex w-full items-center justify-between px-3 py-2 text-(length:--term-text-xs) hover:bg-panel-2">
-              <span>SMA ({maPeriod})</span>
-              <span className={`h-3 w-3 rounded border ${showMA ? "border-brand bg-brand" : "border-border"}`} />
-            </button>
-            <button type="button" role="menuitemcheckbox" aria-checked={showEMA} onClick={toggleEMA} className="flex w-full items-center justify-between px-3 py-2 text-(length:--term-text-xs) hover:bg-panel-2">
-              <span>EMA ({emaPeriod})</span>
-              <span className={`h-3 w-3 rounded border ${showEMA ? "border-brand bg-brand" : "border-border"}`} />
-            </button>
-            <button type="button" role="menuitemcheckbox" aria-checked={showBollinger} onClick={toggleBollinger} className="flex w-full items-center justify-between px-3 py-2 text-(length:--term-text-xs) hover:bg-panel-2">
-              <span>Bollinger ({bollingerPeriod}, {bollingerStdDev}σ)</span>
-              <span className={`h-3 w-3 rounded border ${showBollinger ? "border-brand bg-brand" : "border-border"}`} />
-            </button>
-            <div className="mx-3 my-1 border-t border-border-soft" />
-            <div className="px-3 pb-1 pt-1.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">Oscillators</div>
-            <button type="button" role="menuitemcheckbox" aria-checked={showRSI} onClick={toggleRSI} className="flex w-full items-center justify-between px-3 py-2 text-(length:--term-text-xs) hover:bg-panel-2">
-              <span>RSI ({rsiPeriod})</span>
-              <span className={`h-3 w-3 rounded border ${showRSI ? "border-brand bg-brand" : "border-border"}`} />
-            </button>
-            <button type="button" role="menuitemcheckbox" aria-checked={showMACD} onClick={toggleMACD} className="flex w-full items-center justify-between px-3 py-2 text-(length:--term-text-xs) hover:bg-panel-2">
-              <span>MACD (12, 26, 9)</span>
-              <span className={`h-3 w-3 rounded border ${showMACD ? "border-brand bg-brand" : "border-border"}`} />
-            </button>
-          </div>
-        </>,
-        document.body,
-      )}
     </div>
+  );
+}
+
+interface IndicatorEntry {
+  key: string;
+  label: string;
+  checked: boolean;
+  toggle: () => void;
+}
+
+interface IndicatorGroup {
+  group: string;
+  entries: IndicatorEntry[];
+}
+
+/** Indicator toggles as a Radix dropdown menu (keyboard nav, Escape,
+ *  collision-aware placement) replacing the hand-rolled positioned portal. */
+function IndicatorsMenu({ groups }: { groups: IndicatorGroup[] }) {
+  const anyActive = groups.some((group) => group.entries.some((entry) => entry.checked));
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <ChartButton label="Chart indicators" active={anyActive}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M4 16c3 0 4-8 7-8s4 8 7 8 2-4 2-4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </ChartButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={4} className="min-w-48 rounded-md border border-border bg-canvas text-xs shadow-xl">
+        {groups.map((group, groupIndex) => (
+          <div key={group.group}>
+            {groupIndex > 0 && <DropdownMenuSeparator className="bg-border-soft" />}
+            <DropdownMenuLabel className="px-2 py-1.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">
+              {group.group}
+            </DropdownMenuLabel>
+            {group.entries.map((entry) => (
+              <DropdownMenuCheckboxItem
+                key={entry.key}
+                checked={entry.checked}
+                onCheckedChange={() => entry.toggle()}
+                className="gap-2 rounded-sm px-2 py-1.5 text-(length:--term-text-xs) text-text"
+              >
+                {entry.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </div>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -909,20 +923,22 @@ function ChartButton({
   active = false,
   onClick,
   children,
+  ...rest
 }: {
   label: string;
   active?: boolean;
-  onClick: (e: React.MouseEvent) => void;
+  onClick?: (e: React.MouseEvent) => void;
   children: React.ReactNode;
-}) {
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       type="button"
+      {...rest}
       aria-label={label}
       aria-pressed={active || undefined}
       title={label}
       onClick={onClick}
-      className={`shrink-0 rounded px-2 py-1 text-(length:--term-text-2xs) font-medium transition-colors ${
+      className={`shrink-0 rounded px-2 py-1 text-(length:--term-text-2xs) font-medium transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
         active ? "bg-brand-soft text-brand" : "text-text-muted hover:bg-panel-3 hover:text-text"
       }`}
     >
@@ -935,7 +951,7 @@ function ChartButton({
  *  and a remove (✕) handle that detaches the indicator from the chart. */
 function LegendChip({ color, label, value, onRemove }: { color: string; label: string; value: string | null; onRemove: () => void }) {
   return (
-    <span className="pointer-events-auto flex items-center gap-1.5 rounded border border-border-soft bg-canvas/85 px-1.5 py-0.5 text-(length:--term-text-2xs) tnum shadow-sm backdrop-blur-sm">
+    <span className="pointer-events-auto flex items-center gap-1.5 rounded bg-canvas/85 px-1.5 py-0.5 text-(length:--term-text-2xs) tnum shadow-sm backdrop-blur-sm">
       <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
       <span className="font-medium text-text-muted">{label}</span>
       {value != null && <span className="text-text">{value}</span>}

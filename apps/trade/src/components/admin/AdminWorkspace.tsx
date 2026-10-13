@@ -21,6 +21,8 @@ import { CsvExportButton } from "@/components/ui/CsvExport";
 import { createDeviceId } from "@/lib/device";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";
 import { toast } from "@/lib/toast";
+import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Input } from "@/components/ui/Input";
 
 type Permission = string;
 type TabKey =
@@ -270,7 +272,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border border-border bg-canvas p-4 shadow-panel">
+      <section className="p-4 shadow-panel">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold">Enterprise operations console</h1>
@@ -285,7 +287,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
       <div className="lg:grid lg:grid-cols-[13.5rem_minmax(0,1fr)] lg:gap-5">
         {/* Desktop: grouped vertical sidebar. Mobile/tablet: horizontal pills. */}
         <nav aria-label="Administrative modules" className="hidden lg:block">
-          <div className="sticky top-20 space-y-4 rounded-lg border border-border bg-canvas p-3">
+          <div className="sticky top-20 space-y-4 p-3">
             {NAV_SECTIONS.map((section) => {
               const items = allowedTabs.filter((t) => section.tabs.includes(t.key));
               if (items.length === 0) return null;
@@ -341,7 +343,7 @@ function ModuleState({ loading, error, onRetry, children }: { loading: boolean; 
   if (loading) {
     // Table-shaped shimmer instead of a text line — no layout jank on refresh.
     return (
-      <div role="status" aria-label="Loading module" className="space-y-3 rounded-lg border border-border bg-canvas p-4">
+      <div role="status" aria-label="Loading module" className="space-y-3 p-4">
         <Skeleton className="h-5 w-48" />
         <Skeleton className="h-3 w-72" />
         <div className="space-y-2 pt-2">
@@ -355,7 +357,7 @@ function ModuleState({ loading, error, onRetry, children }: { loading: boolean; 
 }
 
 function SectionHeader({ title, description, onRefresh }: { title: string; description: string; onRefresh?: () => void }) {
-  return <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold">{title}</h2><p className="mt-1 text-xs text-text-muted">{description}</p></div>{onRefresh && <button type="button" onClick={onRefresh} className="flex items-center gap-1.5 rounded border border-border px-3 py-1.5 text-xs hover:bg-panel-2"><RefreshCw size={12} strokeWidth={1.75} aria-hidden />Refresh</button>}</div>;
+  return <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold">{title}</h2><p className="mt-1 text-xs text-text-muted">{description}</p></div>{onRefresh && <button type="button" onClick={onRefresh} className="flex items-center gap-1.5 hover:bg-panel-2"><RefreshCw size={12} strokeWidth={1.75} aria-hidden />Refresh</button>}</div>;
 }
 
 /** Icons for the overview stat grid — inferred from the stat key. */
@@ -378,7 +380,7 @@ function OverviewPanel() {
   const resource = useResource<OverviewResponse>("/api/admin/overview", 15_000);
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><div className="rounded-lg border border-brand/30 bg-brand-soft p-3 text-xs text-brand"><strong>Environment.</strong> Execution provider: {resource.data.environment.executionProvider}; market data: {resource.data.environment.marketDataMode}.</div><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{Object.entries(resource.data.stats).map(([key, value]) => {
               const StatGlyph = OVERVIEW_STAT_ICONS[key];
-              return <div key={key} className="rounded-lg border border-border bg-canvas p-4"><div className="flex items-center gap-1.5 text-(length:--term-text-2xs) uppercase text-text-faint">{StatGlyph && <StatGlyph size={12} strokeWidth={1.75} aria-hidden />}{key.replaceAll(/([A-Z])/g, " $1")}</div><div className="mt-1 text-2xl font-semibold tnum">{value.toLocaleString("en-US")}</div></div>;
+              return <div key={key} className="p-4"><div className="flex items-center gap-1.5 text-(length:--term-text-2xs) uppercase text-text-faint">{StatGlyph && <StatGlyph size={12} strokeWidth={1.75} aria-hidden />}{key.replaceAll(/([A-Z])/g, " $1")}</div><div className="mt-1 text-2xl font-semibold tnum">{value.toLocaleString("en-US")}</div></div>;
             })}</div></div>}</ModuleState>;
 }
 
@@ -538,8 +540,8 @@ function PaginatedUsers({
   ]);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-canvas">
-      <div className="flex min-h-9 flex-wrap items-center gap-2 border-b border-border bg-panel-2 px-3 py-1.5">
+    <div className="overflow-hidden">
+      <div className="flex min-h-9 flex-wrap items-center gap-2 border-b">
         <span className="text-(length:--term-text-2xs) text-text-faint tnum">{sortedUsers.length} users</span>
         <CsvExportButton
           filename="users"
@@ -841,7 +843,7 @@ function UserBalanceDialog({
       className="sm:max-w-4xl"
     >
       <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-        {loading && !data ? <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">Loading account finance…</div> : null}
+        {loading && !data ? <div className="border-dashed p-8 text-center">Loading account finance…</div> : null}
         {data ? (
           <div className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -850,17 +852,17 @@ function UserBalanceDialog({
               <MetricCard label="Locked" value={formatUsd(data.wallet?.locked ?? "0")} />
               <MetricCard label="Equity" value={formatUsd(data.metrics?.equity ?? "0")} />
             </div>
-            <form onSubmit={submit} className="rounded-lg border border-border bg-panel-2 p-4">
+            <form onSubmit={submit} className="p-4">
               <div className="flex flex-wrap gap-2" role="group" aria-label="Balance adjustment type">
                 <button type="button" onClick={() => setAction("CREDIT")} className={`rounded px-3 py-2 text-xs font-semibold ${action === "CREDIT" ? "bg-up text-white" : "border border-border bg-canvas"}`}>Top up balance</button>
                 <button type="button" onClick={() => setAction("DEBIT")} className={`rounded px-3 py-2 text-xs font-semibold ${action === "DEBIT" ? "bg-down text-white" : "border border-border bg-canvas"}`}>Deduct balance</button>
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,12rem)_1fr_auto] md:items-end">
                 <label className="text-xs font-medium">Amount (USD)
-                  <input type="number" inputMode="decimal" min="0.00000001" max="1000000" step="0.00000001" required value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 h-10 w-full rounded border border-border bg-canvas px-3 text-sm outline-none focus:border-brand" placeholder="0.00" />
+                  <Input type="number" inputMode="decimal" min="0.00000001" max="1000000" step="0.00000001" required value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 h-10" placeholder="0.00" />
                 </label>
                 <label className="text-xs font-medium">Audited reason
-                  <input type="text" minLength={5} maxLength={500} required value={reason} onChange={(event) => setReason(event.target.value)} className="mt-1 h-10 w-full rounded border border-border bg-canvas px-3 text-sm outline-none focus:border-brand" placeholder="Ticket, customer request, or correction reason" />
+                  <Input type="text" minLength={5} maxLength={500} required value={reason} onChange={(event) => setReason(event.target.value)} className="mt-1 h-10" placeholder="Ticket, customer request, or correction reason" />
                 </label>
                 <Button type="submit" variant={action === "CREDIT" ? "buy" : "sell"} loading={busy} loadingLabel="Posting adjustment">{action === "CREDIT" ? "Post top-up" : "Post deduction"}</Button>
               </div>
@@ -873,14 +875,14 @@ function UserBalanceDialog({
                 <div><h3 id="user-transaction-history" className="text-sm font-semibold">Customer transaction history</h3><p className="text-xs text-text-muted">Deposits, withdrawals, trading settlements, bonuses, fees, and administrative adjustments.</p></div>
                 <Button size="sm" variant="ghost" onClick={() => void load()} disabled={loading}>Refresh</Button>
               </div>
-              <div className="overflow-hidden rounded-lg border border-border">
+              <div className="overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-175 text-left text-xs">
                     <thead className="bg-panel-2 text-text-muted"><tr><th className="p-2">Date</th><th className="p-2">Type</th><th className="p-2">Description</th><th className="p-2">Reference</th><th className="p-2 text-right">Amount</th><th className="p-2">Status</th></tr></thead>
                     <tbody>
                       {visible.map((item) => {
                         const numeric = Number(item.amount);
-                        return <tr key={item.id} className="border-t border-border"><td className="p-2 whitespace-nowrap">{new Date(item.createdAt).toLocaleString()}</td><td className="p-2">{item.type}</td><td className="p-2 max-w-70 truncate" title={item.description ?? undefined}>{item.description ?? "—"}</td><td className="p-2 tnum">{item.reference ?? "—"}</td><td className={`p-2 text-right font-medium tnum ${numeric >= 0 ? "text-up" : "text-down"}`}>{numeric >= 0 ? "+" : ""}{formatUsd(item.amount)}</td><td className="p-2">{item.status}</td></tr>;
+                        return <tr key={item.id} className="border-t"><td className="p-2 whitespace-nowrap">{new Date(item.createdAt).toLocaleString()}</td><td className="p-2">{item.type}</td><td className="p-2 max-w-70 truncate" title={item.description ?? undefined}>{item.description ?? "—"}</td><td className="p-2 tnum">{item.reference ?? "—"}</td><td className={`p-2 text-right font-medium tnum ${numeric >= 0 ? "text-up" : "text-down"}`}>{numeric >= 0 ? "+" : ""}{formatUsd(item.amount)}</td><td className="p-2">{item.status}</td></tr>;
                       })}
                       {transactions.length === 0 ? <tr><td colSpan={6} className="p-8 text-center text-text-muted">No transactions.</td></tr> : null}
                     </tbody>
@@ -892,13 +894,13 @@ function UserBalanceDialog({
           </div>
         ) : null}
       </div>
-      <div className="flex shrink-0 justify-end border-t border-border px-4 py-3 sm:px-5"><Button variant="ghost" onClick={onClose} disabled={busy}>Close</Button></div>
+      <div className="flex shrink-0 justify-end border-t px-4 py-3 sm:px-5"><Button variant="ghost" onClick={onClose} disabled={busy}>Close</Button></div>
     </Dialog>
   );
 }
 
 function MetricCard({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border border-border bg-canvas p-3"><div className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">{label}</div><div className="mt-1 text-lg font-semibold tnum">{value}</div></div>;
+  return <div className="p-3"><div className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">{label}</div><div className="mt-1 text-lg font-semibold tnum">{value}</div></div>;
 }
 
 function formatUsd(value: string | number): string {
@@ -990,7 +992,7 @@ function LedgerPanel() {
 
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4">
     <SectionHeader title="Double-entry ledger" description="Posted transaction headers and immutable debit/credit entries." onRefresh={() => void resource.refresh()} />
-    <div className="flex flex-wrap gap-2">{resource.data.trialBalance.map((row) => <span key={`${row.asset}:${row.direction}`} className="rounded border border-border bg-canvas px-3 py-2 text-xs">{row.asset} {row.direction}: <strong className="tnum">{fmtExecNumber(row.amount)}</strong></span>)}</div>
+    <div className="flex flex-wrap gap-2">{resource.data.trialBalance.map((row) => <span key={`${row.asset}:${row.direction}`}>{row.asset} {row.direction}: <strong className="tnum">{fmtExecNumber(row.amount)}</strong></span>)}</div>
     <div className="mb-3 flex flex-wrap items-center gap-2">
       <TableSearch value={search} onChange={setSearch} placeholder="Search reference, kind, description, or user…" label="Search ledger" />
       {kinds.length > 0 && (
@@ -1007,12 +1009,12 @@ function LedgerPanel() {
     {resource.data.total > all.length && (
       <div className="rounded border border-brand/30 bg-brand-soft px-3 py-2 text-xs text-brand">Showing the {all.length} most recent postings of {resource.data.total.toLocaleString("en-US")} — narrow the window with the search or kind filters.</div>
     )}
-    <div className="overflow-hidden rounded-lg border border-border bg-canvas">
+    <div className="overflow-hidden">
       <div className="space-y-2 p-2">
         {visible.map((item) => {
           const creditTotals = ledgerCreditTotals(item.entries);
           return (
-            <details key={item.id} className="rounded-lg border border-border bg-canvas">
+            <details key={item.id}>
               <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 hover:bg-panel-2">
                 <span className="flex min-w-0 flex-wrap items-center gap-2">
                   <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold ${ledgerKindTone(item.kind)}`}>{item.kind.replaceAll("_", " ")}</span>
@@ -1027,7 +1029,7 @@ function LedgerPanel() {
                   ))}
                 </span>
               </summary>
-              <div className="space-y-2 border-t border-border p-3">
+              <div className="space-y-2 border-t p-3">
                 <p className="text-xs text-text-muted">{item.description}{item.sourceType ? ` · source ${item.sourceType}${item.sourceId ? ` ${item.sourceId}` : ""}` : ""}</p>
                 <div className="grid gap-1">
                   {item.entries.map((entry) => (
@@ -1044,7 +1046,7 @@ function LedgerPanel() {
             </details>
           );
         })}
-        {filtered.length === 0 && <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">{all.length === 0 ? "No ledger transactions." : `No postings match ${needle ? `“${search.trim()}”` : `the ${kindFilter.replaceAll("_", " ").toLowerCase()} filter`}.`}</div>}
+        {filtered.length === 0 && <div className="border-dashed p-8 text-center">{all.length === 0 ? "No ledger transactions." : `No postings match ${needle ? `“${search.trim()}”` : `the ${kindFilter.replaceAll("_", " ").toLowerCase()} filter`}.`}</div>}
       </div>
       {filtered.length > LEDGER_PAGE_SIZE && <Pagination page={safePage} pageSize={LEDGER_PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="postings" compact />}
     </div>
@@ -1260,16 +1262,16 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
       </div>
     )}
     {allPositions.length === 0 ? (
-      <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">No positions.</div>
+      <div className="border-dashed p-8 text-center">No positions.</div>
     ) : filtered.length === 0 ? (
-      <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">
+      <div className="border-dashed p-8 text-center">
         No positions match {needle ? `“${search.trim()}”` : `the ${statusFilter.toLowerCase()} filter`}.
       </div>
     ) : groupByUser ? (
-      <div className="overflow-hidden rounded-lg border border-border bg-canvas">
+      <div className="overflow-hidden">
         <div className="space-y-2 p-2">
           {groups.map((group) => (
-            <details key={group.key} open={group.open > 0 ? true : undefined} className="rounded-lg border border-border bg-canvas">
+            <details key={group.key} open={group.open > 0 ? true : undefined}>
               <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-panel-2">
                 <span className="flex min-w-0 items-baseline gap-2">
                   <span className="truncate text-sm font-semibold">{group.label}</span>
@@ -1288,7 +1290,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
                   <span>Net P/L <strong className={pnlClass(group.netPl)}>{fmtExecNumber(group.netPl.toFixed(2))}</strong></span>
                 </span>
               </summary>
-              <div className="space-y-2 border-t border-border p-2">
+              <div className="space-y-2 border-t p-2">
                 {group.positions.map((position) => (
                   <ExecutionPositionCard key={position.id} position={position} canManage={canManage} busy={busy !== null} onSetProfit={() => void setProfit(position)} onClose={() => void closePosition(position)} />
                 ))}
@@ -1299,7 +1301,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
         {filtered.length > EXECUTIONS_PAGE_SIZE && <Pagination page={safePage} pageSize={EXECUTIONS_PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="positions" compact />}
       </div>
     ) : (
-      <div className="overflow-hidden rounded-lg border border-border bg-canvas">
+      <div className="overflow-hidden">
         <div className="space-y-2 p-2">
           {visiblePositions.map((position) => (
             <ExecutionPositionCard key={position.id} position={position} canManage={canManage} busy={busy !== null} onSetProfit={() => void setProfit(position)} onClose={() => void closePosition(position)} />
@@ -1327,7 +1329,7 @@ function ExecutionPositionCard({
 }) {
   const net = Number(position.netProfit);
   return (
-    <article className="rounded-lg border border-border bg-canvas p-3">
+    <article className="p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -1397,7 +1399,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
     setBusy(id); setError(null);
     try { await requestJson(`/api/admin/support/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status, resolutionNote }) }); await resource.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update case."); } finally { setBusy(null); }
   }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex justify-between"><SectionHeader title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} />{canManage && <Button loading={busy === "create"} onClick={() => void createCase()}>New case</Button>}</div>{error && <p role="alert" className="mb-3 rounded bg-down/10 p-2 text-xs text-down">{error}</p>}<div className="space-y-2">{resource.data.cases.map((item) => <article key={item.id} className="rounded-lg border border-border bg-canvas p-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="text-xs text-text-faint">{item.reference} · {item.priority} · {item.category}{item.brandDomain && <span className="ml-1.5 rounded bg-brand-soft px-1 py-px text-(length:--term-text-2xs) font-semibold text-brand">{item.brandDomain}</span>}</div><h3 className="mt-1 text-sm font-medium">{item.subject}</h3><p className="mt-1 max-w-3xl text-xs text-text-muted">{item.description}</p></div><div className="text-right"><span className="text-xs font-medium">{item.status}</span>{canManage && item.status !== "RESOLVED" && item.status !== "CLOSED" && <div className="mt-2 flex gap-2"><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "IN_PROGRESS")} className="rounded border border-border px-2 py-1 text-xs">Assign to me</button><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "RESOLVED")} className="rounded bg-brand px-2 py-1 text-xs text-white">Resolve</button></div>}</div></div></article>)}{resource.data.cases.length === 0 && <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">No support cases.</div>}</div>{commandDialog}</div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex justify-between"><SectionHeader title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} />{canManage && <Button loading={busy === "create"} onClick={() => void createCase()}>New case</Button>}</div>{error && <p role="alert" className="mb-3 rounded bg-down/10 p-2 text-xs text-down">{error}</p>}<div className="space-y-2">{resource.data.cases.map((item) => <article key={item.id} className="p-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="text-xs text-text-faint">{item.reference} · {item.priority} · {item.category}{item.brandDomain && <span className="ml-1.5 rounded bg-brand-soft px-1 py-px text-(length:--term-text-2xs) font-semibold text-brand">{item.brandDomain}</span>}</div><h3 className="mt-1 text-sm font-medium">{item.subject}</h3><p className="mt-1 max-w-3xl text-xs text-text-muted">{item.description}</p></div><div className="text-right"><span className="text-xs font-medium">{item.status}</span>{canManage && item.status !== "RESOLVED" && item.status !== "CLOSED" && <div className="mt-2 flex gap-2"><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "IN_PROGRESS")}>Assign to me</button><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "RESOLVED")} className="rounded bg-brand px-2 py-1 text-xs text-white">Resolve</button></div>}</div></div></article>)}{resource.data.cases.length === 0 && <div className="border-dashed p-8 text-center">No support cases.</div>}</div>{commandDialog}</div>}</ModuleState>;
 }
 
 interface InstrumentRow extends Record<string, unknown> { symbol: string; name: string; category: string; active: boolean; marginPerLot: string; commissionPerLot: string; swapLongPips: string; swapShortPips: string; feedSymbol: string | null }
@@ -1409,14 +1411,14 @@ function InstrumentsPanel({ canManage }: { canManage: boolean }) {
 interface RiskRuleRow extends Record<string, unknown> { id: string; code: string; name: string; severity: string; enabled: boolean; version: number; configuration: unknown; updatedAt: string }
 function RiskPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<{ rules: RiskRuleRow[]; exposure: Record<string, number>; mutationPolicy: string }>("/api/admin/risk");
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Risk controls" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} /><div className="flex flex-wrap gap-2">{Object.entries(resource.data.exposure).map(([key, value]) => <span key={key} className="rounded border border-border bg-canvas px-3 py-2 text-xs">{key.replaceAll(/([A-Z])/g, " $1")}: <strong>{value}</strong></span>)}</div>{canManage && <ChangeHint text="Risk changes are proposed in Approvals and become effective only after a separate checker executes them." />}<SimpleTable columns={["code", "name", "severity", "enabled", "version", "configuration", "updatedAt"]} rows={resource.data.rules} empty="No risk rules." /></div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Risk controls" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} /><div className="flex flex-wrap gap-2">{Object.entries(resource.data.exposure).map(([key, value]) => <span key={key}>{key.replaceAll(/([A-Z])/g, " $1")}: <strong>{value}</strong></span>)}</div>{canManage && <ChangeHint text="Risk changes are proposed in Approvals and become effective only after a separate checker executes them." />}<SimpleTable columns={["code", "name", "severity", "enabled", "version", "configuration", "updatedAt"]} rows={resource.data.rules} empty="No risk rules." /></div>}</ModuleState>;
 }
 
 interface AuditEventRow extends Record<string, unknown> { sequence: string; domain: string; action: string; entityType: string; entityId: string | null; actorId: string | null; createdAt: string; metadata: unknown; eventHash: string }
 function AuditPanel({ canVerify, canExport }: { canVerify: boolean; canExport: boolean }) {
   const resource = useResource<{ events: AuditEventRow[]; redacted: boolean }>("/api/admin/audit?limit=150");
   async function verify() { try { const result = await requestJson<{ valid: boolean; checkedEvents: number }>("/api/admin/audit/verify", { method: "POST" }); toast.success(`Chain ${result.valid ? "valid" : "invalid"}`, `Checked ${result.checkedEvents} events.`); await resource.refresh(); } catch (cause) { toast.error("Verification failed", cause instanceof Error ? cause.message : "Verification failed."); } }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex flex-wrap items-start justify-between gap-3"><SectionHeader title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} /><div className="flex gap-2">{canVerify && <button type="button" onClick={() => void verify()} className="flex items-center gap-1.5 rounded bg-brand px-3 py-2 text-xs text-white"><ShieldCheck size={12} strokeWidth={2} aria-hidden />Verify chain</button>}{canExport && <a href="/api/admin/audit/export?format=csv&limit=500" className="rounded border border-border px-3 py-2 text-xs">Export CSV</a>}</div></div><SimpleTable columns={["sequence", "domain", "action", "entityType", "entityId", "actorId", "createdAt", "metadata"]} rows={resource.data.events} empty="No audit events." /></div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex flex-wrap items-start justify-between gap-3"><SectionHeader title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} /><div className="flex gap-2">{canVerify && <button type="button" onClick={() => void verify()} className="flex items-center gap-1.5 rounded bg-brand px-3 py-2 text-xs text-white"><ShieldCheck size={12} strokeWidth={2} aria-hidden />Verify chain</button>}{canExport && <a href="/api/admin/audit/export?format=csv&limit=500">Export CSV</a>}</div></div><SimpleTable columns={["sequence", "domain", "action", "entityType", "entityId", "actorId", "createdAt", "metadata"]} rows={resource.data.events} empty="No audit events." /></div>}</ModuleState>;
 }
 
 interface HealthResponse {
@@ -1437,7 +1439,7 @@ function HealthPanel() {
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && (
     <div>
       <SectionHeader title="Service health" description={`Checked ${fmtAgo(resource.data.checkedAt)} · provider ${resource.data.executionProvider} · market data ${resource.data.marketDataMode}.`} onRefresh={() => void resource.refresh()} />
-      <div className="mb-4 flex items-center gap-2 rounded-lg border border-border bg-canvas p-4">
+      <div className="mb-4 flex items-center gap-2 p-4">
         <span className={`h-3 w-3 rounded-full ${resource.data.status === "HEALTHY" ? "bg-up" : "bg-down"}`} aria-hidden />
         <span className="text-sm font-semibold">{resource.data.status === "HEALTHY" ? "All systems operational" : "Degraded — one or more services are down"}</span>
       </div>
@@ -1464,7 +1466,7 @@ function HealthCard({ name, status, latencyMs, detail, error }: { name: string; 
   const tone = status === "UP" ? "text-up" : status === "STARTING" ? "text-brand" : "text-down";
   const dot = status === "UP" ? "bg-up" : status === "STARTING" ? "bg-brand" : "bg-down";
   return (
-    <div className="rounded-lg border border-border bg-canvas p-4">
+    <div className="p-4">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold">{name}</p>
         <span className="flex items-center gap-1.5">
@@ -1560,7 +1562,7 @@ function ChangesPanel({
           )}
           <div className="space-y-2">
             {resource.data.requests.map((item) => (
-              <article key={item.id} className="rounded-lg border border-border bg-canvas p-3">
+              <article key={item.id} className="p-3">
                 <div className="flex flex-wrap justify-between gap-3">
                   <div>
                     <div className="text-(length:--term-text-2xs) text-text-faint">{item.domain} · {item.status} · {new Date(item.createdAt).toLocaleString()}</div>
@@ -1570,14 +1572,14 @@ function ChangesPanel({
                   </div>
                   {item.canReview && item.status === "PENDING" && (
                     <div className="flex gap-2">
-                      <button type="button" onClick={() => void review(item.id, "REJECT")} className="flex items-center gap-1 rounded border border-border px-2 py-1 text-xs"><X size={11} strokeWidth={2} aria-hidden />Reject</button>
+                      <button type="button" onClick={() => void review(item.id, "REJECT")} className="flex items-center gap-1"><X size={11} strokeWidth={2} aria-hidden />Reject</button>
                       <button type="button" onClick={() => void review(item.id, "APPROVE")} className="flex items-center gap-1 rounded bg-brand px-2 py-1 text-xs text-white"><Check size={11} strokeWidth={2} aria-hidden />Approve</button>
                     </div>
                   )}
                 </div>
               </article>
             ))}
-            {resource.data.requests.length === 0 && <div className="rounded border border-dashed border-border p-8 text-center text-text-muted">No change requests.</div>}
+            {resource.data.requests.length === 0 && <div className="border-dashed p-8 text-center">No change requests.</div>}
           </div>
           {commandDialog}
         </div>
@@ -1645,12 +1647,12 @@ function ChangeRequestComposer({
     <form onSubmit={submit} className="rounded-lg border border-brand/30 bg-brand-soft/40 p-4">
       <div className="grid gap-3 md:grid-cols-2">
         <label className="text-xs">Change type
-          <select name="action" value={action} onChange={(event) => setAction(event.target.value as ChangeAction)} className="mt-1 h-9 w-full rounded border border-border bg-canvas px-2">
+          <NativeSelect name="action" value={action} onChange={(event) => setAction(event.target.value as ChangeAction)} className="mt-1">
             {allowedActions.map((item) => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}
-          </select>
+          </NativeSelect>
         </label>
         <label className="text-xs">Request note
-          <input name="requestNote" maxLength={1000} className="mt-1 h-9 w-full rounded border border-border bg-canvas px-2" placeholder="Operational reason and ticket reference" />
+          <Input name="requestNote" maxLength={1000} className="mt-1" placeholder="Operational reason and ticket reference" />
         </label>
       </div>
       {(action === "ASSIGN_ROLE" || action === "REVOKE_ROLE") && <RoleChangeFields userId={prefill?.userId} label={prefill?.label} />}
@@ -1667,9 +1669,9 @@ function RoleChangeFields({ userId, label }: { userId?: string; label?: string }
     <div className="mt-3 grid gap-3 md:grid-cols-3">
       <FieldInput name="userId" label={label ? `Target user (${label})` : "Target user ID"} defaultValue={userId} required />
       <label className="text-xs">Role
-        <select name="role" className="mt-1 h-9 w-full rounded border border-border bg-canvas px-2" defaultValue="SUPPORT">
+        <NativeSelect name="role" className="mt-1" defaultValue="SUPPORT">
           {["SUPER_ADMIN", "COMPLIANCE", "FINANCE", "DEALER", "RISK", "SUPPORT", "AUDITOR"].map((role) => <option key={role}>{role}</option>)}
-        </select>
+        </NativeSelect>
       </label>
       <FieldInput name="reason" label="Reason" required />
     </div>
@@ -1682,9 +1684,9 @@ function RiskChangeFields() {
       <FieldInput name="code" label="Rule code" placeholder="MAX_ORDER_VOLUME" required />
       <FieldInput name="name" label="Rule name" required />
       <label className="text-xs">Severity
-        <select name="severity" className="mt-1 h-9 w-full rounded border border-border bg-canvas px-2" defaultValue="WARNING">
+        <NativeSelect name="severity" className="mt-1" defaultValue="WARNING">
           <option>INFO</option><option>WARNING</option><option>BLOCKING</option>
-        </select>
+        </NativeSelect>
       </label>
       <FieldInput name="description" label="Description" required />
       <FieldInput name="configuration" label="Configuration JSON" placeholder='{"maxLots":"50"}' required />
@@ -1707,7 +1709,7 @@ function InstrumentChangeFields() {
 }
 
 function FieldInput({ name, label, ...props }: { name: string; label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return <label className="text-xs">{label}<input name={name} className="mt-1 h-9 w-full rounded border border-border bg-canvas px-2" {...props} /></label>;
+  return <label className="text-xs">{label}<Input name={name} className="mt-1" {...props} /></label>;
 }
 
 function buildChangeRequest(action: ChangeAction, form: FormData): Record<string, unknown> {
@@ -1763,12 +1765,12 @@ function SimpleTable({ columns, rows, empty }: { columns: string[]; rows: Array<
   useEffect(() => setPage(1), [rows]);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-canvas">
+    <div className="overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full min-w-225 text-left text-xs">
           <thead className="bg-panel-2 text-text-muted"><tr>{columns.map((column) => <th key={column} className="p-2 font-medium">{column.replaceAll(/([A-Z])/g, " $1")}</th>)}</tr></thead>
           <tbody>
-            {visibleRows.map((row, index) => <tr key={String(row.id ?? row.code ?? row.symbol ?? index)} className="border-t border-border">{columns.map((column) => <td key={column} className="max-w-80 truncate p-2" title={displayValue(row[column])}>{displayValue(row[column])}</td>)}</tr>)}
+            {visibleRows.map((row, index) => <tr key={String(row.id ?? row.code ?? row.symbol ?? index)} className="border-t">{columns.map((column) => <td key={column} className="max-w-80 truncate p-2" title={displayValue(row[column])}>{displayValue(row[column])}</td>)}</tr>)}
             {rows.length === 0 && <tr><td colSpan={columns.length} className="p-8 text-center text-text-muted">{empty}</td></tr>}
           </tbody>
         </table>

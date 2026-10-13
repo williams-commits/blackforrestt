@@ -8,6 +8,7 @@ import { Dialog } from "@/components/ui/Dialog";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { useForexStore } from "@/lib/store";
 import type { InstrumentCategory } from "@/lib/types";
+import { Input } from "@/components/ui/Input";
 
 interface PaletteInstrument {
   symbol: string;
@@ -140,14 +141,14 @@ export function GlobalSearchPalette() {
       className="sm:max-w-md"
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 border-b border-border px-3 py-2.5">
+        <div className="shrink-0 border-b py-2.5">
           <div className="relative">
             <Search
               size={13}
               aria-hidden
               className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-faint"
             />
-            <input
+            <Input
               ref={inputRef}
               type="text"
               value={query}
@@ -172,7 +173,7 @@ export function GlobalSearchPalette() {
               // Radix focuses the dialog container; steal focus into the
               // field so typing works immediately.
               autoFocus
-              className="h-9 w-full rounded-md border border-border bg-panel pl-8 pr-3 text-sm text-text outline-none transition placeholder:text-text-faint focus:border-brand focus:ring-2 focus:ring-brand/25"
+              className="pl-8 pr-3 transition placeholder:text-text-faint focus:ring-2 focus:ring-brand/25"
             />
           </div>
         </div>
@@ -215,7 +216,7 @@ export function GlobalSearchPalette() {
             ))
           )}
         </div>
-        <p className="shrink-0 border-t border-border px-3 py-1.5 text-(length:--term-text-2xs) text-text-faint">
+        <p className="shrink-0 border-t text-(length:--term-text-2xs) text-text-faint">
           ↑↓ to navigate · Enter to open · Esc to close
         </p>
       </div>

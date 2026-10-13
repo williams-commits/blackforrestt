@@ -11,7 +11,11 @@ interface PaginationProps {
   compact?: boolean;
 }
 
-/** Accessible, reusable client-side pagination for bounded enterprise tables. */
+/**
+ * Accessible, reusable client-side pagination for bounded enterprise tables.
+ * Tonal footer band — no per-button borders; hover/disabled follow the
+ * platform's ghost-button behavior instead of outlined chrome.
+ */
 export function Pagination({
   page,
   pageSize,
@@ -24,6 +28,9 @@ export function Pagination({
   const safePage = Math.min(Math.max(page, 1), totalPages);
   const start = totalItems === 0 ? 0 : (safePage - 1) * pageSize + 1;
   const end = Math.min(totalItems, safePage * pageSize);
+
+  const step =
+    "inline-flex cursor-pointer items-center gap-1 rounded-md px-2.5 py-1 text-(length:--term-text-2xs) font-medium text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand disabled:pointer-events-none disabled:opacity-40";
 
   return (
     <nav
@@ -38,7 +45,7 @@ export function Pagination({
           type="button"
           disabled={safePage <= 1}
           onClick={() => onPageChange(safePage - 1)}
-          className="inline-flex items-center gap-1 rounded border border-border bg-canvas px-2.5 py-1 text-[10px] font-medium text-text-muted hover:border-brand hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+          className={step}
         >
           <ChevronLeft size={12} strokeWidth={2} aria-hidden /> Previous
         </button>
@@ -49,7 +56,7 @@ export function Pagination({
           type="button"
           disabled={safePage >= totalPages}
           onClick={() => onPageChange(safePage + 1)}
-          className="inline-flex items-center gap-1 rounded border border-border bg-canvas px-2.5 py-1 text-[10px] font-medium text-text-muted hover:border-brand hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+          className={step}
         >
           Next <ChevronRight size={12} strokeWidth={2} aria-hidden />
         </button>

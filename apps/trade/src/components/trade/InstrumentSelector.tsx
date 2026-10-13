@@ -6,6 +6,7 @@ import { useForexStore } from "@/lib/store";
 import { fmtPrice, fmtPct } from "@/lib/format";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import type { InstrumentCategory } from "@/lib/types";
+import { Input } from "@/components/ui/Input";
 
 interface Props {
   activeSymbol: string;
@@ -50,16 +51,16 @@ export function InstrumentSelector({ activeSymbol }: Props) {
             <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
             <path d="m21 21-4.3-4.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          <input
+          <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search"
-            className="w-full h-6 bg-canvas border border-border rounded pl-6 pr-2 text-(length:--term-text-xs) outline-none focus:border-brand placeholder:text-text-faint"
+            className="h-6 pl-6 pr-2 text-(length:--term-text-xs) placeholder:text-text-faint"
           />
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-1.5 py-0.5 text-(length:--term-text-2xs) text-text-faint uppercase border-y border-border-soft bg-panel-2">
+      <div className="flex items-center justify-between bg-panel-2/60 px-1.5 py-0.5 text-(length:--term-text-2xs) text-text-faint uppercase">
         <span>Symbol</span>
         <span>{total}</span>
       </div>
@@ -70,7 +71,7 @@ export function InstrumentSelector({ activeSymbol }: Props) {
           if (items.length === 0) return null;
           return (
             <li key={cat}>
-              <div className="px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint bg-canvas sticky top-0 z-10 border-b border-border-soft">
+              <div className="bg-panel-2/60 px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint sticky top-0 z-10">
                 {CATEGORY_LABEL[cat]}
               </div>
               {items.map((i) => {
@@ -79,7 +80,7 @@ export function InstrumentSelector({ activeSymbol }: Props) {
                   <div key={i.symbol}>
                     <button
                       onClick={() => router.push(`/trade/${i.symbol}`)}
-                      className={`w-full flex items-center justify-between gap-1 px-1.5 py-3 text-left hover:bg-panel-2 transition-colors border-b border-border-soft ${
+                      className={`w-full flex items-center justify-between gap-1 px-1.5 py-3 text-left transition-colors hover:bg-panel-2 ${
                         i.symbol === activeSymbol ? "bg-brand-soft" : ""
                       }`}
                     >

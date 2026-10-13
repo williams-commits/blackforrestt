@@ -9,6 +9,7 @@ import { CsvExportButton } from "@/components/ui/CsvExport";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";
 import { fmtDateTime } from "@/lib/dates";
+import { NativeSelect } from "@/components/ui/NativeSelect";
 
 type PositionRow = {
   id: string;
@@ -110,15 +111,15 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
               </FilterChip>
             ))}
           </div>
-          <select
+          <NativeSelect
             value={symbolFilter}
             onChange={(e) => setSymbolFilter(e.target.value)}
             aria-label="Filter by symbol"
-            className="h-8 rounded border border-border bg-canvas px-2 text-xs outline-none focus:border-brand"
+            className="h-8"
           >
             <option value="ALL">All symbols</option>
             {symbols.map((symbol) => <option key={symbol} value={symbol}>{symbol}</option>)}
-          </select>
+          </NativeSelect>
           <span className="ml-auto text-(length:--term-text-2xs) text-text-faint tnum">
             {rows.length} shown · Net P/L {allFilteredProfit >= 0 ? "+" : ""}{allFilteredProfit.toFixed(2)}
             {capped && (
@@ -131,7 +132,7 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
         </>
       }
     >
-      <thead className="border-b border-border-soft bg-panel-2">
+      <thead className="border-b border-border-soft">
         <tr>
           <Th sortKey="symbol" sort={sort} onSort={onSort}>Symbol</Th>
           <Th>Type</Th><Th>Side</Th>

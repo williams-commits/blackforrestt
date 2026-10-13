@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { KycDocuments } from "@/components/account/KycDocuments";
 import { ADDRESS_DOCUMENT_TYPES, IDENTITY_DOCUMENT_TYPES } from "@/lib/kyc";
+import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Input } from "@/components/ui/Input";
 
 interface Kyc {
   status: "NOT_SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED";
@@ -107,7 +109,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
   return (
     <div className="max-w-2xl space-y-4">
       <StatusBanner status={status} kyc={kyc} />
-      <section aria-labelledby="verification-checklist-heading" className="rounded-lg border border-border bg-canvas p-4">
+      <section aria-labelledby="verification-checklist-heading" className="p-4">
         <div className="flex items-center justify-between gap-3">
           <h3 id="verification-checklist-heading" className="text-sm font-medium">Verification checklist</h3>
           <span className="text-(length:--term-text-2xs) font-semibold tnum text-text-muted">{progress}% complete</span>
@@ -127,7 +129,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
       <KycDocuments />
 
       {status === "NOT_SUBMITTED" || status === "REJECTED" ? (
-        <form onSubmit={submit} className="space-y-4 rounded-lg border border-border bg-canvas p-6">
+        <form onSubmit={submit} className="space-y-4 p-6">
           <h3 className="text-sm font-medium">
             {status === "REJECTED" ? "Re-submit verification" : "Verify your identity"}
           </h3>
@@ -152,18 +154,18 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
             />
             <div>
               <label htmlFor="country-field" className="mb-1 block text-(length:--term-text-xs) text-text-muted">Country</label>
-              <select
+              <NativeSelect
                 id="country-field"
                 name="country"
                 required
                 defaultValue=""
-                className="h-10 w-full rounded border border-border bg-canvas px-2 text-sm outline-none focus:border-brand focus-visible:ring-1 focus-visible:ring-brand"
+                className="h-10"
               >
                 <option value="" disabled>Select country</option>
                 {KYC_COUNTRIES.map((country) => (
                   <option key={country} value={country}>{country}</option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
           </div>
           <Field label="Address" name="address" required maxLength={200} />
@@ -176,12 +178,12 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
             <label htmlFor={docTypeId} className="mb-1 block text-(length:--term-text-xs) text-text-muted">
               Document type
             </label>
-            <select
+            <NativeSelect
               id={docTypeId}
               name="docType"
               required
               defaultValue={kyc?.docType ?? "PASSPORT"}
-              className="h-10 w-full rounded border border-border bg-canvas px-2 text-sm outline-none focus:border-brand focus-visible:ring-1 focus-visible:ring-brand"
+              className="h-10"
             >
               <optgroup label="Identity">
                 {IDENTITY_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
@@ -189,7 +191,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
               <optgroup label="Proof of address">
                 {ADDRESS_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
               </optgroup>
-            </select>
+            </NativeSelect>
             <p className="mt-1 text-(length:--term-text-2xs) text-text-faint">The selected type must show as Verified above before submission.</p>
           </div>
 
@@ -211,7 +213,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
       ) : null}
 
       {status === "PENDING" && kyc && (
-        <section aria-labelledby="pending-summary-heading" className="rounded-lg border border-border bg-canvas p-6">
+        <section aria-labelledby="pending-summary-heading" className="p-6">
           <h3 id="pending-summary-heading" className="text-sm font-medium">Submitted details</h3>
           <p className="mt-1 text-(length:--term-text-xs) text-text-faint">Under compliance review — this is what we received.</p>
           <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
@@ -227,7 +229,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between border-b border-border-soft py-1.5 last:border-0">
+    <div className="flex items-center justify-between border-b border-border-soft last:border-0">
       <dt className="text-text-muted">{label}</dt>
       <dd className="font-medium">{value || "—"}</dd>
     </div>
@@ -285,7 +287,7 @@ function StatusBanner({ status, kyc }: { status: Kyc["status"]; kyc: Kyc | null 
     );
   }
   return (
-    <div role="status" className="flex items-center gap-3 rounded-lg border border-border bg-panel-2 p-4">
+    <div role="status" className="flex items-center gap-3 p-4">
       <span aria-hidden="true" className="text-lg text-text-muted">⚠</span>
       <div>
         <div className="text-sm font-medium">Not verified</div>
@@ -322,7 +324,7 @@ function Field({
       <label htmlFor={id} className="mb-1 block text-(length:--term-text-xs) text-text-muted">
         {label}
       </label>
-      <input
+      <Input
         id={id}
         type={type}
         name={name}
@@ -332,7 +334,7 @@ function Field({
         min={min}
         max={max}
         maxLength={maxLength}
-        className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm outline-none placeholder:text-text-faint focus:border-brand focus-visible:ring-1 focus-visible:ring-brand"
+        className="h-10 placeholder:text-text-faint"
       />
     </div>
   );

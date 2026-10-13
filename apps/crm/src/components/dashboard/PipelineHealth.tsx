@@ -97,14 +97,18 @@ export function PipelineHealth({ className }: { className?: string }) {
                   return data.pipelineStages.map((stage) => (
                     <li key={stage.id} className="group/stage">
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="flex min-w-0 items-center gap-2 text-sm">
+                        <Link
+                          href={`/leads?status=${stage.id}`}
+                          className="flex min-w-0 items-center gap-2 text-sm rounded-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+                          title={`Open ${stage.name} leads`}
+                        >
                           <span
                             aria-hidden
                             className="size-2 shrink-0 rounded-full"
                             style={{ background: stage.color ?? "var(--muted-foreground)" }}
                           />
-                          <span className="truncate font-medium text-foreground">{stage.name}</span>
-                        </span>
+                          <span className="truncate font-medium text-foreground hover:underline">{stage.name}</span>
+                        </Link>
                         <span className="shrink-0 text-sm tabular-nums text-muted-foreground">{stage.count}</span>
                       </div>
                       <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>

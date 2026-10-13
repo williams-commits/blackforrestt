@@ -9,6 +9,8 @@ import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";
 import { fmtDateTime } from "@/lib/dates";
+import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Input } from "@/components/ui/Input";
 
 export interface ReportRow {
   id: string;
@@ -96,12 +98,12 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
       <div className="flex flex-wrap items-center gap-2 text-(length:--term-text-xs) text-text-muted">
         <label className="flex items-center gap-1">
           From
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="Closed after" className="h-8 rounded border border-border bg-canvas px-2 text-xs outline-none focus:border-brand" />
+          <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="Closed after" className="h-8" />
         </label>
         <span className="text-text-faint">→</span>
         <label className="flex items-center gap-1">
           To
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="Closed before" className="h-8 rounded border border-border bg-canvas px-2 text-xs outline-none focus:border-brand" />
+          <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="Closed before" className="h-8" />
         </label>
         <CsvExportButton
           filename="trade-report"
@@ -117,33 +119,32 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
           {toDate && <input type="hidden" name="to" value={toDate} />}
           <label className="grid gap-1 text-(length:--term-text-xs) text-text-muted">
             Symbol
-            <select name="symbol" defaultValue={symbol} className="h-9 rounded border border-border bg-canvas px-2 text-sm outline-none focus:border-brand">
+            <NativeSelect name="symbol" defaultValue={symbol}>
               <option value="ALL">All symbols</option>
               {symbols.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
+            </NativeSelect>
           </label>
           <label className="grid gap-1 text-(length:--term-text-xs) text-text-muted">
             Side
-            <select name="side" defaultValue={side} className="h-9 rounded border border-border bg-canvas px-2 text-sm outline-none focus:border-brand">
+            <NativeSelect name="side" defaultValue={side}>
               <option value="ALL">All sides</option>
               <option value="BUY">BUY</option>
               <option value="SELL">SELL</option>
-            </select>
+            </NativeSelect>
           </label>
           <button type="submit" className="h-9 rounded bg-brand px-4 text-xs font-medium text-white hover:brightness-95">Apply filters</button>
           <span className="ml-auto text-xs text-text-faint">{filtered.length} shown of {server.pagination.total}</span>
         </form>
       ) : (
         <div className="flex flex-wrap items-center gap-3">
-          <select
+          <NativeSelect
             value={symbol}
             onChange={(event) => setLocalSymbol(event.target.value)}
-            className="h-9 rounded border border-border bg-canvas px-2 text-sm outline-none focus:border-brand"
           >
             <option value="ALL">All symbols</option>
             {symbols.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <div className="inline-flex rounded border border-border bg-panel-2 p-0.5 text-xs">
+          </NativeSelect>
+          <div className="inline-flex p-0.5">
             {["ALL", "BUY", "SELL"].map((item) => (
               <button
                 type="button"
@@ -159,9 +160,9 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
         </div>
       )}
 
-      <div className="overflow-hidden overflow-x-auto rounded-lg border border-border bg-canvas">
-        <table className="w-full min-w-[820px]">
-          <thead className="border-b border-border-soft bg-panel-2">
+      <div className="overflow-hidden overflow-x-auto">
+        <table className="w-full min-w-205">
+          <thead className="border-b border-border-soft">
             <tr>
               <Th>Symbol</Th><Th>Type</Th><Th>Side</Th><Th className="text-right">Volume</Th>
               <Th className="text-right">Swap</Th><Th className="text-right">Commission</Th>
@@ -228,21 +229,21 @@ function calculateStats(rows: ReportRow[]): ReportSummary {
 }
 
 function ReportPageLink({ server, page, disabled, children }: { server: ReportServerState; page: number; disabled: boolean; children: React.ReactNode }) {
-  if (disabled) return <span aria-disabled="true" className="rounded border border-border px-3 py-2 text-text-faint">{children}</span>;
+  if (disabled) return <span aria-disabled="true" className="text-text-faint">{children}</span>;
   const params = new URLSearchParams();
   if (server.filters.symbol !== "ALL") params.set("symbol", server.filters.symbol);
   if (server.filters.side !== "ALL") params.set("side", server.filters.side);
   if (server.filters.from) params.set("from", server.filters.from);
   if (server.filters.to) params.set("to", server.filters.to);
   params.set("page", String(page));
-  return <Link href={`/reports?${params.toString()}`} className="rounded border border-border px-3 py-2 text-text hover:border-brand">{children}</Link>;
+  return <Link href={`/reports?${params.toString()}`} className="hover:border-brand">{children}</Link>;
 }
 
 function Card({ label, value, valueClass = "", sub }: { label: string; value: string; valueClass?: string; sub?: string }) {
-  return <div className="rounded-lg border border-border bg-canvas p-4"><div className="text-(length:--term-text-xs) uppercase text-text-faint">{label}</div><div className={`mt-1 text-xl font-semibold tnum ${valueClass}`}>{value}</div>{sub && <div className="mt-0.5 text-(length:--term-text-xs) text-text-faint">{sub}</div>}</div>;
+  return <div className="p-4"><div className="text-(length:--term-text-xs) uppercase text-text-faint">{label}</div><div className={`mt-1 text-xl font-semibold tnum ${valueClass}`}>{value}</div>{sub && <div className="mt-0.5 text-(length:--term-text-xs) text-text-faint">{sub}</div>}</div>;
 }
 function ExtremCard({ title, row, positive, emptyLabel = "—" }: { title: string; row: ReportRow | null; positive: boolean; emptyLabel?: string }) {
-  return <div className="rounded-lg border border-border bg-canvas p-4"><div className="mb-2 text-(length:--term-text-xs) uppercase text-text-faint">{title}</div>{row ? <div className="flex items-center justify-between"><div className="flex items-center gap-2"><InstrumentIcon symbol={row.symbol} size={18} /><div><div className="text-sm font-medium">{row.symbol}</div><div className="text-(length:--term-text-xs) text-text-muted">{row.side} · {row.volume.toFixed(2)} lots</div></div></div><div className={`text-lg font-semibold tnum ${positive ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</div></div> : <EmptyState compact icon={positive ? <TrendingUp size={16} /> : <TrendingDown size={16} />} title={emptyLabel} />}</div>;
+  return <div className="p-4"><div className="mb-2 text-(length:--term-text-xs) uppercase text-text-faint">{title}</div>{row ? <div className="flex items-center justify-between"><div className="flex items-center gap-2"><InstrumentIcon symbol={row.symbol} size={18} /><div><div className="text-sm font-medium">{row.symbol}</div><div className="text-(length:--term-text-xs) text-text-muted">{row.side} · {row.volume.toFixed(2)} lots</div></div></div><div className={`text-lg font-semibold tnum ${positive ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</div></div> : <EmptyState compact icon={positive ? <TrendingUp size={16} /> : <TrendingDown size={16} />} title={emptyLabel} />}</div>;
 }
 function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <th className={`whitespace-nowrap px-3 py-2 text-left text-(length:--term-text-2xs) font-medium uppercase text-text-faint ${className}`}>{children}</th>; }
 function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <td className={`whitespace-nowrap px-3 py-2 text-xs ${className}`}>{children}</td>; }

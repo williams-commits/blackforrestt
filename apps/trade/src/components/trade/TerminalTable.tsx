@@ -77,7 +77,7 @@ export function TerminalTable<T extends object>({
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className={`whitespace-nowrap border-b border-border px-2 py-1.5 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint ${String((header.column.columnDef.meta as { headerClass?: string } | undefined)?.headerClass ?? "")}`}
+                    className={`whitespace-nowrap px-2 py-1.5 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint ${String((header.column.columnDef.meta as { headerClass?: string } | undefined)?.headerClass ?? "")}`}
                   >
                     {header.isPlaceholder
                       ? null
@@ -103,8 +103,8 @@ export function TerminalTable<T extends object>({
                       data-index={virtualRow.index}
                       onClick={(event) => { if (event.target instanceof Element && event.target.closest("button, a, input, select, textarea, label, [role=button]")) return; onRowClick?.(row.original); }}
                       ref={virtualizer.measureElement}
-                      className={`border-t border-border-soft transition-colors hover:bg-panel-2/50 ${onRowClick ? "cursor-pointer " : ""}${
-                        virtualRow.index % 2 === 1 ? "bg-panel/30" : ""
+                      className={`transition-colors hover:bg-panel-2 ${onRowClick ? "cursor-pointer " : ""}${
+                        virtualRow.index % 2 === 1 ? "bg-panel-2/50" : ""
                       }`}
                     >
                       {row.getVisibleCells().map((cell) => (
@@ -136,8 +136,8 @@ export function TerminalTable<T extends object>({
                 <tr
                   key={row.id}
                   onClick={(event) => { if (event.target instanceof Element && event.target.closest("button, a, input, select, textarea, label, [role=button]")) return; onRowClick?.(row.original); }}
-                  className={`border-t border-border-soft transition-colors hover:bg-panel-2/50 ${onRowClick ? "cursor-pointer " : ""}${
-                    index % 2 === 1 ? "bg-panel/30" : ""
+                  className={`transition-colors hover:bg-panel-2 ${onRowClick ? "cursor-pointer " : ""}${
+                    index % 2 === 1 ? "bg-panel-2/50" : ""
                   }`}
                 >
                   {row.getVisibleCells().map((cell) => (

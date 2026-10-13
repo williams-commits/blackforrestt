@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import type { WalletAddressEntry } from "@/server/userSettings";
 import { validateDepositAddress } from "@/lib/paymentNetworks";
+import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Input } from "@/components/ui/Input";
 
 /**
  * Reusable settings form for both group settings and per-user profile overrides.
@@ -149,10 +151,11 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
                 <button
                   key={cat}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => toggleArrayItem(["trading", "allowedCategories"], cat, effectiveCategories)}
-                  className={`rounded-md px-2.5 py-1 text-(length:--term-text-xs) font-medium border transition ${
-                    active ? "bg-brand text-white border-brand" : "bg-panel-2 text-text-muted border-border"
-                  }`}
+                  className={`h-7 cursor-pointer rounded-md px-2.5 text-(length:--term-text-xs) font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand ${
+                  active ? "bg-brand text-white" : "bg-panel-2 text-text-muted hover:bg-panel-3 hover:text-text"
+                }`}
                 >
                   {cat}
                 </button>
@@ -195,10 +198,11 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
                 <button
                   key={method}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => toggleArrayItem(["deposits", "allowedMethods"], method, effectiveMethods)}
-                  className={`rounded-md px-2.5 py-1 text-(length:--term-text-xs) font-medium border transition ${
-                    active ? "bg-brand text-white border-brand" : "bg-panel-2 text-text-muted border-border"
-                  }`}
+                  className={`h-7 cursor-pointer rounded-md px-2.5 text-(length:--term-text-xs) font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand ${
+                  active ? "bg-brand text-white" : "bg-panel-2 text-text-muted hover:bg-panel-3 hover:text-text"
+                }`}
                 >
                   {method}
                 </button>
@@ -219,7 +223,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
           Leave empty to inherit.
         </p>
         {wallets.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-canvas px-3 py-4 text-center">
+          <div className="border-dashed py-4 text-center">
             <p className="text-(length:--term-text-xs) text-text-faint">
               No wallets set — using the next layer up (group / global default).
             </p>
@@ -227,43 +231,43 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         ) : (
           <div className="space-y-2">
             {wallets.map((wallet, index) => (
-              <div key={index} className="rounded-lg border border-border bg-canvas p-2.5 space-y-2">
+              <div key={index} className="p-2.5 space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-(length:--term-text-2xs) font-bold text-text-faint">#{index + 1}</span>
-                  <input
+                  <Input
                     value={wallet.label ?? ""}
                     onChange={(e) => updateWallet(index, { label: e.target.value })}
                     placeholder="Label (optional), e.g. Main USDT"
                     maxLength={40}
-                    className="h-8 flex-1 rounded border border-border bg-canvas px-2 text-xs outline-none focus:border-brand"
+                    className="h-8 flex-1"
                   />
                   <button
                     type="button"
                     onClick={() => setWallets(wallets.filter((_, i) => i !== index))}
                     aria-label={`Remove wallet ${index + 1}`}
-                    className="h-7 w-7 shrink-0 rounded border border-border text-text-muted transition hover:border-down/40 hover:text-down"
+                    className="h-7 w-7 shrink-0 transition hover:border-down/40 hover:text-down"
                   >
                     ✕
                   </button>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-[100px_1fr]">
-                  <select
+                  <NativeSelect
                     value={WALLET_ASSETS.includes(wallet.asset) ? wallet.asset : "USDT"}
                     onChange={(e) => updateWallet(index, { asset: e.target.value })}
                     aria-label="Asset"
-                    className="h-8 rounded border border-border bg-canvas px-2 text-xs outline-none focus:border-brand"
+                    className="h-8"
                   >
                     {WALLET_ASSETS.map((a) => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                  <input
+                  </NativeSelect>
+                  <Input
                     value={wallet.network}
                     onChange={(e) => updateWallet(index, { network: e.target.value })}
                     placeholder="Network, e.g. TRON (TRC20)"
                     maxLength={60}
-                    className="h-8 rounded border border-border bg-canvas px-2 text-xs outline-none focus:border-brand"
+                    className="h-8"
                   />
                 </div>
-                <input
+                <Input
                   value={wallet.address}
                   onChange={(e) => updateWallet(index, { address: e.target.value })}
                   placeholder="Deposit address"
@@ -282,7 +286,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         <button
           type="button"
           onClick={() => setWallets([...wallets, { asset: "USDT", network: "", address: "" }])}
-          className="w-full rounded-lg border border-dashed border-border py-2 text-xs font-medium text-text-muted transition hover:border-brand/50 hover:text-brand"
+          className="border-dashed font-medium transition hover:border-brand/50 hover:text-brand"
         >
           + Add wallet
         </button>
@@ -397,7 +401,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
             <button
               type="button"
               onClick={() => setS(initial)}
-              className="rounded-lg border border-border px-3 py-2 text-(length:--term-text-xs) font-medium text-text-muted transition hover:text-text"
+              className="text-(length:--term-text-xs) font-medium transition hover:text-text"
             >
               Reset
             </button>
@@ -412,7 +416,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-panel p-4">
+    <div className="rounded-xl p-4">
       <h4 className="text-(length:--term-text-2xs) font-bold uppercase tracking-wider text-text-faint mb-3">{title}</h4>
       <div className="space-y-3">{children}</div>
     </div>
@@ -451,12 +455,11 @@ function NumberInput({
   return (
     <div>
       <label className="block text-xs text-text-muted mb-1">{label}</label>
-      <input
+      <Input
         type="number"
         value={value ?? ""}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
-        className="w-full h-9 rounded-lg border border-border bg-canvas px-3 text-sm outline-none focus:border-brand"
       />
       {hint && <p className="mt-1 text-(length:--term-text-2xs) text-text-faint">{hint}</p>}
     </div>

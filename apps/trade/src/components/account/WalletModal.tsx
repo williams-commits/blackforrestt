@@ -10,6 +10,8 @@ import type { WalletAddressEntry } from "@/server/userSettings";
 import { WITHDRAWAL_CRYPTO_NETWORKS } from "@/lib/paymentNetworks";
 import { PAYMENT_PROOF_MAX_BYTES, compressProofImage, isHeicFile } from "@/lib/paymentProofs";
 import { WALLET_ICONS, TabIcon } from "@/components/ui/tabIcons";
+import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Input } from "@/components/ui/Input";
 
 /** Widened view of the server-enforced presets for string-indexed lookups. */
 const WITHDRAWAL_NETWORKS: Record<string, readonly string[]> = WITHDRAWAL_CRYPTO_NETWORKS;
@@ -17,7 +19,7 @@ const WITHDRAWAL_NETWORKS: Record<string, readonly string[]> = WITHDRAWAL_CRYPTO
 type WalletMode = "deposit" | "withdraw";
 type PaymentMethod = "CARD" | "BANK_TRANSFER" | "CRYPTO";
 
-interface Props {
+interface Props { 
   open: boolean;
   onClose: () => void;
   onDone: () => void | Promise<void>;
@@ -332,7 +334,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
             </div>
             <div className="relative mt-1">
               <span aria-hidden className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-medium text-text-faint">$</span>
-              <input
+              <Input
                 id={amountId}
                 type="number"
                 inputMode="decimal"
@@ -343,7 +345,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                 value={amount}
                 onChange={(event) => { setAmount(event.target.value); invalidateRequestKey(); }}
                 placeholder="0.00"
-                className="h-12 w-full rounded-lg border border-border bg-canvas pl-8 pr-3 text-lg font-semibold tnum outline-none transition-colors focus:border-brand"
+                className="h-12 pl-8 pr-3 text-lg font-semibold tnum transition-colors"
               />
             </div>
             <div className="mt-2 grid grid-cols-4 gap-1.5" role="group" aria-label="Preset amounts">
@@ -371,27 +373,27 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
 
           <div>
             <label htmlFor={methodId} className="mb-1 block text-(length:--term-text-xs) text-text-muted">Method</label>
-            <select id={methodId} value={method} onChange={(event) => changeMethod(event.target.value as PaymentMethod)} className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm">
+            <NativeSelect id={methodId} value={method} onChange={(event) => changeMethod(event.target.value as PaymentMethod)} className="h-10">
               {enabledMethods.map((m) => (
                 <option key={m} value={m}>{methodLabel(m)}</option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
 
-          <fieldset className="space-y-3 rounded border border-border-soft p-3 sm:p-4">
+          <fieldset className="space-y-3 border-border-soft p-3 sm:p-4">
             <legend className="px-1 text-xs font-medium">{isDeposit ? "Payment source" : "Withdrawal destination"} · {methodLabel(method)}</legend>
             {method === "CARD" && <>
               <p className="text-(length:--term-text-xs) text-text-faint">For PCI safety, never enter a full card number or CVV. Only the brand and final four digits are collected.</p>
               {!isDeposit && <p className="text-(length:--term-text-xs) text-text-faint">Card withdrawals are refunds: use the original verified card deposit reference — the brand and last four digits must match an approved card deposit on your account.</p>}
-              <input required maxLength={120} value={card.cardholderName} onChange={(e) => setCard((v) => ({...v, cardholderName:e.target.value}))} placeholder="Cardholder name" aria-label="Cardholder name" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" />
-              <div className="grid grid-cols-2 gap-2"><select value={card.cardBrand} onChange={(e) => setCard((v)=>({...v,cardBrand:e.target.value}))} aria-label="Card brand" className="h-10 rounded border border-border bg-canvas px-3 text-sm"><option>VISA</option><option>MASTERCARD</option><option>AMEX</option><option>OTHER</option></select><input required inputMode="numeric" pattern="\d{4}" maxLength={4} value={card.last4} onChange={(e)=>setCard((v)=>({...v,last4:e.target.value.replace(/\D/g,"").slice(0,4)}))} placeholder="Last 4 digits" aria-label="Last four card digits" className="h-10 rounded border border-border bg-canvas px-3 text-sm" /></div>
-              {isDeposit && <input required maxLength={160} value={card.providerReference} onChange={(e) => setCard((v)=>({...v,providerReference:e.target.value}))} placeholder="Card processor transaction reference" aria-label="Card processor transaction reference" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" />}
+              <Input required maxLength={120} value={card.cardholderName} onChange={(e) => setCard((v) => ({...v, cardholderName:e.target.value}))} placeholder="Cardholder name" aria-label="Cardholder name" className="h-10" />
+              <div className="grid grid-cols-2 gap-2"><NativeSelect value={card.cardBrand} onChange={(e) => setCard((v)=>({...v,cardBrand:e.target.value}))} aria-label="Card brand" className="h-10"><option>VISA</option><option>MASTERCARD</option><option>AMEX</option><option>OTHER</option></NativeSelect><Input required inputMode="numeric" pattern="\d{4}" maxLength={4} value={card.last4} onChange={(e)=>setCard((v)=>({...v,last4:e.target.value.replace(/\D/g,"").slice(0,4)}))} placeholder="Last 4 digits" aria-label="Last four card digits" className="h-10" /></div>
+              {isDeposit && <Input required maxLength={160} value={card.providerReference} onChange={(e) => setCard((v)=>({...v,providerReference:e.target.value}))} placeholder="Card processor transaction reference" aria-label="Card processor transaction reference" className="h-10" />}
             </>}
             {method === "BANK_TRANSFER" && <>
-              <input required maxLength={120} value={bank.accountName} onChange={(e)=>setBank((v)=>({...v,accountName:e.target.value}))} placeholder={isDeposit ? "Sender account name" : "Beneficiary account name"} aria-label="Account name" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" />
-              {!isDeposit && <input required maxLength={128} value={bank.accountNumber} onChange={(e)=>setBank((v)=>({...v,accountNumber:e.target.value}))} placeholder="Account number or IBAN" aria-label="Account number or IBAN" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" />}
-              <div className="grid grid-cols-[1fr_100px] gap-2"><input required maxLength={120} value={bank.institution} onChange={(e)=>setBank((v)=>({...v,institution:e.target.value}))} placeholder="Bank / institution" aria-label="Bank or institution" className="h-10 min-w-0 rounded border border-border bg-canvas px-3 text-sm" /><input required maxLength={2} value={bank.country} onChange={(e)=>setBank((v)=>({...v,country:e.target.value.toUpperCase()}))} placeholder="US" aria-label="Country code" className="h-10 rounded border border-border bg-canvas px-3 text-sm uppercase" /></div>
-              {isDeposit ? <input required maxLength={160} value={bank.transferReference} onChange={(e)=>setBank((v)=>({...v,transferReference:e.target.value}))} placeholder="Bank transfer reference" aria-label="Bank transfer reference" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /> : <input maxLength={64} value={bank.routingCode} onChange={(e)=>setBank((v)=>({...v,routingCode:e.target.value}))} placeholder="Routing / SWIFT / BIC (optional)" aria-label="Routing or SWIFT code" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" />}
+              <Input required maxLength={120} value={bank.accountName} onChange={(e)=>setBank((v)=>({...v,accountName:e.target.value}))} placeholder={isDeposit ? "Sender account name" : "Beneficiary account name"} aria-label="Account name" className="h-10" />
+              {!isDeposit && <Input required maxLength={128} value={bank.accountNumber} onChange={(e)=>setBank((v)=>({...v,accountNumber:e.target.value}))} placeholder="Account number or IBAN" aria-label="Account number or IBAN" className="h-10" />}
+              <div className="grid grid-cols-[1fr_100px] gap-2"><Input required maxLength={120} value={bank.institution} onChange={(e)=>setBank((v)=>({...v,institution:e.target.value}))} placeholder="Bank / institution" aria-label="Bank or institution" className="h-10 min-w-0" /><Input required maxLength={2} value={bank.country} onChange={(e)=>setBank((v)=>({...v,country:e.target.value.toUpperCase()}))} placeholder="US" aria-label="Country code" className="h-10 uppercase" /></div>
+              {isDeposit ? <Input required maxLength={160} value={bank.transferReference} onChange={(e)=>setBank((v)=>({...v,transferReference:e.target.value}))} placeholder="Bank transfer reference" aria-label="Bank transfer reference" className="h-10" /> : <Input maxLength={64} value={bank.routingCode} onChange={(e)=>setBank((v)=>({...v,routingCode:e.target.value}))} placeholder="Routing / SWIFT / BIC (optional)" aria-label="Routing or SWIFT code" className="h-10" />}
             </>}
             {method === "CRYPTO" && <>
               {isDeposit && walletAddresses.length > 0 && (
@@ -428,7 +430,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                     ))}
                   </div>
                   {selectedWallet && (
-                    <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-panel p-3 sm:flex-row">
+                    <div className="flex flex-col items-center gap-3 p-3 sm:flex-row">
                       <QrCode
                         value={depositQrPayload(selectedWallet)}
                         label={`Deposit address for ${selectedWallet.asset} on ${selectedWallet.network}`}
@@ -438,12 +440,12 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                           Pay <span className="font-semibold text-text">{selectedWallet.asset}</span> on{" "}
                           <span className="font-semibold text-text">{selectedWallet.network}</span> only
                         </p>
-                        <input
+                        <Input
                           readOnly
                           value={selectedWallet.address}
                           aria-label="Selected deposit address"
                           onFocus={(e) => e.currentTarget.select()}
-                          className="h-9 w-full min-w-0 rounded-md border border-border bg-canvas px-2.5 font-mono text-xs text-text outline-none"
+                          className="min-w-0 font-mono"
                         />
                         <button
                           type="button"
@@ -468,7 +470,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                     <span aria-hidden className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
                       <InstrumentIcon symbol={cryptoDetails.asset} size={18} />
                     </span>
-                    <select
+                    <NativeSelect
                       value={cryptoDetails.asset}
                       onChange={(e) => {
                         const asset = e.target.value;
@@ -476,21 +478,21 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                         setCryptoDetails((v) => ({ ...v, asset, network: WITHDRAWAL_NETWORKS[asset]?.[0] ?? v.network }));
                       }}
                       aria-label="Crypto asset"
-                      className="h-10 w-full rounded border border-border bg-canvas pl-9 pr-2 text-sm"
+                      className="h-10 pl-9 pr-2"
                     >
                       {Object.keys(WITHDRAWAL_NETWORKS).map((asset) => <option key={asset}>{asset}</option>)}
-                    </select>
+                    </NativeSelect>
                   </div>
-                  <select
+                  <NativeSelect
                     value={cryptoDetails.network}
                     onChange={(e) => setCryptoDetails((v) => ({ ...v, network: e.target.value }))}
                     aria-label="Blockchain network"
-                    className="h-10 min-w-0 rounded border border-border bg-canvas px-3 text-sm"
+                    className="h-10 min-w-0"
                   >
                     {(WITHDRAWAL_NETWORKS[cryptoDetails.asset] ?? []).map((network) => (
                       <option key={network}>{network}</option>
                     ))}
-                  </select>
+                  </NativeSelect>
                 </div>
               ) : !(walletAddresses.length > 0) && (
                 <div className="grid grid-cols-[150px_1fr] gap-2">
@@ -498,16 +500,16 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                     <span aria-hidden className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
                       <InstrumentIcon symbol={cryptoDetails.asset} size={18} />
                     </span>
-                    <select value={cryptoDetails.asset} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,asset:e.target.value}));}} aria-label="Crypto asset" className="h-10 w-full rounded border border-border bg-canvas pl-9 pr-2 text-sm"><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></select>
+                    <NativeSelect value={cryptoDetails.asset} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,asset:e.target.value}));}} aria-label="Crypto asset" className="h-10 pl-9 pr-2"><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></NativeSelect>
                   </div>
-                  <input required maxLength={120} value={cryptoDetails.network} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,network:e.target.value}));}} placeholder="Network, e.g. TRON (TRC20)" aria-label="Blockchain network" className="h-10 min-w-0 rounded border border-border bg-canvas px-3 text-sm" />
+                  <Input required maxLength={120} value={cryptoDetails.network} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,network:e.target.value}));}} placeholder="Network, e.g. TRON (TRC20)" aria-label="Blockchain network" className="h-10 min-w-0" />
                 </div>
               )}
-              {isDeposit ? <><input required maxLength={256} value={cryptoDetails.transactionHash} onChange={(e)=>setCryptoDetails((v)=>({...v,transactionHash:e.target.value}))} placeholder="Transaction hash" aria-label="Transaction hash" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /><input maxLength={256} value={cryptoDetails.senderAddress} onChange={(e)=>setCryptoDetails((v)=>({...v,senderAddress:e.target.value}))} placeholder="Sender wallet address (optional)" aria-label="Sender wallet address" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /></> : <><input required maxLength={256} value={cryptoDetails.walletAddress} onChange={(e)=>setCryptoDetails((v)=>({...v,walletAddress:e.target.value}))} placeholder="Destination wallet address" aria-label="Destination wallet address" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /><input maxLength={120} value={cryptoDetails.destinationTag} onChange={(e)=>setCryptoDetails((v)=>({...v,destinationTag:e.target.value}))} placeholder="Destination tag / memo (optional)" aria-label="Destination tag or memo" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /></>}
+              {isDeposit ? <><Input required maxLength={256} value={cryptoDetails.transactionHash} onChange={(e)=>setCryptoDetails((v)=>({...v,transactionHash:e.target.value}))} placeholder="Transaction hash" aria-label="Transaction hash" className="h-10" /><Input maxLength={256} value={cryptoDetails.senderAddress} onChange={(e)=>setCryptoDetails((v)=>({...v,senderAddress:e.target.value}))} placeholder="Sender wallet address (optional)" aria-label="Sender wallet address" className="h-10" /></> : <><Input required maxLength={256} value={cryptoDetails.walletAddress} onChange={(e)=>setCryptoDetails((v)=>({...v,walletAddress:e.target.value}))} placeholder="Destination wallet address" aria-label="Destination wallet address" className="h-10" /><Input maxLength={120} value={cryptoDetails.destinationTag} onChange={(e)=>setCryptoDetails((v)=>({...v,destinationTag:e.target.value}))} placeholder="Destination tag / memo (optional)" aria-label="Destination tag or memo" className="h-10" /></>}
             </>}
           </fieldset>
 
-          {!isDeposit && needsStepUp && <div className="space-y-3 rounded border border-brand/30 bg-brand-soft p-3"><p className="text-xs text-text-muted">Confirm this withdrawal with your password and authenticator or recovery code.</p><input type="password" required maxLength={128} value={currentPassword} onChange={(e)=>setCurrentPassword(e.target.value)} autoComplete="current-password" placeholder="Current password" aria-label="Current password" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /><input type="text" required maxLength={64} value={mfaCode} onChange={(e)=>setMfaCode(e.target.value)} autoComplete="one-time-code" placeholder="Authenticator or recovery code" aria-label="Authenticator or recovery code" className="h-10 w-full rounded border border-border bg-canvas px-3 text-sm" /></div>}
+          {!isDeposit && needsStepUp && <div className="space-y-3 rounded border border-brand/30 bg-brand-soft p-3"><p className="text-xs text-text-muted">Confirm this withdrawal with your password and authenticator or recovery code.</p><Input type="password" required maxLength={128} value={currentPassword} onChange={(e)=>setCurrentPassword(e.target.value)} autoComplete="current-password" placeholder="Current password" aria-label="Current password" className="h-10" /><Input type="text" required maxLength={64} value={mfaCode} onChange={(e)=>setMfaCode(e.target.value)} autoComplete="one-time-code" placeholder="Authenticator or recovery code" aria-label="Authenticator or recovery code" className="h-10" /></div>}
 
           <div>
             <label htmlFor={proofId} className="mb-1 block text-(length:--term-text-xs) text-text-muted">
@@ -519,7 +521,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
               accept="image/jpeg,image/png,application/pdf"
               required={isDeposit && method !== "CARD"}
               onChange={(event)=>{const input = event.currentTarget; void prepareProofFile(input.files?.[0] ?? null, input); invalidateRequestKey();}}
-              className="block w-full rounded border border-border bg-canvas p-2 text-xs file:mr-3 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-2 file:text-xs"
+              className="block p-2 file:mr-3 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-2 file:text-xs"
             />
             <p className="mt-1 text-(length:--term-text-xs) text-text-faint">
               {isDeposit && method === "CARD"

@@ -4,6 +4,7 @@ import { useId, useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
 import { TableSearch } from "@/components/ui/DataTable";
+import { Input } from "@/components/ui/Input";
 
 interface Submission {
   id: string;
@@ -211,7 +212,7 @@ export function KycReview({
             </span>
           </div>
           <TableSearch value={queueSearch} onChange={setQueueSearch} placeholder="Search name, email, account…" label="Search KYC queue" />
-          <div className="overflow-hidden rounded-lg border border-border bg-canvas">
+          <div className="overflow-hidden">
             <div className="space-y-1.5 p-1.5">
               {visiblePending.map((s) => (
                 <button
@@ -236,7 +237,7 @@ export function KycReview({
                 </button>
               ))}
               {filteredPending.length === 0 && (
-                <div className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-text-faint">
+                <div className="border-dashed p-6 text-center text-text-faint">
                   {needle ? `No pending submissions match “${queueSearch.trim()}”.` : "Queue is empty — no pending submissions."}
                 </div>
               )}
@@ -250,7 +251,7 @@ export function KycReview({
         {/* Detail panel */}
         <div>
           {selected ? (
-            <div className="bg-canvas border border-border rounded-xl p-6">
+            <div className="rounded-xl p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="text-lg font-semibold">
@@ -278,13 +279,13 @@ export function KycReview({
               <div className="mt-5">
                 <h3 className="mb-2 text-xs font-medium uppercase text-text-faint">Identity documents</h3>
                 {documents.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-text-faint">
+                  <div className="border-dashed p-6 text-center text-text-faint">
                     No documents uploaded yet.
                   </div>
                 ) : (
                   <ul className="space-y-2">
                     {documents.map((doc) => (
-                      <li key={doc.id} className="rounded-lg border border-border p-3">
+                      <li key={doc.id} className="p-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="min-w-0">
                             <div className="text-sm font-medium">{doc.docType}</div>
@@ -306,12 +307,12 @@ export function KycReview({
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             {accessDocId === doc.id ? (
                               <>
-                                <input
+                                <Input
                                   type="text"
                                   value={accessReason}
                                   onChange={(e) => setAccessReason(e.target.value)}
                                   placeholder="Reason for compliance access"
-                                  className="h-9 flex-1 rounded border border-border bg-canvas px-2 text-xs"
+                                  className="flex-1"
                                 />
                                 <Button
                                   type="button"
@@ -364,7 +365,7 @@ export function KycReview({
                   value={rejectNote}
                   onChange={(e) => setRejectNote(e.target.value)}
                   placeholder="e.g. Document is expired — please resubmit with a valid ID."
-                  className="w-full bg-canvas border border-border rounded px-3 py-2 text-sm outline-none focus:border-brand resize-none"
+                  className="resize-none"
                 />
               </div>}
 
@@ -398,10 +399,10 @@ export function KycReview({
                 >
                   Reject
                 </Button>
-              </div> : <p className="mt-5 rounded border border-border bg-panel-2 px-3 py-2 text-xs text-text-muted">Read-only compliance access.</p>}
+              </div> : <p className="mt-5">Read-only compliance access.</p>}
             </div>
           ) : (
-            <div className="bg-canvas border border-dashed border-border rounded-xl p-12 text-center">
+            <div className="border-dashed rounded-xl p-12 text-center">
               <div className="text-3xl mb-2">✓</div>
               <h3 className="text-sm font-semibold text-up">All caught up</h3>
               <p className="text-xs text-text-muted mt-1">No pending KYC submissions. Select one from the queue to review.</p>
@@ -415,10 +416,10 @@ export function KycReview({
               <span className="text-(length:--term-text-2xs) text-brand">showing {reviewed.length} most recent of {reviewedTotalResolved}</span>
             )}
           </div>
-          <div className="overflow-hidden rounded-lg border border-border bg-canvas">
+          <div className="overflow-hidden">
             <div className="space-y-1.5 p-1.5">
               {visibleReviewed.map((s) => (
-                <div key={s.id} className="flex items-center justify-between rounded-lg border border-border bg-canvas px-3 py-2">
+                <div key={s.id} className="flex items-center justify-between">
                   <div className="min-w-0">
                     <span className="text-sm font-medium">{s.firstName} {s.lastName}</span>
                     <span className="text-xs text-text-muted ml-2">{s.user.email}</span>

@@ -4,20 +4,24 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { Input } from "@/components/ui/Input";
+import { cn } from "@/lib/utils";
+
 /**
- * Password input with a show/hide (eye) toggle. Drops in anywhere a plain
- * `<input type="password">` was used — all input props pass through, with
- * right padding reserved for the eye button.
+ * Password input with a show/hide (eye) toggle, on the shared Input
+ * primitive. Drops in anywhere a plain `<input type="password">` was
+ * used — all input props pass through, with right padding reserved for
+ * the eye button.
  */
 export function PasswordInput({ className = "", ...inputProps }: React.InputHTMLAttributes<HTMLInputElement>) {
   const t = useTranslations("auth");
   const [visible, setVisible] = useState(false);
   return (
     <div className="relative w-full">
-      <input
+      <Input
         {...inputProps}
         type={visible ? "text" : "password"}
-        className={`${className} ${className.includes("pr-") ? "" : "pr-10"}`}
+        className={cn(className, !className.includes("pr-") && "pr-10")}
       />
       <button
         type="button"

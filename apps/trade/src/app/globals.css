@@ -34,6 +34,9 @@
 
   --shadow-panel: 0 1px 2px rgba(16, 24, 40, 0.06);
   --shadow-card: 0 12px 32px rgba(16, 24, 40, 0.10);
+  /* Upward lift for border-free floating bars (order-ticket footer, headers):
+     separates a surface from content scrolling beneath it without a rule. */
+  --shadow-lift: 0 -10px 14px -14px rgba(16, 24, 40, 0.30);
 
   /* A fixed dark surface for intentionally-inverted regions (the marketing
      footer). Deliberately NOT derived from --color-text, which flips between
@@ -125,6 +128,7 @@ html.dim {
   --color-text-faint: #78828f;
   --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-lift: 0 -10px 14px -14px rgba(0, 0, 0, 0.55);
   /* In dim mode the footer darkens further so it still reads as a distinct
      band against the (already dark) canvas. */
   --color-surface-dark: #06090d;

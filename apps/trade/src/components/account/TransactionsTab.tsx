@@ -8,6 +8,8 @@ import { CsvExportButton } from "@/components/ui/CsvExport";
 import { StatCard } from "@/components/ui/StatCard";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { fmtDateTime } from "@/lib/dates";
+import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Input } from "@/components/ui/Input";
 
 interface Txn {
   id: string;
@@ -121,19 +123,19 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
         toolbar={
           <>
             <TableSearch value={search} onChange={setSearch} placeholder="Search description or reference…" label="Search transactions" />
-            <select
+            <NativeSelect
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as "ALL" | Txn["type"])}
               aria-label="Filter by type"
-              className="h-8 rounded border border-border bg-canvas px-2 text-xs outline-none focus:border-brand"
+              className="h-8"
             >
               <option value="ALL">All types</option>
               {[...new Set(transactions.map((t) => t.type))].sort().map((type) => <option key={type} value={type}>{type}</option>)}
-            </select>
+            </NativeSelect>
             <div className="flex items-center gap-1">
-              <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="From date" className="h-8 rounded border border-border bg-canvas px-2 text-xs text-text-muted outline-none focus:border-brand" />
+              <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="From date" className="h-8" />
               <span className="text-(length:--term-text-2xs) text-text-faint">→</span>
-              <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="To date" className="h-8 rounded border border-border bg-canvas px-2 text-xs text-text-muted outline-none focus:border-brand" />
+              <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="To date" className="h-8" />
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               {(["ALL", "COMPLETED", "PENDING", "REJECTED", "CANCELLED"] as const).map((value) => (
@@ -147,7 +149,7 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
           </>
         }
       >
-        <thead className="border-b border-border-soft bg-panel-2">
+        <thead className="border-b border-border-soft">
           <tr>
             <Th sortKey="createdAt" sort={sort} onSort={onSort}>Date</Th>
             <Th>Type</Th>

@@ -8,9 +8,10 @@ import { fmtPrice, fmtNum } from "@/lib/format";
 import type { InstrumentView, PositionSide } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { ChipGroup } from "@/components/ui/ChipGroup";
-import { Input } from "@/components/ui/Input";
+import { Tabs } from "@/components/ui/Tabs";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { isExecutableQuote, quoteAgeMs } from "@/lib/marketFreshness";
+import { Input } from "@/components/ui/Input";
 
 interface Props {
   instrument: InstrumentView;
@@ -158,7 +159,7 @@ export function TradePanel({ instrument }: Props) {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* ── Instrument header ──────────────────────────────────────────────── */}
-      <div className="px-4 pt-4 pb-3 border-b border-border">
+      <div className="bg-panel-2/60 px-4 pt-4 pb-3">
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -172,39 +173,33 @@ export function TradePanel({ instrument }: Props) {
           </div>
         </div>
 
-        {/* Trade type toggle */}
-        <div className="flex gap-1 mt-3 bg-panel-2 rounded-lg p-1">
-          {(["CFD", "STRIKE"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              role="tab"
-              aria-selected={type === t}
-              onClick={() => { setType(t); clearMessages(); }}
-              className={`flex-1 py-2.5 text-(length:--term-text-xs) font-medium rounded-md transition-all ${
-                type === t
-                  ? "bg-canvas text-text shadow-sm"
-                  : "text-text-muted hover:text-text"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+        {/* Trade type toggle — Radix Tabs (segmented): roving focus, arrow keys. */}
+        <Tabs
+          variant="segmented"
+          label="Order type"
+          className="mt-3 rounded-lg bg-panel-2 p-1"
+          triggerClassName="flex-1 py-2.5"
+          tabs={[
+            { key: "CFD", label: "CFD" },
+            { key: "STRIKE", label: "STRIKE" },
+          ]}
+          active={type}
+          onChange={(key) => { setType(key as "CFD" | "STRIKE"); clearMessages(); }}
+        />
       </div>
 
       {/* ── Bid / Ask ──────────────────────────────────────────────────────── */}
       <div className="px-4 py-3">
         <div className="grid grid-cols-2 gap-2">
           {/* Sell / Bid */}
-          <div className="flex flex-col items-center justify-center bg-down/5 border border-down/20 rounded-lg py-2.5">
+          <div className="flex flex-col items-center justify-center bg-down/10 rounded-lg py-2.5">
             <span className="text-(length:--term-text-2xs) font-semibold uppercase text-down tracking-wide">Sell</span>
             <span className="text-lg font-bold tnum text-down leading-tight mt-0.5">
               {fmtPrice(bid, instrument.digits)}
             </span>
           </div>
           {/* Buy / Ask */}
-          <div className="flex flex-col items-center justify-center bg-up/5 border border-up/20 rounded-lg py-2.5">
+          <div className="flex flex-col items-center justify-center bg-up/10 rounded-lg py-2.5">
             <span className="text-(length:--term-text-2xs) font-semibold uppercase text-up tracking-wide">Buy</span>
             <span className="text-lg font-bold tnum text-up leading-tight mt-0.5">
               {fmtPrice(ask, instrument.digits)}
@@ -213,7 +208,7 @@ export function TradePanel({ instrument }: Props) {
         </div>
         <div className="flex items-center justify-center gap-3 mt-2 text-(length:--term-text-2xs) text-text-faint">
           <span>Spread <span className="tnum text-text-muted font-medium">{fmtPrice(spread, instrument.digits)}</span></span>
-          <span className="w-px h-3 bg-border" />
+          <span className="w-px h-3 bg-panel-3" />
           <span>Pip <span className="tnum text-text-muted font-medium">{instrument.pipSize}</span></span>
         </div>
       </div>
@@ -338,7 +333,7 @@ export function TradePanel({ instrument }: Props) {
       )}
 
       {/* ── Order summary ──────────────────────────────────────────────────── */}
-      <div className="mx-4 mb-3 bg-panel-2/60 rounded-lg p-3 space-y-1.5 border border-border-soft">
+      <div className="mx-4 mb-3 bg-panel-2 rounded-lg p-3 space-y-1.5">
         <SummaryRow label="Margin Required" value={`${fmtNum(margin, 2)} USD`} />
         <SummaryRow label="Commission" value={`${fmtNum(commission, 2)} USD`} />
         <SummaryRow label="Pip Value" value={`${fmtNum(pipValue, 2)} USD`} />
@@ -347,12 +342,12 @@ export function TradePanel({ instrument }: Props) {
           value={currentQuoteAgeMs == null ? "Waiting" : `${(currentQuoteAgeMs / 1_000).toFixed(1)}s${hasFreshQuote ? "" : " · stale"}`}
           valueClass={hasFreshQuote ? "text-up font-semibold" : "text-down font-semibold"}
         />
-        <div className="border-t border-border-soft pt-1.5 mt-1.5">
+        <div className="pt-1.5 mt-1.5">
           <SummaryRow label="Free Margin" value={`${fmtNum(freeMargin, 2)} USD`} valueClass={!hasFunds ? "text-down font-semibold" : "font-semibold"} />
         </div>
       </div>
 
-      <div className="mx-4 mb-2 rounded-lg border border-border-soft bg-panel-2/60 px-3 py-2 text-(length:--term-text-2xs)" role="status" aria-live="polite">
+      <div className="mx-4 mb-2 rounded-lg bg-panel-2 px-3 py-2 text-(length:--term-text-2xs)" role="status" aria-live="polite">
         <span className="font-semibold text-text">Order lifecycle: </span>
         {status === "submitting" && <span className="text-brand">Pending provider acceptance</span>}
         {status === "accepted" && <span className="text-up">Accepted and open{lastAcceptedAt ? ` at ${new Date(lastAcceptedAt).toLocaleTimeString()}` : ""}</span>}
@@ -362,7 +357,7 @@ export function TradePanel({ instrument }: Props) {
 
       {/* ── Error ──────────────────────────────────────────────────────────── */}
       {(validationError || error) && (
-        <div role="alert" className="mx-4 mb-2 text-(length:--term-text-xs) text-down bg-down/10 border border-down/30 rounded-lg px-3 py-2">
+        <div role="alert" className="mx-4 mb-2 text-(length:--term-text-xs) text-down bg-down/10 rounded-lg px-3 py-2">
           {validationError ?? error}
         </div>
       )}
@@ -370,7 +365,7 @@ export function TradePanel({ instrument }: Props) {
       {/* ── Sell / Buy buttons — pinned to the bottom of the scroll area so
               the dealing rates are always visible while adjusting the order
               (especially in the mobile bottom sheet). ──────────────────── */}
-      <div className="sticky bottom-0 z-10 mt-auto border-t border-border bg-canvas px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+      <div className="sticky bottom-0 z-10 mt-auto bg-canvas shadow-lift px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <div className="grid grid-cols-2 gap-2">
           <Button variant="sell" size="md" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting sell order" onClick={() => submit("SELL")} className="h-16 rounded-lg">
             <span className="flex flex-col items-center leading-tight">

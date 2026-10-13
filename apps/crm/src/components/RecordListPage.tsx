@@ -537,6 +537,16 @@ export function RecordListPage({ object }: { object: ObjectKey }) {
     if (params.get("mine") === "1") {
       setFilters((previous) => (object === "tasks" ? { ...previous, mine: "1" } : previous));
     }
+    // `?status=<id>` deep-links the status filter (e.g. a pipeline-health
+    // stage row). Applied like ?q= (unvalidated): the status options load
+    // asynchronously, so validating here would race — a stale id simply
+    // filters to zero rows server-side.
+    const statusId = params.get("status");
+    if (statusId) {
+      deepLinkedRef.current = true;
+      setFilters((previous) => ({ ...previous, statusId }));
+      setPage(1);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

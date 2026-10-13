@@ -12,6 +12,7 @@ import { signInFailureMessage } from "@/lib/authClient";
 import { isValidPassword, PASSWORD_MIN_LENGTH } from "@/lib/passwordPolicy";
 import { PasswordStrength } from "@/components/ui/PasswordStrength";
 import { PasswordInput } from "@/components/ui/PasswordInput";
+import { Input } from "@/components/ui/Input";
 
 /** Referral attribution persistence: a ?ref= code is remembered for 30 days so
  *  visitors who leave the registration page and come back later keep their
@@ -197,7 +198,7 @@ export default function RegisterPage() {
         <div className="mb-6">
           <Logo className="text-lg" />
         </div>
-        <div className="w-full bg-canvas border border-border rounded-lg shadow-panel p-8">
+        <div className="w-full rounded-md border border-border bg-canvas p-8 shadow-panel">
           <h1 className="text-lg font-semibold text-center mb-1">{t("createH1")}</h1>
           <p className="text-xs text-text-muted text-center mb-6">
             {t("createSub")}
@@ -243,7 +244,7 @@ export default function RegisterPage() {
               <label htmlFor={nameId} className="mb-1.5 block text-xs font-medium text-text-muted">
                 {t("fullName")}
               </label>
-              <input
+              <Input
                 id={nameId}
                 type="text"
                 required
@@ -251,14 +252,14 @@ export default function RegisterPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 autoComplete="name"
-                className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+                className="h-11"
               />
             </div>
             <div className="mb-4">
               <label htmlFor={emailId} className="mb-1.5 block text-xs font-medium text-text-muted">
                 {t("email")}
               </label>
-              <input
+              <Input
                 id={emailId}
                 type="email"
                 required
@@ -267,7 +268,7 @@ export default function RegisterPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 inputMode="email"
-                className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+                className="h-11"
               />
             </div>
             <div className="mb-4">
@@ -283,7 +284,7 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
                 aria-describedby={`${passwordId}-hint`}
-                className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+                className="h-11"
               />
               <p id={`${passwordId}-hint`} className="mt-1 text-[10px] text-text-faint">
                 {t("pwdHint")}
@@ -302,7 +303,7 @@ export default function RegisterPage() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 autoComplete="new-password"
-                className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+                className="h-11"
               />
             </div>
 

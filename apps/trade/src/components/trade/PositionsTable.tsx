@@ -9,6 +9,8 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { TerminalTable } from "@/components/trade/TerminalTable";
 import { toast } from "@/lib/toast";
+import { Tabs } from "@/components/ui/Tabs";
+import { Button } from "@/components/ui/Button";
 import { fmtPrice, fmtNum } from "@/lib/format";
 import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";
 import type { InstrumentView, PositionView } from "@/lib/types";
@@ -40,22 +42,31 @@ export function PositionsTable({ instruments }: Props) {
   const totalFloating = positions.reduce((s, p) => s + p.profit + p.swap, 0);
 
   return (
-    <div className="flex flex-col h-full bg-canvas border-t border-border">
+    <div className="flex flex-col h-full bg-panel">
       {/* Header: tabs + floating P/L */}
-      <div className="flex items-center h-8 px-2 border-b border-border bg-panel-2 shrink-0 gap-1">
-        <div className="flex items-center gap-0.5">
-          <TabButton active={tab === "open"} onClick={() => setTab("open")}>
-            Open Positions
-            {positions.length > 0 && (
-              <span className="ml-1 text-(length:--term-text-2xs) bg-brand text-white rounded-full px-1.5 py-px font-medium">
-                {positions.length}
-              </span>
-            )}
-          </TabButton>
-          <TabButton active={tab === "history"} onClick={() => setTab("history")}>
-            Trade History
-          </TabButton>
-        </div>
+      <div className="flex items-center h-8 px-2 bg-panel-2 shrink-0 gap-1">
+        <Tabs
+          variant="segmented"
+          label="Positions dock"
+          tabs={[
+            {
+              key: "open",
+              label: (
+                <>
+                  Open Positions
+                  {positions.length > 0 && (
+                    <span className="ml-1 text-(length:--term-text-2xs) bg-brand text-white rounded-full px-1.5 py-px font-medium">
+                      {positions.length}
+                    </span>
+                  )}
+                </>
+              ),
+            },
+            { key: "history", label: "Trade History" },
+          ]}
+          active={tab}
+          onChange={(key) => setTab(key as Tab)}
+        />
         {tab === "open" && positions.length > 0 && (
           <div className="ml-auto flex items-center gap-3">
             <div className="flex items-center gap-1.5">
@@ -166,8 +177,8 @@ function OpenPositionCards({
   }
 
   return (
-    <ul className="divide-y divide-border-soft pb-24">
-      {positions.map((p) => {
+    <ul className="pb-24">
+      {positions.map((p, index) => {
         const digits = digitsFor(p.symbol);
         const up = p.netProfit >= 0;
         const closing = busy === p.id;
@@ -175,7 +186,7 @@ function OpenPositionCards({
           <li
             key={p.id}
             onClick={rowNavigate(router, p.symbol)}
-            className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors active:bg-panel-2"
+            className={`flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors active:bg-panel-2 ${index % 2 === 1 ? "bg-panel-2/40" : ""}`}
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
@@ -202,7 +213,7 @@ function OpenPositionCards({
               disabled={closing}
               aria-label={`Close ${p.symbol} position`}
               onClick={(event) => { event.stopPropagation(); void close(p); }}
-              className="flex h-11 shrink-0 items-center justify-center gap-1 rounded-lg border border-down/40 bg-down/10 px-3 text-xs font-semibold text-down transition active:scale-95 disabled:opacity-50"
+              className="flex h-11 shrink-0 items-center justify-center gap-1 rounded-lg bg-down/15 px-3 text-xs font-semibold text-down transition active:scale-95 disabled:opacity-50"
             >
               {closing ? "…" : "✕ Close"}
             </button>
@@ -244,14 +255,16 @@ function OpenPositionsTable({
       { accessorKey: "currentRate", header: "Current", meta: { cellClass: "text-right", headerClass: "text-right" }, cell: (info) => <span className="tnum">{fmtPrice(info.getValue() as number, digitsFor(info.row.original.symbol))}</span> },
       { id: "netProfit", header: "Net P/L", meta: { cellClass: "text-right", headerClass: "text-right" }, cell: (info) => { const p = info.row.original; const up = p.netProfit >= 0; return <span className={`tnum font-bold ${up ? "text-up" : "text-down"}`}>{up ? "+" : ""}{fmtNum(p.netProfit, 2)}</span>; } },
       { id: "close", header: "", cell: (info) => { const p = info.row.original; return (
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           disabled={busy === p.id}
           aria-label={`Close ${p.symbol} position`}
           onClick={(event) => { event.stopPropagation(); void close(p); }}
-          className="flex h-8 w-8 items-center justify-center rounded border border-border text-text-muted hover:text-down hover:border-down/50 hover:bg-down/10 disabled:opacity-50 transition-colors text-xs"
+          className="h-8 w-8 p-0 text-xs text-text-muted hover:bg-down/10 hover:text-down"
         >
           {busy === p.id ? "…" : "✕"}
-        </button>
+        </Button>
       ); } },
     ],
     // close/busy are stable per render set; digitsFor identity is stable upstream
@@ -324,7 +337,7 @@ function HistoryEmptyState({ loading, error, retry }: { loading: boolean; error:
     return (
       <div role="alert" className="flex flex-col items-center justify-center h-full gap-2 py-6 text-xs text-down">
         <span>{error}</span>
-        <button type="button" onClick={retry} className="rounded border border-border px-3 py-1 text-text hover:border-brand">Retry</button>
+        <Button variant="default" size="sm" onClick={retry}>Retry</Button>
       </div>
     );
   }
@@ -350,15 +363,15 @@ function HistoryCards({ digitsFor }: { digitsFor: (s: string) => number }) {
 
   return (
     <div className="pb-24">
-      <ul className="divide-y divide-border-soft">
-        {history.map((p) => {
+      <ul>
+        {history.map((p, index) => {
           const digits = digitsFor(p.symbol);
           const up = p.netProfit >= 0;
           return (
             <li
               key={p.id}
               onClick={rowNavigate(router, p.symbol)}
-              className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors active:bg-panel-2"
+              className={`flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors active:bg-panel-2 ${index % 2 === 1 ? "bg-panel-2/40" : ""}`}
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -386,14 +399,9 @@ function HistoryCards({ digitsFor }: { digitsFor: (s: string) => number }) {
       </ul>
       {nextCursor ? (
         <div className="flex justify-center p-2">
-          <button
-            type="button"
-            disabled={loadingMore}
-            onClick={() => void loadHistory(nextCursor, true)}
-            className="rounded border border-border bg-canvas px-4 py-2 text-(length:--term-text-xs) font-medium hover:border-brand disabled:opacity-50"
-          >
+          <Button variant="default" size="sm" disabled={loadingMore} onClick={() => void loadHistory(nextCursor, true)}>
             {loadingMore ? "Loading…" : "Load 25 more"}
-          </button>
+          </Button>
         </div>
       ) : null}
     </div>
@@ -429,34 +437,15 @@ function HistoryTable({ digitsFor }: { digitsFor: (s: string) => number }) {
       onRowClick={(p) => rowNavigate(router, p.symbol)({ stopPropagation: () => undefined, target: null, currentTarget: null } as unknown as Parameters<ReturnType<typeof rowNavigate>>[0])}
       emptyState={<HistoryEmptyState loading={loading} error={error} retry={() => void loadHistory()} />}
       footer={nextCursor ? (
-        <div className="flex justify-center border-t border-border bg-panel-2 p-2">
-          <button
-            type="button"
-            disabled={loadingMore}
-            onClick={() => void loadHistory(nextCursor, true)}
-            className="rounded border border-border bg-canvas px-4 py-1.5 text-(length:--term-text-2xs) font-medium hover:border-brand disabled:opacity-50"
-          >
+        <div className="flex justify-center bg-panel-2 p-2">
+          <Button variant="default" size="sm" disabled={loadingMore} onClick={() => void loadHistory(nextCursor, true)}>
             {loadingMore ? "Loading…" : "Load 25 more"}
-          </button>
+          </Button>
         </div>
       ) : undefined}
     />
   );
 }
-
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center px-2.5 py-1 text-(length:--term-text-xs) font-medium rounded transition-colors ${
-        active ? "bg-canvas text-text shadow-sm border border-border" : "text-text-muted hover:text-text"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
 
 function fmtTime(ms: number): string {
   return new Date(ms).toLocaleString("en-GB", {

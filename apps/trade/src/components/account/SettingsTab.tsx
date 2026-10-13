@@ -7,6 +7,7 @@ import { PasswordStrength } from "@/components/ui/PasswordStrength";
 import { PASSWORD_MIN_LENGTH, isValidPassword } from "@/lib/passwordPolicy";
 import { SecurityCenter } from "./SecurityCenter";
 import { fmtDate } from "@/lib/dates";
+import { Input } from "@/components/ui/Input";
 
 interface User {
   id: string;
@@ -129,7 +130,7 @@ export function SettingsTab({ user }: { user: User }) {
 
   return (
     <div className="max-w-2xl space-y-5">
-      <form onSubmit={saveProfile} className="space-y-4 rounded-lg border border-border bg-canvas p-6">
+      <form onSubmit={saveProfile} className="space-y-4 p-6">
         <h3 className="text-sm font-medium">Profile</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
@@ -170,7 +171,7 @@ export function SettingsTab({ user }: { user: User }) {
         </Button>
       </form>
 
-      <form onSubmit={changePassword} className="space-y-4 rounded-lg border border-border bg-canvas p-6">
+      <form onSubmit={changePassword} className="space-y-4 p-6">
         <div>
           <h3 className="text-sm font-medium">Change password</h3>
           <p className="mt-1 text-(length:--term-text-xs) text-text-faint">
@@ -286,7 +287,7 @@ function Field({
       <label htmlFor={id} className="mb-1 block text-(length:--term-text-xs) text-text-muted">
         {label}
       </label>
-      <input
+      <Input
         id={id}
         type={type}
         value={value}
@@ -295,7 +296,7 @@ function Field({
         required={required}
         minLength={minLength}
         maxLength={maxLength}
-        className="h-11 w-full rounded border border-border bg-canvas px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus:border-brand focus-visible:ring-1 focus-visible:ring-brand"
+        className="h-11 transition-colors placeholder:text-text-faint hover:border-text-faint"
       />
     </div>
   );
@@ -313,7 +314,7 @@ function ReadonlyField({
   return (
     <div>
       <div className="mb-1 text-(length:--term-text-xs) text-text-muted">{label}</div>
-      <div className="flex h-10 items-center rounded border border-border bg-panel-2 px-3 text-sm text-text-muted">
+      <div className="flex h-10 items-center">
         <span className={valueClass}>{value}</span>
       </div>
     </div>

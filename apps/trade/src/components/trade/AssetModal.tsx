@@ -9,6 +9,7 @@ import { useForexStore } from "@/lib/store";
 import { fmtPct, fmtPrice } from "@/lib/format";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import type { InstrumentCategory, InstrumentView } from "@/lib/types";
+import { Input } from "@/components/ui/Input";
 
 interface Props {
   open: boolean;
@@ -78,7 +79,7 @@ export function AssetModal({ open, onClose, activeSymbol }: Props) {
       className="h-dvh max-w-5xl sm:h-[min(86dvh,50rem)]"
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="shrink-0 border-b border-border px-4 py-3 sm:px-5">
+        <div className="shrink-0 bg-panel-2/60 px-4 py-3 sm:px-5">
           <label htmlFor={searchId} className="sr-only">
             Search instruments
           </label>
@@ -94,19 +95,19 @@ export function AssetModal({ open, onClose, activeSymbol }: Props) {
               <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
               <path d="m21 21-4.3-4.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <input
+            <Input
               id={searchId}
               autoFocus
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search symbol or instrument…"
-              className="h-10 w-full rounded-md border border-border bg-panel-2 pl-8 pr-3 text-xs outline-none placeholder:text-text-faint focus:border-brand focus-visible:ring-1 focus-visible:ring-brand"
+              className="h-10 pl-8 pr-3 placeholder:text-text-faint"
             />
           </div>
         </div>
 
-        <div className="shrink-0 border-b border-border bg-panel px-4 py-2 sm:px-5">
+        <div className="shrink-0 bg-panel-2/60 px-4 sm:px-5">
           <ChipGroup
             ariaLabel="Instrument categories"
             className="overflow-x-auto"
@@ -176,8 +177,8 @@ function AssetCard({
       onClick={onClick}
       aria-current={active ? "true" : undefined}
       aria-label={`${instrument.name}, ${fmtPrice(instrument.mid, instrument.digits)}, ${fmtPct(instrument.changePct)}`}
-      className={`group flex min-h-24 flex-col gap-1 rounded-lg border p-3 text-left transition-all hover:shadow-sm focus-visible:outline focus-visible:outline-brand ${
-        active ? "border-brand bg-brand-soft" : "border-border bg-canvas hover:border-text-faint"
+      className={`group flex min-h-24 flex-col gap-1 rounded-lg p-3 text-left transition-all hover:shadow-sm focus-visible:outline focus-visible:outline-brand ${
+        active ? "bg-brand-soft" : "bg-panel-2 hover:bg-panel-3"
       }`}
     >
       <div className="flex items-center justify-between gap-2">

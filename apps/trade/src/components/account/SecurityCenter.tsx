@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/lib/toast";
+import { Input } from "@/components/ui/Input";
 
 interface SessionView {
   id: string;
@@ -172,7 +173,7 @@ export function SecurityCenter() {
   const otherCount = sessions.filter((s) => !s.current).length;
 
   return (
-    <section className="space-y-5 rounded-lg border border-border bg-canvas p-6">
+    <section className="space-y-5 p-6">
       {/* ── Header ── */}
       <div>
         <h3 className="text-sm font-medium">Security center</h3>
@@ -184,7 +185,7 @@ export function SecurityCenter() {
       {/* ── MFA enrollment ── */}
       {!enabled && !secret && (
         <div className="flex gap-2">
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Current password" aria-label="Current password for MFA enrollment" className="h-10 flex-1 rounded border border-border bg-canvas px-3 text-sm" />
+          <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Current password" aria-label="Current password for MFA enrollment" className="h-10 flex-1" />
           <Button type="button" variant="sell" loading={loading} onClick={() => void startEnrollment()}>Start MFA setup</Button>
         </div>
       )}
@@ -192,7 +193,7 @@ export function SecurityCenter() {
         <div className="space-y-3 rounded border border-brand/30 bg-brand-soft p-3">
           <p className="break-all font-mono text-xs">{secret}</p>
           <div className="flex gap-2">
-            <input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="Six-digit code" aria-label="Authenticator code" className="h-10 flex-1 rounded border border-border bg-canvas px-3 text-sm" />
+            <Input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="Six-digit code" aria-label="Authenticator code" className="h-10 flex-1" />
             <Button type="button" loading={loading} onClick={() => void confirmEnrollment()}>Enable MFA</Button>
           </div>
         </div>
@@ -203,13 +204,13 @@ export function SecurityCenter() {
         </ul>
       )}
       {enabled && (
-        <div className="space-y-3 rounded border border-border-soft p-3">
+        <div className="space-y-3 border-border-soft p-3">
           <p className="text-xs text-text-muted">
             Disabling MFA requires your password and an authenticator or recovery code.
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
-            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Current password" autoComplete="current-password" aria-label="Current password for disabling MFA" className="h-10 rounded border border-border bg-canvas px-3 text-sm" />
-            <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Authenticator or recovery code" autoComplete="one-time-code" aria-label="MFA code for disabling MFA" className="h-10 rounded border border-border bg-canvas px-3 text-sm" />
+            <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Current password" autoComplete="current-password" aria-label="Current password for disabling MFA" className="h-10" />
+            <Input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Authenticator or recovery code" autoComplete="one-time-code" aria-label="MFA code for disabling MFA" className="h-10" />
           </div>
           <Button type="button" loading={loading} onClick={() => void disableMfa()}>Disable MFA</Button>
         </div>
@@ -241,7 +242,7 @@ export function SecurityCenter() {
         {!sessionsLoaded ? (
           <div className="space-y-2" role="status" aria-label="Loading sessions">
             {[0, 1].map((i) => (
-              <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-panel p-3">
+              <div key={i} className="flex items-center gap-3 p-3">
                 <Skeleton className="h-9 w-9 rounded-full" />
                 <div className="flex-1 space-y-1.5">
                   <Skeleton className="h-3.5 w-40" />
@@ -251,7 +252,7 @@ export function SecurityCenter() {
             ))}
           </div>
         ) : sessions.length === 0 ? (
-          <div className="rounded-lg border border-border-soft bg-panel p-4 text-center">
+          <div className="border-border-soft p-4 text-center">
             <p className="text-xs text-text-muted">No active sessions found.</p>
           </div>
         ) : (
@@ -297,7 +298,7 @@ export function SecurityCenter() {
                     type="button"
                     onClick={() => void revoke(session.id)}
                     disabled={revokingId === session.id}
-                    className="shrink-0 rounded-md border border-border px-3 py-1.5 text-(length:--term-text-xs) font-medium text-text-muted transition hover:border-down/40 hover:text-down disabled:opacity-50"
+                    className="shrink-0 text-(length:--term-text-xs) font-medium transition hover:border-down/40 hover:text-down disabled:opacity-50"
                   >
                     {revokingId === session.id ? "Revoking…" : "Revoke"}
                   </button>

@@ -14,6 +14,7 @@ import {
   safeCallbackUrl,
   signInFailureMessage,
 } from "@/lib/authClient";
+import { Input } from "@/components/ui/Input";
 
 function LoginForm() {
   const t = useTranslations("auth");
@@ -106,7 +107,7 @@ function LoginForm() {
         <label htmlFor={emailId} className="mb-1.5 block text-xs font-medium text-text-muted">
           {t("email")}
         </label>
-        <input
+        <Input
           id={emailId}
           type="email"
           required
@@ -115,7 +116,7 @@ function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
           inputMode="email"
-          className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+          className="h-11"
         />
       </div>
       <div className="mb-5">
@@ -129,14 +130,14 @@ function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
-          className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+          className="h-11"
         />
       </div>
       <div className="mb-5">
         <label htmlFor={mfaId} className="mb-1.5 block text-xs font-medium text-text-muted">
           {t("mfa")}
         </label>
-        <input
+        <Input
           id={mfaId}
           type="text"
           maxLength={64}
@@ -145,7 +146,7 @@ function LoginForm() {
           autoComplete="one-time-code"
           inputMode="numeric"
           placeholder={t("mfaPlaceholder")}
-          className="w-full h-11 bg-canvas border border-border rounded px-3 text-sm outline-none transition-colors placeholder:text-text-faint hover:border-text-faint focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+          className="h-11"
         />
       </div>
 
@@ -211,7 +212,7 @@ export default function LoginPage() {
         <div className="mb-6">
           <Logo className="text-lg" />
         </div>
-        <div className="w-full rounded-lg border border-border bg-canvas p-5 shadow-panel sm:p-8">
+        <div className="w-full rounded-md border border-border bg-canvas p-5 shadow-panel sm:p-8">
           <h1 className="text-lg font-semibold text-center mb-1">{t("loginH1")}</h1>
           <p className="text-xs text-text-muted text-center mb-6">{t("loginSub")}</p>
           <Suspense fallback={<div className="h-64" aria-label={t("loadingForm")} />}>

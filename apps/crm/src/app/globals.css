@@ -1601,7 +1601,7 @@ select.input {
   --border-hairline: color-mix(in oklab, var(--border) 60%, transparent);
   --text-primary: var(--foreground);
   --text-secondary: var(--muted-foreground);
-  --text-tertiary: color-mix(in oklab, var(--muted-foreground) 70%, var(--background));
+  --text-tertiary: color-mix(in oklab, var(--muted-foreground) 85%, var(--background));
   --text-inverse: var(--primary-foreground);
   /* Accent stays a subtle SURFACE pair (dropdown/menu hover) — mapping it to
      --primary inverted bg/foreground and made hovered select items
@@ -1615,7 +1615,7 @@ select.input {
 
 [data-theme="dark"] {
   --border-hairline: color-mix(in oklab, var(--border) 70%, transparent);
-  --text-tertiary: color-mix(in oklab, var(--muted-foreground) 65%, var(--background));
+  --text-tertiary: color-mix(in oklab, var(--muted-foreground) 75%, var(--background));
 
   /* Semantic tones: light-mode pastel chips become subtle tints on dark
      surfaces; text tones lighten so status badges keep contrast. */

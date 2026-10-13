@@ -70,7 +70,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
   const initial = userName[0]?.toUpperCase() ?? "U";
 
   return (
-    <header className="relative z-40 flex min-h-11 shrink-0 flex-wrap items-center bg-canvas border-b border-border sm:flex-nowrap">
+    <header className="relative z-40 flex min-h-11 shrink-0 flex-wrap items-center bg-canvas shadow-panel sm:flex-nowrap">
       {/* Logo — the TRADE badge is desktop-only; on the phone it just repeated
           where the user already is. */}
       <div className="flex items-center gap-2.5 px-3 shrink-0 h-full">
@@ -84,7 +84,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
         <button
           type="button"
           onClick={onOpenAssets}
-          className="hidden md:flex items-center gap-1.5 px-3 h-full text-(length:--term-text-xs) font-medium text-text-muted hover:text-text hover:bg-panel-2 border-r border-border transition-colors shrink-0"
+          className="hidden md:flex items-center gap-1.5 px-3 h-full text-(length:--term-text-xs) font-medium text-text-muted hover:text-text hover:bg-panel-2 transition-colors shrink-0"
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -99,7 +99,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
       {/* Metrics strip — phones get a compact 2×3 grid: every key account
           metric (margin and margin level included) visible at once with
           consistent columns; sm+ keeps the single dense row. */}
-      <div className="order-3 grid w-full grid-cols-3 gap-x-3 gap-y-1.5 border-t border-border px-3 py-2 sm:order-0 sm:flex sm:w-auto sm:items-center sm:gap-4 sm:border-t-0 sm:py-0">
+      <div className="order-3 grid w-full grid-cols-3 gap-x-3 gap-y-1.5 bg-panel px-3 py-2 sm:order-0 sm:flex sm:w-auto sm:items-center sm:gap-4 sm:bg-transparent sm:py-0">
         <Metric label="ACCOUNT" value={account?.accountNo ?? "—"} className="hidden lg:flex" />
         <Metric label="BALANCE" value={fmtUsd(account?.balance)} />
         <Metric label="EQUITY" value={fmtUsd(account?.equity)} />
@@ -164,7 +164,7 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64 rounded-lg border border-border bg-canvas p-0 text-xs shadow-xl">
           {/* User header */}
-          <div className="border-b border-border bg-panel-2/50 px-4 py-3">
+          <div className="bg-panel-2/50 px-4 py-3">
             <div className="flex items-center gap-2.5">
               <span className="w-9 h-9 rounded-full bg-brand-soft flex items-center justify-center text-brand font-semibold">
                 {initial}
@@ -209,14 +209,14 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
 
           {/* Theme control — the header keeps its toggle from sm up; on phones
               this is where dim mode lives. */}
-          <div className="flex items-center gap-3 border-t border-border px-4 py-2 text-xs text-text">
+          <div className="flex items-center gap-3 bg-panel-2/40 px-4 py-2 text-xs text-text">
             <span className="text-text-muted"><ThemeIcon /></span>
             <span className="flex-1 font-medium">Dim mode</span>
             <ThemeToggle className="h-7 w-7" />
           </div>
 
           {/* Sign out */}
-          <div className="border-t border-border py-1">
+          <div className="py-1">
             {session?.user ? (
               <DropdownMenuItem
                 variant="destructive"

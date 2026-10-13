@@ -16,12 +16,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        buy: "bg-up text-white hover:brightness-110 font-semibold",
-        sell: "bg-down text-white hover:brightness-110 font-semibold",
-        destructive: "bg-down text-white hover:brightness-110 font-semibold",
-        default: "bg-panel-3 text-text hover:bg-border border border-border",
+        buy: "bg-up text-white hover:brightness-110 font-semibold disabled:opacity-70 disabled:brightness-90",
+        sell: "bg-down text-white hover:brightness-110 font-semibold disabled:opacity-70 disabled:brightness-90",
+        destructive: "bg-down text-white hover:brightness-110 font-semibold disabled:opacity-70 disabled:brightness-90",
+        default: "bg-panel-3 text-text hover:bg-border",
         ghost: "bg-transparent text-text-muted hover:text-text hover:bg-panel-2",
-        brand: "bg-brand text-white hover:brightness-110 font-semibold",
+        brand: "bg-brand text-white hover:brightness-110 font-semibold disabled:opacity-70 disabled:brightness-90",
       },
       size: {
         sm: "h-8 px-3 text-xs",

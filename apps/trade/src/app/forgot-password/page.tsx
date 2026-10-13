@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { Logo } from "@/components/trade/Logo";
+import { AuthCard, AuthShell } from "@/components/auth/AuthCard";
 import { Input } from "@/components/ui/Input";
 
 export default function ForgotPasswordPage() {
@@ -41,27 +41,26 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main id="main-content" tabIndex={-1} className="min-h-screen bg-panel flex items-center justify-center p-4">
-      <div className="w-full max-w-sm flex flex-col items-center">
-        <div className="mb-6">
-          <Logo className="text-lg" />
-        </div>
-        <form onSubmit={submit} className="w-full rounded-md border border-border bg-canvas p-6 shadow-panel">
-        <h1 className="text-lg font-semibold">{t("resetH1")}</h1>
-        <p className="text-xs text-text-muted mt-1 mb-5">{t("resetSub")}</p>
-        <label className="text-xs text-text-muted" htmlFor="reset-email">{t("email")}</label>
-        <Input id="reset-email" type="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1 mb-4 h-10" />
-        {message && <p role="status" className="text-xs text-up mb-3">{message}</p>}
-        {previewUrl && <a href={previewUrl} className="block text-xs text-brand mb-3 hover:underline">{t("resetDevLink")}</a>}
-        {error && <p role="alert" className="text-xs text-down mb-3">{error}</p>}
-        <Button type="submit" variant="brand" loading={loading} className="w-full">
-          {t("sendReset")}
-        </Button>
-        <Link href="/login" className="block text-xs text-brand text-center mt-4">
-          {t("backSignIn")}
-        </Link>
+    <AuthShell footerNote={t("riskNote")}>
+      <AuthCard title={t("resetH1")} subtitle={t("resetSub")}>
+        <form onSubmit={submit} className="w-full">
+          <div className="mb-5">
+            <label htmlFor="reset-email" className="mb-1.5 block text-xs font-medium text-text-muted">
+              {t("email")}
+            </label>
+            <Input id="reset-email" type="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" inputMode="email" className="h-11" />
+          </div>
+          {message && <p role="status" className="text-xs text-up mb-3">{message}</p>}
+          {previewUrl && <a href={previewUrl} className="block text-xs text-brand mb-3 hover:underline">{t("resetDevLink")}</a>}
+          {error && <p role="alert" className="text-xs text-down mb-3">{error}</p>}
+          <Button type="submit" variant="brand" loading={loading} className="w-full">
+            {t("sendReset")}
+          </Button>
+          <Link href="/login" className="block text-xs text-brand text-center mt-4">
+            {t("backSignIn")}
+          </Link>
         </form>
-      </div>
-    </main>
+      </AuthCard>
+    </AuthShell>
   );
 }

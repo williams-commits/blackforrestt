@@ -5,9 +5,9 @@ import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { Logo } from "@/components/trade/Logo";
 import { Button } from "@/components/ui/Button";
 import { PasswordInput } from "@/components/ui/PasswordInput";
+import { AuthCard, AuthShell } from "@/components/auth/AuthCard";
 import { browserDeviceIdentity } from "@/lib/device";
 import {
   AUTH_SERVICE_MESSAGE,
@@ -207,22 +207,12 @@ function LoginForm() {
 export default function LoginPage() {
   const t = useTranslations("auth");
   return (
-    <main id="main-content" tabIndex={-1} className="flex min-h-dvh items-center justify-center bg-panel px-4 py-8 sm:py-10">
-      <div className="w-full max-w-sm flex flex-col items-center">
-        <div className="mb-6">
-          <Logo className="text-lg" />
-        </div>
-        <div className="w-full rounded-md border border-border bg-canvas p-5 shadow-panel sm:p-8">
-          <h1 className="text-lg font-semibold text-center mb-1">{t("loginH1")}</h1>
-          <p className="text-xs text-text-muted text-center mb-6">{t("loginSub")}</p>
-          <Suspense fallback={<div className="h-64" aria-label={t("loadingForm")} />}>
-            <LoginForm />
-          </Suspense>
-        </div>
-        <p className="text-[11px] text-text-faint mt-6 text-center max-w-xs">
-          {t("riskNote")}
-        </p>
-      </div>
-    </main>
+    <AuthShell footerNote={t("riskNote")}>
+      <AuthCard title={t("loginH1")} subtitle={t("loginSub")}>
+        <Suspense fallback={<div className="h-64" aria-label={t("loadingForm")} />}>
+          <LoginForm />
+        </Suspense>
+      </AuthCard>
+    </AuthShell>
   );
 }

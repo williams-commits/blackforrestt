@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { Logo } from "@/components/trade/Logo";
 import { Button } from "@/components/ui/Button";
+import { AuthCard, AuthShell } from "@/components/auth/AuthCard";
 import { browserDeviceIdentity } from "@/lib/device";
 import { signInFailureMessage } from "@/lib/authClient";
 import { isValidPassword, PASSWORD_MIN_LENGTH } from "@/lib/passwordPolicy";
@@ -193,18 +193,9 @@ export default function RegisterPage() {
   const errorId = `${formId}-error`;
 
   return (
-    <main id="main-content" tabIndex={-1} className="min-h-screen flex items-center justify-center bg-panel px-4 py-10">
-      <div className="w-full max-w-sm flex flex-col items-center">
-        <div className="mb-6">
-          <Logo className="text-lg" />
-        </div>
-        <div className="w-full rounded-md border border-border bg-canvas p-8 shadow-panel">
-          <h1 className="text-lg font-semibold text-center mb-1">{t("createH1")}</h1>
-          <p className="text-xs text-text-muted text-center mb-6">
-            {t("createSub")}
-          </p>
-
-          {referralCode && (
+    <AuthShell footerNote={t("riskNote")}>
+      <AuthCard title={t("createH1")} subtitle={t("createSub")}>
+        {referralCode && (
             <div className="mb-4 flex items-center justify-center gap-2 rounded-lg bg-brand-soft border border-brand/30 px-3 py-2 text-xs text-brand">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 12v8H4v-8M16 6l-4-4-4 4M12 2v13" strokeLinecap="round" strokeLinejoin="round"/></svg>
               <span>Referred by <strong>{referralCode}</strong></span>
@@ -375,11 +366,7 @@ export default function RegisterPage() {
               {t("signIn")}
             </Link>
           </p>
-        </div>
-        <p className="text-[11px] text-text-faint mt-6 text-center max-w-xs">
-          {t("riskNote")}
-        </p>
-      </div>
-    </main>
+      </AuthCard>
+    </AuthShell>
   );
 }

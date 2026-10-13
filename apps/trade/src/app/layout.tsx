@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Providers } from "@/components/providers";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { currentBrandProfile } from "@/lib/branding";
 import "./globals.css";
 
 // Same font variables the platform design system expects (globals.css
@@ -27,15 +28,23 @@ const themeNoFlashScript = `(function(){try{var t=document.cookie.match(/blckfor
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   const messages = await getMessages();
+  // Per-domain brand resolved from the request Host through the domain
+  // registry (allowlisted). Passed to the client provider so Logo, the
+  // account shell, and QrCode render this family's brand instead of the
+  // primary fallback. The gbfxs design key additionally scopes the app
+  // surface class — same allowlisted switch the web app's root layout uses.
+  const brand = await currentBrandProfile();
   return (
     <html lang={locale} suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
       </head>
-      <body className="bg-canvas text-text antialiased">
+      <body
+        className={`bg-canvas text-text antialiased${brand.landingTemplate === "gbfxs" ? " gbfxs-app" : ""}`}
+      >
         <ThemeProvider>
           <NextIntlClientProvider locale={locale} messages={messages}>
-            <Providers>{children}</Providers>
+            <Providers brand={brand}>{children}</Providers>
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

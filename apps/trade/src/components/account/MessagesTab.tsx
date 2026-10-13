@@ -209,7 +209,7 @@ function OperatorInbox({ threads }: { threads: { threads: ThreadRow[]; totalUnre
         >
           Open Operations console
           {threads && threads.totalUnread > 0 && (
-            <span className="rounded-full bg-white/25 px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold">{threads.totalUnread} unread</span>
+            <span className="rounded-full bg-canvas/25 px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold">{threads.totalUnread} unread</span>
           )}
         </Link>
       </div>

@@ -147,7 +147,7 @@ export function MessagesTab() {
                 </span>
                 <div className={`rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${mine ? "bg-brand text-white" : "bg-panel-2 text-text"}`}>
                   {message.body}
-                  <div className={`mt-1 flex items-center justify-end gap-1.5 text-(length:--term-text-2xs) ${mine ? "text-white/60" : "text-text-faint"}`}>
+                  <div className={`mt-1 flex items-center justify-end gap-1.5 text-(length:--term-text-2xs) ${mine ? "opacity-60" : "text-text-faint"}`}>
                     <span className="tnum">{fmtDateTime(message.createdAt)}</span>
                     {mine && <span aria-label={message.readAt ? "Read by support" : "Not yet read"}>{message.readAt ? "✓✓ Read" : "✓ Sent"}</span>}
                   </div>

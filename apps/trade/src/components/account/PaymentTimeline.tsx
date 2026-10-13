@@ -238,7 +238,7 @@ export function PaymentTimeline() {
                 <li key={request.id} className="p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium">{request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} · {request.asset} {request.amount}</p>
+                      <p className="text-sm font-medium tnum">{request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} · {request.asset} {request.amount}</p>
                       <p className="mt-1 text-xs text-text-muted">{request.methodLabel} · {fmtDateTime(request.createdAt)}</p>
                     {request.methodDetailsSummary && <p className="mt-1 text-xs text-text-faint">Details: {request.methodDetailsSummary}</p>}
                     {request.riskHoldUntil && new Date(request.riskHoldUntil) > new Date() && <p className="mt-1 text-xs text-brand">Beneficiary cooling-off until {fmtDateTime(request.riskHoldUntil)}.</p>}

@@ -349,7 +349,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                         <span className={`px-1 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide ${mine ? "text-text-faint" : "text-text-muted"}`}>{label}</span>
                         <div className={`rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${mine ? "bg-brand text-white" : "bg-panel-2 text-text"}`}>
                           {message.body}
-                          <div className={`mt-1 flex items-center justify-end gap-1.5 text-(length:--term-text-2xs) tnum ${mine ? "text-white/60" : "text-text-faint"}`}>
+                          <div className={`mt-1 flex items-center justify-end gap-1.5 text-(length:--term-text-2xs) tnum ${mine ? "opacity-60" : "text-text-faint"}`}>
                             <span>{fmtDateTime(message.createdAt)}</span>
                             {mine && <span aria-label={message.readAt ? "Read by customer" : "Not yet read"}>{message.readAt ? "✓ Read" : "✓ Sent"}</span>}
                           </div>

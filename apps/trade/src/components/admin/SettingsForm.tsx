@@ -433,7 +433,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
         className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${checked ? "bg-brand" : "bg-panel-3"}`}
         aria-pressed={checked}
       >
-        <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-150 ${checked ? "translate-x-4" : "translate-x-0"}`} />
+        <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-canvas shadow-sm transition-transform duration-150 ${checked ? "translate-x-4" : "translate-x-0"}`} />
       </button>
     </label>
   );

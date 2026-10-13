@@ -196,7 +196,7 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
                 </Td>
                 <Td><StatusBadge status={transaction.status} /></Td>
                 <Td align="right" className={credit ? "text-up" : "text-down"}>
-                  <span className={`font-medium ${credit ? "text-up" : "text-down"}`}>
+                  <span className={`font-medium tnum ${credit ? "text-up" : "text-down"}`}>
                     {credit ? "+" : ""}{transaction.amount.toFixed(2)} {transaction.asset}
                   </span>
                 </Td>

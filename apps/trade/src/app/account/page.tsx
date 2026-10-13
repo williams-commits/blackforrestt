@@ -6,6 +6,7 @@ import { Logo } from "@/components/trade/Logo";
 import { AccountShell } from "@/components/account/AccountShell";
 import { AccountUserMenu } from "@/components/account/AccountUserMenu";
 import { TradeSearchButton } from "@/components/GlobalSearchPalette";
+import { MobileTabBar } from "@/components/trade/MobileTabBar";
 import type { InstrumentView } from "@/lib/types";
 import { ADDRESS_DOCUMENT_TYPES, IDENTITY_DOCUMENT_TYPES } from "@/lib/kyc";
 import { resolveUserSettings } from "@/server/userSettings";
@@ -156,8 +157,11 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
     <div className="terminal-ui min-h-screen bg-panel">
       <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-canvas px-3 py-1 sm:flex-nowrap sm:px-4">
         <Logo />
-        {/* Visible on every breakpoint — previously hidden below lg, which left
-            phones with no way to reach Trade/Reports from the account portal. */}
+        {/* Inline section nav is desktop-only (lg+). Phones and tablets use
+            the Stage-4 bottom navigation (Markets / Trade / Positions /
+            Account); Reports is reachable there via the account shell's
+            Reports tab and the standalone /reports page (both carry the
+            bottom bar). */}
         <nav className="order-3 hidden lg:flex w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 sm:w-auto">
           <Link href="/trade/AUDCAD" className="flex items-center gap-1 text-text-muted hover:text-text shadow-lg transition-colors">
           {TradeTerminal()} Trade Terminal</Link>
@@ -173,7 +177,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         />
       </header>
 
-      <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-3 py-4 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:px-4 sm:py-6 md:pb-6">
         <AccountShell
           unreadNotifications={unreadNotifications}
           operator={isOperator}
@@ -262,6 +266,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           }}
         />
       </main>
+      <MobileTabBar />
     </div>
   );
 }

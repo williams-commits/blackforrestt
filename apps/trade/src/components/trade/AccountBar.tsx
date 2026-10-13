@@ -96,10 +96,10 @@ export function AccountBar({ wsStatus, onOpenAssets, depositUiEnabled = true, di
         </button>
       )}
 
-      {/* Metrics strip — phones get a compact 2×3 grid: every key account
-          metric (margin and margin level included) visible at once with
-          consistent columns; sm+ keeps the single dense row. */}
-      <div className="order-3 grid w-full grid-cols-3 gap-x-3 gap-y-1.5 bg-panel px-3 py-2 sm:order-0 sm:flex sm:w-auto sm:items-center sm:gap-4 sm:bg-transparent sm:py-0">
+      {/* Metrics strip — phones get one compact horizontally-scrollable row
+          (an intentional data strip: every key metric reachable, no vertical
+          bulk); sm+ keeps the single dense row. */}
+      <div className="order-3 flex w-full items-center gap-4 overflow-x-auto bg-panel px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:order-0 sm:w-auto sm:gap-4 sm:overflow-visible sm:bg-transparent sm:py-0">
         <Metric label="ACCOUNT" value={account?.accountNo ?? "—"} className="hidden lg:flex" />
         <Metric label="BALANCE" value={fmtUsd(account?.balance)} />
         <Metric label="EQUITY" value={fmtUsd(account?.equity)} />

@@ -12,8 +12,9 @@ import { TradePanel } from "./TradePanel";
 import { PositionsTable } from "./PositionsTable";
 import { InstrumentSelector } from "./InstrumentSelector";
 import { AssetModal } from "./AssetModal";
-import { Dialog } from "@/components/ui/Dialog";
 import { MarketStatusBanner } from "./MarketStatusBanner";
+import { MobileTabBar, rememberMobileSymbol } from "./MobileTabBar";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { WalletAddressEntry } from "@/server/userSettings";
 
 interface Props {
@@ -67,6 +68,11 @@ export function Dashboard({
       applyInstruments(instruments);
     }
   }, [instruments, applyInstruments]);
+
+  // The mobile tab bar's Trade destination returns to the live symbol.
+  useEffect(() => {
+    rememberMobileSymbol(instrument.symbol);
+  }, [instrument.symbol]);
 
   // Rail/dock collapse choices persist per workstation (defaults: open).
   useEffect(() => {
@@ -148,12 +154,12 @@ export function Dashboard({
         >
           <ChartPanel instrument={instrument} onOpenAssets={() => setAssetModalOpen(true)} />
           {/* Mobile trade FAB — visible only below md (tablet gets the inline
-              panel) and hidden while the order sheet is open so it doesn't
-              compete with the sheet's Sell/Buy footer. */}
+              panel), floating above the bottom tab bar and hidden while the
+              order sheet is open so it doesn't compete with the footer. */}
           <button
             type="button"
             onClick={() => setMobileOrderOpen(true)}
-            className={`fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-4 z-30 flex items-center gap-2 rounded-full bg-brand px-6 py-3.5 text-sm font-bold text-white shadow-2xl transition active:scale-95 md:hidden ${mobileOrderOpen ? "pointer-events-none opacity-0" : ""}`}
+            className={`fixed bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] right-4 z-30 flex items-center gap-2 rounded-full bg-brand px-6 py-3.5 text-sm font-bold text-white shadow-2xl transition active:scale-95 md:hidden ${mobileOrderOpen ? "pointer-events-none opacity-0" : ""}`}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 17l6-6 4 4 8-8" /><path d="M21 7v6h-6" />
@@ -169,23 +175,32 @@ export function Dashboard({
       </div>
 
       {/* Activity dock — collapses to its tab strip on short laptops so the
-          chart and order controls keep their space. */}
-      <div className={cn("shrink-0 bg-panel", dockOpen ? "min-h-50 h-60 sm:h-88 md:h-64 lg:h-70" : "h-9")}>
+          chart and order controls keep their space. Phones get bottom
+          padding so the fixed tab bar never covers the last rows. */}
+      <div className={cn("shrink-0 bg-panel pb-[calc(env(safe-area-inset-bottom)+3.5rem)] md:pb-0", dockOpen ? "min-h-50 h-60 sm:h-88 md:h-64 lg:h-70" : "h-9")}>
         <PositionsTable instruments={instruments} collapsed={!dockOpen} onToggleCollapsed={toggleDock} />
       </div>
 
-      {/* Mobile bottom sheet order panel — slides up from bottom, partial height */}
-      <Dialog
-        open={mobileOrderOpen}
-        onClose={() => setMobileOrderOpen(false)}
-        title={`Trade ${instrument.symbol}`}
-        description="Review the order details before submitting."
-        className="max-h-[88dvh] w-full max-w-md self-end rounded-b-none rounded-t-2xl md:hidden"
-      >
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <TradePanel instrument={instrument} />
-        </div>
-      </Dialog>
+      {/* Mobile order entry — purpose-built bottom sheet (side-anchored Radix
+          Sheet with slide-in, focus trap, Escape and scroll lock). The
+          panel's own footer pads env(safe-area-inset-bottom) so the Buy/Sell
+          actions stay clear of the home indicator. */}
+      <Sheet open={mobileOrderOpen} onOpenChange={setMobileOrderOpen}>
+        <SheetContent
+          side="bottom"
+          className="h-[92dvh] gap-0 rounded-t-2xl p-0 md:hidden sm:max-w-none"
+        >
+          <SheetHeader className="border-b border-border-soft pb-2 pt-3">
+            <SheetTitle>Trade {instrument.symbol}</SheetTitle>
+            <SheetDescription>Review the order details before submitting.</SheetDescription>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <TradePanel instrument={instrument} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <MobileTabBar />
 
       <AssetModal
         open={assetModalOpen}

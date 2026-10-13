@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { Logo } from "@/components/trade/Logo";
 import { AccountUserMenu } from "@/components/account/AccountUserMenu";
 import { RealtimeRefresh } from "@/components/account/RealtimeRefresh";
+import { MobileTabBar } from "@/components/trade/MobileTabBar";
 import {
   ReportsView,
   type ReportRow,
@@ -181,6 +182,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     <div className="min-h-screen bg-panel">
       <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-canvas px-3 py-1 sm:flex-nowrap sm:px-4">
         <Logo />
+        {/* Inline section nav is desktop-only (lg+); below lg the Stage-4
+            bottom navigation covers Trade/Account/Markets and this page
+            carries the bar too, so /reports is never a dead end on phones. */}
         <nav className="order-3 w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 hidden lg:flex">
           <Link href="/trade/AUDCAD" className="flex items-center gap-1 text-text-muted hover:text-text shadow-lg transition-colors">
           {TradeTerminal()} Trade Terminal</Link>
@@ -195,7 +199,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         />
       </header>
 
-      <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-6">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-6 pb-[calc(env(safe-area-inset-bottom)+5rem)] md:pb-6">
         <h1 className="mb-4 text-lg font-semibold">Trade Reports</h1>
         {/* Server-rendered stats: re-fetch when funds move or positions close. */}
         <RealtimeRefresh />
@@ -209,6 +213,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           }}
         />
       </main>
+      <MobileTabBar />
     </div>
   );
 }

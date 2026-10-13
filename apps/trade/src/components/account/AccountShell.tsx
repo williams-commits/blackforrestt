@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { LayoutGrid } from "lucide-react";
 import { AccountOverview } from "./AccountOverview";
 import { PositionHistory } from "./PositionHistory";
 import { TransactionsTab } from "./TransactionsTab";
@@ -16,10 +17,9 @@ import { ReferralTab } from "./ReferralTab";
 import type { InstrumentView, PositionView } from "@/lib/types";
 import { useForexStore } from "@/lib/store";
 import type { ServerMessage } from "@/lib/ws/client";
-import { Tabs } from "@/components/ui/Tabs";
 import { Badge } from "@/components/ui/badge";
 import { ACCOUNT_TAB_ICONS, TabIcon } from "@/components/ui/tabIcons";
-import { ScrollFade } from "@/components/ui/ScrollFade";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useBrand } from "@/components/providers";
 import { AccountReconciliationStatus, type ReconciliationStatus } from "./AccountReconciliationStatus";
 import type { WalletAddressEntry } from "@/server/userSettings";
@@ -113,7 +113,22 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "settings", label: "Settings" },
 ];
 
-/** Tabbed account dashboard shell. */
+/** Grouped account navigation — the information architecture of the portal.
+ *  Rendered as the desktop sidebar and (grouped) inside the mobile section
+ *  sheet from one source of truth. */
+const NAV_GROUPS: { label: string | null; items: Tab[] }[] = [
+  { label: null, items: ["overview"] },
+  { label: "Trading", items: ["positions", "reports"] },
+  { label: "Money", items: ["transactions", "payments"] },
+  { label: "Profile & Security", items: ["verification", "settings"] },
+  { label: "Activity & Help", items: ["notifications", "messages", "support"] },
+  { label: "Rewards", items: ["referrals"] },
+];
+
+/** Account portal shell: grouped navigation (sidebar on desktop, sheet on
+ *  phones) over the tabbed sections. Tab selection, ?tab= deep links,
+ *  localStorage restoration, Back/Forward, live badges and the realtime
+ *  refresh behavior are unchanged from the previous tab-strip shell. */
 export function AccountShell(props: Props) {
   const marginWarningPercent = props.marginWarningPercent ?? 125;
   // Badge counts start from the server render and stay LIVE: a lightweight
@@ -181,6 +196,7 @@ export function AccountShell(props: Props) {
     };
   }, [refreshCounts, operator]);
   const [tab, setTab] = useState<Tab>("overview");
+  const [navOpen, setNavOpen] = useState(false);
   const router = useRouter();
   const realtimeAccount = useForexStore((state) => state.account);
   const realtimePositions = useForexStore((state) => state.positions);
@@ -281,33 +297,27 @@ export function AccountShell(props: Props) {
     props.reconciliation.paymentMismatchCount > 0 ||
     props.reconciliation.lastRun?.status === "FAILED";
 
-  // Icons first, then the existing unread/attn badges — one pass builds the
-  // final tab labels so the strip stays a single map.
-  const tabsWithBadges = TABS.map((item) => {
-    const icon = ACCOUNT_TAB_ICONS[item.key];
-    const iconEl = icon ? <TabIcon key="icon" icon={icon} /> : null;
-    const badgeFor: Record<string, React.ReactNode> = {};
-    if (item.key === "positions" && openPositionCount > 0) {
-      badgeFor[item.key] = <Badge variant="secondary" className="ml-1.5 bg-panel-3 px-1.5 font-bold text-text-muted">{openPositionCount}</Badge>;
+  // Live badge per section — icons first, badges after, one map reused by the
+  // desktop sidebar and the mobile sheet.
+  const badgeFor = (key: Tab): React.ReactNode => {
+    if (key === "positions" && openPositionCount > 0) {
+      return <Badge variant="secondary" className="ml-auto bg-panel-3 px-1.5 font-bold text-text-muted">{openPositionCount}</Badge>;
     }
-    if (item.key === "verification" && verificationNeeded) {
-      badgeFor[item.key] = <Badge className="ml-1.5 px-1.5 font-bold">!</Badge>;
+    if (key === "verification" && verificationNeeded) {
+      return <Badge className="ml-auto px-1.5 font-bold">!</Badge>;
     }
-    // Unread badges — after a toast fires these steer the user to the tab that
-    // holds the history (toasts no longer consume the unread state).
-    if (item.key === "notifications" && unreadNotifications > 0) {
-      badgeFor[item.key] = <Badge className="ml-1.5 px-1.5 font-bold">{unreadNotifications > 99 ? "99+" : unreadNotifications}</Badge>;
+    if (key === "notifications" && unreadNotifications > 0) {
+      return <Badge className="ml-auto px-1.5 font-bold">{unreadNotifications > 99 ? "99+" : unreadNotifications}</Badge>;
     }
-    if (item.key === "messages" && unreadMessages > 0) {
-      badgeFor[item.key] = <Badge className="ml-1.5 px-1.5 font-bold">{unreadMessages > 99 ? "99+" : unreadMessages}</Badge>;
+    if (key === "messages" && unreadMessages > 0) {
+      return <Badge className="ml-auto px-1.5 font-bold">{unreadMessages > 99 ? "99+" : unreadMessages}</Badge>;
     }
-    if (item.key === "support" && openSupportCases > 0) {
-      badgeFor[item.key] = <Badge variant="secondary" className="ml-1.5 bg-panel-3 px-1.5 font-bold text-text-muted">{openSupportCases}</Badge>;
+    if (key === "support" && openSupportCases > 0) {
+      return <Badge variant="secondary" className="ml-auto bg-panel-3 px-1.5 font-bold text-text-muted">{openSupportCases}</Badge>;
     }
-    const badge = badgeFor[item.key];
-    if (!iconEl && !badge) return item;
-    return { ...item, label: <>{iconEl}{item.label}{badge}</> };
-  });
+    return null;
+  };
+
   const activeTabLabel = TABS.find((item) => item.key === tab)?.label ?? "Account";
 
   // Keep the browser title in sync with the active tab (clicks, Back/Forward,
@@ -319,91 +329,164 @@ export function AccountShell(props: Props) {
     document.title = label ? `${label} — Account — ${brand.name}` : `Account — ${brand.name}`;
   }, [tab, brand.name]);
 
-  return (
-    <div>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-lg font-semibold">My Account</h1>
-        {verificationNeeded && (
-          <button
-            onClick={() => selectTab("verification")}
-            className="rounded border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-medium text-brand transition hover:brightness-95"
-          >
-            Complete verification
-          </button>
-        )}
-      </div>
-
-      {reconAttention ? (
-        <AccountReconciliationStatus status={props.reconciliation} />
-      ) : (
-        <div className="mb-5 flex items-center gap-2 rounded-lg border border-up/25 bg-up/5 px-3 py-2">
-          <span className="h-2 w-2 rounded-full bg-up" aria-hidden />
-          <p className="text-(length:--term-text-xs) text-text-muted">
-            Account integrity verified — balances, positions, and payments reconciled.
-          </p>
+  const navSection = (onSelect: (key: Tab) => void) => (
+    <nav aria-label="Account sections">
+      {NAV_GROUPS.map((group) => (
+        <div key={group.label ?? "root"} className="mb-1 last:mb-0">
+          {group.label && (
+            <div className="px-3 pt-3 pb-1 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint first:pt-0">
+              {group.label}
+            </div>
+          )}
+          <ul>
+            {group.items.map((key) => {
+              const item = TABS.find((t) => t.key === key)!;
+              const icon = ACCOUNT_TAB_ICONS[key];
+              const active = tab === key;
+              return (
+                <li key={key}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(key)}
+                    aria-current={active ? "true" : undefined}
+                    className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
+                      active ? "bg-brand-soft font-semibold text-text" : "text-text-muted hover:bg-panel-2 hover:text-text"
+                    }`}
+                  >
+                    {icon ? <TabIcon icon={icon} /> : null}
+                    <span className="min-w-0 truncate">{item.label}</span>
+                    {badgeFor(key)}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
-      )}
+      ))}
+    </nav>
+  );
 
-      <ScrollFade className="mb-5">
-        <Tabs
-          tabs={tabsWithBadges}
-          active={tab}
-          onChange={(key) => selectTab(key as Tab)}
-          label="Account sections"
-        />
-      </ScrollFade>
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
+      {/* Desktop sidebar — grouped account navigation */}
+      <aside className="hidden lg:block">
+        <div className="sticky top-20 rounded-lg border border-border bg-canvas p-2">
+          {navSection(selectTab)}
+        </div>
+      </aside>
 
-      <div role="tabpanel" aria-label={typeof activeTabLabel === "string" ? activeTabLabel : tab}>
+      {/* Content column */}
+      <div className="min-w-0">
+        {/* Mobile section bar (<lg): current section + grouped sheet selector */}
+        <button
+          type="button"
+          onClick={() => setNavOpen(true)}
+          aria-haspopup="dialog"
+          className="mb-4 flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-canvas px-4 py-3 text-left transition-colors hover:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand lg:hidden"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <LayoutGrid size={16} strokeWidth={2} aria-hidden className="shrink-0 text-text-muted" />
+            <span className="truncate text-sm font-semibold">{activeTabLabel}</span>
+            {badgeFor(tab)}
+          </span>
+          <span className="shrink-0 text-(length:--term-text-xs) font-medium text-brand">All sections</span>
+        </button>
 
-      {tab === "overview" && (
-        <AccountOverview
-          user={{ ...props.user, createdAt: new Date(props.user.createdAt) }}
-          metrics={metrics}
-          wallets={props.wallets}
-          openCount={positions.filter((position) => position.status === "OPEN").length}
-          depositUiEnabled={props.depositUiEnabled}
-          disabledPaymentMethods={props.disabledPaymentMethods}
-          walletAddresses={props.walletAddresses}
-          kyc={props.kyc ? { status: props.kyc.status, note: props.kyc.note } : null}
-          onOpenVerification={() => selectTab("verification")}
-          marginWarningPercent={marginWarningPercent}
-        />
-      )}
-      {tab === "positions" && (
-        <PositionHistory
-          open={positions.filter((p) => p.status === "OPEN").map((p) => ({ ...p, openedAt: new Date(p.openedAt), closedAt: p.closedAt ? new Date(p.closedAt) : null }))}
-          closed={positions.filter((p) => p.status === "CLOSED").map((p) => ({ ...p, openedAt: new Date(p.openedAt), closedAt: p.closedAt ? new Date(p.closedAt) : null }))}
-          instruments={props.instruments}
-          fetchCap={100}
-        />
-      )}
-      {tab === "transactions" && <TransactionsTab transactions={props.transactions} />}
-      {tab === "payments" && <PaymentTimeline />}
-      {tab === "reports" && (
-        <ReportsView
-          rows={positions
-            .filter((p) => p.status === "CLOSED")
-            .map((p) => ({
-              id: p.id,
-              symbol: p.symbol,
-              type: p.type,
-              side: p.side,
-              volume: p.volume,
-              netProfit: p.netProfit,
-              swap: p.swap,
-              commission: p.commission + p.tradingCommission,
-              openedAt: p.openedAt,
-              closedAt: p.closedAt ?? p.openedAt,
-            }))}
-        />
-      )}
-      {tab === "verification" && <VerificationTab kyc={props.kyc} checklist={props.kycChecklist} onSubmitted={() => selectTab("overview")} />}
-      {tab === "notifications" && <NotificationsTab onActivity={refreshCounts} onOpenMessages={() => selectTab("messages")} />}
-      {tab === "messages" && <MessagesTab />}
-      {tab === "support" && <SupportTab />}
-      {tab === "referrals" && <ReferralTab />}
-      {tab === "settings" && <SettingsTab user={props.user} />}
+        {/* Page heading + contextual action */}
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[22px] font-semibold leading-tight sm:text-2xl">My Account</h1>
+            <p className="mt-0.5 text-sm text-text-muted">Manage your trading account, funds and profile.</p>
+          </div>
+          {verificationNeeded && (
+            <button
+              onClick={() => selectTab("verification")}
+              className="rounded border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-medium text-brand transition hover:brightness-95"
+            >
+              Complete verification
+            </button>
+          )}
+        </div>
+
+        {reconAttention ? (
+          <AccountReconciliationStatus status={props.reconciliation} />
+        ) : (
+          <div className="mb-5 flex items-center gap-2 rounded-lg border border-up/25 bg-up/5 px-3 py-2">
+            <span className="h-2 w-2 rounded-full bg-up" aria-hidden />
+            <p className="text-(length:--term-text-xs) text-text-muted">
+              Account integrity verified — balances, positions, and payments reconciled.
+            </p>
+          </div>
+        )}
+
+        <div role="tabpanel" aria-label={activeTabLabel}>
+
+        {tab === "overview" && (
+          <AccountOverview
+            user={{ ...props.user, createdAt: new Date(props.user.createdAt) }}
+            metrics={metrics}
+            wallets={props.wallets}
+            openCount={positions.filter((position) => position.status === "OPEN").length}
+            depositUiEnabled={props.depositUiEnabled}
+            disabledPaymentMethods={props.disabledPaymentMethods}
+            walletAddresses={props.walletAddresses}
+            kyc={props.kyc ? { status: props.kyc.status, note: props.kyc.note } : null}
+            onOpenVerification={() => selectTab("verification")}
+            marginWarningPercent={marginWarningPercent}
+          />
+        )}
+        {tab === "positions" && (
+          <PositionHistory
+            open={positions.filter((p) => p.status === "OPEN").map((p) => ({ ...p, openedAt: new Date(p.openedAt), closedAt: p.closedAt ? new Date(p.closedAt) : null }))}
+            closed={positions.filter((p) => p.status === "CLOSED").map((p) => ({ ...p, openedAt: new Date(p.openedAt), closedAt: p.closedAt ? new Date(p.closedAt) : null }))}
+            instruments={props.instruments}
+            fetchCap={100}
+          />
+        )}
+        {tab === "transactions" && <TransactionsTab transactions={props.transactions} />}
+        {tab === "payments" && <PaymentTimeline />}
+        {tab === "reports" && (
+          <ReportsView
+            rows={positions
+              .filter((p) => p.status === "CLOSED")
+              .map((p) => ({
+                id: p.id,
+                symbol: p.symbol,
+                type: p.type,
+                side: p.side,
+                volume: p.volume,
+                netProfit: p.netProfit,
+                swap: p.swap,
+                commission: p.commission + p.tradingCommission,
+                openedAt: p.openedAt,
+                closedAt: p.closedAt ?? p.openedAt,
+              }))}
+          />
+        )}
+        {tab === "verification" && <VerificationTab kyc={props.kyc} checklist={props.kycChecklist} onSubmitted={() => selectTab("overview")} />}
+        {tab === "notifications" && <NotificationsTab onActivity={refreshCounts} onOpenMessages={() => selectTab("messages")} />}
+        {tab === "messages" && <MessagesTab />}
+        {tab === "support" && <SupportTab />}
+        {tab === "referrals" && <ReferralTab />}
+        {tab === "settings" && <SettingsTab user={props.user} />}
+        </div>
       </div>
+
+      {/* Mobile grouped-section sheet */}
+      <Sheet open={navOpen} onOpenChange={setNavOpen}>
+        <SheetContent side="left" className="w-80 gap-0 overflow-y-auto p-0 sm:max-w-none">
+          <SheetHeader className="border-b border-border-soft pb-3 pt-4">
+            <SheetTitle>Account sections</SheetTitle>
+            <SheetDescription>Jump to any part of your account.</SheetDescription>
+          </SheetHeader>
+          <div className="p-2">
+            {navSection((key) => {
+              setNavOpen(false);
+              selectTab(key);
+            })}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

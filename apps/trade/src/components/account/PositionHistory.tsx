@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { InstrumentView } from "@/lib/types";
 import { Pagination } from "@/components/ui/Pagination";
-import { TableShell, Th, Td, EmptyRow, TotalsRow, FilterChip, type SortDirection } from "@/components/ui/DataTable";
+import { RecordShell, RecordSortButton, RecordLabel, MobileSortSelect, type SortDirection } from "@/components/ui/RecordList";
+import { FilterChip } from "@/components/ui/DataTable";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";
 import { fmtDateTime } from "@/lib/dates";
 import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Inbox } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type PositionRow = {
   id: string;
@@ -38,7 +41,19 @@ const PAGE_SIZE = 20;
 
 type SortKey = "openedAt" | "symbol" | "volume" | "netProfit";
 
-/** Sortable, filterable position history with totals and CSV export. */
+const SORT_OPTIONS: Array<{ key: SortKey; direction: SortDirection; label: string }> = [
+  { key: "openedAt", direction: "desc", label: "Newest first" },
+  { key: "openedAt", direction: "asc", label: "Oldest first" },
+  { key: "symbol", direction: "asc", label: "Symbol A→Z" },
+  { key: "symbol", direction: "desc", label: "Symbol Z→A" },
+  { key: "volume", direction: "desc", label: "Volume high→low" },
+  { key: "volume", direction: "asc", label: "Volume low→high" },
+  { key: "netProfit", direction: "desc", label: "Profit high→low" },
+  { key: "netProfit", direction: "asc", label: "Profit low→high" },
+];
+
+/** Sortable, filterable position history as record rows (grid columns on
+ *  desktop, stacked cards on phones) with totals and CSV export. */
 export function PositionHistory({ open, closed, instruments, fetchCap }: Props) {
   const router = useRouter();
   const [page, setPage] = useState(1);
@@ -97,13 +112,12 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
   ]);
 
   return (
-    <>
-    <TableShell
-      minWidth={900}
+    <RecordShell
+      ariaLabel="Position history"
       footer={<Pagination page={safePage} pageSize={PAGE_SIZE} totalItems={rows.length} onPageChange={setPage} label="positions" />}
       toolbar={
         <>
-          <h3 className="text-xs font-medium uppercase text-text-muted">Position History</h3>
+          <h2 className="text-sm font-semibold">Position History</h2>
           <div className="flex flex-wrap items-center gap-1.5">
             {(["ALL", "OPEN", "CLOSED"] as const).map((value) => (
               <FilterChip key={value} active={statusFilter === value} onClick={() => setStatusFilter(value)}>
@@ -120,6 +134,11 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
             <option value="ALL">All symbols</option>
             {symbols.map((symbol) => <option key={symbol} value={symbol}>{symbol}</option>)}
           </NativeSelect>
+          <MobileSortSelect
+            value={`${sort.key}:${sort.direction}`}
+            onChange={(next) => setSort(next as { key: SortKey; direction: SortDirection })}
+            options={SORT_OPTIONS}
+          />
           <span className="ml-auto text-(length:--term-text-2xs) text-text-faint tnum">
             {rows.length} shown · Net P/L {allFilteredProfit >= 0 ? "+" : ""}{allFilteredProfit.toFixed(2)}
             {capped && (
@@ -132,61 +151,82 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
         </>
       }
     >
-      <thead className="border-b border-border-soft">
-        <tr>
-          <Th sortKey="symbol" sort={sort} onSort={onSort}>Symbol</Th>
-          <Th>Type</Th><Th>Side</Th>
-          <Th sortKey="volume" sort={sort} onSort={onSort} align="right">Volume</Th>
-          <Th align="right">Open Rate</Th><Th align="right">Current/Close</Th>
-          <Th sortKey="netProfit" sort={sort} onSort={onSort} align="right">Net Profit</Th>
-          <Th>Status</Th>
-          <Th sortKey="openedAt" sort={sort} onSort={onSort}>Opened</Th>
-        </tr>
-      </thead>
-      <tbody>
+      {/* Column header — desktop only; phones sort via the toolbar selector */}
+      <div className="hidden md:grid md:grid-cols-[minmax(0,1.5fr)_1fr_0.8fr_1fr_1fr_1fr_0.9fr_1.3fr] md:items-center md:gap-3 border-b border-border-soft bg-panel-2/50 px-3 py-2 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint" aria-hidden="true">
+        <RecordSortButton label="Symbol" sortKey="symbol" sort={sort} onSort={onSort} />
+        <RecordLabel>Type · Side</RecordLabel>
+        <RecordSortButton label="Volume" sortKey="volume" sort={sort} onSort={onSort} align="right" />
+        <RecordLabel align="right">Open</RecordLabel>
+        <RecordLabel align="right">Current/Close</RecordLabel>
+        <RecordSortButton label="Net Profit" sortKey="netProfit" sort={sort} onSort={onSort} align="right" />
+        <RecordLabel>Status</RecordLabel>
+        <RecordSortButton label="Opened" sortKey="openedAt" sort={sort} onSort={onSort} />
+      </div>
+
+      <ul>
         {visibleRows.map((position) => {
           const profitable = position.netProfit >= 0;
+          const plClass = profitable ? "text-up" : "text-down";
           return (
-            <tr
+            <li
               key={position.id}
               onClick={rowNavigate(router, position.symbol)}
-              className="cursor-pointer border-b border-border-soft last:border-b-0 hover:bg-panel-2"
+              className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-border-soft px-3 py-3 transition-colors last:border-b-0 hover:bg-panel-2 md:grid-cols-[minmax(0,1.5fr)_1fr_0.8fr_1fr_1fr_1fr_0.9fr_1.3fr] md:gap-3 md:py-2.5"
             >
-              <Td className="font-medium"><SymbolLink symbol={position.symbol} /></Td>
-              <Td className="text-text-muted">{position.type}</Td>
-              <Td><span className={position.side === "BUY" ? "text-up" : "text-down"}>{position.side}</span></Td>
-              <Td align="right">{position.volume.toFixed(2)}</Td>
-              <Td align="right">{fmt(position.openRate, digits(position.symbol))}</Td>
-              <Td align="right">{fmt(position.currentRate, digits(position.symbol))}</Td>
-              <Td align="right" className={profitable ? "text-up" : "text-down"} >
-                <span className={`font-medium ${profitable ? "text-up" : "text-down"}`}>
-                  {profitable ? "+" : ""}{position.netProfit.toFixed(2)}
-                </span>
-              </Td>
-              <Td>
-                <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) ${position.status === "OPEN" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-panel-3 text-text-muted"}`}>
+              {/* Identity — col 1 on both layouts */}
+              <div className="min-w-0 md:col-start-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold"><SymbolLink symbol={position.symbol} /></span>
+                  <span className={`text-(length:--term-text-xs) font-semibold ${position.side === "BUY" ? "text-up" : "text-down"}`}>{position.side}</span>
+                  <span className="text-(length:--term-text-xs) text-text-faint">{position.type}</span>
+                </div>
+                <div className="mt-0.5 text-(length:--term-text-xs) tnum text-text-muted md:hidden">
+                  {position.volume.toFixed(2)} lots · {fmt(position.openRate, digits(position.symbol))} → {fmt(position.currentRate, digits(position.symbol))}
+                </div>
+                <div className="mt-0.5 text-(length:--term-text-2xs) text-text-faint md:hidden">{fmtDateTime(position.openedAt)}</div>
+              </div>
+
+              {/* Net P/L — mobile anchor (col 2); desktop col 6 under its header */}
+              <div className={`text-right text-sm font-semibold tnum md:col-start-6 md:text-(length:--term-text-sm) ${plClass}`}>
+                {profitable ? "+" : ""}{position.netProfit.toFixed(2)}
+                <span className="md:hidden block text-(length:--term-text-2xs) font-normal text-text-faint">net P/L</span>
+              </div>
+
+              {/* Desktop-only columns — explicit grid placement */}
+              <div className="hidden md:block md:col-start-2 text-(length:--term-text-sm) text-text-muted">{position.type} · <span className={position.side === "BUY" ? "text-up" : "text-down"}>{position.side}</span></div>
+              <div className="hidden md:block md:col-start-3 text-right text-(length:--term-text-sm) tnum">{position.volume.toFixed(2)}</div>
+              <div className="hidden md:block md:col-start-4 text-right text-(length:--term-text-sm) tnum text-text-muted">{fmt(position.openRate, digits(position.symbol))}</div>
+              <div className="hidden md:block md:col-start-5 text-right text-(length:--term-text-sm) tnum text-text-muted">{fmt(position.currentRate, digits(position.symbol))}</div>
+              <div className="hidden md:block md:col-start-7">
+                <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium ${position.status === "OPEN" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-panel-3 text-text-muted"}`}>
                   {position.status}
                 </span>
-              </Td>
-              <Td className="text-(length:--term-text-xs) text-text-muted">{fmtDateTime(position.openedAt)}</Td>
-            </tr>
+              </div>
+              <div className="hidden md:block md:col-start-8 text-(length:--term-text-xs) tnum text-text-muted">{fmtDateTime(position.openedAt)}</div>
+            </li>
           );
         })}
-        {rows.length === 0 && <EmptyRow colSpan={9} label="No positions match the current filters." />}
-        {rows.length > 0 && (
-          <TotalsRow
-            cells={[
-              { label: `Page totals (${visibleRows.length})`, colSpan: 3 },
-              { label: pageVolume.toFixed(2), align: "right" },
-              { colSpan: 2, label: "" },
-              { label: `${pageProfit >= 0 ? "+" : ""}${pageProfit.toFixed(2)}`, align: "right", className: pageProfit >= 0 ? "text-up" : "text-down" },
-              { label: "", colSpan: 3 },
-            ]}
-          />
+        {rows.length === 0 && (
+          <li className="px-4 py-8">
+            <EmptyState compact icon={<Inbox size={18} />} title="No positions match the current filters." />
+          </li>
         )}
-      </tbody>
-    </TableShell>
-    </>
+      </ul>
+
+      {/* Page totals — desktop grid columns; compact line on phones */}
+      {rows.length > 0 && (
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 bg-panel-2/60 px-3 py-2 tnum md:grid-cols-[minmax(0,1.5fr)_1fr_0.8fr_1fr_1fr_1fr_0.9fr_1.3fr]">
+          <span className="text-xs font-medium text-text-muted md:col-start-1">
+            Page totals ({visibleRows.length})
+            <span className="ml-2 md:hidden font-normal">{pageVolume.toFixed(2)} lots</span>
+          </span>
+          <span className={`text-right text-sm font-semibold md:col-start-6 ${pageProfit >= 0 ? "text-up" : "text-down"}`}>
+            {pageProfit >= 0 ? "+" : ""}{pageProfit.toFixed(2)}
+          </span>
+          <span className="hidden md:block md:col-start-3 text-right text-(length:--term-text-sm) text-text-muted">{pageVolume.toFixed(2)}</span>
+        </div>
+      )}
+    </RecordShell>
   );
 }
 

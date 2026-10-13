@@ -3,13 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pagination } from "@/components/ui/Pagination";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
-import { TableShell, Th, Td, EmptyRow, FilterChip, TableSearch, type SortDirection } from "@/components/ui/DataTable";
+import { RecordShell, RecordSortButton, RecordLabel, MobileSortSelect, type SortDirection } from "@/components/ui/RecordList";
+import { FilterChip, TableSearch } from "@/components/ui/DataTable";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { StatCard } from "@/components/ui/StatCard";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { fmtDateTime } from "@/lib/dates";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
+import { Inbox } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface Txn {
   id: string;
@@ -26,7 +29,15 @@ const PAGE_SIZE = 20;
 
 type SortKey = "createdAt" | "amount";
 
-/** Transactions history: filters, date range, search, CSV export. */
+const SORT_OPTIONS: Array<{ key: SortKey; direction: SortDirection; label: string }> = [
+  { key: "createdAt", direction: "desc", label: "Newest first" },
+  { key: "createdAt", direction: "asc", label: "Oldest first" },
+  { key: "amount", direction: "desc", label: "Amount high→low" },
+  { key: "amount", direction: "asc", label: "Amount low→high" },
+];
+
+/** Transactions history: filters, date range, search, CSV export — record
+ *  rows (grid columns on desktop, stacked cards on phones). */
 export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<"ALL" | Txn["status"]>("ALL");
@@ -117,8 +128,8 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
         <StatCard label="Withdrawals · this month" value={money(totals.monthWithdrawals)} tone="down" />
       </div>
 
-      <TableShell
-        minWidth={900}
+      <RecordShell
+        ariaLabel="Transactions"
         footer={<Pagination page={safePage} pageSize={PAGE_SIZE} totalItems={rows.length} onPageChange={setPage} label="transactions" />}
         toolbar={
           <>
@@ -144,73 +155,107 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
                 </FilterChip>
               ))}
             </div>
+            <MobileSortSelect
+              value={`${sort.key}:${sort.direction}`}
+              onChange={(next) => setSort(next as { key: SortKey; direction: SortDirection })}
+              options={SORT_OPTIONS}
+            />
             <span className="ml-auto text-(length:--term-text-2xs) text-text-faint tnum">{rows.length} shown</span>
             <CsvExportButton filename="transactions" columns={["Date", "Type", "Description", "Reference", "Status", "Amount"]} rows={csvRows} disabled={rows.length === 0} />
           </>
         }
       >
-        <thead className="border-b border-border-soft">
-          <tr>
-            <Th sortKey="createdAt" sort={sort} onSort={onSort}>Date</Th>
-            <Th>Type</Th>
-            <Th>Description</Th>
-            <Th>Reference</Th>
-            <Th>Status</Th>
-            <Th sortKey="amount" sort={sort} onSort={onSort} align="right">Amount</Th>
-          </tr>
-        </thead>
-        <tbody>
+        {/* Column header — desktop only */}
+        <div className="hidden md:grid md:grid-cols-[1.1fr_0.9fr_minmax(0,2.2fr)_1.2fr_1fr_1.1fr] md:items-center md:gap-3 border-b border-border-soft bg-panel-2/50 px-3 py-2 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint" aria-hidden="true">
+          <RecordSortButton label="Date" sortKey="createdAt" sort={sort} onSort={onSort} />
+          <RecordLabel>Type</RecordLabel>
+          <RecordLabel>Description</RecordLabel>
+          <RecordLabel>Reference</RecordLabel>
+          <RecordLabel>Status</RecordLabel>
+          <RecordSortButton label="Amount" sortKey="amount" sort={sort} onSort={onSort} align="right" />
+        </div>
+
+        <ul>
           {visible.map((transaction) => {
             const credit = transaction.amount >= 0;
             const sym = extractSymbol(transaction);
             return (
-              <tr key={transaction.id} className="border-b border-border-soft last:border-b-0 hover:bg-panel-2">
-                <Td className="text-text-muted">{fmtDateTime(transaction.createdAt)}</Td>
-                <Td><TypeBadge type={transaction.type} /></Td>
-                <Td className="max-w-64">
+              <li
+                key={transaction.id}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 border-b border-border-soft px-3 py-3 transition-colors last:border-b-0 hover:bg-panel-2 md:grid-cols-[1.1fr_0.9fr_minmax(0,2.2fr)_1.2fr_1fr_1.1fr] md:gap-3 md:py-2.5"
+              >
+                {/* Identity: date (desktop col 1) / type + date (mobile) */}
+                <div className="min-w-0 md:col-start-1">
+                  <div className="flex items-center gap-2 md:hidden">
+                    <TypeBadge type={transaction.type} />
+                    <span className="text-(length:--term-text-xs) tnum text-text-muted">{fmtDateTime(transaction.createdAt)}</span>
+                  </div>
+                  <div className="hidden md:block text-(length:--term-text-sm) tnum text-text-muted">{fmtDateTime(transaction.createdAt)}</div>
+                </div>
+                {/* Amount — mobile anchor; desktop col 6 */}
+                <div className={`text-right text-sm font-semibold tnum md:col-start-6 ${credit ? "text-up" : "text-down"}`}>
+                  {credit ? "+" : ""}{transaction.amount.toFixed(2)} <span className="text-(length:--term-text-2xs) font-normal text-text-faint">{transaction.asset}</span>
+                </div>
+                {/* Desktop-only columns */}
+                <div className="hidden md:block md:col-start-2"><TypeBadge type={transaction.type} /></div>
+                <div className="hidden md:block md:col-start-3 min-w-0">
                   <span className="flex items-center gap-1.5">
                     {sym ? <InstrumentIcon symbol={sym} size={14} /> : null}
                     {transaction.description ? (
                       <Tooltip text={transaction.description}>
-                        <span className="truncate text-text-muted">{transaction.description}</span>
+                        <span className="truncate text-(length:--term-text-sm) text-text-muted">{transaction.description}</span>
                       </Tooltip>
                     ) : (
-                      <span className="text-text-muted">—</span>
+                      <span className="text-(length:--term-text-sm) text-text-muted">—</span>
                     )}
                   </span>
-                </Td>
-                <Td>
+                </div>
+                <div className="hidden md:block md:col-start-4">
                   {transaction.reference ? (
                     <Tooltip text="Copy reference">
                       <button
                         type="button"
-                        onClick={() => void copyReference(transaction.reference!)}
-                        className="tnum text-text-faint transition hover:text-brand"
+                        onClick={(event) => { event.stopPropagation(); void copyReference(transaction.reference!); }}
+                        className="tnum text-(length:--term-text-xs) text-text-faint transition hover:text-brand"
                       >
                         {copiedRef === transaction.reference ? "✓ Copied" : transaction.reference}
                       </button>
                     </Tooltip>
                   ) : (
-                    <span className="text-text-faint">—</span>
+                    <span className="text-(length:--term-text-xs) text-text-faint">—</span>
                   )}
-                </Td>
-                <Td><StatusBadge status={transaction.status} /></Td>
-                <Td align="right" className={credit ? "text-up" : "text-down"}>
-                  <span className={`font-medium tnum ${credit ? "text-up" : "text-down"}`}>
-                    {credit ? "+" : ""}{transaction.amount.toFixed(2)} {transaction.asset}
-                  </span>
-                </Td>
-              </tr>
+                </div>
+                <div className="hidden md:block md:col-start-5"><StatusBadge status={transaction.status} /></div>
+                {/* Mobile secondary line: status + reference */}
+                <div className="col-start-1 flex items-center gap-2 md:hidden">
+                  <StatusBadge status={transaction.status} />
+                  {transaction.reference && (
+                    <Tooltip text="Copy reference">
+                      <button
+                        type="button"
+                        onClick={(event) => { event.stopPropagation(); void copyReference(transaction.reference!); }}
+                        className="tnum text-(length:--term-text-2xs) text-text-faint transition hover:text-brand"
+                      >
+                        {copiedRef === transaction.reference ? "✓ Copied" : transaction.reference}
+                      </button>
+                    </Tooltip>
+                  )}
+                  {transaction.description && (
+                    <Tooltip text={transaction.description}>
+                      <span className="truncate text-(length:--term-text-2xs) text-text-faint">{transaction.description}</span>
+                    </Tooltip>
+                  )}
+                </div>
+              </li>
             );
           })}
           {rows.length === 0 && (
-            <EmptyRow
-              colSpan={6}
-              label={hasActiveFilters ? "No transactions match the current filters." : "No transactions yet. Deposits and withdrawals will appear here."}
-            />
+            <li className="px-4 py-8">
+              <EmptyState compact icon={<Inbox size={18} />} title={hasActiveFilters ? "No transactions match the current filters." : "No transactions yet. Deposits and withdrawals will appear here."} />
+            </li>
           )}
-        </tbody>
-      </TableShell>
+        </ul>
+      </RecordShell>
     </div>
   );
 }

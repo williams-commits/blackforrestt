@@ -108,7 +108,7 @@ export function ReferralTab() {
     <div className="space-y-5">
       {/* Share card */}
       <div className="p-5">
-        <h3 className="text-sm font-bold mb-1">Your Referral Link</h3>
+        <h3 className="text-base font-semibold mb-1">Your Referral Link</h3>
         <p className="text-xs text-text-muted mb-3">Share this link. When your referral makes their first deposit, you both earn a bonus.</p>
         <div className="flex items-center gap-2">
           <Input
@@ -138,51 +138,44 @@ export function ReferralTab() {
         <StatCard label="Total Earned" value={`$${data.stats.totalEarned.toFixed(2)}`} highlight />
       </div>
 
-      {/* Referral list */}
+      {/* Referral list — record rows, not a table */}
       <div>
-        <h3 className="text-sm font-bold mb-3">Referral History</h3>
+        <h3 className="mb-3 text-base font-semibold">Referral History</h3>
         {data.referrals.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-sm text-text-muted">No referrals yet. Share your link to start earning.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-panel-2 text-text-faint">
-                <tr>
-                  <th className="px-3 py-2 text-left text-(length:--term-text-2xs) uppercase">User</th>
-                  <th className="px-3 py-2 text-left text-(length:--term-text-2xs) uppercase hidden sm:table-cell">Date</th>
-                  <th className="px-3 py-2 text-center text-(length:--term-text-2xs) uppercase">Status</th>
-                  <th className="px-3 py-2 text-right text-(length:--term-text-2xs) uppercase">Reward</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.referrals.map((r) => (
-                  <tr key={r.id} className="border-t border-border-soft">
-                    <td className="px-3 py-2">
-                      <div className="text-xs font-medium">{r.referred.name ?? "Unknown"}</div>
-                      <div className="text-(length:--term-text-2xs) text-text-faint">{r.referred.email}</div>
-                    </td>
-                    <td className="px-3 py-2 text-xs text-text-muted hidden sm:table-cell">
-                      {fmtDate(r.createdAt)}
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold ${
-                        r.status === "COMPLETED" ? "bg-up/15 text-up" :
-                        r.status === "PENDING" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" :
-                        "bg-down/15 text-down"
-                      }`}>
-                        {r.status === "COMPLETED" ? "Completed" : r.status === "PENDING" ? "Pending" : "Rejected"}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right text-xs tnum font-semibold text-up">
-                      {r.status === "COMPLETED" ? `+$${r.reward.toFixed(2)}` : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className="rounded-lg border border-border bg-canvas">
+            {data.referrals.map((r) => (
+              <li key={r.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-border-soft px-4 py-3 last:border-b-0 hover:bg-panel-2 md:grid-cols-[minmax(0,2fr)_1fr_1fr_1fr] md:gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium">{r.referred.name ?? "Unknown"}</div>
+                  <div className="truncate text-(length:--term-text-xs) text-text-faint">{r.referred.email}</div>
+                  <div className="mt-0.5 text-(length:--term-text-2xs) text-text-faint md:hidden">{fmtDate(r.createdAt)}</div>
+                </div>
+                <div className="text-right">
+                  <span className={`text-sm tnum font-semibold ${r.status === "COMPLETED" ? "text-up" : "text-text-faint"}`}>
+                    {r.status === "COMPLETED" ? `+$${r.reward.toFixed(2)}` : "—"}
+                  </span>
+                  <div className="text-(length:--term-text-2xs) text-text-faint md:hidden">reward</div>
+                </div>
+                <div className="hidden md:block text-(length:--term-text-sm) text-text-muted tnum">{fmtDate(r.createdAt)}</div>
+                <div className="col-start-1 md:col-start-3">
+                  <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold ${
+                    r.status === "COMPLETED" ? "bg-up/15 text-up" :
+                    r.status === "PENDING" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" :
+                    "bg-down/15 text-down"
+                  }`}>
+                    {r.status === "COMPLETED" ? "Completed" : r.status === "PENDING" ? "Pending" : "Rejected"}
+                  </span>
+                </div>
+                <span className="hidden md:block text-right text-sm tnum font-semibold text-up">
+                  {r.status === "COMPLETED" ? `+$${r.reward.toFixed(2)}` : "—"}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>

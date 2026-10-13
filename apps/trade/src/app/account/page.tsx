@@ -177,7 +177,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         />
       </header>
 
-      <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-3 py-4 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:px-4 sm:py-6 md:pb-6">
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-[1440px] px-4 py-5 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:px-6 sm:py-6 md:pb-6 lg:px-8">
         <AccountShell
           unreadNotifications={unreadNotifications}
           operator={isOperator}

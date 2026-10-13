@@ -160,40 +160,49 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
         </div>
       )}
 
-      <div className="overflow-hidden overflow-x-auto">
-        <table className="w-full min-w-205">
-          <thead className="border-b border-border-soft">
-            <tr>
-              <Th>Symbol</Th><Th>Type</Th><Th>Side</Th><Th className="text-right">Volume</Th>
-              <Th className="text-right">Swap</Th><Th className="text-right">Commission</Th>
-              <Th className="text-right">Net P&L</Th><Th>Closed</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((row) => {
-              const up = row.netProfit >= 0;
-              return (
-                <tr
-                  key={row.id}
-                  onClick={rowNavigate(router, row.symbol)}
-                  className="cursor-pointer border-b border-border-soft last:border-b-0 hover:bg-panel-2"
-                >
-                  <Td className="font-medium"><SymbolLink symbol={row.symbol} /></Td>
-                  <Td className="text-text-muted">{row.type}</Td>
-                  <Td><span className={row.side === "BUY" ? "text-up" : "text-down"}>{row.side}</span></Td>
-                  <Td className="text-right tnum">{row.volume.toFixed(2)}</Td>
-                  <Td className="text-right tnum text-text-muted">{fmtSigned(row.swap)}</Td>
-                  <Td className="text-right tnum text-text-muted">{fmtSigned(-row.commission)}</Td>
-                  <Td className={`text-right tnum font-medium ${up ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</Td>
-                  <Td className="text-(length:--term-text-xs) text-text-faint">{fmtDateTime(row.closedAt)}</Td>
-                </tr>
-              );
-            })}
-            {filtered.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-xs text-text-faint">No closed trades match these filters.</td></tr>
-            )}
-          </tbody>
-        </table>
+      <div className="overflow-hidden rounded-lg border border-border bg-canvas">
+        {/* Column header — desktop only */}
+        <div className="hidden md:grid md:grid-cols-[minmax(0,1.5fr)_1fr_0.8fr_1fr_1fr_1.1fr_1.3fr] md:items-center md:gap-3 border-b border-border bg-panel-2 px-3 py-2 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint" aria-hidden="true">
+          <span>Symbol</span>
+          <span>Type · Side</span>
+          <span className="text-right">Volume</span>
+          <span className="text-right">Swap</span>
+          <span className="text-right">Commission</span>
+          <span className="text-right">Net P&L</span>
+          <span>Closed</span>
+        </div>
+        <ul>
+          {filtered.map((row) => {
+            const up = row.netProfit >= 0;
+            return (
+              <li
+                key={row.id}
+                onClick={rowNavigate(router, row.symbol)}
+                className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 border-b border-border-soft px-3 py-3 transition-colors last:border-b-0 hover:bg-panel-2 md:grid-cols-[minmax(0,1.5fr)_1fr_0.8fr_1fr_1fr_1.1fr_1.3fr] md:gap-3 md:py-2.5"
+              >
+                <div className="min-w-0 md:col-start-1">
+                  <span className="text-sm font-medium"><SymbolLink symbol={row.symbol} /></span>
+                  <div className="mt-0.5 text-(length:--term-text-xs) tnum text-text-muted md:hidden">
+                    {row.side} · {row.volume.toFixed(2)} lots · {fmtSigned(row.swap)} swap / {fmtSigned(-row.commission)} comm
+                  </div>
+                  <div className="mt-0.5 text-(length:--term-text-2xs) text-text-faint md:hidden">{fmtDateTime(row.closedAt)}</div>
+                </div>
+                <div className={`text-right text-sm font-semibold tnum md:col-start-6 ${up ? "text-up" : "text-down"}`}>
+                  {fmtSigned(row.netProfit)}
+                  <span className="md:hidden block text-(length:--term-text-2xs) font-normal text-text-faint">net P&L</span>
+                </div>
+                <div className="hidden md:block md:col-start-2 text-(length:--term-text-sm) text-text-muted">{row.type} · <span className={row.side === "BUY" ? "text-up" : "text-down"}>{row.side}</span></div>
+                <div className="hidden md:block md:col-start-3 text-right text-(length:--term-text-sm) tnum">{row.volume.toFixed(2)}</div>
+                <div className="hidden md:block md:col-start-4 text-right text-(length:--term-text-sm) tnum text-text-muted">{fmtSigned(row.swap)}</div>
+                <div className="hidden md:block md:col-start-5 text-right text-(length:--term-text-sm) tnum text-text-muted">{fmtSigned(-row.commission)}</div>
+                <div className="hidden md:block md:col-start-7 text-(length:--term-text-xs) text-text-faint">{fmtDateTime(row.closedAt)}</div>
+              </li>
+            );
+          })}
+          {filtered.length === 0 && (
+            <li className="px-4 py-10 text-center text-xs text-text-faint">No closed trades match these filters.</li>
+          )}
+        </ul>
       </div>
 
       {server && server.pagination.pageCount > 1 && (
@@ -245,6 +254,4 @@ function Card({ label, value, valueClass = "", sub }: { label: string; value: st
 function ExtremCard({ title, row, positive, emptyLabel = "—" }: { title: string; row: ReportRow | null; positive: boolean; emptyLabel?: string }) {
   return <div className="p-4"><div className="mb-2 text-(length:--term-text-xs) uppercase text-text-faint">{title}</div>{row ? <div className="flex items-center justify-between"><div className="flex items-center gap-2"><InstrumentIcon symbol={row.symbol} size={18} /><div><div className="text-sm font-medium">{row.symbol}</div><div className="text-(length:--term-text-xs) text-text-muted">{row.side} · {row.volume.toFixed(2)} lots</div></div></div><div className={`text-lg font-semibold tnum ${positive ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</div></div> : <EmptyState compact icon={positive ? <TrendingUp size={16} /> : <TrendingDown size={16} />} title={emptyLabel} />}</div>;
 }
-function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <th className={`whitespace-nowrap px-3 py-2 text-left text-(length:--term-text-2xs) font-medium uppercase text-text-faint ${className}`}>{children}</th>; }
-function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) { return <td className={`whitespace-nowrap px-3 py-2 text-xs ${className}`}>{children}</td>; }
 function fmtSigned(value: number): string { return `${value >= 0 ? "+" : ""}${value.toFixed(2)}`; }

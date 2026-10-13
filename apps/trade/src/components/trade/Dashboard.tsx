@@ -13,7 +13,7 @@ import { PositionsTable } from "./PositionsTable";
 import { InstrumentSelector } from "./InstrumentSelector";
 import { AssetModal } from "./AssetModal";
 import { MarketStatusBanner } from "./MarketStatusBanner";
-import { MobileTabBar, rememberMobileSymbol } from "./MobileTabBar";
+import { MobileTabBar, OPEN_ORDER_EVENT, consumeOpenOrderFlag, rememberMobileSymbol } from "./MobileTabBar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { WalletAddressEntry } from "@/server/userSettings";
 
@@ -73,6 +73,15 @@ export function Dashboard({
   useEffect(() => {
     rememberMobileSymbol(instrument.symbol);
   }, [instrument.symbol]);
+
+  // Center Trade action: on the chart it opens the ticket in place; arriving
+  // from another screen (flag set by the tab bar) opens it on mount.
+  useEffect(() => {
+    if (consumeOpenOrderFlag()) setMobileOrderOpen(true);
+    const onOpenOrder = () => setMobileOrderOpen(true);
+    window.addEventListener(OPEN_ORDER_EVENT, onOpenOrder);
+    return () => window.removeEventListener(OPEN_ORDER_EVENT, onOpenOrder);
+  }, []);
 
   // Rail/dock collapse choices persist per workstation (defaults: open).
   useEffect(() => {
@@ -153,19 +162,6 @@ export function Dashboard({
           className="relative min-h-75 p-1 sm:min-h-100 md:min-h-0"
         >
           <ChartPanel instrument={instrument} onOpenAssets={() => setAssetModalOpen(true)} />
-          {/* Mobile trade FAB — visible only below md (tablet gets the inline
-              panel), floating above the bottom tab bar and hidden while the
-              order sheet is open so it doesn't compete with the footer. */}
-          <button
-            type="button"
-            onClick={() => setMobileOrderOpen(true)}
-            className={`fixed bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] right-4 z-30 flex items-center gap-2 rounded-full bg-brand px-6 py-3.5 text-sm font-bold text-white shadow-2xl transition active:scale-95 md:hidden ${mobileOrderOpen ? "pointer-events-none opacity-0" : ""}`}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 17l6-6 4 4 8-8" /><path d="M21 7v6h-6" />
-            </svg>
-            Trade
-          </button>
         </main>
 
         {/* Order panel — hidden on phones (FAB opens bottom sheet), inline from md up */}

@@ -7,7 +7,7 @@ export default function AccountLoading() {
       <div className="mx-auto max-w-screen-2xl space-y-4">
         <Skeleton className="h-9 w-56" />
         <div className="grid gap-4 lg:grid-cols-[15rem_1fr]">
-          <Skeleton className="hidden h-[26rem] lg:block" />
+          <Skeleton className="hidden h-104 lg:block" />
           <div className="space-y-4">
             <Skeleton className="h-24 w-full" />
             <div className="grid gap-4 sm:grid-cols-2">

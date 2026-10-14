@@ -30,7 +30,7 @@ export function ConfirmDialog({
   return (
     <Dialog open={open} onClose={busy ? () => undefined : onCancel} title={title} className="max-w-sm">
       <div className="p-5">
-        <p className="text-sm text-text-muted">{message}</p>
+        <p className="text-sm text-muted-foreground">{message}</p>
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" size="sm" onClick={onCancel} disabled={busy}>
             {cancelLabel}

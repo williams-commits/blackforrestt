@@ -6,6 +6,7 @@
  * Run: npx tsx scripts/seed-design-data.ts
  */
 import { PrismaClient } from "@prisma/client";
+import { preparePaymentMethodDetails } from "../src/server/paymentMethodDetails";
 
 const prisma = new PrismaClient();
 
@@ -131,6 +132,12 @@ async function main() {
   const approvedTxn = await prisma.transaction.create({
     data: { userId, type: "DEPOSIT", status: "COMPLETED", amount: 5_000, description: "Bank transfer deposit", reference: "DESK-SEED-PAY-001", createdAt: daysAgo(21, 1) },
   });
+  const bankDetails = preparePaymentMethodDetails("DEPOSIT", "BANK_TRANSFER", {
+    accountName: "Alex Mercer",
+    institution: "HSBC",
+    country: "GB",
+    transferReference: "TRF-88213476",
+  });
   await prisma.paymentRequest.create({
     data: {
       userId,
@@ -143,7 +150,9 @@ async function main() {
       externalReference: "IN-5521",
       reconciliationStatus: "MATCHED",
       reconciliationReference: "REC-8821",
-      methodDetailsSummary: "HSBC •••• 8842 → BlackForest Securities",
+      methodDetailsEncrypted: bankDetails.encrypted,
+      methodDetailsFingerprint: bankDetails.fingerprint,
+      methodDetailsSummary: bankDetails.summary,
       preparedAt: daysAgo(20, 20),
       reviewedAt: daysAgo(20, 4),
       createdAt: daysAgo(21, 1),
@@ -156,6 +165,12 @@ async function main() {
   const pendingTxn = await prisma.transaction.create({
     data: { userId, type: "WITHDRAW", status: "PENDING", amount: -800, description: "Withdrawal to USDT TRC-20", reference: "DESK-SEED-PAY-002", createdAt: daysAgo(1, 4) },
   });
+  const withdrawalDetails = preparePaymentMethodDetails("WITHDRAWAL", "CRYPTO", {
+    asset: "USDT",
+    network: "TRON (TRC20)",
+    walletAddress: "TQ5f2k8vRn3XzA9wPmJ7cYbL0dHsE4uGtN",
+    destinationTag: "MEMO-1145",
+  });
   await prisma.paymentRequest.create({
     data: {
       userId,
@@ -165,8 +180,10 @@ async function main() {
       amount: 800,
       method: "CRYPTO",
       userReference: "TX-9f3a…c21e",
-      beneficiarySummary: "USDT TRC-20 · T•••• 7Qf2",
-      methodDetailsSummary: "USDT · TRON (TRC-20) network",
+      methodDetailsEncrypted: withdrawalDetails.encrypted,
+      methodDetailsFingerprint: withdrawalDetails.fingerprint,
+      methodDetailsSummary: withdrawalDetails.summary,
+      beneficiarySummary: "USDT · TRON (TRC20) · T•••• 7Qf2",
       reconciliationStatus: "PENDING",
       riskHoldUntil: daysAgo(0, -2), // still cooling off (2h future)
       createdAt: daysAgo(1, 4),
@@ -179,6 +196,12 @@ async function main() {
   const cardTxn = await prisma.transaction.create({
     data: { userId, type: "DEPOSIT", status: "PENDING", amount: 2_000, description: "Card deposit · Visa •••• 4242", reference: "DESK-SEED-PAY-003", createdAt: daysAgo(0, 5) },
   });
+  const cardDetails = preparePaymentMethodDetails("DEPOSIT", "CARD", {
+    cardholderName: "Alex Mercer",
+    cardBrand: "VISA",
+    last4: "4242",
+    providerReference: "CH-3DS-77341",
+  });
   await prisma.paymentRequest.create({
     data: {
       userId,
@@ -188,10 +211,56 @@ async function main() {
       amount: 2_000,
       method: "CARD",
       externalReference: "CH-3DS-77341",
+      methodDetailsEncrypted: cardDetails.encrypted,
+      methodDetailsFingerprint: cardDetails.fingerprint,
+      methodDetailsSummary: cardDetails.summary,
       reconciliationStatus: "PENDING",
       createdAt: daysAgo(0, 5),
     },
   });
+
+  // ── BTC crypto deposit (full method-details showcase) ─────────────────────
+  const btcTxn = await prisma.transaction.create({
+    data: { userId, type: "DEPOSIT", status: "COMPLETED", amount: 1_200, description: "Crypto deposit · Bitcoin", reference: "DESK-SEED-PAY-004", createdAt: daysAgo(3, 2) },
+  });
+  const btcDetails = preparePaymentMethodDetails("DEPOSIT", "CRYPTO", {
+    asset: "BTC",
+    network: "BITCOIN",
+    transactionHash: "bclnsljoqi0901nckaqijadlkjlqq",
+    senderAddress: "bclnsljoqi0901nckaqijadlkjlqqsender",
+    depositAddress: "bclnsljoqi0901nckaqijadlkjlqq",
+    depositWalletLabel: "Bitcoin V1 Deposit",
+  });
+  const btcRequest = await prisma.paymentRequest.create({
+    data: {
+      userId,
+      transactionId: btcTxn.id,
+      type: "DEPOSIT",
+      status: "APPROVED",
+      amount: 1_200,
+      method: "CRYPTO",
+      userReference: "bclnsljoqi0901nckaqijadlkjlqq",
+      reconciliationStatus: "MATCHED",
+      reconciliationReference: "REC-BTC-0091",
+      methodDetailsEncrypted: btcDetails.encrypted,
+      methodDetailsFingerprint: btcDetails.fingerprint,
+      methodDetailsSummary: btcDetails.summary,
+      preparedAt: daysAgo(3, 1),
+      reviewedAt: daysAgo(2, 20),
+      createdAt: daysAgo(3, 2),
+      proofs: {
+        create: [{ status: "CLEAN", declaredMime: "image/png", detectedMime: "image/png", sizeBytes: 142_301, uploadedBy: userId, storageKey: "seed-proof-btc", bucket: "quarantine", sha256: "seed-hash-btc", uploadedAt: daysAgo(3, 1), finalizedAt: daysAgo(3) }],
+      },
+    },
+  });
+  await prisma.paymentEvent.createMany({ data: [
+    { paymentRequestId: btcRequest.id, type: "CREATED", createdAt: daysAgo(3, 2) },
+    { paymentRequestId: btcRequest.id, type: "PROOF_RECEIVED", createdAt: daysAgo(3, 1) },
+    { paymentRequestId: btcRequest.id, type: "PROOF_FINALIZED", createdAt: daysAgo(3) },
+    { paymentRequestId: btcRequest.id, type: "PREPARED", createdAt: daysAgo(2, 23) },
+    { paymentRequestId: btcRequest.id, type: "APPROVED", createdAt: daysAgo(2, 20) },
+    { paymentRequestId: btcRequest.id, type: "RECONCILED", createdAt: daysAgo(2, 18) },
+  ] });
 
   // ── Event timelines (what the payment detail slider shows) ───────────────
   const bankRequest = await prisma.paymentRequest.findFirst({ where: { userId, method: "BANK_TRANSFER" }, orderBy: { createdAt: "desc" } });

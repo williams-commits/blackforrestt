@@ -41,7 +41,7 @@ export function StatCard({
     );
   }
   return (
-    <div className="flex items-start gap-2.5 rounded-xl border bg-card p-4 shadow-sm">
+    <div className="flex items-start gap-2.5 rounded-xl bg-card p-5">
       {icon && <span className="mt-0.5 shrink-0">{icon}</span>}
       <div className="min-w-0 flex-1">{body}</div>
     </div>

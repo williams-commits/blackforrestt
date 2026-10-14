@@ -34,7 +34,7 @@ export default async function AdminPage() {
   const isSimulation = process.env.MARKET_DATA_MODE !== "live";
 
   return (
-    <div className="terminal-ui min-h-screen bg-panel">
+    <div className="flat-ui terminal-ui min-h-screen">
       {/* Operations header — deliberately distinct from the customer app: a
           dark console bar with the environment badge and the operator's roles,
           so nobody mistakes production for the trading UI. */}

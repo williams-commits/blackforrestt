@@ -14,7 +14,7 @@ export function AdminSignOutButton() {
         setBusy(true);
         void signOut({ redirect: false }).then(() => { window.location.assign("/"); });
       }}
-      className="rounded border border-(--term-console-border) bg-(--term-console-active) px-2.5 py-1 text-(length:--term-text-xs) font-medium text-(--term-console-soft) transition hover:border-red-400/50 hover:text-red-300 disabled:opacity-50"
+      className="rounded border border-(--term-console-border) bg-(--term-console-active) px-2.5 py-1 text-xs font-medium text-(--term-console-soft) transition hover:border-red-400/50 hover:text-red-300 disabled:opacity-50"
     >
       {busy ? "Signing out…" : "Sign out"}
     </button>

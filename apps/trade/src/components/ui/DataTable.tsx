@@ -28,9 +28,9 @@ export function TableShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-canvas">
+    <div className="overflow-hidden rounded-xl bg-card shadow-sm">
       {toolbar && (
-        <div className="flex min-h-10 flex-wrap items-center gap-2 border-b border-border bg-panel-2 px-3 py-2">
+        <div className="flex min-h-10 flex-wrap items-center gap-2 bg-muted/40 px-3 py-2">
           {toolbar}
         </div>
       )}
@@ -72,7 +72,7 @@ export function Th({
     <>
       {children}
       {indicator && (
-        <span className={`ml-1 text-(length:--term-text-2xs) ${active ? "text-brand" : "text-text-faint"}`}>{indicator}</span>
+        <span className={`ml-1 text-[10px] ${active ? "text-primary" : "text-muted-foreground"}`}>{indicator}</span>
       )}
     </>
   );
@@ -80,7 +80,7 @@ export function Th({
     return (
       <TableHead
         aria-sort={undefined}
-        className={`h-auto border-0 px-3 py-2 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
+        className={`h-auto border-0 px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
       >
         {content}
       </TableHead>
@@ -89,12 +89,12 @@ export function Th({
   return (
     <TableHead
       aria-sort={active ? (sort!.direction === "asc" ? "ascending" : "descending") : "none"}
-      className={`h-auto border-0 px-3 py-2 text-(length:--term-text-2xs) font-medium uppercase tracking-wide ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
+      className={`h-auto border-0 px-3 py-2 text-xs font-medium uppercase tracking-wide ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
     >
       <button
         type="button"
         onClick={() => onSort!(sortKey!)}
-        className={`inline-flex items-center gap-0.5 uppercase transition hover:text-text ${active ? "text-text" : "text-text-faint"}`}
+        className={`inline-flex items-center gap-0.5 uppercase transition hover:text-foreground ${active ? "text-foreground" : "text-muted-foreground"}`}
       >
         {content}
       </button>
@@ -116,7 +116,7 @@ export function Td({
   return (
     <TableCell
       colSpan={colSpan}
-      className={`border-0 px-3 py-2 text-(length:--term-text-sm) tnum ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
+      className={`border-0 px-3 py-2 text-sm tnum ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${className}`}
     >
       {children}
     </TableCell>
@@ -137,12 +137,12 @@ export function TotalsRow({ cells }: { cells: Array<{ label?: string; value?: st
   // No border-t: the preceding data row's border-b is the single separator
   // (adding one here doubled the line above the totals).
   return (
-    <tr className="bg-panel-2/60">
+    <tr className="bg-muted/60">
       {cells.map((cell, i) => (
         <TableCell
           key={i}
           colSpan={cell.colSpan}
-          className={`border-0 px-3 py-2 text-(length:--term-text-sm) font-semibold tnum ${cell.align === "right" ? "text-right" : "text-left"} ${cell.className ?? ""}`}
+          className={`border-0 px-3 py-2 text-sm font-semibold tnum ${cell.align === "right" ? "text-right" : "text-left"} ${cell.className ?? ""}`}
         >
           {cell.label ?? cell.value ?? ""}
         </TableCell>
@@ -166,10 +166,10 @@ export function FilterChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full border px-2.5 py-1 text-(length:--term-text-2xs) font-medium whitespace-nowrap transition active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+      className={`rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap transition active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
         active
-          ? "border-brand bg-brand text-white"
-          : "border-border bg-canvas text-text-muted hover:border-brand/40 hover:text-text"
+          ? "bg-primary text-primary-foreground"
+          : "bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground"
       }`}
     >
       {children}
@@ -194,7 +194,7 @@ export function TableSearch({
       <Search
         size={14}
         aria-hidden
-        className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-faint"
+        className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
       />
       <input
         type="search"
@@ -202,7 +202,7 @@ export function TableSearch({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={label}
-        className="h-8 w-full rounded-md border border-border bg-canvas pl-8 pr-2.5 text-(length:--term-text-sm) text-text outline-none transition placeholder:text-text-faint focus:border-brand focus:ring-2 focus:ring-brand/25"
+        className="h-8 w-full rounded-lg border-0 bg-muted pl-8 pr-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 hover:bg-muted/70 focus-visible:ring-[3px] focus-visible:ring-ring/40"
       />
     </div>
   );

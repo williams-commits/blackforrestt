@@ -1,10 +1,17 @@
 "use client";
 
 import { useId, useState, useEffect, useMemo } from "react";
+import { Ban, CheckCheck, ExternalLink, FileSearch, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
 import { TableSearch } from "@/components/ui/DataTable";
 import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 
 interface Submission {
   id: string;
@@ -196,7 +203,7 @@ export function KycReview({
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-lg font-semibold">KYC Verification Queue</h1>
         <div className="flex gap-4 text-sm">
-          <Stat label="Pending" value={pending.length} cls="text-brand" />
+          <Stat label="Pending" value={pending.length} cls="text-primary" />
           <Stat label="Reviewed" value={reviewedTotalResolved} />
           <Stat label="Total submissions" value={totalCount} />
         </div>
@@ -206,8 +213,8 @@ export function KycReview({
         {/* Queue list */}
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-xs font-medium uppercase text-text-faint">Pending review · oldest first</h2>
-            <span className="text-(length:--term-text-2xs) text-text-faint tnum" aria-live="polite">
+            <h2 className="text-xs font-medium uppercase text-muted-foreground">Pending review · oldest first</h2>
+            <span className="text-xs text-muted-foreground tnum" aria-live="polite">
               {needle ? `${filteredPending.length}/${pending.length}` : pending.length}
             </span>
           </div>
@@ -220,24 +227,29 @@ export function KycReview({
                   type="button"
                   aria-pressed={selected?.id === s.id}
                   onClick={() => { setSelected(s); setError(null); }}
-                  className={`w-full text-left rounded-lg border p-3 transition ${
-                    selected?.id === s.id ? "border-brand bg-brand-soft" : "border-border bg-canvas hover:bg-panel-2"
+                  className={`flex w-full items-start gap-2.5 rounded-xl p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
+                    selected?.id === s.id ? "bg-primary/10 ring-1 ring-primary/40" : "bg-card hover:bg-accent/60"
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">
-                      {s.firstName} {s.lastName}
-                    </span>
-                    <span className="text-(length:--term-text-2xs) text-text-faint">{s.submittedAt ? fmtAgo(s.submittedAt) : ""}</span>
+                  <IdentityTile tone={selected?.id === s.id ? "brand" : "muted"}>
+                    {initialsOf(`${s.firstName ?? ""} ${s.lastName ?? ""}`)}
+                  </IdentityTile>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-sm font-medium">
+                        {s.firstName} {s.lastName}
+                      </span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{s.submittedAt ? fmtAgo(s.submittedAt) : ""}</span>
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {s.user.email} · #{s.user.accountNo ?? "—"}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground/80 mt-0.5">{s.docType} · {s.country}</div>
                   </div>
-                  <div className="text-xs text-text-muted">
-                    {s.user.email} · #{s.user.accountNo ?? "—"}
-                  </div>
-                  <div className="text-(length:--term-text-xs) text-text-faint mt-0.5">{s.docType} · {s.country}</div>
                 </button>
               ))}
               {filteredPending.length === 0 && (
-                <div className="border-dashed p-6 text-center text-text-faint">
+                <div className="rounded-xl bg-muted/40 p-6 text-center text-sm text-muted-foreground">
                   {needle ? `No pending submissions match “${queueSearch.trim()}”.` : "Queue is empty — no pending submissions."}
                 </div>
               )}
@@ -251,18 +263,21 @@ export function KycReview({
         {/* Detail panel */}
         <div>
           {selected ? (
-            <div className="rounded-xl p-6">
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h2 className="text-lg font-semibold">
-                    {selected.firstName} {selected.lastName}
-                  </h2>
-                  <p className="text-sm text-text-muted">
-                    {selected.user.email} · Account #{selected.user.accountNo ?? "—"}
-                  </p>
+            <Card>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-base">
+                      {selected.firstName} {selected.lastName}
+                    </CardTitle>
+                    <CardDescription>
+                      {selected.user.email} · Account #{selected.user.accountNo ?? "—"}
+                    </CardDescription>
+                  </div>
+                  <Badge variant="secondary" className="bg-(--term-warning-bg) text-(--term-warning-fg)">PENDING</Badge>
                 </div>
-                <span className="text-xs px-2 py-1 rounded bg-(--term-warning-bg) text-(--term-warning-fg) font-medium">PENDING</span>
-              </div>
+              </CardHeader>
+              <CardContent>
 
               <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <Detail label="Date of Birth" value={selected.dob ? new Date(selected.dob).toLocaleDateString("en-GB") : "—"} />
@@ -277,31 +292,31 @@ export function KycReview({
 
               {/* Sealed documents list — request a short-lived signed URL with a reason */}
               <div className="mt-5">
-                <h3 className="mb-2 text-xs font-medium uppercase text-text-faint">Identity documents</h3>
+                <h3 className="mb-2 text-xs font-medium uppercase text-muted-foreground">Identity documents</h3>
                 {documents.length === 0 ? (
-                  <div className="border-dashed p-6 text-center text-text-faint">
+                  <div className="rounded-xl bg-muted/40 p-6 text-center text-sm text-muted-foreground">
                     No documents uploaded yet.
                   </div>
                 ) : (
                   <ul className="space-y-2">
                     {documents.map((doc) => (
-                      <li key={doc.id} className="p-3">
+                      <li key={doc.id} className="rounded-xl bg-muted/40 p-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="min-w-0">
                             <div className="text-sm font-medium">{doc.docType}</div>
-                            <div className="text-(length:--term-text-xs) text-text-faint">
+                            <div className="text-xs text-muted-foreground">
                               {fmtSize(doc.sizeBytes)}
                               {doc.sha256 ? ` · ${doc.sha256.slice(0, 12)}…` : ""}
                               {doc.detectedMime ? ` · ${doc.detectedMime}` : ""}
                             </div>
                           </div>
-                          <span className={`text-(length:--term-text-2xs) px-2 py-0.5 rounded font-medium ${
-                            doc.status === "CLEAN" ? "bg-up/15 text-up"
-                            : doc.status === "BLOCKED" ? "bg-down/15 text-down"
+                          <Badge variant="secondary" className={`${
+                            doc.status === "CLEAN" ? "bg-(--term-success-bg) text-(--term-success-fg)"
+                            : doc.status === "BLOCKED" ? "bg-(--term-danger-bg) text-(--term-danger-fg)"
                             : "bg-(--term-warning-bg) text-(--term-warning-fg)"
                           }`}>
                             {doc.status}
-                          </span>
+                          </Badge>
                         </div>
                         {doc.status === "CLEAN" && canAccessDocuments && (
                           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -321,7 +336,7 @@ export function KycReview({
                                   disabled={accessReason.trim().length < 3}
                                   onClick={() => void requestAccess(doc.id)}
                                 >
-                                  Open
+                                  <ExternalLink size={13} strokeWidth={2} aria-hidden /> Open
                                 </Button>
                                 <Button type="button" size="sm" onClick={() => { setAccessDocId(null); setAccessReason(""); }}>
                                   Cancel
@@ -333,7 +348,7 @@ export function KycReview({
                                 size="sm"
                                 onClick={() => { setAccessDocId(doc.id); setAccessReason(""); }}
                               >
-                                Request access
+                                <FileSearch size={13} strokeWidth={2} aria-hidden /> Request access
                               </Button>
                             )}
                           </div>
@@ -342,24 +357,23 @@ export function KycReview({
                     ))}
                   </ul>
                 )}
-                <p className="mt-2 text-(length:--term-text-xs) text-text-faint">
+                <p className="mt-2 text-xs text-muted-foreground">
                   Access is logged with your identity and reason. Downloads open in a new tab from a short-lived signed URL.
                 </p>
                 {manualDocUrl && (
-                  <div className="mt-2 rounded border border-brand/30 bg-brand-soft px-3 py-2 text-xs text-brand" role="status">
+                  <Alert tone="info" className="mt-2 text-xs" >
                     The browser blocked the automatic pop-up —{" "}
                     <a href={manualDocUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
                       open the document manually
-                    </a>
-                    .
-                  </div>
+                    </a>.
+                  </Alert>
                 )}
               </div>
 
               {/* Reject note */}
               {canDecide && <div className="mt-5">
-                <label htmlFor={noteId} className="block text-xs text-text-muted mb-1">Rejection note (required when rejecting)</label>
-                <textarea
+                <Label htmlFor={noteId} className="mb-1 block text-xs font-medium text-muted-foreground">Rejection note (required when rejecting)</Label>
+                <Textarea
                   id={noteId}
                   rows={2}
                   value={rejectNote}
@@ -369,51 +383,48 @@ export function KycReview({
                 />
               </div>}
 
-              {error && (
-                <div role="alert" className="mt-4 rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">
-                  {error}
-                </div>
-              )}
+              {error && <Alert tone="err" className="mt-4">{error}</Alert>}
 
               {/* Actions */}
-              {canDecide ? <div className="mt-5 flex flex-col sm:flex-row gap-3">
+              {canDecide ? <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                 <Button
-                  variant="buy"
-                  size="default"
+                  variant="default"
                   loading={loading === "APPROVE"}
                   loadingLabel="Approving submission"
                   disabled={loading !== null}
                   onClick={() => void review("APPROVE")}
-                  className="flex-1 h-11"
+                  className="flex-1"
                 >
-                  Approve and verify user
+                  <ShieldCheck size={14} strokeWidth={2} aria-hidden /> Approve and verify user
                 </Button>
                 <Button
-                  variant="sell"
-                  size="default"
+                  variant="destructive"
                   loading={loading === "REJECT"}
                   loadingLabel="Rejecting submission"
                   disabled={loading !== null || rejectNote.trim().length < 3}
                   onClick={() => void review("REJECT")}
-                  className="flex-1 h-11"
+                  className="flex-1"
                 >
-                  Reject
+                  <Ban size={14} strokeWidth={2} aria-hidden /> Reject
                 </Button>
               </div> : <p className="mt-5">Read-only compliance access.</p>}
-            </div>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="border-dashed rounded-xl p-12 text-center">
-              <div className="text-3xl mb-2">✓</div>
-              <h3 className="text-sm font-semibold text-up">All caught up</h3>
-              <p className="text-xs text-text-muted mt-1">No pending KYC submissions. Select one from the queue to review.</p>
+            <div className="flex flex-col items-center justify-center gap-2 rounded-xl bg-muted/40 p-12 text-center">
+              <span className="flex size-10 items-center justify-center rounded-full bg-(--term-success-bg) text-(--term-success-fg)">
+                <CheckCheck size={18} strokeWidth={2} aria-hidden />
+              </span>
+              <h3 className="text-sm font-semibold">All caught up</h3>
+              <p className="text-xs text-muted-foreground">No pending KYC submissions. Select one from the queue to review.</p>
             </div>
           )}
 
           {/* Recent decisions */}
           <div className="flex flex-wrap items-center justify-between gap-2 mt-8 mb-2">
-            <h2 className="text-xs font-medium uppercase text-text-faint">Recent decisions</h2>
+            <h2 className="text-xs font-medium uppercase text-muted-foreground">Recent decisions</h2>
             {reviewedTotalResolved > reviewed.length && (
-              <span className="text-(length:--term-text-2xs) text-brand">showing {reviewed.length} most recent of {reviewedTotalResolved}</span>
+              <span className="text-xs text-primary">showing {reviewed.length} most recent of {reviewedTotalResolved}</span>
             )}
           </div>
           <div className="overflow-hidden">
@@ -422,18 +433,18 @@ export function KycReview({
                 <div key={s.id} className="flex items-center justify-between">
                   <div className="min-w-0">
                     <span className="text-sm font-medium">{s.firstName} {s.lastName}</span>
-                    <span className="text-xs text-text-muted ml-2">{s.user.email}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{s.user.email}</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-(length:--term-text-2xs) px-2 py-0.5 rounded font-medium ${s.status === "APPROVED" ? "bg-up/15 text-up" : "bg-down/15 text-down"}`}>
+                    <Badge variant="secondary" className={s.status === "APPROVED" ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}>
                       {s.status}
-                    </span>
-                    <span className="text-(length:--term-text-xs) text-text-faint">{s.reviewedAt ? fmtAgo(s.reviewedAt) : ""}</span>
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{s.reviewedAt ? fmtAgo(s.reviewedAt) : ""}</span>
                   </div>
                 </div>
               ))}
               {reviewed.length === 0 && (
-                <div className="text-xs text-text-faint py-3 text-center">No decisions yet.</div>
+                <div className="text-xs text-muted-foreground py-3 text-center">No decisions yet.</div>
               )}
             </div>
             {reviewed.length > REVIEWED_PAGE_SIZE && (
@@ -450,7 +461,7 @@ function Stat({ label, value, cls = "" }: { label: string; value: number; cls?: 
   return (
     <span className="flex items-baseline gap-1">
       <span className={`text-lg font-bold tnum ${cls}`}>{value}</span>
-      <span className="text-text-faint text-xs">{label}</span>
+      <span className="text-muted-foreground text-xs">{label}</span>
     </span>
   );
 }
@@ -458,7 +469,7 @@ function Stat({ label, value, cls = "" }: { label: string; value: number; cls?: 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-(length:--term-text-xs) text-text-faint uppercase">{label}</dt>
+      <dt className="text-xs text-muted-foreground uppercase">{label}</dt>
       <dd className="mt-0.5">{value}</dd>
     </div>
   );

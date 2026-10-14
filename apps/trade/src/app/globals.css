@@ -528,32 +528,43 @@ html.dim .terminal-ui {
    (panel), cards are canvas and border-free — mirroring the terminal's
    border-free tonal stage. Scoped to .account-flat so the terminal, admin
    and portaled overlays keep their own treatment. */
-.account-flat {
+.account-flat,
+.flat-ui {
   background: var(--color-panel);
 }
-.account-flat [data-slot="card"] {
+.account-flat [data-slot="card"],
+.flat-ui [data-slot="card"] {
   border-width: 0;
   box-shadow: none;
 }
 /* Cards sit directly on the page tone; content regions inside them get
    their separation from spacing, not rules. */
 .account-flat [data-slot="card"] > [data-slot="card-content"] + [data-slot="card-content"],
-.account-flat [data-slot="table-container"] + * {
+.flat-ui [data-slot="card"] > [data-slot="card-content"] + [data-slot="card-content"],
+.account-flat [data-slot="table-container"] + *,
+.flat-ui [data-slot="table-container"] + * ,
+.flat-ui [data-slot="table-container"] + *,
+.flat-ui [data-slot="table-container"] + * {
   border-top-width: 0;
 }
 /* Tables: tonal header band, zebra body, tonal hover — zero hairlines. */
-.account-flat [data-slot="table-header"] tr {
+.account-flat [data-slot="table-header"] tr ,
+.flat-ui [data-slot="table-header"] tr {
   border-bottom-width: 0;
 }
-.account-flat [data-slot="table-header"] {
+.account-flat [data-slot="table-header"] ,
+.flat-ui [data-slot="table-header"] {
   background: color-mix(in oklab, var(--color-panel-2) 55%, transparent);
 }
-.account-flat [data-slot="table-body"] tr {
+.account-flat [data-slot="table-body"] tr ,
+.flat-ui [data-slot="table-body"] tr {
   border-bottom-width: 0;
 }
-.account-flat [data-slot="table-body"] tr:nth-child(even):not(:hover) {
+.account-flat [data-slot="table-body"] tr:nth-child(even):not(:hover) ,
+.flat-ui [data-slot="table-body"] tr:nth-child(even):not(:hover) {
   background: color-mix(in oklab, var(--color-panel-2) 35%, transparent);
 }
-.account-flat [data-slot="table-body"] tr:hover {
+.account-flat [data-slot="table-body"] tr:hover ,
+.flat-ui [data-slot="table-body"] tr:hover {
   background: color-mix(in oklab, var(--color-panel-2) 60%, transparent);
 }

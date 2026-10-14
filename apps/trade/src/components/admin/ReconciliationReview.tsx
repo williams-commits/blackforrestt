@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CheckCircle2, Eye, Play, RefreshCw, Unlock, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Textarea";
+import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/Alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { Pagination } from "@/components/ui/Pagination";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -193,13 +198,13 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold">Reconciliation operations</h2>
-          <p className="text-xs text-text-muted mt-1">Replay-safe ledger, projection, position and payment checks.</p>
+          <p className="text-xs text-muted-foreground mt-1">Replay-safe ledger, projection, position and payment checks.</p>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => void refresh()}>Refresh</Button>
+          <Button size="sm" variant="outline" onClick={() => void refresh()}><RefreshCw size={13} strokeWidth={2} aria-hidden /> Refresh</Button>
           {canManage && (
-            <Button size="sm" variant="brand" loading={busy === "run"} loadingLabel="Running reconciliation" disabled={busy !== null} onClick={() => void runNow()}>
-              Run now
+            <Button size="sm" loading={busy === "run"} loadingLabel="Running reconciliation" disabled={busy !== null} onClick={() => void runNow()}>
+              <Play size={13} strokeWidth={2} aria-hidden /> Run now
             </Button>
           )}
           {canManage && (blocks.length > 0 || cases.length > 0) && (
@@ -207,36 +212,36 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
               type="button"
               disabled={busy !== null}
               onClick={() => { setActionNote(""); setBulkSummary(""); setActionDialog({ kind: "bulk" }); }}
-              className="px-3 py-2 rounded border border-down/50 text-down text-xs hover:bg-down/10 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-down/50 px-3 py-2 text-xs font-medium text-down hover:bg-down/10 disabled:opacity-50"
               title="Releases every active block and resolves every unresolved case across all users — not just this page."
             >
-              {busy === "bulk" ? "Resolving all…" : "Release all & resolve all"}
+              <Unlock size={13} strokeWidth={2} aria-hidden /> {busy === "bulk" ? "Resolving all…" : "Release all & resolve all"}
             </button>
           )}
         </div>
       </div>
 
-      {error && <div role="alert" className="rounded border border-down/40 bg-down/10 px-3 py-2 text-sm text-down">{error}</div>}
-      {bulkSummary && !error && <div role="status" className="rounded border border-up/40 bg-up/10 px-3 py-2 text-sm text-up">{bulkSummary}</div>}
+      {error && <Alert tone="err">{error}</Alert>}
+      {bulkSummary && !error && <Alert tone="ok">{bulkSummary}</Alert>}
 
       <section>
         <h3 className="text-sm font-semibold mb-2">Active blocks [{blocks.length}]</h3>
-        <div className="overflow-x-auto rounded border border-border bg-canvas">
-          <table className="w-full text-xs">
-            <thead className="bg-panel-2 text-text-muted"><tr><th className="text-left p-2">Account</th><th className="text-left p-2">Scope</th><th className="text-left p-2">Reason</th><th className="text-left p-2">Created</th><th className="p-2" /></tr></thead>
-            <tbody>
+        <div className="overflow-hidden rounded-xl bg-card shadow-sm">
+          <Table>
+            <TableHeader><TableRow><TableHead>Account</TableHead><TableHead>Scope</TableHead><TableHead>Reason</TableHead><TableHead>Created</TableHead><TableHead /></TableRow></TableHeader>
+            <TableBody>
               {visibleBlocks.map((block) => (
-                <tr key={block.id} className="border-t border-border">
-                  <td className="p-2">{block.user.email ?? block.userId}<div className="text-text-faint">#{block.user.accountNo ?? "—"}</div></td>
-                  <td className="p-2 font-medium text-down">{block.scope}</td>
-                  <td className="p-2 max-w-xl">{block.reason}</td>
-                  <td className="p-2 whitespace-nowrap">{new Date(block.createdAt).toLocaleString()}</td>
-                  <td className="p-2 text-right">{canManage ? <button type="button" disabled={busy !== null} onClick={() => { setActionNote(""); setActionDialog({ kind: "release", id: block.id }); }} className="px-2 py-1 rounded border border-border hover:bg-panel-2 disabled:opacity-50">Release</button> : <span className="text-text-faint">Read only</span>}</td>
-                </tr>
+                <TableRow key={block.id}>
+                  <TableCell>{block.user.email ?? block.userId}<div className="text-muted-foreground">#{block.user.accountNo ?? "—"}</div></TableCell>
+                  <TableCell className="font-medium text-down">{block.scope}</TableCell>
+                  <TableCell className="max-w-xl">{block.reason}</TableCell>
+                  <TableCell className="whitespace-nowrap">{new Date(block.createdAt).toLocaleString()}</TableCell>
+                  <TableCell className="text-right">{canManage ? <Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => { setActionNote(""); setActionDialog({ kind: "release", id: block.id }); }}><Unlock size={13} strokeWidth={2} aria-hidden /> Release</Button> : <span className="text-muted-foreground">Read only</span>}</TableCell>
+                </TableRow>
               ))}
-              {blocks.length === 0 && <tr><td colSpan={5} className="p-5 text-center text-text-muted">No active reconciliation blocks.</td></tr>}
-            </tbody>
-          </table>
+              {blocks.length === 0 && <TableRow><TableCell colSpan={5} className="p-5 text-center text-muted-foreground">No active reconciliation blocks.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
           <Pagination page={safeBlockPage} pageSize={PAGE_SIZE} totalItems={blocks.length} onPageChange={setBlockPage} label="active blocks" compact />
         </div>
       </section>
@@ -245,25 +250,25 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
         <h3 className="text-sm font-semibold mb-2">Cases [{cases.length}]</h3>
         <div className="space-y-2">
           {visibleCases.map((item) => (
-            <article key={item.id} className="rounded border border-border bg-canvas p-3">
+            <article key={item.id} className="rounded-xl bg-card p-4 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="flex flex-wrap gap-2 text-(length:--term-text-xs)">
-                    <span className={item.severity === "CRITICAL" ? "text-down font-semibold" : "text-text-muted"}>{item.severity}</span>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span className={item.severity === "CRITICAL" ? "text-down font-semibold" : "text-muted-foreground"}>{item.severity}</span>
                     <span>{item.feedKind}</span><span>{item.status}</span><span>{new Date(item.detectedAt).toLocaleString()}</span>
                   </div>
                   <p className="text-sm mt-1">{item.message}</p>
-                  {(item.expectedValue || item.actualValue) && <p className="text-xs text-text-muted mt-1">Expected {item.expectedValue ?? "—"}; actual {item.actualValue ?? "—"}</p>}
+                  {(item.expectedValue || item.actualValue) && <p className="text-xs text-muted-foreground mt-1">Expected {item.expectedValue ?? "—"}; actual {item.actualValue ?? "—"}</p>}
                 </div>
                 {canManage && item.status !== "RESOLVED" && <div className="flex gap-2">
-                  {item.status === "OPEN" && <Button size="sm" disabled={busy !== null} onClick={() => void commandCase(item.id, "ACKNOWLEDGE")}>Acknowledge</Button>}
-                  <Button size="sm" variant="brand" disabled={busy !== null || item.blocks.length > 0} title={item.blocks.length > 0 ? "Release active blocks before resolving the case." : undefined} onClick={() => { setActionNote(""); setActionDialog({ kind: "resolve", id: item.id }); }}>Resolve</Button>
+                  {item.status === "OPEN" && <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void commandCase(item.id, "ACKNOWLEDGE")}><Eye size={13} strokeWidth={2} aria-hidden /> Acknowledge</Button>}
+                  <Button size="sm" disabled={busy !== null || item.blocks.length > 0} title={item.blocks.length > 0 ? "Release active blocks before resolving the case." : undefined} onClick={() => { setActionNote(""); setActionDialog({ kind: "resolve", id: item.id }); }}><CheckCircle2 size={13} strokeWidth={2} aria-hidden /> Resolve</Button>
                 </div>}
               </div>
             </article>
           ))}
-          {cases.length === 0 && <div className="rounded border border-border bg-canvas p-5 text-sm text-text-muted text-center">No reconciliation cases.</div>}
-          <div className="mt-2 rounded-lg border border-border bg-canvas">
+          {cases.length === 0 && <div className="rounded-xl bg-muted/40 p-5 text-sm text-muted-foreground text-center">No reconciliation cases.</div>}
+          <div className="mt-2">
             <Pagination page={safeCasePage} pageSize={PAGE_SIZE} totalItems={cases.length} onPageChange={setCasePage} label="reconciliation cases" compact />
           </div>
         </div>
@@ -271,14 +276,14 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
 
       <section>
         <h3 className="text-sm font-semibold mb-2">Recent runs</h3>
-        <div className="overflow-x-auto rounded border border-border bg-canvas">
-          <table className="w-full text-xs">
-            <thead className="bg-panel-2 text-text-muted"><tr><th className="text-left p-2">Started</th><th className="text-left p-2">Trigger</th><th className="text-left p-2">Status</th><th className="text-right p-2">Cases</th><th className="text-right p-2">Blocks</th><th className="text-left p-2">Reference</th></tr></thead>
-            <tbody>
-              {visibleRuns.map((run) => <tr key={run.id} className="border-t border-border"><td className="p-2 whitespace-nowrap">{new Date(run.startedAt).toLocaleString()}</td><td className="p-2">{run.trigger}</td><td className="p-2">{run.status}</td><td className="p-2 text-right">{run.caseCount}</td><td className="p-2 text-right">{run.blockCount}</td><td className="p-2 max-w-xs truncate" title={run.reference}>{run.reference}</td></tr>)}
-              {runs.length === 0 && <tr><td colSpan={6} className="p-5 text-center text-text-muted">No reconciliation runs yet.</td></tr>}
-            </tbody>
-          </table>
+        <div className="overflow-hidden rounded-xl bg-card shadow-sm">
+          <Table>
+            <TableHeader><TableRow><TableHead>Started</TableHead><TableHead>Trigger</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Cases</TableHead><TableHead className="text-right">Blocks</TableHead><TableHead>Reference</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {visibleRuns.map((run) => <TableRow key={run.id}><TableCell className="whitespace-nowrap">{new Date(run.startedAt).toLocaleString()}</TableCell><TableCell>{run.trigger}</TableCell><TableCell>{run.status}</TableCell><TableCell className="text-right">{run.caseCount}</TableCell><TableCell className="text-right">{run.blockCount}</TableCell><TableCell className="max-w-xs truncate" title={run.reference}>{run.reference}</TableCell></TableRow>)}
+              {runs.length === 0 && <TableRow><TableCell colSpan={6} className="p-5 text-center text-muted-foreground">No reconciliation runs yet.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
           <Pagination page={safeRunPage} pageSize={PAGE_SIZE} totalItems={runs.length} onPageChange={setRunPage} label="reconciliation runs" compact />
         </div>
       </section>
@@ -305,8 +310,8 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
           }}
         >
           <div>
-            <label htmlFor="reconciliation-action-note" className="block text-xs font-medium mb-1">Reason</label>
-            <textarea
+            <Label htmlFor="reconciliation-action-note" className="mb-1 block text-xs font-medium text-muted-foreground">Reason</Label>
+            <Textarea
               id="reconciliation-action-note"
               required
               minLength={3}
@@ -314,14 +319,14 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
               rows={5}
               value={actionNote}
               onChange={(event) => setActionNote(event.target.value)}
-              className="w-full rounded border border-border bg-panel px-3 py-2 text-sm outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+              placeholder="Describe the verified resolution…"
             />
           </div>
           <div className="flex justify-end gap-2">
-            <button type="button" disabled={busy !== null} onClick={() => { setActionDialog(null); setActionNote(""); }} className="px-3 py-2 rounded border border-border text-xs disabled:opacity-50">Cancel</button>
-            <button type="submit" disabled={busy !== null || actionNote.trim().length < 3} className={`px-3 py-2 rounded text-white text-xs disabled:opacity-50 ${actionDialog?.kind === "bulk" ? "bg-down" : "bg-brand"}`}>
-              {busy ? "Saving…" : actionDialog?.kind === "release" ? "Release block" : actionDialog?.kind === "bulk" ? "Release all & resolve all" : "Resolve case"}
-            </button>
+            <Button type="button" variant="ghost" size="sm" disabled={busy !== null} onClick={() => { setActionDialog(null); setActionNote(""); }}><X size={13} strokeWidth={2} aria-hidden /> Cancel</Button>
+            <Button type="submit" size="sm" variant={actionDialog?.kind === "bulk" ? "destructive" : "default"} disabled={busy !== null || actionNote.trim().length < 3} loading={busy !== null}>
+              {busy ? "Saving…" : actionDialog?.kind === "release" ? <><Unlock size={13} strokeWidth={2} aria-hidden /> Release block</> : actionDialog?.kind === "bulk" ? <><Unlock size={13} strokeWidth={2} aria-hidden /> Release all & resolve all</> : <><CheckCircle2 size={13} strokeWidth={2} aria-hidden /> Resolve case</>}
+            </Button>
           </div>
         </form>
       </Dialog>

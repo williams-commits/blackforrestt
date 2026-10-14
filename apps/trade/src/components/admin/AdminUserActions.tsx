@@ -8,6 +8,9 @@ import { Ellipsis } from "lucide-react";
 import { ADMIN_ACTION_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
 import { fmtDateTime } from "@/lib/dates";
 import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/Textarea";
+import { Alert } from "@/components/ui/Alert";
 
 export interface ManagedUserRow {
   id: string;
@@ -293,7 +296,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
   return (
     <>
       <div className="flex items-center justify-end gap-1.5">
-        <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold uppercase ${state === "active" ? "bg-(--term-success-bg) text-(--term-success-fg)" : state === "suspended" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}`}>
+        <span className={`rounded px-1.5 py-0.5 text-xs font-semibold uppercase ${state === "active" ? "bg-(--term-success-bg) text-(--term-success-fg)" : state === "suspended" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}`}>
           {state}
         </span>
         <button
@@ -303,7 +306,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           aria-expanded={menuOpen}
           aria-label={`Actions for ${user.name ?? user.email ?? user.id}`}
           onClick={() => (menuOpen ? setMenuOpen(false) : openMenu())}
-          className="flex h-6 w-7 items-center justify-center hover:bg-panel-2 hover:text-text"
+          className="flex h-6 w-7 items-center justify-center hover:bg-accent/60 hover:text-foreground"
         >
           <TabIcon icon={Ellipsis} size={16} />
         </button>
@@ -402,34 +405,34 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           <div className="p-5 space-y-4">
             {resetResult.mode === "temporary" ? (
               <>
-                <div className="rounded border border-up/30 bg-up/10 px-3 py-2 text-xs text-up">
+                <Alert tone="ok">
                   New sign-in password generated — it is shown below exactly once.
-                </div>
+                </Alert>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <code className="min-w-0 flex-1 py-2.5 text-center font-mono text-xl font-bold tracking-widest">{resetResult.temporaryPassword}</code>
-                    <button type="button" onClick={() => void copyValue(resetResult.temporaryPassword)} className="shrink-0 py-2.5 hover:bg-panel-2">
+                    <button type="button" onClick={() => void copyValue(resetResult.temporaryPassword)} className="shrink-0 py-2.5 hover:bg-accent/60">
                       {copiedValue ? "✓ Copied" : "Copy"}
                     </button>
                   </div>
-                  <p className="text-(length:--term-text-2xs) text-text-faint">
+                  <p className="text-xs text-muted-foreground">
                     Case-sensitive, 6 characters. Deliver it to the user through a secure channel — the user should
                     change it after signing in (Account → Security).
                   </p>
                 </div>
-                <p className="text-xs text-text-muted">
+                <p className="text-xs text-muted-foreground">
                   All active sessions were signed out and any login lockout was cleared — the user signs in fresh
                   with this password. This action is written to the audit trail (the password itself is never recorded).
                 </p>
               </>
             ) : (
               <>
-                <div className={`rounded border px-3 py-2 text-xs ${resetResult.sent ? "border-up/30 bg-(--term-success-bg) text-(--term-success-fg)" : "border-brand/30 bg-(--term-warning-bg) text-(--term-warning-fg)"}`}>
+                <Alert tone={resetResult.sent ? "ok" : "info"}>
                   {resetResult.sent
                     ? `Reset link emailed to ${user.email}.`
                     : "Email delivery is not configured — use the link below."}
-                </div>
-                <p className="text-xs text-text-muted">
+                </Alert>
+                <p className="text-xs text-muted-foreground">
                   Valid until {fmtDateTime(resetResult.expiresAt)}. The user sets their own new password;
                   existing sessions stay signed in until the reset is completed.
                 </p>
@@ -441,19 +444,19 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                         readOnly
                         value={resetResult.previewUrl}
                         onClick={(e) => (e.target as HTMLInputElement).select()}
-                        className="min-w-0 flex-1 font-mono text-(length:--term-text-xs)"
+                        className="min-w-0 flex-1 font-mono text-xs"
                       />
-                      <button type="button" onClick={() => void copyValue(resetResult.previewUrl!)} className="shrink-0 hover:bg-panel-2">
+                      <button type="button" onClick={() => void copyValue(resetResult.previewUrl!)} className="shrink-0 hover:bg-accent/60">
                         {copiedValue ? "✓ Copied" : "Copy"}
                       </button>
                     </div>
-                    <p className="text-(length:--term-text-2xs) text-text-faint">Hand this to the user through a secure channel — anyone with the link can set the password.</p>
+                    <p className="text-xs text-muted-foreground">Hand this to the user through a secure channel — anyone with the link can set the password.</p>
                   </div>
                 )}
               </>
             )}
             <div className="flex justify-end">
-              <button type="button" onClick={() => { setDialog(null); setError(null); setResetResult(null); }} className="hover:bg-panel-2">Close</button>
+              <button type="button" onClick={() => { setDialog(null); setError(null); setResetResult(null); }} className="hover:bg-accent/60">Close</button>
             </div>
           </div>
         ) : (
@@ -476,14 +479,14 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 <Input id="notify-title" required minLength={3} maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium" htmlFor="notify-body">Message</label>
-                <textarea id="notify-body" required minLength={3} maxLength={2000} rows={5} value={body} onChange={(e) => setBody(e.target.value)} />
+                <Label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="notify-body">Message</Label>
+                <Textarea id="notify-body" required minLength={3} maxLength={2000} rows={5} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write the in-app notification…" />
               </div>
             </>
           ) : dialog?.kind === "hardDelete" ? (
             <div>
-              <label className="mb-1 block text-xs font-medium" htmlFor="purge-note">Purge reason (audited, min 10 chars)</label>
-              <textarea
+              <Label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="purge-note">Purge reason (audited, min 10 chars)</Label>
+              <Textarea
                 id="purge-note"
                 required
                 minLength={10}
@@ -494,14 +497,14 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 placeholder="GDPR erasure request, fraud cleanup, or compliance reference…"
                 className="resize-none"
               />
-              <p className="mt-2 text-(length:--term-text-xs) text-down">
+              <p className="mt-2 text-xs text-down">
                 This cannot be undone. The account, positions, transactions, documents, and chat history are
                 destroyed immediately. The audit entry recording this deletion is permanent. Accounts that ever
                 moved funds are protected by the ledger and will be refused.
               </p>
             </div>
           ) : dialog?.kind === "forceSignOut" ? (
-            <p className="text-xs text-text-muted">
+            <p className="text-xs text-muted-foreground">
               All devices and browsers are signed out immediately — useful when an account may be
               compromised, or before handing control back to a customer after support. Open
               WebSockets drop on their next validation. The action is written to the audit trail.
@@ -513,7 +516,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                   type="button"
                   onClick={() => setResetMode("temporary")}
                   aria-pressed={resetMode === "temporary"}
-                  className={`rounded px-3 py-2 text-xs font-semibold ${resetMode === "temporary" ? "bg-brand text-white" : "border border-border bg-canvas hover:bg-panel-2"}`}
+                  className={`rounded px-3 py-2 text-xs font-semibold ${resetMode === "temporary" ? "bg-primary text-primary-foreground" : "border border-border bg-card hover:bg-accent/60"}`}
                 >
                   Generate temporary password
                 </button>
@@ -521,21 +524,21 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                   type="button"
                   onClick={() => setResetMode("link")}
                   aria-pressed={resetMode === "link"}
-                  className={`rounded px-3 py-2 text-xs font-semibold ${resetMode === "link" ? "bg-brand text-white" : "border border-border bg-canvas hover:bg-panel-2"}`}
+                  className={`rounded px-3 py-2 text-xs font-semibold ${resetMode === "link" ? "bg-primary text-primary-foreground" : "border border-border bg-card hover:bg-accent/60"}`}
                 >
                   Email reset link
                 </button>
               </div>
               {resetMode === "temporary" ? (
-                <p className="text-xs text-text-muted">
+                <p className="text-xs text-muted-foreground">
                   Generates a random 6-character alphanumeric password and sets it on{" "}
-                  <strong className="text-text">{user.email}</strong> immediately. All active sessions are signed out
+                  <strong className="text-foreground">{user.email}</strong> immediately. All active sessions are signed out
                   and any login lockout is cleared, so the user can sign in right away. The code is shown to you once —
                   deliver it securely; the user should change it after signing in.
                 </p>
               ) : (
-                <p className="text-xs text-text-muted">
-                  The link goes to <strong className="text-text">{user.email}</strong> and is valid for 30 minutes.
+                <p className="text-xs text-muted-foreground">
+                  The link goes to <strong className="text-foreground">{user.email}</strong> and is valid for 30 minutes.
                   Completing the reset signs out all of the user&apos;s active sessions and clears any login lockout.
                   Issuing a new link invalidates previously issued, unused links. This action is written to the audit trail.
                 </p>
@@ -543,19 +546,19 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
             </div>
           ) : (
             <div>
-              <label className="mb-1 block text-xs font-medium" htmlFor="status-note">Note (optional, shown to the user in-app)</label>
-              <textarea id="status-note" maxLength={500} rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
+              <Label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="status-note">Note (optional, shown to the user in-app)</Label>
+              <Textarea id="status-note" maxLength={500} rows={4} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason shown to the user…" />
               {(user.suspendedAt || user.blockedAt || user.deletedAt) && (
-                <p className="mt-2 text-(length:--term-text-2xs) text-text-faint">
+                <p className="mt-2 text-xs text-muted-foreground">
                   Since: {fmtDateTime(user.suspendedAt ?? user.blockedAt ?? user.deletedAt!)}
                 </p>
               )}
             </div>
           )}
-          {error && <p role="alert" className="rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">{error}</p>}
+          {error && <Alert tone="err">{error}</Alert>}
           <div className="flex justify-end gap-2">
             <Button type="button" size="sm" disabled={busy} onClick={() => { setDialog(null); setError(null); }}>Cancel</Button>
-            <Button type="submit" size="sm" variant={dialog?.kind === "status" ? "destructive" : "brand"} disabled={busy} loading={busy}>
+            <Button type="submit" size="sm" variant={dialog?.kind === "status" ? "destructive" : "default"} disabled={busy} loading={busy}>
               {busy ? "Working…" : dialog?.kind === "notify" ? "Send notification" : dialog?.kind === "resetPassword" ? (resetMode === "temporary" ? "Generate password" : "Send reset link") : dialog?.kind === "forceSignOut" ? "Sign out everywhere" : dialog?.kind === "hardDelete" ? "Delete permanently" : "Confirm"}
             </Button>
           </div>
@@ -566,19 +569,19 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
   );
 }
 
-function MenuItemRow({ onSelect, label, hint, tone = "text-text", icon }: { onSelect: () => void; label: string; hint?: string; tone?: string; icon?: React.ReactNode }) {
+function MenuItemRow({ onSelect, label, hint, tone = "text-foreground", icon }: { onSelect: () => void; label: string; hint?: string; tone?: string; icon?: React.ReactNode }) {
   return (
     <button
       type="button"
       role="menuitem"
       tabIndex={-1}
       onClick={onSelect}
-      className="flex items-center gap-3 text-left transition-colors hover:bg-panel-2 focus:bg-panel-2 focus:outline-none"
+      className="flex items-center gap-3 text-left transition-colors hover:bg-accent/60 focus:bg-muted focus:outline-none"
     >
       {icon}
       <span className={`min-w-0 flex-1 ${tone}`}>
         <span className="block font-medium">{label}</span>
-        {hint && <span className="block text-(length:--term-text-2xs) text-text-faint">{hint}</span>}
+        {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
       </span>
     </button>
   );

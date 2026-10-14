@@ -30,14 +30,14 @@ export function Pagination({
   const end = Math.min(totalItems, safePage * pageSize);
 
   const step =
-    "inline-flex cursor-pointer items-center gap-1 rounded-md px-2.5 py-1 text-(length:--term-text-2xs) font-medium text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand disabled:pointer-events-none disabled:opacity-40";
+    "inline-flex cursor-pointer items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40";
 
   return (
     <nav
       aria-label={`${label} pagination`}
-      className={`flex flex-wrap items-center justify-between gap-2 border-t border-border bg-panel-2 ${compact ? "px-3 py-1.5" : "px-4 py-2.5"}`}
+      className={`flex flex-wrap items-center justify-between gap-2 border-t bg-muted/40 ${compact ? "px-3 py-1.5" : "px-4 py-2.5"}`}
     >
-      <span className="text-[10px] text-text-faint" aria-live="polite">
+      <span className="text-[10px] text-muted-foreground" aria-live="polite">
         {totalItems === 0 ? `No ${label}` : `${start}–${end} of ${totalItems} ${label}`}
       </span>
       <div className="flex items-center gap-1">
@@ -49,7 +49,7 @@ export function Pagination({
         >
           <ChevronLeft size={12} strokeWidth={2} aria-hidden /> Previous
         </button>
-        <span className="min-w-16 text-center text-[10px] text-text-muted tnum">
+        <span className="min-w-16 text-center text-[10px] text-muted-foreground tnum">
           {safePage} / {totalPages}
         </span>
         <button

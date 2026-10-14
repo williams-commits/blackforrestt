@@ -6,6 +6,8 @@ import { validateDepositAddress } from "@/lib/paymentNetworks";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
 import { Switch } from "@/components/ui/switch";
+import { Plus, Save } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 /**
  * Reusable settings form for both group settings and per-user profile overrides.
@@ -142,8 +144,8 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         />
         <div>
           <div className="flex items-baseline justify-between">
-            <p className="text-xs text-text-muted mb-1.5">Allowed instrument categories</p>
-            {categoriesInherited && <span className="text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">Inherited</span>}
+            <p className="text-xs text-muted-foreground mb-1.5">Allowed instrument categories</p>
+            {categoriesInherited && <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Inherited</span>}
           </div>
           <div className="flex flex-wrap gap-2">
             {ALL_CATEGORIES.map((cat) => {
@@ -154,8 +156,8 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
                   type="button"
                   aria-pressed={active}
                   onClick={() => toggleArrayItem(["trading", "allowedCategories"], cat, effectiveCategories)}
-                  className={`h-7 cursor-pointer rounded-md px-2.5 text-(length:--term-text-xs) font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand ${
-                  active ? "bg-brand text-white" : "bg-panel-2 text-text-muted hover:bg-panel-3 hover:text-text"
+                  className={`h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${
+                  active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
                 >
                   {cat}
@@ -189,8 +191,8 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         />
         <div>
           <div className="flex items-baseline justify-between">
-            <p className="text-xs text-text-muted mb-1.5">Allowed payment methods (Deposit and Withdrawal)</p>
-            {methodsInherited && <span className="text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">Inherited</span>}
+            <p className="text-xs text-muted-foreground mb-1.5">Allowed payment methods (Deposit and Withdrawal)</p>
+            {methodsInherited && <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Inherited</span>}
           </div>
           <div className="flex flex-wrap gap-2">
             {ALL_METHODS.map((method) => {
@@ -201,8 +203,8 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
                   type="button"
                   aria-pressed={active}
                   onClick={() => toggleArrayItem(["deposits", "allowedMethods"], method, effectiveMethods)}
-                  className={`h-7 cursor-pointer rounded-md px-2.5 text-(length:--term-text-xs) font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand ${
-                  active ? "bg-brand text-white" : "bg-panel-2 text-text-muted hover:bg-panel-3 hover:text-text"
+                  className={`h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${
+                  active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
                 >
                   {method}
@@ -215,7 +217,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
 
       {/* ── Deposit Wallets ── */}
       <SettingsSection title="Deposit Wallets (Crypto)">
-        <p className="text-(length:--term-text-xs) text-text-muted">
+        <p className="text-xs text-muted-foreground">
           Crypto addresses shown to users on the deposit screen. User-level wallets
           override group wallets; group wallets override the global default
           {defaults && defaults.deposits.walletAddresses.length > 0
@@ -225,7 +227,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         </p>
         {wallets.length === 0 ? (
           <div className="border-dashed py-4 text-center">
-            <p className="text-(length:--term-text-xs) text-text-faint">
+            <p className="text-xs text-muted-foreground">
               No wallets set — using the next layer up (group / global default).
             </p>
           </div>
@@ -234,7 +236,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
             {wallets.map((wallet, index) => (
               <div key={index} className="p-2.5 space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-(length:--term-text-2xs) font-bold text-text-faint">#{index + 1}</span>
+                  <span className="text-xs font-bold text-muted-foreground">#{index + 1}</span>
                   <Input
                     value={wallet.label ?? ""}
                     onChange={(e) => updateWallet(index, { label: e.target.value })}
@@ -273,24 +275,24 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
                   onChange={(e) => updateWallet(index, { address: e.target.value })}
                   placeholder="Deposit address"
                   maxLength={256}
-                  className={`h-8 w-full rounded border bg-canvas px-2 font-mono text-xs outline-none focus:border-brand ${
-                    walletErrors[index] ? "border-down/50" : "border-border"
-                  }`}
+                  aria-invalid={Boolean(walletErrors[index])}
+                  className="h-8 w-full font-mono text-xs"
                 />
                 {walletErrors[index] && (
-                  <p className="text-(length:--term-text-2xs) text-down">{walletErrors[index]}</p>
+                  <p className="text-xs text-down">{walletErrors[index]}</p>
                 )}
               </div>
             ))}
           </div>
         )}
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => setWallets([...wallets, { asset: "USDT", network: "", address: "" }])}
-          className="border-dashed font-medium transition hover:border-brand/50 hover:text-brand"
         >
-          + Add wallet
-        </button>
+          <Plus size={13} strokeWidth={2} aria-hidden /> Add wallet
+        </Button>
       </SettingsSection>
 
       {/* ── Withdrawals ── */}
@@ -383,26 +385,27 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
       </SettingsSection>
 
       {/* ── Save ── */}
-      <div className="flex items-center gap-3 border-t border-border-soft pt-3">
-        <button
+      <div className="flex items-center gap-3 border-t border-border pt-3">
+        <Button
           type="button"
           onClick={() => void onSave(s)}
           disabled={saving || hasWalletErrors}
+          loading={saving}
+          loadingLabel="Saving"
           title={hasWalletErrors ? "Fix the invalid wallet address(es) above before saving." : undefined}
-          className="rounded-lg bg-brand px-5 py-2.5 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50 transition"
         >
-          {saving ? "Saving…" : saveLabel}
-        </button>
+          <Save size={13} strokeWidth={2} aria-hidden /> {saveLabel}
+        </Button>
         {hasWalletErrors && (
-          <span className="text-(length:--term-text-xs) text-down">Fix the invalid wallet address{walletErrors.filter(Boolean).length > 1 ? "es" : ""} above to save.</span>
+          <span className="text-xs text-down">Fix the invalid wallet address{walletErrors.filter(Boolean).length > 1 ? "es" : ""} above to save.</span>
         )}
         {dirty && !saving && !hasWalletErrors && (
           <>
-            <span className="text-(length:--term-text-xs) text-brand">Unsaved changes</span>
+            <span className="text-xs text-primary">Unsaved changes</span>
             <button
               type="button"
               onClick={() => setS(initial)}
-              className="text-(length:--term-text-xs) font-medium transition hover:text-text"
+              className="text-xs font-medium transition hover:text-foreground"
             >
               Reset
             </button>
@@ -418,7 +421,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl p-4">
-      <h4 className="text-(length:--term-text-2xs) font-bold uppercase tracking-wider text-text-faint mb-3">{title}</h4>
+      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">{title}</h4>
       <div className="space-y-3">{children}</div>
     </div>
   );
@@ -427,7 +430,7 @@ function SettingsSection({ title, children }: { title: string; children: React.R
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="flex items-center justify-between cursor-pointer">
-      <span className="text-xs text-text">{label}</span>
+      <span className="text-xs text-foreground">{label}</span>
       <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
     </label>
   );
@@ -448,14 +451,14 @@ function NumberInput({
 }) {
   return (
     <div>
-      <label className="block text-xs text-text-muted mb-1">{label}</label>
+      <label className="block text-xs text-muted-foreground mb-1">{label}</label>
       <Input
         type="number"
         value={value ?? ""}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
       />
-      {hint && <p className="mt-1 text-(length:--term-text-2xs) text-text-faint">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }

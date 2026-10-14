@@ -24,6 +24,9 @@ import { toast } from "@/lib/toast";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert } from "@/components/ui/Alert";
+import { CheckCircle2, UserRound } from "lucide-react";
+import { Table } from "@/components/ui/table";
 
 type Permission = string;
 type TabKey =
@@ -256,14 +259,14 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
         aria-current={active ? "page" : undefined}
         className={`flex items-center gap-2 whitespace-nowrap text-xs font-medium transition ${
           sidebar
-            ? `w-full rounded-md px-3 py-2 text-left ${active ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "text-text-muted hover:bg-panel-2 hover:text-text"}`
-            : `border-b-2 px-3 py-2.5 ${active ? "border-brand text-brand" : "border-transparent text-text-muted hover:text-text"}`
+            ? `w-full rounded-md px-3 py-2 text-left ${active ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`
+            : `border-b-2 px-3 py-2.5 ${active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`
         }`}
       >
         {tabIcon && <TabIcon icon={tabIcon} />}
         <span>{item.label}</span>
         {badge != null && badge > 0 && (
-          <span className={`rounded-full px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold ${active ? "bg-brand text-white" : "bg-(--term-warning-bg) text-(--term-warning-fg)"}`}>
+          <span className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${active ? "bg-primary text-primary-foreground" : "bg-(--term-warning-bg) text-(--term-warning-fg)"}`}>
             {badge}
           </span>
         )}
@@ -277,10 +280,10 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold">Enterprise operations console</h1>
-            <p className="mt-1 text-xs text-text-muted">Signed in as {userName}. Every command is role-gated and audit chained.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Signed in as {userName}. Every command is role-gated and audit chained.</p>
           </div>
           <div className="flex flex-wrap justify-end gap-1.5" aria-label="Active administrative roles">
-            {roles.map((role) => <span key={role} className="rounded bg-brand-soft px-2 py-1 text-(length:--term-text-2xs) font-semibold text-brand">{role.replaceAll("_", " ")}</span>)}
+            {roles.map((role) => <span key={role} className="rounded bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">{role.replaceAll("_", " ")}</span>)}
           </div>
         </div>
       </section>
@@ -294,7 +297,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
               if (items.length === 0) return null;
               return (
                 <div key={section.label}>
-                  <p className="mb-1 px-3 text-(length:--term-text-2xs) font-bold uppercase tracking-wider text-text-faint">{section.label}</p>
+                  <p className="mb-1 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">{section.label}</p>
                   <div className="space-y-0.5">
                     {items.map((item) => tabButton(item, true))}
                   </div>
@@ -358,7 +361,7 @@ function ModuleState({ loading, error, onRetry, children }: { loading: boolean; 
 }
 
 function SectionHeader({ title, description, onRefresh }: { title: string; description: string; onRefresh?: () => void }) {
-  return <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold">{title}</h2><p className="mt-1 text-xs text-text-muted">{description}</p></div>{onRefresh && <button type="button" onClick={onRefresh} className="flex items-center gap-1.5 hover:bg-panel-2"><RefreshCw size={12} strokeWidth={1.75} aria-hidden />Refresh</button>}</div>;
+  return <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold">{title}</h2><p className="mt-1 text-xs text-muted-foreground">{description}</p></div>{onRefresh && <button type="button" onClick={onRefresh} className="flex items-center gap-1.5 hover:bg-accent/60"><RefreshCw size={12} strokeWidth={1.75} aria-hidden />Refresh</button>}</div>;
 }
 
 /** Icons for the overview stat grid — inferred from the stat key. */
@@ -379,9 +382,9 @@ interface OverviewResponse {
 }
 function OverviewPanel() {
   const resource = useResource<OverviewResponse>("/api/admin/overview", 15_000);
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><div className="rounded-lg border border-brand/30 bg-brand-soft p-3 text-xs text-brand"><strong>Environment.</strong> Execution provider: {resource.data.environment.executionProvider}; market data: {resource.data.environment.marketDataMode}.</div><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{Object.entries(resource.data.stats).map(([key, value]) => {
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><Alert tone="info"><strong>Environment.</strong> Execution provider: {resource.data.environment.executionProvider}; market data: {resource.data.environment.marketDataMode}.</Alert><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{Object.entries(resource.data.stats).map(([key, value]) => {
               const StatGlyph = OVERVIEW_STAT_ICONS[key];
-              return <div key={key} className="p-4"><div className="flex items-center gap-1.5 text-(length:--term-text-2xs) uppercase text-text-faint">{StatGlyph && <StatGlyph size={12} strokeWidth={1.75} aria-hidden />}{key.replaceAll(/([A-Z])/g, " $1")}</div><div className="mt-1 text-2xl font-semibold tnum">{value.toLocaleString("en-US")}</div></div>;
+              return <div key={key} className="p-4"><div className="flex items-center gap-1.5 text-xs uppercase text-muted-foreground">{StatGlyph && <StatGlyph size={12} strokeWidth={1.75} aria-hidden />}{key.replaceAll(/([A-Z])/g, " $1")}</div><div className="mt-1 text-2xl font-semibold tnum">{value.toLocaleString("en-US")}</div></div>;
             })}</div></div>}</ModuleState>;
 }
 
@@ -440,12 +443,12 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat, onProposeRole }: 
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <TableSearch value={search} onChange={setSearch} placeholder="Search email, name, or account number…" label="Search users" />
             {needle && (
-              <span className="text-(length:--term-text-2xs) text-text-faint tnum" aria-live="polite">
+              <span className="text-xs text-muted-foreground tnum" aria-live="polite">
                 {users.length} match{users.length === 1 ? "" : "es"}{searchPending ? " · searching…" : ""}
               </span>
             )}
             {truncated && !debouncedSearch && (
-              <span className="text-(length:--term-text-2xs) text-brand">showing first {resource.data.users.length} of {resource.data.total} — refine your search</span>
+              <span className="text-xs text-primary">showing first {resource.data.users.length} of {resource.data.total} — refine your search</span>
             )}
           </div>
           <PaginatedUsers
@@ -543,7 +546,7 @@ function PaginatedUsers({
   return (
     <div className="overflow-hidden">
       <div className="flex min-h-9 flex-wrap items-center gap-2 border-b">
-        <span className="text-(length:--term-text-2xs) text-text-faint tnum">{sortedUsers.length} users</span>
+        <span className="text-xs text-muted-foreground tnum">{sortedUsers.length} users</span>
         <CsvExportButton
           filename="users"
           columns={["Name", "Email", "Account", "Status", "KYC", "Security", "Roles", "Balance", "Equity", "Positions", "Created", "Last active", "Location"]}
@@ -577,63 +580,63 @@ function PaginatedUsers({
           grid. Same data the CSV export carries. */}
       <ul className="divide-y divide-border" aria-label="Users">
         {visibleUsers.map((user) => (
-          <li key={user.id} className="flex flex-col gap-2.5 px-3 py-3 transition-colors hover:bg-panel-2/40 lg:flex-row lg:items-center lg:gap-4">
+          <li key={user.id} className="flex flex-col gap-2.5 px-3 py-3 transition-colors hover:bg-accent/60/40 lg:flex-row lg:items-center lg:gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${user.online ? "bg-up" : "bg-panel-3"}`}
+                  className={`h-2 w-2 shrink-0 rounded-full ${user.online ? "bg-up" : "bg-muted"}`}
                   title={user.online ? "Online — live session" : "Offline"}
                   aria-label={user.online ? "Online" : "Offline"}
                 />
-                <span className="truncate text-xs font-medium text-text">{user.name ?? "Unnamed"}</span>
+                <span className="truncate text-xs font-medium text-foreground">{user.name ?? "Unnamed"}</span>
                 {!user.verified ? (
-                  <span className="rounded-full bg-panel-2 px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium text-text-muted">unverified</span>
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">unverified</span>
                 ) : null}
                 {user.lockedUntil ? (
-                  <span className="rounded-full bg-down/10 px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium text-down">locked</span>
+                  <span className="rounded-full bg-down/10 px-1.5 py-0.5 text-xs font-medium text-down">locked</span>
                 ) : null}
                 {user.adminRoles.length > 0 ? (
-                  <span className="rounded-full bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium text-brand">
+                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
                     {user.adminRoles[0].role.toLowerCase()}
                     {user.adminRoles.length > 1 ? ` +${user.adminRoles.length - 1}` : ""}
                   </span>
                 ) : null}
               </div>
-              <p className="mt-0.5 truncate text-(length:--term-text-2xs) text-text-faint">
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
                 {user.email ?? "—"} · #{user.accountNo ?? "—"}
                 {user.brandDomain ? (
-                  <span className="ml-1.5 rounded bg-brand-soft px-1 py-0.5 font-semibold text-brand">{user.brandDomain}</span>
+                  <span className="ml-1.5 rounded bg-primary/10 px-1 py-0.5 font-semibold text-primary">{user.brandDomain}</span>
                 ) : null}
               </p>
             </div>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3 lg:ml-auto lg:flex lg:flex-nowrap lg:gap-6 lg:pl-4">
               <div className="min-w-0">
-                <dt className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">Verification</dt>
-                <dd className="mt-0.5 text-xs text-text">{user.kyc?.status ?? "NOT SUBMITTED"}</dd>
-                <dd className={`text-(length:--term-text-2xs) ${user.verified ? "text-up" : "text-text-faint"}`}>
+                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Verification</dt>
+                <dd className="mt-0.5 text-xs text-foreground">{user.kyc?.status ?? "NOT SUBMITTED"}</dd>
+                <dd className={`text-xs ${user.verified ? "text-up" : "text-muted-foreground"}`}>
                   {user.verified ? "Verified" : "Unverified"}
                   {(user.kyc?.country || user.kyc?.city) ? ` · ${[user.kyc.city, user.kyc.country].filter(Boolean).join(", ")}` : ""}
                 </dd>
               </div>
               <div className="min-w-0">
-                <dt className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">Security</dt>
-                <dd className="mt-0.5 text-xs text-text">MFA {user.mfaEnabledAt ? "enabled" : "off"}</dd>
-                <dd className={`text-(length:--term-text-2xs) ${user.lockedUntil ? "text-down" : "text-text-faint"}`}>
+                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Security</dt>
+                <dd className="mt-0.5 text-xs text-foreground">MFA {user.mfaEnabledAt ? "enabled" : "off"}</dd>
+                <dd className={`text-xs ${user.lockedUntil ? "text-down" : "text-muted-foreground"}`}>
                   {user.lockedUntil ? "Locked" : `${user._count.securitySessions} session(s)`}
                 </dd>
               </div>
               <div className="min-w-0">
-                <dt className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">Balance</dt>
-                <dd className="mt-0.5 text-xs tnum text-text">{formatUsd(user.metrics?.balance ?? "0")}</dd>
+                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Balance</dt>
+                <dd className="mt-0.5 text-xs tnum text-foreground">{formatUsd(user.metrics?.balance ?? "0")}</dd>
               </div>
               <div className="min-w-0">
-                <dt className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">Equity</dt>
-                <dd className="mt-0.5 text-xs tnum text-text">{formatUsd(user.metrics?.equity ?? "0")}</dd>
+                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Equity</dt>
+                <dd className="mt-0.5 text-xs tnum text-foreground">{formatUsd(user.metrics?.equity ?? "0")}</dd>
               </div>
               <div className="min-w-0">
-                <dt className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">Activity</dt>
-                <dd className={`mt-0.5 text-xs tnum ${user._count.positions > 0 ? "text-up" : "text-text"}`}>{user._count.positions} open</dd>
-                <dd className={`text-(length:--term-text-2xs) ${user._count.reconciliationBlocks ? "text-down" : "text-text-faint"}`}>
+                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Activity</dt>
+                <dd className={`mt-0.5 text-xs tnum ${user._count.positions > 0 ? "text-up" : "text-foreground"}`}>{user._count.positions} open</dd>
+                <dd className={`text-xs ${user._count.reconciliationBlocks ? "text-down" : "text-muted-foreground"}`}>
                   {user._count.reconciliationBlocks} blocks · {user.lastActiveAt ? `active ${fmtAgo(user.lastActiveAt)}` : "never seen"}
                 </dd>
               </div>
@@ -654,7 +657,7 @@ function PaginatedUsers({
           </li>
         ))}
         {users.length === 0 ? (
-          <li className="p-8 text-center text-xs text-text-muted">{emptyLabel ?? "No users found."}</li>
+          <li className="p-8 text-center text-xs text-muted-foreground">{emptyLabel ?? "No users found."}</li>
         ) : null}
       </ul>
       <Pagination page={safePage} pageSize={pageSize} totalItems={sortedUsers.length} onPageChange={setPage} label="users" compact />
@@ -729,7 +732,7 @@ function UserSettingsDialog({ user, open, onClose }: { user: UserRow | null; ope
   return (
     <Dialog open={open} onClose={saving ? () => undefined : onClose} title="User Settings" description={`${user.name ?? "Unnamed"} · ${user.email ?? "—"}`} className="sm:max-w-lg">
       <div className="max-h-[74dvh] overflow-y-auto px-5 py-4">
-        {error && <div className="mb-3 rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error}</div>}
+        {error && <Alert tone="err" className="mb-3">{error}</Alert>}
         {loading ? (
           <div className="space-y-3" role="status" aria-label="Loading settings">
             <Skeleton className="h-5 w-40" />
@@ -844,7 +847,7 @@ function UserBalanceDialog({
       className="sm:max-w-4xl"
     >
       <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-        {loading && !data ? <div className="border-dashed p-8 text-center">Loading account finance…</div> : null}
+        {loading && !data ? <div className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">Loading account finance…</div> : null}
         {data ? (
           <div className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -855,8 +858,8 @@ function UserBalanceDialog({
             </div>
             <form onSubmit={submit} className="p-4">
               <div className="flex flex-wrap gap-2" role="group" aria-label="Balance adjustment type">
-                <button type="button" onClick={() => setAction("CREDIT")} className={`rounded px-3 py-2 text-xs font-semibold ${action === "CREDIT" ? "bg-up text-white" : "border border-border bg-canvas"}`}>Top up balance</button>
-                <button type="button" onClick={() => setAction("DEBIT")} className={`rounded px-3 py-2 text-xs font-semibold ${action === "DEBIT" ? "bg-down text-white" : "border border-border bg-canvas"}`}>Deduct balance</button>
+                <button type="button" onClick={() => setAction("CREDIT")} className={`rounded px-3 py-2 text-xs font-semibold ${action === "CREDIT" ? "bg-up text-white" : "border border-border bg-card"}`}>Top up balance</button>
+                <button type="button" onClick={() => setAction("DEBIT")} className={`rounded px-3 py-2 text-xs font-semibold ${action === "DEBIT" ? "bg-down text-white" : "border border-border bg-card"}`}>Deduct balance</button>
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,12rem)_1fr_auto] md:items-end">
                 <label className="text-xs font-medium">Amount (USD)
@@ -867,27 +870,27 @@ function UserBalanceDialog({
                 </label>
                 <Button type="submit" variant={action === "CREDIT" ? "buy" : "sell"} loading={busy} loadingLabel="Posting adjustment">{action === "CREDIT" ? "Post top-up" : "Post deduction"}</Button>
               </div>
-              <p className="mt-2 text-(length:--term-text-xs) text-text-muted">Deductions cannot exceed the user’s available balance. Margin and pending withdrawals are never silently consumed.</p>
+              <p className="mt-2 text-xs text-muted-foreground">Deductions cannot exceed the user’s available balance. Margin and pending withdrawals are never silently consumed.</p>
             </form>
-            {error ? <p role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error}</p> : null}
-            {notice ? <p role="status" className="rounded border border-up/30 bg-up/10 px-3 py-2 text-xs text-up">{notice}</p> : null}
+            {error ? <Alert tone="err">{error}</Alert> : null}
+            {notice ? <Alert tone="ok">{notice}</Alert> : null}
             <section aria-labelledby="user-transaction-history">
               <div className="mb-2 flex items-center justify-between gap-3">
-                <div><h3 id="user-transaction-history" className="text-sm font-semibold">Customer transaction history</h3><p className="text-xs text-text-muted">Deposits, withdrawals, trading settlements, bonuses, fees, and administrative adjustments.</p></div>
+                <div><h3 id="user-transaction-history" className="text-sm font-semibold">Customer transaction history</h3><p className="text-xs text-muted-foreground">Deposits, withdrawals, trading settlements, bonuses, fees, and administrative adjustments.</p></div>
                 <Button size="sm" variant="ghost" onClick={() => void load()} disabled={loading}>Refresh</Button>
               </div>
               <div className="overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-175 text-left text-xs">
-                    <thead className="bg-panel-2 text-text-muted"><tr><th className="p-2">Date</th><th className="p-2">Type</th><th className="p-2">Description</th><th className="p-2">Reference</th><th className="p-2 text-right">Amount</th><th className="p-2">Status</th></tr></thead>
+                  <Table className="w-full min-w-175 text-left text-xs">
+                    <thead className="bg-muted text-muted-foreground"><tr><th className="p-2">Date</th><th className="p-2">Type</th><th className="p-2">Description</th><th className="p-2">Reference</th><th className="p-2 text-right">Amount</th><th className="p-2">Status</th></tr></thead>
                     <tbody>
                       {visible.map((item) => {
                         const numeric = Number(item.amount);
                         return <tr key={item.id} className="border-t"><td className="p-2 whitespace-nowrap">{new Date(item.createdAt).toLocaleString()}</td><td className="p-2">{item.type}</td><td className="p-2 max-w-70 truncate" title={item.description ?? undefined}>{item.description ?? "—"}</td><td className="p-2 tnum">{item.reference ?? "—"}</td><td className={`p-2 text-right font-medium tnum ${numeric >= 0 ? "text-up" : "text-down"}`}>{numeric >= 0 ? "+" : ""}{formatUsd(item.amount)}</td><td className="p-2">{item.status}</td></tr>;
                       })}
-                      {transactions.length === 0 ? <tr><td colSpan={6} className="p-8 text-center text-text-muted">No transactions.</td></tr> : null}
+                      {transactions.length === 0 ? <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No transactions.</td></tr> : null}
                     </tbody>
-                  </table>
+                  </Table>
                 </div>
                 <Pagination page={safePage} pageSize={pageSize} totalItems={transactions.length} onPageChange={setPage} label="transactions" compact />
               </div>
@@ -901,7 +904,7 @@ function UserBalanceDialog({
 }
 
 function MetricCard({ label, value }: { label: string; value: string }) {
-  return <div className="p-3"><div className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">{label}</div><div className="mt-1 text-lg font-semibold tnum">{value}</div></div>;
+  return <div className="p-3"><div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div><div className="mt-1 text-lg font-semibold tnum">{value}</div></div>;
 }
 
 function formatUsd(value: string | number): string {
@@ -937,14 +940,14 @@ const LEDGER_PAGE_SIZE = 20;
 function ledgerKindTone(kind: string): string {
   if (kind === "DEPOSIT" || kind === "BONUS") return "bg-up/15 text-up";
   if (kind === "WITHDRAWAL" || kind === "FEE") return "bg-down/15 text-down";
-  return "bg-panel-2 text-text-muted";
+  return "bg-muted text-muted-foreground";
 }
 
 /** Text-only tone (amounts) matching the kind badge. */
 function ledgerKindTextTone(kind: string): string {
   if (kind === "DEPOSIT" || kind === "BONUS") return "text-up";
   if (kind === "WITHDRAWAL" || kind === "FEE") return "text-down";
-  return "text-text-muted";
+  return "text-muted-foreground";
 }
 
 /** Total credited per asset — for double-entry postings this is the gross amount moved. */
@@ -1003,12 +1006,12 @@ function LedgerPanel() {
         </div>
       )}
       <CsvExportButton filename="ledger" columns={["Reference", "Kind", "Status", "User", "Account", "Effective", "Direction", "Account name", "Account code", "Asset", "Amount"]} rows={csvRows} disabled={filtered.length === 0} />
-      <span className="text-(length:--term-text-2xs) text-text-faint tnum" aria-live="polite">
+      <span className="text-xs text-muted-foreground tnum" aria-live="polite">
         {filtering ? `${filtered.length} of ${all.length} postings` : `${all.length} postings`}
       </span>
     </div>
     {resource.data.total > all.length && (
-      <div className="rounded border border-brand/30 bg-brand-soft px-3 py-2 text-xs text-brand">Showing the {all.length} most recent postings of {resource.data.total.toLocaleString("en-US")} — narrow the window with the search or kind filters.</div>
+      <Alert tone="info">Showing the {all.length} most recent postings of {resource.data.total.toLocaleString("en-US")} — narrow the window with the search or kind filters.</Alert>
     )}
     <div className="overflow-hidden">
       <div className="space-y-2 p-2">
@@ -1016,27 +1019,27 @@ function LedgerPanel() {
           const creditTotals = ledgerCreditTotals(item.entries);
           return (
             <details key={item.id}>
-              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 hover:bg-panel-2">
+              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 hover:bg-accent/60">
                 <span className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold ${ledgerKindTone(item.kind)}`}>{item.kind.replaceAll("_", " ")}</span>
+                  <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${ledgerKindTone(item.kind)}`}>{item.kind.replaceAll("_", " ")}</span>
                   <span className="truncate font-mono text-xs font-medium" title={item.reference}>{item.reference}</span>
-                  <span className="text-(length:--term-text-xs) text-text-faint">{fmtDateTime(item.effectiveAt)}</span>
+                  <span className="text-xs text-muted-foreground">{fmtDateTime(item.effectiveAt)}</span>
                 </span>
                 <span className="flex items-center gap-2 text-xs">
-                  <span className="max-w-45 truncate text-text-muted" title={item.user?.email ?? undefined}>{item.user?.email ?? item.user?.accountNo ?? "system"}</span>
-                  <span className="rounded bg-panel-2 px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium text-text-muted">{item.status}</span>
+                  <span className="max-w-45 truncate text-muted-foreground" title={item.user?.email ?? undefined}>{item.user?.email ?? item.user?.accountNo ?? "system"}</span>
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">{item.status}</span>
                   {[...creditTotals.entries()].map(([asset, total]) => (
                     <span key={asset} className={`tnum font-semibold ${ledgerKindTextTone(item.kind)}`}>{asset} {fmtExecNumber(total.toFixed(8))}</span>
                   ))}
                 </span>
               </summary>
               <div className="space-y-2 border-t p-3">
-                <p className="text-xs text-text-muted">{item.description}{item.sourceType ? ` · source ${item.sourceType}${item.sourceId ? ` ${item.sourceId}` : ""}` : ""}</p>
+                <p className="text-xs text-muted-foreground">{item.description}{item.sourceType ? ` · source ${item.sourceType}${item.sourceId ? ` ${item.sourceId}` : ""}` : ""}</p>
                 <div className="grid gap-1">
                   {item.entries.map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between gap-2 rounded bg-panel-2 px-2 py-1 text-xs">
+                    <div key={entry.id} className="flex items-center justify-between gap-2 rounded bg-muted px-2 py-1 text-xs">
                       <span className="flex min-w-0 items-center gap-2">
-                        <span className={`rounded px-1 py-0.5 text-(length:--term-text-2xs) font-bold ${entry.direction === "DEBIT" ? "bg-(--term-danger-bg) text-(--term-danger-fg)" : "bg-(--term-success-bg) text-(--term-success-fg)"}`}>{entry.direction}</span>
+                        <span className={`rounded px-1 py-0.5 text-xs font-bold ${entry.direction === "DEBIT" ? "bg-(--term-danger-bg) text-(--term-danger-fg)" : "bg-(--term-success-bg) text-(--term-success-fg)"}`}>{entry.direction}</span>
                         <span className="truncate" title={`${entry.account.name} (${entry.account.code})`}>{entry.account.name}</span>
                       </span>
                       <span className="shrink-0 font-medium tnum">{entry.asset} {fmtExecNumber(entry.amount)}</span>
@@ -1047,7 +1050,7 @@ function LedgerPanel() {
             </details>
           );
         })}
-        {filtered.length === 0 && <div className="border-dashed p-8 text-center">{all.length === 0 ? "No ledger transactions." : `No postings match ${needle ? `“${search.trim()}”` : `the ${kindFilter.replaceAll("_", " ").toLowerCase()} filter`}.`}</div>}
+        {filtered.length === 0 && <div className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">{all.length === 0 ? "No ledger transactions." : `No postings match ${needle ? `“${search.trim()}”` : `the ${kindFilter.replaceAll("_", " ").toLowerCase()} filter`}.`}</div>}
       </div>
       {filtered.length > LEDGER_PAGE_SIZE && <Pagination page={safePage} pageSize={LEDGER_PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="postings" compact />}
     </div>
@@ -1090,7 +1093,7 @@ function fmtExecNumber(value: string | number): string {
 function pnlClass(value: number): string {
   if (value > 0) return "text-up";
   if (value < 0) return "text-down";
-  return "text-text-muted";
+  return "text-muted-foreground";
 }
 
 /** Stable identity for grouping execution rows by user. */
@@ -1233,8 +1236,8 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
 
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div>
     <SectionHeader title="Execution and position surveillance" description={resource.data.providerWarning} onRefresh={() => void resource.refresh()} />
-    <div className="mb-3 flex flex-wrap gap-2 text-xs"><span className="rounded bg-brand-soft px-2 py-1 text-brand">{resource.data.executionMode}</span><span className="rounded bg-panel-2 px-2 py-1">Feed: {resource.data.marketDataMode}</span><span className={`rounded px-2 py-1 ${resource.data.engineReady ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}`}>Engine {resource.data.engineReady ? "ready" : "starting"}</span></div>
-    {error && <p role="alert" className="mb-3 rounded bg-down/10 p-2 text-xs text-down">{error}</p>}
+    <div className="mb-3 flex flex-wrap gap-2 text-xs"><span className="rounded bg-primary/10 px-2 py-1 text-primary">{resource.data.executionMode}</span><span className="rounded bg-muted px-2 py-1">Feed: {resource.data.marketDataMode}</span><span className={`rounded px-2 py-1 ${resource.data.engineReady ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}`}>Engine {resource.data.engineReady ? "ready" : "starting"}</span></div>
+    {error && <Alert tone="err" className="mb-3">{error}</Alert>}
     <div className="mb-3 flex flex-wrap items-center gap-2">
       <TableSearch value={search} onChange={setSearch} placeholder="Search symbol, email, or account number…" label="Search executions" />
       <div className="flex gap-1.5" role="group" aria-label="Filter positions by status">
@@ -1249,7 +1252,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
         rows={csvRows}
         disabled={filtered.length === 0}
       />
-      <span className="text-(length:--term-text-2xs) text-text-faint tnum" aria-live="polite">
+      <span className="text-xs text-muted-foreground tnum" aria-live="polite">
         {filtering
           ? `${filtered.length} of ${allPositions.length} positions`
           : `${allPositions.length} positions · ${userCount} user${userCount === 1 ? "" : "s"}`}
@@ -1258,14 +1261,14 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
       </span>
     </div>
     {resource.data.total > allPositions.length && (
-      <div className="mb-3 rounded border border-brand/30 bg-brand-soft px-3 py-2 text-xs text-brand">
+      <Alert tone="info" className="mb-3">
         Showing the {allPositions.length} most recent positions of {resource.data.total.toLocaleString("en-US")} — narrow the window with the search or status filters.
-      </div>
+      </Alert>
     )}
     {allPositions.length === 0 ? (
-      <div className="border-dashed p-8 text-center">No positions.</div>
+      <div className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">No positions.</div>
     ) : filtered.length === 0 ? (
-      <div className="border-dashed p-8 text-center">
+      <div className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">
         No positions match {needle ? `“${search.trim()}”` : `the ${statusFilter.toLowerCase()} filter`}.
       </div>
     ) : groupByUser ? (
@@ -1273,13 +1276,13 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
         <div className="space-y-2 p-2">
           {groups.map((group) => (
             <details key={group.key} open={group.open > 0 ? true : undefined}>
-              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-panel-2">
+              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-accent/60">
                 <span className="flex min-w-0 items-baseline gap-2">
                   <span className="truncate text-sm font-semibold">{group.label}</span>
-                  {group.accountNo && group.accountNo !== group.label ? <span className="text-text-faint">#{group.accountNo}</span> : null}
+                  {group.accountNo && group.accountNo !== group.label ? <span className="text-muted-foreground">#{group.accountNo}</span> : null}
                 </span>
-                <span className="flex flex-wrap items-center gap-2 text-text-muted tnum">
-                  {group.open > 0 && <span className="rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-brand">{group.open} open</span>}
+                <span className="flex flex-wrap items-center gap-2 text-muted-foreground tnum">
+                  {group.open > 0 && <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary">{group.open} open</span>}
                   <span>
                     {(() => {
                       const total = userTotals.get(group.key) ?? group.positions.length;
@@ -1335,11 +1338,11 @@ function ExecutionPositionCard({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-sm font-semibold">{position.symbol}</span>
-            <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold ${position.side === "BUY" ? "bg-up/15 text-up" : "bg-down/15 text-down"}`}>{position.side}</span>
-            <span className="rounded bg-panel-2 px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium text-text-muted">{position.type ?? "CFD"}</span>
-            <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold ${position.status === "OPEN" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-panel-3 text-text-muted"}`}>{position.status}</span>
+            <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${position.side === "BUY" ? "bg-up/15 text-up" : "bg-down/15 text-down"}`}>{position.side}</span>
+            <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">{position.type ?? "CFD"}</span>
+            <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${position.status === "OPEN" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-muted text-muted-foreground"}`}>{position.status}</span>
           </div>
-          <div className="mt-1 text-xs text-text-muted">
+          <div className="mt-1 text-xs text-muted-foreground">
             {fmtExecNumber(position.volume)} lots @ {fmtExecNumber(position.openRate ?? "0")}
             {position.status === "OPEN" ? ` · mark ${fmtExecNumber(position.currentRate ?? "0")}` : ""}
             {" · opened "}{fmtDateTime(position.openedAt)}
@@ -1400,7 +1403,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
     setBusy(id); setError(null);
     try { await requestJson(`/api/admin/support/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status, resolutionNote }) }); await resource.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update case."); } finally { setBusy(null); }
   }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex justify-between"><SectionHeader title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} />{canManage && <Button loading={busy === "create"} onClick={() => void createCase()}>New case</Button>}</div>{error && <p role="alert" className="mb-3 rounded bg-down/10 p-2 text-xs text-down">{error}</p>}<div className="space-y-2">{resource.data.cases.map((item) => <article key={item.id} className="p-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="text-xs text-text-faint">{item.reference} · {item.priority} · {item.category}{item.brandDomain && <span className="ml-1.5 rounded bg-brand-soft px-1 py-px text-(length:--term-text-2xs) font-semibold text-brand">{item.brandDomain}</span>}</div><h3 className="mt-1 text-sm font-medium">{item.subject}</h3><p className="mt-1 max-w-3xl text-xs text-text-muted">{item.description}</p></div><div className="text-right"><span className="text-xs font-medium">{item.status}</span>{canManage && item.status !== "RESOLVED" && item.status !== "CLOSED" && <div className="mt-2 flex gap-2"><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "IN_PROGRESS")}>Assign to me</button><button type="button" disabled={busy !== null} onClick={() => void updateCase(item.id, "RESOLVED")} className="rounded bg-brand px-2 py-1 text-xs text-white">Resolve</button></div>}</div></div></article>)}{resource.data.cases.length === 0 && <div className="border-dashed p-8 text-center">No support cases.</div>}</div>{commandDialog}</div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex justify-between"><SectionHeader title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} />{canManage && <Button loading={busy === "create"} onClick={() => void createCase()}>New case</Button>}</div>{error && <Alert tone="err" className="mb-3">{error}</Alert>}<div className="space-y-2">{resource.data.cases.map((item) => <article key={item.id} className="rounded-xl bg-card p-4 shadow-sm"><div className="flex flex-wrap justify-between gap-3"><div><div className="text-xs text-muted-foreground">{item.reference} · {item.priority} · {item.category}{item.brandDomain && <span className="ml-1.5 rounded bg-primary/10 px-1 py-px text-xs font-semibold text-primary">{item.brandDomain}</span>}</div><h3 className="mt-1 text-sm font-medium">{item.subject}</h3><p className="mt-1 max-w-3xl text-xs text-muted-foreground">{item.description}</p></div><div className="text-right"><span className="text-xs font-medium">{item.status}</span>{canManage && item.status !== "RESOLVED" && item.status !== "CLOSED" && <div className="mt-2 flex gap-2"><Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => void updateCase(item.id, "IN_PROGRESS")}><UserRound size={13} strokeWidth={2} aria-hidden /> Assign to me</Button><Button type="button" size="sm" disabled={busy !== null} onClick={() => void updateCase(item.id, "RESOLVED")}><CheckCircle2 size={13} strokeWidth={2} aria-hidden /> Resolve</Button></div>}</div></div></article>)}{resource.data.cases.length === 0 && <div className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">No support cases.</div>}</div>{commandDialog}</div>}</ModuleState>;
 }
 
 interface InstrumentRow extends Record<string, unknown> { symbol: string; name: string; category: string; active: boolean; marginPerLot: string; commissionPerLot: string; swapLongPips: string; swapShortPips: string; feedSymbol: string | null }
@@ -1419,7 +1422,7 @@ interface AuditEventRow extends Record<string, unknown> { sequence: string; doma
 function AuditPanel({ canVerify, canExport }: { canVerify: boolean; canExport: boolean }) {
   const resource = useResource<{ events: AuditEventRow[]; redacted: boolean }>("/api/admin/audit?limit=150");
   async function verify() { try { const result = await requestJson<{ valid: boolean; checkedEvents: number }>("/api/admin/audit/verify", { method: "POST" }); toast.success(`Chain ${result.valid ? "valid" : "invalid"}`, `Checked ${result.checkedEvents} events.`); await resource.refresh(); } catch (cause) { toast.error("Verification failed", cause instanceof Error ? cause.message : "Verification failed."); } }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex flex-wrap items-start justify-between gap-3"><SectionHeader title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} /><div className="flex gap-2">{canVerify && <button type="button" onClick={() => void verify()} className="flex items-center gap-1.5 rounded bg-brand px-3 py-2 text-xs text-white"><ShieldCheck size={12} strokeWidth={2} aria-hidden />Verify chain</button>}{canExport && <a href="/api/admin/audit/export?format=csv&limit=500">Export CSV</a>}</div></div><SimpleTable columns={["sequence", "domain", "action", "entityType", "entityId", "actorId", "createdAt", "metadata"]} rows={resource.data.events} empty="No audit events." /></div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex flex-wrap items-start justify-between gap-3"><SectionHeader title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} /><div className="flex gap-2">{canVerify && <Button type="button" size="sm" onClick={() => void verify()}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Verify chain</Button>}{canExport && <a href="/api/admin/audit/export?format=csv&limit=500">Export CSV</a>}</div></div><SimpleTable columns={["sequence", "domain", "action", "entityType", "entityId", "actorId", "createdAt", "metadata"]} rows={resource.data.events} empty="No audit events." /></div>}</ModuleState>;
 }
 
 interface HealthResponse {
@@ -1464,7 +1467,7 @@ function HealthPanel() {
 }
 
 function HealthCard({ name, status, latencyMs, detail, error }: { name: string; status: string; latencyMs?: number; detail?: string; error?: string | null }) {
-  const tone = status === "UP" ? "text-up" : status === "STARTING" ? "text-brand" : "text-down";
+  const tone = status === "UP" ? "text-up" : status === "STARTING" ? "text-primary" : "text-down";
   const dot = status === "UP" ? "bg-up" : status === "STARTING" ? "bg-brand" : "bg-down";
   return (
     <div className="p-4">
@@ -1472,12 +1475,12 @@ function HealthCard({ name, status, latencyMs, detail, error }: { name: string; 
         <p className="text-xs font-semibold">{name}</p>
         <span className="flex items-center gap-1.5">
           <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden />
-          <span className={`text-(length:--term-text-2xs) font-bold ${tone}`}>{status}</span>
+          <span className={`text-xs font-bold ${tone}`}>{status}</span>
         </span>
       </div>
-      {latencyMs != null && <p className="mt-2 text-lg font-semibold tnum">{latencyMs}<span className="ml-0.5 text-(length:--term-text-2xs) font-normal text-text-faint">ms</span></p>}
-      {detail && <p className="mt-1 text-(length:--term-text-xs) text-text-muted">{detail}</p>}
-      {error && <p className="mt-1 text-(length:--term-text-xs) text-down">{error}</p>}
+      {latencyMs != null && <p className="mt-2 text-lg font-semibold tnum">{latencyMs}<span className="ml-0.5 text-xs font-normal text-muted-foreground">ms</span></p>}
+      {detail && <p className="mt-1 text-xs text-muted-foreground">{detail}</p>}
+      {error && <p className="mt-1 text-xs text-down">{error}</p>}
     </div>
   );
 }
@@ -1566,10 +1569,10 @@ function ChangesPanel({
               <article key={item.id} className="p-3">
                 <div className="flex flex-wrap justify-between gap-3">
                   <div>
-                    <div className="text-(length:--term-text-2xs) text-text-faint">{item.domain} · {item.status} · {new Date(item.createdAt).toLocaleString()}</div>
+                    <div className="text-xs text-muted-foreground">{item.domain} · {item.status} · {new Date(item.createdAt).toLocaleString()}</div>
                     <h3 className="mt-1 text-sm font-medium">{item.action} · {item.entityType} {item.entityId ?? ""}</h3>
-                    <pre className="mt-2 max-w-3xl overflow-auto rounded bg-panel-2 p-2 text-(length:--term-text-2xs)">{JSON.stringify(item.payload, null, 2)}</pre>
-                    <div className="mt-1 text-(length:--term-text-2xs) text-text-faint">Maker: {item.requestedById}{item.reviewedById ? ` · Checker: ${item.reviewedById}` : ""}</div>
+                    <pre className="mt-2 max-w-3xl overflow-auto rounded bg-muted p-2 text-xs">{JSON.stringify(item.payload, null, 2)}</pre>
+                    <div className="mt-1 text-xs text-muted-foreground">Maker: {item.requestedById}{item.reviewedById ? ` · Checker: ${item.reviewedById}` : ""}</div>
                   </div>
                   {item.canReview && item.status === "PENDING" && (
                     <div className="flex gap-2">
@@ -1580,7 +1583,7 @@ function ChangesPanel({
                 </div>
               </article>
             ))}
-            {resource.data.requests.length === 0 && <div className="border-dashed p-8 text-center">No change requests.</div>}
+            {resource.data.requests.length === 0 && <div className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">No change requests.</div>}
           </div>
           {commandDialog}
         </div>
@@ -1645,7 +1648,7 @@ function ChangeRequestComposer({
   }
 
   return (
-    <form onSubmit={submit} className="rounded-lg border border-brand/30 bg-brand-soft/40 p-4">
+    <form onSubmit={submit} className="rounded-lg border border-primary/30 bg-primary/10/40 p-4">
       <div className="grid gap-3 md:grid-cols-2">
         <label className="text-xs">Change type
           <NativeSelect name="action" value={action} onChange={(event) => setAction(event.target.value as ChangeAction)} className="mt-1">
@@ -1660,7 +1663,7 @@ function ChangeRequestComposer({
       {action === "UPDATE_RISK_RULE" && <RiskChangeFields />}
       {action === "UPDATE_INSTRUMENT" && <InstrumentChangeFields />}
       {error && <p role="alert" className="mt-3 text-xs text-down">{error}</p>}
-      <Button type="submit" loading={busy} loadingLabel="Creating change request" className="mt-3 bg-brand text-white">Submit for approval</Button>
+      <Button type="submit" loading={busy} loadingLabel="Creating change request" className="mt-3 bg-primary text-primary-foreground">Submit for approval</Button>
     </form>
   );
 }
@@ -1748,7 +1751,7 @@ function buildChangeRequest(action: ChangeAction, form: FormData): Record<string
   };
 }
 
-function ChangeHint({ text }: { text: string }) { return <div className="mb-3 rounded border border-brand/30 bg-brand-soft p-3 text-xs text-brand">{text}</div>; }
+function ChangeHint({ text }: { text: string }) { return <div className="mb-3 rounded border border-primary/30 bg-primary/10 p-3 text-xs text-primary">{text}</div>; }
 
 function displayValue(value: unknown): string {
   if (value == null) return "—";
@@ -1768,13 +1771,13 @@ function SimpleTable({ columns, rows, empty }: { columns: string[]; rows: Array<
   return (
     <div className="overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-225 text-left text-xs">
-          <thead className="bg-panel-2 text-text-muted"><tr>{columns.map((column) => <th key={column} className="p-2 font-medium">{column.replaceAll(/([A-Z])/g, " $1")}</th>)}</tr></thead>
+        <Table className="w-full min-w-225 text-left text-xs">
+          <thead className="bg-muted text-muted-foreground"><tr>{columns.map((column) => <th key={column} className="p-2 font-medium">{column.replaceAll(/([A-Z])/g, " $1")}</th>)}</tr></thead>
           <tbody>
             {visibleRows.map((row, index) => <tr key={String(row.id ?? row.code ?? row.symbol ?? index)} className="border-t">{columns.map((column) => <td key={column} className="max-w-80 truncate p-2" title={displayValue(row[column])}>{displayValue(row[column])}</td>)}</tr>)}
-            {rows.length === 0 && <tr><td colSpan={columns.length} className="p-8 text-center text-text-muted">{empty}</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={columns.length} className="p-8 text-center text-muted-foreground">{empty}</td></tr>}
           </tbody>
-        </table>
+        </Table>
       </div>
       <Pagination page={safePage} pageSize={pageSize} totalItems={rows.length} onPageChange={setPage} label="rows" compact />
     </div>

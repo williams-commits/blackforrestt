@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
+import { Megaphone, Send } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Textarea";
+import { Alert } from "@/components/ui/Alert";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/lib/toast";
@@ -228,29 +231,27 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 id="admin-messages-heading" className="text-sm font-semibold">Customer messages</h2>
-          <p className="text-xs text-text-muted mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Shared team inbox — every operator sees the same threads.{" "}
             {totalUnread > 0
-              ? <span className="font-medium text-brand">{totalUnread} unread message{totalUnread === 1 ? "" : "s"}</span>
+              ? <span className="font-medium text-primary">{totalUnread} unread message{totalUnread === 1 ? "" : "s"}</span>
               : "All caught up."}
           </p>
         </div>
-        <button type="button" onClick={() => { setBError(null); setBResult(null); setBroadcastOpen(true); }} className="rounded bg-brand px-3 py-2 text-xs font-medium text-white hover:brightness-95">
-          Broadcast notification
-        </button>
+        <Button type="button" size="sm" onClick={() => { setBError(null); setBResult(null); setBroadcastOpen(true); }}><Megaphone size={13} strokeWidth={2} aria-hidden /> New broadcast</Button>
       </div>
 
       {error && (
-        <div role="alert" className="flex items-center justify-between gap-2 rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">
+        <Alert tone="err" className="flex items-center justify-between gap-2 text-xs">
           <span>{error}</span>
           <button type="button" onClick={() => void loadThreads()} className="shrink-0 font-medium underline underline-offset-2">Retry</button>
-        </div>
+        </Alert>
       )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(240px,340px)_minmax(0,1fr)]">
         {/* Thread list */}
         <div className="flex max-h-144 flex-col">
-          <div className="space-y-2 border-b border-border-soft p-2">
+          <div className="space-y-2 border-b border-border p-2">
             <Input
               type="search"
               value={search}
@@ -258,14 +259,14 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               placeholder="Search name, email, account…"
               aria-label="Search conversations"
             />
-            <label className="flex items-center gap-1.5 text-(length:--term-text-2xs) text-text-muted">
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Checkbox checked={unreadOnly} onCheckedChange={(checked) => setUnreadOnly(checked === true)} aria-label="Unread only" />
               Unread only
             </label>
           </div>
           <div className="flex-1 overflow-y-auto">
             {visibleThreads.length === 0 && (
-              <p className="p-6 text-center text-xs text-text-muted">
+              <p className="p-6 text-center text-xs text-muted-foreground">
                 {threads.length === 0 ? "No conversations yet. Open a user in the Users tab and press “Chat”." : "No conversations match."}
               </p>
             )}
@@ -275,28 +276,28 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                 type="button"
                 onClick={() => { setLimit(PAGE_SIZE); setActiveUser({ id: threadRow.userId, label: threadRow.name ?? threadRow.email ?? threadRow.userId }); }}
                 aria-current={activeUser?.id === threadRow.userId ? "true" : undefined}
-                className={`block w-full border-b border-border-soft px-3 py-2.5 text-left last:border-0 hover:bg-panel-2 ${activeUser?.id === threadRow.userId ? "bg-panel-2" : ""}`}
+                className={`block w-full border-b border-border px-3 py-2.5 text-left last:border-0 hover:bg-accent/60 ${activeUser?.id === threadRow.userId ? "bg-muted" : ""}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className={`truncate text-xs ${threadRow.unread > 0 ? "font-semibold" : "font-medium"}`}>{threadRow.name ?? "Unnamed"}</span>
-                  <span className="shrink-0 text-(length:--term-text-2xs) text-text-faint tnum">{threadRow.lastMessageAt ? fmtDateTime(threadRow.lastMessageAt) : ""}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground tnum">{threadRow.lastMessageAt ? fmtDateTime(threadRow.lastMessageAt) : ""}</span>
                 </div>
-                <div className="truncate text-(length:--term-text-2xs) text-text-faint">
+                <div className="truncate text-xs text-muted-foreground">
                   {threadRow.email ?? "—"} · #{threadRow.accountNo ?? "—"}
-                  {threadRow.brandDomain && <span className="ml-1 rounded bg-brand-soft px-1 py-px text-(length:--term-text-2xs) font-semibold text-brand">{threadRow.brandDomain}</span>}
+                  {threadRow.brandDomain && <span className="ml-1 rounded bg-primary/10 px-1 py-px text-xs font-semibold text-primary">{threadRow.brandDomain}</span>}
                 </div>
                 <div className="mt-1 flex items-center gap-1.5">
                   <span
-                    className={`shrink-0 rounded px-1 py-px text-(length:--term-text-2xs) font-bold uppercase tracking-wide ${
-                      threadRow.status === "AWAITING_REPLY" ? "bg-brand/15 text-brand" : "bg-panel-3 text-text-muted"
+                    className={`shrink-0 rounded px-1 py-px text-xs font-bold uppercase tracking-wide ${
+                      threadRow.status === "AWAITING_REPLY" ? "bg-brand/15 text-primary" : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {threadRow.status === "AWAITING_REPLY" ? "Awaiting reply" : "Replied"}
                   </span>
                   {threadRow.unread > 0 && (
-                    <span className="shrink-0 rounded-full bg-brand px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-white">{threadRow.unread}</span>
+                    <span className="shrink-0 rounded-full bg-brand px-1.5 py-0.5 text-xs font-bold text-white">{threadRow.unread}</span>
                   )}
-                  <span className={`truncate text-(length:--term-text-2xs) ${threadRow.lastFromAdmin ? "text-text-muted" : "text-text font-medium"}`}>
+                  <span className={`truncate text-xs ${threadRow.lastFromAdmin ? "text-muted-foreground" : "text-foreground font-medium"}`}>
                     {threadRow.lastFromAdmin ? "You: " : ""}{threadRow.lastMessage || "(no messages)"}
                   </span>
                 </div>
@@ -309,23 +310,23 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
         <div className="flex h-144 flex-col">
           {activeUser ? (
             <>
-              <div className="flex items-start justify-between gap-2 border-b border-border-soft px-4 py-2.5">
+              <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-2.5">
                 <div className="min-w-0">
                   <div className="truncate text-xs font-semibold">{thread?.user ? (thread.user.name ?? thread.user.email ?? activeUser.label) : activeUser.label}</div>
                   {thread?.user && (
-                    <div className="truncate text-(length:--term-text-2xs) text-text-faint">{thread.user.email ?? "—"} · #{thread.user.accountNo ?? "—"}</div>
+                    <div className="truncate text-xs text-muted-foreground">{thread.user.email ?? "—"} · #{thread.user.accountNo ?? "—"}</div>
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setDeleteOpen(true)}
-                    className="text-(length:--term-text-2xs) font-medium text-down/80 hover:text-down hover:underline underline-offset-2"
+                    className="text-xs font-medium text-down/80 hover:text-down hover:underline underline-offset-2"
                     title="Permanently delete this conversation (audited)"
                   >
                     delete
                   </button>
-                  <button type="button" onClick={() => { setActiveUser(null); setThread(null); }} className="text-(length:--term-text-2xs) text-text-faint hover:text-text">close</button>
+                  <button type="button" onClick={() => { setActiveUser(null); setThread(null); }} className="text-xs text-muted-foreground hover:text-foreground">close</button>
                 </div>
               </div>
               <div
@@ -337,7 +338,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               >
                 {threadLoading && !thread && <div className="space-y-2" role="status" aria-label="Loading thread"><Skeleton className="h-8 w-2/3" /><Skeleton className="h-8 w-1/2" /><Skeleton className="h-8 w-3/4" /></div>}
                 {thread && thread.hasMore && (
-                  <button type="button" onClick={loadEarlier} className="mx-auto block text-(length:--term-text-2xs) hover:text-text">
+                  <button type="button" onClick={loadEarlier} className="mx-auto block text-xs hover:text-foreground">
                     Load earlier messages
                   </button>
                 )}
@@ -347,10 +348,10 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                   return (
                     <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                       <div className={`max-w-[80%] ${mine ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
-                        <span className={`px-1 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide ${mine ? "text-text-faint" : "text-text-muted"}`}>{label}</span>
-                        <div className={`rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${mine ? "bg-brand text-white" : "bg-panel-2 text-text"}`}>
+                        <span className={`px-1 text-xs font-semibold uppercase tracking-wide ${mine ? "text-muted-foreground" : "text-muted-foreground"}`}>{label}</span>
+                        <div className={`rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${mine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
                           {message.body}
-                          <div className={`mt-1 flex items-center justify-end gap-1.5 text-(length:--term-text-2xs) tnum ${mine ? "opacity-60" : "text-text-faint"}`}>
+                          <div className={`mt-1 flex items-center justify-end gap-1.5 text-xs tnum ${mine ? "opacity-60" : "text-muted-foreground"}`}>
                             <span>{fmtDateTime(message.createdAt)}</span>
                             {mine && <span aria-label={message.readAt ? "Read by customer" : "Not yet read"}>{message.readAt ? "✓ Read" : "✓ Sent"}</span>}
                           </div>
@@ -359,17 +360,17 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                     </div>
                   );
                 })}
-                {thread && thread.messages.length === 0 && <p className="py-8 text-center text-xs text-text-muted">No messages yet — send the first one.</p>}
+                {thread && thread.messages.length === 0 && <p className="py-8 text-center text-xs text-muted-foreground">No messages yet — send the first one.</p>}
                 <div ref={bottomRef} />
               </div>
               {threadError && (
-                <div role="alert" className="mx-4 mb-2 flex items-center justify-between gap-2 rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">
+                <div className="mx-4 mb-2"><Alert tone="err" className="flex items-center justify-between gap-2 text-xs">
                   <span>{threadError}</span>
                   <button type="button" onClick={() => activeUser && void loadThread(activeUser.id, limit)} className="shrink-0 font-medium underline underline-offset-2">Retry</button>
-                </div>
+                </Alert></div>
               )}
-              <form onSubmit={send} className="flex items-end gap-2 border-t border-border-soft p-3">
-                <textarea
+              <form onSubmit={send} className="flex items-end gap-2 border-t border-border p-3">
+                <Textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => {
@@ -390,7 +391,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               </form>
             </>
           ) : (
-            <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-text-muted">
+            <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-muted-foreground">
               Select a conversation on the left, or start one from the Users tab.
             </div>
           )}
@@ -422,13 +423,13 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium" htmlFor="b-body">Message</label>
-            <textarea id="b-body" required minLength={3} maxLength={2000} rows={5} value={bBody} onChange={(e) => setBBody(e.target.value)} />
+            <Textarea id="b-body" required minLength={3} maxLength={2000} rows={5} value={bBody} onChange={(e) => setBBody(e.target.value)} placeholder="Message every customer will receive…" />
           </div>
-          {bError && <p role="alert" className="rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">{bError}</p>}
-          {bResult && <p role="status" className="rounded border border-up/40 bg-up/10 px-3 py-2 text-xs text-up">{bResult}</p>}
+          {bError && <Alert tone="err">{bError}</Alert>}
+          {bResult && <Alert tone="ok">{bResult}</Alert>}
           <div className="flex justify-end gap-2">
             <Button type="button" size="sm" disabled={bBusy} onClick={() => setBroadcastOpen(false)}>Close</Button>
-            <button type="submit" disabled={bBusy} className="rounded bg-brand px-3 py-2 text-xs text-white disabled:opacity-50">{bBusy ? "Sending…" : "Send broadcast"}</button>
+            <Button type="submit" size="sm" loading={bBusy} loadingLabel="Sending"><Send size={13} strokeWidth={2} aria-hidden /> Send broadcast</Button>
           </div>
         </form>
       </Dialog>

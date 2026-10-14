@@ -1,6 +1,9 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Ban, ChevronDown, ChevronUp, ClipboardCheck, ShieldCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
 import { useCommandDialog } from "@/components/ui/useCommandDialog";
@@ -141,9 +144,9 @@ export function PaymentsReview({
       <div className="flex items-center justify-between">
         <div>
           <h2 id="payments-heading" className="text-sm font-semibold">Manual payment queue</h2>
-          <p className="text-xs text-text-muted">{reviewPolicy}</p>
+          <p className="text-xs text-muted-foreground">{reviewPolicy}</p>
         </div>
-        <span className="rounded bg-panel-2 px-2 py-1 text-xs text-text-muted">{requests.length} Total</span>
+        <span className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">{requests.length} Total</span>
       </div>
       {error && <div role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error}</div>}
       <div className="flex flex-wrap items-center gap-2">
@@ -162,69 +165,69 @@ export function PaymentsReview({
           disabled={filtered.length === 0}
         />
       </div>
-      <div className="overflow-x-auto rounded-lg border border-border bg-canvas">
-        <table className="w-full min-w-225 text-left text-xs">
-          <thead className="sticky top-0 z-10 bg-panel-2 text-text-muted">
-            <tr>
-              <th className="w-8 px-2 py-2 font-medium" aria-label="Expand details" />
-              <th className="px-3 py-2 font-medium">Created</th><th className="px-3 py-2 font-medium">Client</th>
-              <th className="px-3 py-2 font-medium">Type</th><th className="px-3 py-2 font-medium">Method</th>
-              <th className="px-3 py-2 font-medium text-right">Amount</th><th className="px-3 py-2 font-medium">Reference</th>
-              <th className="px-3 py-2 font-medium text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
+      <div className="overflow-hidden rounded-xl bg-card shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-8" aria-label="Expand details" />
+              <TableHead>Created</TableHead><TableHead>Client</TableHead>
+              <TableHead>Type</TableHead><TableHead>Method</TableHead>
+              <TableHead className="text-right">Amount</TableHead><TableHead>Reference</TableHead>
+              <TableHead className="text-right">Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {visibleRequests.map((item) => (
               <Fragment key={item.id}>
-                <tr className={expandedIds.has(item.id) ? "bg-panel-2/50" : undefined}>
-                  <td className="px-2 py-3">
+                <TableRow className={expandedIds.has(item.id) ? "bg-muted/50" : undefined}>
+                  <TableCell className="px-2 py-3">
                     {item.methodDetails && (
                       <button
                         type="button"
                         onClick={() => toggleExpanded(item.id)}
                         aria-expanded={expandedIds.has(item.id)}
                         aria-label={expandedIds.has(item.id) ? "Hide full payment details" : "Show full payment details"}
-                        className="rounded px-1.5 py-1 text-(length:--term-text-2xs) text-text-faint hover:bg-panel-3 hover:text-brand"
+                        className="rounded px-1.5 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-primary"
                       >
-                        {expandedIds.has(item.id) ? "▲" : "▼"}
+                        {expandedIds.has(item.id) ? <ChevronUp size={13} strokeWidth={2} aria-hidden /> : <ChevronDown size={13} strokeWidth={2} aria-hidden />}
                       </button>
                     )}
-                  </td>
-                  <td className="px-3 py-3 text-text-muted">{new Date(item.createdAt).toLocaleString()}</td>
-                  <td className="px-3 py-3"><div className="font-medium">{item.user.name ?? item.user.email ?? "Unknown"}</div><div className="text-text-faint">#{item.user.accountNo ?? "—"} · {item.user.verified ? "Verified" : "Unverified"}</div></td>
-                  <td className="px-3 py-3"><span className={`rounded px-1.5 py-0.5 ${item.type === "DEPOSIT" ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-warning-bg) text-(--term-warning-fg)"}`}>{item.type}</span></td>
-                  <td className="px-3 py-3"><div>{item.methodLabel}</div><div className="text-(length:--term-text-2xs) text-text-faint">{item.methodDetailsSummary ?? "Details unavailable"}</div></td>
-                  <td className="px-3 py-3 text-right font-semibold tnum">{item.asset} {item.amount}</td>
-                  <td className="px-3 py-3 text-text-muted">{item.userReference ?? "—"}</td>
-                  <td className="px-3 py-3">
+                  </TableCell>
+                  <TableCell className="px-3 py-3 text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</TableCell>
+                  <TableCell className="px-3 py-3"><div className="font-medium">{item.user.name ?? item.user.email ?? "Unknown"}</div><div className="text-muted-foreground">#{item.user.accountNo ?? "—"} · {item.user.verified ? "Verified" : "Unverified"}</div></TableCell>
+                  <TableCell className="px-3 py-3"><Badge variant="secondary" className={item.type === "DEPOSIT" ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-warning-bg) text-(--term-warning-fg)"}>{item.type}</Badge></TableCell>
+                  <TableCell className="px-3 py-3"><div>{item.methodLabel}</div><div className="text-xs text-muted-foreground">{item.methodDetailsSummary ?? "Details unavailable"}</div></TableCell>
+                  <TableCell className="px-3 py-3 text-right font-semibold tabular-nums">{item.asset} {item.amount}</TableCell>
+                  <TableCell className="px-3 py-3 text-muted-foreground">{item.userReference ?? "—"}</TableCell>
+                  <TableCell className="px-3 py-3">
                     <div className="flex justify-end gap-2">
-                      {item.status === "PENDING" && canPrepare && !simpleApproval && <Button size="sm" loading={busy === item.id} onClick={() => decide(item.id, "PREPARE")}>Prepare</Button>}
-                      {item.status === "PENDING" && simpleApproval && canApprove && <Button size="sm" loading={busy === item.id} onClick={() => decide(item.id, "APPROVE")}>Approve</Button>}
-                      {item.status === "AWAITING_APPROVAL" && canApprove && <Button size="sm" loading={busy === item.id} onClick={() => decide(item.id, "APPROVE")}>Approve</Button>}
-                      {canPrepare && <Button size="sm" variant="ghost" disabled={busy === item.id} onClick={() => decide(item.id, "REJECT")}>Reject</Button>}
-                      {!canPrepare && !canApprove && <span className="text-text-faint">Read only</span>}
+                      {item.status === "PENDING" && canPrepare && !simpleApproval && <Button size="sm" loading={busy === item.id} onClick={() => decide(item.id, "PREPARE")}><ClipboardCheck size={13} strokeWidth={2} aria-hidden /> Prepare</Button>}
+                      {item.status === "PENDING" && simpleApproval && canApprove && <Button size="sm" loading={busy === item.id} onClick={() => decide(item.id, "APPROVE")}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Approve</Button>}
+                      {item.status === "AWAITING_APPROVAL" && canApprove && <Button size="sm" loading={busy === item.id} onClick={() => decide(item.id, "APPROVE")}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Approve</Button>}
+                      {canPrepare && <Button size="sm" variant="outline" className="text-down" disabled={busy === item.id} onClick={() => decide(item.id, "REJECT")}><Ban size={13} strokeWidth={2} aria-hidden /> Reject</Button>}
+                      {!canPrepare && !canApprove && <span className="text-muted-foreground">Read only</span>}
                     </div>
-                    <div className="mt-1 text-right text-(length:--term-text-2xs) text-text-faint">
+                    <div className="mt-1 text-right text-xs text-muted-foreground">
                       {item.type === "DEPOSIT" && item.method !== "CARD"
                         ? `Proof: ${item.proofs.some((proof) => proof.status === "CLEAN") ? "clean" : "missing"}`
                         : item.methodDetailsSummary ?? item.beneficiarySummary ?? "Destination missing"}
                       {item.riskHoldUntil && new Date(item.riskHoldUntil) > new Date() ? " · cooling-off" : ""}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
                 {expandedIds.has(item.id) && item.methodDetails && (
-                  <tr className="bg-panel-2/30">
-                    <td colSpan={8} className="px-4 py-3">
-                      <p className="mb-2 text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">Full payment details</p>
+                  <TableRow className="bg-muted/30">
+                    <TableCell colSpan={8} className="px-4 py-3">
+                      <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Full payment details</p>
                       <MethodDetailsGrid details={item.methodDetails} />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
               </Fragment>
             ))}
-            {requests.length === 0 && <tr><td colSpan={8} className="px-3 py-10 text-center text-text-muted">No pending payment requests.</td></tr>}
-          </tbody>
-        </table>
+            {requests.length === 0 && <TableRow><TableCell colSpan={8} className="px-3 py-10 text-center text-muted-foreground">No pending payment requests.</TableCell></TableRow>}
+          </TableBody>
+        </Table>
         <Pagination page={safePage} pageSize={PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="payment requests" compact />
       </div>
       {commandDialog}

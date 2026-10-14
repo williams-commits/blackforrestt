@@ -103,7 +103,6 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
         rows={filtered}
         rowKey={(r) => r.id}
         leading={(r) => ({
-          icon: <span className="text-xs font-bold">{r.symbol.slice(0, 2)}</span>,
           tone: r.side === "BUY" ? "up" : "down",
           title: <SymbolLink symbol={r.symbol} />,
           secondary: `${r.type} · ${r.side} · ${r.volume.toFixed(2)} lots`,
@@ -281,12 +280,9 @@ function ExtremCard({ title, row, positive, emptyLabel = "—" }: { title: strin
         <div className="text-sm font-medium text-muted-foreground">{title}</div>
         {row ? (
           <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <InstrumentIcon symbol={row.symbol} size={20} />
-              <div className="min-w-0">
-                <div className="text-sm font-medium"><SymbolLink symbol={row.symbol} /></div>
-                <div className="text-xs text-muted-foreground">{row.side} · {row.volume.toFixed(2)} lots</div>
-              </div>
+            <div className="min-w-0">
+              <div className="text-sm font-medium"><SymbolLink symbol={row.symbol} /></div>
+              <div className="text-xs text-muted-foreground">{row.side} · {row.volume.toFixed(2)} lots</div>
             </div>
             <div className={`text-lg font-semibold tabular-nums ${positive ? "text-up" : "text-down"}`}>{fmtSigned(row.netProfit)}</div>
           </div>

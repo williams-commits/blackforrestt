@@ -138,9 +138,9 @@ export function GlobalSearchPalette() {
       icon={<Search size={14} />}
       title="Search"
       description="Jump to an instrument — ⌘K from anywhere"
-      className="sm:max-w-md"
+      className="max-h-[85dvh] gap-0 p-0 sm:max-w-md"
     >
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="shrink-0 border-b py-2.5">
           <div className="relative">
             <Search

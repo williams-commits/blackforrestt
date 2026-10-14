@@ -78,7 +78,7 @@
   --secondary-foreground: var(--color-text);
   --muted: var(--color-panel-2);
   --muted-foreground: var(--color-text-muted);
-  --accent: var(--color-panel-3);
+  --accent: var(--color-panel-2);
   --accent-foreground: var(--color-text);
   --destructive: var(--color-down);
   /* market-ink is the shared readable-on-bright-fill foreground (white on
@@ -89,7 +89,8 @@
   --border: var(--color-border);
   --input: var(--color-border);
   --ring: var(--color-brand);
-  --popover: var(--color-panel);
+  /* Popovers ride on card elevation (CRM parity: popover = card, both themes). */
+  --popover: var(--color-canvas);
   --popover-foreground: var(--color-text);
   --card: var(--color-canvas);
   --card-foreground: var(--color-text);
@@ -131,22 +132,25 @@
 */
 html.dim {
   color-scheme: dark;
-  --color-canvas: #0e1116;
-  --color-panel: #161b22;
-  --color-panel-2: #1c232c;
-  --color-panel-3: #2a323d;
-  --color-border: #2a323d;
-  --color-border-soft: #222932;
+  /* CRM-parity neutral black: the same shadcn dark ramp the CRM uses
+     (0.145 app / 0.205 card / 0.269 muted), so dim surfaces match the CRM
+     exactly and the treatment carries cleanly into admin + terminal. */
+  --color-canvas: oklch(0.205 0 0);
+  --color-panel: oklch(0.145 0 0);
+  --color-panel-2: oklch(0.269 0 0);
+  --color-panel-3: oklch(0.32 0 0);
+  --color-border: oklch(1 0 0 / 8%);
+  --color-border-soft: oklch(1 0 0 / 6%);
   --color-up: #4cba6a;
   --color-down: #f15b5b;
   --color-brand: #fd9444;
   --color-brand-strong: #fd9444;
   --color-brand-ink: #0e1116;
   --color-market-ink: #0e1116;
-  --color-brand-soft: #3a2410;
-  --color-text: #e6edf3;
-  --color-text-muted: #9aa7b4;
-  --color-text-faint: #78828f;
+  --color-brand-soft: oklch(0.32 0 0);
+  --color-text: oklch(0.985 0 0);
+  --color-text-muted: oklch(0.752 0 0);
+  --color-text-faint: oklch(0.64 0 0);
   --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.45);
   --shadow-lift: 0 -10px 14px -14px rgba(0, 0, 0, 0.55);
@@ -506,8 +510,15 @@ html.dim .terminal-ui {
   color: var(--color-brand-ink);
 }
 .bg-up.text-white,
-.bg-down.text-white {
+.bg-down.text-white,
+.bg-destructive.text-white {
   color: var(--color-market-ink);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 }
 
 /* ── Account portal flat-tonal surface system ──────────────────────────────

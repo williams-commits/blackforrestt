@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 /** Account portal loading skeleton — sidebar navigation + content card. */
 export default function AccountLoading() {
   return (
-    <div className="min-h-dvh bg-canvas px-4 py-6">
+    <div className="min-h-dvh bg-panel px-4 py-6">
       <div className="mx-auto max-w-screen-2xl space-y-4">
         <Skeleton className="h-9 w-56" />
         <div className="grid gap-4 lg:grid-cols-[15rem_1fr]">

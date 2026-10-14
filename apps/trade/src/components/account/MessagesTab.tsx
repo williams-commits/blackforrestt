@@ -6,10 +6,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/Alert";
-import { MessageCircle, Send } from "lucide-react";
+import { ArrowRight, Headset, MessageCircle, Send } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { fmtDateTime } from "@/lib/dates";
+import { fmtAgo, fmtDateTime } from "@/lib/dates";
 
 interface MessageRow {
   id: string;
@@ -217,56 +218,103 @@ function OperatorInbox({ threads }: { threads: { threads: ThreadRow[]; totalUnre
   const awaiting = threads?.threads.filter((thread) => thread.status === "AWAITING_REPLY") ?? [];
   const recent = threads?.threads.slice(0, 6) ?? [];
   return (
-    <div className="rounded-xl bg-card">
-      <div className="border-b border-border px-4 py-3">
-        <h2 className="text-sm font-semibold">Support inbox</h2>
-        <p className="text-xs text-muted-foreground">
-          You&apos;re signed in as an operator. Customer conversations are handled from the Operations console — they never appear as your personal messages.
-        </p>
-      </div>
-      <div className="px-4 py-3">
-        <Button type="button" variant="default" size="sm" asChild>
-          <Link href="/admin" className="inline-flex items-center gap-2">
-            Open Operations console
-            {threads && threads.totalUnread > 0 && (
-              <Badge className="bg-card/25 text-white hover:bg-card/25">{threads.totalUnread} unread</Badge>
+    <div className="space-y-6">
+      {/* Overview */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Headset size={18} strokeWidth={1.75} aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <CardTitle>Support inbox</CardTitle>
+              <CardDescription>
+                You&apos;re signed in as an operator — customer conversations are owned by the team and handled from the Operations console.
+              </CardDescription>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            {awaiting.length > 0 && (
+              <Badge variant="secondary" className="bg-(--term-warning-bg) text-(--term-warning-fg)">{awaiting.length} awaiting reply</Badge>
             )}
-          </Link>
-        </Button>
-      </div>
-      {threads ? (
-        threads.threads.length === 0 ? (
-          <p className="border-t border-border px-4 py-6 text-center text-xs text-muted-foreground">No customer conversations yet.</p>
-        ) : (
-          <ul className="divide-y divide-border-soft border-t border-border" aria-label="Recent conversations">
-            {recent.map((thread) => (
-              <li key={thread.userId} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-xs font-medium">{thread.name ?? thread.email ?? thread.userId}</span>
-                    {thread.unread > 0 && (
-                      <Badge className="bg-primary px-1.5 py-0 text-xs">{thread.unread} new</Badge>
-                    )}
-                  </div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {thread.status === "AWAITING_REPLY" ? "Waiting for a reply" : "Replied"} · {thread.lastMessage || "—"}
-                  </div>
-                </div>
-                <span className="shrink-0 text-xs text-muted-foreground tnum">{thread.lastMessageAt ? fmtDateTime(thread.lastMessageAt) : ""}</span>
-              </li>
-            ))}
-          </ul>
-        )
-      ) : (
-        <p className="border-t border-border px-4 py-6 text-center text-xs text-muted-foreground">
-          Your role doesn&apos;t include support access — contact an administrator if you need it.
-        </p>
-      )}
-      {threads && awaiting.length > 0 && (
-        <p className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
-          {awaiting.length} conversation{awaiting.length === 1 ? "" : "s"} waiting for a reply.
-        </p>
-      )}
+            {threads && threads.totalUnread > 0 && (
+              <Badge className="bg-primary text-primary-foreground">{threads.totalUnread} unread</Badge>
+            )}
+            {awaiting.length === 0 && (!threads || threads.totalUnread === 0) && (
+              <Badge variant="secondary" className="bg-(--term-success-bg) text-(--term-success-fg)">All caught up</Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Button type="button" variant="default" size="sm" asChild>
+            <Link href="/admin" className="inline-flex items-center gap-2">
+              Open Operations console
+              <ArrowRight size={13} strokeWidth={2} aria-hidden />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Recent conversations */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent conversations</CardTitle>
+          <CardDescription>Newest activity first.</CardDescription>
+        </CardHeader>
+        <CardContent className="px-0 pb-0">
+          {threads == null ? (
+            <div className="flex flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+              <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <MessageCircle size={18} strokeWidth={1.75} aria-hidden />
+              </div>
+              <p className="text-sm font-medium">No support access</p>
+              <p className="text-xs text-muted-foreground">Your role doesn&apos;t include support access — contact an administrator if you need it.</p>
+            </div>
+          ) : threads.threads.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+              <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <MessageCircle size={18} strokeWidth={1.75} aria-hidden />
+              </div>
+              <p className="text-sm font-medium">No customer conversations yet</p>
+            </div>
+          ) : (
+            <ul className="space-y-1 px-3 pb-3">
+              {recent.map((thread) => {
+                const waiting = thread.status === "AWAITING_REPLY";
+                return (
+                  <li key={thread.userId}>
+                    <Link
+                      href="/admin"
+                      className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-muted/50"
+                    >
+                      <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${waiting ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-muted text-muted-foreground"}`}>
+                        {(thread.name ?? thread.email ?? thread.userId)[0]?.toUpperCase()}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-medium">{thread.name ?? thread.email ?? thread.userId}</span>
+                          {thread.unread > 0 && (
+                            <Badge className="bg-primary px-1.5 text-xs">{thread.unread} new</Badge>
+                          )}
+                        </div>
+                        <p className="truncate text-xs text-muted-foreground">{thread.lastMessage || "—"}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <Badge variant="secondary" className={waiting ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-(--term-success-bg) text-(--term-success-fg)"}>
+                          {waiting ? "Awaiting reply" : "Replied"}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {thread.lastMessageAt ? fmtAgo(thread.lastMessageAt) : ""}
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

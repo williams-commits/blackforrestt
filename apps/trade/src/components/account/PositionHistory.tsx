@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { InstrumentView } from "@/lib/types";
 import { CsvExportButton } from "@/components/ui/CsvExport";
-import { SymbolLink } from "@/components/trade/SymbolLink";
+
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { fmtDateTime } from "@/lib/dates";
 import { CandlestickChart } from "lucide-react";
@@ -92,7 +92,7 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
       leading={(r) => ({
         icon: <InstrumentIcon symbol={r.symbol} size={20} />,
         tone: r.side === "BUY" ? "up" : "down",
-        title: <SymbolLink symbol={r.symbol} />,
+        title: r.symbol,
         secondary: <span>{r.type} · <span className={r.side === "BUY" ? "text-up" : "text-down"}>{r.side}</span> · {r.volume.toFixed(2)} lots</span>,
       })}
       columns={[

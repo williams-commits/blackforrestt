@@ -471,7 +471,7 @@ export function AccountShell(props: Props) {
       {/* Mobile grouped-section sheet */}
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
         <SheetContent side="left" className="w-80 gap-0 overflow-y-auto p-0 sm:max-w-none">
-          <SheetHeader className="border-b border-border-soft pb-3 pt-4">
+          <SheetHeader className="border-b pb-3 pt-4">
             <SheetTitle>Account sections</SheetTitle>
             <SheetDescription>Jump to any part of your account.</SheetDescription>
           </SheetHeader>

@@ -111,32 +111,14 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
   }
 
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="space-y-6">
       <StatusBanner status={status} kyc={kyc} />
-      <Card>
-        <CardHeader className="gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <CardTitle id="verification-checklist-heading">Verification checklist</CardTitle>
-            <span className="text-xs font-semibold tnum text-muted-foreground">{progress}% complete</span>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Verification progress">
-            <div className={`h-full rounded-full transition-all ${progress === 100 ? "bg-up" : "bg-brand"}`} style={{ width: `${progress}%` }} />
-          </div>
-          <ol className="mt-4 space-y-1.5">
-            <ChecklistItem complete={status !== "NOT_SUBMITTED"} label="Identity and address details submitted" />
-            <ChecklistItem complete={checklist.cleanIdentityDocuments > 0} label={`Identity document verified (${checklist.cleanIdentityDocuments})`} />
-            <ChecklistItem complete={checklist.cleanAddressDocuments > 0} label={`Proof of address verified (${checklist.cleanAddressDocuments})`} />
-            <ChecklistItem complete={noScanIssues} label={hasDocuments ? "No document scan issues outstanding" : "Upload documents for scanning"} />
-            <ChecklistItem complete={status === "APPROVED"} label="Compliance review approved" />
-          </ol>
-        </CardContent>
-      </Card>
 
-      <KycDocuments />
-
-      {status === "NOT_SUBMITTED" || status === "REJECTED" ? (
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {/* Main column — the current action: submit (or re-submit) for
+            unverified accounts; the submitted identity summary otherwise. */}
+        <div className="min-w-0 space-y-6">
+          {status === "NOT_SUBMITTED" || status === "REJECTED" ? (
         <Card>
           <CardHeader>
             <CardTitle>
@@ -221,30 +203,76 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
         </Card>
       ) : null}
 
-      {status === "PENDING" && kyc && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Submitted details</CardTitle>
-            <CardDescription>Under compliance review — this is what we received.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
-              <SummaryRow label="Name" value={[kyc.firstName, kyc.lastName].filter(Boolean).join(" ")} />
-              <SummaryRow label="Document type" value={kyc.docType ?? "—"} />
-            </dl>
-          </CardContent>
-        </Card>
-      )}
+          {status === "PENDING" && kyc && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Submitted details</CardTitle>
+                <CardDescription>Under compliance review — this is what we received.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-2.5 text-sm">
+                  <SummaryRow label="Name" value={[kyc.firstName, kyc.lastName].filter(Boolean).join(" ")} />
+                  <SummaryRow label="Document type" value={kyc.docType ?? "—"} />
+                  <SummaryRow label="Submitted" value={kyc.submittedAt ? new Date(kyc.submittedAt).toLocaleString("en-US") : "—"} />
+                </dl>
+              </CardContent>
+            </Card>
+          )}
 
+          {status === "APPROVED" && kyc && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Verified identity</CardTitle>
+                <CardDescription>Your compliance record on file.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-2.5 text-sm">
+                  <SummaryRow label="Name" value={[kyc.firstName, kyc.lastName].filter(Boolean).join(" ")} />
+                  <SummaryRow label="Document type" value={kyc.docType ?? "—"} />
+                  <SummaryRow label="Submitted" value={kyc.submittedAt ? new Date(kyc.submittedAt).toLocaleDateString("en-US") : "—"} />
+                  <SummaryRow label="Approved" value={kyc.reviewedAt ? new Date(kyc.reviewedAt).toLocaleDateString("en-US") : "—"} />
+                </dl>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Aside — verification progress; sticky on desktop so it stays
+            visible while the (long) form or summary scrolls. */}
+        <aside className="lg:sticky lg:top-20 lg:self-start">
+          <Card>
+            <CardHeader className="gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle id="verification-checklist-heading">Verification checklist</CardTitle>
+                <span className="text-xs font-semibold tnum text-muted-foreground">{progress}% complete</span>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Verification progress">
+                <div className={`h-full rounded-full transition-all ${progress === 100 ? "bg-up" : "bg-brand"}`} style={{ width: `${progress}%` }} />
+              </div>
+              <ol className="mt-4 space-y-1.5">
+                <ChecklistItem complete={status !== "NOT_SUBMITTED"} label="Identity and address details submitted" />
+                <ChecklistItem complete={checklist.cleanIdentityDocuments > 0} label={`Identity document verified (${checklist.cleanIdentityDocuments})`} />
+                <ChecklistItem complete={checklist.cleanAddressDocuments > 0} label={`Proof of address verified (${checklist.cleanAddressDocuments})`} />
+                <ChecklistItem complete={noScanIssues} label={hasDocuments ? "No document scan issues outstanding" : "Upload documents for scanning"} />
+                <ChecklistItem complete={status === "APPROVED"} label="Compliance review approved" />
+              </ol>
+            </CardContent>
+          </Card>
+        </aside>
+      </div>
+
+      <KycDocuments />
     </div>
   );
 }
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between border-b border-border last:border-0">
+    <div className="flex items-center justify-between gap-4 rounded-lg px-3 py-2 transition-colors hover:bg-muted/40">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-medium">{value || "—"}</dd>
+      <dd className="font-medium tabular-nums">{value || "—"}</dd>
     </div>
   );
 }

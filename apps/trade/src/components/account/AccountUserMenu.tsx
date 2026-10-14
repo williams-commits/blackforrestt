@@ -53,7 +53,7 @@ export function AccountUserMenu({
               </span>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64 rounded-xl bg-canvas p-0 text-xs shadow-xl">
+          <DropdownMenuContent align="end" className="w-64 rounded-xl bg-card p-0 text-xs shadow-xl">
             <div className="border-b border-border bg-muted/60 px-4 py-3">
               <div className="truncate text-xs font-semibold">{displayName}</div>
               <div className="truncate text-xs text-muted-foreground">{email}</div>

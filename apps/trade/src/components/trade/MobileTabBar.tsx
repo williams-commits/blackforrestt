@@ -72,12 +72,10 @@ function MobileTabBarInner() {
   };
 
   const navItems = [
+    { href: "/account", label: "Account", Icon: User, active: onAccount && !positionsActive },
     { href: "/markets", label: "Markets", Icon: CandlestickChart, active: pathname === "/markets" },
     { href: "/account?tab=positions", label: "Positions", Icon: Activity, active: positionsActive },
   ];
-  const rightItems = [
-    { href: "/account", label: "Account", Icon: User, active: onAccount && !positionsActive },
-    ];
 
   const navLink = (item: { href: string; label: string; Icon: typeof User; active: boolean }) => (
     <Link
@@ -122,9 +120,6 @@ function MobileTabBarInner() {
             <span className="text-(length:--term-text-2xs) font-semibold text-brand">Trade</span>
           </button>
         </li>
-        {rightItems.map((item) => (
-          <li key={item.label}>{navLink(item)}</li>
-        ))}
       </ul>
     </nav>
   );

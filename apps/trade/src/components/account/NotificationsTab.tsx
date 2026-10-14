@@ -10,6 +10,7 @@ import { ChipGroup } from "@/components/ui/ChipGroup";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";
+import { notificationMeta, notificationTileClass } from "@/lib/notificationMeta";
 
 interface NotificationRow {
   id: string;
@@ -137,7 +138,7 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
         <CardDescription>Your full notification history — available whenever you sign in.</CardDescription>
         <div className="flex flex-wrap items-center gap-2 pt-1">
           <ChipGroup
-            ariaLabel="Filter notifications by category"
+            ariaLabel="Filter notifications by category" className="flex-wrap"
             value={group}
             onChange={(value) => { setGroup(value); setPage(1); setAccumulated([]); }}
             options={Object.entries(GROUP_LABELS).map(([key, label]) => ({
@@ -190,16 +191,24 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
                       item.readAt ? "bg-card" : "bg-primary/10"
                     }`}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${TYPE_TONES[item.type] ?? "bg-muted text-muted-foreground"}`}>
-                          {item.type.replaceAll("_", " ").toLowerCase()}
+                    <div className="flex items-start gap-3">
+                      <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${notificationTileClass(item.type)}`}>
+                        {(() => { const M = notificationMeta(item.type); return <M.icon size={15} strokeWidth={2} aria-hidden />; })()}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span className="truncate text-sm font-medium">{item.title}</span>
+                            {!item.readAt && <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label="New" />}
+                          </span>
+                          <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{fmtAgo(item.createdAt)}</span>
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.body}</p>
+                        <span className={`mt-1.5 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${TYPE_TONES[item.type] ?? "bg-muted text-muted-foreground"}`}>
+                          {notificationMeta(item.type).label}
                         </span>
-                        <span className="truncate text-sm font-medium">{item.title}</span>
                       </div>
-                      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{fmtAgo(item.createdAt)}</span>
                     </div>
-                    <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.body}</p>
                   </button>
                 </li>
               ))}
@@ -225,9 +234,12 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
       >
         {selected && (
           <div className="space-y-4 px-5 py-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className={`flex size-9 items-center justify-center rounded-full ${notificationTileClass(selected.type)}`}>
+                {(() => { const M = notificationMeta(selected.type); return <M.icon size={15} strokeWidth={2} aria-hidden />; })()}
+              </span>
               <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${TYPE_TONES[selected.type] ?? "bg-muted text-muted-foreground"}`}>
-                {selected.type.replaceAll("_", " ").toLowerCase()}
+                {notificationMeta(selected.type).label}
               </span>
               {!selected.readAt && <span className="text-xs font-semibold text-primary">● unread</span>}
             </div>

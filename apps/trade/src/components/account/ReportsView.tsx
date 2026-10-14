@@ -173,7 +173,7 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
                   </SelectContent>
                 </Select>
                 <ChipGroup
-                  ariaLabel="Filter by side"
+                  ariaLabel="Filter by side" className="flex-wrap"
                   value={side}
                   onChange={setLocalSide}
                   options={[
@@ -211,6 +211,9 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
           { label: "Opened", value: fmtDateTime(r.openedAt) },
           { label: "Closed", value: fmtDateTime(r.closedAt) },
         ]}
+        mobilePrimary={(r) => (
+          <span className={up(r) ? "text-up" : "text-down"}>{fmtSigned(r.netProfit)}</span>
+        )}
         emptyTitle="No closed trades match these filters."
       />
 

@@ -8,6 +8,7 @@ import { useForexStore } from "@/lib/store";
 import { GlobalSearchPalette } from "@/components/GlobalSearchPalette";
 import type { BrandProfile } from "@/lib/branding";
 import { Toaster } from "@/components/ui/sonner";
+import { NotificationToastBridge } from "@/components/NotificationToastBridge";
 
 /** Client fallback when no provider is mounted (defensive — the root layout
  *  always resolves the per-domain brand server-side and passes it down). */
@@ -106,6 +107,7 @@ export function Providers({ children, brand }: { children: React.ReactNode; bran
         <QueryClientProvider client={client}>
           <AccountRealtimeBridge />
           <Toaster />
+          <NotificationToastBridge />
           <GlobalSearchPalette />
           {children}
         </QueryClientProvider>

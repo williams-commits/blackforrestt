@@ -121,7 +121,7 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
       filters={
         <>
           <ChipGroup
-            ariaLabel="Filter positions by status"
+            ariaLabel="Filter positions by status" className="flex-wrap"
             value={statusFilter}
             onChange={(value) => setStatusFilter(value)}
             options={[
@@ -170,6 +170,11 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
         <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => router.push(`/trade/${r.symbol}`)}>
           <CandlestickChart size={14} strokeWidth={2} aria-hidden /> Open in terminal
         </Button>
+      )}
+      mobilePrimary={(r) => (
+        <span className={profitable(r) ? "text-up" : "text-down"}>
+          {profitable(r) ? "+" : ""}{r.netProfit.toFixed(2)}
+        </span>
       )}
       emptyTitle="No positions match the current filters."
       emptyHint="Adjust the status or symbol filters to see more."

@@ -289,6 +289,32 @@ async function main() {
     ] });
   }
 
+  // ── Notifications (feed + toast-bridge showcase; mixed read state) ────────
+  await prisma.notification.deleteMany({ where: { userId, title: { startsWith: "SEED:" } } });
+  const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000);
+  const notifSeed = [
+    { type: "TRADE_OPENED", title: "SEED: Trade opened", body: "Buy 1.00 EURUSD at 1.08423.", createdAt: hoursAgo(26), read: true },
+    { type: "TRADE_CLOSED", title: "SEED: XAUUSD closed +878.60", body: "Sell 0.50 XAUUSD closed by manual close at 2641.80.", createdAt: hoursAgo(20), read: true },
+    { type: "PAYMENT_APPROVED", title: "SEED: Deposit approved", body: "Your bank transfer deposit of 5000.00 USD was approved.", createdAt: hoursAgo(48), read: true },
+    { type: "PAYMENT_PREPARED", title: "SEED: Withdrawal in review", body: "Your 800.00 USDT withdrawal is awaiting finance review.", createdAt: hoursAgo(5), read: false },
+    { type: "PAYMENT_PREPARED", title: "SEED: Card deposit pending", body: "Card deposit of 2000.00 USD submitted for processing.", createdAt: hoursAgo(2), read: false },
+    { type: "ADMIN_MESSAGE", title: "SEED: New message from support", body: "Our team replied to your conversation.", createdAt: hoursAgo(1), read: false },
+    { type: "ACCOUNT_STATUS", title: "SEED: KYC under review", body: "Your identity submission is being reviewed by compliance.", createdAt: hoursAgo(30), read: true },
+  ];
+  for (const n of notifSeed) {
+    await prisma.notification.create({
+      data: {
+        userId,
+        type: n.type,
+        title: n.title,
+        body: n.body,
+        readAt: n.read ? hoursAgo(1) : null,
+        toastedAt: n.read ? hoursAgo(1) : null,
+        createdAt: n.createdAt,
+      },
+    });
+  }
+
   // ── Account metrics (coherent with the seeded wallet/positions) ─────────
   const floating = openPositions.reduce((s, p) => s + p.profit + p.swap - p.commission - p.tradingCommission, 0);
   const balance = 24_350 + 500; // free + locked

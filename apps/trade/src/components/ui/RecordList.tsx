@@ -178,7 +178,7 @@ export function RecordList<T>({
         <CardTitle>{title}</CardTitle>
         {description != null && <CardDescription>{description}</CardDescription>}
         {(search || filters || toolbarEnd) && (
-          <div className="flex flex-wrap items-center gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-2.5 pt-1 [&>*]:min-w-0">
             {search && (
               <div className="relative w-full sm:w-64">
                 <Search size={14} strokeWidth={2} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />

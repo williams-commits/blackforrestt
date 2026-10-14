@@ -237,7 +237,7 @@ export function PaymentTimeline() {
         filters={
           <>
             <ChipGroup
-              ariaLabel="Filter payment requests by type"
+              ariaLabel="Filter payment requests by type" className="flex-wrap"
               value={typeFilter}
               onChange={(value) => setTypeFilter(value)}
               options={[

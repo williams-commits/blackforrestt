@@ -130,7 +130,7 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
         filters={
           <>
             <ChipGroup
-              ariaLabel="Filter transactions by status"
+              ariaLabel="Filter transactions by status" className="flex-wrap"
               value={statusFilter}
               onChange={(value) => setStatusFilter(value)}
               options={[

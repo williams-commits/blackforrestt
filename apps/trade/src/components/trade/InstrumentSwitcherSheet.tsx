@@ -16,10 +16,13 @@ export function InstrumentSwitcherSheet({
   open,
   onOpenChange,
   activeSymbol,
+  onSelect,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   activeSymbol: string;
+  /** In-place selection — switching no longer navigates. */
+  onSelect?: (symbol: string) => void;
 }) {
   const pathname = usePathname();
   // Navigating to the picked instrument changes the route — close the sheet.
@@ -39,7 +42,7 @@ export function InstrumentSwitcherSheet({
           <SheetDescription>Search or pick a market to load its chart.</SheetDescription>
         </SheetHeader>
         <div className="flex min-h-0 flex-1 flex-col">
-          <InstrumentSelector activeSymbol={activeSymbol} />
+          <InstrumentSelector activeSymbol={activeSymbol} onSelect={onSelect} />
         </div>
       </SheetContent>
     </Sheet>

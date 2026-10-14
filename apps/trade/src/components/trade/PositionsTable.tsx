@@ -140,8 +140,9 @@ function makeCloseHandler(busy: string | null, setBusy: (v: string | null) => vo
         `Position closed at market. Realized P/L ${profit >= 0 ? "+" : "−"}${Math.abs(profit).toFixed(2)} USD.`,
       );
     } else {
-      const ev = new CustomEvent("blckforest:toast", { detail: { type: "error", message: result.error ? `${position.symbol}: ${result.error}` : `Failed to close ${position.symbol}. Try again or contact support.` } });
-      window.dispatchEvent(ev);
+      toast.error(
+        result.error ? `${position.symbol}: ${result.error}` : `Failed to close ${position.symbol}. Try again or contact support.`,
+      );
     }
   };
 }

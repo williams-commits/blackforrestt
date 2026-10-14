@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownToLine, ArrowUpFromLine, FileText, LogOut, Settings, Shield, Sun, User } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, LogOut, Settings, Shield, Sun, User } from "lucide-react";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -189,7 +189,6 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
 
             <MenuGroupLabel>Account</MenuGroupLabel>
             <MenuLink href="/account" icon={<AccountIcon />} label="My Account" />
-            <MenuLink href="/reports" icon={<ReportsIcon />} label="Trade Reports" />
             <MenuLink href="/account?tab=settings" icon={<SettingsIcon />} label="Settings" />
             {session?.user?.role === "admin" && (
               <>
@@ -320,9 +319,6 @@ function WithdrawIcon() {
 }
 function AccountIcon() {
   return <User size={14} strokeWidth={2} aria-hidden className={ic} />;
-}
-function ReportsIcon() {
-  return <FileText size={14} strokeWidth={2} aria-hidden className={ic} />;
 }
 function SettingsIcon() {
   return <Settings size={14} strokeWidth={2} aria-hidden className={ic} />;

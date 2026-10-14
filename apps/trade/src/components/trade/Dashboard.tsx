@@ -50,7 +50,30 @@ export function Dashboard({
   const interval = useForexStore((state) => state.interval);
   const setInterval = useForexStore((state) => state.setInterval);
   const applyInstruments = useForexStore((state) => state.applyInstruments);
-  const { status } = useForexSocket(instrument.symbol, interval);
+  const storeInstruments = useForexStore((state) => state.instruments);
+
+  // In-place instrument switching: the route symbol seeds the workspace, but
+  // selecting another instrument only swaps market data (store resubscribes)
+  // — same view, preserved dock/watchlist state, no navigation. The URL is
+  // silently replaced so refresh/share/deep links keep working.
+  const [activeSymbol, setActiveSymbol] = useState(instrument.symbol);
+  const activeInstrument =
+    storeInstruments.find((i) => i.symbol.toUpperCase() === activeSymbol.toUpperCase()) ??
+    instruments.find((i) => i.symbol.toUpperCase() === activeSymbol.toUpperCase()) ??
+    instrument;
+  const { status } = useForexSocket(activeInstrument.symbol, interval);
+
+  const switchInstrument = (symbol: string) => {
+    if (symbol === activeInstrument.symbol) return;
+    setActiveSymbol(symbol);
+    setSwitcherOpen(false);
+    try {
+      const url = new URL(window.location.href);
+      url.pathname = `/trade/${symbol}`;
+      url.searchParams.delete("tf");
+      window.history.replaceState(null, "", url.toString());
+    } catch { /* non-critical */ }
+  };
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [mobileOrderOpen, setMobileOrderOpen] = useState(false);
   const [watchlistOpen, setWatchlistOpen] = useState(true);
@@ -72,8 +95,8 @@ export function Dashboard({
 
   // The mobile tab bar's Trade destination returns to the live symbol.
   useEffect(() => {
-    rememberMobileSymbol(instrument.symbol);
-  }, [instrument.symbol]);
+    rememberMobileSymbol(activeInstrument.symbol);
+  }, [activeInstrument.symbol]);
 
   // Center Trade action: on the chart it opens the ticket in place; arriving
   // from another screen (flag set by the tab bar) opens it on mount.
@@ -128,7 +151,8 @@ export function Dashboard({
           {watchlistOpen ? (
             <div className="flex h-full flex-col bg-panel">
               <InstrumentSelector
-                activeSymbol={instrument.symbol}
+                activeSymbol={activeInstrument.symbol}
+                onSelect={switchInstrument}
                 headerAction={
                   <button
                     type="button"
@@ -162,7 +186,7 @@ export function Dashboard({
           tabIndex={-1}
           className="relative min-h-75 p-1 sm:min-h-100 md:min-h-0"
         >
-          <ChartPanel instrument={instrument} onSwitchInstrument={() => setSwitcherOpen(true)} />
+          <ChartPanel instrument={activeInstrument} onSwitchInstrument={() => setSwitcherOpen(true)} />
         </main>
 
         {/* Order column — live market context above the ticket; hidden on
@@ -170,7 +194,7 @@ export function Dashboard({
         <aside className="hidden min-h-0 flex-col bg-panel md:flex">
           <MarketMarkers instrument={instrument} />
           <div className="min-h-0 flex-1">
-            <TradePanel instrument={instrument} onSwitchInstrument={() => setSwitcherOpen(true)} />
+            <TradePanel instrument={activeInstrument} onSwitchInstrument={() => setSwitcherOpen(true)} />
           </div>
         </aside>
       </div>
@@ -191,11 +215,11 @@ export function Dashboard({
           className="top-0 h-dvh gap-0 rounded-none p-0 md:hidden sm:max-w-none"
         >
           <SheetHeader className="border-b border-border-soft pb-2 pt-3">
-            <SheetTitle>Trade {instrument.symbol}</SheetTitle>
+            <SheetTitle>Trade {activeInstrument.symbol}</SheetTitle>
             <SheetDescription>Review the order details before submitting.</SheetDescription>
           </SheetHeader>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <TradePanel instrument={instrument} onSwitchInstrument={() => setSwitcherOpen(true)} />
+            <TradePanel instrument={activeInstrument} onSwitchInstrument={() => setSwitcherOpen(true)} />
           </div>
         </SheetContent>
       </Sheet>
@@ -205,7 +229,8 @@ export function Dashboard({
       <InstrumentSwitcherSheet
         open={switcherOpen}
         onOpenChange={setSwitcherOpen}
-        activeSymbol={instrument.symbol}
+        activeSymbol={activeInstrument.symbol}
+        onSelect={switchInstrument}
       />
     </div>
   );

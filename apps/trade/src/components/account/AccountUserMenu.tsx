@@ -1,6 +1,6 @@
 "use client";
 
-import { CandlestickChart, ChevronDown, FileText, LogOut, Settings, User } from "lucide-react";
+import { CandlestickChart, ChevronDown, LogOut, Settings, User } from "lucide-react";
 
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import {
@@ -61,7 +61,6 @@ export function AccountUserMenu({
             <div className="p-1">
               <AccountMenuLink href="/account" label="My account" icon={<User size={14} strokeWidth={1.75} aria-hidden />} />
               <AccountMenuLink href="/trade/AUDCAD" label="Trading terminal" icon={<CandlestickChart size={14} strokeWidth={1.75} aria-hidden />} />
-              <AccountMenuLink href="/reports" label="Trade reports" icon={<FileText size={14} strokeWidth={1.75} aria-hidden />} />
               {isAdmin && <AccountMenuLink href="/admin" label="Admin console" icon={<Settings size={14} strokeWidth={1.75} aria-hidden />} />}
             </div>
             <div className="border-t border-border p-1">

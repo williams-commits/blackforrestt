@@ -11,7 +11,7 @@ import type { InstrumentView } from "@/lib/types";
 import { ADDRESS_DOCUMENT_TYPES, IDENTITY_DOCUMENT_TYPES } from "@/lib/kyc";
 import { resolveUserSettings } from "@/server/userSettings";
 import { adminMessageThreads, countUnreadDirectMessages } from "@/server/adminUserManagement";
-import { CandlestickChart, FileText, User } from "lucide-react";
+import { CandlestickChart, User } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -159,16 +159,12 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <Logo />
         {/* Inline section nav is desktop-only (lg+). Phones and tablets use
             the Stage-4 bottom navigation (Markets / Trade / Positions /
-            Account); Reports is reachable there via the account shell's
-            Reports tab and the standalone /reports page (both carry the
-            bottom bar). */}
+            Account); reports live in the account shell's Reports tab. */}
         <nav className="order-3 hidden lg:flex w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 sm:w-auto">
           <Link href="/trade/AUDCAD" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground">
             <CandlestickChart size={14} strokeWidth={2} aria-hidden /> Trade Terminal</Link>
           <Link href="/account" aria-current="page" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 font-semibold text-foreground">
             <User size={14} strokeWidth={2} aria-hidden /> Account</Link>
-          <Link href="/reports" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground">
-            <FileText size={14} strokeWidth={2} aria-hidden /> Reports</Link>
         </nav>
         <TradeSearchButton className="ml-auto lg:ml-0" />
         <AccountUserMenu

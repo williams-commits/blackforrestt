@@ -5,9 +5,9 @@ import { SessionProvider, useSession } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { socket, type ServerMessage } from "@/lib/ws/client";
 import { useForexStore } from "@/lib/store";
-import { ToastNotifications } from "@/components/ui/ToastNotifications";
 import { GlobalSearchPalette } from "@/components/GlobalSearchPalette";
 import type { BrandProfile } from "@/lib/branding";
+import { Toaster } from "@/components/ui/sonner";
 
 /** Client fallback when no provider is mounted (defensive — the root layout
  *  always resolves the per-domain brand server-side and passes it down). */
@@ -105,7 +105,7 @@ export function Providers({ children, brand }: { children: React.ReactNode; bran
       <SessionProvider>
         <QueryClientProvider client={client}>
           <AccountRealtimeBridge />
-          <ToastNotifications />
+          <Toaster />
           <GlobalSearchPalette />
           {children}
         </QueryClientProvider>

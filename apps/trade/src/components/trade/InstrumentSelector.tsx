@@ -10,6 +10,8 @@ import type { InstrumentCategory, InstrumentView } from "@/lib/types";
 import { Input } from "@/components/ui/Input";
 
 interface Props {
+  /** In-place selection (terminal): switch instrument without navigation. */
+  onSelect?: (symbol: string) => void;
   activeSymbol: string;
   /** Optional control rendered at the right of the header strip (the rail's
    *  collapse toggle in the desktop workstation). */
@@ -29,7 +31,7 @@ const FAVORITES_KEY = "blckforest:watchlist-favorites";
 /** Left rail: searchable, category-grouped watchlist of the live instrument
  *  list (store — hydrated from the server list, refreshed by the socket).
  *  Rows can be starred into a pinned Favorites group (persisted locally). */
-export function InstrumentSelector({ activeSymbol, headerAction }: Props) {
+export function InstrumentSelector({ activeSymbol, onSelect, headerAction }: Props) {
   const router = useRouter();
   const instruments = useForexStore((s) => s.instruments);
   const [query, setQuery] = useState("");
@@ -91,7 +93,7 @@ export function InstrumentSelector({ activeSymbol, headerAction }: Props) {
           }`}
         >
           <button
-            onClick={() => router.push(`/trade/${i.symbol}`)}
+            onClick={() => (onSelect ? onSelect(i.symbol) : router.push(`/trade/${i.symbol}`))}
             aria-current={active ? "true" : undefined}
             className="flex min-w-0 flex-1 items-center justify-between gap-1.5 text-left"
           >

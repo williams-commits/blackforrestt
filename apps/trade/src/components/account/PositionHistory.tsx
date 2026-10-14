@@ -131,7 +131,7 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
             ]}
           />
           <Select value={symbolFilter} onValueChange={setSymbolFilter}>
-            <SelectTrigger size="sm" className="w-[150px]" aria-label="Filter by symbol">
+            <SelectTrigger size="sm" className="w-37.5" aria-label="Filter by symbol">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

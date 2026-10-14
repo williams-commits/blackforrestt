@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Activity, CandlestickChart, FileText, TrendingUpDown, User } from "lucide-react";
+import { Activity, CandlestickChart, TrendingUpDown, User } from "lucide-react";
 import { useForexStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -77,8 +77,7 @@ function MobileTabBarInner() {
   ];
   const rightItems = [
     { href: "/account", label: "Account", Icon: User, active: onAccount && !positionsActive },
-    { href: "/reports", label: "Reports", Icon: FileText, active: pathname === "/reports" },
-  ];
+    ];
 
   const navLink = (item: { href: string; label: string; Icon: typeof User; active: boolean }) => (
     <Link
@@ -132,7 +131,7 @@ function MobileTabBarInner() {
 }
 
 /** Phone bottom navigation (<md): five in-flow destinations — Markets,
- *  Positions, Trade (center action), Account, Reports. Trade opens the order
+ *  Positions, Trade (center action), Account. Trade opens the order
  *  ticket like the web FAB rather than linking to a route. Tablet and
  *  desktop keep their inline navigation. Fixed above the safe area; pages
  *  add matching bottom padding so content is never covered. */

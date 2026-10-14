@@ -60,14 +60,34 @@ export function TerminalNotifications() {
       if (!next) return;
       counter.current += 1;
       setEvents((prev) => [{ ...next, id: counter.current, time: Date.now() }, ...prev].slice(0, MAX_EVENTS));
-      setUnread((prev) => prev + 1);
+      if (!openRef.current) setUnread((prev) => prev + 1);
     };
     window.addEventListener("blckforest:realtime", onRealtime);
     return () => window.removeEventListener("blckforest:realtime", onRealtime);
   }, []);
 
+  // Displayed = read: opening the dropdown marks the session's notifications
+  // seen locally AND settles the server-side unread count (mark all read), so
+  // badges never stay inflated and alerts don't repeat after being shown.
+  const openRef = useRef(false);
+  const settleServerCount = async () => {
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ all: true }),
+      });
+      if (response.ok) {
+        window.dispatchEvent(new CustomEvent("blckforest:counts-changed"));
+      }
+    } catch {
+      // Offline — the local badge already cleared; server count settles on
+      // the next poll or open.
+    }
+  };
+
   return (
-    <DropdownMenu open={open} onOpenChange={(next) => { setOpen(next); if (next) setUnread(0); }}>
+    <DropdownMenu open={open} onOpenChange={(next) => { setOpen(next); openRef.current = next; if (next) { setUnread(0); void settleServerCount(); } }}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"

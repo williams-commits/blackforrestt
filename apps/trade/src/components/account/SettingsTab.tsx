@@ -9,6 +9,11 @@ import { SecurityCenter } from "./SecurityCenter";
 import { fmtDate } from "@/lib/dates";
 import { Input } from "@/components/ui/Input";
 import { Switch } from "@/components/ui/switch";
+import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
+import { KeyRound, Pencil, ShieldCheck } from "lucide-react";
 
 interface User {
   id: string;
@@ -29,42 +34,93 @@ async function readJson(response: Response): Promise<{ error?: string }> {
   }
 }
 
-/** Editable profile and password security settings. */
+/** Settings — a details Card (who you are) with profile and password edits
+ *  behind modals, plus the security center. */
 export function SettingsTab({ user }: { user: User }) {
   const router = useRouter();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+
+  return (
+    <div className="space-y-8">
+      {/* Account details */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Account details</CardTitle>
+          <CardDescription>Your identity on the platform.</CardDescription>
+          <CardAction className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setProfileOpen(true)}>
+              <Pencil size={13} strokeWidth={2} aria-hidden /> Edit profile
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setPasswordOpen(true)}>
+              <KeyRound size={13} strokeWidth={2} aria-hidden /> Change password
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-4 pb-5">
+            <div className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
+              {(user.name || user.email)[0]?.toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-semibold">{user.name}</div>
+              <div className="text-sm text-muted-foreground">{user.email}</div>
+            </div>
+            {user.verified ? (
+              <Badge variant="secondary" className="bg-(--term-success-bg) text-(--term-success-fg)">
+                <ShieldCheck size={11} strokeWidth={2} aria-hidden /> Verified
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="bg-(--term-danger-bg) text-(--term-danger-fg)">Unverified</Badge>
+            )}
+          </div>
+          <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+            <DetailRow label="Display name" value={user.name} />
+            <DetailRow label="Email" value={user.email} />
+            <DetailRow label="Account number" value={<span className="font-mono">{user.accountNo}</span>} />
+            <DetailRow label="Member since" value={fmtDate(user.createdAt)} />
+          </dl>
+        </CardContent>
+      </Card>
+
+      <SecurityCenter />
+
+      <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} user={user} onSaved={() => router.refresh()} />
+      <PasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-lg px-3 py-2 transition-colors hover:bg-muted/40">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 truncate text-sm font-medium">{value}</dd>
+    </div>
+  );
+}
+
+function ProfileDialog({ open, onClose, user, onSaved }: { open: boolean; onClose: () => void; user: User; onSaved: () => void }) {
   const [name, setName] = useState(user.name);
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [showPasswords, setShowPasswords] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [passwordNotice, setPasswordNotice] = useState<Notice>(null);
-  const [profileNotice, setProfileNotice] = useState<Notice>(null);
+  const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<Notice>(null);
 
-  const profileDirty = name.trim() !== user.name;
-  const passwordDirty = current !== "" || next !== "" || confirm !== "";
-
-  // Guard against losing unsaved edits to a refresh/close mid-edit.
   useEffect(() => {
-    if (!profileDirty && !passwordDirty) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [profileDirty, passwordDirty]);
+    if (open) {
+      setName(user.name);
+      setNotice(null);
+    }
+  }, [open, user.name]);
 
-  const passwordFieldType = showPasswords ? "text" : "password";
-
-  async function saveProfile(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+  async function save(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    setProfileNotice(null);
+    setNotice(null);
     const normalizedName = name.trim();
     if (!normalizedName) {
-      setProfileNotice({ kind: "err", text: "Name cannot be empty." });
+      setNotice({ kind: "err", text: "Name cannot be empty." });
       return;
     }
-
-    setProfileLoading(true);
+    setLoading(true);
     try {
       const response = await fetch("/api/profile", {
         method: "POST",
@@ -73,40 +129,87 @@ export function SettingsTab({ user }: { user: User }) {
       });
       const data = await readJson(response);
       if (!response.ok) {
-        setProfileNotice({ kind: "err", text: data.error ?? "Failed to update profile." });
+        setNotice({ kind: "err", text: data.error ?? "Failed to update profile." });
         return;
       }
-      setName(normalizedName);
-      setProfileNotice({ kind: "ok", text: "Profile updated." });
-      router.refresh();
+      setNotice({ kind: "ok", text: "Profile updated." });
+      onSaved();
+      onClose();
     } catch {
-      setProfileNotice({ kind: "err", text: "Network error while updating the profile." });
+      setNotice({ kind: "err", text: "Network error while updating the profile." });
     } finally {
-      setProfileLoading(false);
+      setLoading(false);
     }
   }
 
+  return (
+    <Dialog open={open} onClose={onClose} title="Edit profile" description="Update how your name appears across the platform." className="sm:max-w-md">
+      <form onSubmit={save} className="space-y-4 px-5 py-4">
+        <Field
+          label="Display name"
+          type="text"
+          value={name}
+          onChange={(value) => { setName(value); setNotice(null); }}
+          autoComplete="name"
+          maxLength={100}
+        />
+        <div>
+          <label className="mb-1 block text-xs text-muted-foreground">Email</label>
+          <Input value={user.email} readOnly aria-readonly="true" className="cursor-default truncate text-muted-foreground" />
+        </div>
+        {notice && <Alert tone={notice.kind}>{notice.text}</Alert>}
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="submit" variant="default" loading={loading} loadingLabel="Saving" disabled={name.trim() === user.name}>
+            Save changes
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+function PasswordDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<Notice>(null);
+
+  useEffect(() => {
+    if (open) {
+      setCurrent(""); setNext(""); setConfirm(""); setNotice(null);
+    }
+  }, [open]);
+
+  // Guard against losing unsaved edits to a refresh/close mid-edit.
+  const passwordDirty = open && (current !== "" || next !== "" || confirm !== "");
+  useEffect(() => {
+    if (!passwordDirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [passwordDirty]);
+
+  const passwordFieldType = showPasswords ? "text" : "password";
+
   async function changePassword(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    setPasswordNotice(null);
-
+    setNotice(null);
     if (next !== confirm) {
-      setPasswordNotice({ kind: "err", text: "New passwords do not match." });
+      setNotice({ kind: "err", text: "New passwords do not match." });
       return;
     }
     if (!isValidPassword(next)) {
-      setPasswordNotice({
-        kind: "err",
-        text: `Use at least ${PASSWORD_MIN_LENGTH} characters.`,
-      });
+      setNotice({ kind: "err", text: `Use at least ${PASSWORD_MIN_LENGTH} characters.` });
       return;
     }
     if (current === next) {
-      setPasswordNotice({ kind: "err", text: "The new password must be different." });
+      setNotice({ kind: "err", text: "The new password must be different." });
       return;
     }
-
-    setPasswordLoading(true);
+    setLoading(true);
     try {
       const response = await fetch("/api/password", {
         method: "POST",
@@ -115,146 +218,41 @@ export function SettingsTab({ user }: { user: User }) {
       });
       const data = await readJson(response);
       if (!response.ok) {
-        setPasswordNotice({ kind: "err", text: data.error ?? "Failed to change password." });
+        setNotice({ kind: "err", text: data.error ?? "Failed to change password." });
         return;
       }
-      setPasswordNotice({ kind: "ok", text: "Password updated successfully." });
-      setCurrent("");
-      setNext("");
-      setConfirm("");
+      setNotice({ kind: "ok", text: "Password updated successfully." });
+      setCurrent(""); setNext(""); setConfirm("");
+      setTimeout(onClose, 1200);
     } catch {
-      setPasswordNotice({ kind: "err", text: "Network error while changing the password." });
+      setNotice({ kind: "err", text: "Network error while changing password." });
     } finally {
-      setPasswordLoading(false);
+      setLoading(false);
     }
   }
 
   return (
-    <div className="max-w-2xl space-y-5">
-      <form onSubmit={saveProfile} className="space-y-4 p-6">
-        <h3 className="text-sm font-medium">Profile</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field
-            label="Display name"
-            type="text"
-            value={name}
-            onChange={(value) => {
-              setName(value);
-              setProfileNotice(null);
-            }}
-            autoComplete="name"
-            maxLength={100}
-          />
-          <ReadonlyField label="Email" value={user.email} />
-          <ReadonlyField label="Account number" value={user.accountNo} />
-          <ReadonlyField
-            label="Member since"
-            value={fmtDate(user.createdAt)}
-          />
-          <ReadonlyField
-            label="Verification"
-            value={user.verified ? "Verified" : "Unverified"}
-            valueClass={user.verified ? "text-up" : "text-down"}
-          />
-        </div>
-
-        <NoticeView notice={profileNotice} />
-
-        <Button
-          type="submit"
-          variant="brand"
-          loading={profileLoading}
-          loadingLabel="Saving profile"
-          disabled={name.trim() === user.name}
-          className="bg-brand text-white hover:brightness-110"
-        >
-          Save profile
-        </Button>
-      </form>
-
-      <form onSubmit={changePassword} className="space-y-4 p-6">
+    <Dialog open={open} onClose={onClose} title="Change password" description={`Use at least ${PASSWORD_MIN_LENGTH} characters.`} className="sm:max-w-md">
+      <form onSubmit={changePassword} className="space-y-4 px-5 py-4">
+        <Field label="Current password" type={passwordFieldType} value={current} onChange={(v) => { setCurrent(v); setNotice(null); }} autoComplete="current-password" required />
         <div>
-          <h3 className="text-sm font-medium">Change password</h3>
-          <p className="mt-1 text-(length:--term-text-xs) text-text-faint">
-            Use at least 6 characters.
-          </p>
-        </div>
-        <Field
-          label="Current password"
-          type={passwordFieldType}
-          value={current}
-          onChange={(value) => {
-            setCurrent(value);
-            setPasswordNotice(null);
-          }}
-          autoComplete="current-password"
-          required
-        />
-        <div>
-          <Field
-            label="New password"
-            type={passwordFieldType}
-            value={next}
-            onChange={(value) => {
-              setNext(value);
-              setPasswordNotice(null);
-            }}
-            autoComplete="new-password"
-            required
-            minLength={PASSWORD_MIN_LENGTH}
-            maxLength={128}
-          />
+          <Field label="New password" type={passwordFieldType} value={next} onChange={(v) => { setNext(v); setNotice(null); }} autoComplete="new-password" required minLength={PASSWORD_MIN_LENGTH} maxLength={128} />
           <PasswordStrength password={next} className="mt-1.5" />
         </div>
-        <Field
-          label="Confirm new password"
-          type={passwordFieldType}
-          value={confirm}
-          onChange={(value) => {
-            setConfirm(value);
-            setPasswordNotice(null);
-          }}
-          autoComplete="new-password"
-          required
-          minLength={PASSWORD_MIN_LENGTH}
-          maxLength={128}
-        />
-        <label className="flex w-fit cursor-pointer items-center gap-2 text-(length:--term-text-xs) text-text-muted">
+        <Field label="Confirm new password" type={passwordFieldType} value={confirm} onChange={(v) => { setConfirm(v); setNotice(null); }} autoComplete="new-password" required minLength={PASSWORD_MIN_LENGTH} maxLength={128} />
+        <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted-foreground">
           <Switch checked={showPasswords} onCheckedChange={setShowPasswords} aria-label="Show passwords" />
           Show passwords
         </label>
-
-        <NoticeView notice={passwordNotice} />
-
-        <Button
-          type="submit"
-          variant="brand"
-          loading={passwordLoading}
-          loadingLabel="Updating password"
-          className="bg-brand text-white hover:brightness-110"
-        >
-          Update password
-        </Button>
+        {notice && <Alert tone={notice.kind}>{notice.text}</Alert>}
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="submit" variant="default" loading={loading} loadingLabel="Updating">
+            Update password
+          </Button>
+        </div>
       </form>
-
-      <SecurityCenter />
-    </div>
-  );
-}
-
-function NoticeView({ notice }: { notice: Notice }) {
-  if (!notice) return null;
-  return (
-    <div
-      role={notice.kind === "err" ? "alert" : "status"}
-      className={`rounded border px-3 py-2 text-xs ${
-        notice.kind === "ok"
-          ? "border-up/30 bg-(--term-success-bg) text-(--term-success-fg)"
-          : "border-down/30 bg-(--term-danger-bg) text-(--term-danger-fg)"
-      }`}
-    >
-      {notice.text}
-    </div>
+    </Dialog>
   );
 }
 
@@ -280,7 +278,7 @@ function Field({
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-(length:--term-text-xs) text-text-muted">
+      <label htmlFor={id} className="mb-1 block text-xs text-muted-foreground">
         {label}
       </label>
       <Input
@@ -292,27 +290,7 @@ function Field({
         required={required}
         minLength={minLength}
         maxLength={maxLength}
-        className="h-11 transition-colors placeholder:text-text-faint hover:border-text-faint"
       />
-    </div>
-  );
-}
-
-function ReadonlyField({
-  label,
-  value,
-  valueClass = "",
-}: {
-  label: string;
-  value: string;
-  valueClass?: string;
-}) {
-  return (
-    <div>
-      <div className="mb-1 text-(length:--term-text-xs) text-text-muted">{label}</div>
-      <div className="flex h-10 items-center">
-        <span className={valueClass}>{value}</span>
-      </div>
     </div>
   );
 }

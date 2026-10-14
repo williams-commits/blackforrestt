@@ -179,18 +179,18 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-panel">
-      <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-canvas px-3 py-1 sm:flex-nowrap sm:px-4">
+    <div className="account-flat min-h-screen">
+      <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-card px-3 py-1 sm:flex-nowrap sm:px-4">
         <Logo />
         {/* Inline section nav is desktop-only (lg+); below lg the Stage-4
             bottom navigation covers Trade/Account/Markets and this page
             carries the bar too, so /reports is never a dead end on phones. */}
         <nav className="order-3 w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 hidden lg:flex">
-          <Link href="/trade/AUDCAD" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-text-muted transition-colors duration-150 hover:bg-panel-2 hover:text-text">
+          <Link href="/trade/AUDCAD" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground">
             <CandlestickChart size={14} strokeWidth={2} aria-hidden /> Trade Terminal</Link>
-          <Link href="/account" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-text-muted transition-colors duration-150 hover:bg-panel-2 hover:text-text">
+          <Link href="/account" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground">
             <User size={14} strokeWidth={2} aria-hidden /> Account</Link>
-          <Link href="/reports" aria-current="page" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 font-semibold text-text">
+          <Link href="/reports" aria-current="page" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 font-semibold text-foreground">
             <FileText size={14} strokeWidth={2} aria-hidden /> Reports</Link>
         </nav>
         <AccountUserMenu
@@ -201,9 +201,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         />
       </header>
 
-      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-[1440px] px-4 py-5 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:px-6 sm:py-6 md:pb-6 lg:px-8">
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-[1440px] px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:px-6 sm:py-8 md:pb-6 lg:px-8">
         <h1 className="mb-1 text-[22px] font-semibold leading-tight sm:text-2xl">Trade Reports</h1>
-        <p className="mb-5 text-sm text-text-muted">Closed-trade performance, filters and statements.</p>
+        <p className="mb-5 text-sm text-muted-foreground">Closed-trade performance, filters and statements.</p>
         {/* Server-rendered stats: re-fetch when funds move or positions close. */}
         <RealtimeRefresh />
         <ReportsView

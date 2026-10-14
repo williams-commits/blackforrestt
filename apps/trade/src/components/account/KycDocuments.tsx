@@ -12,6 +12,8 @@ import {
   type KycDocumentType,
 } from "@/lib/kyc";
 import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Alert } from "@/components/ui/Alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface DocumentView {
   id: string;
@@ -150,66 +152,67 @@ export function KycDocuments() {
   }
 
   return (
-    <section className="space-y-4 p-4 sm:p-6">
-      <div>
-        <h3 className="text-sm font-medium">Identity and proof-of-address documents</h3>
-        <p className="mt-1 text-(length:--term-text-xs) text-text-faint">
+    <Card>
+      <CardHeader>
+        <CardTitle>Identity and proof-of-address documents</CardTitle>
+        <CardDescription>
           Upload at least one identity document and one proof-of-address document. Files are scanned and sealed in private storage.
-        </p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] sm:items-end">
-        <div>
-          <label htmlFor={selectId} className="mb-1.5 block text-(length:--term-text-xs) font-medium text-text-muted">Document type</label>
-          <NativeSelect
-            id={selectId}
-            value={selectedType}
-            onChange={(event) => setSelectedType(event.target.value as KycDocumentType)}
-            className="h-11 transition-colors hover:border-text-faint focus-visible:ring-2 focus-visible:ring-brand/20"
-          >
-            <optgroup label="Identity">
-              {IDENTITY_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-            </optgroup>
-            <optgroup label="Proof of address">
-              {ADDRESS_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-            </optgroup>
-          </NativeSelect>
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] sm:items-end">
+          <div>
+            <label htmlFor={selectId} className="mb-1.5 block text-xs font-medium text-muted-foreground">Document type</label>
+            <NativeSelect
+              id={selectId}
+              value={selectedType}
+              onChange={(event) => setSelectedType(event.target.value as KycDocumentType)}
+              className="h-10 transition-colors focus-visible:ring-2 focus-visible:ring-ring/30"
+            >
+              <optgroup label="Identity">
+                {IDENTITY_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </optgroup>
+              <optgroup label="Proof of address">
+                {ADDRESS_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </optgroup>
+            </NativeSelect>
+          </div>
+          <div>
+            <label htmlFor={fileId} className="mb-1.5 block text-xs font-medium text-muted-foreground">File</label>
+            <input
+              id={fileId}
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+              className="block h-10 transition-colors file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-xs file:text-muted-foreground"
+            />
+          </div>
+          <Button type="button" variant="default" loading={loading} loadingLabel="Uploading" onClick={() => void upload()}>
+            Upload and verify
+          </Button>
         </div>
-        <div>
-          <label htmlFor={fileId} className="mb-1.5 block text-(length:--term-text-xs) font-medium text-text-muted">File</label>
-          <input
-            id={fileId}
-            type="file"
-            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-            onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-            className="block h-11 transition-colors hover:border-text-faint file:mr-3 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-1 file:text-xs file:text-text-muted"
-          />
-        </div>
-        <Button type="button" variant="brand" loading={loading} loadingLabel="Uploading" onClick={() => void upload()} className="h-10">
-          Upload and verify
-        </Button>
-      </div>
 
-      {(error ?? (queryError instanceof Error ? queryError.message : null)) && <p role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error ?? (queryError instanceof Error ? queryError.message : null)}</p>}
+        {(error ?? (queryError instanceof Error ? queryError.message : null)) && <Alert tone="err">{error ?? (queryError instanceof Error ? queryError.message : null)}</Alert>}
 
-      <div className="grid gap-2 sm:grid-cols-2">
-        {KYC_DOCUMENT_TYPES.map((type) => {
-          const latest = latestByType.get(type.value);
-          return (
-            <article key={type.value} className="flex min-w-0 items-center justify-between gap-3 border-border-soft p-3">
-              <div className="min-w-0">
-                <div className="truncate text-sm font-medium">{type.label}</div>
-                <div className="truncate text-(length:--term-text-xs) text-text-faint">
-                  {latest ? `${statusLabel(latest.status)} · ${fmtSize(latest.sizeBytes)}${latest.sha256 ? ` · ${latest.sha256.slice(0, 10)}…` : ""}` : "Not uploaded"}
+        <div className="grid gap-2 sm:grid-cols-2">
+          {KYC_DOCUMENT_TYPES.map((type) => {
+            const latest = latestByType.get(type.value);
+            return (
+              <article key={type.value} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-muted/50 p-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">{type.label}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {latest ? `${statusLabel(latest.status)} · ${fmtSize(latest.sizeBytes)}${latest.sha256 ? ` · ${latest.sha256.slice(0, 10)}…` : ""}` : "Not uploaded"}
+                  </div>
                 </div>
-              </div>
-              {latest?.status === "PENDING_SCAN" && (
-                <Button type="button" size="sm" loading={busyDocId === latest.id} onClick={() => void cancel(latest.id)}>Cancel</Button>
-              )}
-            </article>
-          );
-        })}
-      </div>
-    </section>
+                {latest?.status === "PENDING_SCAN" && (
+                  <Button type="button" size="sm" variant="outline" loading={busyDocId === latest.id} onClick={() => void cancel(latest.id)}>Cancel</Button>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

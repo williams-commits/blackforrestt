@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { KycDocuments } from "@/components/account/KycDocuments";
 import { ADDRESS_DOCUMENT_TYPES, IDENTITY_DOCUMENT_TYPES } from "@/lib/kyc";
-import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert } from "@/components/ui/Alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Kyc {
   status: "NOT_SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED";
@@ -109,118 +111,127 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
   return (
     <div className="max-w-2xl space-y-4">
       <StatusBanner status={status} kyc={kyc} />
-      <section aria-labelledby="verification-checklist-heading" className="p-4">
-        <div className="flex items-center justify-between gap-3">
-          <h3 id="verification-checklist-heading" className="text-sm font-medium">Verification checklist</h3>
-          <span className="text-(length:--term-text-2xs) font-semibold tnum text-text-muted">{progress}% complete</span>
-        </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-panel-3" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Verification progress">
-          <div className={`h-full rounded-full transition-all ${progress === 100 ? "bg-up" : "bg-brand"}`} style={{ width: `${progress}%` }} />
-        </div>
-        <ol className="mt-3 space-y-2 text-xs">
-          <ChecklistItem complete={status !== "NOT_SUBMITTED"} label="Identity and address details submitted" />
-          <ChecklistItem complete={checklist.cleanIdentityDocuments > 0} label={`Identity document verified (${checklist.cleanIdentityDocuments})`} />
-          <ChecklistItem complete={checklist.cleanAddressDocuments > 0} label={`Proof of address verified (${checklist.cleanAddressDocuments})`} />
-          <ChecklistItem complete={noScanIssues} label={hasDocuments ? "No document scan issues outstanding" : "Upload documents for scanning"} />
-          <ChecklistItem complete={status === "APPROVED"} label="Compliance review approved" />
-        </ol>
-      </section>
+      <Card>
+        <CardHeader className="gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle id="verification-checklist-heading">Verification checklist</CardTitle>
+            <span className="text-xs font-semibold tnum text-muted-foreground">{progress}% complete</span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Verification progress">
+            <div className={`h-full rounded-full transition-all ${progress === 100 ? "bg-up" : "bg-brand"}`} style={{ width: `${progress}%` }} />
+          </div>
+          <ol className="mt-3 space-y-2 text-xs">
+            <ChecklistItem complete={status !== "NOT_SUBMITTED"} label="Identity and address details submitted" />
+            <ChecklistItem complete={checklist.cleanIdentityDocuments > 0} label={`Identity document verified (${checklist.cleanIdentityDocuments})`} />
+            <ChecklistItem complete={checklist.cleanAddressDocuments > 0} label={`Proof of address verified (${checklist.cleanAddressDocuments})`} />
+            <ChecklistItem complete={noScanIssues} label={hasDocuments ? "No document scan issues outstanding" : "Upload documents for scanning"} />
+            <ChecklistItem complete={status === "APPROVED"} label="Compliance review approved" />
+          </ol>
+        </CardContent>
+      </Card>
 
       <KycDocuments />
 
       {status === "NOT_SUBMITTED" || status === "REJECTED" ? (
-        <form onSubmit={submit} className="space-y-4 p-6">
-          <h3 className="text-sm font-medium">
-            {status === "REJECTED" ? "Re-submit verification" : "Verify your identity"}
-          </h3>
-          {status === "REJECTED" && kyc?.note ? (
-            <div role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">
-              Previous submission rejected: {kyc.note}
-            </div>
-          ) : null}
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {status === "REJECTED" ? "Re-submit verification" : "Verify your identity"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={submit} className="space-y-4">
+              {status === "REJECTED" && kyc?.note ? (
+                <Alert tone="err">Previous submission rejected: {kyc.note}</Alert>
+              ) : null}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="First name" name="firstName" defaultValue={kyc?.firstName ?? ""} required maxLength={100} />
-            <Field label="Last name" name="lastName" defaultValue={kyc?.lastName ?? ""} required maxLength={100} />
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field
-              label="Date of birth"
-              name="dob"
-              type="date"
-              required
-              min={dateYearsAgo(120)}
-              max={dateYearsAgo(18)}
-            />
-            <div>
-              <label htmlFor="country-field" className="mb-1 block text-(length:--term-text-xs) text-text-muted">Country</label>
-              <NativeSelect
-                id="country-field"
-                name="country"
-                required
-                defaultValue=""
-                className="h-10"
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="First name" name="firstName" defaultValue={kyc?.firstName ?? ""} required maxLength={100} />
+                <Field label="Last name" name="lastName" defaultValue={kyc?.lastName ?? ""} required maxLength={100} />
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field
+                  label="Date of birth"
+                  name="dob"
+                  type="date"
+                  required
+                  min={dateYearsAgo(120)}
+                  max={dateYearsAgo(18)}
+                />
+                <div>
+                  <label htmlFor="country-field" className="mb-1 block text-xs text-muted-foreground">Country</label>
+                  <Select name="country" defaultValue="">
+                    <SelectTrigger id="country-field" className="h-10 w-full">
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {KYC_COUNTRIES.map((country) => (
+                        <SelectItem key={country} value={country}>{country}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Field label="Address" name="address" required maxLength={200} />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="City" name="city" required maxLength={100} />
+                <Field label="Postal code" name="postalCode" maxLength={32} />
+              </div>
+
+                <div>
+                  <label htmlFor={docTypeId} className="mb-1 block text-xs text-muted-foreground">
+                    Document type
+                  </label>
+                  <Select name="docType" required defaultValue={kyc?.docType ?? "PASSPORT"}>
+                    <SelectTrigger id={docTypeId} className="h-10 w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Identity</SelectLabel>
+                        {IDENTITY_DOCUMENT_TYPES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Proof of address</SelectLabel>
+                        {ADDRESS_DOCUMENT_TYPES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <p className="mt-1 text-xs text-muted-foreground">The selected type must show as Verified above before submission.</p>
+                </div>
+
+              {error ? (
+                <Alert tone="err">{error}</Alert>
+              ) : null}
+
+              <Button
+                type="submit"
+                variant="default"
+                loading={submitting}
+                loadingLabel="Submitting verification"
               >
-                <option value="" disabled>Select country</option>
-                {KYC_COUNTRIES.map((country) => (
-                  <option key={country} value={country}>{country}</option>
-                ))}
-              </NativeSelect>
-            </div>
-          </div>
-          <Field label="Address" name="address" required maxLength={200} />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="City" name="city" required maxLength={100} />
-            <Field label="Postal code" name="postalCode" maxLength={32} />
-          </div>
-
-          <div>
-            <label htmlFor={docTypeId} className="mb-1 block text-(length:--term-text-xs) text-text-muted">
-              Document type
-            </label>
-            <NativeSelect
-              id={docTypeId}
-              name="docType"
-              required
-              defaultValue={kyc?.docType ?? "PASSPORT"}
-              className="h-10"
-            >
-              <optgroup label="Identity">
-                {IDENTITY_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-              </optgroup>
-              <optgroup label="Proof of address">
-                {ADDRESS_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-              </optgroup>
-            </NativeSelect>
-            <p className="mt-1 text-(length:--term-text-2xs) text-text-faint">The selected type must show as Verified above before submission.</p>
-          </div>
-
-          {error ? (
-            <div role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">
-              {error}
-            </div>
-          ) : null}
-
-          <Button
-            type="submit"
-            variant="brand"
-            loading={submitting}
-            loadingLabel="Submitting verification"
-          >
-            Submit for verification
-          </Button>
-        </form>
+                Submit for verification
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       ) : null}
 
       {status === "PENDING" && kyc && (
-        <section aria-labelledby="pending-summary-heading" className="p-6">
-          <h3 id="pending-summary-heading" className="text-sm font-medium">Submitted details</h3>
-          <p className="mt-1 text-(length:--term-text-xs) text-text-faint">Under compliance review — this is what we received.</p>
-          <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
-            <SummaryRow label="Name" value={[kyc.firstName, kyc.lastName].filter(Boolean).join(" ")} />
-            <SummaryRow label="Document type" value={kyc.docType ?? "—"} />
-          </dl>
-        </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>Submitted details</CardTitle>
+            <CardDescription>Under compliance review — this is what we received.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
+              <SummaryRow label="Name" value={[kyc.firstName, kyc.lastName].filter(Boolean).join(" ")} />
+              <SummaryRow label="Document type" value={kyc.docType ?? "—"} />
+            </dl>
+          </CardContent>
+        </Card>
       )}
 
     </div>
@@ -229,8 +240,8 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between border-b border-border-soft last:border-0">
-      <dt className="text-text-muted">{label}</dt>
+    <div className="flex items-center justify-between border-b border-border last:border-0">
+      <dt className="text-muted-foreground">{label}</dt>
       <dd className="font-medium">{value || "—"}</dd>
     </div>
   );
@@ -239,8 +250,8 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 function ChecklistItem({ complete, label }: { complete: boolean; label: string }) {
   return (
     <li className="flex items-center gap-2">
-      <span aria-hidden="true" className={complete ? "text-up" : "text-text-faint"}>{complete ? "✓" : "○"}</span>
-      <span className={complete ? "text-text" : "text-text-muted"}>{label}</span>
+      <span aria-hidden="true" className={complete ? "text-up" : "text-muted-foreground"}>{complete ? "✓" : "○"}</span>
+      <span className={complete ? "text-foreground" : "text-muted-foreground"}>{label}</span>
       <span className="sr-only">{complete ? "Complete" : "Incomplete"}</span>
     </li>
   );
@@ -249,51 +260,39 @@ function ChecklistItem({ complete, label }: { complete: boolean; label: string }
 function StatusBanner({ status, kyc }: { status: Kyc["status"]; kyc: Kyc | null }) {
   if (status === "APPROVED") {
     return (
-      <div role="status" className="flex items-center gap-3 rounded-lg border border-up/30 bg-up/10 p-4">
-        <span aria-hidden="true" className="text-lg text-up">✓</span>
-        <div>
-          <div className="text-sm font-medium text-up">Identity verified</div>
-          <div className="text-xs text-text-muted">
-            {kyc?.reviewedAt ? `Approved ${new Date(kyc.reviewedAt).toLocaleDateString("en-US")}. ` : ""}
-            Your account is verified.
-          </div>
+      <Alert tone="ok">
+        <strong className="font-medium">Identity verified</strong>
+        <div className="text-xs text-muted-foreground">
+          {kyc?.reviewedAt ? `Approved ${new Date(kyc.reviewedAt).toLocaleDateString("en-US")}. ` : ""}
+          Your account is verified.
         </div>
-      </div>
+      </Alert>
     );
   }
   if (status === "PENDING") {
     return (
-      <div role="status" className="flex items-center gap-3 rounded-lg border border-brand/30 bg-brand-soft p-4">
-        <span aria-hidden="true" className="text-lg text-brand">⏳</span>
-        <div>
-          <div className="text-sm font-medium text-brand">Verification under review</div>
-          <div className="text-xs text-text-muted">
-            {kyc?.submittedAt ? `Submitted ${new Date(kyc.submittedAt).toLocaleDateString("en-US")}. ` : ""}
-            You will be notified after review.
-          </div>
+      <Alert tone="info" className="border-primary/30 bg-primary/10">
+        <strong className="font-medium text-primary">Verification under review</strong>
+        <div className="text-xs text-muted-foreground">
+          {kyc?.submittedAt ? `Submitted ${new Date(kyc.submittedAt).toLocaleDateString("en-US")}. ` : ""}
+          You will be notified after review.
         </div>
-      </div>
+      </Alert>
     );
   }
   if (status === "REJECTED") {
     return (
-      <div role="alert" className="flex items-center gap-3 rounded-lg border border-down/30 bg-down/10 p-4">
-        <span aria-hidden="true" className="text-lg text-down">✕</span>
-        <div>
-          <div className="text-sm font-medium text-down">Verification rejected</div>
-          <div className="text-xs text-text-muted">Review the compliance note and submit corrected details.</div>
-        </div>
-      </div>
+      <Alert tone="err">
+        <strong className="font-medium">Verification rejected</strong>
+        <div className="text-xs text-muted-foreground">Review the compliance note and submit corrected details.</div>
+      </Alert>
     );
   }
   return (
-    <div role="status" className="flex items-center gap-3 p-4">
-      <span aria-hidden="true" className="text-lg text-text-muted">⚠</span>
-      <div>
-        <div className="text-sm font-medium">Not verified</div>
-        <div className="text-xs text-text-muted">Complete identity verification before production withdrawals.</div>
-      </div>
-    </div>
+    <Alert tone="info">
+      <strong className="font-medium">Not verified</strong>
+      <div className="text-xs text-muted-foreground">Complete identity verification before production withdrawals.</div>
+    </Alert>
   );
 }
 
@@ -321,7 +320,7 @@ function Field({
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-(length:--term-text-xs) text-text-muted">
+      <label htmlFor={id} className="mb-1 block text-xs text-muted-foreground">
         {label}
       </label>
       <Input
@@ -334,7 +333,7 @@ function Field({
         min={min}
         max={max}
         maxLength={maxLength}
-        className="h-10 placeholder:text-text-faint"
+        className="h-10 placeholder:text-muted-foreground"
       />
     </div>
   );

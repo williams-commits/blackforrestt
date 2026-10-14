@@ -57,7 +57,9 @@ export { TooltipRootFn as TooltipRoot, TooltipTrigger, TooltipContent, TooltipPr
 
 /* ── Legacy Tooltip API compat ─────────────────────────────────────────────
    The app wraps plain children: <Tooltip text="...">this</Tooltip>. Rendered
-   on the shadcn compound tooltip. */
+   on the shadcn compound tooltip. Radix Slot requires a single ELEMENT child,
+   so any non-element children shape (string, number, array of text nodes,
+   fragment) is wrapped in a span before slotting. */
 export function Tooltip({
   text,
   placement,
@@ -72,7 +74,7 @@ export function Tooltip({
     <TooltipProvider>
       <TooltipRootFn>
         <TooltipTrigger asChild>
-          {typeof children === "string" || typeof children === "number" ? <span>{children}</span> : children}
+          {React.isValidElement(children) ? children : <span>{children}</span>}
         </TooltipTrigger>
         <TooltipContent side={side}>{text}</TooltipContent>
       </TooltipRootFn>

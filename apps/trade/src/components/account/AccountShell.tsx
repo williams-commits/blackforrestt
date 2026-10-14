@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LayoutGrid } from "lucide-react";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
 import { AccountOverview } from "./AccountOverview";
 import { PositionHistory } from "./PositionHistory";
 import { TransactionsTab } from "./TransactionsTab";
@@ -301,7 +303,7 @@ export function AccountShell(props: Props) {
   // desktop sidebar and the mobile sheet.
   const badgeFor = (key: Tab): React.ReactNode => {
     if (key === "positions" && openPositionCount > 0) {
-      return <Badge variant="secondary" className="ml-auto bg-panel-3 px-1.5 font-bold text-text-muted">{openPositionCount}</Badge>;
+      return <Badge variant="secondary" className="ml-auto px-1.5 font-semibold tabular-nums">{openPositionCount}</Badge>;
     }
     if (key === "verification" && verificationNeeded) {
       return <Badge className="ml-auto px-1.5 font-bold">!</Badge>;
@@ -313,7 +315,7 @@ export function AccountShell(props: Props) {
       return <Badge className="ml-auto px-1.5 font-bold">{unreadMessages > 99 ? "99+" : unreadMessages}</Badge>;
     }
     if (key === "support" && openSupportCases > 0) {
-      return <Badge variant="secondary" className="ml-auto bg-panel-3 px-1.5 font-bold text-text-muted">{openSupportCases}</Badge>;
+      return <Badge variant="secondary" className="ml-auto px-1.5 font-semibold tabular-nums">{openSupportCases}</Badge>;
     }
     return null;
   };
@@ -332,9 +334,9 @@ export function AccountShell(props: Props) {
   const navSection = (onSelect: (key: Tab) => void) => (
     <nav aria-label="Account sections">
       {NAV_GROUPS.map((group) => (
-        <div key={group.label ?? "root"} className="mb-1 last:mb-0">
+        <div key={group.label ?? "root"} className="mb-2 last:mb-0">
           {group.label && (
-            <div className="px-3 pt-3 pb-1 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint first:pt-0">
+            <div className="px-3 pt-3 pb-1.5 text-xs font-medium text-muted-foreground first:pt-1">
               {group.label}
             </div>
           )}
@@ -349,11 +351,11 @@ export function AccountShell(props: Props) {
                     type="button"
                     onClick={() => onSelect(key)}
                     aria-current={active ? "true" : undefined}
-                    className={`group flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-all duration-150 focus-visible:outline-2 focus-visible:outline-brand ${
-                      active ? "bg-brand-soft font-semibold text-text" : "text-text-muted hover:bg-panel-2 hover:text-text hover:translate-x-0.5"
+                    className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+                      active ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                     }`}
                   >
-                    {icon ? <TabIcon icon={icon} /> : null}
+                    {icon ? <TabIcon icon={icon} size={16} /> : null}
                     <span className="min-w-0 truncate">{item.label}</span>
                     {badgeFor(key)}
                   </button>
@@ -367,10 +369,10 @@ export function AccountShell(props: Props) {
   );
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
       {/* Desktop sidebar — grouped account navigation */}
       <aside className="hidden lg:block">
-        <div className="sticky top-20 rounded-xl border border-border bg-canvas p-2 shadow-sm">
+        <div className="sticky top-20 rounded-xl border bg-card p-2 shadow-sm">
           {navSection(selectTab)}
         </div>
       </aside>
@@ -382,41 +384,35 @@ export function AccountShell(props: Props) {
           type="button"
           onClick={() => setNavOpen(true)}
           aria-haspopup="dialog"
-          className="mb-4 flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-canvas px-4 py-3 text-left transition-colors hover:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand lg:hidden"
+          className="mb-5 flex w-full items-center justify-between gap-3 rounded-xl bg-card px-4 py-3 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:hidden"
         >
           <span className="flex min-w-0 items-center gap-2">
-            <LayoutGrid size={16} strokeWidth={2} aria-hidden className="shrink-0 text-text-muted" />
-            <span className="truncate text-sm font-semibold">{activeTabLabel}</span>
+            <LayoutGrid size={16} strokeWidth={2} aria-hidden className="shrink-0 text-muted-foreground" />
+            <span className="truncate text-sm font-medium">{activeTabLabel}</span>
             {badgeFor(tab)}
           </span>
-          <span className="shrink-0 text-(length:--term-text-xs) font-medium text-brand">All sections</span>
+          <span className="shrink-0 text-xs font-medium text-muted-foreground">All sections</span>
         </button>
 
         {/* Page heading + contextual action */}
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-[22px] font-semibold leading-tight sm:text-2xl">My Account</h1>
-            <p className="mt-0.5 text-sm text-text-muted">Manage your trading account, funds and profile.</p>
+            <h1 className="text-2xl font-semibold tracking-tight">My Account</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Manage your trading account, funds and profile.</p>
           </div>
           {verificationNeeded && (
-            <button
-              onClick={() => selectTab("verification")}
-              className="rounded border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-medium text-brand transition hover:brightness-95"
-            >
+            <Button type="button" size="sm" variant="outline" onClick={() => selectTab("verification")}>
               Complete verification
-            </button>
+            </Button>
           )}
         </div>
 
         {reconAttention ? (
           <AccountReconciliationStatus status={props.reconciliation} />
         ) : (
-          <div className="mb-5 flex items-center gap-2 rounded-lg border border-up/25 bg-up/5 px-3 py-2">
-            <span className="h-2 w-2 rounded-full bg-up" aria-hidden />
-            <p className="text-(length:--term-text-xs) text-text-muted">
-              Account integrity verified — balances, positions, and payments reconciled.
-            </p>
-          </div>
+          <Alert tone="ok" className="mb-6">
+            Account integrity verified — balances, positions, and payments reconciled.
+          </Alert>
         )}
 
         <div role="tabpanel" aria-label={activeTabLabel}>

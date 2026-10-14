@@ -154,8 +154,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const unreadMessages = isOperator ? teamUnread.totalUnread : customerUnread;
 
   return (
-    <div className="terminal-ui min-h-screen bg-panel">
-      <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-canvas px-3 py-1 sm:flex-nowrap sm:px-4">
+    <div className="account-flat terminal-ui min-h-screen">
+      <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-card px-3 py-1 sm:flex-nowrap sm:px-4">
         <Logo />
         {/* Inline section nav is desktop-only (lg+). Phones and tablets use
             the Stage-4 bottom navigation (Markets / Trade / Positions /
@@ -163,11 +163,11 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
             Reports tab and the standalone /reports page (both carry the
             bottom bar). */}
         <nav className="order-3 hidden lg:flex w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 sm:w-auto">
-          <Link href="/trade/AUDCAD" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-text-muted transition-colors duration-150 hover:bg-panel-2 hover:text-text">
+          <Link href="/trade/AUDCAD" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground">
             <CandlestickChart size={14} strokeWidth={2} aria-hidden /> Trade Terminal</Link>
-          <Link href="/account" aria-current="page" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 font-semibold text-text">
+          <Link href="/account" aria-current="page" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 font-semibold text-foreground">
             <User size={14} strokeWidth={2} aria-hidden /> Account</Link>
-          <Link href="/reports" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-text-muted transition-colors duration-150 hover:bg-panel-2 hover:text-text">
+          <Link href="/reports" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground">
             <FileText size={14} strokeWidth={2} aria-hidden /> Reports</Link>
         </nav>
         <TradeSearchButton className="ml-auto lg:ml-0" />
@@ -179,7 +179,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         />
       </header>
 
-      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-[1440px] px-4 py-5 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:px-6 sm:py-6 md:pb-6 lg:px-8">
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-[1440px] px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:px-6 sm:py-8 md:pb-6 lg:px-8">
         <AccountShell
           unreadNotifications={unreadNotifications}
           operator={isOperator}

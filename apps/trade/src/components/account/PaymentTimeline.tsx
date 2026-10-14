@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
-import { Pagination } from "@/components/ui/Pagination";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { Alert } from "@/components/ui/Alert";
+import { ChipGroup } from "@/components/ui/ChipGroup";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { FilterChip } from "@/components/ui/DataTable";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { Badge } from "@/components/ui/badge";
+import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Upload } from "lucide-react";
 import { MethodDetailsGrid } from "@/components/payments/MethodDetailsGrid";
 import { fmtDateTime } from "@/lib/dates";
 import { PAYMENT_PROOF_MAX_BYTES, compressProofImage, isHeicFile } from "@/lib/paymentProofs";
@@ -31,6 +34,8 @@ interface PaymentView {
   asset: string;
   method: string;
   methodLabel: string;
+  userReference: string | null;
+  externalReference: string | null;
   methodDetailsSummary: string | null;
   methodDetails: Record<string, string> | null;
   beneficiarySummary: string | null;
@@ -41,15 +46,13 @@ interface PaymentView {
   proofs: PaymentProofView[];
 }
 
-const PAGE_SIZE = 10;
-
-const STATUS_STYLES: Record<PaymentView["status"], string> = {
-  PENDING: "bg-(--term-warning-bg) text-(--term-warning-fg)",
-  AWAITING_APPROVAL: "bg-brand/10 text-brand border border-brand/30",
-  APPROVED: "bg-(--term-success-bg) text-(--term-success-fg)",
-  REJECTED: "bg-(--term-danger-bg) text-(--term-danger-fg)",
-  CANCELLED: "bg-panel-3 text-text-muted",
-  REVERSED: "bg-panel-3 text-text-muted border border-border",
+const STATUS_TONES: Record<PaymentView["status"], "up" | "down" | "warn" | "brand" | "muted"> = {
+  PENDING: "warn",
+  AWAITING_APPROVAL: "brand",
+  APPROVED: "up",
+  REJECTED: "down",
+  CANCELLED: "muted",
+  REVERSED: "muted",
 };
 
 const PROOF_STYLES: Record<PaymentProofView["status"], string> = {
@@ -65,14 +68,15 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1_048_576).toFixed(1)} MB`;
 }
 
+/** Payment requests on the enterprise RecordList — proof upload, cancel and
+ *  full settlement details live in the side-slide detail panel. */
 export function PaymentTimeline() {
   const [busy, setBusy] = useState<string | null>(null);
-  // Action failures (cancel) are distinct from query failures — local only.
+  // Action failures (cancel/upload) are distinct from query failures.
   const [actionError, setActionError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState<"ALL" | "DEPOSIT" | "WITHDRAWAL">("ALL");
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const keys = useRef(new Map<string, string>());
 
   // Server state via react-query: 30s auto-sync (pauses in background tabs);
@@ -117,15 +121,6 @@ export function PaymentTimeline() {
     () => requests.filter((r) => typeFilter === "ALL" || r.type === typeFilter),
     [requests, typeFilter],
   );
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const visibleRequests = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
-  useEffect(() => { setPage(1); }, [typeFilter]);
 
   async function upload(requestId: string, file: File) {
     setBusy(requestId);
@@ -182,120 +177,78 @@ export function PaymentTimeline() {
   }
 
   const pendingCount = requests.filter((r) => r.status === "PENDING" || r.status === "AWAITING_APPROVAL").length;
+  const detail = requests.find((r) => r.id === detailId) ?? null;
 
   return (
-    <section className="space-y-4" aria-labelledby="payments-heading">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 id="payments-heading" className="text-sm font-semibold">Payment requests</h2>
-          <p className="mt-1 text-xs text-text-muted">Deposit proofs are required and verified before finance review. Optional withdrawal supporting documents use the same private quarantine and scanning workflow.</p>
-        </div>
-        {pendingCount > 0 && (
-          <span className="rounded-full border border-brand/30 bg-brand-soft px-2.5 py-1 text-(length:--term-text-2xs) font-semibold text-brand">
-            {pendingCount} awaiting review
-          </span>
-        )}
-      </div>
+    <div className="space-y-4">
+      {(error ?? actionError) && <Alert tone="err">{error ?? actionError}</Alert>}
 
-      {(error ?? actionError) && <p role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error ?? actionError}</p>}
+      <RecordList<PaymentView>
+        ariaLabel="Payment"
+        title="Payment requests"
+        description="Deposit proofs are required and verified before finance review."
+        rows={filtered}
+        rowKey={(r) => r.id}
+        loading={loading}
+        leading={(r) => ({
+          icon: <span className="text-[10px] font-bold">{r.type === "DEPOSIT" ? "IN" : "OUT"}</span>,
+          tone: r.type === "DEPOSIT" ? "up" : "down",
+          title: `${r.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} · ${r.asset} ${r.amount}`,
+          secondary: `${r.methodLabel} · ${fmtDateTime(r.createdAt)}`,
+        })}
+        columns={[
+          { key: "reference", label: "Reference", render: (r) => (
+            <span className="font-mono text-xs text-muted-foreground">{r.userReference ?? r.externalReference ?? "—"}</span>
+          ) },
+          { key: "status", label: "Status", render: (r) => (
+            <RecordStatusChip tone={STATUS_TONES[r.status]}>{r.status.replaceAll("_", " ")}</RecordStatusChip>
+          ) },
+          { key: "amount", label: "Amount", sortable: true, align: "right", render: (r) => (
+            <span className="font-semibold tabular-nums">{Number(r.amount).toFixed(2)}</span>
+          ) },
+          { key: "createdAt", label: "Created", sortable: true, align: "right", render: (r) => (
+            <span className="text-xs text-muted-foreground tabular-nums">{fmtDateTime(r.createdAt)}</span>
+          ) },
+        ]}
+        sortValue={(r, key) => {
+          switch (key) {
+            case "amount": return Number(r.amount);
+            case "createdAt": return new Date(r.createdAt).getTime();
+            default: return String((r as unknown as Record<string, unknown>)[key] ?? "");
+          }
+        }}
+        initialSort={{ key: "createdAt", direction: "desc" }}
+        filters={
+          <>
+            <ChipGroup
+              ariaLabel="Filter payment requests by type"
+              value={typeFilter}
+              onChange={(value) => setTypeFilter(value)}
+              options={[
+                { value: "ALL", label: "All" },
+                { value: "DEPOSIT", label: "Deposits" },
+                { value: "WITHDRAWAL", label: "Withdrawals" },
+              ]}
+            />
+            {pendingCount > 0 && (
+              <Badge variant="secondary" className="border border-primary/30 bg-primary/10 text-primary">
+                {pendingCount} awaiting review
+              </Badge>
+            )}
+          </>
+        }
+        detailTitle="Payment Detail"
+        onRowActivate={(r) => setDetailId(r.id)}
+      />
 
-      <div className="flex items-center gap-1.5">
-        {(["ALL", "DEPOSIT", "WITHDRAWAL"] as const).map((value) => (
-          <FilterChip key={value} active={typeFilter === value} onClick={() => setTypeFilter(value)}>
-            {value === "ALL" ? "All" : value === "DEPOSIT" ? "Deposits" : "Withdrawals"}
-          </FilterChip>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="space-y-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="space-y-2 p-4">
-              <Skeleton className="h-4 w-48" />
-              <Skeleton className="h-3 w-64" />
-              <Skeleton className="h-8 w-32" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <>
-          {filtered.length === 0 && (
-            <p className="px-4 py-10 text-center">
-              No {typeFilter === "ALL" ? "payment requests" : typeFilter === "DEPOSIT" ? "deposits" : "withdrawals"} yet.
-            </p>
-          )}
-          <ul className="space-y-3">
-            {visibleRequests.map((request) => {
-              const canCancel = request.status === "PENDING" || request.status === "AWAITING_APPROVAL";
-              const hasCleanProof = request.proofs.some((proof) => proof.status === "CLEAN");
-              // Bank and crypto deposits settle against free-form transfer
-              // references, so a scanned receipt is mandatory. Card deposits are
-              // verified via the processor reference — a receipt is optional.
-              const proofRequired = request.type === "DEPOSIT" && request.method !== "CARD" && !hasCleanProof;
-              const canUploadSupport = request.status === "PENDING"
-                && (proofRequired || request.type === "WITHDRAWAL" || (request.type === "DEPOSIT" && request.method === "CARD"));
-              return (
-                <li key={request.id} className="p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium tnum">{request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} · {request.asset} {request.amount}</p>
-                      <p className="mt-1 text-xs text-text-muted">{request.methodLabel} · {fmtDateTime(request.createdAt)}</p>
-                    {request.methodDetailsSummary && <p className="mt-1 text-xs text-text-faint">Details: {request.methodDetailsSummary}</p>}
-                    {request.riskHoldUntil && new Date(request.riskHoldUntil) > new Date() && <p className="mt-1 text-xs text-brand">Beneficiary cooling-off until {fmtDateTime(request.riskHoldUntil)}.</p>}
-                    {request.reviewerNote && <p className="mt-1 text-xs text-text-muted">Finance note: {request.reviewerNote}</p>}
-                    {request.methodDetails && (
-                      <button
-                        type="button"
-                        onClick={() => setExpandedId(expandedId === request.id ? null : request.id)}
-                        aria-expanded={expandedId === request.id}
-                        className="mt-1.5 inline-flex items-center gap-1 text-xs text-brand hover:underline"
-                      >
-                        {expandedId === request.id ? "Hide full details" : "Show full details"}
-                        <span aria-hidden className="text-(length:--term-text-2xs)">{expandedId === request.id ? "▲" : "▼"}</span>
-                      </button>
-                    )}
-                  </div>
-                    <span className={`rounded px-2 py-1 text-(length:--term-text-2xs) font-medium ${STATUS_STYLES[request.status]}`}>
-                      {request.status.replaceAll("_", " ")}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {canUploadSupport && (
-                      <label className="inline-flex cursor-pointer items-center text-brand hover:bg-panel-2">
-                        <input type="file" accept="image/jpeg,image/png,application/pdf" className="sr-only" disabled={busy === request.id} onChange={(event) => {
-                          const file = event.currentTarget.files?.[0];
-                          if (file) void upload(request.id, file);
-                          event.currentTarget.value = "";
-                        }} />
-                        {busy === request.id ? "Uploading document…" : proofRequired ? "Upload required payment proof" : "Upload supporting document"}
-                      </label>
-                    )}
-                    {request.proofs.map((proof) => (
-                      <Tooltip key={proof.id} text={`${proof.declaredMime} · ${formatBytes(proof.sizeBytes)} · ${fmtDateTime(proof.uploadedAt)}`}>
-                        <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) ${PROOF_STYLES[proof.status]}`}>
-                          Proof · {proof.status.replaceAll("_", " ").toLowerCase()} · {formatBytes(proof.sizeBytes)}
-                        </span>
-                      </Tooltip>
-                    ))}
-                    {canCancel && (
-                      <Button type="button" size="sm" variant="ghost" loading={busy === request.id} onClick={() => setConfirmCancelId(request.id)}>
-                        Cancel request
-                      </Button>
-                    )}
-                    {request.reconciliationStatus === "MISMATCHED" && <span className="text-xs text-down">Settlement reconciliation needs review.</span>}
-                  </div>
-                  {expandedId === request.id && request.methodDetails && (
-                    <div className="mt-3 border-t border-border-soft pt-3">
-                      <MethodDetailsGrid details={request.methodDetails} />
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          <Pagination page={safePage} pageSize={PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="payment requests" />
-        </>
-      )}
+      {/* Side-slide detail (controlled — stays mounted across refreshes) */}
+      {detail != null && <PaymentDetailSheet
+        request={detail}
+        busy={busy === detail.id}
+        onOpenChange={(open) => { if (!open) setDetailId(null); }}
+        onUpload={(file) => void upload(detail.id, file)}
+        onCancel={() => setConfirmCancelId(detail.id)}
+      />}
 
       <ConfirmDialog
         open={confirmCancelId !== null}
@@ -307,6 +260,117 @@ export function PaymentTimeline() {
         onConfirm={() => confirmCancelId && void cancel(confirmCancelId)}
         onCancel={() => setConfirmCancelId(null)}
       />
-    </section>
+    </div>
+  );
+}
+
+/** The slide-over detail for one payment request: status hero, settlement
+ *  metadata, proofs, upload/cancel actions. */
+function PaymentDetailSheet({
+  request,
+  busy,
+  onOpenChange,
+  onUpload,
+  onCancel,
+}: {
+  request: PaymentView;
+  busy: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpload: (file: File) => void;
+  onCancel: () => void;
+}) {
+  const canCancel = request.status === "PENDING" || request.status === "AWAITING_APPROVAL";
+  const hasCleanProof = request.proofs.some((proof) => proof.status === "CLEAN");
+  // Bank and crypto deposits settle against free-form transfer references,
+  // so a scanned receipt is mandatory. Card deposits are verified via the
+  // processor reference — a receipt is optional.
+  const proofRequired = request.type === "DEPOSIT" && request.method !== "CARD" && !hasCleanProof;
+  const canUploadSupport = request.status === "PENDING"
+    && (proofRequired || request.type === "WITHDRAWAL" || (request.type === "DEPOSIT" && request.method === "CARD"));
+
+  return (
+    <Sheet open onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-md">
+        <SheetHeader className="space-y-1 pb-2">
+          <SheetTitle>{request.type === "DEPOSIT" ? "Deposit Detail" : "Withdrawal Detail"}</SheetTitle>
+          <SheetDescription>{request.methodLabel}</SheetDescription>
+        </SheetHeader>
+        <div className="space-y-5 px-4 pb-6">
+          <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+            <span className={`flex size-12 items-center justify-center rounded-full text-sm font-bold ${request.type === "DEPOSIT" ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>
+              {request.type === "DEPOSIT" ? "IN" : "OUT"}
+            </span>
+            <div className="text-sm font-medium">{request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"}</div>
+            <div className="text-2xl font-semibold tabular-nums">
+              {Number(request.amount).toFixed(2)} <span className="text-sm font-normal text-muted-foreground">{request.asset}</span>
+            </div>
+            <RecordStatusChip tone={STATUS_TONES[request.status]}>{request.status.replaceAll("_", " ")}</RecordStatusChip>
+          </div>
+
+          <dl className="space-y-3">
+            <DetailRow label="Created" value={fmtDateTime(request.createdAt)} />
+            {request.methodDetailsSummary && <DetailRow label="Method" value={request.methodDetailsSummary} />}
+            {request.beneficiarySummary && <DetailRow label="Beneficiary" value={request.beneficiarySummary} />}
+            {request.riskHoldUntil && new Date(request.riskHoldUntil) > new Date() && (
+              <DetailRow label="Cooling-off until" value={<span className="text-primary">{fmtDateTime(request.riskHoldUntil)}</span>} />
+            )}
+            <DetailRow label="Reconciliation" value={
+              <RecordStatusChip tone={request.reconciliationStatus === "MATCHED" ? "up" : request.reconciliationStatus === "MISMATCHED" ? "down" : "muted"}>
+                {request.reconciliationStatus}
+              </RecordStatusChip>
+            } />
+            {request.reviewerNote && <DetailRow label="Finance note" value={request.reviewerNote} />}
+          </dl>
+
+          {request.methodDetails && (
+            <div className="rounded-xl bg-muted/40 p-4">
+              <MethodDetailsGrid details={request.methodDetails} />
+            </div>
+          )}
+
+          {request.proofs.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {request.proofs.map((proof) => (
+                <Tooltip key={proof.id} text={`${proof.declaredMime} · ${formatBytes(proof.sizeBytes)} · ${fmtDateTime(proof.uploadedAt)}`}>
+                  <Badge variant="secondary" className={`font-normal ${PROOF_STYLES[proof.status]}`}>
+                    Proof · {proof.status.replaceAll("_", " ").toLowerCase()} · {formatBytes(proof.sizeBytes)}
+                  </Badge>
+                </Tooltip>
+              ))}
+            </div>
+          )}
+
+          {(canUploadSupport || canCancel) && (
+            <div className="flex flex-col gap-2">
+              {canUploadSupport && (
+                <label className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-md border border-input bg-background text-xs font-medium shadow-xs transition-colors hover:bg-accent/60">
+                  <Upload size={13} strokeWidth={2} aria-hidden />
+                  <input type="file" accept="image/jpeg,image/png,application/pdf" className="sr-only" disabled={busy} onChange={(event) => {
+                    const file = event.currentTarget.files?.[0];
+                    if (file) onUpload(file);
+                    event.currentTarget.value = "";
+                  }} />
+                  {busy ? "Uploading document…" : proofRequired ? "Upload required payment proof" : "Upload supporting document"}
+                </label>
+              )}
+              {canCancel && (
+                <Button type="button" variant="outline" size="sm" className="w-full text-down" loading={busy} onClick={onCancel}>
+                  Cancel request
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4 text-sm">
+      <dt className="shrink-0 text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 text-right font-medium text-foreground">{value}</dd>
+    </div>
   );
 }

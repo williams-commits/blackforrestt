@@ -1,18 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { InstrumentView } from "@/lib/types";
-import { Pagination } from "@/components/ui/Pagination";
-import { RecordShell, RecordSortButton, RecordLabel, MobileSortSelect, type SortDirection } from "@/components/ui/RecordList";
-import { FilterChip } from "@/components/ui/DataTable";
 import { CsvExportButton } from "@/components/ui/CsvExport";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";
+import { SymbolLink } from "@/components/trade/SymbolLink";
 import { fmtDateTime } from "@/lib/dates";
-import { NativeSelect } from "@/components/ui/NativeSelect";
-import { Inbox } from "lucide-react";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { CandlestickChart } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { ChipGroup } from "@/components/ui/ChipGroup";
+import { RecordList, RecordStatusChip, type RecordDetailMeta } from "@/components/ui/RecordList";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type PositionRow = {
   id: string;
@@ -24,6 +22,9 @@ type PositionRow = {
   strikeRate: number | null;
   currentRate: number;
   netProfit: number;
+  swap: number;
+  commission: number;
+  tradingCommission: number;
   status: "OPEN" | "CLOSED";
   openedAt: Date;
   closedAt: Date | null;
@@ -37,29 +38,12 @@ interface Props {
   fetchCap?: number;
 }
 
-const PAGE_SIZE = 20;
-
-type SortKey = "openedAt" | "symbol" | "volume" | "netProfit";
-
-const SORT_OPTIONS: Array<{ key: SortKey; direction: SortDirection; label: string }> = [
-  { key: "openedAt", direction: "desc", label: "Newest first" },
-  { key: "openedAt", direction: "asc", label: "Oldest first" },
-  { key: "symbol", direction: "asc", label: "Symbol A→Z" },
-  { key: "symbol", direction: "desc", label: "Symbol Z→A" },
-  { key: "volume", direction: "desc", label: "Volume high→low" },
-  { key: "volume", direction: "asc", label: "Volume low→high" },
-  { key: "netProfit", direction: "desc", label: "Profit high→low" },
-  { key: "netProfit", direction: "asc", label: "Profit low→high" },
-];
-
-/** Sortable, filterable position history as record rows (grid columns on
- *  desktop, stacked cards on phones) with totals and CSV export. */
+/** Position history on the enterprise RecordList — filter chips, symbol
+ *  select, sortable columns, load-more, and a side-slide detail per trade. */
 export function PositionHistory({ open, closed, instruments, fetchCap }: Props) {
   const router = useRouter();
-  const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<"ALL" | "OPEN" | "CLOSED">("ALL");
   const [symbolFilter, setSymbolFilter] = useState<string>("ALL");
-  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection }>({ key: "openedAt", direction: "desc" });
 
   const allRows = useMemo(
     () => [...open, ...closed].sort((left, right) => right.openedAt.getTime() - left.openedAt.getTime()),
@@ -67,169 +51,127 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
   );
   const symbols = useMemo(() => [...new Set(allRows.map((r) => r.symbol))].sort(), [allRows]);
 
-  const rows = useMemo(() => {
-    const filtered = allRows.filter(
+  const rows = useMemo(
+    () => allRows.filter(
       (r) =>
         (statusFilter === "ALL" || r.status === statusFilter) &&
         (symbolFilter === "ALL" || r.symbol === symbolFilter),
-    );
-    const dir = sort.direction === "asc" ? 1 : -1;
-    return [...filtered].sort((a, b) => {
-      switch (sort.key) {
-        case "symbol": return a.symbol.localeCompare(b.symbol) * dir;
-        case "volume": return (a.volume - b.volume) * dir;
-        case "netProfit": return (a.netProfit - b.netProfit) * dir;
-        default: return (a.openedAt.getTime() - b.openedAt.getTime()) * dir;
-      }
-    });
-  }, [allRows, statusFilter, symbolFilter, sort]);
+    ),
+    [allRows, statusFilter, symbolFilter],
+  );
 
-  // Reset to the first page whenever filters change.
-  useEffect(() => { setPage(1); }, [statusFilter, symbolFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const visibleRows = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const digits = (symbol: string) => instruments[symbol]?.digits ?? 5;
+  const fmt = (v: number, symbol: string) => v.toFixed(digits(symbol));
+  const profitable = (r: PositionRow) => r.netProfit >= 0;
 
-  const onSort = (key: string) => {
-    setSort((prev) =>
-      prev.key === key
-        ? { key: prev.key, direction: prev.direction === "asc" ? "desc" : "asc" }
-        : { key: key as SortKey, direction: "desc" },
-    );
-  };
-
-  const pageProfit = visibleRows.reduce((sum, r) => sum + r.netProfit, 0);
-  const pageVolume = visibleRows.reduce((sum, r) => sum + r.volume, 0);
-  const allFilteredProfit = rows.reduce((sum, r) => sum + r.netProfit, 0);
+  const netTotal = rows.reduce((sum, r) => sum + r.netProfit, 0);
   const capped = fetchCap != null && allRows.length >= fetchCap;
 
   const csvRows = rows.map((r) => [
     r.symbol, r.type, r.side, r.volume.toFixed(2),
-    r.openRate.toFixed(digits(r.symbol)), r.currentRate.toFixed(digits(r.symbol)),
+    fmt(r.openRate, r.symbol), fmt(r.currentRate, r.symbol),
     r.netProfit.toFixed(2), r.status, fmtDateTime(r.openedAt), r.closedAt ? fmtDateTime(r.closedAt) : "",
   ]);
 
   return (
-    <RecordShell
-      ariaLabel="Position history"
-      footer={<Pagination page={safePage} pageSize={PAGE_SIZE} totalItems={rows.length} onPageChange={setPage} label="positions" />}
-      toolbar={
+    <RecordList<PositionRow>
+      ariaLabel="Position"
+      title="Position History"
+      description={
         <>
-          <h2 className="text-sm font-semibold">Position History</h2>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {(["ALL", "OPEN", "CLOSED"] as const).map((value) => (
-              <FilterChip key={value} active={statusFilter === value} onClick={() => setStatusFilter(value)}>
-                {value === "ALL" ? "All" : value === "OPEN" ? "Open" : "Closed"}
-              </FilterChip>
-            ))}
-          </div>
-          <NativeSelect
-            value={symbolFilter}
-            onChange={(e) => setSymbolFilter(e.target.value)}
-            aria-label="Filter by symbol"
-            className="h-8"
-          >
-            <option value="ALL">All symbols</option>
-            {symbols.map((symbol) => <option key={symbol} value={symbol}>{symbol}</option>)}
-          </NativeSelect>
-          <MobileSortSelect
-            value={`${sort.key}:${sort.direction}`}
-            onChange={(next) => setSort(next as { key: SortKey; direction: SortDirection })}
-            options={SORT_OPTIONS}
-          />
-          <span className="ml-auto text-(length:--term-text-2xs) text-text-faint tnum">
-            {rows.length} shown · Net P/L {allFilteredProfit >= 0 ? "+" : ""}{allFilteredProfit.toFixed(2)}
-            {capped && (
-              <Tooltip text="The server loads the most recent positions first.">
-                <span className="ml-1.5 text-brand">· showing latest {fetchCap}</span>
-              </Tooltip>
-            )}
+          {rows.length} shown · Net P/L{" "}
+          <span className={`font-semibold ${netTotal >= 0 ? "text-up" : "text-down"}`}>
+            {netTotal >= 0 ? "+" : ""}{netTotal.toFixed(2)}
           </span>
-          <CsvExportButton filename="positions" columns={["Symbol", "Type", "Side", "Volume", "Open Rate", "Current/Close", "Net Profit", "Status", "Opened", "Closed"]} rows={csvRows} disabled={rows.length === 0} />
+          {capped && <span className="text-muted-foreground"> · showing latest {fetchCap}</span>}
         </>
       }
-    >
-      {/* Column header — desktop only; phones sort via the toolbar selector */}
-      <div className="hidden md:grid md:grid-cols-[minmax(0,1.5fr)_1fr_0.8fr_1fr_1fr_1fr_0.9fr_1.3fr] md:items-center md:gap-3 border-b border-border-soft bg-panel-2/50 px-3 py-2 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint" aria-hidden="true">
-        <RecordSortButton label="Symbol" sortKey="symbol" sort={sort} onSort={onSort} />
-        <RecordLabel>Type · Side</RecordLabel>
-        <RecordSortButton label="Volume" sortKey="volume" sort={sort} onSort={onSort} align="right" />
-        <RecordLabel align="right">Open</RecordLabel>
-        <RecordLabel align="right">Current/Close</RecordLabel>
-        <RecordSortButton label="Net Profit" sortKey="netProfit" sort={sort} onSort={onSort} align="right" />
-        <RecordLabel>Status</RecordLabel>
-        <RecordSortButton label="Opened" sortKey="openedAt" sort={sort} onSort={onSort} />
-      </div>
-
-      <ul>
-        {visibleRows.map((position) => {
-          const profitable = position.netProfit >= 0;
-          const plClass = profitable ? "text-up" : "text-down";
-          return (
-            <li
-              key={position.id}
-              onClick={rowNavigate(router, position.symbol)}
-              className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-border-soft px-3 py-3 transition-colors last:border-b-0 hover:bg-panel-2 md:grid-cols-[minmax(0,1.5fr)_1fr_0.8fr_1fr_1fr_1fr_0.9fr_1.3fr] md:gap-3 md:py-2.5"
-            >
-              {/* Identity — col 1 on both layouts */}
-              <div className="min-w-0 md:col-start-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold"><SymbolLink symbol={position.symbol} /></span>
-                  <span className={`text-(length:--term-text-xs) font-semibold ${position.side === "BUY" ? "text-up" : "text-down"}`}>{position.side}</span>
-                  <span className="text-(length:--term-text-xs) text-text-faint">{position.type}</span>
-                </div>
-                <div className="mt-0.5 text-(length:--term-text-xs) tnum text-text-muted md:hidden">
-                  {position.volume.toFixed(2)} lots · {fmt(position.openRate, digits(position.symbol))} → {fmt(position.currentRate, digits(position.symbol))}
-                </div>
-                <div className="mt-0.5 text-(length:--term-text-2xs) text-text-faint md:hidden">{fmtDateTime(position.openedAt)}</div>
-              </div>
-
-              {/* Net P/L — mobile anchor (col 2); desktop col 6 under its header */}
-              <div className={`text-right text-sm font-semibold tnum md:col-start-6 md:text-(length:--term-text-sm) ${plClass}`}>
-                {profitable ? "+" : ""}{position.netProfit.toFixed(2)}
-                <span className="md:hidden block text-(length:--term-text-2xs) font-normal text-text-faint">net P/L</span>
-              </div>
-
-              {/* Desktop-only columns — explicit grid placement */}
-              <div className="hidden md:block md:col-start-2 text-(length:--term-text-sm) text-text-muted">{position.type} · <span className={position.side === "BUY" ? "text-up" : "text-down"}>{position.side}</span></div>
-              <div className="hidden md:block md:col-start-3 text-right text-(length:--term-text-sm) tnum">{position.volume.toFixed(2)}</div>
-              <div className="hidden md:block md:col-start-4 text-right text-(length:--term-text-sm) tnum text-text-muted">{fmt(position.openRate, digits(position.symbol))}</div>
-              <div className="hidden md:block md:col-start-5 text-right text-(length:--term-text-sm) tnum text-text-muted">{fmt(position.currentRate, digits(position.symbol))}</div>
-              <div className="hidden md:block md:col-start-7">
-                <span className={`rounded px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium ${position.status === "OPEN" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-panel-3 text-text-muted"}`}>
-                  {position.status}
-                </span>
-              </div>
-              <div className="hidden md:block md:col-start-8 text-(length:--term-text-xs) tnum text-text-muted">{fmtDateTime(position.openedAt)}</div>
-            </li>
-          );
-        })}
-        {rows.length === 0 && (
-          <li className="px-4 py-8">
-            <EmptyState compact icon={<Inbox size={18} />} title="No positions match the current filters." />
-          </li>
-        )}
-      </ul>
-
-      {/* Page totals — desktop grid columns; compact line on phones */}
-      {rows.length > 0 && (
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 bg-panel-2/60 px-3 py-2 tnum md:grid-cols-[minmax(0,1.5fr)_1fr_0.8fr_1fr_1fr_1fr_0.9fr_1.3fr]">
-          <span className="text-xs font-medium text-text-muted md:col-start-1">
-            Page totals ({visibleRows.length})
-            <span className="ml-2 md:hidden font-normal">{pageVolume.toFixed(2)} lots</span>
+      rows={rows}
+      rowKey={(r) => r.id}
+      leading={(r) => ({
+        icon: <span className="text-xs font-bold">{r.symbol.slice(0, 2)}</span>,
+        tone: r.side === "BUY" ? "up" : "down",
+        title: <SymbolLink symbol={r.symbol} />,
+        secondary: <span>{r.type} · <span className={r.side === "BUY" ? "text-up" : "text-down"}>{r.side}</span> · {r.volume.toFixed(2)} lots</span>,
+      })}
+      columns={[
+        { key: "openRate", label: "Open", align: "right", render: (r) => fmt(r.openRate, r.symbol) },
+        { key: "currentRate", label: "Current/Close", align: "right", render: (r) => fmt(r.currentRate, r.symbol) },
+        { key: "netProfit", label: "Net P/L", sortable: true, align: "right", render: (r) => (
+          <span className={`font-semibold tabular-nums ${profitable(r) ? "text-up" : "text-down"}`}>
+            {profitable(r) ? "+" : ""}{r.netProfit.toFixed(2)}
           </span>
-          <span className={`text-right text-sm font-semibold md:col-start-6 ${pageProfit >= 0 ? "text-up" : "text-down"}`}>
-            {pageProfit >= 0 ? "+" : ""}{pageProfit.toFixed(2)}
+        ) },
+        { key: "status", label: "Status", render: (r) => (
+          <RecordStatusChip tone={r.status === "OPEN" ? "warn" : "muted"}>{r.status}</RecordStatusChip>
+        ) },
+        { key: "openedAt", label: "Opened", sortable: true, align: "right", render: (r) => (
+          <span className="text-xs text-muted-foreground tabular-nums">{fmtDateTime(r.openedAt)}</span>
+        ) },
+      ]}
+      sortValue={(r, key) => {
+        switch (key) {
+          case "netProfit": return r.netProfit;
+          case "openedAt": return r.openedAt.getTime();
+          default: return String((r as unknown as Record<string, unknown>)[key] ?? "");
+        }
+      }}
+      initialSort={{ key: "openedAt", direction: "desc" }}
+      filters={
+        <>
+          <ChipGroup
+            ariaLabel="Filter positions by status"
+            value={statusFilter}
+            onChange={(value) => setStatusFilter(value)}
+            options={[
+              { value: "ALL", label: "All" },
+              { value: "OPEN", label: "Open" },
+              { value: "CLOSED", label: "Closed" },
+            ]}
+          />
+          <Select value={symbolFilter} onValueChange={setSymbolFilter}>
+            <SelectTrigger size="sm" className="w-[150px]" aria-label="Filter by symbol">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All symbols</SelectItem>
+              {symbols.map((symbol) => <SelectItem key={symbol} value={symbol}>{symbol}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </>
+      }
+      toolbarEnd={
+        <CsvExportButton filename="positions" columns={["Symbol", "Type", "Side", "Volume", "Open Rate", "Current/Close", "Net Profit", "Status", "Opened", "Closed"]} rows={csvRows} disabled={rows.length === 0} />
+      }
+      detailTitle="Position Detail"
+      renderDetailHero={(r) => (
+        <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+          <span className={`flex size-12 items-center justify-center rounded-full text-sm font-bold ${r.side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>
+            {r.symbol.slice(0, 2)}
           </span>
-          <span className="hidden md:block md:col-start-3 text-right text-(length:--term-text-sm) text-text-muted">{pageVolume.toFixed(2)}</span>
+          <div className="text-sm font-medium">{r.symbol} · {r.side}</div>
+          <div className={`text-2xl font-semibold tabular-nums ${profitable(r) ? "text-up" : "text-down"}`}>
+            {profitable(r) ? "+" : ""}{r.netProfit.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">USD</span>
+          </div>
         </div>
       )}
-    </RecordShell>
+      renderDetailMeta={(r): RecordDetailMeta[] => [
+        { label: "Status", value: <RecordStatusChip tone={r.status === "OPEN" ? "warn" : "muted"}>{r.status}</RecordStatusChip> },
+        { label: "Volume", value: `${r.volume.toFixed(2)} lots` },
+        { label: "Open rate", value: fmt(r.openRate, r.symbol) },
+        { label: r.status === "OPEN" ? "Current rate" : "Close rate", value: fmt(r.currentRate, r.symbol) },
+        { label: "Swap", value: r.swap.toFixed(2) },
+        { label: "Commission", value: (r.commission + r.tradingCommission).toFixed(2) },
+        { label: "Opened", value: fmtDateTime(r.openedAt) },
+        ...(r.closedAt ? [{ label: "Closed", value: fmtDateTime(r.closedAt) }] : []),
+      ]}
+      renderDetailExtra={(r) => (
+        <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => router.push(`/trade/${r.symbol}`)}>
+          <CandlestickChart size={14} strokeWidth={2} aria-hidden /> Open in terminal
+        </Button>
+      )}
+      emptyTitle="No positions match the current filters."
+      emptyHint="Adjust the status or symbol filters to see more."
+    />
   );
-}
-
-function fmt(value: number, digits: number): string {
-  return value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }

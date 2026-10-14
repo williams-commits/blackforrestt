@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Skeleton } from "@/components/ui/Skeleton";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CircleCheck } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RecordList, RecordStatusChip, type RecordDetailMeta } from "@/components/ui/RecordList";
 
 const CATEGORIES = ["General enquiry", "Account & verification", "Deposits & withdrawals", "Technical issue", "Partnership"] as const;
 
@@ -23,15 +25,15 @@ interface SupportCase {
   resolvedAt: string | null;
 }
 
-const STATUS_STYLES: Record<string, string> = {
-  OPEN: "bg-(--term-warning-bg) text-(--term-warning-fg)",
-  IN_PROGRESS: "bg-brand/15 text-brand",
-  WAITING_CUSTOMER: "bg-(--term-success-bg) text-(--term-success-fg)",
-  RESOLVED: "bg-up/15 text-up",
-  CLOSED: "bg-panel-2 text-text-faint",
+const STATUS_TONES: Record<SupportCase["status"], "up" | "down" | "warn" | "brand" | "muted"> = {
+  OPEN: "warn",
+  IN_PROGRESS: "brand",
+  WAITING_CUSTOMER: "up",
+  RESOLVED: "up",
+  CLOSED: "muted",
 };
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<SupportCase["status"], string> = {
   OPEN: "Open",
   IN_PROGRESS: "In progress",
   WAITING_CUSTOMER: "Awaiting your reply",
@@ -39,6 +41,8 @@ const STATUS_LABELS: Record<string, string> = {
   CLOSED: "Closed",
 };
 
+/** Support on the enterprise RecordList — new-case Card on top, cases list
+ *  with a side-slide detail (description, resolution, status) below. */
 export function SupportTab() {
 
   // New case form state
@@ -106,123 +110,128 @@ export function SupportTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Create new case */}
-      <section className="rounded-lg border border-border bg-canvas p-5">
-        <h3 className="text-sm font-semibold mb-1">Open a support case</h3>
-        <p className="text-xs text-text-muted mb-4">
-          Our team typically responds within one business day. Your case reference will appear below once submitted.
-        </p>
-        {successRef && (
-          <div className="mb-4 flex items-start gap-2 rounded-lg border border-up/30 bg-up/10 px-4 py-3 text-sm text-up"><CircleCheck size={16} strokeWidth={2} aria-hidden className="mt-0.5 shrink-0" />
-            Case created — your reference is <strong>{successRef}</strong>. We&apos;ll reply by email.
-          </div>
-        )}
-        <form onSubmit={submit} className="space-y-4">
-          <div>
-            <label className="mb-1.5 block text-xs text-text-muted">Subject</label>
-            <Select value={subject} onValueChange={setSubject}>
-              <SelectTrigger aria-label="Subject" className="h-10 w-full rounded px-2 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs text-text-muted">Message</label>
-            <Textarea
-              required
-              minLength={10}
-              rows={4}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="resize-none"
-              placeholder="Describe your issue or question…"
-              aria-label="Message"
-            />
-          </div>
-          {(queryError instanceof Error ? queryError.message : actionError) && <p className="rounded-lg border border-down/30 bg-down/10 px-3 py-2 text-sm text-down">{queryError instanceof Error ? queryError.message : actionError}</p>}
-          <button
-            type="submit"
-            disabled={submitting || message.trim().length < 10}
-            className="h-10 rounded-lg bg-brand px-6 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-50 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-          >
-            {submitting ? "Submitting…" : "Submit case"}
-          </button>
-        </form>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Open a support case</CardTitle>
+          <CardDescription>Our team typically responds within one business day. Your case reference will appear below once submitted.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {successRef && (
+            <Alert tone="ok" className="mb-4">
+              Case created — your reference is <strong>{successRef}</strong>. We&apos;ll reply by email.
+            </Alert>
+          )}
+          <form onSubmit={submit} className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-xs text-muted-foreground">Subject</label>
+              <Select value={subject} onValueChange={setSubject}>
+                <SelectTrigger aria-label="Subject" className="h-10 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs text-muted-foreground">Message</label>
+              <Textarea
+                required
+                minLength={10}
+                rows={4}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="resize-none"
+                placeholder="Describe your issue or question…"
+                aria-label="Message"
+              />
+            </div>
+            {(queryError instanceof Error ? queryError.message : actionError) && <Alert tone="err">{queryError instanceof Error ? queryError.message : actionError}</Alert>}
+            <Button
+              type="submit"
+              variant="default"
+              loading={submitting}
+              loadingLabel="Submitting…"
+              disabled={message.trim().length < 10}
+            >
+              Submit case
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       {/* Case history */}
-      <section className="rounded-lg border border-border bg-canvas p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold">Your support cases</h3>
-          {cases.length > 0 && (
-            <span className="flex flex-wrap gap-1.5" aria-label="Case status summary">
-              {(["OPEN", "IN_PROGRESS", "WAITING_CUSTOMER"] as const).map((st) => {
-                const n = cases.filter((c) => c.status === st).length;
-                if (!n) return null;
-                return <span key={st} className={`rounded-full px-2 py-0.5 text-(length:--term-text-2xs) font-semibold ${STATUS_STYLES[st]}`}>{n} {STATUS_LABELS[st]}</span>;
-              })}
-              {(() => {
-                const done = cases.filter((c) => c.status === "RESOLVED" || c.status === "CLOSED").length;
-                return done > 0 ? <span className="rounded-full bg-panel-3 px-2 py-0.5 text-(length:--term-text-2xs) font-semibold text-text-muted">{done} resolved</span> : null;
-              })()}
-            </span>
-          )}
-        </div>
-        {loading ? (
-          <div className="space-y-3" role="status" aria-label="Loading support cases">
-            {[0, 1].map((i) => (
-              <div key={i} className="space-y-2 rounded-lg border border-border p-4">
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-3 w-24" />
-                  <Skeleton className="h-4 w-16 rounded" />
-                </div>
-                <Skeleton className="h-3.5 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
-              </div>
-            ))}
+      <RecordList<SupportCase>
+        ariaLabel="Case"
+        title="Your support cases"
+        description={`${cases.length} cases`}
+        rows={cases}
+        rowKey={(c) => c.id}
+        loading={loading}
+        search={{
+          placeholder: "Search subject or reference…",
+          text: (c) => `${c.subject} ${c.reference} ${c.category}`,
+        }}
+        leading={(c) => ({
+          icon: <span className="text-[10px] font-bold">CS</span>,
+          tone: c.status === "RESOLVED" || c.status === "CLOSED" ? "muted" : c.status === "WAITING_CUSTOMER" ? "up" : "brand",
+          title: c.subject,
+          secondary: <span className="font-mono text-xs">{c.reference}</span>,
+        })}
+        columns={[
+          { key: "category", label: "Category", render: (c) => <span className="text-muted-foreground">{c.category}</span> },
+          { key: "status", label: "Status", render: (c) => (
+            <RecordStatusChip tone={STATUS_TONES[c.status]}>{STATUS_LABELS[c.status]}</RecordStatusChip>
+          ) },
+          { key: "createdAt", label: "Opened", sortable: true, align: "right", render: (c) => (
+            <span className="text-xs text-muted-foreground tabular-nums">{new Date(c.createdAt).toLocaleDateString()}</span>
+          ) },
+        ]}
+        sortValue={(c, key) => {
+          switch (key) {
+            case "createdAt": return new Date(c.createdAt).getTime();
+            default: return String((c as unknown as Record<string, unknown>)[key] ?? "");
+          }
+        }}
+        initialSort={{ key: "createdAt", direction: "desc" }}
+        detailTitle="Case Detail"
+        renderDetailHero={(c) => (
+          <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">CS</span>
+            <div className="text-sm font-medium">{c.subject}</div>
+            <RecordStatusChip tone={STATUS_TONES[c.status]}>{STATUS_LABELS[c.status]}</RecordStatusChip>
           </div>
-        ) : cases.length === 0 ? (
-          <p className="text-sm text-text-muted">You haven&apos;t opened any support cases yet.</p>
-        ) : (
-          <ul className="space-y-3">
-            {[...cases]
-              // Active cases first (most recent), then resolved/closed history.
-              .sort((a, b) => {
-                const rank = (s: string) => (s === "RESOLVED" || s === "CLOSED" ? 1 : 0);
-                return rank(a.status) - rank(b.status) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-              })
-              .map((c) => (
-              <li key={c.id} className="rounded-lg border border-border p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-text-faint">{c.reference}</span>
-                    <span className={`rounded px-2 py-0.5 text-(length:--term-text-2xs) font-semibold ${STATUS_STYLES[c.status] ?? "bg-panel-3 text-text-muted"}`}>
-                      {STATUS_LABELS[c.status] ?? c.status}
-                    </span>
-                  </div>
-                  <time className="text-xs text-text-faint" dateTime={c.createdAt}>{new Date(c.createdAt).toLocaleDateString()}</time>
-                </div>
-                <p className="mt-2 text-sm font-medium">{c.subject}</p>
-                <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-text-muted">{c.description}</p>
-                {c.resolutionNote && (
-                  <p className="mt-2 rounded border border-up/25 bg-up/5 px-3 py-2 text-xs text-text">
-                    <strong className="text-up">Resolved:</strong> {c.resolutionNote}
-                  </p>
-                )}
-                {c.status === "WAITING_CUSTOMER" && (
-                  <p className="mt-2 text-(length:--term-text-xs) font-medium text-up">Awaiting your response — reply via chat or update this case.</p>
-                )}
-              </li>
-            ))}
-          </ul>
         )}
-      </section>
+        renderDetailMeta={(c): RecordDetailMeta[] => [
+          { label: "Reference", value: <span className="font-mono text-xs">{c.reference}</span> },
+          { label: "Category", value: c.category },
+          { label: "Priority", value: c.priority },
+          { label: "Opened", value: new Date(c.createdAt).toLocaleString() },
+          ...(c.resolvedAt ? [{ label: "Resolved", value: new Date(c.resolvedAt).toLocaleString() }] : []),
+        ]}
+        renderDetailExtra={(c) => (
+          <div className="space-y-3">
+            <div className="rounded-xl bg-muted/40 p-4">
+              <div className="text-xs font-medium text-muted-foreground">Description</div>
+              <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">{c.description}</p>
+            </div>
+            {c.resolutionNote && (
+              <Alert tone="ok">
+                <strong>Resolved:</strong> {c.resolutionNote}
+              </Alert>
+            )}
+            {c.status === "WAITING_CUSTOMER" && (
+              <p className="text-xs font-medium text-up">Awaiting your response — reply via chat or update this case.</p>
+            )}
+          </div>
+        )}
+        emptyTitle="No support cases yet"
+        emptyHint="Open a case above and our team will respond."
+      />
     </div>
   );
 }

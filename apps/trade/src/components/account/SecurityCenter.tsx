@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/lib/toast";
 import { Input } from "@/components/ui/Input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface SessionView {
   id: string;
@@ -173,24 +174,23 @@ export function SecurityCenter() {
   const otherCount = sessions.filter((s) => !s.current).length;
 
   return (
-    <section className="space-y-5 p-6">
-      {/* ── Header ── */}
-      <div>
-        <h3 className="text-sm font-medium">Security center</h3>
-        <p className="mt-1 text-(length:--term-text-xs) text-text-faint">
+    <Card>
+      <CardHeader>
+        <CardTitle>Security center</CardTitle>
+        <CardDescription>
           MFA: {enabled ? `enabled · ${remaining} recovery codes remaining` : "not enabled"}
-        </p>
-      </div>
-
-      {/* ── MFA enrollment ── */}
-      {!enabled && !secret && (
-        <div className="flex gap-2">
-          <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Current password" aria-label="Current password for MFA enrollment" className="h-10 flex-1" />
-          <Button type="button" variant="sell" loading={loading} onClick={() => void startEnrollment()}>Start MFA setup</Button>
-        </div>
-      )}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {/* ── MFA enrollment ── */}
+        {!enabled && !secret && (
+          <div className="flex gap-2">
+            <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Current password" aria-label="Current password for MFA enrollment" className="h-10 flex-1" />
+            <Button type="button" variant="sell" loading={loading} onClick={() => void startEnrollment()}>Start MFA setup</Button>
+          </div>
+        )}
       {secret && (
-        <div className="space-y-3 rounded border border-brand/30 bg-brand-soft p-3">
+        <div className="space-y-3 rounded border border-primary/30 bg-primary/10 p-3">
           <p className="break-all font-mono text-xs">{secret}</p>
           <div className="flex gap-2">
             <Input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="Six-digit code" aria-label="Authenticator code" className="h-10 flex-1" />
@@ -204,8 +204,8 @@ export function SecurityCenter() {
         </ul>
       )}
       {enabled && (
-        <div className="space-y-3 border-border-soft p-3">
-          <p className="text-xs text-text-muted">
+        <div className="space-y-3 border-border p-3">
+          <p className="text-xs text-muted-foreground">
             Disabling MFA requires your password and an authenticator or recovery code.
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -215,14 +215,14 @@ export function SecurityCenter() {
           <Button type="button" loading={loading} onClick={() => void disableMfa()}>Disable MFA</Button>
         </div>
       )}
-      {notice && <p role="status" className="text-xs text-text-muted">{notice}</p>}
+      {notice && <p role="status" className="text-xs text-muted-foreground">{notice}</p>}
 
       {/* ── Active sessions ── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="text-xs font-semibold text-text">Active sessions</h4>
-            <p className="text-(length:--term-text-xs) text-text-faint">
+            <h4 className="text-xs font-semibold text-foreground">Active sessions</h4>
+            <p className="text-xs text-muted-foreground">
               {sessions.length} device{sessions.length === 1 ? "" : "s"} signed in
             </p>
           </div>
@@ -252,41 +252,41 @@ export function SecurityCenter() {
             ))}
           </div>
         ) : sessions.length === 0 ? (
-          <div className="border-border-soft p-4 text-center">
-            <p className="text-xs text-text-muted">No active sessions found.</p>
+          <div className="border-border p-4 text-center">
+            <p className="text-xs text-muted-foreground">No active sessions found.</p>
           </div>
         ) : (
           <div className="space-y-2">
             {sessions.map((session) => (
               <div
                 key={session.id}
-                className={`flex items-center gap-3 rounded-lg border p-3 transition ${
+                className={`flex items-center gap-3 rounded-xl bg-muted/50 p-3 transition ${
                   session.current
-                    ? "border-brand/30 bg-brand-soft/20"
-                    : "border-border bg-panel hover:border-brand/30"
+                    ? "border-primary/30 bg-primary/10/20"
+                    : "border-border bg-panel hover:border-primary/30"
                 }`}
               >
                 <BrowserIcon browser={session.browser} />
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-xs font-medium text-text">
+                    <span className="truncate text-xs font-medium text-foreground">
                       {session.browser === "Unknown" && session.os === "Unknown"
                         ? session.deviceName
                         : `${session.browser} on ${session.os}`}
                     </span>
                     {session.current && (
-                      <span className="shrink-0 rounded-full bg-brand/15 px-2 py-0.5 text-(length:--term-text-2xs) font-bold uppercase tracking-wide text-brand">
+                      <span className="shrink-0 rounded-full bg-brand/15 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-primary">
                         This device
                       </span>
                     )}
                     {session.mfaVerifiedAt && !session.current && (
-                      <span className="shrink-0 rounded-full bg-up/10 px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold text-up">
+                      <span className="shrink-0 rounded-full bg-up/10 px-1.5 py-0.5 text-xs font-semibold text-up">
                         MFA
                       </span>
                     )}
                   </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-(length:--term-text-xs) text-text-faint">
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{formatRelative(session.lastSeenAt)}</span>
                     <span className="text-border">·</span>
                     <span className="capitalize">{session.deviceType}</span>
@@ -298,7 +298,7 @@ export function SecurityCenter() {
                     type="button"
                     onClick={() => void revoke(session.id)}
                     disabled={revokingId === session.id}
-                    className="shrink-0 text-(length:--term-text-xs) font-medium transition hover:border-down/40 hover:text-down disabled:opacity-50"
+                    className="shrink-0 text-xs font-medium transition hover:border-down/40 hover:text-down disabled:opacity-50"
                   >
                     {revokingId === session.id ? "Revoking…" : "Revoke"}
                   </button>
@@ -308,6 +308,7 @@ export function SecurityCenter() {
           </div>
         )}
       </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,3 +1,6 @@
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/Alert";
+
 interface ReconciliationStatus {
   activeBlocks: { scope: "TRADE" | "WITHDRAW"; reason: string; createdAt: string }[];
   openCaseCount: number;
@@ -11,18 +14,18 @@ export function AccountReconciliationStatus({ status }: { status: Reconciliation
   const verificationPending = status.lastRun?.status === "RUNNING" || status.lastRun?.status === "FAILED";
   const underReview = status.openCaseCount > 0 || status.paymentMismatchCount > 0 || verificationPending;
   const state = blocked ? "Restricted" : underReview ? "Under review" : "Reconciled";
-  const stateClass = blocked ? "text-down bg-down/10 border-down/30" : underReview ? "text-brand bg-brand-soft border-brand/30" : "text-up bg-up/10 border-up/30";
+  const stateClass = blocked ? "text-down bg-down/10 border-down/30" : underReview ? "text-primary bg-primary/10 border-primary/30" : "text-up bg-up/10 border-up/30";
 
   return (
-    <section aria-labelledby="account-reconciliation-heading" className="mb-5 rounded-lg border border-border bg-canvas p-4">
+    <section aria-labelledby="account-reconciliation-heading" className="mb-5 rounded-xl bg-card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="account-reconciliation-heading" className="text-sm font-semibold">Account integrity and reconciliation</h2>
-          <p className="mt-1 text-(length:--term-text-xs) text-text-muted">
+          <p className="mt-1 text-xs text-muted-foreground">
             Independent checks compare ledger balances, wallet projections, position settlement, and payment records.
           </p>
         </div>
-        <span role="status" className={`rounded-full border px-2.5 py-1 text-(length:--term-text-2xs) font-semibold ${stateClass}`}>{state}</span>
+        <Badge variant="secondary" role="status" className={`border ${stateClass}`}>{state}</Badge>
       </div>
 
       <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -37,14 +40,14 @@ export function AccountReconciliationStatus({ status }: { status: Reconciliation
       </dl>
 
       {status.activeBlocks.length > 0 && (
-        <div role="alert" className="mt-4 rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">
-          <div className="font-semibold">Temporary safeguards are active</div>
+        <Alert tone="err" className="mt-4">
+          <strong className="font-semibold">Temporary safeguards are active</strong>
           <ul className="mt-1 list-disc space-y-1 pl-4">
             {status.activeBlocks.map((block, index) => (
               <li key={`${block.scope}-${index}`}>{block.scope === "TRADE" ? "New trades" : "Withdrawals"} blocked: {block.reason}</li>
             ))}
           </ul>
-        </div>
+        </Alert>
       )}
     </section>
   );
@@ -52,9 +55,9 @@ export function AccountReconciliationStatus({ status }: { status: Reconciliation
 
 function Metric({ label, value, alert = false }: { label: string; value: string; alert?: boolean }) {
   return (
-    <div className="rounded border border-border-soft bg-panel-2/50 p-2.5">
-      <dt className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">{label}</dt>
-      <dd className={`mt-1 text-xs font-semibold ${alert ? "text-down" : "text-text"}`}>{value}</dd>
+    <div className="rounded border border-border bg-muted/50 p-2.5">
+      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className={`mt-1 text-xs font-semibold ${alert ? "text-down" : "text-foreground"}`}>{value}</dd>
     </div>
   );
 }

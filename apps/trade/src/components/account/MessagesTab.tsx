@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/Alert";
 import { Send } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { fmtDateTime } from "@/lib/dates";
@@ -126,15 +128,15 @@ export function MessagesTab() {
   const hasThread = inbox?.role === "customer" ? inbox.hasThread : false;
 
   return (
-    <div className="flex h-[min(70vh,32rem)] flex-col rounded-lg border border-border bg-canvas">
-      <div className="border-b border-border-soft px-4 py-3">
+    <div className="flex h-[min(70vh,32rem)] flex-col rounded-xl bg-card">
+      <div className="border-b border-border px-4 py-3">
         <h2 className="text-sm font-semibold">Support chat</h2>
-        <p className="text-(length:--term-text-xs) text-text-muted">Talk directly with our team — replies land here and in your notifications.</p>
+        <p className="text-xs text-muted-foreground">Talk directly with our team — replies land here and in your notifications.</p>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
         {!hasThread && (
-          <p className="rounded border border-dashed border-border px-4 py-8 text-center text-xs text-text-muted">
+          <p className="rounded-xl bg-muted/40 px-4 py-8 text-center text-xs text-muted-foreground">
             No messages yet — say hello and our team will reply here.
           </p>
         )}
@@ -143,12 +145,12 @@ export function MessagesTab() {
           return (
             <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[80%] ${mine ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
-                <span className={`px-1 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide ${mine ? "text-text-faint" : "text-text-muted"}`}>
+                <span className={`px-1 text-xs font-semibold ${mine ? "text-muted-foreground" : "text-muted-foreground"}`}>
                   {mine ? "You" : `Support · ${message.senderName}`}
                 </span>
-                <div className={`rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${mine ? "bg-brand text-white" : "bg-panel-2 text-text"}`}>
+                <div className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${mine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
                   {message.body}
-                  <div className={`mt-1 flex items-center justify-end gap-1.5 text-(length:--term-text-2xs) ${mine ? "opacity-60" : "text-text-faint"}`}>
+                  <div className={`mt-1 flex items-center justify-end gap-1.5 text-xs ${mine ? "opacity-60" : "text-muted-foreground"}`}>
                     <span className="tnum">{fmtDateTime(message.createdAt)}</span>
                     {mine && <span aria-label={message.readAt ? "Read by support" : "Not yet read"}>{message.readAt ? "✓✓ Read" : "✓ Sent"}</span>}
                   </div>
@@ -161,13 +163,17 @@ export function MessagesTab() {
       </div>
 
       {(error ?? actionError) && (
-        <div role="alert" className="mx-4 mb-2 flex items-center justify-between gap-2 rounded border border-down/40 bg-down/10 px-3 py-2 text-xs text-down">
-          <span>{error ?? actionError}</span>
-          <button type="button" onClick={() => void load()} className="shrink-0 font-medium underline underline-offset-2">Retry</button>
+        <div className="mx-4 mb-2">
+          <Alert tone="err" className="py-2 text-xs">
+            <span className="flex flex-wrap items-center justify-between gap-2">
+              {error ?? actionError}
+              <button type="button" onClick={() => void load()} className="shrink-0 font-medium underline underline-offset-2">Retry</button>
+            </span>
+          </Alert>
         </div>
       )}
 
-      <form onSubmit={send} className="flex items-end gap-2 border-t border-border-soft p-3">
+      <form onSubmit={send} className="flex items-end gap-2 border-t border-border p-3">
         <Textarea
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
@@ -183,7 +189,7 @@ export function MessagesTab() {
           aria-label="Message body"
           className="flex-1 resize-none"
         />
-        <Button type="submit" size="sm" variant="brand" loading={sending} disabled={!draft.trim()}><Send size={12} strokeWidth={2} aria-hidden /> Send</Button>
+        <Button type="submit" size="sm" variant="default" loading={sending} disabled={!draft.trim()}><Send size={12} strokeWidth={2} aria-hidden /> Send</Button>
       </form>
     </div>
   );
@@ -196,54 +202,53 @@ function OperatorInbox({ threads }: { threads: { threads: ThreadRow[]; totalUnre
   const awaiting = threads?.threads.filter((thread) => thread.status === "AWAITING_REPLY") ?? [];
   const recent = threads?.threads.slice(0, 6) ?? [];
   return (
-    <div className="rounded-lg border border-border bg-canvas">
-      <div className="border-b border-border-soft px-4 py-3">
+    <div className="rounded-xl bg-card">
+      <div className="border-b border-border px-4 py-3">
         <h2 className="text-sm font-semibold">Support inbox</h2>
-        <p className="text-(length:--term-text-xs) text-text-muted">
+        <p className="text-xs text-muted-foreground">
           You&apos;re signed in as an operator. Customer conversations are handled from the Operations console — they never appear as your personal messages.
         </p>
       </div>
       <div className="px-4 py-3">
-        <Link
-          href="/admin"
-          className="inline-flex items-center gap-2 rounded bg-brand px-3 py-2 text-xs font-medium text-white hover:brightness-95"
-        >
-          Open Operations console
-          {threads && threads.totalUnread > 0 && (
-            <span className="rounded-full bg-canvas/25 px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold">{threads.totalUnread} unread</span>
-          )}
-        </Link>
+        <Button type="button" variant="default" size="sm" asChild>
+          <Link href="/admin" className="inline-flex items-center gap-2">
+            Open Operations console
+            {threads && threads.totalUnread > 0 && (
+              <Badge className="bg-card/25 text-white hover:bg-card/25">{threads.totalUnread} unread</Badge>
+            )}
+          </Link>
+        </Button>
       </div>
       {threads ? (
         threads.threads.length === 0 ? (
-          <p className="border-t border-border-soft px-4 py-6 text-center text-xs text-text-muted">No customer conversations yet.</p>
+          <p className="border-t border-border px-4 py-6 text-center text-xs text-muted-foreground">No customer conversations yet.</p>
         ) : (
-          <ul className="divide-y divide-border-soft border-t border-border-soft" aria-label="Recent conversations">
+          <ul className="divide-y divide-border-soft border-t border-border" aria-label="Recent conversations">
             {recent.map((thread) => (
               <li key={thread.userId} className="flex items-center justify-between gap-3 px-4 py-2.5">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-xs font-medium">{thread.name ?? thread.email ?? thread.userId}</span>
                     {thread.unread > 0 && (
-                      <span className="rounded-full bg-brand px-1.5 py-0.5 text-(length:--term-text-2xs) font-bold text-white">{thread.unread} new</span>
+                      <Badge className="bg-primary px-1.5 py-0 text-xs">{thread.unread} new</Badge>
                     )}
                   </div>
-                  <div className="truncate text-(length:--term-text-2xs) text-text-faint">
+                  <div className="truncate text-xs text-muted-foreground">
                     {thread.status === "AWAITING_REPLY" ? "Waiting for a reply" : "Replied"} · {thread.lastMessage || "—"}
                   </div>
                 </div>
-                <span className="shrink-0 text-(length:--term-text-2xs) text-text-faint tnum">{thread.lastMessageAt ? fmtDateTime(thread.lastMessageAt) : ""}</span>
+                <span className="shrink-0 text-xs text-muted-foreground tnum">{thread.lastMessageAt ? fmtDateTime(thread.lastMessageAt) : ""}</span>
               </li>
             ))}
           </ul>
         )
       ) : (
-        <p className="border-t border-border-soft px-4 py-6 text-center text-xs text-text-muted">
+        <p className="border-t border-border px-4 py-6 text-center text-xs text-muted-foreground">
           Your role doesn&apos;t include support access — contact an administrator if you need it.
         </p>
       )}
       {threads && awaiting.length > 0 && (
-        <p className="border-t border-border-soft px-4 py-2 text-(length:--term-text-2xs) text-text-muted">
+        <p className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
           {awaiting.length} conversation{awaiting.length === 1 ? "" : "s"} waiting for a reply.
         </p>
       )}

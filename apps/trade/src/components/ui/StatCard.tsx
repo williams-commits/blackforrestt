@@ -20,12 +20,12 @@ export function StatCard({
   onClick?: () => void;
 }) {
   const toneClass =
-    tone === "up" ? "text-up" : tone === "down" ? "text-down" : tone === "warn" ? "text-brand" : "text-text";
+    tone === "up" ? "text-up" : tone === "down" ? "text-down" : tone === "warn" ? "text-primary" : "text-foreground";
   const body = (
     <>
-      <p className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">{label}</p>
-      <p className={`mt-1 text-lg font-semibold tnum leading-tight ${toneClass}`}>{value}</p>
-      {hint && <p className="mt-1 text-(length:--term-text-2xs) text-text-faint">{hint}</p>}
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className={`mt-1 text-lg font-semibold tabular-nums leading-tight ${toneClass}`}>{value}</p>
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </>
   );
   if (onClick) {
@@ -33,7 +33,7 @@ export function StatCard({
       <button
         type="button"
         onClick={onClick}
-        className="flex w-full items-start gap-2.5 rounded-lg border border-border bg-canvas p-4 text-left transition hover:border-brand/40"
+        className="flex w-full items-start gap-2.5 rounded-xl border bg-card p-4 text-left shadow-sm transition-colors hover:border-primary/40"
       >
         {icon && <span className="mt-0.5 shrink-0">{icon}</span>}
         <span className="min-w-0 flex-1">{body}</span>
@@ -41,7 +41,7 @@ export function StatCard({
     );
   }
   return (
-    <div className="flex items-start gap-2.5 rounded-lg border border-border bg-canvas p-4">
+    <div className="flex items-start gap-2.5 rounded-xl border bg-card p-4 shadow-sm">
       {icon && <span className="mt-0.5 shrink-0">{icon}</span>}
       <div className="min-w-0 flex-1">{body}</div>
     </div>

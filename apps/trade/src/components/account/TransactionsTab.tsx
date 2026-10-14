@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CsvExportButton } from "@/components/ui/CsvExport";
+import { DateInput } from "@/components/ui/Input";
 import { StatCard } from "@/components/ui/StatCard";
 import { fmtDateTime } from "@/lib/dates";
 import { ChipGroup } from "@/components/ui/ChipGroup";
@@ -36,6 +37,8 @@ const TYPE_TONES: Record<Txn["type"], "up" | "down" | "warn" | "muted"> = {
 export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
   const [statusFilter, setStatusFilter] = useState<"ALL" | Txn["status"]>("ALL");
   const [typeFilter, setTypeFilter] = useState<"ALL" | Txn["type"]>("ALL");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   const totals = useMemo(() => {
     let net = 0;
@@ -53,13 +56,19 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
     return { net, monthDeposits, monthWithdrawals };
   }, [transactions]);
 
-  const rows = useMemo(
-    () => transactions.filter((t) =>
-      (statusFilter === "ALL" || t.status === statusFilter) &&
-      (typeFilter === "ALL" || t.type === typeFilter),
-    ),
-    [transactions, statusFilter, typeFilter],
-  );
+  const rows = useMemo(() => {
+    const from = fromDate ? new Date(fromDate).getTime() : null;
+    // End of the selected day (inclusive).
+    const to = toDate ? new Date(toDate).getTime() + 86_399_999 : null;
+    return transactions.filter((t) => {
+      if (statusFilter !== "ALL" && t.status !== statusFilter) return false;
+      if (typeFilter !== "ALL" && t.type !== typeFilter) return false;
+      const ts = new Date(t.createdAt).getTime();
+      if (from != null && ts < from) return false;
+      if (to != null && ts > to) return false;
+      return true;
+    });
+  }, [transactions, statusFilter, typeFilter, fromDate, toDate]);
 
   const credit = (t: Txn) => t.amount >= 0;
 
@@ -132,6 +141,11 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
                 { value: "CANCELLED", label: "Cancelled" },
               ]}
             />
+            <div className="flex items-center gap-1.5">
+              <DateInput value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="From date" className="h-8 w-35" />
+              <span className="text-xs text-muted-foreground">→</span>
+              <DateInput value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="To date" className="h-8 w-35" />
+            </div>
             <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as "ALL" | Txn["type"])}>
               <SelectTrigger size="sm" className="w-40" aria-label="Filter by type">
                 <SelectValue />

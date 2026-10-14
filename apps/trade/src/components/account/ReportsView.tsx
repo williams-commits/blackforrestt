@@ -7,7 +7,7 @@ import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { SymbolLink } from "@/components/trade/SymbolLink";
 import { fmtDateTime } from "@/lib/dates";
-import { Input } from "@/components/ui/Input";
+import { DateInput } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChipGroup } from "@/components/ui/ChipGroup";
@@ -132,9 +132,9 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
             {/* Server mode: dates are submitted with the filter form and applied
                 to the list, pagination, and summary alike. Local mode: live filtering. */}
             <div className="flex items-center gap-1.5">
-              <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="Closed after" className="h-8 w-35" />
+              <DateInput value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="Closed after" className="h-8 w-35" />
               <span className="text-xs text-muted-foreground">→</span>
-              <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="Closed before" className="h-8 w-35" />
+              <DateInput value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="Closed before" className="h-8 w-35" />
             </div>
             {server ? (
               <form action="/reports" method="get" className="flex flex-wrap items-center gap-2">

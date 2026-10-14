@@ -23,6 +23,7 @@ import { fmtAgo, fmtDateTime } from "@/lib/dates";
 import { toast } from "@/lib/toast";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Permission = string;
 type TabKey =
@@ -1690,7 +1691,7 @@ function RiskChangeFields() {
       </label>
       <FieldInput name="description" label="Description" required />
       <FieldInput name="configuration" label="Configuration JSON" placeholder='{"maxLots":"50"}' required />
-      <label className="flex items-center gap-2 self-end pb-2 text-xs"><input name="enabled" type="checkbox" defaultChecked /> Enabled</label>
+      <label className="flex items-center gap-2 self-end pb-2 text-xs"><Checkbox name="enabled" defaultChecked /> Enabled</label>
     </div>
   );
 }
@@ -1703,7 +1704,7 @@ function InstrumentChangeFields() {
       <FieldInput name="commissionPerLot" label="Commission per lot" type="number" step="0.00000001" required />
       <FieldInput name="swapLongPips" label="Long swap pips" type="number" step="0.00000001" required />
       <FieldInput name="swapShortPips" label="Short swap pips" type="number" step="0.00000001" required />
-      <label className="flex items-center gap-2 self-end pb-2 text-xs"><input name="active" type="checkbox" defaultChecked /> Active</label>
+      <label className="flex items-center gap-2 self-end pb-2 text-xs"><Checkbox name="active" defaultChecked /> Active</label>
     </div>
   );
 }

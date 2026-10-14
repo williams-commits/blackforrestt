@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { KycDocuments } from "@/components/account/KycDocuments";
 import { ADDRESS_DOCUMENT_TYPES, IDENTITY_DOCUMENT_TYPES } from "@/lib/kyc";
-import { Input } from "@/components/ui/Input";
+import { Input, DateInput } from "@/components/ui/Input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert } from "@/components/ui/Alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -132,8 +132,8 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
               ) : null}
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="First name" name="firstName" defaultValue={kyc?.firstName ?? ""} required maxLength={100} />
-                <Field label="Last name" name="lastName" defaultValue={kyc?.lastName ?? ""} required maxLength={100} />
+                <Field label="First name" name="firstName" placeholder="e.g. Alex" defaultValue={kyc?.firstName ?? ""} required maxLength={100} />
+                <Field label="Last name" name="lastName" placeholder="e.g. Mercer" defaultValue={kyc?.lastName ?? ""} required maxLength={100} />
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field
@@ -158,10 +158,10 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
                   </Select>
                 </div>
               </div>
-              <Field label="Address" name="address" required maxLength={200} />
+              <Field label="Address" name="address" placeholder="Street and number" required maxLength={200} />
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="City" name="city" required maxLength={100} />
-                <Field label="Postal code" name="postalCode" maxLength={32} />
+                <Field label="City" name="city" placeholder="e.g. London" required maxLength={100} />
+                <Field label="Postal code" name="postalCode" placeholder="e.g. EC1A 1BB" maxLength={32} />
               </div>
 
                 <div>
@@ -356,6 +356,18 @@ function Field({
       <Label htmlFor={id} className="text-xs font-medium text-muted-foreground">
         {label}
       </Label>
+      {type === "date" ? (
+      <DateInput
+        id={id}
+        name={name}
+        placeholder={placeholder}
+        defaultValue={defaultValue}
+        required={required}
+        min={min}
+        max={max}
+        maxLength={maxLength}
+      />
+      ) : (
       <Input
         id={id}
         type={type}
@@ -368,6 +380,7 @@ function Field({
         maxLength={maxLength}
         className="h-10 placeholder:text-muted-foreground"
       />
+      )}
     </div>
   );
 }

@@ -77,6 +77,7 @@ export function RecordList<T>({
   emptyHint,
   emptyIcon,
   onRowActivate,
+  mobilePrimary,
   className,
 }: {
   ariaLabel: string;
@@ -116,6 +117,9 @@ export function RecordList<T>({
   emptyIcon?: React.ReactNode;
   /** Optional override instead of the slide-over detail. */
   onRowActivate?: (row: T) => void;
+  /** Concise right-hand metric shown on phones (defaults to the last
+   *  right-aligned column). */
+  mobilePrimary?: (row: T) => React.ReactNode;
   className?: string;
 }) {
   const [sort, setSort] = React.useState<{ key: string; direction: "asc" | "desc" }>(
@@ -146,6 +150,10 @@ export function RecordList<T>({
   const windowRows = sorted.slice(0, visible);
   const clientHasMore = visible < sorted.length;
   const showLoadMore = hasMore !== undefined ? hasMore || clientHasMore : clientHasMore;
+
+  const lastRightColumn = [...columns].reverse().find((c) => c.align === "right");
+  const primaryFor = (row: T) =>
+    mobilePrimary ? mobilePrimary(row) : lastRightColumn?.render?.(row) ?? null;
 
   const activate = (row: T) => {
     if (onRowActivate) onRowActivate(row);
@@ -212,6 +220,9 @@ export function RecordList<T>({
             {emptyHint && <p className="text-xs text-muted-foreground">{emptyHint}</p>}
           </div>
         ) : (
+          <>
+          {/* Desktop: full sortable table */}
+          <div className="hidden md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -281,6 +292,41 @@ export function RecordList<T>({
               })}
             </TableBody>
           </Table>
+          </div>
+
+          {/* Mobile: concise summary rows — leading identity + primary
+              metric, aligned with the desktop leading cell and slide-over. */}
+          <ul className="space-y-2 p-3 md:hidden">
+            {windowRows.map((row) => {
+              const lead = leading(row);
+              return (
+                <li key={rowKey(row)}>
+                  <button
+                    type="button"
+                    onClick={() => activate(row)}
+                    className="flex w-full items-center gap-3 rounded-xl bg-muted/40 px-3.5 py-3 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  >
+                    {lead.icon != null && (
+                      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", toneClass(lead.tone))}>
+                        {lead.icon}
+                      </span>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-foreground">{lead.title}</div>
+                      {lead.secondary != null && (
+                        <div className="truncate text-xs text-muted-foreground">{lead.secondary}</div>
+                      )}
+                    </div>
+                    <div className="shrink-0 text-right text-sm font-semibold tabular-nums">
+                      {primaryFor(row)}
+                    </div>
+                    <ChevronRight size={14} strokeWidth={2} aria-hidden className="shrink-0 text-muted-foreground opacity-60" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          </>
         )}
         {showLoadMore && sorted.length > 0 && (
           <div className="flex items-center justify-center gap-3 px-6 py-4">

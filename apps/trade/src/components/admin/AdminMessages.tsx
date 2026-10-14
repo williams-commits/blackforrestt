@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/lib/toast";
 import { fmtDateTime } from "@/lib/dates";
 import { Input } from "@/components/ui/Input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ThreadRow {
   userId: string;
@@ -258,7 +259,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               aria-label="Search conversations"
             />
             <label className="flex items-center gap-1.5 text-(length:--term-text-2xs) text-text-muted">
-              <input type="checkbox" checked={unreadOnly} onChange={(event) => setUnreadOnly(event.target.checked)} className="accent-brand" />
+              <Checkbox checked={unreadOnly} onCheckedChange={(checked) => setUnreadOnly(checked === true)} aria-label="Unread only" />
               Unread only
             </label>
           </div>

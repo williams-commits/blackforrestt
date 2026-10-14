@@ -235,12 +235,12 @@ function PasswordDialog({ open, onClose }: { open: boolean; onClose: () => void 
   return (
     <Dialog open={open} onClose={onClose} title="Change password" description={`Use at least ${PASSWORD_MIN_LENGTH} characters.`} className="sm:max-w-md">
       <form onSubmit={changePassword} className="space-y-4 px-5 py-4">
-        <Field label="Current password" type={passwordFieldType} value={current} onChange={(v) => { setCurrent(v); setNotice(null); }} autoComplete="current-password" required />
+        <Field label="Current password" type={passwordFieldType} placeholder="Enter your current password" value={current} onChange={(v) => { setCurrent(v); setNotice(null); }} autoComplete="current-password" required />
         <div>
-          <Field label="New password" type={passwordFieldType} value={next} onChange={(v) => { setNext(v); setNotice(null); }} autoComplete="new-password" required minLength={PASSWORD_MIN_LENGTH} maxLength={128} />
+          <Field label="New password" type={passwordFieldType} placeholder={`At least ${PASSWORD_MIN_LENGTH} characters`} value={next} onChange={(v) => { setNext(v); setNotice(null); }} autoComplete="new-password" required minLength={PASSWORD_MIN_LENGTH} maxLength={128} />
           <PasswordStrength password={next} className="mt-1.5" />
         </div>
-        <Field label="Confirm new password" type={passwordFieldType} value={confirm} onChange={(v) => { setConfirm(v); setNotice(null); }} autoComplete="new-password" required minLength={PASSWORD_MIN_LENGTH} maxLength={128} />
+        <Field label="Confirm new password" type={passwordFieldType} placeholder="Repeat your new password" value={confirm} onChange={(v) => { setConfirm(v); setNotice(null); }} autoComplete="new-password" required minLength={PASSWORD_MIN_LENGTH} maxLength={128} />
         <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted-foreground">
           <Switch checked={showPasswords} onCheckedChange={setShowPasswords} aria-label="Show passwords" />
           Show passwords
@@ -260,6 +260,7 @@ function PasswordDialog({ open, onClose }: { open: boolean; onClose: () => void 
 function Field({
   label,
   type,
+  placeholder,
   value,
   onChange,
   autoComplete,
@@ -269,6 +270,7 @@ function Field({
 }: {
   label: string;
   type: string;
+  placeholder?: string;
   value: string;
   onChange: (value: string) => void;
   autoComplete?: string;
@@ -285,6 +287,7 @@ function Field({
       <Input
         id={id}
         type={type}
+        placeholder={placeholder}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         autoComplete={autoComplete}

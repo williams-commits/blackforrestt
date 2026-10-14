@@ -25,8 +25,9 @@ function SelectTrigger({
   className,
   size = "default",
   children,
+  startIcon,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Trigger> & { size?: "sm" | "default" }) {
+}: React.ComponentProps<typeof SelectPrimitive.Trigger> & { size?: "sm" | "default"; startIcon?: React.ReactNode }) {
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
@@ -37,6 +38,9 @@ function SelectTrigger({
       )}
       {...props}
     >
+      {startIcon ? (
+        <span aria-hidden className="pointer-events-none shrink-0 text-muted-foreground">{startIcon}</span>
+      ) : null}
       {children}
       <SelectPrimitive.Icon asChild>
         <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />

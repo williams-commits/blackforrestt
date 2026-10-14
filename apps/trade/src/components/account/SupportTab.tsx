@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
+import { LifeBuoy, Send, Tag } from "lucide-react";
+import { IdentityTile } from "@/components/ui/Initial";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecordList, RecordStatusChip, type RecordDetailMeta } from "@/components/ui/RecordList";
 import { Label } from "@/components/ui/label";
@@ -128,7 +130,7 @@ export function SupportTab() {
             <div>
               <Label className="text-xs font-medium text-muted-foreground">Subject</Label>
               <Select value={subject} onValueChange={setSubject}>
-                <SelectTrigger aria-label="Subject" className="h-10 w-full">
+                <SelectTrigger aria-label="Subject" className="h-10 w-full" startIcon={<Tag size={13} strokeWidth={2} aria-hidden />}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -159,7 +161,7 @@ export function SupportTab() {
               loadingLabel="Submitting…"
               disabled={message.trim().length < 10}
             >
-              Submit case
+              <Send size={13} strokeWidth={2} aria-hidden /> Submit case
             </Button>
           </form>
         </CardContent>
@@ -178,7 +180,7 @@ export function SupportTab() {
           text: (c) => `${c.subject} ${c.reference} ${c.category}`,
         }}
         leading={(c) => ({
-          icon: <span className="text-[10px] font-bold">CS</span>,
+          icon: <LifeBuoy size={15} strokeWidth={2} aria-hidden />,
           tone: c.status === "RESOLVED" || c.status === "CLOSED" ? "muted" : c.status === "WAITING_CUSTOMER" ? "up" : "brand",
           title: c.subject,
           secondary: <span className="font-mono text-xs">{c.reference}</span>,
@@ -202,7 +204,7 @@ export function SupportTab() {
         detailTitle="Case Detail"
         renderDetailHero={(c) => (
           <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
-            <span className="flex size-12 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">CS</span>
+            <IdentityTile size="lg"><LifeBuoy size={20} strokeWidth={2} aria-hidden /></IdentityTile>
             <div className="text-sm font-medium">{c.subject}</div>
             <RecordStatusChip tone={STATUS_TONES[c.status]}>{STATUS_LABELS[c.status]}</RecordStatusChip>
           </div>

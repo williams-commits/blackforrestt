@@ -155,7 +155,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="account-flat terminal-ui min-h-screen">
-      <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 border-b border-border bg-card px-3 py-1 sm:flex-nowrap sm:px-4">
+      <header className="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-3 bg-card px-3 py-2 sm:flex-nowrap sm:px-4">
         <Logo />
         {/* Inline section nav is desktop-only (lg+). Phones and tablets use
             the Stage-4 bottom navigation (Markets / Trade / Positions /

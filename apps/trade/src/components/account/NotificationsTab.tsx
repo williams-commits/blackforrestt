@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/Alert";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, ChevronDown, MessageCircle, X } from "lucide-react";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -216,7 +216,7 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
             {hasMore && (
               <div className="flex items-center justify-center gap-3 pt-2">
                 <Button type="button" variant="outline" size="sm" loading={isFetching && page > 1} onClick={() => setPage((p) => p + 1)}>
-                  Load more
+                  <ChevronDown size={13} strokeWidth={2} aria-hidden /> Load more
                 </Button>
                 <span className="text-xs text-muted-foreground tabular-nums">{rows.length} loaded</span>
               </div>
@@ -247,10 +247,10 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
             <div className="flex flex-wrap justify-end gap-2">
               {(selected.type === "ADMIN_CHAT" || selected.type === "CUSTOMER_MESSAGE") && onOpenMessages && (
                 <Button type="button" variant="default" onClick={() => { setSelected(null); onOpenMessages(); }}>
-                  Open conversation
+                  <MessageCircle size={13} strokeWidth={2} aria-hidden /> Open conversation
                 </Button>
               )}
-              <Button type="button" variant="ghost" onClick={() => setSelected(null)}>Close</Button>
+              <Button type="button" variant="ghost" onClick={() => setSelected(null)}><X size={13} strokeWidth={2} aria-hidden /> Close</Button>
             </div>
           </div>
         )}

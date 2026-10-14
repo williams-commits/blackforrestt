@@ -1,5 +1,6 @@
 "use client";
 
+import { LogOut, ShieldCheck, ShieldOff, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -186,7 +187,7 @@ export function SecurityCenter() {
         {!enabled && !secret && (
           <div className="flex gap-2">
             <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Current password" aria-label="Current password for MFA enrollment" className="h-10 flex-1" />
-            <Button type="button" loading={loading} onClick={() => void startEnrollment()}>Start MFA setup</Button>
+            <Button type="button" loading={loading} onClick={() => void startEnrollment()}><ShieldCheck size={14} strokeWidth={2} aria-hidden /> Start MFA setup</Button>
           </div>
         )}
       {secret && (
@@ -194,7 +195,7 @@ export function SecurityCenter() {
           <p className="break-all font-mono text-xs">{secret}</p>
           <div className="flex gap-2">
             <Input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="Six-digit code" aria-label="Authenticator code" className="h-10 flex-1" />
-            <Button type="button" loading={loading} onClick={() => void confirmEnrollment()}>Enable MFA</Button>
+            <Button type="button" loading={loading} onClick={() => void confirmEnrollment()}><ShieldCheck size={14} strokeWidth={2} aria-hidden /> Enable MFA</Button>
           </div>
         </div>
       )}
@@ -212,7 +213,7 @@ export function SecurityCenter() {
             <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Current password" autoComplete="current-password" aria-label="Current password for disabling MFA" className="h-10" />
             <Input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Authenticator or recovery code" autoComplete="one-time-code" aria-label="MFA code for disabling MFA" className="h-10" />
           </div>
-          <Button type="button" loading={loading} onClick={() => void disableMfa()}>Disable MFA</Button>
+          <Button type="button" variant="outline" loading={loading} onClick={() => void disableMfa()}><ShieldOff size={14} strokeWidth={2} aria-hidden /> Disable MFA</Button>
         </div>
       )}
       {notice && <p role="status" className="text-xs text-muted-foreground">{notice}</p>}
@@ -234,7 +235,7 @@ export function SecurityCenter() {
               loading={loading}
               onClick={() => void revokeOthers()}
             >
-              Sign out all others ({otherCount})
+              <LogOut size={13} strokeWidth={2} aria-hidden /> Sign out all others ({otherCount})
             </Button>
           )}
         </div>
@@ -298,9 +299,9 @@ export function SecurityCenter() {
                     type="button"
                     onClick={() => void revoke(session.id)}
                     disabled={revokingId === session.id}
-                    className="shrink-0 text-xs font-medium transition hover:border-down/40 hover:text-down disabled:opacity-50"
+                    className="shrink-0 text-xs font-medium transition hover:border-down/40 hover:text-down disabled:opacity-50 flex items-center gap-2"
                   >
-                    {revokingId === session.id ? "Revoking…" : "Revoke"}
+                    {revokingId === session.id ? "Revoking…" : <><X size={13} strokeWidth={2} aria-hidden /> Revoke</>}
                   </button>
                 )}
               </div>

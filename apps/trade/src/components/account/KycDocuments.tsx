@@ -14,6 +14,23 @@ import {
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert } from "@/components/ui/Alert";
 import { Label } from "@/components/ui/label";
+
+import { BookUser, Car, CreditCard, FileText, IdCard, Landmark, Mail, ScrollText, Upload, X, type LucideIcon } from "lucide-react";
+
+/** Document-type identity — one icon per KYC document kind. */
+const DOCUMENT_ICONS: Record<string, LucideIcon> = {
+  PASSPORT: BookUser,
+  ID_CARD: IdCard,
+  DRIVING_LICENSE: Car,
+  PROOF_OF_ADDRESS: FileText,
+  UTILITY_BILL: ScrollText,
+  BANK_STATEMENT: Landmark,
+  GOVERNMENT_LETTER: Mail,
+  TENANCY_AGREEMENT: CreditCard,
+};
+function documentIcon(value: string): LucideIcon {
+  return DOCUMENT_ICONS[value] ?? FileText;
+}
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface DocumentView {
@@ -165,17 +182,23 @@ export function KycDocuments() {
           <div>
             <Label htmlFor={selectId} className="text-xs font-medium text-muted-foreground">Document type</Label>
             <Select value={selectedType} onValueChange={(value) => setSelectedType(value as KycDocumentType)}>
-              <SelectTrigger id={selectId} className="h-10 w-full">
+              <SelectTrigger id={selectId} className="h-10 w-full" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   <SelectLabel>Identity</SelectLabel>
-                  {IDENTITY_DOCUMENT_TYPES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                  {IDENTITY_DOCUMENT_TYPES.map((item) => {
+                    const Icon = documentIcon(item.value);
+                    return <SelectItem key={item.value} value={item.value}><span className="flex items-center gap-2"><Icon size={14} strokeWidth={1.75} aria-hidden className="text-muted-foreground" />{item.label}</span></SelectItem>;
+                  })}
                 </SelectGroup>
                 <SelectGroup>
                   <SelectLabel>Proof of address</SelectLabel>
-                  {ADDRESS_DOCUMENT_TYPES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                  {ADDRESS_DOCUMENT_TYPES.map((item) => {
+                    const Icon = documentIcon(item.value);
+                    return <SelectItem key={item.value} value={item.value}><span className="flex items-center gap-2"><Icon size={14} strokeWidth={1.75} aria-hidden className="text-muted-foreground" />{item.label}</span></SelectItem>;
+                  })}
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -191,7 +214,7 @@ export function KycDocuments() {
             />
           </div>
           <Button type="button" variant="default" loading={loading} loadingLabel="Uploading" onClick={() => void upload()}>
-            Upload and verify
+            <Upload size={13} strokeWidth={2} aria-hidden /> Upload and verify
           </Button>
         </div>
 
@@ -202,14 +225,17 @@ export function KycDocuments() {
             const latest = latestByType.get(type.value);
             return (
               <article key={type.value} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-muted/50 p-3">
-                <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  {(() => { const Icon = documentIcon(type.value); return <Icon size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-muted-foreground" />; })()}
+                  <div className="min-w-0">
                   <div className="truncate text-sm font-medium">{type.label}</div>
                   <div className="truncate text-xs text-muted-foreground">
                     {latest ? `${statusLabel(latest.status)} · ${fmtSize(latest.sizeBytes)}${latest.sha256 ? ` · ${latest.sha256.slice(0, 10)}…` : ""}` : "Not uploaded"}
                   </div>
+                  </div>
                 </div>
                 {latest?.status === "PENDING_SCAN" && (
-                  <Button type="button" size="sm" variant="outline" loading={busyDocId === latest.id} onClick={() => void cancel(latest.id)}>Cancel</Button>
+                  <Button type="button" size="sm" variant="outline" loading={busyDocId === latest.id} onClick={() => void cancel(latest.id)}><X size={13} strokeWidth={2} aria-hidden /> Cancel</Button>
                 )}
               </article>
             );

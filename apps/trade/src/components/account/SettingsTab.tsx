@@ -13,7 +13,8 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
-import { KeyRound, Pencil, ShieldCheck } from "lucide-react";
+import { Check, KeyRound, Lock, Pencil, ShieldCheck, User, X } from "lucide-react";
+import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 import { Label } from "@/components/ui/label";
 
 interface User {
@@ -60,9 +61,9 @@ export function SettingsTab({ user }: { user: User }) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-4 pb-5">
-            <div className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
-              {(user.name || user.email)[0]?.toUpperCase()}
-            </div>
+            <IdentityTile size="lg" tone="brand" className="size-14 text-lg font-semibold">
+              {initialsOf(user.name || user.email)}
+            </IdentityTile>
             <div className="min-w-0">
               <div className="text-base font-semibold">{user.name}</div>
               <div className="text-sm text-muted-foreground">{user.email}</div>
@@ -149,6 +150,7 @@ function ProfileDialog({ open, onClose, user, onSaved }: { open: boolean; onClos
         <Field
           label="Display name"
           type="text"
+          icon={<User size={13} strokeWidth={2} />}
           value={name}
           onChange={(value) => { setName(value); setNotice(null); }}
           autoComplete="name"
@@ -160,9 +162,9 @@ function ProfileDialog({ open, onClose, user, onSaved }: { open: boolean; onClos
         </div>
         {notice && <Alert tone={notice.kind}>{notice.text}</Alert>}
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="ghost" onClick={onClose}><X size={13} strokeWidth={2} aria-hidden /> Cancel</Button>
           <Button type="submit" variant="default" loading={loading} loadingLabel="Saving" disabled={name.trim() === user.name}>
-            Save changes
+            <Check size={13} strokeWidth={2} aria-hidden /> Save changes
           </Button>
         </div>
       </form>
@@ -235,21 +237,21 @@ function PasswordDialog({ open, onClose }: { open: boolean; onClose: () => void 
   return (
     <Dialog open={open} onClose={onClose} title="Change password" description={`Use at least ${PASSWORD_MIN_LENGTH} characters.`} className="sm:max-w-md">
       <form onSubmit={changePassword} className="space-y-4 px-5 py-4">
-        <Field label="Current password" type={passwordFieldType} placeholder="Enter your current password" value={current} onChange={(v) => { setCurrent(v); setNotice(null); }} autoComplete="current-password" required />
+        <Field label="Current password" type={passwordFieldType} placeholder="Enter your current password" icon={<Lock size={13} strokeWidth={2} />} value={current} onChange={(v) => { setCurrent(v); setNotice(null); }} autoComplete="current-password" required />
         <div>
-          <Field label="New password" type={passwordFieldType} placeholder={`At least ${PASSWORD_MIN_LENGTH} characters`} value={next} onChange={(v) => { setNext(v); setNotice(null); }} autoComplete="new-password" required minLength={PASSWORD_MIN_LENGTH} maxLength={128} />
+          <Field label="New password" type={passwordFieldType} placeholder={`At least ${PASSWORD_MIN_LENGTH} characters`} icon={<KeyRound size={13} strokeWidth={2} />} value={next} onChange={(v) => { setNext(v); setNotice(null); }} autoComplete="new-password" required minLength={PASSWORD_MIN_LENGTH} maxLength={128} />
           <PasswordStrength password={next} className="mt-1.5" />
         </div>
-        <Field label="Confirm new password" type={passwordFieldType} placeholder="Repeat your new password" value={confirm} onChange={(v) => { setConfirm(v); setNotice(null); }} autoComplete="new-password" required minLength={PASSWORD_MIN_LENGTH} maxLength={128} />
+        <Field label="Confirm new password" type={passwordFieldType} placeholder="Repeat your new password" icon={<KeyRound size={13} strokeWidth={2} />} value={confirm} onChange={(v) => { setConfirm(v); setNotice(null); }} autoComplete="new-password" required minLength={PASSWORD_MIN_LENGTH} maxLength={128} />
         <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted-foreground">
           <Switch checked={showPasswords} onCheckedChange={setShowPasswords} aria-label="Show passwords" />
           Show passwords
         </label>
         {notice && <Alert tone={notice.kind}>{notice.text}</Alert>}
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="ghost" onClick={onClose}><X size={13} strokeWidth={2} aria-hidden /> Cancel</Button>
           <Button type="submit" variant="default" loading={loading} loadingLabel="Updating">
-            Update password
+            <KeyRound size={13} strokeWidth={2} aria-hidden /> Update password
           </Button>
         </div>
       </form>
@@ -261,6 +263,7 @@ function Field({
   label,
   type,
   placeholder,
+  icon,
   value,
   onChange,
   autoComplete,
@@ -271,6 +274,7 @@ function Field({
   label: string;
   type: string;
   placeholder?: string;
+  icon?: React.ReactNode;
   value: string;
   onChange: (value: string) => void;
   autoComplete?: string;
@@ -288,6 +292,7 @@ function Field({
         id={id}
         type={type}
         placeholder={placeholder}
+        startIcon={icon}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         autoComplete={autoComplete}

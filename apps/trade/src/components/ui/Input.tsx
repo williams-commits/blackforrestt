@@ -3,8 +3,19 @@ import { Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /** Premium filled input — flat tonal field (no border), soft hover, ring on
- *  focus. The same primitive serves every surface via the token bridge. */
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+ *  focus. The same primitive serves every surface via the token bridge.
+ *  `startIcon` renders a leading Lucide icon inside the field. */
+function Input({ className, type, startIcon, ...props }: React.ComponentProps<"input"> & { startIcon?: React.ReactNode }) {
+  if (startIcon) {
+    return (
+      <div className="relative w-full">
+        <span aria-hidden className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground">
+          {startIcon}
+        </span>
+        <Input className={cn("pl-9", className)} {...props} />
+      </div>
+    );
+  }
   return (
     <input
       type={type}

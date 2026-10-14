@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Activity, CandlestickChart, TrendingUpDown, User } from "lucide-react";
@@ -49,7 +49,14 @@ function MobileTabBarInner() {
   const searchParams = useSearchParams();
   const liveSymbol = useForexStore((s) => s.symbol);
 
-  const symbol = liveSymbol ?? readLastSymbol();
+  // The remembered symbol lives in sessionStorage — reading it during the
+  // first render would diverge from SSR (null) and fail hydration. Load it
+  // after mount; the label settles one tick later.
+  const [storedSymbol, setStoredSymbol] = useState<string | null>(null);
+  useEffect(() => {
+    setStoredSymbol(readLastSymbol());
+  }, []);
+  const symbol = liveSymbol ?? storedSymbol;
   const tradeHref = symbol ? `/trade/${encodeURIComponent(symbol)}` : "/markets";
   const onTrade = pathname.startsWith("/trade/");
   const onAccount = pathname === "/account";

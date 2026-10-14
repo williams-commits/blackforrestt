@@ -5,6 +5,8 @@ import { CsvExportButton } from "@/components/ui/CsvExport";
 import { DateInput } from "@/components/ui/Input";
 import { StatCard } from "@/components/ui/StatCard";
 import { fmtDateTime } from "@/lib/dates";
+import { ArrowDownToLine, ArrowUpFromLine, CandlestickChart, Gift, Percent, Receipt, Repeat, ShieldCheck, SlidersHorizontal, Undo2, type LucideIcon } from "lucide-react";
+import { IdentityTile } from "@/components/ui/Initial";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { RecordList, RecordStatusChip, type RecordDetailMeta } from "@/components/ui/RecordList";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,6 +32,20 @@ const TYPE_TONES: Record<Txn["type"], "up" | "down" | "warn" | "muted"> = {
   DEPOSIT: "up", BONUS: "warn", NEGATIVE_BALANCE_PROTECTION: "up",
   WITHDRAW: "down", FEE: "down", TRADE_PNL: "warn", COMMISSION: "muted",
   SWAP: "muted", ADJUSTMENT: "muted", REVERSAL: "muted",
+};
+
+/** Per-type Lucide identity — one icon language for rows and the hero. */
+const TYPE_ICONS: Record<Txn["type"], LucideIcon> = {
+  DEPOSIT: ArrowDownToLine,
+  WITHDRAW: ArrowUpFromLine,
+  BONUS: Gift,
+  TRADE_PNL: CandlestickChart,
+  COMMISSION: Percent,
+  SWAP: Repeat,
+  FEE: Receipt,
+  REVERSAL: Undo2,
+  ADJUSTMENT: SlidersHorizontal,
+  NEGATIVE_BALANCE_PROTECTION: ShieldCheck,
 };
 
 /** Transactions history on the enterprise RecordList — search, status/type
@@ -95,12 +111,15 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
           placeholder: "Search description or reference…",
           text: (t) => `${t.description ?? ""} ${t.reference ?? ""} ${t.type} ${t.asset}`,
         }}
-        leading={(t) => ({
-          icon: <span className="text-[10px] font-bold">{TYPE_LABELS[t.type].replace(/[^A-Za-z ]/g, "").split(" ").map((w) => w[0]).join("").slice(0, 2)}</span>,
+        leading={(t) => {
+          const Icon = TYPE_ICONS[t.type];
+          return {
+          icon: <Icon size={15} strokeWidth={2} aria-hidden />,
           tone: TYPE_TONES[t.type],
           title: TYPE_LABELS[t.type],
           secondary: <span className="truncate">{t.description ?? "—"}</span>,
-        })}
+          };
+        }}
         columns={[
           { key: "createdAt", label: "Date", sortable: true, align: "right", render: (t) => (
             <span className="text-xs text-muted-foreground tabular-nums">{fmtDateTime(t.createdAt)}</span>
@@ -165,9 +184,9 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
         detailTitle="Transaction Detail"
         renderDetailHero={(t) => (
           <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
-            <span className={`flex size-12 items-center justify-center rounded-full text-sm font-bold ${TYPE_TONES[t.type] === "up" ? "bg-up/10 text-up" : TYPE_TONES[t.type] === "down" ? "bg-down/10 text-down" : "bg-muted text-muted-foreground"}`}>
-              {TYPE_LABELS[t.type].slice(0, 2)}
-            </span>
+            <IdentityTile size="lg" tone={TYPE_TONES[t.type]}>
+              {(() => { const Icon = TYPE_ICONS[t.type]; return <Icon size={20} strokeWidth={2} aria-hidden />; })()}
+            </IdentityTile>
             <div className="text-sm font-medium">{TYPE_LABELS[t.type]}</div>
             <div className={`text-2xl font-semibold tabular-nums ${credit(t) ? "text-up" : "text-down"}`}>
               {credit(t) ? "+" : ""}{t.amount.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">{t.asset}</span>

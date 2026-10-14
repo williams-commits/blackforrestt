@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Inbox, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Inbox, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { IdentityTile } from "@/components/ui/Initial";
 
 /* ────────────────────────────────────────────────────────────────────────────
    RecordList — the account portal's centralized enterprise record list.
@@ -46,7 +47,7 @@ export interface RecordDetailMeta {
 export interface RecordLeading {
   /** Tinted identity tile (icon, initials, instrument mark). */
   icon?: React.ReactNode;
-  tone?: "default" | "up" | "down" | "brand" | "warn" | "muted";
+  tone?: "up" | "down" | "brand" | "warn" | "muted";
   title: React.ReactNode;
   secondary?: React.ReactNode;
 }
@@ -178,7 +179,7 @@ export function RecordList<T>({
         <CardTitle>{title}</CardTitle>
         {description != null && <CardDescription>{description}</CardDescription>}
         {(search || filters || toolbarEnd) && (
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-2.5 pt-1 [&>*]:min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-2.5 pt-1 *:min-w-0">
             {search && (
               <div className="relative w-full sm:w-64">
                 <Search size={14} strokeWidth={2} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -226,7 +227,7 @@ export function RecordList<T>({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[220px] pl-6">{ariaLabel}</TableHead>
+                <TableHead className="min-w-55 pl-6">{ariaLabel}</TableHead>
                 {columns.map((column) => (
                   <TableHead key={column.key} className={column.align === "right" ? "text-right" : undefined}>
                     {column.sortable ? (
@@ -261,7 +262,7 @@ export function RecordList<T>({
                     onClick={() => activate(row)}
                     className="cursor-pointer"
                   >
-                    <TableCell className="max-w-[300px] pl-6">
+                    <TableCell className="max-w-75 pl-6">
                       <div className="flex items-center gap-3">
                         {lead.icon != null && (
                           <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", toneClass(lead.tone))}>
@@ -307,9 +308,7 @@ export function RecordList<T>({
                     className="flex w-full items-center gap-3 rounded-xl bg-muted/40 px-3.5 py-3 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
                     {lead.icon != null && (
-                      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", toneClass(lead.tone))}>
-                        {lead.icon}
-                      </span>
+                      <IdentityTile tone={lead.tone}>{lead.icon}</IdentityTile>
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium text-foreground">{lead.title}</div>
@@ -340,7 +339,7 @@ export function RecordList<T>({
                 else setVisible((v) => v + pageSize);
               }}
             >
-              Load more
+              <ChevronDown size={13} strokeWidth={2} aria-hidden /> Load more
             </Button>
             <span className="text-xs text-muted-foreground tabular-nums">
               Showing {windowRows.length} of {hasMore !== undefined && !clientHasMore ? `${sorted.length}+` : sorted.length}

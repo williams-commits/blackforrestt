@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowDownToLine, ArrowRight, ArrowUpFromLine, Info, Lock, Wallet } from "lucide-react";
+import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 import { InfoHint } from "@/components/ui/InfoHint";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { fmtDate } from "@/lib/dates";
@@ -62,31 +63,33 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
         <Card>
           <CardHeader>
             <CardTitle>Equity</CardTitle>
-            <div className="flex items-baseline gap-3">
-              <span className="text-3xl font-semibold tracking-tight tabular-nums">
-                <span className="align-top text-lg font-normal text-muted-foreground">$</span>{money(metrics.equity)}
-              </span>
-              <span className={`text-sm font-medium tabular-nums ${floatingUp ? "text-up" : "text-down"}`}>
-                {floatingUp ? "▲" : "▼"} {money(Math.abs(floating))} floating
-              </span>
-            </div>
             <CardDescription>
               {openCount} open {openCount === 1 ? "position" : "positions"} · live account value including floating P/L
             </CardDescription>
-            <CardAction className="flex gap-2">
+            <CardAction className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-none sm:flex">
               {depositUiEnabled && (
-                <Button type="button" onClick={() => { setWalletMode("deposit"); setWalletOpen(true); }}>
+                <Button type="button" onClick={() => { setWalletMode("deposit"); setWalletOpen(true); }} className="w-full sm:w-auto">
                   <ArrowDownToLine size={14} strokeWidth={2} aria-hidden /> Deposit
                 </Button>
               )}
-              <Button type="button" variant="outline" onClick={() => { setWalletMode("withdraw"); setWalletOpen(true); }}>
+              <Button type="button" variant="outline" onClick={() => { setWalletMode("withdraw"); setWalletOpen(true); }} className="w-full sm:w-auto">
                 <ArrowUpFromLine size={14} strokeWidth={2} aria-hidden /> Withdraw
               </Button>
             </CardAction>
+            <div className="pt-1">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-3">
+                <span className="text-3xl font-semibold tracking-tight tabular-nums">
+                  <span className="align-top text-lg font-normal text-muted-foreground">$</span>{money(metrics.equity)}
+                </span>
+                <span className={`text-sm font-medium tabular-nums ${floatingUp ? "text-up" : "text-down"}`}>
+                  {floatingUp ? "▲" : "▼"} {money(Math.abs(floating))} floating P/L
+                </span>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-2">
             {/* Supporting metrics — one band under the hero, dividers between */}
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 lg:grid-cols-5">
               <Metric label="Balance" value={money(metrics.balance)} hint="Settled funds: approved deposits/withdrawals and closed-trade P/L. Excludes floating P/L." />
               <Metric label="Free Margin" value={money(metrics.free)} hint="Margin available to open new positions." />
               <Metric label="Margin" value={money(metrics.margin)} hint="Collateral currently held against open positions." icon={<Lock size={12} strokeWidth={1.75} aria-hidden />} />
@@ -114,9 +117,9 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-base font-semibold text-primary">
-                {(user.name || user.email)[0]?.toUpperCase()}
-              </div>
+              <IdentityTile size="lg" tone="brand" className="text-base font-semibold">
+                {initialsOf(user.name || user.email)}
+              </IdentityTile>
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">{user.name}</div>
                 <div className="truncate text-xs text-muted-foreground">{user.email}</div>

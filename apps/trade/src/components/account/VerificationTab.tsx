@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Circle } from "lucide-react";
+import { BadgeCheck, Building2, Check, Circle, FileText, Globe, Hash, MapPin, UserRound } from "lucide-react";
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -132,8 +132,8 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
               ) : null}
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="First name" name="firstName" placeholder="e.g. Alex" defaultValue={kyc?.firstName ?? ""} required maxLength={100} />
-                <Field label="Last name" name="lastName" placeholder="e.g. Mercer" defaultValue={kyc?.lastName ?? ""} required maxLength={100} />
+                <Field label="First name" name="firstName" placeholder="e.g. Alex" icon={<UserRound size={13} strokeWidth={2} />} defaultValue={kyc?.firstName ?? ""} required maxLength={100} />
+                <Field label="Last name" name="lastName" placeholder="e.g. Mercer" icon={<UserRound size={13} strokeWidth={2} />} defaultValue={kyc?.lastName ?? ""} required maxLength={100} />
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field
@@ -147,7 +147,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
                 <div>
                   <Label htmlFor="country-field" className="text-xs font-medium text-muted-foreground">Country</Label>
                   <Select name="country" defaultValue="">
-                    <SelectTrigger id="country-field" className="h-10 w-full">
+                    <SelectTrigger id="country-field" className="h-10 w-full" startIcon={<Globe size={13} strokeWidth={2} aria-hidden />}>
                       <SelectValue placeholder="Select country" />
                     </SelectTrigger>
                     <SelectContent>
@@ -158,10 +158,10 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
                   </Select>
                 </div>
               </div>
-              <Field label="Address" name="address" placeholder="Street and number" required maxLength={200} />
+              <Field label="Address" name="address" placeholder="Street and number" icon={<MapPin size={13} strokeWidth={2} />} required maxLength={200} />
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="City" name="city" placeholder="e.g. London" required maxLength={100} />
-                <Field label="Postal code" name="postalCode" placeholder="e.g. EC1A 1BB" maxLength={32} />
+                <Field label="City" name="city" placeholder="e.g. London" icon={<Building2 size={13} strokeWidth={2} />} required maxLength={100} />
+                <Field label="Postal code" name="postalCode" placeholder="e.g. EC1A 1BB" icon={<Hash size={13} strokeWidth={2} />} maxLength={32} />
               </div>
 
                 <div>
@@ -169,7 +169,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
                     Document type
                   </Label>
                   <Select name="docType" required defaultValue={kyc?.docType ?? "PASSPORT"}>
-                    <SelectTrigger id={docTypeId} className="h-10 w-full">
+                    <SelectTrigger id={docTypeId} className="h-10 w-full" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -196,7 +196,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
                 loading={submitting}
                 loadingLabel="Submitting verification"
               >
-                Submit for verification
+                <BadgeCheck size={13} strokeWidth={2} aria-hidden /> Submit for verification
               </Button>
             </form>
           </CardContent>
@@ -334,6 +334,7 @@ function Field({
   name,
   type = "text",
   placeholder,
+  icon,
   defaultValue,
   required,
   min,
@@ -344,6 +345,7 @@ function Field({
   name: string;
   type?: string;
   placeholder?: string;
+  icon?: React.ReactNode;
   defaultValue?: string;
   required?: boolean;
   min?: string;
@@ -373,6 +375,7 @@ function Field({
         type={type}
         name={name}
         placeholder={placeholder}
+        startIcon={icon}
         defaultValue={defaultValue}
         required={required}
         min={min}

@@ -10,7 +10,8 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { Badge } from "@/components/ui/badge";
 import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Upload } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Ban, Upload } from "lucide-react";
+import { IdentityTile } from "@/components/ui/Initial";
 import { MethodDetailsGrid } from "@/components/payments/MethodDetailsGrid";
 import { fmtDateTime } from "@/lib/dates";
 import { PAYMENT_PROOF_MAX_BYTES, compressProofImage, isHeicFile } from "@/lib/paymentProofs";
@@ -207,7 +208,9 @@ export function PaymentTimeline() {
         rowKey={(r) => r.id}
         loading={loading}
         leading={(r) => ({
-          icon: <span className="text-[10px] font-bold">{r.type === "DEPOSIT" ? "IN" : "OUT"}</span>,
+          icon: r.type === "DEPOSIT"
+            ? <ArrowDownToLine size={15} strokeWidth={2} aria-hidden />
+            : <ArrowUpFromLine size={15} strokeWidth={2} aria-hidden />,
           tone: r.type === "DEPOSIT" ? "up" : "down",
           title: `${r.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} · ${r.asset} ${r.amount}`,
           secondary: `${r.methodLabel} · ${fmtDateTime(r.createdAt)}`,
@@ -313,9 +316,11 @@ function PaymentDetailSheet({
         </SheetHeader>
         <div className="space-y-5 px-4 pb-6">
           <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
-            <span className={`flex size-12 items-center justify-center rounded-full text-sm font-bold ${request.type === "DEPOSIT" ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>
-              {request.type === "DEPOSIT" ? "IN" : "OUT"}
-            </span>
+            <IdentityTile size="lg" tone={request.type === "DEPOSIT" ? "up" : "down"}>
+              {request.type === "DEPOSIT"
+                ? <ArrowDownToLine size={20} strokeWidth={2} aria-hidden />
+                : <ArrowUpFromLine size={20} strokeWidth={2} aria-hidden />}
+            </IdentityTile>
             <div className="text-sm font-medium">{request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"}</div>
             <div className="text-2xl font-semibold tabular-nums">
               {Number(request.amount).toFixed(2)} <span className="text-sm font-normal text-muted-foreground">{request.asset}</span>
@@ -392,7 +397,7 @@ function PaymentDetailSheet({
               )}
               {canCancel && (
                 <Button type="button" variant="outline" size="sm" className="w-full text-down" loading={busy} onClick={onCancel}>
-                  Cancel request
+                  <Ban size={13} strokeWidth={2} aria-hidden /> Cancel request
                 </Button>
               )}
             </div>

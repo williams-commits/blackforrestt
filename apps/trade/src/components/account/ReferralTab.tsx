@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 import { StatCard } from "@/components/ui/StatCard";
 import { RecordList, RecordStatusChip, type RecordDetailMeta } from "@/components/ui/RecordList";
 
@@ -159,7 +160,7 @@ export function ReferralTab() {
           text: (r) => `${r.referred.name ?? ""} ${r.referred.email ?? ""} ${r.referred.accountNo ?? ""}`,
         }}
         leading={(r) => ({
-          icon: <span className="text-xs font-bold">{(r.referred.name ?? r.referred.email ?? "?")[0]?.toUpperCase()}</span>,
+          icon: <span className="text-xs font-bold">{initialsOf(r.referred.name ?? r.referred.email)}</span>,
           tone: done(r) ? "up" : "muted",
           title: r.referred.name ?? "Unknown",
           secondary: r.referred.email ?? "—",
@@ -188,9 +189,7 @@ export function ReferralTab() {
         detailTitle="Referral Detail"
         renderDetailHero={(r) => (
           <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
-            <span className="flex size-12 items-center justify-center rounded-full bg-muted text-base font-bold text-muted-foreground">
-              {(r.referred.name ?? r.referred.email ?? "?")[0]?.toUpperCase()}
-            </span>
+            <IdentityTile size="lg">{initialsOf(r.referred.name ?? r.referred.email)}</IdentityTile>
             <div className="text-sm font-medium">{r.referred.name ?? "Unknown"}</div>
             <div className={`text-2xl font-semibold tabular-nums ${done(r) ? "text-up" : "text-muted-foreground"}`}>
               {done(r) ? `+$${r.reward.toFixed(2)}` : "—"}

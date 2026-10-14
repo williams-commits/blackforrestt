@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LayoutGrid } from "lucide-react";
+import { BadgeCheck, LayoutGrid } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { AccountOverview } from "./AccountOverview";
@@ -402,7 +402,7 @@ export function AccountShell(props: Props) {
           </div>
           {verificationNeeded && (
             <Button type="button" size="sm" variant="outline" onClick={() => selectTab("verification")}>
-              Complete verification
+              <BadgeCheck size={13} strokeWidth={2} aria-hidden /> Complete verification
             </Button>
           )}
         </div>

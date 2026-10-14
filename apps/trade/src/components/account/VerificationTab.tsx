@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Circle } from "lucide-react";
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert } from "@/components/ui/Alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 
 interface Kyc {
   status: "NOT_SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED";
@@ -122,7 +124,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
           <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Verification progress">
             <div className={`h-full rounded-full transition-all ${progress === 100 ? "bg-up" : "bg-brand"}`} style={{ width: `${progress}%` }} />
           </div>
-          <ol className="mt-3 space-y-2 text-xs">
+          <ol className="mt-4 space-y-1.5">
             <ChecklistItem complete={status !== "NOT_SUBMITTED"} label="Identity and address details submitted" />
             <ChecklistItem complete={checklist.cleanIdentityDocuments > 0} label={`Identity document verified (${checklist.cleanIdentityDocuments})`} />
             <ChecklistItem complete={checklist.cleanAddressDocuments > 0} label={`Proof of address verified (${checklist.cleanAddressDocuments})`} />
@@ -161,7 +163,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
                   max={dateYearsAgo(18)}
                 />
                 <div>
-                  <label htmlFor="country-field" className="mb-1 block text-xs text-muted-foreground">Country</label>
+                  <Label htmlFor="country-field" className="text-xs font-medium text-muted-foreground">Country</Label>
                   <Select name="country" defaultValue="">
                     <SelectTrigger id="country-field" className="h-10 w-full">
                       <SelectValue placeholder="Select country" />
@@ -181,9 +183,9 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
               </div>
 
                 <div>
-                  <label htmlFor={docTypeId} className="mb-1 block text-xs text-muted-foreground">
+                  <Label htmlFor={docTypeId} className="text-xs font-medium text-muted-foreground">
                     Document type
-                  </label>
+                  </Label>
                   <Select name="docType" required defaultValue={kyc?.docType ?? "PASSPORT"}>
                     <SelectTrigger id={docTypeId} className="h-10 w-full">
                       <SelectValue />
@@ -249,9 +251,12 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 
 function ChecklistItem({ complete, label }: { complete: boolean; label: string }) {
   return (
-    <li className="flex items-center gap-2">
-      <span aria-hidden="true" className={complete ? "text-up" : "text-muted-foreground"}>{complete ? "✓" : "○"}</span>
-      <span className={complete ? "text-foreground" : "text-muted-foreground"}>{label}</span>
+    <li className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${complete ? "bg-(--term-success-bg)/40" : "bg-muted/40"}`}>
+      <span aria-hidden="true" className={`flex size-6 shrink-0 items-center justify-center rounded-full ${complete ? "bg-up/15 text-up" : "bg-muted text-muted-foreground"}`}>
+        {complete ? <Check size={13} strokeWidth={2.5} /> : <Circle size={12} strokeWidth={2} />}
+      </span>
+      <span className={`text-sm ${complete ? "font-medium text-foreground" : "text-muted-foreground"}`}>{label}</span>
+      <span className={`ml-auto text-xs font-medium ${complete ? "text-up" : "text-muted-foreground"}`}>{complete ? "Complete" : "Pending"}</span>
       <span className="sr-only">{complete ? "Complete" : "Incomplete"}</span>
     </li>
   );
@@ -320,9 +325,9 @@ function Field({
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-xs text-muted-foreground">
+      <Label htmlFor={id} className="text-xs font-medium text-muted-foreground">
         {label}
-      </label>
+      </Label>
       <Input
         id={id}
         type={type}

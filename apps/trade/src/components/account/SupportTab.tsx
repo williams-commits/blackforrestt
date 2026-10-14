@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecordList, RecordStatusChip, type RecordDetailMeta } from "@/components/ui/RecordList";
+import { Label } from "@/components/ui/label";
 
 const CATEGORIES = ["General enquiry", "Account & verification", "Deposits & withdrawals", "Technical issue", "Partnership"] as const;
 
@@ -125,7 +126,7 @@ export function SupportTab() {
           )}
           <form onSubmit={submit} className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-xs text-muted-foreground">Subject</label>
+              <Label className="text-xs font-medium text-muted-foreground">Subject</Label>
               <Select value={subject} onValueChange={setSubject}>
                 <SelectTrigger aria-label="Subject" className="h-10 w-full">
                   <SelectValue />
@@ -138,7 +139,7 @@ export function SupportTab() {
               </Select>
             </div>
             <div>
-              <label className="mb-1.5 block text-xs text-muted-foreground">Message</label>
+              <Label className="text-xs font-medium text-muted-foreground">Message</Label>
               <Textarea
                 required
                 minLength={10}

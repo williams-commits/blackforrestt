@@ -193,6 +193,33 @@ async function main() {
     },
   });
 
+  // ── Event timelines (what the payment detail slider shows) ───────────────
+  const bankRequest = await prisma.paymentRequest.findFirst({ where: { userId, method: "BANK_TRANSFER" }, orderBy: { createdAt: "desc" } });
+  if (bankRequest) {
+    await prisma.paymentEvent.createMany({ data: [
+      { paymentRequestId: bankRequest.id, type: "CREATED", createdAt: daysAgo(21, 1) },
+      { paymentRequestId: bankRequest.id, type: "PROOF_RECEIVED", createdAt: daysAgo(21) },
+      { paymentRequestId: bankRequest.id, type: "PROOF_FINALIZED", createdAt: daysAgo(20, 22) },
+      { paymentRequestId: bankRequest.id, type: "PREPARED", createdAt: daysAgo(20, 20) },
+      { paymentRequestId: bankRequest.id, type: "APPROVED", createdAt: daysAgo(20, 4) },
+      { paymentRequestId: bankRequest.id, type: "RECONCILED", createdAt: daysAgo(20, 2) },
+    ] });
+  }
+  const cryptoRequest = await prisma.paymentRequest.findFirst({ where: { userId, method: "CRYPTO" }, orderBy: { createdAt: "desc" } });
+  if (cryptoRequest) {
+    await prisma.paymentEvent.createMany({ data: [
+      { paymentRequestId: cryptoRequest.id, type: "CREATED", createdAt: daysAgo(1, 4) },
+      { paymentRequestId: cryptoRequest.id, type: "PROOF_RECEIVED", createdAt: daysAgo(1, 3) },
+      { paymentRequestId: cryptoRequest.id, type: "PROOF_FINALIZED", createdAt: daysAgo(1, 2) },
+    ] });
+  }
+  const cardRequest = await prisma.paymentRequest.findFirst({ where: { userId, method: "CARD" }, orderBy: { createdAt: "desc" } });
+  if (cardRequest) {
+    await prisma.paymentEvent.createMany({ data: [
+      { paymentRequestId: cardRequest.id, type: "CREATED", createdAt: daysAgo(0, 5) },
+    ] });
+  }
+
   // ── Account metrics (coherent with the seeded wallet/positions) ─────────
   const floating = openPositions.reduce((s, p) => s + p.profit + p.swap - p.commission - p.tradingCommission, 0);
   const balance = 24_350 + 500; // free + locked

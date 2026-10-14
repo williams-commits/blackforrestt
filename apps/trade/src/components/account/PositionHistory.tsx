@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { InstrumentView } from "@/lib/types";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { SymbolLink } from "@/components/trade/SymbolLink";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { fmtDateTime } from "@/lib/dates";
 import { CandlestickChart } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -89,7 +90,7 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
       rows={rows}
       rowKey={(r) => r.id}
       leading={(r) => ({
-        icon: <span className="text-xs font-bold">{r.symbol.slice(0, 2)}</span>,
+        icon: <InstrumentIcon symbol={r.symbol} size={20} />,
         tone: r.side === "BUY" ? "up" : "down",
         title: <SymbolLink symbol={r.symbol} />,
         secondary: <span>{r.type} · <span className={r.side === "BUY" ? "text-up" : "text-down"}>{r.side}</span> · {r.volume.toFixed(2)} lots</span>,
@@ -146,8 +147,8 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
       detailTitle="Position Detail"
       renderDetailHero={(r) => (
         <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
-          <span className={`flex size-12 items-center justify-center rounded-full text-sm font-bold ${r.side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>
-            {r.symbol.slice(0, 2)}
+          <span className={`flex size-14 items-center justify-center rounded-full ${r.side === "BUY" ? "bg-up/10" : "bg-down/10"}`}>
+            <InstrumentIcon symbol={r.symbol} size={32} />
           </span>
           <div className="text-sm font-medium">{r.symbol} · {r.side}</div>
           <div className={`text-2xl font-semibold tabular-nums ${profitable(r) ? "text-up" : "text-down"}`}>

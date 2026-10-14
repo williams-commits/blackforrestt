@@ -10,8 +10,9 @@ import type { WalletAddressEntry } from "@/server/userSettings";
 import { WITHDRAWAL_CRYPTO_NETWORKS } from "@/lib/paymentNetworks";
 import { PAYMENT_PROOF_MAX_BYTES, compressProofImage, isHeicFile } from "@/lib/paymentProofs";
 import { WALLET_ICONS, TabIcon } from "@/components/ui/tabIcons";
-import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/label";
 
 /** Widened view of the server-enforced presets for string-indexed lookups. */
 const WITHDRAWAL_NETWORKS: Record<string, readonly string[]> = WITHDRAWAL_CRYPTO_NETWORKS;
@@ -315,11 +316,11 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
       <div className="max-h-[min(82dvh,760px)] overflow-y-auto overscroll-contain p-4 sm:p-5">
         <div className={`mb-5 grid ${depositEnabled ? "grid-cols-2" : "grid-cols-1"} gap-1 rounded-xl bg-muted p-1 text-xs`} role="tablist" aria-label="Wallet operation">
           {depositEnabled && (
-            <button type="button" role="tab" aria-selected={isDeposit} onClick={() => switchMode("deposit")} className={`flex items-center justify-center gap-1.5 rounded-md py-2.5 transition ${isDeposit ? "bg-up font-semibold text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+            <button type="button" role="tab" aria-selected={isDeposit} onClick={() => switchMode("deposit")} className={`flex items-center justify-center gap-1.5 rounded-lg py-2.5 transition ${isDeposit ? "bg-card font-semibold text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
               <TabIcon icon={WALLET_ICONS.deposit} size={16} /> Deposit
             </button>
           )}
-          <button type="button" role="tab" aria-selected={!isDeposit} onClick={() => switchMode("withdraw")} className={`flex items-center justify-center gap-1.5 rounded-md py-2.5 transition ${!isDeposit ? "bg-down font-semibold text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+          <button type="button" role="tab" aria-selected={!isDeposit} onClick={() => switchMode("withdraw")} className={`flex items-center justify-center gap-1.5 rounded-lg py-2.5 transition ${!isDeposit ? "bg-card font-semibold text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             <TabIcon icon={WALLET_ICONS.withdraw} size={16} /> Withdraw
           </button>
         </div>
@@ -372,12 +373,17 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
           </div>
 
           <div>
-            <label htmlFor={methodId} className="mb-1 block text-xs text-muted-foreground">Method</label>
-            <NativeSelect id={methodId} value={method} onChange={(event) => changeMethod(event.target.value as PaymentMethod)} className="h-10">
-              {enabledMethods.map((m) => (
-                <option key={m} value={m}>{methodLabel(m)}</option>
-              ))}
-            </NativeSelect>
+            <Label htmlFor={methodId} className="text-xs font-medium text-muted-foreground">Method</Label>
+            <Select value={method} onValueChange={(value) => changeMethod(value as PaymentMethod)}>
+              <SelectTrigger id={methodId} className="h-10 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {enabledMethods.map((m) => (
+                  <SelectItem key={m} value={m}>{methodLabel(m)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <fieldset className="space-y-3 border-border p-3 sm:p-4">
@@ -386,7 +392,10 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
               <p className="text-xs text-muted-foreground">For PCI safety, never enter a full card number or CVV. Only the brand and final four digits are collected.</p>
               {!isDeposit && <p className="text-xs text-muted-foreground">Card withdrawals are refunds: use the original verified card deposit reference — the brand and last four digits must match an approved card deposit on your account.</p>}
               <Input required maxLength={120} value={card.cardholderName} onChange={(e) => setCard((v) => ({...v, cardholderName:e.target.value}))} placeholder="Cardholder name" aria-label="Cardholder name" className="h-10" />
-              <div className="grid grid-cols-2 gap-2"><NativeSelect value={card.cardBrand} onChange={(e) => setCard((v)=>({...v,cardBrand:e.target.value}))} aria-label="Card brand" className="h-10"><option>VISA</option><option>MASTERCARD</option><option>AMEX</option><option>OTHER</option></NativeSelect><Input required inputMode="numeric" pattern="\d{4}" maxLength={4} value={card.last4} onChange={(e)=>setCard((v)=>({...v,last4:e.target.value.replace(/\D/g,"").slice(0,4)}))} placeholder="Last 4 digits" aria-label="Last four card digits" className="h-10" /></div>
+              <div className="grid grid-cols-2 gap-2"><Select value={card.cardBrand} onValueChange={(value) => setCard((v)=>({...v,cardBrand:value}))}>
+                  <SelectTrigger aria-label="Card brand" className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="VISA">VISA</SelectItem><SelectItem value="MASTERCARD">MASTERCARD</SelectItem><SelectItem value="AMEX">AMEX</SelectItem><SelectItem value="OTHER">OTHER</SelectItem></SelectContent>
+                </Select><Input required inputMode="numeric" pattern="\d{4}" maxLength={4} value={card.last4} onChange={(e)=>setCard((v)=>({...v,last4:e.target.value.replace(/\D/g,"").slice(0,4)}))} placeholder="Last 4 digits" aria-label="Last four card digits" className="h-10" /></div>
               {isDeposit && <Input required maxLength={160} value={card.providerReference} onChange={(e) => setCard((v)=>({...v,providerReference:e.target.value}))} placeholder="Card processor transaction reference" aria-label="Card processor transaction reference" className="h-10" />}
             </>}
             {method === "BANK_TRANSFER" && <>
@@ -470,29 +479,30 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                     <span aria-hidden className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
                       <InstrumentIcon symbol={cryptoDetails.asset} size={18} />
                     </span>
-                    <NativeSelect
+                    <Select
                       value={cryptoDetails.asset}
-                      onChange={(e) => {
-                        const asset = e.target.value;
+                      onValueChange={(asset) => {
                         setWalletIndex(null);
                         setCryptoDetails((v) => ({ ...v, asset, network: WITHDRAWAL_NETWORKS[asset]?.[0] ?? v.network }));
                       }}
-                      aria-label="Crypto asset"
-                      className="h-10 pl-9 pr-2"
                     >
-                      {Object.keys(WITHDRAWAL_NETWORKS).map((asset) => <option key={asset}>{asset}</option>)}
-                    </NativeSelect>
+                      <SelectTrigger aria-label="Crypto asset" className="h-10 w-full pl-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(WITHDRAWAL_NETWORKS).map((asset) => <SelectItem key={asset} value={asset}>{asset}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <NativeSelect
+                  <Select
                     value={cryptoDetails.network}
-                    onChange={(e) => setCryptoDetails((v) => ({ ...v, network: e.target.value }))}
-                    aria-label="Blockchain network"
-                    className="h-10 min-w-0"
+                    onValueChange={(network) => setCryptoDetails((v) => ({ ...v, network }))}
                   >
-                    {(WITHDRAWAL_NETWORKS[cryptoDetails.asset] ?? []).map((network) => (
-                      <option key={network}>{network}</option>
-                    ))}
-                  </NativeSelect>
+                    <SelectTrigger aria-label="Blockchain network" className="h-10 min-w-0"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(WITHDRAWAL_NETWORKS[cryptoDetails.asset] ?? []).map((network) => (
+                        <SelectItem key={network} value={network}>{network}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               ) : !(walletAddresses.length > 0) && (
                 <div className="grid grid-cols-[150px_1fr] gap-2">
@@ -500,7 +510,10 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                     <span aria-hidden className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
                       <InstrumentIcon symbol={cryptoDetails.asset} size={18} />
                     </span>
-                    <NativeSelect value={cryptoDetails.asset} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,asset:e.target.value}));}} aria-label="Crypto asset" className="h-10 pl-9 pr-2"><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></NativeSelect>
+                    <Select value={cryptoDetails.asset} onValueChange={(asset)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,asset}));}}>
+                      <SelectTrigger aria-label="Crypto asset" className="h-10 w-full pl-9"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="USDT">USDT</SelectItem><SelectItem value="USDC">USDC</SelectItem><SelectItem value="BTC">BTC</SelectItem><SelectItem value="ETH">ETH</SelectItem></SelectContent>
+                    </Select>
                   </div>
                   <Input required maxLength={120} value={cryptoDetails.network} onChange={(e)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,network:e.target.value}));}} placeholder="Network, e.g. TRON (TRC20)" aria-label="Blockchain network" className="h-10 min-w-0" />
                 </div>
@@ -512,9 +525,9 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
           {!isDeposit && needsStepUp && <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/10 p-3"><p className="text-xs text-muted-foreground">Confirm this withdrawal with your password and authenticator or recovery code.</p><Input type="password" required maxLength={128} value={currentPassword} onChange={(e)=>setCurrentPassword(e.target.value)} autoComplete="current-password" placeholder="Current password" aria-label="Current password" className="h-10" /><Input type="text" required maxLength={64} value={mfaCode} onChange={(e)=>setMfaCode(e.target.value)} autoComplete="one-time-code" placeholder="Authenticator or recovery code" aria-label="Authenticator or recovery code" className="h-10" /></div>}
 
           <div>
-            <label htmlFor={proofId} className="mb-1 block text-xs text-muted-foreground">
+            <Label htmlFor={proofId} className="text-xs font-medium text-muted-foreground">
               {isDeposit ? (method === "CARD" ? "Payment receipt (optional)" : "Payment proof (required)") : "Supporting document (optional)"}
-            </label>
+            </Label>
             <input
               id={proofId}
               type="file"

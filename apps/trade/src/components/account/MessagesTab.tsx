@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/Alert";
-import { Send } from "lucide-react";
+import { MessageCircle, Send } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { fmtDateTime } from "@/lib/dates";
 
@@ -129,21 +129,36 @@ export function MessagesTab() {
 
   return (
     <div className="flex h-[min(70vh,32rem)] flex-col rounded-xl bg-card">
-      <div className="border-b border-border px-4 py-3">
-        <h2 className="text-sm font-semibold">Support chat</h2>
-        <p className="text-xs text-muted-foreground">Talk directly with our team — replies land here and in your notifications.</p>
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">BF</span>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold">Support chat</h2>
+          <p className="text-xs text-muted-foreground">Talk directly with our team — replies land here and in your notifications.</p>
+        </div>
+        <Badge variant="secondary" className="bg-(--term-success-bg) text-(--term-success-fg)">
+          <span className="size-1.5 rounded-full bg-(--term-success-fg)" aria-hidden /> Online
+        </Badge>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
         {!hasThread && (
-          <p className="rounded-xl bg-muted/40 px-4 py-8 text-center text-xs text-muted-foreground">
-            No messages yet — say hello and our team will reply here.
-          </p>
+          <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/40 px-4 py-10 text-center">
+            <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <MessageCircle size={18} strokeWidth={1.75} aria-hidden />
+            </span>
+            <p className="text-sm font-medium">No messages yet</p>
+            <p className="text-xs text-muted-foreground">Say hello and our team will reply here.</p>
+          </div>
         )}
         {messages.map((message) => {
           const mine = inbox?.role === "customer" && message.senderId === inbox.viewerId;
           return (
-            <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+            <div key={message.id} className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
+              {!mine && (
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
+                  {(message.senderName ?? "S")[0]?.toUpperCase()}
+                </span>
+              )}
               <div className={`max-w-[80%] ${mine ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
                 <span className={`px-1 text-xs font-semibold ${mine ? "text-muted-foreground" : "text-muted-foreground"}`}>
                   {mine ? "You" : `Support · ${message.senderName}`}

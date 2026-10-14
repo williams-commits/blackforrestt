@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { KeyRound, Pencil, ShieldCheck } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 interface User {
   id: string;
@@ -278,9 +279,9 @@ function Field({
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-xs text-muted-foreground">
+      <Label htmlFor={id} className="text-xs font-medium text-muted-foreground">
         {label}
-      </label>
+      </Label>
       <Input
         id={id}
         type={type}

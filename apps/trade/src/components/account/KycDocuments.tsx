@@ -11,8 +11,9 @@ import {
   kycDocumentLabel,
   type KycDocumentType,
 } from "@/lib/kyc";
-import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert } from "@/components/ui/Alert";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface DocumentView {
@@ -162,23 +163,25 @@ export function KycDocuments() {
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] sm:items-end">
           <div>
-            <label htmlFor={selectId} className="mb-1.5 block text-xs font-medium text-muted-foreground">Document type</label>
-            <NativeSelect
-              id={selectId}
-              value={selectedType}
-              onChange={(event) => setSelectedType(event.target.value as KycDocumentType)}
-              className="h-10 transition-colors focus-visible:ring-2 focus-visible:ring-ring/30"
-            >
-              <optgroup label="Identity">
-                {IDENTITY_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-              </optgroup>
-              <optgroup label="Proof of address">
-                {ADDRESS_DOCUMENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-              </optgroup>
-            </NativeSelect>
+            <Label htmlFor={selectId} className="text-xs font-medium text-muted-foreground">Document type</Label>
+            <Select value={selectedType} onValueChange={(value) => setSelectedType(value as KycDocumentType)}>
+              <SelectTrigger id={selectId} className="h-10 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Identity</SelectLabel>
+                  {IDENTITY_DOCUMENT_TYPES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel>Proof of address</SelectLabel>
+                  {ADDRESS_DOCUMENT_TYPES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
           <div>
-            <label htmlFor={fileId} className="mb-1.5 block text-xs font-medium text-muted-foreground">File</label>
+            <Label htmlFor={fileId} className="text-xs font-medium text-muted-foreground">File</Label>
             <input
               id={fileId}
               type="file"

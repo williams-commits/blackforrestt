@@ -186,7 +186,7 @@ export function SecurityCenter() {
         {!enabled && !secret && (
           <div className="flex gap-2">
             <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Current password" aria-label="Current password for MFA enrollment" className="h-10 flex-1" />
-            <Button type="button" variant="sell" loading={loading} onClick={() => void startEnrollment()}>Start MFA setup</Button>
+            <Button type="button" loading={loading} onClick={() => void startEnrollment()}>Start MFA setup</Button>
           </div>
         )}
       {secret && (
@@ -230,7 +230,7 @@ export function SecurityCenter() {
             <Button
               type="button"
               size="sm"
-              variant="sell"
+              variant="destructive"
               loading={loading}
               onClick={() => void revokeOthers()}
             >

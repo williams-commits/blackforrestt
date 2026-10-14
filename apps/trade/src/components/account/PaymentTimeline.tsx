@@ -43,6 +43,8 @@ interface PaymentView {
   reconciliationStatus: "PENDING" | "MATCHED" | "MISMATCHED";
   reviewerNote: string | null;
   createdAt: string;
+  reviewedAt: string | null;
+  events: Array<{ type: string; createdAt: string }>;
   proofs: PaymentProofView[];
 }
 
@@ -60,6 +62,20 @@ const PROOF_STYLES: Record<PaymentProofView["status"], string> = {
   PENDING_SCAN: "bg-(--term-warning-bg) text-(--term-warning-fg)",
   BLOCKED: "bg-(--term-danger-bg) text-(--term-danger-fg)",
   QUARANTINED: "bg-(--term-danger-bg) text-(--term-danger-fg)",
+};
+
+const EVENT_LABELS: Record<string, string> = {
+  CREATED: "Request created",
+  PROOF_RECEIVED: "Document received",
+  PROOF_FINALIZED: "Document verified",
+  PROOF_BLOCKED: "Document blocked",
+  PREPARED: "Prepared for review",
+  APPROVED: "Approved by finance",
+  REJECTED: "Rejected",
+  CANCELLED: "Cancelled",
+  REVERSED: "Reversed",
+  RECONCILED: "Reconciled with settlement",
+  RISK_REJECTED: "Rejected by risk checks",
 };
 
 function formatBytes(bytes: number): string {
@@ -308,8 +324,13 @@ function PaymentDetailSheet({
           </div>
 
           <dl className="space-y-3">
+            <DetailRow label="Type" value={request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} />
+            <DetailRow label="Asset" value={request.asset} />
+            <DetailRow label="Method" value={request.methodLabel} />
+            {request.userReference && <DetailRow label="Your reference" value={<span className="font-mono text-xs">{request.userReference}</span>} />}
             <DetailRow label="Created" value={fmtDateTime(request.createdAt)} />
-            {request.methodDetailsSummary && <DetailRow label="Method" value={request.methodDetailsSummary} />}
+            {request.reviewedAt && <DetailRow label="Reviewed" value={fmtDateTime(request.reviewedAt)} />}
+            {request.methodDetailsSummary && <DetailRow label="Method details" value={request.methodDetailsSummary} />}
             {request.beneficiarySummary && <DetailRow label="Beneficiary" value={request.beneficiarySummary} />}
             {request.riskHoldUntil && new Date(request.riskHoldUntil) > new Date() && (
               <DetailRow label="Cooling-off until" value={<span className="text-primary">{fmtDateTime(request.riskHoldUntil)}</span>} />
@@ -319,8 +340,24 @@ function PaymentDetailSheet({
                 {request.reconciliationStatus}
               </RecordStatusChip>
             } />
+            <DetailRow label="Documents" value={`${request.proofs.length} uploaded`} />
             {request.reviewerNote && <DetailRow label="Finance note" value={request.reviewerNote} />}
           </dl>
+
+          {request.events.length > 0 && (
+            <div className="rounded-xl bg-muted/40 p-4">
+              <div className="text-xs font-medium text-muted-foreground">Timeline</div>
+              <ol className="mt-3 space-y-2.5">
+                {[...request.events].reverse().map((event, index) => (
+                  <li key={`${event.type}-${index}`} className="flex items-center gap-2.5 text-xs">
+                    <span className={`size-1.5 shrink-0 rounded-full ${index === request.events.length - 1 ? "bg-primary" : "bg-muted-foreground/50"}`} aria-hidden />
+                    <span className="font-medium text-foreground">{EVENT_LABELS[event.type] ?? event.type.replaceAll("_", " ").toLowerCase()}</span>
+                    <span className="ml-auto text-muted-foreground tabular-nums">{fmtDateTime(event.createdAt)}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
 
           {request.methodDetails && (
             <div className="rounded-xl bg-muted/40 p-4">

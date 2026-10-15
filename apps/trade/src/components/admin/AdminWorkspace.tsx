@@ -24,9 +24,12 @@ import { toast } from "@/lib/toast";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { IdentityTile, initialsOf } from "@/components/ui/Initial";
+import { StatCard } from "@/components/ui/StatCard";
 import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, UserRound } from "lucide-react";
-import { Table } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type Permission = string;
 type TabKey =
@@ -384,7 +387,7 @@ function OverviewPanel() {
   const resource = useResource<OverviewResponse>("/api/admin/overview", 15_000);
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><Alert tone="info"><strong>Environment.</strong> Execution provider: {resource.data.environment.executionProvider}; market data: {resource.data.environment.marketDataMode}.</Alert><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{Object.entries(resource.data.stats).map(([key, value]) => {
               const StatGlyph = OVERVIEW_STAT_ICONS[key];
-              return <div key={key} className="p-4"><div className="flex items-center gap-1.5 text-xs uppercase text-muted-foreground">{StatGlyph && <StatGlyph size={12} strokeWidth={1.75} aria-hidden />}{key.replaceAll(/([A-Z])/g, " $1")}</div><div className="mt-1 text-2xl font-semibold tnum">{value.toLocaleString("en-US")}</div></div>;
+              return <StatCard key={key} label={key.replaceAll(/([A-Z])/g, " $1")} value={value.toLocaleString("en-US")} icon={StatGlyph ? <StatGlyph size={16} strokeWidth={1.75} aria-hidden /> : undefined} />;
             })}</div></div>}</ModuleState>;
 }
 
@@ -578,36 +581,43 @@ function PaginatedUsers({
       {/* Users as entity rows — identity first, key-values right, actions
           last; stacks on phones instead of horizontal-scrolling a 275px
           grid. Same data the CSV export carries. */}
-      <ul className="divide-y divide-border" aria-label="Users">
+      <ul className="space-y-2" aria-label="Users">
         {visibleUsers.map((user) => (
-          <li key={user.id} className="flex flex-col gap-2.5 px-3 py-3 transition-colors hover:bg-accent/60/40 lg:flex-row lg:items-center lg:gap-4">
+          <li key={user.id} className="flex flex-col gap-2.5 rounded-xl bg-card p-3.5 shadow-sm transition-colors hover:bg-accent/40 lg:flex-row lg:items-center lg:gap-4">
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${user.online ? "bg-up" : "bg-muted"}`}
-                  title={user.online ? "Online — live session" : "Offline"}
-                  aria-label={user.online ? "Online" : "Offline"}
-                />
-                <span className="truncate text-xs font-medium text-foreground">{user.name ?? "Unnamed"}</span>
-                {!user.verified ? (
-                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">unverified</span>
-                ) : null}
-                {user.lockedUntil ? (
-                  <span className="rounded-full bg-down/10 px-1.5 py-0.5 text-xs font-medium text-down">locked</span>
-                ) : null}
-                {user.adminRoles.length > 0 ? (
-                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-                    {user.adminRoles[0].role.toLowerCase()}
-                    {user.adminRoles.length > 1 ? ` +${user.adminRoles.length - 1}` : ""}
-                  </span>
-                ) : null}
+              <div className="flex min-w-0 items-start gap-2.5">
+                <IdentityTile tone={user.online ? "up" : "muted"} className="mt-0.5">
+                  {initialsOf(user.name ?? user.email)}
+                </IdentityTile>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${user.online ? "bg-up" : "bg-muted"}`}
+                      title={user.online ? "Online — live session" : "Offline"}
+                      aria-label={user.online ? "Online" : "Offline"}
+                    />
+                    <span className="truncate text-sm font-medium text-foreground">{user.name ?? "Unnamed"}</span>
+                    {!user.verified ? (
+                      <Badge variant="secondary" className="px-1.5 py-0 text-xs">unverified</Badge>
+                    ) : null}
+                    {user.lockedUntil ? (
+                      <Badge variant="secondary" className="bg-down/10 px-1.5 py-0 text-xs text-down">locked</Badge>
+                    ) : null}
+                    {user.adminRoles.length > 0 ? (
+                      <Badge variant="secondary" className="bg-primary/10 px-1.5 py-0 text-xs text-primary">
+                        {user.adminRoles[0].role.toLowerCase()}
+                        {user.adminRoles.length > 1 ? ` +${user.adminRoles.length - 1}` : ""}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {user.email ?? "—"} · #{user.accountNo ?? "—"}
+                    {user.brandDomain ? (
+                      <span className="ml-1.5 rounded bg-primary/10 px-1 py-0.5 font-semibold text-primary">{user.brandDomain}</span>
+                    ) : null}
+                  </p>
+                </div>
               </div>
-              <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                {user.email ?? "—"} · #{user.accountNo ?? "—"}
-                {user.brandDomain ? (
-                  <span className="ml-1.5 rounded bg-primary/10 px-1 py-0.5 font-semibold text-primary">{user.brandDomain}</span>
-                ) : null}
-              </p>
             </div>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3 lg:ml-auto lg:flex lg:flex-nowrap lg:gap-6 lg:pl-4">
               <div className="min-w-0">
@@ -627,11 +637,11 @@ function PaginatedUsers({
               </div>
               <div className="min-w-0">
                 <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Balance</dt>
-                <dd className="mt-0.5 text-xs tnum text-foreground">{formatUsd(user.metrics?.balance ?? "0")}</dd>
+                <dd className="mt-0.5 text-xs tabular-nums text-foreground">{formatUsd(user.metrics?.balance ?? "0")}</dd>
               </div>
               <div className="min-w-0">
                 <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Equity</dt>
-                <dd className="mt-0.5 text-xs tnum text-foreground">{formatUsd(user.metrics?.equity ?? "0")}</dd>
+                <dd className="mt-0.5 text-xs tabular-nums text-foreground">{formatUsd(user.metrics?.equity ?? "0")}</dd>
               </div>
               <div className="min-w-0">
                 <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Activity</dt>
@@ -657,7 +667,7 @@ function PaginatedUsers({
           </li>
         ))}
         {users.length === 0 ? (
-          <li className="p-8 text-center text-xs text-muted-foreground">{emptyLabel ?? "No users found."}</li>
+          <li className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">{emptyLabel ?? "No users found."}</li>
         ) : null}
       </ul>
       <Pagination page={safePage} pageSize={pageSize} totalItems={sortedUsers.length} onPageChange={setPage} label="users" compact />
@@ -857,9 +867,9 @@ function UserBalanceDialog({
               <MetricCard label="Equity" value={formatUsd(data.metrics?.equity ?? "0")} />
             </div>
             <form onSubmit={submit} className="p-4">
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Balance adjustment type">
-                <button type="button" onClick={() => setAction("CREDIT")} className={`rounded px-3 py-2 text-xs font-semibold ${action === "CREDIT" ? "bg-up text-white" : "border border-border bg-card"}`}>Top up balance</button>
-                <button type="button" onClick={() => setAction("DEBIT")} className={`rounded px-3 py-2 text-xs font-semibold ${action === "DEBIT" ? "bg-down text-white" : "border border-border bg-card"}`}>Deduct balance</button>
+              <div className="inline-flex gap-1 rounded-xl bg-muted p-1" role="group" aria-label="Balance adjustment type">
+                <button type="button" onClick={() => setAction("CREDIT")} aria-pressed={action === "CREDIT"} className={`rounded-lg px-3 py-2 text-xs font-medium transition ${action === "CREDIT" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Top up balance</button>
+                <button type="button" onClick={() => setAction("DEBIT")} aria-pressed={action === "DEBIT"} className={`rounded-lg px-3 py-2 text-xs font-medium transition ${action === "DEBIT" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Deduct balance</button>
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,12rem)_1fr_auto] md:items-end">
                 <label className="text-xs font-medium">Amount (USD)
@@ -868,7 +878,7 @@ function UserBalanceDialog({
                 <label className="text-xs font-medium">Audited reason
                   <Input type="text" minLength={5} maxLength={500} required value={reason} onChange={(event) => setReason(event.target.value)} className="mt-1 h-10" placeholder="Ticket, customer request, or correction reason" />
                 </label>
-                <Button type="submit" variant={action === "CREDIT" ? "buy" : "sell"} loading={busy} loadingLabel="Posting adjustment">{action === "CREDIT" ? "Post top-up" : "Post deduction"}</Button>
+                <Button type="submit" variant={action === "CREDIT" ? "default" : "destructive"} loading={busy} loadingLabel="Posting adjustment">{action === "CREDIT" ? "Post top-up" : "Post deduction"}</Button>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">Deductions cannot exceed the user’s available balance. Margin and pending withdrawals are never silently consumed.</p>
             </form>
@@ -882,14 +892,14 @@ function UserBalanceDialog({
               <div className="overflow-hidden">
                 <div className="overflow-x-auto">
                   <Table className="w-full min-w-175 text-left text-xs">
-                    <thead className="bg-muted text-muted-foreground"><tr><th className="p-2">Date</th><th className="p-2">Type</th><th className="p-2">Description</th><th className="p-2">Reference</th><th className="p-2 text-right">Amount</th><th className="p-2">Status</th></tr></thead>
-                    <tbody>
+                    <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Description</TableHead><TableHead>Reference</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                    <TableBody>
                       {visible.map((item) => {
                         const numeric = Number(item.amount);
-                        return <tr key={item.id} className="border-t"><td className="p-2 whitespace-nowrap">{new Date(item.createdAt).toLocaleString()}</td><td className="p-2">{item.type}</td><td className="p-2 max-w-70 truncate" title={item.description ?? undefined}>{item.description ?? "—"}</td><td className="p-2 tnum">{item.reference ?? "—"}</td><td className={`p-2 text-right font-medium tnum ${numeric >= 0 ? "text-up" : "text-down"}`}>{numeric >= 0 ? "+" : ""}{formatUsd(item.amount)}</td><td className="p-2">{item.status}</td></tr>;
+                        return <TableRow key={item.id}><TableCell className="whitespace-nowrap">{new Date(item.createdAt).toLocaleString()}</TableCell><TableCell>{item.type}</TableCell><TableCell className="max-w-70 truncate" title={item.description ?? undefined}>{item.description ?? "—"}</TableCell><TableCell className="tabular-nums">{item.reference ?? "—"}</TableCell><TableCell className={`text-right font-medium tabular-nums ${numeric >= 0 ? "text-up" : "text-down"}`}>{numeric >= 0 ? "+" : ""}{formatUsd(item.amount)}</TableCell><TableCell>{item.status}</TableCell></TableRow>;
                       })}
-                      {transactions.length === 0 ? <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No transactions.</td></tr> : null}
-                    </tbody>
+                      {transactions.length === 0 ? <TableRow><TableCell colSpan={6} className="p-8 text-center text-muted-foreground">No transactions.</TableCell></TableRow> : null}
+                    </TableBody>
                   </Table>
                 </div>
                 <Pagination page={safePage} pageSize={pageSize} totalItems={transactions.length} onPageChange={setPage} label="transactions" compact />

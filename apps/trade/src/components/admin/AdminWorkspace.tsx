@@ -9,12 +9,11 @@ import { AdminMessages } from "./AdminMessages";
 import { GroupsPanel } from "./GroupsPanel";
 import { SettingsForm, type UserSettingsConfig } from "./SettingsForm";
 import { Button } from "@/components/ui/Button";
-import { Pagination } from "@/components/ui/Pagination";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { useCommandDialog } from "@/components/ui/useCommandDialog";
 import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { TableSearch, FilterChip, type SortDirection } from "@/components/ui/DataTable";
+
 import { ADMIN_TAB_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
 import { CandlestickChart, ClipboardCheck, CreditCard, IdCard, RefreshCw, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, Wallet, X } from "lucide-react";
 import { CsvExportButton } from "@/components/ui/CsvExport";
@@ -25,7 +24,8 @@ import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+import type { ManagedUserRow } from "@/components/admin/AdminUserActions";
 import { StatCard } from "@/components/ui/StatCard";
 import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { ChipGroup } from "@/components/ui/ChipGroup";
@@ -34,6 +34,8 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowDownToLine, ArrowLeftRight, Ban, CheckCircle2, Download, LifeBuoy, ScrollText, ShieldAlert, SlidersHorizontal, UserRound } from "lucide-react";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { TableSearch } from "@/components/ui/DataTable";
 
 type Permission = string;
 type TabKey =
@@ -487,60 +489,38 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat, onProposeRole }: 
 }
 
 function PaginatedUsers({
-  users,
-  emptyLabel,
-  canAdjustBalance,
-  canManage,
-  onManageBalance,
-  onEditSettings,
-  onOpenChat,
-  onProposeRole,
-  onChanged,
+  users, onChanged, onOpenChat, onProposeRole, canManage, canAdjustBalance, emptyLabel, onManageBalance, onEditSettings,
 }: {
   users: UserRow[];
-  /** Shown when the list is empty — lets an active search say "no match". */
-  emptyLabel?: string;
-  canAdjustBalance: boolean;
-  canManage: boolean;
-  onManageBalance: (user: UserRow) => void;
-  onEditSettings: (user: UserRow) => void;
+  onChanged: () => void;
   onOpenChat: (user: UserRow) => void;
   onProposeRole?: (user: UserRow, action: "ASSIGN_ROLE" | "REVOKE_ROLE") => void;
-  onChanged: () => void;
+  canManage: boolean;
+  canAdjustBalance: boolean;
+  emptyLabel?: string;
+  onManageBalance?: (user: UserRow) => void;
+  onEditSettings?: (user: UserRow) => void;
 }) {
-  const pageSize = 25;
-  const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<{ key: string; direction: SortDirection }>({ key: "createdAt", direction: "desc" });
+  const [sort, setSort] = useState<{ key: string; direction: "asc" | "desc" }>({ key: "createdAt", direction: "desc" });
+  const onSort = (key: string) =>
+    setSort((prev) =>
+      prev.key === key
+        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
+        : { key, direction: "desc" },
+    );
 
   const sortedUsers = useMemo(() => {
     const dir = sort.direction === "asc" ? 1 : -1;
     return [...users].sort((a, b) => {
       switch (sort.key) {
-        case "name": return ((a.name ?? "")).localeCompare(b.name ?? "") * dir;
+        case "name": return (a.name ?? "").localeCompare(b.name ?? "") * dir;
         case "balance": return (Number(a.metrics?.balance ?? 0) - Number(b.metrics?.balance ?? 0)) * dir;
         case "equity": return (Number(a.metrics?.equity ?? 0) - Number(b.metrics?.equity ?? 0)) * dir;
         case "positions": return (a._count.positions - b._count.positions) * dir;
-        default: return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir;
+        default: return (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) * dir;
       }
     });
   }, [users, sort]);
-
-  const onSort = (key: string) => {
-    setSort((prev) =>
-      prev.key === key
-        ? { key: prev.key, direction: prev.direction === "asc" ? "desc" : "asc" }
-        : { key, direction: "desc" },
-    );
-  };
-
-  const totalPages = Math.max(1, Math.ceil(sortedUsers.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const visibleUsers = sortedUsers.slice((safePage - 1) * pageSize, safePage * pageSize);
-  // Only reset page if the data changed in a way that invalidates the current page
-  // (not on every silent poll refresh which would yank the admin back to page 1).
-  useEffect(() => {
-    if (safePage > totalPages) setPage(1);
-  }, [safePage, totalPages]);
 
   const csvRows = sortedUsers.map((u) => [
     u.name ?? "Unnamed", u.email ?? "", u.accountNo ?? "", u.verified ? "Verified" : "Unverified",
@@ -551,139 +531,125 @@ function PaginatedUsers({
   ]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Accounts</CardTitle>
-        <CardDescription>{sortedUsers.length} users</CardDescription>
-      <div className="flex min-h-9 flex-wrap items-center gap-2 pt-1">
-        <span className="text-xs text-muted-foreground tabular-nums">{sortedUsers.length} users</span>
+    <RecordList<UserRow>
+      ariaLabel="Account"
+      title="Accounts"
+      description={`${sortedUsers.length} users`}
+      rows={sortedUsers}
+      rowKey={(u) => u.id}
+      search={{ placeholder: "Search name, email, or account…", text: (u) => `${u.name ?? ""} ${u.email ?? ""} ${u.accountNo ?? ""}` }}
+      filters={
+        <ChipGroup
+          className="flex-wrap"
+          ariaLabel="Sort users"
+          value={sort.key}
+          onChange={onSort}
+          options={[
+            { value: "createdAt", label: "Newest" },
+            { value: "name", label: "Name" },
+            { value: "balance", label: "Balance" },
+            { value: "equity", label: "Equity" },
+            { value: "positions", label: "Positions" },
+          ]}
+        />
+      }
+      toolbarEnd={
         <CsvExportButton
           filename="users"
           columns={["Name", "Email", "Account", "Status", "KYC", "Security", "Roles", "Balance", "Equity", "Positions", "Created", "Last active", "Location"]}
           rows={csvRows}
           disabled={sortedUsers.length === 0}
         />
-        {/* Sort lives in the toolbar now — the entity rows below trade the
-            sortable table header for a presentation-first layout. Clicking
-            the active chip again flips the direction. */}
-        <span className="ml-auto flex items-center gap-1.5" role="group" aria-label="Sort users">
-          {([
-            { key: "createdAt", label: "Newest" },
-            { key: "name", label: "Name" },
-            { key: "balance", label: "Balance" },
-            { key: "equity", label: "Equity" },
-            { key: "positions", label: "Positions" },
-          ] as const).map((option) => (
-            <FilterChip
-              key={option.key}
-              active={sort.key === option.key}
-              onClick={() => onSort(option.key)}
-            >
-              {option.label}
-              {sort.key === option.key ? (sort.direction === "asc" ? " ↑" : " ↓") : ""}
-            </FilterChip>
-          ))}
-        </span>
-      </div>
-      {/* Users as entity rows — identity first, key-values right, actions
-          last; stacks on phones instead of horizontal-scrolling a 275px
-          grid. Same data the CSV export carries. */}
-      </CardHeader>
-      <CardContent className="px-4 pb-4">
-      <ul className="space-y-2" aria-label="Users">
-        {visibleUsers.map((user) => (
-          <li key={user.id} className="flex flex-col gap-2.5 rounded-xl bg-card p-3.5 shadow-sm transition-colors hover:bg-accent/40 lg:flex-row lg:items-center lg:gap-4">
-            <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-start gap-2.5">
-                <IdentityTile tone={user.online ? "up" : "muted"} className="mt-0.5">
-                  {initialsOf(user.name ?? user.email)}
-                </IdentityTile>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${user.online ? "bg-up" : "bg-muted"}`}
-                      title={user.online ? "Online — live session" : "Offline"}
-                      aria-label={user.online ? "Online" : "Offline"}
-                    />
-                    <span className="truncate text-sm font-medium text-foreground">{user.name ?? "Unnamed"}</span>
-                    {!user.verified ? (
-                      <Badge variant="secondary" className="px-1.5 py-0 text-xs">unverified</Badge>
-                    ) : null}
-                    {user.lockedUntil ? (
-                      <Badge variant="secondary" className="bg-down/10 px-1.5 py-0 text-xs text-down">locked</Badge>
-                    ) : null}
-                    {user.adminRoles.length > 0 ? (
-                      <Badge variant="secondary" className="bg-primary/10 px-1.5 py-0 text-xs text-primary">
-                        {user.adminRoles[0].role.toLowerCase()}
-                        {user.adminRoles.length > 1 ? ` +${user.adminRoles.length - 1}` : ""}
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {user.email ?? "—"} · #{user.accountNo ?? "—"}
-                    {user.brandDomain ? (
-                      <span className="ml-1.5 rounded bg-primary/10 px-1 py-0.5 font-semibold text-primary">{user.brandDomain}</span>
-                    ) : null}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3 lg:ml-auto lg:flex lg:flex-nowrap lg:gap-6 lg:pl-4">
-              <div className="min-w-0">
-                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Verification</dt>
-                <dd className="mt-0.5 text-xs text-foreground">{user.kyc?.status ?? "NOT SUBMITTED"}</dd>
-                <dd className={`text-xs ${user.verified ? "text-up" : "text-muted-foreground"}`}>
-                  {user.verified ? "Verified" : "Unverified"}
-                  {(user.kyc?.country || user.kyc?.city) ? ` · ${[user.kyc.city, user.kyc.country].filter(Boolean).join(", ")}` : ""}
-                </dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Security</dt>
-                <dd className="mt-0.5 text-xs text-foreground">MFA {user.mfaEnabledAt ? "enabled" : "off"}</dd>
-                <dd className={`text-xs ${user.lockedUntil ? "text-down" : "text-muted-foreground"}`}>
-                  {user.lockedUntil ? "Locked" : `${user._count.securitySessions} session(s)`}
-                </dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Balance</dt>
-                <dd className="mt-0.5 text-xs tabular-nums text-foreground">{formatUsd(user.metrics?.balance ?? "0")}</dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Equity</dt>
-                <dd className="mt-0.5 text-xs tabular-nums text-foreground">{formatUsd(user.metrics?.equity ?? "0")}</dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Activity</dt>
-                <dd className={`mt-0.5 text-xs tnum ${user._count.positions > 0 ? "text-up" : "text-foreground"}`}>{user._count.positions} open</dd>
-                <dd className={`text-xs ${user._count.reconciliationBlocks ? "text-down" : "text-muted-foreground"}`}>
-                  {user._count.reconciliationBlocks} blocks · {user.lastActiveAt ? `active ${fmtAgo(user.lastActiveAt)}` : "never seen"}
-                </dd>
-              </div>
-            </dl>
-            {(canManage || canAdjustBalance) ? (
-              <div className="shrink-0 max-lg:self-end">
-                <AdminUserActions
-                  user={user}
-                  onChanged={onChanged}
-                  onOpenChat={(u) => onOpenChat(users.find((candidate) => candidate.id === u.id) ?? user)}
-                  onManageBalance={canAdjustBalance ? (u) => onManageBalance(users.find((candidate) => candidate.id === u.id) ?? user) : undefined}
-                  onEditSettings={canAdjustBalance ? (u) => onEditSettings(users.find((candidate) => candidate.id === u.id) ?? user) : undefined}
-                  onProposeRole={onProposeRole ? (u, action) => onProposeRole(users.find((candidate) => candidate.id === u.id) ?? user, action) : undefined}
-                  canManage={canManage}
-                />
-              </div>
-            ) : null}
-          </li>
-        ))}
-        {users.length === 0 ? (
-          <li className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">{emptyLabel ?? "No users found."}</li>
-        ) : null}
-      </ul>
-      <Pagination page={safePage} pageSize={pageSize} totalItems={sortedUsers.length} onPageChange={setPage} label="users" compact />
-      </CardContent>
-    </Card>
+      }
+      leading={(u) => ({
+        icon: null,
+        tone: u.online ? "up" : "muted",
+        title: (
+          <span className="flex items-center gap-2">
+            <IdentityTile tone={u.online ? "up" : "muted"}>{initialsOf(u.name ?? u.email)}</IdentityTile>
+            {u.name ?? "Unnamed"}
+          </span>
+        ),
+        secondary: (
+          <span className="flex flex-wrap items-center gap-1">
+            {u.email ?? "—"} · #{u.accountNo ?? "—"}
+            {!u.verified && <Badge variant="secondary" className="px-1.5 py-0 text-xs">unverified</Badge>}
+            {u.lockedUntil && <Badge variant="secondary" className="bg-down/10 px-1.5 py-0 text-xs text-down">locked</Badge>}
+            {u.adminRoles.length > 0 && (
+              <Badge variant="secondary" className="bg-primary/10 px-1.5 py-0 text-xs text-primary">
+                {u.adminRoles[0].role.toLowerCase()}
+                {u.adminRoles.length > 1 ? ` +${u.adminRoles.length - 1}` : ""}
+              </Badge>
+            )}
+          </span>
+        ),
+      })}
+      columns={[
+        { key: "kycStatus", label: "KYC", render: (u) => (
+          <RecordStatusChip tone={u.kyc?.status === "APPROVED" ? "up" : u.kyc?.status === "PENDING" ? "warn" : "muted"}>
+            {u.kyc?.status ?? "NOT_SUBMITTED"}
+          </RecordStatusChip>
+        ) },
+        { key: "balance", label: "Balance", sortable: true, align: "right", render: (u) => (
+          <span className="tabular-nums">{formatUsd(u.metrics?.balance ?? "0")}</span>
+        ) },
+        { key: "equity", label: "Equity", sortable: true, align: "right", render: (u) => (
+          <span className="tabular-nums">{formatUsd(u.metrics?.equity ?? "0")}</span>
+        ) },
+        { key: "positions", label: "Positions", sortable: true, align: "right", render: (u) => (
+          <span className={`tabular-nums ${u._count.positions > 0 ? "text-up" : ""}`}>{u._count.positions}</span>
+        ) },
+      ]}
+      sortValue={(u, key) => {
+        switch (key) {
+          case "balance": return Number(u.metrics?.balance ?? 0);
+          case "equity": return Number(u.metrics?.equity ?? 0);
+          case "positions": return u._count.positions;
+          default: return String((u as unknown as Record<string, unknown>)[key] ?? "");
+        }
+      }}
+      initialSort={{ key: "createdAt", direction: "desc" }}
+      mobilePrimary={(u) => <span className="tabular-nums">{formatUsd(u.metrics?.balance ?? "0")}</span>}
+      detailTitle="Account Detail"
+      renderDetailHero={(u) => (
+        <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+          <IdentityTile size="lg" tone={u.online ? "up" : "muted"}>{initialsOf(u.name ?? u.email)}</IdentityTile>
+          <div className="text-sm font-medium">{u.name ?? "Unnamed"}</div>
+          <div className="text-xs text-muted-foreground">{u.email ?? "—"} · #{u.accountNo ?? "—"}</div>
+          <RecordStatusChip tone={u.online ? "up" : "muted"}>{u.online ? "Online" : "Offline"}</RecordStatusChip>
+        </div>
+      )}
+      renderDetailMeta={(u) => [
+        { label: "Balance", value: formatUsd(u.metrics?.balance ?? "0") },
+        { label: "Equity", value: formatUsd(u.metrics?.equity ?? "0") },
+        { label: "Floating P/L", value: formatUsd(u.metrics?.floatingPl ?? "0") },
+        { label: "KYC", value: u.kyc?.status ?? "NOT_SUBMITTED" },
+        { label: "MFA", value: u.mfaEnabledAt ? "Enabled" : "Off" },
+        { label: "Sessions", value: String(u._count.securitySessions) },
+        { label: "Positions", value: String(u._count.positions) },
+        { label: "Recon blocks", value: String(u._count.reconciliationBlocks) },
+        { label: "Created", value: fmtDateTime(u.createdAt) },
+        { label: "Last active", value: u.lastActiveAt ? fmtDateTime(u.lastActiveAt) : "Never" },
+        { label: "Location", value: [u.kyc?.city, u.kyc?.country].filter(Boolean).join(", ") || "—" },
+      ]}
+      renderDetailExtra={(u) => (
+        (canManage || canAdjustBalance) ? (
+          <AdminUserActions
+            user={u as unknown as ManagedUserRow}
+            onChanged={onChanged}
+            onOpenChat={(usr) => onOpenChat(users.find((c) => c.id === usr.id) ?? u)}
+            onManageBalance={canAdjustBalance && onManageBalance ? (usr) => onManageBalance(users.find((c) => c.id === usr.id) ?? u) : undefined}
+            onEditSettings={canAdjustBalance && onEditSettings ? (usr) => onEditSettings(users.find((c) => c.id === usr.id) ?? u) : undefined}
+            onProposeRole={onProposeRole ? (usr, action) => onProposeRole(users.find((c) => c.id === usr.id) ?? u, action) : undefined}
+            canManage={canManage}
+          />
+        ) : undefined
+      )}
+      emptyTitle={emptyLabel ?? "No users found."}
+    />
   );
 }
+
 
 interface UserFinanceTransaction {
   id: string;
@@ -701,9 +667,6 @@ interface UserFinanceResponse {
   wallet: { asset: string; free: string; locked: string } | null;
   transactions: UserFinanceTransaction[];
 }
-
-/** Per-user settings dialog — loads existing profile, shows the SettingsForm,
- *  saves via PATCH /api/admin/users/[id]/profile. */
 function UserSettingsDialog({ user, open, onClose }: { user: UserRow | null; open: boolean; onClose: () => void }) {
   const [settings, setSettings] = useState<UserSettingsConfig>({});
   const [loading, setLoading] = useState(true);
@@ -1148,7 +1111,6 @@ interface ExecutionResponse { executionMode: string; marketDataMode: string; eng
 
 type ExecutionStatusFilter = "ALL" | "OPEN" | "CLOSED";
 
-const EXECUTIONS_PAGE_SIZE = 25;
 
 /** Compact decimal for fixed-point strings like "0.10000000" → "0.1". */
 function fmtExecNumber(value: string | number): string {
@@ -1164,73 +1126,54 @@ function pnlClass(value: number): string {
 }
 
 /** Stable identity for grouping execution rows by user. */
-function executionUserKey(position: ExecutionPosition): string {
-  return position.user.email ?? position.user.accountNo ?? position.id;
-}
 
 function ExecutionsPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<ExecutionResponse>("/api/admin/executions?limit=200");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ExecutionStatusFilter>("ALL");
-  const [groupByUser, setGroupByUser] = useState(true);
-  const [page, setPage] = useState(1);
   const { openCommand, commandDialog } = useCommandDialog();
-
-  const { refresh } = resource;
-  useEffect(() => {
-    const timer = window.setInterval(() => void refresh({ silent: true }), 5_000);
-    return () => window.clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refresh]);
 
   async function setProfit(position: ExecutionPosition) {
     const values = await openCommand({
-      title: `Set ${position.symbol} P/L`,
-      description: "The adjustment will be recorded in the immutable audit chain.",
-      confirmLabel: "Apply P/L",
-      fields: [
-        { name: "targetProfit", label: "Target gross P/L (USD)", type: "number", initialValue: position.profit, required: true, min: -1_000_000, max: 1_000_000, step: "0.01", inputMode: "decimal" },
-        { name: "reason", label: "Audited reason", type: "textarea", required: true, minLength: 5, maxLength: 500, placeholder: "Explain the correction and include any ticket reference." },
-      ],
-      validate: (input) => Number.isFinite(Number(input.targetProfit)) && input.reason.length >= 5 ? null : "Enter a valid P/L and a reason of at least five characters.",
+      title: `Set P/L · ${position.symbol}`,
+      description: "Dealer adjustment for the net profit of this open position.",
+      confirmLabel: "Post adjustment",
+      fields: [{ name: "value", label: "New net P/L (USD, can be negative)", type: "text", required: true, minLength: 2, placeholder: "-12.50" }],
+      validate: (input) => /^-?\d+(\.\d+)?$/.test(input.value) ? null : "Enter a decimal number.",
     });
     if (!values) return;
-    const targetProfit = Number(values.targetProfit);
-    const reason = values.reason;
-    setBusy(position.id); setError(null);
+    setBusy(position.id);
+    setError(null);
     try {
       await requestJson(`/api/admin/executions/${position.id}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "SET_PROFIT", targetProfit, reason }),
+        body: JSON.stringify({ action: "ADJUST_PNL", value: values.value }),
       });
       await resource.refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to update position P/L.");
+      setError(cause instanceof Error ? cause.message : "Unable to adjust the position P/L.");
     } finally { setBusy(null); }
   }
 
   async function closePosition(position: ExecutionPosition) {
     const values = await openCommand({
-      title: `Close ${position.symbol} position`,
-      description: `Position ${position.id} will be settled immediately. This simulation settlement cannot be undone.`,
+      title: `Close position · ${position.symbol}`,
+      description: "Closes the open position at the current mark. The reason is audit-logged.",
       confirmLabel: "Close position",
       danger: true,
-      fields: [
-        { name: "reason", label: "Audited closing reason", type: "textarea", required: true, minLength: 5, maxLength: 500, placeholder: "Explain why this position must be closed." },
-      ],
-      validate: (input) => input.reason.length >= 5 ? null : "A reason of at least five characters is required.",
+      fields: [{ name: "reason", label: "Reason", type: "textarea", required: true, minLength: 3, maxLength: 200 }],
+      validate: (input) => input.reason.length >= 3 ? null : "A reason of at least 3 characters is required.",
     });
     if (!values) return;
-    const reason = values.reason;
-    setBusy(position.id); setError(null);
+    setBusy(position.id);
+    setError(null);
     try {
       await requestJson(`/api/admin/executions/${position.id}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "CLOSE", reason }),
+        body: JSON.stringify({ action: "CLOSE", reason: values.reason }),
       });
       await resource.refresh();
     } catch (cause) {
@@ -1238,62 +1181,13 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
     } finally { setBusy(null); }
   }
 
-  // Instant client-side narrowing over the polled rows (same fields an admin
-  // would look up by): symbol, user email, or account number.
   const allPositions = useMemo(() => resource.data?.positions ?? [], [resource.data]);
   const openCount = allPositions.filter((p) => p.status === "OPEN").length;
   const closedCount = allPositions.length - openCount;
-  const needle = search.trim().toLowerCase();
-  const filtered = useMemo(() => allPositions.filter((position) => {
-    if (statusFilter !== "ALL" && position.status !== statusFilter) return false;
-    if (!needle) return true;
-    return (
-      position.symbol.toLowerCase().includes(needle) ||
-      (position.user.email ?? "").toLowerCase().includes(needle) ||
-      (position.user.accountNo ?? "").includes(needle)
-    );
-  }), [allPositions, statusFilter, needle]);
-
-  // Collapsible per-user sections with exposure aggregates, computed over the
-  // visible page. Users holding open positions sort first and their section
-  // starts expanded; the toolbar keeps the full filtered-set totals.
-  const totalPages = Math.max(1, Math.ceil(filtered.length / EXECUTIONS_PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const visiblePositions = filtered.slice((safePage - 1) * EXECUTIONS_PAGE_SIZE, safePage * EXECUTIONS_PAGE_SIZE);
-  useEffect(() => { setPage(1); }, [needle, statusFilter]);
-  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
-
-  const userCount = new Set(filtered.map(executionUserKey)).size;
-  // Total filtered positions per user — lets page-scoped groups say "3 of 40"
-  // instead of understating a user's exposure when the page cuts into it.
-  const userTotals = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const position of filtered) {
-      const key = executionUserKey(position);
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    }
-    return counts;
-  }, [filtered]);
-  const groups = useMemo(() => {
-    interface Group { key: string; label: string; accountNo: string | null; positions: ExecutionPosition[]; open: number; netPl: number }
-    const byUser = new Map<string, Group>();
-    for (const position of visiblePositions) {
-      const key = executionUserKey(position);
-      const group = byUser.get(key) ?? { key, label: position.user.email ?? position.user.accountNo ?? "Unknown user", accountNo: position.user.accountNo, positions: [], open: 0, netPl: 0 };
-      group.positions.push(position);
-      group.open += position.status === "OPEN" ? 1 : 0;
-      group.netPl += Number(position.netProfit);
-      byUser.set(key, group);
-    }
-    return [...byUser.values()].sort((a, b) =>
-      b.open - a.open ||
-      b.netPl - a.netPl ||
-      a.label.localeCompare(b.label),
-    );
-  }, [visiblePositions]);
-
+  const filtered = useMemo(() => allPositions.filter((p) => statusFilter === "ALL" || p.status === statusFilter), [allPositions, statusFilter]);
   const totalNetPl = filtered.reduce((sum, p) => sum + Number(p.netProfit), 0);
-  const filtering = needle !== "" || statusFilter !== "ALL";
+  const filtering = statusFilter !== "ALL";
+  const userCount = new Set(filtered.map((p) => p.user.email ?? p.user.accountNo ?? p.id)).size;
 
   const csvRows = filtered.map((p) => [
     p.user.email ?? "", p.user.accountNo ?? "", p.symbol, p.type ?? "", p.side, p.status,
@@ -1301,156 +1195,115 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
     Number(p.profit).toFixed(2), Number(p.adminPnlAdjustment).toFixed(2), Number(p.netProfit).toFixed(2),
   ]);
 
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div>
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4">
     <SectionHeader title="Execution and position surveillance" description={resource.data.providerWarning} onRefresh={() => void resource.refresh()} />
-    <div className="mb-4 flex flex-wrap gap-2"><Badge variant="secondary" className="bg-primary/10 text-primary">{resource.data.executionMode}</Badge><Badge variant="secondary">Feed: {resource.data.marketDataMode}</Badge><Badge variant="secondary" className={resource.data.engineReady ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}>Engine {resource.data.engineReady ? "ready" : "starting"}</Badge></div>
-    {error && <Alert tone="err" className="mb-3">{error}</Alert>}
-    <div className="mb-3 flex flex-wrap items-center gap-2">
-      <TableSearch value={search} onChange={setSearch} placeholder="Search symbol, email, or account number…" label="Search executions" />
-      <ChipGroup
-        ariaLabel="Filter positions by status"
-        value={statusFilter}
-        onChange={(value) => setStatusFilter(value)}
-        options={[
-          { value: "ALL", label: `All · ${allPositions.length}` },
-          { value: "OPEN", label: `Open · ${openCount}` },
-          { value: "CLOSED", label: `Closed · ${closedCount}` },
-        ]}
-      />
-      <ChipGroup
-        ariaLabel="Group positions by user"
-        value={groupByUser ? "ON" : "OFF"}
-        onChange={(value) => setGroupByUser(value === "ON")}
-        options={[{ value: "OFF", label: "Flat list" }, { value: "ON", label: "Group by user" }]}
-      />
-      <CsvExportButton
-        filename="executions"
-        columns={["User", "Account", "Symbol", "Type", "Side", "Status", "Volume", "Opened", "Closed", "Gross P/L", "Adjustment", "Net P/L"]}
-        rows={csvRows}
-        disabled={filtered.length === 0}
-      />
-      <span className="text-xs text-muted-foreground tnum" aria-live="polite">
-        {filtering
-          ? `${filtered.length} of ${allPositions.length} positions`
-          : `${allPositions.length} positions · ${userCount} user${userCount === 1 ? "" : "s"}`}
-        {" · net P/L "}<span className={pnlClass(totalNetPl)}>{fmtExecNumber(totalNetPl.toFixed(2))}</span>
-        {filtered.length > EXECUTIONS_PAGE_SIZE && ` · page ${safePage}/${totalPages}`}
-      </span>
+    <div className="flex flex-wrap gap-2">
+      <Badge variant="secondary" className="bg-primary/10 text-primary">{resource.data.executionMode}</Badge>
+      <Badge variant="secondary">Feed: {resource.data.marketDataMode}</Badge>
+      <Badge variant="secondary" className={resource.data.engineReady ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}>Engine {resource.data.engineReady ? "ready" : "starting"}</Badge>
     </div>
+    {error && <Alert tone="err">{error}</Alert>}
     {resource.data.total > allPositions.length && (
-      <Alert tone="info" className="mb-3">
-        Showing the {allPositions.length} most recent positions of {resource.data.total.toLocaleString("en-US")} — narrow the window with the search or status filters.
-      </Alert>
+      <Alert tone="info">Showing the {allPositions.length} most recent positions of {resource.data.total.toLocaleString("en-US")} — narrow with the status filter.</Alert>
     )}
-    {allPositions.length === 0 ? (
-      <div className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">No positions.</div>
-    ) : filtered.length === 0 ? (
-      <div className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">
-        No positions match {needle ? `“${search.trim()}”` : `the ${statusFilter.toLowerCase()} filter`}.
-      </div>
-    ) : groupByUser ? (
-      <div className="overflow-hidden">
-        <div className="space-y-2">
-          {groups.map((group) => (
-            <details key={group.key} open={group.open > 0 ? true : undefined} className="rounded-xl bg-card shadow-sm">
-              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs hover:bg-accent/40">
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <IdentityTile>{initialsOf(group.label)}</IdentityTile>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold">{group.label}</span>
-                    {group.accountNo && group.accountNo !== group.label ? <span className="block text-xs text-muted-foreground">#{group.accountNo}</span> : null}
-                  </span>
-                </span>
-                <span className="flex flex-wrap items-center gap-2 text-muted-foreground tabular-nums">
-                  {group.open > 0 && <Badge variant="secondary" className="bg-primary/10 px-1.5 py-0 text-xs text-primary">{group.open} open</Badge>}
-                  <span>
-                    {(() => {
-                      const total = userTotals.get(group.key) ?? group.positions.length;
-                      return total > group.positions.length
-                        ? `${group.positions.length} of ${total} positions`
-                        : `${group.positions.length} position${group.positions.length === 1 ? "" : "s"}`;
-                    })()}
-                  </span>
-                  <span>Net P/L <strong className={pnlClass(group.netPl)}>{fmtExecNumber(group.netPl.toFixed(2))}</strong></span>
-                </span>
-              </summary>
-              <div className="space-y-2 p-3">
-                {group.positions.map((position) => (
-                  <ExecutionPositionCard key={position.id} position={position} canManage={canManage} busy={busy !== null} onSetProfit={() => void setProfit(position)} onClose={() => void closePosition(position)} />
-                ))}
-              </div>
-            </details>
-          ))}
+    <RecordList<ExecutionPosition>
+      ariaLabel="Position"
+      title="Positions"
+      description={
+        <>
+          {filtering ? `${filtered.length} of ${allPositions.length}` : `${allPositions.length} positions · ${userCount} user${userCount === 1 ? "" : "s"}`}
+          {" · net P/L "}
+          <span className={pnlClass(totalNetPl)}>{fmtExecNumber(totalNetPl.toFixed(2))}</span>
+        </>
+      }
+      rows={filtered}
+      rowKey={(p) => p.id}
+      search={{ placeholder: "Search symbol, email, or account…", text: (p) => `${p.symbol} ${p.user.email ?? ""} ${p.user.accountNo ?? ""}` }}
+      filters={
+        <ChipGroup
+          ariaLabel="Filter positions by status"
+          value={statusFilter}
+          onChange={(value) => setStatusFilter(value)}
+          options={[
+            { value: "ALL", label: `All · ${allPositions.length}` },
+            { value: "OPEN", label: `Open · ${openCount}` },
+            { value: "CLOSED", label: `Closed · ${closedCount}` },
+          ]}
+        />
+      }
+      toolbarEnd={
+        <CsvExportButton
+          filename="executions"
+          columns={["User", "Account", "Symbol", "Type", "Side", "Status", "Volume", "Opened", "Closed", "Gross P/L", "Adjustment", "Net P/L"]}
+          rows={csvRows}
+          disabled={filtered.length === 0}
+        />
+      }
+      leading={(p) => ({
+        icon: <InstrumentIcon symbol={p.symbol} size={18} />,
+        tone: p.side === "BUY" ? "up" : "down",
+        title: p.symbol,
+        secondary: <span>{p.side} · {fmtExecNumber(p.volume)} lots · {p.user.email ?? p.user.accountNo}</span>,
+      })}
+      columns={[
+        { key: "status", label: "Status", render: (p) => (
+          <RecordStatusChip tone={p.status === "OPEN" ? "warn" : "muted"}>{p.status}</RecordStatusChip>
+        ) },
+        { key: "openRate", label: "Open/Mark", align: "right", render: (p) => (
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {fmtExecNumber(p.openRate ?? "0")}{p.status === "OPEN" ? ` → ${fmtExecNumber(p.currentRate ?? "0")}` : ""}
+          </span>
+        ) },
+        { key: "netProfit", label: "Net P/L", sortable: true, align: "right", render: (p) => (
+          <span className={`font-semibold tabular-nums ${pnlClass(Number(p.netProfit))}`}>
+            {Number(p.netProfit) >= 0 ? "+" : ""}{fmtExecNumber(p.netProfit)}
+          </span>
+        ) },
+      ]}
+      sortValue={(p, key) => key === "netProfit" ? Number(p.netProfit) : String((p as unknown as Record<string, unknown>)[key] ?? "")}
+      mobilePrimary={(p) => (
+        <span className={pnlClass(Number(p.netProfit))}>
+          {Number(p.netProfit) >= 0 ? "+" : ""}{fmtExecNumber(p.netProfit)}
+        </span>
+      )}
+      detailTitle="Position Detail"
+      renderDetailHero={(p) => (
+        <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+          <IdentityTile size="lg" tone={p.side === "BUY" ? "up" : "down"}><InstrumentIcon symbol={p.symbol} size={30} /></IdentityTile>
+          <div className="text-sm font-medium">{p.symbol} · {p.side}</div>
+          <div className={`text-2xl font-semibold tabular-nums ${pnlClass(Number(p.netProfit))}`}>
+            {Number(p.netProfit) >= 0 ? "+" : ""}{fmtExecNumber(p.netProfit)} <span className="text-sm font-normal text-muted-foreground">USD</span>
+          </div>
+          <RecordStatusChip tone={p.status === "OPEN" ? "warn" : "muted"}>{p.status}</RecordStatusChip>
         </div>
-        {filtered.length > EXECUTIONS_PAGE_SIZE && <Pagination page={safePage} pageSize={EXECUTIONS_PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="positions" compact />}
-      </div>
-    ) : (
-      <div className="overflow-hidden">
-        <div className="space-y-2 p-1">
-          {visiblePositions.map((position) => (
-            <ExecutionPositionCard key={position.id} position={position} canManage={canManage} busy={busy !== null} onSetProfit={() => void setProfit(position)} onClose={() => void closePosition(position)} />
-          ))}
-        </div>
-        {filtered.length > EXECUTIONS_PAGE_SIZE && <Pagination page={safePage} pageSize={EXECUTIONS_PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="positions" compact />}
-      </div>
-    )}
+      )}
+      renderDetailMeta={(p) => [
+        { label: "User", value: `${p.user.email ?? "—"} · #${p.user.accountNo ?? "—"}` },
+        { label: "Volume", value: `${fmtExecNumber(p.volume)} lots` },
+        { label: "Type", value: p.type ?? "CFD" },
+        { label: "Open rate", value: fmtExecNumber(p.openRate ?? "0") },
+        { label: p.status === "OPEN" ? "Mark rate" : "Close rate", value: fmtExecNumber(p.currentRate ?? "0") },
+        { label: "Gross P/L", value: fmtExecNumber(p.profit) },
+        { label: "Adjustment", value: fmtExecNumber(p.adminPnlAdjustment) },
+        ...(Number(p.commission ?? 0) !== 0 ? [{ label: "Commission", value: fmtExecNumber(p.commission ?? "0") }] : []),
+        ...(Number(p.swap ?? 0) !== 0 ? [{ label: "Swap", value: fmtExecNumber(p.swap ?? "0") }] : []),
+        { label: "Opened", value: fmtDateTime(p.openedAt) },
+        ...(p.closedAt ? [{ label: "Closed", value: fmtDateTime(p.closedAt) }] : []),
+      ]}
+      renderDetailExtra={(p) => (
+        canManage && p.status === "OPEN" ? (
+          <div className="flex gap-2">
+            <Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => void setProfit(p)}><SlidersHorizontal size={13} strokeWidth={2} aria-hidden /> Set P/L</Button>
+            <Button type="button" size="sm" variant="destructive" disabled={busy !== null} onClick={() => void closePosition(p)}><X size={13} strokeWidth={2} aria-hidden /> Close position</Button>
+          </div>
+        ) : undefined
+      )}
+      emptyTitle="No positions."
+    />
     {commandDialog}
   </div>}</ModuleState>;
 }
 
-function ExecutionPositionCard({
-  position,
-  canManage,
-  busy,
-  onSetProfit,
-  onClose,
-}: {
-  position: ExecutionPosition;
-  canManage: boolean;
-  busy: boolean;
-  onSetProfit: () => void;
-  onClose: () => void;
-}) {
-  const net = Number(position.netProfit);
-  return (
-    <article className="rounded-xl bg-card p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <IdentityTile tone={position.side === "BUY" ? "up" : "down"}>
-            <InstrumentIcon symbol={position.symbol} size={18} />
-          </IdentityTile>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-sm font-semibold">{position.symbol}</span>
-              <Badge variant="secondary" className={position.side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"}>{position.side}</Badge>
-              <Badge variant="secondary" className="px-1.5 py-0 text-xs">{position.type ?? "CFD"}</Badge>
-              <Badge variant="secondary" className={position.status === "OPEN" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "px-1.5 py-0 text-xs"}>
-                {position.status}
-              </Badge>
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              {fmtExecNumber(position.volume)} lots @ {fmtExecNumber(position.openRate ?? "0")}
-              {position.status === "OPEN" ? ` · mark ${fmtExecNumber(position.currentRate ?? "0")}` : ""}
-              {" · opened "}{fmtDateTime(position.openedAt)}
-              {position.closedAt ? ` · closed ${fmtDateTime(position.closedAt)}` : ""}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-3 text-xs tabular-nums">
-              <span>Gross P/L <strong>{fmtExecNumber(position.profit)}</strong></span>
-              <span>Dealer adjustment <strong>{fmtExecNumber(position.adminPnlAdjustment)}</strong></span>
-              <span>Net P/L <strong className={pnlClass(net)}>{fmtExecNumber(position.netProfit)}</strong></span>
-              {Number(position.commission ?? 0) !== 0 && <span>Commission <strong>{fmtExecNumber(position.commission ?? "0")}</strong></span>}
-              {Number(position.swap ?? 0) !== 0 && <span>Swap <strong>{fmtExecNumber(position.swap ?? "0")}</strong></span>}
-            </div>
-          </div>
-        </div>
-        {canManage && position.status === "OPEN" && <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onSetProfit}><SlidersHorizontal size={13} strokeWidth={2} aria-hidden /> Set P/L</Button>
-          <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={onClose}><X size={13} strokeWidth={2} aria-hidden /> Close</Button>
-        </div>}
-      </div>
-    </article>
-  );
-}
 
 interface SupportCase { id: string; reference: string; userId: string | null; subject: string; category: string; priority: string; status: string; assignedToId: string | null; description: string; createdAt: string; brandDomain?: string | null }
 function SupportPanel({ canManage }: { canManage: boolean }) {

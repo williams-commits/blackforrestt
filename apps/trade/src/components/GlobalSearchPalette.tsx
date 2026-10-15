@@ -141,7 +141,7 @@ export function GlobalSearchPalette() {
       className="max-h-[85dvh] gap-0 p-0 sm:max-w-md"
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="shrink-0 border-b py-2.5">
+        <div className="shrink-0 border-b p-2">
           <div className="relative">
             <Search
               size={13}
@@ -216,7 +216,7 @@ export function GlobalSearchPalette() {
             ))
           )}
         </div>
-        <p className="shrink-0 border-t text-(length:--term-text-2xs) text-text-faint">
+        <p className="shrink-0 border-t text-(length:--term-text-2xs) text-text-faint p-1.5">
           ↑↓ to navigate · Enter to open · Esc to close
         </p>
       </div>

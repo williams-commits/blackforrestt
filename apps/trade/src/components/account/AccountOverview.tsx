@@ -170,7 +170,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
           {wallets.length > 0 ? (
             <ul className="-my-2 space-y-1">
               {wallets.map((w) => (
-                <li key={w.asset} className="flex items-center justify-between gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-muted/50">
+                <li key={w.asset} className="flex items-center justify-between gap-3 rounded-lg px-3 py-3 transition-colors bg-muted/30 hover:bg-muted/60">
                   <div className="flex min-w-0 items-center gap-3">
                     <InstrumentIcon symbol={w.asset} size={24} />
                     <div className="min-w-0">

@@ -6,6 +6,7 @@ import { Megaphone, Send } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/lib/toast";
@@ -276,26 +277,22 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                 type="button"
                 onClick={() => { setLimit(PAGE_SIZE); setActiveUser({ id: threadRow.userId, label: threadRow.name ?? threadRow.email ?? threadRow.userId }); }}
                 aria-current={activeUser?.id === threadRow.userId ? "true" : undefined}
-                className={`block w-full border-b border-border px-3 py-2.5 text-left last:border-0 hover:bg-accent/60 ${activeUser?.id === threadRow.userId ? "bg-muted" : ""}`}
+                className={`block w-full border-b border-border px-3 py-3 text-left last:border-0 hover:bg-accent/60 ${activeUser?.id === threadRow.userId ? "bg-muted/60" : ""}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className={`truncate text-xs ${threadRow.unread > 0 ? "font-semibold" : "font-medium"}`}>{threadRow.name ?? "Unnamed"}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground tnum">{threadRow.lastMessageAt ? fmtDateTime(threadRow.lastMessageAt) : ""}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{threadRow.lastMessageAt ? fmtDateTime(threadRow.lastMessageAt) : ""}</span>
                 </div>
                 <div className="truncate text-xs text-muted-foreground">
                   {threadRow.email ?? "—"} · #{threadRow.accountNo ?? "—"}
                   {threadRow.brandDomain && <span className="ml-1 rounded bg-primary/10 px-1 py-px text-xs font-semibold text-primary">{threadRow.brandDomain}</span>}
                 </div>
                 <div className="mt-1 flex items-center gap-1.5">
-                  <span
-                    className={`shrink-0 rounded px-1 py-px text-xs font-bold uppercase tracking-wide ${
-                      threadRow.status === "AWAITING_REPLY" ? "bg-brand/15 text-primary" : "bg-muted text-muted-foreground"
-                    }`}
-                  >
+                  <Badge variant="secondary" className={`px-1.5 py-0 text-xs ${threadRow.status === "AWAITING_REPLY" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : ""}`}>
                     {threadRow.status === "AWAITING_REPLY" ? "Awaiting reply" : "Replied"}
-                  </span>
+                  </Badge>
                   {threadRow.unread > 0 && (
-                    <span className="shrink-0 rounded-full bg-brand px-1.5 py-0.5 text-xs font-bold text-white">{threadRow.unread}</span>
+                    <Badge className="px-1.5 py-0 text-xs">{threadRow.unread}</Badge>
                   )}
                   <span className={`truncate text-xs ${threadRow.lastFromAdmin ? "text-muted-foreground" : "text-foreground font-medium"}`}>
                     {threadRow.lastFromAdmin ? "You: " : ""}{threadRow.lastMessage || "(no messages)"}

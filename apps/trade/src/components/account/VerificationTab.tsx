@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Building2, Check, Circle, FileText, Globe, Hash, MapPin, UserRound } from "lucide-react";
+import { BadgeCheck, Building2, Check, User, IdCard, Circle, FileText, Globe, Hash, MapPin, UserRound } from "lucide-react";
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -211,9 +211,9 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
               </CardHeader>
               <CardContent>
                 <dl className="space-y-2.5 text-sm">
-                  <SummaryRow label="Name" value={[kyc.firstName, kyc.lastName].filter(Boolean).join(" ")} />
-                  <SummaryRow label="Document type" value={kyc.docType ?? "—"} />
-                  <SummaryRow label="Submitted" value={kyc.submittedAt ? new Date(kyc.submittedAt).toLocaleString("en-US") : "—"} />
+                  <SummaryRow icon={<User size={14} strokeWidth={1.75} aria-hidden />} label="Name" value={[kyc.firstName, kyc.lastName].filter(Boolean).join(" ")} />
+                  <SummaryRow icon={<IdCard size={14} strokeWidth={1.75} aria-hidden />} label="Document type" value={kyc.docType ?? "—"} />
+                  <SummaryRow icon={<Check size={14} strokeWidth={1.75} aria-hidden />} label="Submitted" value={kyc.submittedAt ? new Date(kyc.submittedAt).toLocaleString("en-US") : "—"} />
                 </dl>
               </CardContent>
             </Card>
@@ -227,10 +227,10 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
               </CardHeader>
               <CardContent>
                 <dl className="space-y-2.5 text-sm">
-                  <SummaryRow label="Name" value={[kyc.firstName, kyc.lastName].filter(Boolean).join(" ")} />
-                  <SummaryRow label="Document type" value={kyc.docType ?? "—"} />
-                  <SummaryRow label="Submitted" value={kyc.submittedAt ? new Date(kyc.submittedAt).toLocaleDateString("en-US") : "—"} />
-                  <SummaryRow label="Approved" value={kyc.reviewedAt ? new Date(kyc.reviewedAt).toLocaleDateString("en-US") : "—"} />
+                  <SummaryRow icon={<User size={14} strokeWidth={1.75} aria-hidden />} label="Name" value={[kyc.firstName, kyc.lastName].filter(Boolean).join(" ")} />
+                  <SummaryRow icon={<IdCard size={14} strokeWidth={1.75} aria-hidden />} label="Document type" value={kyc.docType ?? "—"} />
+                  <SummaryRow icon={<Check size={14} strokeWidth={1.75} aria-hidden />} label="Submitted" value={kyc.submittedAt ? new Date(kyc.submittedAt).toLocaleDateString("en-US") : "—"} />
+                  <SummaryRow icon={<BadgeCheck size={14} strokeWidth={1.75} aria-hidden />} label="Approved" value={kyc.reviewedAt ? new Date(kyc.reviewedAt).toLocaleDateString("en-US") : "—"} />
                 </dl>
               </CardContent>
             </Card>
@@ -268,10 +268,10 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+function SummaryRow({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg px-3 py-2 transition-colors hover:bg-muted/40">
-      <dt className="text-muted-foreground">{label}</dt>
+    <div className="flex items-center justify-between gap-4 rounded-lg px-3 py-2 transition-colors bg-muted/30 hover:bg-muted/60">
+      <dt className="flex items-center gap-2 text-muted-foreground">{icon} {label}</dt>
       <dd className="font-medium tabular-nums">{value || "—"}</dd>
     </div>
   );

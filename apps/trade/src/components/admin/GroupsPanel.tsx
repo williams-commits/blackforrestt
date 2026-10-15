@@ -9,7 +9,9 @@ import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Check, Play, Plus, Save, Search, UserPlus, X } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { IdentityTile, initialsOf } from "@/components/ui/Initial";
+import { Check, Play, Plus, Save, Search, UserMinus, UserPlus, X } from "lucide-react";
 
 interface Group {
   id: string;
@@ -660,50 +662,54 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
         {detail.members.length === 0 ? (
           <p className="text-sm text-muted-foreground">No members yet.</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl">
-            <table className="w-full text-sm">
-              <thead className="bg-muted text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-left text-xs uppercase">Name</th>
-                  <th className="px-3 py-2 text-left text-xs uppercase">Account</th>
-                  <th className="px-3 py-2 text-right text-xs uppercase">Balance</th>
-                  <th className="px-3 py-2 text-right text-xs uppercase">Equity</th>
-                  <th className="px-3 py-2 text-right text-xs uppercase hidden md:table-cell">P/L</th>
-                  {canManage && <th className="px-3 py-2"></th>}
-                </tr>
-              </thead>
-              <tbody>
+          <div className="overflow-x-auto rounded-xl bg-card shadow-sm">
+            <Table className="w-full text-sm">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Account</TableHead>
+                  <TableHead className="text-right">Balance</TableHead>
+                  <TableHead className="text-right">Equity</TableHead>
+                  <TableHead className="hidden text-right md:table-cell">P/L</TableHead>
+                  {canManage && <TableHead />}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {detail.members.map((m) => (
-                  <tr key={m.id} className="border-t border-border">
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-1.5">
-                        {!m.user.verified && <span className="h-1.5 w-1.5 rounded-full bg-down" title="Unverified" />}
-                        <div>
+                  <TableRow key={m.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2.5">
+                        {!m.user.verified && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-down" title="Unverified" />}
+                        <IdentityTile tone={m.user.verified ? "muted" : "down"}>{initialsOf(m.user.name ?? m.user.email)}</IdentityTile>
+                        <div className="min-w-0">
                           <div className="text-xs font-medium">{m.user.name ?? "—"}</div>
-                          <div className="text-xs text-muted-foreground">{m.user.email}</div>
+                          <div className="truncate text-xs text-muted-foreground">{m.user.email}</div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-3 py-2 text-xs tnum">{m.user.accountNo ?? "—"}</td>
-                    <td className="px-3 py-2 text-right text-xs tnum">{m.user.balance.toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right text-xs tnum">{m.user.equity.toFixed(2)}</td>
-                    <td className={`px-3 py-2 text-right text-xs tnum hidden md:table-cell ${m.user.floatingPl >= 0 ? "text-up" : "text-down"}`}>
+                    </TableCell>
+                    <TableCell className="text-xs tabular-nums">{m.user.accountNo ?? "—"}</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums">{m.user.balance.toFixed(2)}</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums">{m.user.equity.toFixed(2)}</TableCell>
+                    <TableCell className={`hidden text-right text-xs tabular-nums md:table-cell ${m.user.floatingPl >= 0 ? "text-up" : "text-down"}`}>
                       {m.user.floatingPl >= 0 ? "+" : ""}{m.user.floatingPl.toFixed(2)}
-                    </td>
+                    </TableCell>
                     {canManage && (
-                      <td className="px-3 py-2">
-                        <button
+                      <TableCell>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="text-down"
                           onClick={() => confirmRemove(m.user.id, m.user.name ?? m.user.email ?? "this member")}
-                          className="text-xs text-muted-foreground hover:text-down transition"
                         >
-                          Remove
-                        </button>
-                      </td>
+                          <UserMinus size={13} strokeWidth={2} aria-hidden /> Remove
+                        </Button>
+                      </TableCell>
                     )}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>
@@ -827,7 +833,7 @@ function BulkDialog({ title, subtitle, fields, endpoint, onClose }: {
         <h3 className="text-base font-bold mb-1">{title}</h3>
         <p className="text-xs text-muted-foreground mb-4">{subtitle}</p>
         {err && <Alert tone="err" className="mb-3">{err}</Alert>}
-        {result && <div className="mb-3 rounded border border-up/30 bg-up/10 px-3 py-2 text-xs text-up">{result}</div>}
+        {result && <Alert tone="ok" className="mb-3">{result}</Alert>}
         <div className="space-y-3">
           {fields.map((f) => (
             <div key={f.key}>
@@ -887,7 +893,7 @@ function SettingsEditor({ groupId, initial, onSaved }: { groupId: string; initia
 
   return (
     <div className="space-y-2">
-      {saveErr && <div className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{saveErr}</div>}
+      {saveErr && <Alert tone="err">{saveErr}</Alert>}
       <SettingsForm initial={initial} onSave={save} saving={saving} saveLabel="Save Group Settings" />
     </div>
   );

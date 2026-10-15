@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { fmtDate } from "@/lib/dates";
-import { Check, CheckCircle2, Clock, Copy, DollarSign, Users } from "lucide-react";
+import { Check, CheckCircle2, Clock, Copy, DollarSign, Users, Share2 } from "lucide-react";
 import type { ServerMessage } from "@/lib/ws/client";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
@@ -124,6 +124,7 @@ export function ReferralTab() {
               className="h-10 flex-1 truncate font-mono text-sm"
               onClick={(e) => (e.target as HTMLInputElement).select()}
               aria-label="Referral link"
+              startIcon={<Share2 size={13} strokeWidth={2} />}
             />
             <Button
               type="button"

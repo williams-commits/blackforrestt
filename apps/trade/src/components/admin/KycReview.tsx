@@ -421,16 +421,16 @@ export function KycReview({
           )}
 
           {/* Recent decisions */}
-          <div className="flex flex-wrap items-center justify-between gap-2 mt-8 mb-2">
-            <h2 className="text-xs font-medium uppercase text-muted-foreground">Recent decisions</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 mt-8 mb-3">
+            <h2 className="text-sm font-semibold">Recent decisions</h2>
             {reviewedTotalResolved > reviewed.length && (
               <span className="text-xs text-primary">showing {reviewed.length} most recent of {reviewedTotalResolved}</span>
             )}
           </div>
-          <div className="overflow-hidden">
-            <div className="space-y-1.5 p-1.5">
+          <div className="overflow-hidden rounded-xl bg-card shadow-sm">
+            <div className="space-y-1 p-3">
               {visibleReviewed.map((s) => (
-                <div key={s.id} className="flex items-center justify-between">
+                <div key={s.id} className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50">
                   <div className="min-w-0">
                     <span className="text-sm font-medium">{s.firstName} {s.lastName}</span>
                     <span className="text-xs text-muted-foreground ml-2">{s.user.email}</span>
@@ -439,12 +439,12 @@ export function KycReview({
                     <Badge variant="secondary" className={s.status === "APPROVED" ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}>
                       {s.status}
                     </Badge>
-                    <span className="text-xs text-muted-foreground">{s.reviewedAt ? fmtAgo(s.reviewedAt) : ""}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">{s.reviewedAt ? fmtAgo(s.reviewedAt) : ""}</span>
                   </div>
                 </div>
               ))}
               {reviewed.length === 0 && (
-                <div className="text-xs text-muted-foreground py-3 text-center">No decisions yet.</div>
+                <div className="rounded-xl bg-muted/40 py-6 text-center text-sm text-muted-foreground">No decisions yet.</div>
               )}
             </div>
             {reviewed.length > REVIEWED_PAGE_SIZE && (

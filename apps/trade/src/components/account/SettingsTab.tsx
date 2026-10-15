@@ -13,7 +13,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
-import { Check, KeyRound, Lock, Pencil, ShieldCheck, User, X } from "lucide-react";
+import { Check, KeyRound, Lock, Pencil, ShieldCheck, User, X, Mail, StarCheck } from "lucide-react";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 import { Label } from "@/components/ui/label";
 
@@ -77,10 +77,10 @@ export function SettingsTab({ user }: { user: User }) {
             )}
           </div>
           <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
-            <DetailRow label="Display name" value={user.name} />
-            <DetailRow label="Email" value={user.email} />
-            <DetailRow label="Account number" value={<span className="font-mono">{user.accountNo}</span>} />
-            <DetailRow label="Member since" value={fmtDate(user.createdAt)} />
+            <DetailRow label="Display name" value={user.name} icon={<User size={14} strokeWidth={1.75} aria-hidden />} />
+            <DetailRow label="Email" value={user.email} icon={<Mail size={14} strokeWidth={1.75} aria-hidden />} />
+            <DetailRow label="Account number" value={<span className="font-mono">{user.accountNo}</span>} icon={<ShieldCheck size={14} strokeWidth={1.75} aria-hidden />}/>
+            <DetailRow label="Member since" value={fmtDate(user.createdAt)} icon={<StarCheck size={14} strokeWidth={1.75} aria-hidden />}/>
           </dl>
         </CardContent>
       </Card>
@@ -93,10 +93,10 @@ export function SettingsTab({ user }: { user: User }) {
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+function DetailRow({ label, value, icon }: { label: string; value: React.ReactNode; icon?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg px-3 py-2 transition-colors hover:bg-muted/40">
-      <dt className="text-sm text-muted-foreground">{label}</dt>
+    <div className="flex items-center justify-between gap-4 rounded-lg px-3 py-2 transition-colors bg-muted/30 hover:bg-muted/60">
+      <dt className="flex items-center gap-2 text-sm text-muted-foreground">{icon} {label}</dt>
       <dd className="min-w-0 truncate text-sm font-medium">{value}</dd>
     </div>
   );

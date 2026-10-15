@@ -25,10 +25,14 @@ import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/StatCard";
+import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
+import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, UserRound } from "lucide-react";
+import { ArrowLeftRight, Ban, CheckCircle2, Download, SlidersHorizontal, UserRound } from "lucide-react";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type Permission = string;
@@ -359,12 +363,12 @@ function ModuleState({ loading, error, onRetry, children }: { loading: boolean; 
       </div>
     );
   }
-  if (error) return <div role="alert" className="flex flex-wrap items-center gap-2 rounded-lg border border-down/30 bg-down/10 p-4 text-sm text-down"><TriangleAlert size={16} strokeWidth={1.75} aria-hidden />{error}<Button type="button" size="sm" variant="ghost" onClick={onRetry} className="ml-auto flex items-center gap-1.5"><RotateCcw size={12} strokeWidth={1.75} aria-hidden />Retry</Button></div>;
+  if (error) return <Alert tone="err" className="flex flex-wrap items-center gap-2 p-4 text-sm"><TriangleAlert size={16} strokeWidth={1.75} aria-hidden />{error}<Button type="button" size="sm" variant="outline" onClick={onRetry} className="ml-auto flex items-center gap-1.5"><RotateCcw size={12} strokeWidth={1.75} aria-hidden />Retry</Button></Alert>;
   return <>{children}</>;
 }
 
-function SectionHeader({ title, description, onRefresh }: { title: string; description: string; onRefresh?: () => void }) {
-  return <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold">{title}</h2><p className="mt-1 text-xs text-muted-foreground">{description}</p></div>{onRefresh && <button type="button" onClick={onRefresh} className="flex items-center gap-1.5 hover:bg-accent/60"><RefreshCw size={12} strokeWidth={1.75} aria-hidden />Refresh</button>}</div>;
+function SectionHeader({ title, description, onRefresh, action }: { title: string; description: string; onRefresh?: () => void; action?: React.ReactNode }) {
+  return <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold tracking-tight">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{description}</p></div><div className="flex shrink-0 items-center gap-2">{action}{onRefresh && <Button type="button" size="sm" variant="outline" onClick={onRefresh}><RefreshCw size={13} strokeWidth={2} aria-hidden />Refresh</Button>}</div></div>;
 }
 
 /** Icons for the overview stat grid — inferred from the stat key. */
@@ -547,9 +551,12 @@ function PaginatedUsers({
   ]);
 
   return (
-    <div className="overflow-hidden">
-      <div className="flex min-h-9 flex-wrap items-center gap-2 border-b">
-        <span className="text-xs text-muted-foreground tnum">{sortedUsers.length} users</span>
+    <Card>
+      <CardHeader>
+        <CardTitle>Accounts</CardTitle>
+        <CardDescription>{sortedUsers.length} users</CardDescription>
+      <div className="flex min-h-9 flex-wrap items-center gap-2 pt-1">
+        <span className="text-xs text-muted-foreground tabular-nums">{sortedUsers.length} users</span>
         <CsvExportButton
           filename="users"
           columns={["Name", "Email", "Account", "Status", "KYC", "Security", "Roles", "Balance", "Equity", "Positions", "Created", "Last active", "Location"]}
@@ -581,6 +588,8 @@ function PaginatedUsers({
       {/* Users as entity rows — identity first, key-values right, actions
           last; stacks on phones instead of horizontal-scrolling a 275px
           grid. Same data the CSV export carries. */}
+      </CardHeader>
+      <CardContent className="px-4 pb-4">
       <ul className="space-y-2" aria-label="Users">
         {visibleUsers.map((user) => (
           <li key={user.id} className="flex flex-col gap-2.5 rounded-xl bg-card p-3.5 shadow-sm transition-colors hover:bg-accent/40 lg:flex-row lg:items-center lg:gap-4">
@@ -671,7 +680,8 @@ function PaginatedUsers({
         ) : null}
       </ul>
       <Pagination page={safePage} pageSize={pageSize} totalItems={sortedUsers.length} onPageChange={setPage} label="users" compact />
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -944,15 +954,6 @@ interface LedgerEntryView { id: string; direction: string; amount: string; asset
 interface LedgerTransactionView { id: string; reference: string; kind: string; status: string; description: string; userId: string | null; user: { email: string | null; accountNo: string | null } | null; sourceType: string | null; sourceId: string | null; effectiveAt: string; entries: LedgerEntryView[] }
 interface LedgerResponse { trialBalance: Array<{ asset: string; direction: string; amount: string }>; total: number; transactions: LedgerTransactionView[] }
 
-const LEDGER_PAGE_SIZE = 20;
-
-/** Client-facing money movement tone for a posting kind (internal kinds stay neutral). */
-function ledgerKindTone(kind: string): string {
-  if (kind === "DEPOSIT" || kind === "BONUS") return "bg-up/15 text-up";
-  if (kind === "WITHDRAWAL" || kind === "FEE") return "bg-down/15 text-down";
-  return "bg-muted text-muted-foreground";
-}
-
 /** Text-only tone (amounts) matching the kind badge. */
 function ledgerKindTextTone(kind: string): string {
   if (kind === "DEPOSIT" || kind === "BONUS") return "text-up";
@@ -972,31 +973,13 @@ function ledgerCreditTotals(entries: LedgerEntryView[]): Map<string, number> {
 
 function LedgerPanel() {
   const resource = useResource<LedgerResponse>("/api/admin/ledger?limit=200", 15_000);
-  const [search, setSearch] = useState("");
   const [kindFilter, setKindFilter] = useState<string>("ALL");
-  const [page, setPage] = useState(1);
 
   const all = useMemo(() => resource.data?.transactions ?? [], [resource.data]);
-  const needle = search.trim().toLowerCase();
   // Kind chips cover the posting kinds present in the loaded window.
   const kinds = useMemo(() => [...new Set(all.map((t) => t.kind))].sort(), [all]);
-  const filtered = useMemo(() => all.filter((t) => {
-    if (kindFilter !== "ALL" && t.kind !== kindFilter) return false;
-    if (!needle) return true;
-    return (
-      t.reference.toLowerCase().includes(needle) ||
-      t.kind.toLowerCase().includes(needle) ||
-      t.description.toLowerCase().includes(needle) ||
-      (t.user?.email ?? "").toLowerCase().includes(needle) ||
-      (t.user?.accountNo ?? "").includes(needle)
-    );
-  }), [all, kindFilter, needle]);
-  useEffect(() => { setPage(1); }, [needle, kindFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / LEDGER_PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const visible = filtered.slice((safePage - 1) * LEDGER_PAGE_SIZE, safePage * LEDGER_PAGE_SIZE);
-  const filtering = needle !== "" || kindFilter !== "ALL";
+  const filtered = useMemo(() => all.filter((t) => kindFilter === "ALL" || t.kind === kindFilter), [all, kindFilter]);
+  const filtering = kindFilter !== "ALL";
 
   const csvRows = filtered.flatMap((t) => t.entries.map((entry) => [
     t.reference, t.kind, t.status, t.user?.email ?? "system", t.user?.accountNo ?? "",
@@ -1004,66 +987,104 @@ function LedgerPanel() {
     entry.asset, Number(entry.amount).toFixed(8),
   ]));
 
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4">
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-5">
     <SectionHeader title="Double-entry ledger" description="Posted transaction headers and immutable debit/credit entries." onRefresh={() => void resource.refresh()} />
-    <div className="flex flex-wrap gap-2">{resource.data.trialBalance.map((row) => <span key={`${row.asset}:${row.direction}`}>{row.asset} {row.direction}: <strong className="tnum">{fmtExecNumber(row.amount)}</strong></span>)}</div>
-    <div className="mb-3 flex flex-wrap items-center gap-2">
-      <TableSearch value={search} onChange={setSearch} placeholder="Search reference, kind, description, or user…" label="Search ledger" />
-      {kinds.length > 0 && (
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter postings by kind">
-          <FilterChip active={kindFilter === "ALL"} onClick={() => setKindFilter("ALL")}>All</FilterChip>
-          {kinds.map((kind) => <FilterChip key={kind} active={kindFilter === kind} onClick={() => setKindFilter(kind)}>{kind.replaceAll("_", " ")}</FilterChip>)}
-        </div>
-      )}
-      <CsvExportButton filename="ledger" columns={["Reference", "Kind", "Status", "User", "Account", "Effective", "Direction", "Account name", "Account code", "Asset", "Amount"]} rows={csvRows} disabled={filtered.length === 0} />
-      <span className="text-xs text-muted-foreground tnum" aria-live="polite">
-        {filtering ? `${filtered.length} of ${all.length} postings` : `${all.length} postings`}
-      </span>
-    </div>
+    <div className="flex flex-wrap gap-2">{resource.data.trialBalance.map((row) => <span key={`${row.asset}:${row.direction}`}>{row.asset} {row.direction}: <strong className="tabular-nums">{fmtExecNumber(row.amount)}</strong></span>)}</div>
     {resource.data.total > all.length && (
       <Alert tone="info">Showing the {all.length} most recent postings of {resource.data.total.toLocaleString("en-US")} — narrow the window with the search or kind filters.</Alert>
     )}
-    <div className="overflow-hidden">
-      <div className="space-y-2 p-2">
-        {visible.map((item) => {
-          const creditTotals = ledgerCreditTotals(item.entries);
-          return (
-            <details key={item.id}>
-              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 hover:bg-accent/60">
-                <span className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${ledgerKindTone(item.kind)}`}>{item.kind.replaceAll("_", " ")}</span>
-                  <span className="truncate font-mono text-xs font-medium" title={item.reference}>{item.reference}</span>
-                  <span className="text-xs text-muted-foreground">{fmtDateTime(item.effectiveAt)}</span>
+    <RecordList<LedgerTransactionView>
+      ariaLabel="Posting"
+      title="Postings"
+      description={`${filtering ? `${filtered.length} of ${all.length}` : `${all.length}`} postings`}
+      rows={filtered}
+      rowKey={(t) => t.id}
+      search={{
+        placeholder: "Search reference, kind, description, or user…",
+        text: (t) => `${t.reference} ${t.kind} ${t.description} ${t.user?.email ?? ""} ${t.user?.accountNo ?? ""}`,
+      }}
+      leading={(t) => ({
+        icon: <ArrowLeftRight size={15} strokeWidth={2} aria-hidden />,
+        tone: t.kind === "DEPOSIT" || t.kind === "BONUS" ? "up" : t.kind === "WITHDRAWAL" || t.kind === "FEE" ? "down" : "muted",
+        title: <span className="font-mono">{t.reference}</span>,
+        secondary: <span>{t.kind.replaceAll("_", " ").toLowerCase()} · {t.user?.email ?? t.user?.accountNo ?? "system"}</span>,
+      })}
+      columns={[
+        { key: "status", label: "Status", render: (t) => (
+          <RecordStatusChip tone="muted">{t.status}</RecordStatusChip>
+        ) },
+        { key: "effectiveAt", label: "Effective", sortable: true, align: "right", render: (t) => (
+          <span className="text-xs text-muted-foreground tabular-nums">{fmtDateTime(t.effectiveAt)}</span>
+        ) },
+        { key: "credits", label: "Credits", sortable: true, align: "right", render: (t) => {
+          const totals = ledgerCreditTotals(t.entries);
+          const cls = ledgerKindTextTone(t.kind);
+          return <span className={`font-semibold tabular-nums ${cls}`}>
+            {[...totals.entries()].map(([asset, total]) => `${asset} ${fmtExecNumber(total.toFixed(8))}`).join(" · ")}
+          </span>;
+        } },
+      ]}
+      sortValue={(t, key) => {
+        switch (key) {
+          case "effectiveAt": return new Date(t.effectiveAt).getTime();
+          case "credits": return [...ledgerCreditTotals(t.entries).values()].reduce((a, b) => a + b, 0);
+          default: return String((t as unknown as Record<string, unknown>)[key] ?? "");
+        }
+      }}
+      initialSort={{ key: "effectiveAt", direction: "desc" }}
+      filters={
+        <ChipGroup
+          ariaLabel="Filter postings by kind"
+          value={kindFilter}
+          onChange={(value) => setKindFilter(value)}
+          options={[{ value: "ALL", label: "All" }, ...kinds.map((kind) => ({ value: kind, label: kind.replaceAll("_", " ").toLowerCase() }))]}
+        />
+      }
+      toolbarEnd={
+        <CsvExportButton filename="ledger" columns={["Reference", "Kind", "Status", "User", "Account", "Effective", "Direction", "Account name", "Account code", "Asset", "Amount"]} rows={csvRows} disabled={filtered.length === 0} />
+      }
+      detailTitle="Posting Detail"
+      renderDetailHero={(t) => {
+        const totals = ledgerCreditTotals(t.entries);
+        const cls = ledgerKindTextTone(t.kind);
+        return (
+          <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+            <IdentityTile size="lg" tone={t.kind === "DEPOSIT" || t.kind === "BONUS" ? "up" : t.kind === "WITHDRAWAL" || t.kind === "FEE" ? "down" : "muted"}>
+              <ArrowLeftRight size={20} strokeWidth={2} aria-hidden />
+            </IdentityTile>
+            <div className="text-sm font-medium">{t.kind.replaceAll("_", " ").toLowerCase()}</div>
+            <div className={`text-2xl font-semibold tabular-nums ${cls}`}>
+              {[...totals.entries()].map(([asset, total]) => `${asset} ${fmtExecNumber(total.toFixed(8))}`).join(" · ")}
+            </div>
+            <RecordStatusChip tone="muted">{t.status}</RecordStatusChip>
+          </div>
+        );
+      }}
+      renderDetailMeta={(t) => [
+        { label: "Reference", value: <span className="font-mono text-xs">{t.reference}</span> },
+        { label: "User", value: t.user?.email ?? t.user?.accountNo ?? "system" },
+        { label: "Effective", value: fmtDateTime(t.effectiveAt) },
+        { label: "Description", value: t.description || "—" },
+        ...(t.sourceType ? [{ label: "Source", value: `${t.sourceType}${t.sourceId ? ` ${t.sourceId}` : ""}` }] : []),
+      ]}
+      renderDetailExtra={(t) => (
+        <div className="rounded-xl bg-muted/40 p-4">
+          <div className="text-xs font-medium text-muted-foreground">Entries</div>
+          <div className="mt-3 space-y-1.5">
+            {t.entries.map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between gap-2 rounded-lg bg-card px-3 py-2 text-xs">
+                <span className="flex min-w-0 items-center gap-2">
+                  <RecordStatusChip tone={entry.direction === "DEBIT" ? "down" : "up"}>{entry.direction}</RecordStatusChip>
+                  <span className="truncate" title={`${entry.account.name} (${entry.account.code})`}>{entry.account.name}</span>
                 </span>
-                <span className="flex items-center gap-2 text-xs">
-                  <span className="max-w-45 truncate text-muted-foreground" title={item.user?.email ?? undefined}>{item.user?.email ?? item.user?.accountNo ?? "system"}</span>
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">{item.status}</span>
-                  {[...creditTotals.entries()].map(([asset, total]) => (
-                    <span key={asset} className={`tnum font-semibold ${ledgerKindTextTone(item.kind)}`}>{asset} {fmtExecNumber(total.toFixed(8))}</span>
-                  ))}
-                </span>
-              </summary>
-              <div className="space-y-2 border-t p-3">
-                <p className="text-xs text-muted-foreground">{item.description}{item.sourceType ? ` · source ${item.sourceType}${item.sourceId ? ` ${item.sourceId}` : ""}` : ""}</p>
-                <div className="grid gap-1">
-                  {item.entries.map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between gap-2 rounded bg-muted px-2 py-1 text-xs">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span className={`rounded px-1 py-0.5 text-xs font-bold ${entry.direction === "DEBIT" ? "bg-(--term-danger-bg) text-(--term-danger-fg)" : "bg-(--term-success-bg) text-(--term-success-fg)"}`}>{entry.direction}</span>
-                        <span className="truncate" title={`${entry.account.name} (${entry.account.code})`}>{entry.account.name}</span>
-                      </span>
-                      <span className="shrink-0 font-medium tnum">{entry.asset} {fmtExecNumber(entry.amount)}</span>
-                    </div>
-                  ))}
-                </div>
+                <span className="shrink-0 font-medium tabular-nums">{entry.asset} {fmtExecNumber(entry.amount)}</span>
               </div>
-            </details>
-          );
-        })}
-        {filtered.length === 0 && <div className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">{all.length === 0 ? "No ledger transactions." : `No postings match ${needle ? `“${search.trim()}”` : `the ${kindFilter.replaceAll("_", " ").toLowerCase()} filter`}.`}</div>}
-      </div>
-      {filtered.length > LEDGER_PAGE_SIZE && <Pagination page={safePage} pageSize={LEDGER_PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} label="postings" compact />}
-    </div>
+            ))}
+          </div>
+        </div>
+      )}
+      emptyTitle="No ledger transactions."
+    />
   </div>}</ModuleState>;
 }
 
@@ -1246,16 +1267,26 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
 
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div>
     <SectionHeader title="Execution and position surveillance" description={resource.data.providerWarning} onRefresh={() => void resource.refresh()} />
-    <div className="mb-3 flex flex-wrap gap-2 text-xs"><span className="rounded bg-primary/10 px-2 py-1 text-primary">{resource.data.executionMode}</span><span className="rounded bg-muted px-2 py-1">Feed: {resource.data.marketDataMode}</span><span className={`rounded px-2 py-1 ${resource.data.engineReady ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}`}>Engine {resource.data.engineReady ? "ready" : "starting"}</span></div>
+    <div className="mb-4 flex flex-wrap gap-2"><Badge variant="secondary" className="bg-primary/10 text-primary">{resource.data.executionMode}</Badge><Badge variant="secondary">Feed: {resource.data.marketDataMode}</Badge><Badge variant="secondary" className={resource.data.engineReady ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}>Engine {resource.data.engineReady ? "ready" : "starting"}</Badge></div>
     {error && <Alert tone="err" className="mb-3">{error}</Alert>}
     <div className="mb-3 flex flex-wrap items-center gap-2">
       <TableSearch value={search} onChange={setSearch} placeholder="Search symbol, email, or account number…" label="Search executions" />
-      <div className="flex gap-1.5" role="group" aria-label="Filter positions by status">
-        <FilterChip active={statusFilter === "ALL"} onClick={() => setStatusFilter("ALL")}>All · {allPositions.length}</FilterChip>
-        <FilterChip active={statusFilter === "OPEN"} onClick={() => setStatusFilter("OPEN")}>Open · {openCount}</FilterChip>
-        <FilterChip active={statusFilter === "CLOSED"} onClick={() => setStatusFilter("CLOSED")}>Closed · {closedCount}</FilterChip>
-      </div>
-      <FilterChip active={groupByUser} onClick={() => setGroupByUser((v) => !v)}>Group by user</FilterChip>
+      <ChipGroup
+        ariaLabel="Filter positions by status"
+        value={statusFilter}
+        onChange={(value) => setStatusFilter(value)}
+        options={[
+          { value: "ALL", label: `All · ${allPositions.length}` },
+          { value: "OPEN", label: `Open · ${openCount}` },
+          { value: "CLOSED", label: `Closed · ${closedCount}` },
+        ]}
+      />
+      <ChipGroup
+        ariaLabel="Group positions by user"
+        value={groupByUser ? "ON" : "OFF"}
+        onChange={(value) => setGroupByUser(value === "ON")}
+        options={[{ value: "OFF", label: "Flat list" }, { value: "ON", label: "Group by user" }]}
+      />
       <CsvExportButton
         filename="executions"
         columns={["User", "Account", "Symbol", "Type", "Side", "Status", "Volume", "Opened", "Closed", "Gross P/L", "Adjustment", "Net P/L"]}
@@ -1283,16 +1314,19 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
       </div>
     ) : groupByUser ? (
       <div className="overflow-hidden">
-        <div className="space-y-2 p-2">
+        <div className="space-y-2">
           {groups.map((group) => (
-            <details key={group.key} open={group.open > 0 ? true : undefined}>
-              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-accent/60">
-                <span className="flex min-w-0 items-baseline gap-2">
-                  <span className="truncate text-sm font-semibold">{group.label}</span>
-                  {group.accountNo && group.accountNo !== group.label ? <span className="text-muted-foreground">#{group.accountNo}</span> : null}
+            <details key={group.key} open={group.open > 0 ? true : undefined} className="rounded-xl bg-card shadow-sm">
+              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs hover:bg-accent/40">
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <IdentityTile>{initialsOf(group.label)}</IdentityTile>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">{group.label}</span>
+                    {group.accountNo && group.accountNo !== group.label ? <span className="block text-xs text-muted-foreground">#{group.accountNo}</span> : null}
+                  </span>
                 </span>
-                <span className="flex flex-wrap items-center gap-2 text-muted-foreground tnum">
-                  {group.open > 0 && <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary">{group.open} open</span>}
+                <span className="flex flex-wrap items-center gap-2 text-muted-foreground tabular-nums">
+                  {group.open > 0 && <Badge variant="secondary" className="bg-primary/10 px-1.5 py-0 text-xs text-primary">{group.open} open</Badge>}
                   <span>
                     {(() => {
                       const total = userTotals.get(group.key) ?? group.positions.length;
@@ -1304,7 +1338,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
                   <span>Net P/L <strong className={pnlClass(group.netPl)}>{fmtExecNumber(group.netPl.toFixed(2))}</strong></span>
                 </span>
               </summary>
-              <div className="space-y-2 border-t p-2">
+              <div className="space-y-2 p-3">
                 {group.positions.map((position) => (
                   <ExecutionPositionCard key={position.id} position={position} canManage={canManage} busy={busy !== null} onSetProfit={() => void setProfit(position)} onClose={() => void closePosition(position)} />
                 ))}
@@ -1316,7 +1350,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
       </div>
     ) : (
       <div className="overflow-hidden">
-        <div className="space-y-2 p-2">
+        <div className="space-y-2 p-1">
           {visiblePositions.map((position) => (
             <ExecutionPositionCard key={position.id} position={position} canManage={canManage} busy={busy !== null} onSetProfit={() => void setProfit(position)} onClose={() => void closePosition(position)} />
           ))}
@@ -1343,32 +1377,39 @@ function ExecutionPositionCard({
 }) {
   const net = Number(position.netProfit);
   return (
-    <article className="p-3">
+    <article className="rounded-xl bg-card p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-sm font-semibold">{position.symbol}</span>
-            <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${position.side === "BUY" ? "bg-up/15 text-up" : "bg-down/15 text-down"}`}>{position.side}</span>
-            <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">{position.type ?? "CFD"}</span>
-            <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${position.status === "OPEN" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-muted text-muted-foreground"}`}>{position.status}</span>
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {fmtExecNumber(position.volume)} lots @ {fmtExecNumber(position.openRate ?? "0")}
-            {position.status === "OPEN" ? ` · mark ${fmtExecNumber(position.currentRate ?? "0")}` : ""}
-            {" · opened "}{fmtDateTime(position.openedAt)}
-            {position.closedAt ? ` · closed ${fmtDateTime(position.closedAt)}` : ""}
-          </div>
-          <div className="mt-2 flex flex-wrap gap-3 text-xs tnum">
-            <span>Gross P/L <strong>{fmtExecNumber(position.profit)}</strong></span>
-            <span>Dealer adjustment <strong>{fmtExecNumber(position.adminPnlAdjustment)}</strong></span>
-            <span>Net P/L <strong className={pnlClass(net)}>{fmtExecNumber(position.netProfit)}</strong></span>
-            {Number(position.commission ?? 0) !== 0 && <span>Commission <strong>{fmtExecNumber(position.commission ?? "0")}</strong></span>}
-            {Number(position.swap ?? 0) !== 0 && <span>Swap <strong>{fmtExecNumber(position.swap ?? "0")}</strong></span>}
+        <div className="flex min-w-0 items-start gap-2.5">
+          <IdentityTile tone={position.side === "BUY" ? "up" : "down"}>
+            <InstrumentIcon symbol={position.symbol} size={18} />
+          </IdentityTile>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-sm font-semibold">{position.symbol}</span>
+              <Badge variant="secondary" className={position.side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"}>{position.side}</Badge>
+              <Badge variant="secondary" className="px-1.5 py-0 text-xs">{position.type ?? "CFD"}</Badge>
+              <Badge variant="secondary" className={position.status === "OPEN" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "px-1.5 py-0 text-xs"}>
+                {position.status}
+              </Badge>
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {fmtExecNumber(position.volume)} lots @ {fmtExecNumber(position.openRate ?? "0")}
+              {position.status === "OPEN" ? ` · mark ${fmtExecNumber(position.currentRate ?? "0")}` : ""}
+              {" · opened "}{fmtDateTime(position.openedAt)}
+              {position.closedAt ? ` · closed ${fmtDateTime(position.closedAt)}` : ""}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-3 text-xs tabular-nums">
+              <span>Gross P/L <strong>{fmtExecNumber(position.profit)}</strong></span>
+              <span>Dealer adjustment <strong>{fmtExecNumber(position.adminPnlAdjustment)}</strong></span>
+              <span>Net P/L <strong className={pnlClass(net)}>{fmtExecNumber(position.netProfit)}</strong></span>
+              {Number(position.commission ?? 0) !== 0 && <span>Commission <strong>{fmtExecNumber(position.commission ?? "0")}</strong></span>}
+              {Number(position.swap ?? 0) !== 0 && <span>Swap <strong>{fmtExecNumber(position.swap ?? "0")}</strong></span>}
+            </div>
           </div>
         </div>
         {canManage && position.status === "OPEN" && <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" disabled={busy} onClick={onSetProfit}>Set P/L</Button>
-          <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={onClose}>Close</Button>
+          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onSetProfit}><SlidersHorizontal size={13} strokeWidth={2} aria-hidden /> Set P/L</Button>
+          <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={onClose}><X size={13} strokeWidth={2} aria-hidden /> Close</Button>
         </div>}
       </div>
     </article>
@@ -1419,20 +1460,62 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
 interface InstrumentRow extends Record<string, unknown> { symbol: string; name: string; category: string; active: boolean; marginPerLot: string; commissionPerLot: string; swapLongPips: string; swapShortPips: string; feedSymbol: string | null }
 function InstrumentsPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<{ instruments: InstrumentRow[]; mutationPolicy: string }>("/api/admin/instruments");
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><SectionHeader title="Instrument configuration" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} />{canManage && <ChangeHint text="Propose instrument changes from the Approvals module; a separate reviewer must execute them." />}<SimpleTable columns={["symbol", "name", "category", "active", "marginPerLot", "commissionPerLot", "swapLongPips", "swapShortPips", "feedSymbol"]} rows={resource.data.instruments} empty="No instruments." /></div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Instrument configuration" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} />{canManage && <ChangeHint text="Propose instrument changes from the Approvals module; a separate reviewer must execute them." />}
+    <RecordList<InstrumentRow>
+      ariaLabel="Instrument"
+      title="Instruments"
+      description={`${resource.data.instruments.length} configured`}
+      rows={resource.data.instruments}
+      rowKey={(i) => i.symbol}
+      search={{ placeholder: "Search symbol, name, or feed…", text: (i) => `${i.symbol} ${i.name} ${i.feedSymbol} ${i.category}` }}
+      leading={(i) => ({
+        icon: <InstrumentIcon symbol={i.symbol} size={18} />,
+        tone: i.active ? "up" : "muted",
+        title: i.symbol,
+        secondary: `${i.name} · ${i.category}`,
+      })}
+      columns={[
+        { key: "active", label: "Active", render: (i) => (
+          <RecordStatusChip tone={i.active ? "up" : "muted"}>{i.active ? "Active" : "Disabled"}</RecordStatusChip>
+        ) },
+        { key: "marginPerLot", label: "Margin/lot", sortable: true, align: "right", render: (i) => <span className="tabular-nums">{i.marginPerLot}</span> },
+        { key: "commissionPerLot", label: "Comm/lot", align: "right", render: (i) => <span className="tabular-nums">{i.commissionPerLot}</span> },
+        { key: "feedSymbol", label: "Feed", render: (i) => <span className="font-mono text-xs text-muted-foreground">{i.feedSymbol}</span> },
+      ]}
+      sortValue={(i, key) => key === "marginPerLot" ? Number(i.marginPerLot) : String((i as unknown as Record<string, unknown>)[key] ?? "")}
+      detailTitle="Instrument Detail"
+      renderDetailHero={(i) => (
+        <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+          <IdentityTile size="lg" tone={i.active ? "up" : "muted"}><InstrumentIcon symbol={i.symbol} size={30} /></IdentityTile>
+          <div className="text-sm font-medium">{i.symbol}</div>
+          <div className="text-xs text-muted-foreground">{i.name}</div>
+          <RecordStatusChip tone={i.active ? "up" : "muted"}>{i.active ? "Active" : "Disabled"}</RecordStatusChip>
+        </div>
+      )}
+      renderDetailMeta={(i) => [
+        { label: "Category", value: i.category },
+        { label: "Margin per lot", value: String(i.marginPerLot) },
+        { label: "Commission per lot", value: String(i.commissionPerLot) },
+        { label: "Swap long (pips)", value: String(i.swapLongPips) },
+        { label: "Swap short (pips)", value: String(i.swapShortPips) },
+        { label: "Feed symbol", value: <span className="font-mono text-xs">{i.feedSymbol}</span> },
+      ]}
+      emptyTitle="No instruments."
+    />
+  </div>}</ModuleState>;
 }
 
 interface RiskRuleRow extends Record<string, unknown> { id: string; code: string; name: string; severity: string; enabled: boolean; version: number; configuration: unknown; updatedAt: string }
 function RiskPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<{ rules: RiskRuleRow[]; exposure: Record<string, number>; mutationPolicy: string }>("/api/admin/risk");
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Risk controls" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} /><div className="flex flex-wrap gap-2">{Object.entries(resource.data.exposure).map(([key, value]) => <span key={key}>{key.replaceAll(/([A-Z])/g, " $1")}: <strong>{value}</strong></span>)}</div>{canManage && <ChangeHint text="Risk changes are proposed in Approvals and become effective only after a separate checker executes them." />}<SimpleTable columns={["code", "name", "severity", "enabled", "version", "configuration", "updatedAt"]} rows={resource.data.rules} empty="No risk rules." /></div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Risk controls" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} /><div className="flex flex-wrap gap-2">{Object.entries(resource.data.exposure).map(([key, value]) => <Badge key={key} variant="secondary">{key.replaceAll(/([A-Z])/g, " $1")}: <strong className="ml-1 tabular-nums">{value}</strong></Badge>)}</div>{canManage && <ChangeHint text="Risk changes are proposed in Approvals and become effective only after a separate checker executes them." />}<SimpleTable columns={["code", "name", "severity", "enabled", "version", "configuration", "updatedAt"]} rows={resource.data.rules} empty="No risk rules." /></div>}</ModuleState>;
 }
 
 interface AuditEventRow extends Record<string, unknown> { sequence: string; domain: string; action: string; entityType: string; entityId: string | null; actorId: string | null; createdAt: string; metadata: unknown; eventHash: string }
 function AuditPanel({ canVerify, canExport }: { canVerify: boolean; canExport: boolean }) {
   const resource = useResource<{ events: AuditEventRow[]; redacted: boolean }>("/api/admin/audit?limit=150");
   async function verify() { try { const result = await requestJson<{ valid: boolean; checkedEvents: number }>("/api/admin/audit/verify", { method: "POST" }); toast.success(`Chain ${result.valid ? "valid" : "invalid"}`, `Checked ${result.checkedEvents} events.`); await resource.refresh(); } catch (cause) { toast.error("Verification failed", cause instanceof Error ? cause.message : "Verification failed."); } }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex flex-wrap items-start justify-between gap-3"><SectionHeader title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} /><div className="flex gap-2">{canVerify && <Button type="button" size="sm" onClick={() => void verify()}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Verify chain</Button>}{canExport && <a href="/api/admin/audit/export?format=csv&limit=500">Export CSV</a>}</div></div><SimpleTable columns={["sequence", "domain", "action", "entityType", "entityId", "actorId", "createdAt", "metadata"]} rows={resource.data.events} empty="No audit events." /></div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex flex-wrap items-start justify-between gap-3"><SectionHeader title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} /><div className="flex gap-2">{canVerify && <Button type="button" size="sm" onClick={() => void verify()}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Verify chain</Button>}{canExport && <Button type="button" size="sm" variant="outline" asChild><a href="/api/admin/audit/export?format=csv&limit=500"><Download size={13} strokeWidth={2} aria-hidden /> Export CSV</a></Button>}</div></div><SimpleTable columns={["sequence", "domain", "action", "entityType", "entityId", "actorId", "createdAt", "metadata"]} rows={resource.data.events} empty="No audit events." /></div>}</ModuleState>;
 }
 
 interface HealthResponse {
@@ -1453,7 +1536,7 @@ function HealthPanel() {
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && (
     <div>
       <SectionHeader title="Service health" description={`Checked ${fmtAgo(resource.data.checkedAt)} · provider ${resource.data.executionProvider} · market data ${resource.data.marketDataMode}.`} onRefresh={() => void resource.refresh()} />
-      <div className="mb-4 flex items-center gap-2 p-4">
+      <div className="mb-4 flex items-center gap-2.5 rounded-xl bg-card p-4 shadow-sm">
         <span className={`h-3 w-3 rounded-full ${resource.data.status === "HEALTHY" ? "bg-up" : "bg-down"}`} aria-hidden />
         <span className="text-sm font-semibold">{resource.data.status === "HEALTHY" ? "All systems operational" : "Degraded — one or more services are down"}</span>
       </div>
@@ -1480,18 +1563,20 @@ function HealthCard({ name, status, latencyMs, detail, error }: { name: string; 
   const tone = status === "UP" ? "text-up" : status === "STARTING" ? "text-primary" : "text-down";
   const dot = status === "UP" ? "bg-up" : status === "STARTING" ? "bg-brand" : "bg-down";
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold">{name}</p>
-        <span className="flex items-center gap-1.5">
-          <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden />
-          <span className={`text-xs font-bold ${tone}`}>{status}</span>
-        </span>
-      </div>
-      {latencyMs != null && <p className="mt-2 text-lg font-semibold tnum">{latencyMs}<span className="ml-0.5 text-xs font-normal text-muted-foreground">ms</span></p>}
-      {detail && <p className="mt-1 text-xs text-muted-foreground">{detail}</p>}
-      {error && <p className="mt-1 text-xs text-down">{error}</p>}
-    </div>
+    <Card className="py-5">
+      <CardContent className="grid gap-1.5 px-5">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold">{name}</p>
+          <span className="flex items-center gap-1.5">
+            <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden />
+            <span className={`text-xs font-bold ${tone}`}>{status}</span>
+          </span>
+        </div>
+        {latencyMs != null && <p className="mt-1 text-lg font-semibold tabular-nums">{latencyMs}<span className="ml-0.5 text-xs font-normal text-muted-foreground">ms</span></p>}
+        {detail && <p className="text-xs text-muted-foreground">{detail}</p>}
+        {error && <p className="text-xs text-down">{error}</p>}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1576,18 +1661,22 @@ function ChangesPanel({
           )}
           <div className="space-y-2">
             {resource.data.requests.map((item) => (
-              <article key={item.id} className="p-3">
-                <div className="flex flex-wrap justify-between gap-3">
-                  <div>
-                    <div className="text-xs text-muted-foreground">{item.domain} · {item.status} · {new Date(item.createdAt).toLocaleString()}</div>
-                    <h3 className="mt-1 text-sm font-medium">{item.action} · {item.entityType} {item.entityId ?? ""}</h3>
-                    <pre className="mt-2 max-w-3xl overflow-auto rounded bg-muted p-2 text-xs">{JSON.stringify(item.payload, null, 2)}</pre>
+              <article key={item.id} className="rounded-xl bg-card p-4 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <Badge variant="secondary" className="px-1.5 py-0 text-xs">{item.domain}</Badge>
+                      <Badge variant="secondary" className={`px-1.5 py-0 text-xs ${item.status === "PENDING" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-(--term-success-bg) text-(--term-success-fg)"}`}>{item.status}</Badge>
+                      <span className="tabular-nums">{new Date(item.createdAt).toLocaleString()}</span>
+                    </div>
+                    <h3 className="mt-1.5 text-sm font-medium">{item.action.replaceAll(/([A-Z])/g, " $1").toLowerCase()} · {item.entityType} {item.entityId ?? ""}</h3>
+                    <pre className="mt-2 max-w-3xl overflow-auto rounded-lg bg-muted/60 p-2 text-xs">{JSON.stringify(item.payload, null, 2)}</pre>
                     <div className="mt-1 text-xs text-muted-foreground">Maker: {item.requestedById}{item.reviewedById ? ` · Checker: ${item.reviewedById}` : ""}</div>
                   </div>
                   {item.canReview && item.status === "PENDING" && (
                     <div className="flex gap-2">
-                      <button type="button" onClick={() => void review(item.id, "REJECT")} className="flex items-center gap-1"><X size={11} strokeWidth={2} aria-hidden />Reject</button>
-                      <button type="button" onClick={() => void review(item.id, "APPROVE")} className="flex items-center gap-1 rounded bg-brand px-2 py-1 text-xs text-white"><Check size={11} strokeWidth={2} aria-hidden />Approve</button>
+                      <Button type="button" size="sm" variant="outline" className="text-down" onClick={() => void review(item.id, "REJECT")}><Ban size={13} strokeWidth={2} aria-hidden /> Reject</Button>
+                      <Button type="button" size="sm" onClick={() => void review(item.id, "APPROVE")}><Check size={13} strokeWidth={2} aria-hidden /> Approve</Button>
                     </div>
                   )}
                 </div>
@@ -1761,7 +1850,7 @@ function buildChangeRequest(action: ChangeAction, form: FormData): Record<string
   };
 }
 
-function ChangeHint({ text }: { text: string }) { return <div className="mb-3 rounded border border-primary/30 bg-primary/10 p-3 text-xs text-primary">{text}</div>; }
+function ChangeHint({ text }: { text: string }) { return <Alert tone="info" className="mb-3">{text}</Alert>; }
 
 function displayValue(value: unknown): string {
   if (value == null) return "—";
@@ -1779,14 +1868,14 @@ function SimpleTable({ columns, rows, empty }: { columns: string[]; rows: Array<
   useEffect(() => setPage(1), [rows]);
 
   return (
-    <div className="overflow-hidden">
+    <div className="overflow-hidden rounded-xl bg-card shadow-sm">
       <div className="overflow-x-auto">
         <Table className="w-full min-w-225 text-left text-xs">
-          <thead className="bg-muted text-muted-foreground"><tr>{columns.map((column) => <th key={column} className="p-2 font-medium">{column.replaceAll(/([A-Z])/g, " $1")}</th>)}</tr></thead>
-          <tbody>
-            {visibleRows.map((row, index) => <tr key={String(row.id ?? row.code ?? row.symbol ?? index)} className="border-t">{columns.map((column) => <td key={column} className="max-w-80 truncate p-2" title={displayValue(row[column])}>{displayValue(row[column])}</td>)}</tr>)}
-            {rows.length === 0 && <tr><td colSpan={columns.length} className="p-8 text-center text-muted-foreground">{empty}</td></tr>}
-          </tbody>
+          <TableHeader><TableRow>{columns.map((column) => <TableHead key={column}>{column.replaceAll(/([A-Z])/g, " $1")}</TableHead>)}</TableRow></TableHeader>
+          <TableBody>
+            {visibleRows.map((row, index) => <TableRow key={String(row.id ?? row.code ?? row.symbol ?? index)}>{columns.map((column) => <TableCell key={column} className="max-w-80 truncate" title={displayValue(row[column])}>{displayValue(row[column])}</TableCell>)}</TableRow>)}
+            {rows.length === 0 && <TableRow><TableCell colSpan={columns.length} className="p-8 text-center text-muted-foreground">{empty}</TableCell></TableRow>}
+          </TableBody>
         </Table>
       </div>
       <Pagination page={safePage} pageSize={pageSize} totalItems={rows.length} onPageChange={setPage} label="rows" compact />

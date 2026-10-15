@@ -9,9 +9,10 @@ import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
+import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { Check, Play, Plus, Save, Search, UserMinus, UserPlus, X } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 interface Group {
   id: string;
@@ -21,6 +22,21 @@ interface Group {
   settings: Record<string, unknown>;
   memberCount: number;
   createdAt: string;
+}
+
+interface GroupMember {
+  id: string;
+  assignedAt: string;
+  user: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    accountNo: string | null;
+    verified: boolean;
+    balance: number;
+    equity: number;
+    floatingPl: number;
+  };
 }
 
 interface GroupDetail extends Group {
@@ -343,17 +359,17 @@ function EditGroupButton({ group, onSaved }: { group: Group; onSaved: () => void
             {err && <Alert tone="err" className="mb-3">{err}</Alert>}
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-muted-foreground mb-1">Name</label>
+                <Label className="mb-1 block text-xs text-muted-foreground">Name</Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)}
                   className="h-10" />
               </div>
               <div>
-                <label className="block text-xs text-muted-foreground mb-1">Description</label>
+                <Label className="mb-1 block text-xs text-muted-foreground">Description</Label>
                 <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Optional"
                   className="h-10" />
               </div>
               <div>
-                <label className="block text-xs text-muted-foreground mb-1">Color</label>
+                <Label className="mb-1 block text-xs text-muted-foreground">Color</Label>
                 <div className="flex items-center gap-2">
                   <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-12" />
                   <span className="text-xs text-muted-foreground font-mono">{color}</span>
@@ -535,17 +551,17 @@ function CreateGroupButton({ onCreated }: { onCreated: () => void }) {
         {err && <Alert tone="err" className="mb-3">{err}</Alert>}
         <div className="space-y-3">
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Name</label>
+            <Label className="mb-1 block text-xs text-muted-foreground">Name</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VIP Traders"
               className="h-10" />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Description (optional)</label>
+            <Label className="mb-1 block text-xs text-muted-foreground">Description (optional)</Label>
             <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Short description"
               className="h-10" />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Color</label>
+            <Label className="mb-1 block text-xs text-muted-foreground">Color</Label>
             <div className="flex items-center gap-2">
               <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-12" />
               <span className="text-xs text-muted-foreground font-mono">{color}</span>
@@ -662,55 +678,67 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
         {detail.members.length === 0 ? (
           <p className="text-sm text-muted-foreground">No members yet.</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl bg-card shadow-sm">
-            <Table className="w-full text-sm">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Account</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                  <TableHead className="text-right">Equity</TableHead>
-                  <TableHead className="hidden text-right md:table-cell">P/L</TableHead>
-                  {canManage && <TableHead />}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {detail.members.map((m) => (
-                  <TableRow key={m.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2.5">
-                        {!m.user.verified && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-down" title="Unverified" />}
-                        <IdentityTile tone={m.user.verified ? "muted" : "down"}>{initialsOf(m.user.name ?? m.user.email)}</IdentityTile>
-                        <div className="min-w-0">
-                          <div className="text-xs font-medium">{m.user.name ?? "—"}</div>
-                          <div className="truncate text-xs text-muted-foreground">{m.user.email}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs tabular-nums">{m.user.accountNo ?? "—"}</TableCell>
-                    <TableCell className="text-right text-xs tabular-nums">{m.user.balance.toFixed(2)}</TableCell>
-                    <TableCell className="text-right text-xs tabular-nums">{m.user.equity.toFixed(2)}</TableCell>
-                    <TableCell className={`hidden text-right text-xs tabular-nums md:table-cell ${m.user.floatingPl >= 0 ? "text-up" : "text-down"}`}>
-                      {m.user.floatingPl >= 0 ? "+" : ""}{m.user.floatingPl.toFixed(2)}
-                    </TableCell>
-                    {canManage && (
-                      <TableCell>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="text-down"
-                          onClick={() => confirmRemove(m.user.id, m.user.name ?? m.user.email ?? "this member")}
-                        >
-                          <UserMinus size={13} strokeWidth={2} aria-hidden /> Remove
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <RecordList<GroupMember>
+            ariaLabel="Member"
+            title="Members"
+            description={`${detail.members.length} members`}
+            rows={detail.members}
+            rowKey={(m) => m.id}
+            search={{ placeholder: "Search name or email…", text: (m) => `${m.user.name ?? ""} ${m.user.email ?? ""} ${m.user.accountNo ?? ""}` }}
+            leading={(m) => ({
+              icon: null,
+              tone: m.user.verified ? "muted" : "down",
+              title: (
+                <span className="flex items-center gap-2">
+                  <IdentityTile tone={m.user.verified ? "muted" : "down"}>{initialsOf(m.user.name ?? m.user.email)}</IdentityTile>
+                  {m.user.name ?? "—"}
+                </span>
+              ),
+              secondary: `${m.user.email ?? "—"} · #${m.user.accountNo ?? "—"}`,
+            })}
+            columns={[
+              { key: "balance", label: "Balance", sortable: true, align: "right", render: (m) => <span className="tabular-nums">{m.user.balance.toFixed(2)}</span> },
+              { key: "equity", label: "Equity", sortable: true, align: "right", render: (m) => <span className="tabular-nums">{m.user.equity.toFixed(2)}</span> },
+              { key: "floatingPl", label: "P/L", sortable: true, align: "right", render: (m) => (
+                <span className={`font-semibold tabular-nums ${m.user.floatingPl >= 0 ? "text-up" : "text-down"}`}>
+                  {m.user.floatingPl >= 0 ? "+" : ""}{m.user.floatingPl.toFixed(2)}
+                </span>
+              ) },
+            ]}
+            sortValue={(m, key) => {
+              switch (key) {
+                case "balance": return m.user.balance;
+                case "equity": return m.user.equity;
+                case "floatingPl": return m.user.floatingPl;
+                default: return String((m as unknown as Record<string, unknown>)[key] ?? "");
+              }
+            }}
+            initialSort={{ key: "equity", direction: "desc" }}
+            detailTitle="Member Detail"
+            renderDetailHero={(m) => (
+              <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+                <IdentityTile size="lg" tone={m.user.verified ? "muted" : "down"}>{initialsOf(m.user.name ?? m.user.email)}</IdentityTile>
+                <div className="text-sm font-medium">{m.user.name ?? "—"}</div>
+                <div className="text-xs text-muted-foreground">{m.user.email ?? "—"}</div>
+                {!m.user.verified && <RecordStatusChip tone="down">Unverified</RecordStatusChip>}
+              </div>
+            )}
+            renderDetailMeta={(m) => [
+              { label: "Account", value: m.user.accountNo ?? "—" },
+              { label: "Balance", value: m.user.balance.toFixed(2) },
+              { label: "Equity", value: m.user.equity.toFixed(2) },
+              { label: "Floating P/L", value: m.user.floatingPl.toFixed(2) },
+              { label: "Member since", value: new Date(m.assignedAt).toLocaleDateString() },
+            ]}
+            renderDetailExtra={(m) => (
+              canManage ? (
+                <Button type="button" size="sm" variant="outline" className="w-full text-down" onClick={() => confirmRemove(m.user.id, m.user.name ?? m.user.email ?? "this member")}>
+                  <UserMinus size={13} strokeWidth={2} aria-hidden /> Remove from group
+                </Button>
+              ) : undefined
+            )}
+            emptyTitle="No members yet."
+          />
         )}
       </div>
 
@@ -837,7 +865,7 @@ function BulkDialog({ title, subtitle, fields, endpoint, onClose }: {
         <div className="space-y-3">
           {fields.map((f) => (
             <div key={f.key}>
-              <label className="block text-xs text-muted-foreground mb-1">{f.label}</label>
+              <Label className="mb-1 block text-xs text-muted-foreground">{f.label}</Label>
               {f.type === "select" ? (
                 <NativeSelect
                   value={values[f.key]}

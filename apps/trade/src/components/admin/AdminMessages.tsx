@@ -13,6 +13,7 @@ import { toast } from "@/lib/toast";
 import { fmtDateTime } from "@/lib/dates";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface ThreadRow {
   userId: string;
@@ -260,10 +261,10 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               placeholder="Search name, email, account…"
               aria-label="Search conversations"
             />
-            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Checkbox checked={unreadOnly} onCheckedChange={(checked) => setUnreadOnly(checked === true)} aria-label="Unread only" />
               Unread only
-            </label>
+            </Label>
           </div>
           <div className="flex-1 overflow-y-auto">
             {visibleThreads.length === 0 && (
@@ -415,11 +416,11 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
       >
         <form className="p-5 space-y-4" onSubmit={broadcast}>
           <div>
-            <label className="mb-1 block text-xs font-medium" htmlFor="b-title">Title</label>
+            <Label htmlFor="b-title" className="mb-1 block text-xs font-medium">Title</Label>
             <Input id="b-title" required minLength={3} maxLength={120} value={bTitle} onChange={(e) => setBTitle(e.target.value)} />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium" htmlFor="b-body">Message</label>
+            <Label htmlFor="b-body" className="mb-1 block text-xs font-medium">Message</Label>
             <Textarea id="b-body" required minLength={3} maxLength={2000} rows={5} value={bBody} onChange={(e) => setBBody(e.target.value)} placeholder="Message every customer will receive…" />
           </div>
           {bError && <Alert tone="err">{bError}</Alert>}

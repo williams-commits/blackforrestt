@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Label } from "@/components/ui/label";
 
 /**
  * Reusable settings form for both group settings and per-user profile overrides.
@@ -429,10 +430,10 @@ function SettingsSection({ title, children }: { title: string; children: React.R
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex items-center justify-between cursor-pointer">
+    <Label className="flex cursor-pointer items-center justify-between">
       <span className="text-xs text-foreground">{label}</span>
       <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
-    </label>
+    </Label>
   );
 }
 
@@ -451,7 +452,7 @@ function NumberInput({
 }) {
   return (
     <div>
-      <label className="block text-xs text-muted-foreground mb-1">{label}</label>
+      <Label className="mb-1 block text-xs text-muted-foreground">{label}</Label>
       <Input
         type="number"
         value={value ?? ""}

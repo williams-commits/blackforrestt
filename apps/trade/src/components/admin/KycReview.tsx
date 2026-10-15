@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, useEffect, useMemo } from "react";
-import { Ban, CheckCheck, ExternalLink, FileSearch, ShieldCheck } from "lucide-react";
+import { Ban, CheckCheck, CheckCircle2, ExternalLink, FileSearch, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
 import { TableSearch } from "@/components/ui/DataTable";
@@ -12,6 +12,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
+import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 
 interface Submission {
   id: string;
@@ -53,7 +54,6 @@ interface Props {
 }
 
 const QUEUE_PAGE_SIZE = 8;
-const REVIEWED_PAGE_SIZE = 10;
 
 /** Admin KYC review dashboard: queue of pending submissions + recent decisions. */
 export function KycReview({
@@ -81,7 +81,6 @@ export function KycReview({
   const [manualDocUrl, setManualDocUrl] = useState<string | null>(null);
   const [queueSearch, setQueueSearch] = useState("");
   const [queuePage, setQueuePage] = useState(1);
-  const [reviewedPage, setReviewedPage] = useState(1);
   const noteId = useId();
 
   // Instant client-side narrowing of the queue — name, email, or account number.
@@ -101,10 +100,6 @@ export function KycReview({
   useEffect(() => { if (queuePage > queueTotalPages) setQueuePage(queueTotalPages); }, [queuePage, queueTotalPages]);
 
   const reviewedTotalResolved = reviewedTotal ?? reviewed.length;
-  const reviewedTotalPages = Math.max(1, Math.ceil(reviewed.length / REVIEWED_PAGE_SIZE));
-  const safeReviewedPage = Math.min(reviewedPage, reviewedTotalPages);
-  const visibleReviewed = reviewed.slice((safeReviewedPage - 1) * REVIEWED_PAGE_SIZE, safeReviewedPage * REVIEWED_PAGE_SIZE);
-  useEffect(() => { if (reviewedPage > reviewedTotalPages) setReviewedPage(reviewedTotalPages); }, [reviewedPage, reviewedTotalPages]);
 
   function updatePending(next: Submission[]) {
     setPending(next);
@@ -421,35 +416,51 @@ export function KycReview({
           )}
 
           {/* Recent decisions */}
-          <div className="flex flex-wrap items-center justify-between gap-2 mt-8 mb-3">
-            <h2 className="text-sm font-semibold">Recent decisions</h2>
-            {reviewedTotalResolved > reviewed.length && (
-              <span className="text-xs text-primary">showing {reviewed.length} most recent of {reviewedTotalResolved}</span>
+          <div className="mt-8">
+          <RecordList<Submission>
+            ariaLabel="Decision"
+            title="Recent decisions"
+            description={reviewedTotalResolved > reviewed.length ? `${reviewed.length} most recent of ${reviewedTotalResolved}` : `${reviewed.length} decisions`}
+            rows={reviewed}
+            rowKey={(r) => r.id}
+            search={{ placeholder: "Search name or email…", text: (r) => `${r.firstName ?? ""} ${r.lastName ?? ""} ${r.user.email ?? ""}` }}
+            leading={(r) => ({
+              icon: r.status === "APPROVED" ? <CheckCircle2 size={15} strokeWidth={2} aria-hidden /> : <Ban size={15} strokeWidth={2} aria-hidden />,
+              tone: r.status === "APPROVED" ? "up" : "down",
+              title: `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim(),
+              secondary: `${r.user.email} · #${r.user.accountNo ?? "—"}`,
+            })}
+            columns={[
+              { key: "status", label: "Decision", render: (r) => (
+                <RecordStatusChip tone={r.status === "APPROVED" ? "up" : "down"}>{r.status}</RecordStatusChip>
+              ) },
+              { key: "reviewedAt", label: "Reviewed", sortable: true, align: "right", render: (r) => (
+                <span className="text-xs text-muted-foreground tabular-nums">{r.reviewedAt ? fmtAgo(r.reviewedAt) : ""}</span>
+              ) },
+            ]}
+            sortValue={(r, key) => key === "reviewedAt" ? new Date(r.reviewedAt ?? 0).getTime() : String((r as unknown as Record<string, unknown>)[key] ?? "")}
+            initialSort={{ key: "reviewedAt", direction: "desc" }}
+            detailTitle="Decision Detail"
+            renderDetailHero={(r) => (
+              <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+                <IdentityTile size="lg" tone={r.status === "APPROVED" ? "up" : "down"}>
+                  {r.status === "APPROVED" ? <CheckCircle2 size={20} strokeWidth={2} aria-hidden /> : <Ban size={20} strokeWidth={2} aria-hidden />}
+                </IdentityTile>
+                <div className="text-sm font-medium">{`${r.firstName ?? ""} ${r.lastName ?? ""}`.trim()}</div>
+                <RecordStatusChip tone={r.status === "APPROVED" ? "up" : "down"}>{r.status}</RecordStatusChip>
+              </div>
             )}
-          </div>
-          <div className="overflow-hidden rounded-xl bg-card shadow-sm">
-            <div className="space-y-1 p-3">
-              {visibleReviewed.map((s) => (
-                <div key={s.id} className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50">
-                  <div className="min-w-0">
-                    <span className="text-sm font-medium">{s.firstName} {s.lastName}</span>
-                    <span className="text-xs text-muted-foreground ml-2">{s.user.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant="secondary" className={s.status === "APPROVED" ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}>
-                      {s.status}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground tabular-nums">{s.reviewedAt ? fmtAgo(s.reviewedAt) : ""}</span>
-                  </div>
-                </div>
-              ))}
-              {reviewed.length === 0 && (
-                <div className="rounded-xl bg-muted/40 py-6 text-center text-sm text-muted-foreground">No decisions yet.</div>
-              )}
-            </div>
-            {reviewed.length > REVIEWED_PAGE_SIZE && (
-              <Pagination page={safeReviewedPage} pageSize={REVIEWED_PAGE_SIZE} totalItems={reviewed.length} onPageChange={setReviewedPage} label="decisions" compact />
-            )}
+            renderDetailMeta={(r) => [
+              { label: "Email", value: r.user.email ?? "—" },
+              { label: "Account", value: r.user.accountNo ?? "—" },
+              { label: "Document", value: r.docType ?? "—" },
+              { label: "Country", value: r.country ?? "—" },
+              { label: "Submitted", value: r.submittedAt ? new Date(r.submittedAt).toLocaleString() : "—" },
+              { label: "Reviewed", value: r.reviewedAt ? new Date(r.reviewedAt).toLocaleString() : "—" },
+              ...(r.note ? [{ label: "Note", value: r.note }] : []),
+            ]}
+            emptyTitle="No decisions yet."
+          />
           </div>
         </div>
       </div>

@@ -438,7 +438,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 </p>
                 {resetResult.previewUrl && (
                   <div className="space-y-2">
-                    <label className="block text-xs font-medium">Single-use reset link</label>
+                    <Label className="block text-xs font-medium">Single-use reset link</Label>
                     <div className="flex gap-2">
                       <Input
                         readOnly
@@ -475,7 +475,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           {dialog?.kind === "notify" ? (
             <>
               <div>
-                <label className="mb-1 block text-xs font-medium" htmlFor="notify-title">Title</label>
+                <Label htmlFor="notify-title" className="mb-1 block text-xs font-medium">Title</Label>
                 <Input id="notify-title" required minLength={3} maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} />
               </div>
               <div>

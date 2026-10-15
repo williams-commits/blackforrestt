@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, Eye, Play, RefreshCw, Unlock, X } from "lucide-react";
+import { CheckCircle2, CircleAlert, Eye, Lock, Play, RefreshCw, Unlock, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/Alert";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
+import { IdentityTile } from "@/components/ui/Initial";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
-import { Pagination } from "@/components/ui/Pagination";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 interface RunRow {
@@ -53,8 +53,6 @@ async function jsonRequest<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-const PAGE_SIZE = 10;
-
 export function ReconciliationReview({ canManage = false }: { canManage?: boolean }) {
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [cases, setCases] = useState<CaseRow[]>([]);
@@ -65,16 +63,7 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
   const [bulkSummary, setBulkSummary] = useState("");
   const [actionDialog, setActionDialog] = useState<{ kind: "resolve" | "release" | "bulk"; id?: string } | null>(null);
   const [actionNote, setActionNote] = useState("");
-  const [blockPage, setBlockPage] = useState(1);
-  const [casePage, setCasePage] = useState(1);
-  const [runPage, setRunPage] = useState(1);
 
-  const safeBlockPage = Math.min(blockPage, Math.max(1, Math.ceil(blocks.length / PAGE_SIZE)));
-  const safeCasePage = Math.min(casePage, Math.max(1, Math.ceil(cases.length / PAGE_SIZE)));
-  const safeRunPage = Math.min(runPage, Math.max(1, Math.ceil(runs.length / PAGE_SIZE)));
-  const visibleBlocks = blocks.slice((safeBlockPage - 1) * PAGE_SIZE, safeBlockPage * PAGE_SIZE);
-  const visibleCases = cases.slice((safeCasePage - 1) * PAGE_SIZE, safeCasePage * PAGE_SIZE);
-  const visibleRuns = runs.slice((safeRunPage - 1) * PAGE_SIZE, safeRunPage * PAGE_SIZE);
 
   const refresh = useCallback(async () => {
     setError("");
@@ -226,66 +215,145 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
 
       <section>
         <h3 className="text-sm font-semibold mb-2">Active blocks [{blocks.length}]</h3>
-        <div className="overflow-hidden rounded-xl bg-card shadow-sm">
-          <Table>
-            <TableHeader><TableRow><TableHead>Account</TableHead><TableHead>Scope</TableHead><TableHead>Reason</TableHead><TableHead>Created</TableHead><TableHead /></TableRow></TableHeader>
-            <TableBody>
-              {visibleBlocks.map((block) => (
-                <TableRow key={block.id}>
-                  <TableCell>{block.user.email ?? block.userId}<div className="text-muted-foreground">#{block.user.accountNo ?? "—"}</div></TableCell>
-                  <TableCell className="font-medium text-down">{block.scope}</TableCell>
-                  <TableCell className="max-w-xl">{block.reason}</TableCell>
-                  <TableCell className="whitespace-nowrap">{new Date(block.createdAt).toLocaleString()}</TableCell>
-                  <TableCell className="text-right">{canManage ? <Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => { setActionNote(""); setActionDialog({ kind: "release", id: block.id }); }}><Unlock size={13} strokeWidth={2} aria-hidden /> Release</Button> : <span className="text-muted-foreground">Read only</span>}</TableCell>
-                </TableRow>
-              ))}
-              {blocks.length === 0 && <TableRow><TableCell colSpan={5} className="p-5 text-center text-muted-foreground">No active reconciliation blocks.</TableCell></TableRow>}
-            </TableBody>
-          </Table>
-          <Pagination page={safeBlockPage} pageSize={PAGE_SIZE} totalItems={blocks.length} onPageChange={setBlockPage} label="active blocks" compact />
-        </div>
+        <RecordList<BlockRow>
+          ariaLabel="Block"
+          title="Active blocks"
+          description={`${blocks.length} active`}
+          rows={blocks}
+          rowKey={(b) => b.id}
+          leading={(b) => ({
+            icon: <Lock size={15} strokeWidth={2} aria-hidden />,
+            tone: "down",
+            title: b.user.email ?? b.userId,
+            secondary: `#${b.user.accountNo ?? "—"} · ${b.scope}`,
+          })}
+          columns={[
+            { key: "reason", label: "Reason", render: (b) => <span className="text-xs text-muted-foreground">{b.reason}</span> },
+            { key: "createdAt", label: "Created", sortable: true, align: "right", render: (b) => (
+              <span className="text-xs text-muted-foreground tabular-nums">{new Date(b.createdAt).toLocaleString()}</span>
+            ) },
+          ]}
+          sortValue={(b, key) => key === "createdAt" ? new Date(b.createdAt).getTime() : String((b as unknown as Record<string, unknown>)[key] ?? "")}
+          initialSort={{ key: "createdAt", direction: "desc" }}
+          detailTitle="Block Detail"
+          renderDetailHero={(b) => (
+            <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+              <IdentityTile size="lg" tone="down"><Lock size={20} strokeWidth={2} aria-hidden /></IdentityTile>
+              <div className="text-sm font-medium">{b.user.email ?? b.userId}</div>
+              <div className="text-xs text-muted-foreground">#{b.user.accountNo ?? "—"} · {b.scope} blocked</div>
+            </div>
+          )}
+          renderDetailMeta={(b) => [
+            { label: "Scope", value: b.scope },
+            { label: "Reason", value: b.reason },
+            { label: "Created", value: new Date(b.createdAt).toLocaleString() },
+          ]}
+          renderDetailExtra={(b) => (
+            canManage ? <Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => { setActionNote(""); setActionDialog({ kind: "release", id: b.id }); }}><Unlock size={13} strokeWidth={2} aria-hidden /> Release block</Button> : undefined
+          )}
+          emptyTitle="No active reconciliation blocks."
+        />
       </section>
 
       <section>
         <h3 className="text-sm font-semibold mb-2">Cases [{cases.length}]</h3>
-        <div className="space-y-2">
-          {visibleCases.map((item) => (
-            <article key={item.id} className="rounded-xl bg-card p-4 shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    <span className={item.severity === "CRITICAL" ? "text-down font-semibold" : "text-muted-foreground"}>{item.severity}</span>
-                    <span>{item.feedKind}</span><span>{item.status}</span><span>{new Date(item.detectedAt).toLocaleString()}</span>
-                  </div>
-                  <p className="text-sm mt-1">{item.message}</p>
-                  {(item.expectedValue || item.actualValue) && <p className="text-xs text-muted-foreground mt-1">Expected {item.expectedValue ?? "—"}; actual {item.actualValue ?? "—"}</p>}
-                </div>
-                {canManage && item.status !== "RESOLVED" && <div className="flex gap-2">
-                  {item.status === "OPEN" && <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void commandCase(item.id, "ACKNOWLEDGE")}><Eye size={13} strokeWidth={2} aria-hidden /> Acknowledge</Button>}
-                  <Button size="sm" disabled={busy !== null || item.blocks.length > 0} title={item.blocks.length > 0 ? "Release active blocks before resolving the case." : undefined} onClick={() => { setActionNote(""); setActionDialog({ kind: "resolve", id: item.id }); }}><CheckCircle2 size={13} strokeWidth={2} aria-hidden /> Resolve</Button>
-                </div>}
+        <RecordList<CaseRow>
+          ariaLabel="Case"
+          title="Cases"
+          description={`${cases.length} cases`}
+          rows={cases}
+          rowKey={(c) => c.id}
+          leading={(c) => ({
+            icon: <CircleAlert size={15} strokeWidth={2} aria-hidden />,
+            tone: c.severity === "CRITICAL" ? "down" : "warn",
+            title: c.message.slice(0, 60),
+            secondary: `${c.severity} · ${c.feedKind} · ${new Date(c.detectedAt).toLocaleString()}`,
+          })}
+          columns={[
+            { key: "status", label: "Status", render: (c) => (
+              <RecordStatusChip tone={c.status === "RESOLVED" ? "up" : c.status === "ACKNOWLEDGED" ? "brand" : "warn"}>{c.status}</RecordStatusChip>
+            ) },
+            { key: "detectedAt", label: "Detected", sortable: true, align: "right", render: (c) => (
+              <span className="text-xs text-muted-foreground tabular-nums">{new Date(c.detectedAt).toLocaleString()}</span>
+            ) },
+          ]}
+          sortValue={(c, key) => key === "detectedAt" ? new Date(c.detectedAt).getTime() : String((c as unknown as Record<string, unknown>)[key] ?? "")}
+          initialSort={{ key: "detectedAt", direction: "desc" }}
+          detailTitle="Case Detail"
+          renderDetailHero={(c) => (
+            <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+              <IdentityTile size="lg" tone={c.severity === "CRITICAL" ? "down" : "warn"}><CircleAlert size={20} strokeWidth={2} aria-hidden /></IdentityTile>
+              <div className="text-sm font-medium">{c.feedKind}</div>
+              <RecordStatusChip tone={c.status === "RESOLVED" ? "up" : "warn"}>{c.status}</RecordStatusChip>
+            </div>
+          )}
+          renderDetailMeta={(c) => [
+            { label: "Severity", value: c.severity },
+            { label: "Feed", value: c.feedKind },
+            { label: "Detected", value: new Date(c.detectedAt).toLocaleString() },
+            ...(c.expectedValue || c.actualValue ? [{ label: "Expected / actual", value: `${c.expectedValue ?? "—"} / ${c.actualValue ?? "—"}` }] : []),
+          ]}
+          renderDetailExtra={(c) => (
+            <div className="space-y-3">
+              <div className="rounded-xl bg-muted/40 p-4">
+                <div className="text-xs font-medium text-muted-foreground">Message</div>
+                <p className="mt-1.5 text-sm leading-relaxed">{c.message}</p>
               </div>
-            </article>
-          ))}
-          {cases.length === 0 && <div className="rounded-xl bg-muted/40 p-5 text-sm text-muted-foreground text-center">No reconciliation cases.</div>}
-          <div className="mt-2">
-            <Pagination page={safeCasePage} pageSize={PAGE_SIZE} totalItems={cases.length} onPageChange={setCasePage} label="reconciliation cases" compact />
-          </div>
-        </div>
+              {canManage && c.status !== "RESOLVED" && (
+                <div className="flex gap-2">
+                  {c.status === "OPEN" && <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void commandCase(c.id, "ACKNOWLEDGE")}><Eye size={13} strokeWidth={2} aria-hidden /> Acknowledge</Button>}
+                  <Button size="sm" disabled={busy !== null || c.blocks.length > 0} title={c.blocks.length > 0 ? "Release active blocks before resolving the case." : undefined} onClick={() => { setActionNote(""); setActionDialog({ kind: "resolve", id: c.id }); }}><CheckCircle2 size={13} strokeWidth={2} aria-hidden /> Resolve</Button>
+                </div>
+              )}
+            </div>
+          )}
+          emptyTitle="No reconciliation cases."
+        />
       </section>
 
       <section>
         <h3 className="text-sm font-semibold mb-2">Recent runs</h3>
-        <div className="overflow-hidden rounded-xl bg-card shadow-sm">
-          <Table>
-            <TableHeader><TableRow><TableHead>Started</TableHead><TableHead>Trigger</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Cases</TableHead><TableHead className="text-right">Blocks</TableHead><TableHead>Reference</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {visibleRuns.map((run) => <TableRow key={run.id}><TableCell className="whitespace-nowrap">{new Date(run.startedAt).toLocaleString()}</TableCell><TableCell>{run.trigger}</TableCell><TableCell>{run.status}</TableCell><TableCell className="text-right">{run.caseCount}</TableCell><TableCell className="text-right">{run.blockCount}</TableCell><TableCell className="max-w-xs truncate" title={run.reference}>{run.reference}</TableCell></TableRow>)}
-              {runs.length === 0 && <TableRow><TableCell colSpan={6} className="p-5 text-center text-muted-foreground">No reconciliation runs yet.</TableCell></TableRow>}
-            </TableBody>
-          </Table>
-          <Pagination page={safeRunPage} pageSize={PAGE_SIZE} totalItems={runs.length} onPageChange={setRunPage} label="reconciliation runs" compact />
-        </div>
+        <RecordList<RunRow>
+          ariaLabel="Run"
+          title="Recent runs"
+          description={`${runs.length} runs`}
+          rows={runs}
+          rowKey={(r) => r.id}
+          leading={(r) => ({
+            icon: r.status === "COMPLETED" ? <CheckCircle2 size={15} strokeWidth={2} aria-hidden /> : r.status === "FAILED" ? <CircleAlert size={15} strokeWidth={2} aria-hidden /> : <Play size={15} strokeWidth={2} aria-hidden />,
+            tone: r.status === "COMPLETED" ? "up" : r.status === "FAILED" ? "down" : "warn",
+            title: `Run ${r.reference.slice(0, 12)}…`,
+            secondary: `${r.trigger} · ${r.caseCount} cases · ${r.blockCount} blocks`,
+          })}
+          columns={[
+            { key: "status", label: "Status", render: (r) => (
+              <RecordStatusChip tone={r.status === "COMPLETED" ? "up" : r.status === "FAILED" ? "down" : "warn"}>{r.status}</RecordStatusChip>
+            ) },
+            { key: "startedAt", label: "Started", sortable: true, align: "right", render: (r) => (
+              <span className="text-xs text-muted-foreground tabular-nums">{new Date(r.startedAt).toLocaleString()}</span>
+            ) },
+          ]}
+          sortValue={(r, key) => key === "startedAt" ? new Date(r.startedAt).getTime() : String((r as unknown as Record<string, unknown>)[key] ?? "")}
+          initialSort={{ key: "startedAt", direction: "desc" }}
+          detailTitle="Run Detail"
+          renderDetailHero={(r) => (
+            <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+              <IdentityTile size="lg" tone={r.status === "COMPLETED" ? "up" : r.status === "FAILED" ? "down" : "warn"}>
+                {r.status === "COMPLETED" ? <CheckCircle2 size={20} strokeWidth={2} aria-hidden /> : <Play size={20} strokeWidth={2} aria-hidden />}
+              </IdentityTile>
+              <div className="text-sm font-medium">{r.trigger} run</div>
+              <RecordStatusChip tone={r.status === "COMPLETED" ? "up" : r.status === "FAILED" ? "down" : "warn"}>{r.status}</RecordStatusChip>
+            </div>
+          )}
+          renderDetailMeta={(r) => [
+            { label: "Reference", value: <span className="font-mono text-xs">{r.reference}</span> },
+            { label: "Trigger", value: r.trigger },
+            { label: "Cases", value: String(r.caseCount) },
+            { label: "Blocks", value: String(r.blockCount) },
+            { label: "Started", value: new Date(r.startedAt).toLocaleString() },
+          ]}
+          emptyTitle="No reconciliation runs yet."
+        />
       </section>
 
       <Dialog

@@ -16,7 +16,7 @@ import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { TableSearch, FilterChip, type SortDirection } from "@/components/ui/DataTable";
 import { ADMIN_TAB_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
-import { CandlestickChart, Check, ClipboardCheck, CreditCard, IdCard, RefreshCw, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, Wallet, X } from "lucide-react";
+import { CandlestickChart, ClipboardCheck, CreditCard, IdCard, RefreshCw, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, Wallet, X } from "lucide-react";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { createDeviceId } from "@/lib/device";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";
@@ -31,9 +31,9 @@ import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeftRight, Ban, CheckCircle2, Download, SlidersHorizontal, UserRound } from "lucide-react";
+import { ArrowDownToLine, ArrowLeftRight, Ban, CheckCircle2, Download, LifeBuoy, ScrollText, ShieldAlert, SlidersHorizontal, UserRound } from "lucide-react";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
 
 type Permission = string;
 type TabKey =
@@ -785,8 +785,6 @@ function UserBalanceDialog({
   const [action, setAction] = useState<"CREDIT" | "DEBIT">("CREDIT");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
   // One idempotency key per logical adjustment: minted when the dialog opens,
   // reused across failed submit attempts (so a retry after a network error
   // replays instead of double-posting), and rotated after each success so the
@@ -812,7 +810,6 @@ function UserBalanceDialog({
     setAmount("");
     setReason("");
     setNotice(null);
-    setPage(1);
     commandKeyRef.current = `admin-balance-${createDeviceId()}`;
     void load();
   }, [open, load]);
@@ -854,9 +851,6 @@ function UserBalanceDialog({
   }
 
   const transactions = data?.transactions ?? [];
-  const totalPages = Math.max(1, Math.ceil(transactions.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const visible = transactions.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   return (
     <Dialog
@@ -882,12 +876,12 @@ function UserBalanceDialog({
                 <button type="button" onClick={() => setAction("DEBIT")} aria-pressed={action === "DEBIT"} className={`rounded-lg px-3 py-2 text-xs font-medium transition ${action === "DEBIT" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Deduct balance</button>
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,12rem)_1fr_auto] md:items-end">
-                <label className="text-xs font-medium">Amount (USD)
+                <Label className="text-xs font-medium">Amount (USD)
                   <Input type="number" inputMode="decimal" min="0.00000001" max="1000000" step="0.00000001" required value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 h-10" placeholder="0.00" />
-                </label>
-                <label className="text-xs font-medium">Audited reason
+                </Label>
+                <Label className="text-xs font-medium">Audited reason
                   <Input type="text" minLength={5} maxLength={500} required value={reason} onChange={(event) => setReason(event.target.value)} className="mt-1 h-10" placeholder="Ticket, customer request, or correction reason" />
-                </label>
+                </Label>
                 <Button type="submit" variant={action === "CREDIT" ? "default" : "destructive"} loading={busy} loadingLabel="Posting adjustment">{action === "CREDIT" ? "Post top-up" : "Post deduction"}</Button>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">Deductions cannot exceed the user’s available balance. Margin and pending withdrawals are never silently consumed.</p>
@@ -899,21 +893,63 @@ function UserBalanceDialog({
                 <div><h3 id="user-transaction-history" className="text-sm font-semibold">Customer transaction history</h3><p className="text-xs text-muted-foreground">Deposits, withdrawals, trading settlements, bonuses, fees, and administrative adjustments.</p></div>
                 <Button size="sm" variant="ghost" onClick={() => void load()} disabled={loading}>Refresh</Button>
               </div>
-              <div className="overflow-hidden">
-                <div className="overflow-x-auto">
-                  <Table className="w-full min-w-175 text-left text-xs">
-                    <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Description</TableHead><TableHead>Reference</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                      {visible.map((item) => {
-                        const numeric = Number(item.amount);
-                        return <TableRow key={item.id}><TableCell className="whitespace-nowrap">{new Date(item.createdAt).toLocaleString()}</TableCell><TableCell>{item.type}</TableCell><TableCell className="max-w-70 truncate" title={item.description ?? undefined}>{item.description ?? "—"}</TableCell><TableCell className="tabular-nums">{item.reference ?? "—"}</TableCell><TableCell className={`text-right font-medium tabular-nums ${numeric >= 0 ? "text-up" : "text-down"}`}>{numeric >= 0 ? "+" : ""}{formatUsd(item.amount)}</TableCell><TableCell>{item.status}</TableCell></TableRow>;
-                      })}
-                      {transactions.length === 0 ? <TableRow><TableCell colSpan={6} className="p-8 text-center text-muted-foreground">No transactions.</TableCell></TableRow> : null}
-                    </TableBody>
-                  </Table>
-                </div>
-                <Pagination page={safePage} pageSize={pageSize} totalItems={transactions.length} onPageChange={setPage} label="transactions" compact />
-              </div>
+              <RecordList<UserFinanceTransaction>
+                    ariaLabel="Transaction"
+                    title="History"
+                    description={`${transactions.length} records`}
+                    rows={transactions}
+                    rowKey={(t) => t.id}
+                    search={{ placeholder: "Search type, description, or reference…", text: (t) => `${t.type} ${t.description ?? ""} ${t.reference ?? ""}` }}
+                    leading={(t) => ({
+                      icon: null,
+                      tone: Number(t.amount) >= 0 ? "up" : "down",
+                      title: t.type.replaceAll("_", " ").toLowerCase(),
+                      secondary: t.description ?? "—",
+                    })}
+                    columns={[
+                      { key: "createdAt", label: "Date", sortable: true, align: "right", render: (t) => (
+                        <span className="text-xs text-muted-foreground tabular-nums">{new Date(t.createdAt).toLocaleString()}</span>
+                      ) },
+                      { key: "reference", label: "Reference", render: (t) => <span className="font-mono text-xs text-muted-foreground">{t.reference ?? "—"}</span> },
+                      { key: "amount", label: "Amount", sortable: true, align: "right", render: (t) => {
+                        const numeric = Number(t.amount);
+                        return <span className={`font-semibold tabular-nums ${numeric >= 0 ? "text-up" : "text-down"}`}>{numeric >= 0 ? "+" : ""}{formatUsd(t.amount)}</span>;
+                      } },
+                      { key: "status", label: "Status", render: (t) => (
+                        <RecordStatusChip tone={t.status === "COMPLETED" ? "up" : t.status === "PENDING" ? "warn" : "down"}>{t.status}</RecordStatusChip>
+                      ) },
+                    ]}
+                    sortValue={(t, key) => {
+                      switch (key) {
+                        case "amount": return Number(t.amount);
+                        case "createdAt": return new Date(t.createdAt).getTime();
+                        default: return String((t as unknown as Record<string, unknown>)[key] ?? "");
+                      }
+                    }}
+                    initialSort={{ key: "createdAt", direction: "desc" }}
+                    detailTitle="Transaction Detail"
+                    renderDetailHero={(t) => {
+                      const numeric = Number(t.amount);
+                      return (
+                        <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+                          <IdentityTile size="lg" tone={numeric >= 0 ? "up" : "down"}>
+                            <ArrowDownToLine size={20} strokeWidth={2} aria-hidden />
+                          </IdentityTile>
+                          <div className="text-sm font-medium">{t.type.replaceAll("_", " ").toLowerCase()}</div>
+                          <div className={`text-2xl font-semibold tabular-nums ${numeric >= 0 ? "text-up" : "text-down"}`}>
+                            {numeric >= 0 ? "+" : ""}{formatUsd(t.amount)} <span className="text-sm font-normal text-muted-foreground">{t.asset}</span>
+                          </div>
+                          <RecordStatusChip tone={t.status === "COMPLETED" ? "up" : t.status === "PENDING" ? "warn" : "down"}>{t.status}</RecordStatusChip>
+                        </div>
+                      );
+                    }}
+                    renderDetailMeta={(t) => [
+                      { label: "Description", value: t.description ?? "—" },
+                      { label: "Reference", value: <span className="font-mono text-xs">{t.reference ?? "—"}</span> },
+                      { label: "Date", value: new Date(t.createdAt).toLocaleString() },
+                    ]}
+                    emptyTitle="No transactions."
+                  />
             </section>
           </div>
         ) : null}
@@ -1454,7 +1490,63 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
     setBusy(id); setError(null);
     try { await requestJson(`/api/admin/support/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status, resolutionNote }) }); await resource.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update case."); } finally { setBusy(null); }
   }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex justify-between"><SectionHeader title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} />{canManage && <Button loading={busy === "create"} onClick={() => void createCase()}>New case</Button>}</div>{error && <Alert tone="err" className="mb-3">{error}</Alert>}<div className="space-y-2">{resource.data.cases.map((item) => <article key={item.id} className="rounded-xl bg-card p-4 shadow-sm"><div className="flex flex-wrap justify-between gap-3"><div><div className="text-xs text-muted-foreground">{item.reference} · {item.priority} · {item.category}{item.brandDomain && <span className="ml-1.5 rounded bg-primary/10 px-1 py-px text-xs font-semibold text-primary">{item.brandDomain}</span>}</div><h3 className="mt-1 text-sm font-medium">{item.subject}</h3><p className="mt-1 max-w-3xl text-xs text-muted-foreground">{item.description}</p></div><div className="text-right"><span className="text-xs font-medium">{item.status}</span>{canManage && item.status !== "RESOLVED" && item.status !== "CLOSED" && <div className="mt-2 flex gap-2"><Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => void updateCase(item.id, "IN_PROGRESS")}><UserRound size={13} strokeWidth={2} aria-hidden /> Assign to me</Button><Button type="button" size="sm" disabled={busy !== null} onClick={() => void updateCase(item.id, "RESOLVED")}><CheckCircle2 size={13} strokeWidth={2} aria-hidden /> Resolve</Button></div>}</div></div></article>)}{resource.data.cases.length === 0 && <div className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">No support cases.</div>}</div>{commandDialog}</div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex justify-between"><SectionHeader title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} />{canManage && <Button loading={busy === "create"} onClick={() => void createCase()}>New case</Button>}</div>{error && <Alert tone="err" className="mb-3">{error}</Alert>}<RecordList<SupportCase>
+      ariaLabel="Case"
+      title="Cases"
+      description={`${resource.data.cases.length} cases`}
+      rows={resource.data.cases}
+      rowKey={(c) => c.id}
+      search={{ placeholder: "Search reference, subject, or category…", text: (c) => `${c.reference} ${c.subject} ${c.category} ${c.description}` }}
+      leading={(c) => ({
+        icon: <LifeBuoy size={15} strokeWidth={2} aria-hidden />,
+        tone: c.status === "RESOLVED" || c.status === "CLOSED" ? "muted" : c.status === "WAITING_CUSTOMER" ? "up" : "brand",
+        title: c.subject,
+        secondary: <span>{c.reference} · {c.category}{c.brandDomain && <span className="ml-1.5 rounded bg-primary/10 px-1 py-px text-xs font-semibold text-primary">{c.brandDomain}</span>}</span>,
+      })}
+      columns={[
+        { key: "priority", label: "Priority", render: (c) => (
+          <RecordStatusChip tone={c.priority === "URGENT" || c.priority === "HIGH" ? "down" : "muted"}>{c.priority}</RecordStatusChip>
+        ) },
+        { key: "status", label: "Status", render: (c) => (
+          <RecordStatusChip tone={c.status === "RESOLVED" ? "up" : c.status === "OPEN" ? "warn" : "brand"}>{c.status}</RecordStatusChip>
+        ) },
+        { key: "createdAt", label: "Opened", sortable: true, align: "right", render: (c) => (
+          <span className="text-xs text-muted-foreground tabular-nums">{fmtAgo(c.createdAt)}</span>
+        ) },
+      ]}
+      sortValue={(c, key) => key === "createdAt" ? new Date(c.createdAt).getTime() : String((c as unknown as Record<string, unknown>)[key] ?? "")}
+      initialSort={{ key: "createdAt", direction: "desc" }}
+      detailTitle="Case Detail"
+      renderDetailHero={(c) => (
+        <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+          <IdentityTile size="lg" tone={c.status === "RESOLVED" ? "muted" : "brand"}><LifeBuoy size={20} strokeWidth={2} aria-hidden /></IdentityTile>
+          <div className="text-sm font-medium">{c.subject}</div>
+          <div className="font-mono text-xs text-muted-foreground">{c.reference}</div>
+          <RecordStatusChip tone={c.status === "RESOLVED" ? "up" : c.status === "OPEN" ? "warn" : "brand"}>{c.status}</RecordStatusChip>
+        </div>
+      )}
+      renderDetailMeta={(c) => [
+        { label: "Category", value: c.category },
+        { label: "Priority", value: c.priority },
+        { label: "Opened", value: fmtDateTime(c.createdAt) },
+      ]}
+      renderDetailExtra={(c) => (
+        <div className="space-y-3">
+          <div className="rounded-xl bg-muted/40 p-4">
+            <div className="text-xs font-medium text-muted-foreground">Description</div>
+            <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">{c.description}</p>
+          </div>
+          {canManage && c.status !== "RESOLVED" && c.status !== "CLOSED" && (
+            <div className="flex gap-2">
+              {c.status === "OPEN" && <Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => void updateCase(c.id, "IN_PROGRESS")}><UserRound size={13} strokeWidth={2} aria-hidden /> Assign to me</Button>}
+              <Button type="button" size="sm" disabled={busy !== null} onClick={() => void updateCase(c.id, "RESOLVED")}><CheckCircle2 size={13} strokeWidth={2} aria-hidden /> Resolve</Button>
+            </div>
+          )}
+        </div>
+      )}
+      emptyTitle="No support cases."
+    />
+    {commandDialog}</div>}</ModuleState>;
 }
 
 interface InstrumentRow extends Record<string, unknown> { symbol: string; name: string; category: string; active: boolean; marginPerLot: string; commissionPerLot: string; swapLongPips: string; swapShortPips: string; feedSymbol: string | null }
@@ -1508,14 +1600,105 @@ function InstrumentsPanel({ canManage }: { canManage: boolean }) {
 interface RiskRuleRow extends Record<string, unknown> { id: string; code: string; name: string; severity: string; enabled: boolean; version: number; configuration: unknown; updatedAt: string }
 function RiskPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<{ rules: RiskRuleRow[]; exposure: Record<string, number>; mutationPolicy: string }>("/api/admin/risk");
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Risk controls" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} /><div className="flex flex-wrap gap-2">{Object.entries(resource.data.exposure).map(([key, value]) => <Badge key={key} variant="secondary">{key.replaceAll(/([A-Z])/g, " $1")}: <strong className="ml-1 tabular-nums">{value}</strong></Badge>)}</div>{canManage && <ChangeHint text="Risk changes are proposed in Approvals and become effective only after a separate checker executes them." />}<SimpleTable columns={["code", "name", "severity", "enabled", "version", "configuration", "updatedAt"]} rows={resource.data.rules} empty="No risk rules." /></div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Risk controls" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} /><div className="flex flex-wrap gap-2">{Object.entries(resource.data.exposure).map(([key, value]) => <Badge key={key} variant="secondary">{key.replaceAll(/([A-Z])/g, " $1")}: <strong className="ml-1 tabular-nums">{value}</strong></Badge>)}</div>{canManage && <ChangeHint text="Risk changes are proposed in Approvals and become effective only after a separate checker executes them." />}
+    <RecordList<RiskRuleRow>
+      ariaLabel="Rule"
+      title="Risk rules"
+      description={`${resource.data.rules.length} rules`}
+      rows={resource.data.rules}
+      rowKey={(r) => r.id}
+      search={{ placeholder: "Search code, name, or severity…", text: (r) => `${r.code} ${r.name} ${r.severity}` }}
+      leading={(r) => ({
+        icon: <ShieldAlert size={15} strokeWidth={2} aria-hidden />,
+        tone: r.severity === "CRITICAL" ? "down" : r.severity === "HIGH" ? "warn" : "muted",
+        title: r.name,
+        secondary: r.code,
+      })}
+      columns={[
+        { key: "severity", label: "Severity", render: (r) => (
+          <RecordStatusChip tone={r.severity === "CRITICAL" ? "down" : r.severity === "HIGH" ? "warn" : "muted"}>{r.severity}</RecordStatusChip>
+        ) },
+        { key: "enabled", label: "State", render: (r) => (
+          <RecordStatusChip tone={r.enabled ? "up" : "muted"}>{r.enabled ? "Enabled" : "Disabled"}</RecordStatusChip>
+        ) },
+        { key: "version", label: "Version", sortable: true, align: "right", render: (r) => <span className="tabular-nums">v{r.version}</span> },
+        { key: "updatedAt", label: "Updated", sortable: true, align: "right", render: (r) => (
+          <span className="text-xs text-muted-foreground tabular-nums">{fmtAgo(r.updatedAt)}</span>
+        ) },
+      ]}
+      sortValue={(r, key) => key === "version" ? r.version : key === "updatedAt" ? new Date(r.updatedAt).getTime() : String((r as unknown as Record<string, unknown>)[key] ?? "")}
+      detailTitle="Rule Detail"
+      renderDetailHero={(r) => (
+        <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+          <IdentityTile size="lg" tone={r.severity === "CRITICAL" ? "down" : r.severity === "HIGH" ? "warn" : "muted"}><ShieldAlert size={20} strokeWidth={2} aria-hidden /></IdentityTile>
+          <div className="text-sm font-medium">{r.name}</div>
+          <div className="font-mono text-xs text-muted-foreground">{r.code}</div>
+          <RecordStatusChip tone={r.enabled ? "up" : "muted"}>{r.enabled ? "Enabled" : "Disabled"}</RecordStatusChip>
+        </div>
+      )}
+      renderDetailMeta={(r) => [
+        { label: "Severity", value: r.severity },
+        { label: "Version", value: `v${r.version}` },
+        { label: "Updated", value: fmtDateTime(r.updatedAt) },
+      ]}
+      renderDetailExtra={(r) => (
+        <div className="rounded-xl bg-muted/40 p-4">
+          <div className="text-xs font-medium text-muted-foreground">Configuration</div>
+          <pre className="mt-2 overflow-auto rounded-lg bg-card p-3 text-xs">{JSON.stringify(r.configuration, null, 2)}</pre>
+        </div>
+      )}
+      emptyTitle="No risk rules."
+    />
+  </div>}</ModuleState>;
 }
 
 interface AuditEventRow extends Record<string, unknown> { sequence: string; domain: string; action: string; entityType: string; entityId: string | null; actorId: string | null; createdAt: string; metadata: unknown; eventHash: string }
 function AuditPanel({ canVerify, canExport }: { canVerify: boolean; canExport: boolean }) {
   const resource = useResource<{ events: AuditEventRow[]; redacted: boolean }>("/api/admin/audit?limit=150");
   async function verify() { try { const result = await requestJson<{ valid: boolean; checkedEvents: number }>("/api/admin/audit/verify", { method: "POST" }); toast.success(`Chain ${result.valid ? "valid" : "invalid"}`, `Checked ${result.checkedEvents} events.`); await resource.refresh(); } catch (cause) { toast.error("Verification failed", cause instanceof Error ? cause.message : "Verification failed."); } }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex flex-wrap items-start justify-between gap-3"><SectionHeader title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} /><div className="flex gap-2">{canVerify && <Button type="button" size="sm" onClick={() => void verify()}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Verify chain</Button>}{canExport && <Button type="button" size="sm" variant="outline" asChild><a href="/api/admin/audit/export?format=csv&limit=500"><Download size={13} strokeWidth={2} aria-hidden /> Export CSV</a></Button>}</div></div><SimpleTable columns={["sequence", "domain", "action", "entityType", "entityId", "actorId", "createdAt", "metadata"]} rows={resource.data.events} empty="No audit events." /></div>}</ModuleState>;
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex flex-wrap items-start justify-between gap-3"><SectionHeader title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} /><div className="flex gap-2">{canVerify && <Button type="button" size="sm" onClick={() => void verify()}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Verify chain</Button>}{canExport && <Button type="button" size="sm" variant="outline" asChild><a href="/api/admin/audit/export?format=csv&limit=500"><Download size={13} strokeWidth={2} aria-hidden /> Export CSV</a></Button>}</div></div><RecordList<AuditEventRow>
+      ariaLabel="Event"
+      title="Audit trail"
+      description={`${resource.data.events.length} events${resource.data.redacted ? " · export-redacted view" : ""}`}
+      rows={resource.data.events}
+      rowKey={(e) => String(e.sequence)}
+      search={{ placeholder: "Search domain, action, entity, or actor…", text: (e) => `${e.domain} ${e.action} ${e.entityType} ${e.entityId ?? ""} ${e.actorId ?? ""}` }}
+      leading={(e) => ({
+        icon: <ScrollText size={15} strokeWidth={2} aria-hidden />,
+        tone: e.domain === "ADMIN" ? "brand" : "muted",
+        title: e.action.replaceAll(/([A-Z])/g, " $1").toLowerCase(),
+        secondary: `${e.domain} · ${e.entityType}${e.entityId ? ` ${e.entityId.slice(0, 10)}…` : ""}`,
+      })}
+      columns={[
+        { key: "actorId", label: "Actor", render: (e) => <span className="font-mono text-xs text-muted-foreground">{e.actorId ?? "system"}</span> },
+        { key: "createdAt", label: "Recorded", sortable: true, align: "right", render: (e) => (
+          <span className="text-xs text-muted-foreground tabular-nums">{fmtDateTime(e.createdAt)}</span>
+        ) },
+      ]}
+      sortValue={(e, key) => key === "createdAt" ? new Date(e.createdAt).getTime() : String((e as unknown as Record<string, unknown>)[key] ?? "")}
+      initialSort={{ key: "createdAt", direction: "desc" }}
+      detailTitle="Event Detail"
+      renderDetailHero={(e) => (
+        <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+          <IdentityTile size="lg" tone={e.domain === "ADMIN" ? "brand" : "muted"}><ScrollText size={20} strokeWidth={2} aria-hidden /></IdentityTile>
+          <div className="text-sm font-medium">{e.action.replaceAll(/([A-Z])/g, " $1").toLowerCase()}</div>
+          <div className="text-xs text-muted-foreground">{e.domain} · sequence {e.sequence}</div>
+        </div>
+      )}
+      renderDetailMeta={(e) => [
+        { label: "Entity", value: `${e.entityType}${e.entityId ? ` · ${e.entityId}` : ""}` },
+        { label: "Actor", value: <span className="font-mono text-xs">{e.actorId ?? "system"}</span> },
+        { label: "Recorded", value: fmtDateTime(e.createdAt) },
+        { label: "Event hash", value: <span className="font-mono text-xs">{e.eventHash.slice(0, 16)}…</span> },
+      ]}
+      renderDetailExtra={(e) => (
+        <div className="rounded-xl bg-muted/40 p-4">
+          <div className="text-xs font-medium text-muted-foreground">Metadata</div>
+          <pre className="mt-2 overflow-auto rounded-lg bg-card p-3 text-xs">{JSON.stringify(e.metadata, null, 2)}</pre>
+        </div>
+      )}
+      emptyTitle="No audit events."
+    /></div>}</ModuleState>;
 }
 
 interface HealthResponse {
@@ -1659,31 +1842,60 @@ function ChangesPanel({
               }}
             />
           )}
-          <div className="space-y-2">
-            {resource.data.requests.map((item) => (
-              <article key={item.id} className="rounded-xl bg-card p-4 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <Badge variant="secondary" className="px-1.5 py-0 text-xs">{item.domain}</Badge>
-                      <Badge variant="secondary" className={`px-1.5 py-0 text-xs ${item.status === "PENDING" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-(--term-success-bg) text-(--term-success-fg)"}`}>{item.status}</Badge>
-                      <span className="tabular-nums">{new Date(item.createdAt).toLocaleString()}</span>
-                    </div>
-                    <h3 className="mt-1.5 text-sm font-medium">{item.action.replaceAll(/([A-Z])/g, " $1").toLowerCase()} · {item.entityType} {item.entityId ?? ""}</h3>
-                    <pre className="mt-2 max-w-3xl overflow-auto rounded-lg bg-muted/60 p-2 text-xs">{JSON.stringify(item.payload, null, 2)}</pre>
-                    <div className="mt-1 text-xs text-muted-foreground">Maker: {item.requestedById}{item.reviewedById ? ` · Checker: ${item.reviewedById}` : ""}</div>
-                  </div>
-                  {item.canReview && item.status === "PENDING" && (
-                    <div className="flex gap-2">
-                      <Button type="button" size="sm" variant="outline" className="text-down" onClick={() => void review(item.id, "REJECT")}><Ban size={13} strokeWidth={2} aria-hidden /> Reject</Button>
-                      <Button type="button" size="sm" onClick={() => void review(item.id, "APPROVE")}><Check size={13} strokeWidth={2} aria-hidden /> Approve</Button>
-                    </div>
-                  )}
+          <RecordList<ChangeRow>
+            ariaLabel="Request"
+            title="Change requests"
+            description={`${resource.data.requests.length} requests`}
+            rows={resource.data.requests}
+            rowKey={(r) => r.id}
+            search={{ placeholder: "Search domain, action, or entity…", text: (r) => `${r.domain} ${r.action} ${r.entityType} ${r.entityId ?? ""} ${r.requestedById}` }}
+            leading={(r) => ({
+              icon: <ClipboardCheck size={15} strokeWidth={2} aria-hidden />,
+              tone: r.status === "PENDING" ? "warn" : r.status === "APPROVED" ? "up" : "down",
+              title: r.action.replaceAll(/([A-Z])/g, " $1").toLowerCase(),
+              secondary: `${r.domain} · ${r.entityType}${r.entityId ? ` ${r.entityId.slice(0, 8)}…` : ""}`,
+            })}
+            columns={[
+              { key: "status", label: "Status", render: (r) => (
+                <RecordStatusChip tone={r.status === "PENDING" ? "warn" : r.status === "APPROVED" ? "up" : "down"}>{r.status}</RecordStatusChip>
+              ) },
+              { key: "createdAt", label: "Proposed", sortable: true, align: "right", render: (r) => (
+                <span className="text-xs text-muted-foreground tabular-nums">{fmtAgo(r.createdAt)}</span>
+              ) },
+            ]}
+            sortValue={(r, key) => key === "createdAt" ? new Date(r.createdAt).getTime() : String((r as unknown as Record<string, unknown>)[key] ?? "")}
+            initialSort={{ key: "createdAt", direction: "desc" }}
+            detailTitle="Change Request"
+            renderDetailHero={(r) => (
+              <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
+                <IdentityTile size="lg" tone={r.status === "PENDING" ? "warn" : r.status === "APPROVED" ? "up" : "down"}><ClipboardCheck size={20} strokeWidth={2} aria-hidden /></IdentityTile>
+                <div className="text-sm font-medium">{r.action.replaceAll(/([A-Z])/g, " $1").toLowerCase()}</div>
+                <div className="text-xs text-muted-foreground">{r.domain} · {r.entityType}</div>
+                <RecordStatusChip tone={r.status === "PENDING" ? "warn" : r.status === "APPROVED" ? "up" : "down"}>{r.status}</RecordStatusChip>
+              </div>
+            )}
+            renderDetailMeta={(r) => [
+              { label: "Entity", value: `${r.entityType}${r.entityId ? ` · ${r.entityId}` : ""}` },
+              { label: "Maker", value: r.requestedById },
+              ...(r.reviewedById ? [{ label: "Checker", value: r.reviewedById }] : []),
+              { label: "Proposed", value: fmtDateTime(r.createdAt) },
+            ]}
+            renderDetailExtra={(r) => (
+              <div className="space-y-3">
+                <div className="rounded-xl bg-muted/40 p-4">
+                  <div className="text-xs font-medium text-muted-foreground">Payload</div>
+                  <pre className="mt-2 overflow-auto rounded-lg bg-card p-3 text-xs">{JSON.stringify(r.payload, null, 2)}</pre>
                 </div>
-              </article>
-            ))}
-            {resource.data.requests.length === 0 && <div className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">No change requests.</div>}
-          </div>
+                {r.canReview && r.status === "PENDING" && (
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" variant="outline" className="text-down" onClick={() => void review(r.id, "REJECT")}><Ban size={13} strokeWidth={2} aria-hidden /> Reject</Button>
+                    <Button type="button" size="sm" onClick={() => void review(r.id, "APPROVE")}><CheckCircle2 size={13} strokeWidth={2} aria-hidden /> Approve</Button>
+                  </div>
+                )}
+              </div>
+            )}
+            emptyTitle="No change requests."
+          />
           {commandDialog}
         </div>
       )}
@@ -1749,14 +1961,14 @@ function ChangeRequestComposer({
   return (
     <form onSubmit={submit} className="rounded-lg border border-primary/30 bg-primary/10/40 p-4">
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="text-xs">Change type
+        <Label className="text-xs">Change type
           <NativeSelect name="action" value={action} onChange={(event) => setAction(event.target.value as ChangeAction)} className="mt-1">
             {allowedActions.map((item) => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}
           </NativeSelect>
-        </label>
-        <label className="text-xs">Request note
+        </Label>
+        <Label className="text-xs">Request note
           <Input name="requestNote" maxLength={1000} className="mt-1" placeholder="Operational reason and ticket reference" />
-        </label>
+        </Label>
       </div>
       {(action === "ASSIGN_ROLE" || action === "REVOKE_ROLE") && <RoleChangeFields userId={prefill?.userId} label={prefill?.label} />}
       {action === "UPDATE_RISK_RULE" && <RiskChangeFields />}
@@ -1771,11 +1983,11 @@ function RoleChangeFields({ userId, label }: { userId?: string; label?: string }
   return (
     <div className="mt-3 grid gap-3 md:grid-cols-3">
       <FieldInput name="userId" label={label ? `Target user (${label})` : "Target user ID"} defaultValue={userId} required />
-      <label className="text-xs">Role
+      <Label className="text-xs">Role
         <NativeSelect name="role" className="mt-1" defaultValue="SUPPORT">
           {["SUPER_ADMIN", "COMPLIANCE", "FINANCE", "DEALER", "RISK", "SUPPORT", "AUDITOR"].map((role) => <option key={role}>{role}</option>)}
         </NativeSelect>
-      </label>
+      </Label>
       <FieldInput name="reason" label="Reason" required />
     </div>
   );
@@ -1786,14 +1998,14 @@ function RiskChangeFields() {
     <div className="mt-3 grid gap-3 md:grid-cols-3">
       <FieldInput name="code" label="Rule code" placeholder="MAX_ORDER_VOLUME" required />
       <FieldInput name="name" label="Rule name" required />
-      <label className="text-xs">Severity
+      <Label className="text-xs">Severity
         <NativeSelect name="severity" className="mt-1" defaultValue="WARNING">
           <option>INFO</option><option>WARNING</option><option>BLOCKING</option>
         </NativeSelect>
-      </label>
+      </Label>
       <FieldInput name="description" label="Description" required />
       <FieldInput name="configuration" label="Configuration JSON" placeholder='{"maxLots":"50"}' required />
-      <label className="flex items-center gap-2 self-end pb-2 text-xs"><Checkbox name="enabled" defaultChecked /> Enabled</label>
+      <Label className="flex items-center gap-2 self-end pb-2 text-xs"><Checkbox name="enabled" defaultChecked /> Enabled</Label>
     </div>
   );
 }
@@ -1806,13 +2018,13 @@ function InstrumentChangeFields() {
       <FieldInput name="commissionPerLot" label="Commission per lot" type="number" step="0.00000001" required />
       <FieldInput name="swapLongPips" label="Long swap pips" type="number" step="0.00000001" required />
       <FieldInput name="swapShortPips" label="Short swap pips" type="number" step="0.00000001" required />
-      <label className="flex items-center gap-2 self-end pb-2 text-xs"><Checkbox name="active" defaultChecked /> Active</label>
+      <Label className="flex items-center gap-2 self-end pb-2 text-xs"><Checkbox name="active" defaultChecked /> Active</Label>
     </div>
   );
 }
 
 function FieldInput({ name, label, ...props }: { name: string; label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return <label className="text-xs">{label}<Input name={name} className="mt-1" {...props} /></label>;
+  return <Label className="text-xs">{label}<Input name={name} className="mt-1" {...props} /></Label>;
 }
 
 function buildChangeRequest(action: ChangeAction, form: FormData): Record<string, unknown> {
@@ -1852,33 +2064,3 @@ function buildChangeRequest(action: ChangeAction, form: FormData): Record<string
 
 function ChangeHint({ text }: { text: string }) { return <Alert tone="info" className="mb-3">{text}</Alert>; }
 
-function displayValue(value: unknown): string {
-  if (value == null) return "—";
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (typeof value === "object") return JSON.stringify(value);
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value)) return new Date(value).toLocaleString();
-  return String(value);
-}
-function SimpleTable({ columns, rows, empty }: { columns: string[]; rows: Array<Record<string, unknown>>; empty: string }) {
-  const pageSize = 25;
-  const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
-  useEffect(() => setPage(1), [rows]);
-
-  return (
-    <div className="overflow-hidden rounded-xl bg-card shadow-sm">
-      <div className="overflow-x-auto">
-        <Table className="w-full min-w-225 text-left text-xs">
-          <TableHeader><TableRow>{columns.map((column) => <TableHead key={column}>{column.replaceAll(/([A-Z])/g, " $1")}</TableHead>)}</TableRow></TableHeader>
-          <TableBody>
-            {visibleRows.map((row, index) => <TableRow key={String(row.id ?? row.code ?? row.symbol ?? index)}>{columns.map((column) => <TableCell key={column} className="max-w-80 truncate" title={displayValue(row[column])}>{displayValue(row[column])}</TableCell>)}</TableRow>)}
-            {rows.length === 0 && <TableRow><TableCell colSpan={columns.length} className="p-8 text-center text-muted-foreground">{empty}</TableCell></TableRow>}
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination page={safePage} pageSize={pageSize} totalItems={rows.length} onPageChange={setPage} label="rows" compact />
-    </div>
-  );
-}

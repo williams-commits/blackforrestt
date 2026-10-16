@@ -79,6 +79,7 @@ export function RecordList<T>({
   emptyIcon,
   onRowActivate,
   mobilePrimary,
+  sheetWidth = "sm:max-w-lg",
   className,
 }: {
   ariaLabel: string;
@@ -121,6 +122,8 @@ export function RecordList<T>({
   /** Concise right-hand metric shown on phones (defaults to the last
    *  right-aligned column). */
   mobilePrimary?: (row: T) => React.ReactNode;
+  /** Detail slide-over width — Tailwind max-width class. */
+  sheetWidth?: string;
   className?: string;
 }) {
   const [sort, setSort] = React.useState<{ key: string; direction: "asc" | "desc" }>(
@@ -128,7 +131,10 @@ export function RecordList<T>({
   );
   const [query, setQuery] = React.useState("");
   const [visible, setVisible] = React.useState(pageSize);
-  const [detail, setDetail] = React.useState<T | null>(null);
+  const [detailKey, setDetailKey] = React.useState<string | null>(null);
+  // Derive the LIVE row from the current rows — the stored key survives
+  // data refreshes so the slider always shows current data.
+  const detail = detailKey != null ? rows.find((r) => rowKey(r) === detailKey) ?? null : null;
 
   React.useEffect(() => setVisible(pageSize), [pageSize, query, sort]);
 
@@ -158,7 +164,7 @@ export function RecordList<T>({
 
   const activate = (row: T) => {
     if (onRowActivate) onRowActivate(row);
-    else setDetail(row);
+    else setDetailKey(rowKey(row));
   };
 
   const toggleSort = (key: string) =>
@@ -349,8 +355,8 @@ export function RecordList<T>({
       </CardContent>
 
       {/* Master–detail side slide */}
-      <Sheet open={detail != null} onOpenChange={(open) => { if (!open) setDetail(null); }}>
-        <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-md">
+      <Sheet open={detail != null} onOpenChange={(open) => { if (!open) setDetailKey(null); }}>
+        <SheetContent side="right" className={cn("flex w-full flex-col gap-0 overflow-y-auto p-0", sheetWidth)}>
           <SheetHeader className="space-y-1 pb-2">
             <SheetTitle>{detailTitle}</SheetTitle>
             <SheetDescription>Full record details.</SheetDescription>

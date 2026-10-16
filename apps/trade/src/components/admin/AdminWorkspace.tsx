@@ -9,7 +9,7 @@ import { AdminMessages } from "./AdminMessages";
 import { GroupsPanel } from "./GroupsPanel";
 import { SettingsForm, type UserSettingsConfig } from "./SettingsForm";
 import { Button } from "@/components/ui/Button";
-import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
+import { SimpleDialog, SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { useCommandDialog } from "@/components/ui/useCommandDialog";
 import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -31,11 +31,12 @@ import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDownToLine, ArrowLeftRight, Ban, CheckCircle2, Download, LifeBuoy, ScrollText, ShieldAlert, SlidersHorizontal, UserRound } from "lucide-react";
+import { ArrowDownToLine, ArrowLeftRight, Ban, CheckCircle2, DollarSign, Download, LifeBuoy, ScrollText, ShieldAlert, SlidersHorizontal, UserRound } from "lucide-react";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { TableSearch } from "@/components/ui/DataTable";
+import { Textarea } from "@/components/ui/Textarea";
 
 type Permission = string;
 type TabKey =
@@ -1132,49 +1133,44 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<ExecutionStatusFilter>("ALL");
-  const { openCommand, commandDialog } = useCommandDialog();
+  const [positionFilter, setPositionFilter] = useState<"ALL" | "OPEN" | "CLOSED">("ALL");
+  const [profitTarget, setProfitTarget] = useState<ExecutionPosition | null>(null);
+  const [profitValue, setProfitValue] = useState("");
+  const [profitReason, setProfitReason] = useState("");
+  const [closeTarget, setCloseTarget] = useState<ExecutionPosition | null>(null);
+  const [closeReason, setCloseReason] = useState("");
 
-  async function setProfit(position: ExecutionPosition) {
-    const values = await openCommand({
-      title: `Set P/L · ${position.symbol}`,
-      description: "Dealer adjustment for the net profit of this open position.",
-      confirmLabel: "Post adjustment",
-      fields: [{ name: "value", label: "New net P/L (USD, can be negative)", type: "text", required: true, minLength: 2, placeholder: "-12.50" }],
-      validate: (input) => /^-?\d+(\.\d+)?$/.test(input.value) ? null : "Enter a decimal number.",
-    });
-    if (!values) return;
-    setBusy(position.id);
+  async function submitProfit() {
+    if (!profitTarget || !/^-?\d+(\.\d+)?$/.test(profitValue) || profitReason.trim().length < 5) return;
+    setBusy(profitTarget.id);
     setError(null);
     try {
-      await requestJson(`/api/admin/executions/${position.id}`, {
+      await requestJson(`/api/admin/executions/${profitTarget.id}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "ADJUST_PNL", value: values.value }),
+        body: JSON.stringify({ action: "SET_PROFIT", targetProfit: Number(profitValue), reason: profitReason.trim() }),
       });
+      setProfitTarget(null);
+      setProfitValue("");
+      setProfitReason("");
       await resource.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to adjust the position P/L.");
     } finally { setBusy(null); }
   }
 
-  async function closePosition(position: ExecutionPosition) {
-    const values = await openCommand({
-      title: `Close position · ${position.symbol}`,
-      description: "Closes the open position at the current mark. The reason is audit-logged.",
-      confirmLabel: "Close position",
-      danger: true,
-      fields: [{ name: "reason", label: "Reason", type: "textarea", required: true, minLength: 3, maxLength: 200 }],
-      validate: (input) => input.reason.length >= 3 ? null : "A reason of at least 3 characters is required.",
-    });
-    if (!values) return;
-    setBusy(position.id);
+  async function submitClose() {
+    if (!closeTarget || closeReason.trim().length < 3) return;
+    setBusy(closeTarget.id);
     setError(null);
     try {
-      await requestJson(`/api/admin/executions/${position.id}`, {
+      await requestJson(`/api/admin/executions/${closeTarget.id}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "CLOSE", reason: values.reason }),
+        body: JSON.stringify({ action: "CLOSE", reason: closeReason.trim() }),
       });
+      setCloseTarget(null);
+      setCloseReason("");
       await resource.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to close the position.");
@@ -1187,13 +1183,42 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
   const filtered = useMemo(() => allPositions.filter((p) => statusFilter === "ALL" || p.status === statusFilter), [allPositions, statusFilter]);
   const totalNetPl = filtered.reduce((sum, p) => sum + Number(p.netProfit), 0);
   const filtering = statusFilter !== "ALL";
-  const userCount = new Set(filtered.map((p) => p.user.email ?? p.user.accountNo ?? p.id)).size;
 
   const csvRows = filtered.map((p) => [
     p.user.email ?? "", p.user.accountNo ?? "", p.symbol, p.type ?? "", p.side, p.status,
     Number(p.volume), fmtDateTime(p.openedAt), p.closedAt ? fmtDateTime(p.closedAt) : "",
     Number(p.profit).toFixed(2), Number(p.adminPnlAdjustment).toFixed(2), Number(p.netProfit).toFixed(2),
   ]);
+
+  interface UserGroup {
+    key: string;
+    label: string;
+    accountNo: string | null;
+    positions: ExecutionPosition[];
+    open: number;
+    netPl: number;
+  }
+  const groups = useMemo(() => {
+    const byUser = new Map<string, UserGroup>();
+    for (const p of filtered) {
+      const key = p.user.email ?? p.user.accountNo ?? p.id;
+      const g = byUser.get(key) ?? { key, label: p.user.email ?? p.user.accountNo ?? "Unknown", accountNo: p.user.accountNo, positions: [], open: 0, netPl: 0 };
+      g.positions.push(p);
+      g.open += p.status === "OPEN" ? 1 : 0;
+      g.netPl += Number(p.netProfit);
+      byUser.set(key, g);
+    }
+    return [...byUser.values()].sort((a, b) => b.open - a.open || b.netPl - a.netPl || a.label.localeCompare(b.label));
+  }, [filtered]);
+
+  const positionFilterLabel = (g: UserGroup) => {
+    const counts = {
+      ALL: g.positions.length,
+      OPEN: g.positions.filter((p) => p.status === "OPEN").length,
+      CLOSED: g.positions.filter((p) => p.status === "CLOSED").length,
+    };
+    return counts;
+  };
 
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4">
     <SectionHeader title="Execution and position surveillance" description={resource.data.providerWarning} onRefresh={() => void resource.refresh()} />
@@ -1206,19 +1231,20 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
     {resource.data.total > allPositions.length && (
       <Alert tone="info">Showing the {allPositions.length} most recent positions of {resource.data.total.toLocaleString("en-US")} — narrow with the status filter.</Alert>
     )}
-    <RecordList<ExecutionPosition>
-      ariaLabel="Position"
-      title="Positions"
+    <RecordList<UserGroup>
+      ariaLabel="Account"
+      title="Positions by user"
+      sheetWidth="sm:max-w-2xl"
       description={
         <>
-          {filtering ? `${filtered.length} of ${allPositions.length}` : `${allPositions.length} positions · ${userCount} user${userCount === 1 ? "" : "s"}`}
+          {groups.length} account{groups.length === 1 ? "" : "s"} · {filtering ? `${filtered.length} of ${allPositions.length}` : `${allPositions.length}`} positions
           {" · net P/L "}
           <span className={pnlClass(totalNetPl)}>{fmtExecNumber(totalNetPl.toFixed(2))}</span>
         </>
       }
-      rows={filtered}
-      rowKey={(p) => p.id}
-      search={{ placeholder: "Search symbol, email, or account…", text: (p) => `${p.symbol} ${p.user.email ?? ""} ${p.user.accountNo ?? ""}` }}
+      rows={groups}
+      rowKey={(g) => g.key}
+      search={{ placeholder: "Search symbol, email, or account…", text: (g) => `${g.label} ${g.accountNo ?? ""} ${g.positions.map((p) => p.symbol).join(" ")}` }}
       filters={
         <ChipGroup
           ariaLabel="Filter positions by status"
@@ -1239,68 +1265,205 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
           disabled={filtered.length === 0}
         />
       }
-      leading={(p) => ({
-        icon: <InstrumentIcon symbol={p.symbol} size={18} />,
-        tone: p.side === "BUY" ? "up" : "down",
-        title: p.symbol,
-        secondary: <span>{p.side} · {fmtExecNumber(p.volume)} lots · {p.user.email ?? p.user.accountNo}</span>,
+      leading={(g) => ({
+        icon: <IdentityTile tone={g.open > 0 ? "up" : "muted"}>{initialsOf(g.label)}</IdentityTile>,
+        title: g.label,
+        secondary: <span>{g.accountNo && g.accountNo !== g.label ? `#${g.accountNo} · ` : ""}{g.positions.length} position{g.positions.length === 1 ? "" : "s"}</span>,
       })}
       columns={[
-        { key: "status", label: "Status", render: (p) => (
-          <RecordStatusChip tone={p.status === "OPEN" ? "warn" : "muted"}>{p.status}</RecordStatusChip>
+        { key: "open", label: "Open", sortable: true, align: "right", render: (g) => (
+          g.open > 0
+            ? <Badge variant="secondary" className="bg-primary/10 px-1.5 py-0 text-xs text-primary">{g.open}</Badge>
+            : <span className="text-xs text-muted-foreground">0</span>
         ) },
-        { key: "openRate", label: "Open/Mark", align: "right", render: (p) => (
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {fmtExecNumber(p.openRate ?? "0")}{p.status === "OPEN" ? ` → ${fmtExecNumber(p.currentRate ?? "0")}` : ""}
-          </span>
-        ) },
-        { key: "netProfit", label: "Net P/L", sortable: true, align: "right", render: (p) => (
-          <span className={`font-semibold tabular-nums ${pnlClass(Number(p.netProfit))}`}>
-            {Number(p.netProfit) >= 0 ? "+" : ""}{fmtExecNumber(p.netProfit)}
+        { key: "netPl", label: "Net P/L", sortable: true, align: "right", render: (g) => (
+          <span className={`font-semibold tabular-nums ${pnlClass(g.netPl)}`}>
+            {g.netPl >= 0 ? "+" : ""}{fmtExecNumber(g.netPl.toFixed(2))}
           </span>
         ) },
       ]}
-      sortValue={(p, key) => key === "netProfit" ? Number(p.netProfit) : String((p as unknown as Record<string, unknown>)[key] ?? "")}
-      mobilePrimary={(p) => (
-        <span className={pnlClass(Number(p.netProfit))}>
-          {Number(p.netProfit) >= 0 ? "+" : ""}{fmtExecNumber(p.netProfit)}
-        </span>
+      sortValue={(g, key) => {
+        switch (key) {
+          case "open": return g.open;
+          case "netPl": return g.netPl;
+          default: return String((g as unknown as Record<string, unknown>)[key] ?? "");
+        }
+      }}
+      initialSort={{ key: "open", direction: "desc" }}
+      mobilePrimary={(g) => (
+        <span className={pnlClass(g.netPl)}>{g.netPl >= 0 ? "+" : ""}{fmtExecNumber(g.netPl.toFixed(2))}</span>
       )}
-      detailTitle="Position Detail"
-      renderDetailHero={(p) => (
+      detailTitle="Account Positions"
+      renderDetailHero={(g) => (
         <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
-          <IdentityTile size="lg" tone={p.side === "BUY" ? "up" : "down"}><InstrumentIcon symbol={p.symbol} size={30} /></IdentityTile>
-          <div className="text-sm font-medium">{p.symbol} · {p.side}</div>
-          <div className={`text-2xl font-semibold tabular-nums ${pnlClass(Number(p.netProfit))}`}>
-            {Number(p.netProfit) >= 0 ? "+" : ""}{fmtExecNumber(p.netProfit)} <span className="text-sm font-normal text-muted-foreground">USD</span>
+          <IdentityTile size="lg" tone={g.open > 0 ? "up" : "muted"}>{initialsOf(g.label)}</IdentityTile>
+          <div className="text-sm font-medium">{g.label}</div>
+          {g.accountNo && <div className="font-mono text-xs text-muted-foreground">#{g.accountNo}</div>}
+          <div className={`text-2xl font-semibold tabular-nums ${pnlClass(g.netPl)}`}>
+            {g.netPl >= 0 ? "+" : ""}{fmtExecNumber(g.netPl.toFixed(2))} <span className="text-sm font-normal text-muted-foreground">USD</span>
           </div>
-          <RecordStatusChip tone={p.status === "OPEN" ? "warn" : "muted"}>{p.status}</RecordStatusChip>
+          <Badge variant="secondary" className="bg-primary/10 px-1.5 text-primary">{g.open} open · {g.positions.length - g.open} closed</Badge>
         </div>
       )}
-      renderDetailMeta={(p) => [
-        { label: "User", value: `${p.user.email ?? "—"} · #${p.user.accountNo ?? "—"}` },
-        { label: "Volume", value: `${fmtExecNumber(p.volume)} lots` },
-        { label: "Type", value: p.type ?? "CFD" },
-        { label: "Open rate", value: fmtExecNumber(p.openRate ?? "0") },
-        { label: p.status === "OPEN" ? "Mark rate" : "Close rate", value: fmtExecNumber(p.currentRate ?? "0") },
-        { label: "Gross P/L", value: fmtExecNumber(p.profit) },
-        { label: "Adjustment", value: fmtExecNumber(p.adminPnlAdjustment) },
-        ...(Number(p.commission ?? 0) !== 0 ? [{ label: "Commission", value: fmtExecNumber(p.commission ?? "0") }] : []),
-        ...(Number(p.swap ?? 0) !== 0 ? [{ label: "Swap", value: fmtExecNumber(p.swap ?? "0") }] : []),
-        { label: "Opened", value: fmtDateTime(p.openedAt) },
-        ...(p.closedAt ? [{ label: "Closed", value: fmtDateTime(p.closedAt) }] : []),
+      renderDetailMeta={(g) => [
+        { label: "Positions", value: String(g.positions.length) },
+        { label: "Open", value: String(g.open) },
+        { label: "Closed", value: String(g.positions.length - g.open) },
+        { label: "Net P/L", value: `${g.netPl >= 0 ? "+" : ""}${fmtExecNumber(g.netPl.toFixed(2))}` },
       ]}
-      renderDetailExtra={(p) => (
-        canManage && p.status === "OPEN" ? (
-          <div className="flex gap-2">
-            <Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => void setProfit(p)}><SlidersHorizontal size={13} strokeWidth={2} aria-hidden /> Set P/L</Button>
-            <Button type="button" size="sm" variant="destructive" disabled={busy !== null} onClick={() => void closePosition(p)}><X size={13} strokeWidth={2} aria-hidden /> Close position</Button>
+      renderDetailExtra={(g) => {
+        const counts = positionFilterLabel(g);
+        const visible = g.positions.filter((p) => positionFilter === "ALL" || p.status === positionFilter);
+        return (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-medium">Positions</span>
+              <ChipGroup
+                ariaLabel="Filter positions in this account"
+                value={positionFilter}
+                onChange={(v) => setPositionFilter(v)}
+                options={[
+                  { value: "ALL", label: `All · ${counts.ALL}` },
+                  { value: "OPEN", label: `Open · ${counts.OPEN}` },
+                  { value: "CLOSED", label: `Closed · ${counts.CLOSED}` },
+                ]}
+              />
+            </div>
+            {visible.map((p) => (
+              <details key={p.id} className="rounded-xl bg-muted/40">
+                <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-4 py-3 transition-colors hover:bg-muted/60">
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <IdentityTile tone={p.side === "BUY" ? "up" : "down"}>
+                      <InstrumentIcon symbol={p.symbol} size={18} />
+                    </IdentityTile>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-sm font-semibold">{p.symbol}</span>
+                        <Badge variant="secondary" className={`px-1.5 py-0 text-xs ${p.side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>{p.side}</Badge>
+                        <Badge variant="secondary" className={`px-1.5 py-0 text-xs ${p.status === "OPEN" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "px-1.5 py-0 text-xs"}`}>{p.status}</Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {fmtExecNumber(p.volume)} lots @ {fmtExecNumber(p.openRate ?? "0")}{p.status === "OPEN" ? ` → ${fmtExecNumber(p.currentRate ?? "0")}` : ""}
+                      </div>
+                    </div>
+                  </span>
+                  <span className={`shrink-0 font-semibold tabular-nums ${pnlClass(Number(p.netProfit))}`}>
+                    {Number(p.netProfit) >= 0 ? "+" : ""}{fmtExecNumber(p.netProfit)}
+                  </span>
+                </summary>
+                <div className="space-y-3 border-t px-4 py-3">
+                  <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-3">
+                    <div><dt className="text-muted-foreground">Type</dt><dd className="font-medium">{p.type ?? "CFD"}</dd></div>
+                    <div><dt className="text-muted-foreground">Gross P/L</dt><dd className="font-medium tabular-nums">{fmtExecNumber(p.profit)}</dd></div>
+                    <div><dt className="text-muted-foreground">Adjustment</dt><dd className="font-medium tabular-nums">{fmtExecNumber(p.adminPnlAdjustment)}</dd></div>
+                    {Number(p.commission ?? 0) !== 0 && <div><dt className="text-muted-foreground">Commission</dt><dd className="font-medium tabular-nums">{fmtExecNumber(p.commission ?? "0")}</dd></div>}
+                    {Number(p.swap ?? 0) !== 0 && <div><dt className="text-muted-foreground">Swap</dt><dd className="font-medium tabular-nums">{fmtExecNumber(p.swap ?? "0")}</dd></div>}
+                    <div><dt className="text-muted-foreground">Opened</dt><dd className="font-medium tabular-nums">{fmtDateTime(p.openedAt)}</dd></div>
+                    {p.closedAt && <div><dt className="text-muted-foreground">Closed</dt><dd className="font-medium tabular-nums">{fmtDateTime(p.closedAt)}</dd></div>}
+                    {p.closeReason && <div className="col-span-2 sm:col-span-3"><dt className="text-muted-foreground">Close reason</dt><dd className="font-medium">{p.closeReason}</dd></div>}
+                  </dl>
+                  {canManage && p.status === "OPEN" && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => { setProfitTarget(p); setProfitValue(""); setProfitReason(""); }}>
+                        <SlidersHorizontal size={13} strokeWidth={2} aria-hidden /> Set P/L
+                      </Button>
+                      <Button type="button" size="sm" variant="destructive" disabled={busy !== null} onClick={() => { setCloseTarget(p); setCloseReason(""); }}>
+                        <X size={13} strokeWidth={2} aria-hidden /> Close position
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </details>
+            ))}
+            {visible.length === 0 && (
+              <div className="rounded-xl bg-muted/40 px-4 py-8 text-center text-sm text-muted-foreground">
+                No {positionFilter.toLowerCase()} positions for this account.
+              </div>
+            )}
           </div>
-        ) : undefined
-      )}
+        );
+      }}
       emptyTitle="No positions."
     />
-    {commandDialog}
+
+    {/* Set P/L dialog */}
+    <SimpleDialog
+      open={profitTarget !== null}
+      onClose={() => { setProfitTarget(null); setProfitValue(""); }}
+      title={profitTarget ? `Set P/L · ${profitTarget.symbol}` : "Set P/L"}
+      description="Dealer adjustment for the net profit of this open position."
+      className="sm:max-w-md"
+    >
+      <form onSubmit={(e) => { e.preventDefault(); void submitProfit(); }} className="space-y-4 px-5 py-4">
+        <div>
+          <Label htmlFor="profit-value" className="mb-1 block text-xs font-medium text-muted-foreground">New net P/L (USD, can be negative)</Label>
+          <Input
+            id="profit-value"
+            type="text"
+            required
+            minLength={2}
+            value={profitValue}
+            onChange={(e) => setProfitValue(e.target.value)}
+            placeholder="-12.50"
+            startIcon={<DollarSign size={13} strokeWidth={2} />}
+          />
+        </div>
+        <div>
+          <Label htmlFor="profit-reason" className="mb-1 block text-xs font-medium text-muted-foreground">Audited reason (min 5 chars)</Label>
+          <Textarea
+            id="profit-reason"
+            required
+            minLength={5}
+            maxLength={500}
+            rows={2}
+            value={profitReason}
+            onChange={(e) => setProfitReason(e.target.value)}
+            placeholder="e.g. Dealer correction — customer reported incorrect mark…"
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={() => { setProfitTarget(null); setProfitValue(""); setProfitReason(""); }}>
+            <X size={13} strokeWidth={2} aria-hidden /> Cancel
+          </Button>
+          <Button type="submit" loading={busy !== null} disabled={!/^-?\d+(\.\d+)?$/.test(profitValue) || profitReason.trim().length < 5}>
+            <SlidersHorizontal size={13} strokeWidth={2} aria-hidden /> Post adjustment
+          </Button>
+        </div>
+      </form>
+    </SimpleDialog>
+
+    {/* Close position dialog */}
+    <SimpleDialog
+      open={closeTarget !== null}
+      onClose={() => { setCloseTarget(null); setCloseReason(""); }}
+      title={closeTarget ? `Close position · ${closeTarget.symbol}` : "Close position"}
+      description="Closes the open position at the current mark. The reason is audit-logged."
+      className="sm:max-w-md"
+    >
+      <form onSubmit={(e) => { e.preventDefault(); void submitClose(); }} className="space-y-4 px-5 py-4">
+        <div>
+          <Label htmlFor="close-reason" className="mb-1 block text-xs font-medium text-muted-foreground">Reason (audited, min 3 chars)</Label>
+          <Textarea
+            id="close-reason"
+            required
+            minLength={3}
+            maxLength={200}
+            rows={3}
+            value={closeReason}
+            onChange={(e) => setCloseReason(e.target.value)}
+            placeholder="e.g. Dealer close at customer request…"
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={() => { setCloseTarget(null); setCloseReason(""); }}>
+            <X size={13} strokeWidth={2} aria-hidden /> Cancel
+          </Button>
+          <Button type="submit" variant="destructive" loading={busy !== null} disabled={closeReason.trim().length < 3}>
+            <X size={13} strokeWidth={2} aria-hidden /> Close position
+          </Button>
+        </div>
+      </form>
+    </SimpleDialog>
   </div>}</ModuleState>;
 }
 

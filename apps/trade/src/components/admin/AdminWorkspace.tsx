@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
 import { KycReview } from "./KycReview";
 import { PaymentsReview, type PaymentRequestRow } from "./PaymentsReview";
 import { ReconciliationReview } from "./ReconciliationReview";
@@ -31,12 +31,12 @@ import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDownToLine, ArrowLeftRight, Ban, CheckCircle2, DollarSign, Download, LifeBuoy, ScrollText, ShieldAlert, SlidersHorizontal, UserRound } from "lucide-react";
+import { ArrowDownToLine, ArrowLeftRight, Ban, CheckCircle2, DollarSign, Download, FileText, LifeBuoy, ScrollText, ShieldAlert, SlidersHorizontal, UserRound } from "lucide-react";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { TableSearch } from "@/components/ui/DataTable";
 import { Textarea } from "@/components/ui/Textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Permission = string;
 type TabKey =
@@ -370,7 +370,7 @@ function ModuleState({ loading, error, onRetry, children }: { loading: boolean; 
   return <>{children}</>;
 }
 
-function SectionHeader({ title, description, onRefresh, action }: { title: string; description: string; onRefresh?: () => void; action?: React.ReactNode }) {
+export function SectionHeader({ title, description, onRefresh, action }: { title: string; description: string; onRefresh?: () => void; action?: React.ReactNode }) {
   return <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold tracking-tight">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{description}</p></div><div className="flex shrink-0 items-center gap-2">{action}{onRefresh && <Button type="button" size="sm" variant="outline" onClick={onRefresh}><RefreshCw size={13} strokeWidth={2} aria-hidden />Refresh</Button>}</div></div>;
 }
 
@@ -418,52 +418,27 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat, onProposeRole }: 
   // the table responds on every keystroke. The debounced server query then
   // refreshes the authoritative result set across the whole user base without
   // flashing a loading state (stale-while-revalidate in useResource).
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => clearTimeout(timer);
-  }, [search]);
-  const url = `/api/admin/users?limit=1000${debouncedSearch ? `&q=${encodeURIComponent(debouncedSearch)}` : ""}`;
+  const url = `/api/admin/users?limit=1000`;
 
   const resource = useResource<{ users: UserRow[]; total: number }>(url, 15_000);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [settingsUser, setSettingsUser] = useState<UserRow | null>(null);
 
-  const needle = search.trim().toLowerCase();
-  const users = useMemo(() => {
-    const rows = resource.data?.users ?? [];
-    if (!needle) return rows;
-    return rows.filter((user) =>
-      (user.email ?? "").toLowerCase().includes(needle) ||
-      (user.name ?? "").toLowerCase().includes(needle) ||
-      (user.accountNo ?? "").includes(needle) ||
-      (user.brandDomain ?? "").toLowerCase().includes(needle) ||
-      (user.kyc?.country ?? "").toLowerCase().includes(needle) ||
-      (user.kyc?.city ?? "").toLowerCase().includes(needle),
-    );
-  }, [resource.data, needle]);
-  const searchPending = search.trim() !== debouncedSearch;
+  const users = useMemo(() => resource.data?.users ?? [], [resource.data]);
   const truncated = resource.data ? resource.data.total > resource.data.users.length : false;
   return (
     <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>
       {resource.data ? (
         <div>
           <SectionHeader title="Users and access" description="Identity, verification, account exposure, active roles, sessions, reconciliation restrictions, and audited balance operations." onRefresh={() => void resource.refresh()} />
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <TableSearch value={search} onChange={setSearch} placeholder="Search email, name, or account number…" label="Search users" />
-            {needle && (
-              <span className="text-xs text-muted-foreground tnum" aria-live="polite">
-                {users.length} match{users.length === 1 ? "" : "es"}{searchPending ? " · searching…" : ""}
-              </span>
-            )}
-            {truncated && !debouncedSearch && (
-              <span className="text-xs text-primary">showing first {resource.data.users.length} of {resource.data.total} — refine your search</span>
-            )}
-          </div>
+          {truncated && (
+            <Alert tone="info" className="mb-3">
+              Showing the first {resource.data.users.length} of {resource.data.total} accounts — use the search to narrow.
+            </Alert>
+          )}
           <PaginatedUsers
             users={users}
-            emptyLabel={needle ? `No users match “${search.trim()}”.` : undefined}
+            emptyLabel="No accounts match."
             canAdjustBalance={canAdjustBalance}
             canManage={canManage}
             onManageBalance={setSelectedUser}
@@ -567,8 +542,11 @@ function PaginatedUsers({
         tone: u.online ? "up" : "muted",
         title: (
           <span className="flex items-center gap-2">
-            <IdentityTile tone={u.online ? "up" : "muted"}>{initialsOf(u.name ?? u.email)}</IdentityTile>
+            <IdentityTile tone={u.online ? "up" : "muted"} className={u.online ? "ring-2 ring-up/30 ring-offset-2 ring-offset-card" : undefined}>
+              {initialsOf(u.name ?? u.email)}
+            </IdentityTile>
             {u.name ?? "Unnamed"}
+            {u.online && <span className="relative flex size-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-up opacity-60" /><span className="relative inline-flex size-2 rounded-full bg-up" /></span>}
           </span>
         ),
         secondary: (
@@ -613,11 +591,31 @@ function PaginatedUsers({
       mobilePrimary={(u) => <span className="tabular-nums">{formatUsd(u.metrics?.balance ?? "0")}</span>}
       detailTitle="Account Detail"
       renderDetailHero={(u) => (
-        <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
-          <IdentityTile size="lg" tone={u.online ? "up" : "muted"}>{initialsOf(u.name ?? u.email)}</IdentityTile>
-          <div className="text-sm font-medium">{u.name ?? "Unnamed"}</div>
-          <div className="text-xs text-muted-foreground">{u.email ?? "—"} · #{u.accountNo ?? "—"}</div>
-          <RecordStatusChip tone={u.online ? "up" : "muted"}>{u.online ? "Online" : "Offline"}</RecordStatusChip>
+        <div className="rounded-xl bg-muted/50 px-4 py-5">
+          <div className="flex items-center gap-4">
+            <IdentityTile size="lg" tone={u.online ? "up" : "muted"} className={u.online ? "ring-2 ring-up/30" : undefined}>
+              {initialsOf(u.name ?? u.email)}
+            </IdentityTile>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="truncate text-base font-semibold">{u.name ?? "Unnamed"}</span>
+                <RecordStatusChip tone={u.online ? "up" : "muted"}>{u.online ? "Online" : "Offline"}</RecordStatusChip>
+              </div>
+              <div className="mt-0.5 truncate text-sm text-muted-foreground">{u.email ?? "—"}</div>
+              <div className="mt-0.5 font-mono text-xs text-muted-foreground">#{u.accountNo ?? "—"}</div>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {!u.verified && <Badge variant="secondary" className="px-1.5 py-0 text-xs">unverified</Badge>}
+                {u.lockedUntil && <Badge variant="secondary" className="bg-down/10 px-1.5 py-0 text-xs text-down">locked</Badge>}
+                {u.adminRoles.map((r) => (
+                  <Badge key={r.role} variant="secondary" className="bg-primary/10 px-1.5 py-0 text-xs text-primary">{r.role.toLowerCase()}</Badge>
+                ))}
+              </div>
+            </div>
+            <div className="shrink-0 text-right">
+              <div className="text-lg font-semibold tabular-nums">{formatUsd(u.metrics?.balance ?? "0")}</div>
+              <div className="text-xs text-muted-foreground">balance</div>
+            </div>
+          </div>
         </div>
       )}
       renderDetailMeta={(u) => [
@@ -841,10 +839,10 @@ function UserBalanceDialog({
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,12rem)_1fr_auto] md:items-end">
                 <Label className="text-xs font-medium">Amount (USD)
-                  <Input type="number" inputMode="decimal" min="0.00000001" max="1000000" step="0.00000001" required value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 h-10" placeholder="0.00" />
+                  <Input type="number" inputMode="decimal" min="0.00000001" max="1000000" step="0.00000001" required value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 h-10" placeholder="0.00" startIcon={<DollarSign size={13} strokeWidth={2} aria-hidden />} />
                 </Label>
                 <Label className="text-xs font-medium">Audited reason
-                  <Input type="text" minLength={5} maxLength={500} required value={reason} onChange={(event) => setReason(event.target.value)} className="mt-1 h-10" placeholder="Ticket, customer request, or correction reason" />
+                  <Input type="text" minLength={5} maxLength={500} required value={reason} onChange={(event) => setReason(event.target.value)} className="mt-1 h-10" placeholder="Ticket, customer request, or correction reason" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />} />
                 </Label>
                 <Button type="submit" variant={action === "CREDIT" ? "default" : "destructive"} loading={busy} loadingLabel="Posting adjustment">{action === "CREDIT" ? "Post top-up" : "Post deduction"}</Button>
               </div>
@@ -1975,21 +1973,28 @@ function ChangeRequestComposer({
   }
 
   return (
-    <form onSubmit={submit} className="rounded-lg border border-primary/30 bg-primary/10/40 p-4">
+    <form onSubmit={submit} className="rounded-xl bg-card p-4 shadow-sm">
       <div className="grid gap-3 md:grid-cols-2">
-        <Label className="text-xs">Change type
-          <NativeSelect name="action" value={action} onChange={(event) => setAction(event.target.value as ChangeAction)} className="mt-1">
-            {allowedActions.map((item) => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}
-          </NativeSelect>
-        </Label>
-        <Label className="text-xs">Request note
-          <Input name="requestNote" maxLength={1000} className="mt-1" placeholder="Operational reason and ticket reference" />
-        </Label>
+        <div>
+          <Label htmlFor="change-action" className="text-xs font-medium text-muted-foreground">Change type</Label>
+          <Select value={action} onValueChange={(value) => setAction(value as ChangeAction)}>
+            <SelectTrigger id="change-action" className="mt-1 h-9 w-full" startIcon={<ClipboardCheck size={13} strokeWidth={2} aria-hidden />}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {allowedActions.map((item) => <SelectItem key={item} value={item}>{item.replaceAll("_", " ").toLowerCase()}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="request-note" className="text-xs font-medium text-muted-foreground">Request note</Label>
+          <Input id="request-note" name="requestNote" maxLength={1000} className="mt-1" placeholder="Operational reason and ticket reference" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />} />
+        </div>
       </div>
       {(action === "ASSIGN_ROLE" || action === "REVOKE_ROLE") && <RoleChangeFields userId={prefill?.userId} label={prefill?.label} />}
       {action === "UPDATE_RISK_RULE" && <RiskChangeFields />}
       {action === "UPDATE_INSTRUMENT" && <InstrumentChangeFields />}
-      {error && <p role="alert" className="mt-3 text-xs text-down">{error}</p>}
+      {error && <Alert tone="err" className="mt-3">{error}</Alert>}
       <Button type="submit" loading={busy} loadingLabel="Creating change request" className="mt-3 bg-primary text-primary-foreground">Submit for approval</Button>
     </form>
   );
@@ -1998,13 +2003,19 @@ function ChangeRequestComposer({
 function RoleChangeFields({ userId, label }: { userId?: string; label?: string }) {
   return (
     <div className="mt-3 grid gap-3 md:grid-cols-3">
-      <FieldInput name="userId" label={label ? `Target user (${label})` : "Target user ID"} defaultValue={userId} required />
-      <Label className="text-xs">Role
-        <NativeSelect name="role" className="mt-1" defaultValue="SUPPORT">
-          {["SUPER_ADMIN", "COMPLIANCE", "FINANCE", "DEALER", "RISK", "SUPPORT", "AUDITOR"].map((role) => <option key={role}>{role}</option>)}
-        </NativeSelect>
-      </Label>
-      <FieldInput name="reason" label="Reason" required />
+      <FieldInput name="userId" label={label ? `Target user (${label})` : "Target user ID"} defaultValue={userId} required startIcon={<UserRound size={13} strokeWidth={2} aria-hidden />} />
+      <div>
+        <Label htmlFor="change-role" className="text-xs font-medium text-muted-foreground">Role</Label>
+        <Select name="role" defaultValue="SUPPORT">
+          <SelectTrigger id="change-role" className="mt-1 h-9 w-full" startIcon={<ShieldAlert size={13} strokeWidth={2} aria-hidden />}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {["SUPER_ADMIN", "COMPLIANCE", "FINANCE", "DEALER", "RISK", "SUPPORT", "AUDITOR"].map((role) => <SelectItem key={role} value={role}>{role.toLowerCase()}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <FieldInput name="reason" label="Reason" required startIcon={<FileText size={13} strokeWidth={2} aria-hidden />} />
     </div>
   );
 }
@@ -2029,7 +2040,7 @@ function RiskChangeFields() {
 function InstrumentChangeFields() {
   return (
     <div className="mt-3 grid gap-3 md:grid-cols-3">
-      <FieldInput name="symbol" label="Symbol" placeholder="EURUSD" required />
+      <FieldInput name="symbol" label="Symbol" placeholder="EURUSD" required startIcon={<CandlestickChart size={13} strokeWidth={2} aria-hidden />} />
       <FieldInput name="marginPerLot" label="Margin per lot" type="number" step="0.00000001" required />
       <FieldInput name="commissionPerLot" label="Commission per lot" type="number" step="0.00000001" required />
       <FieldInput name="swapLongPips" label="Long swap pips" type="number" step="0.00000001" required />
@@ -2039,8 +2050,14 @@ function InstrumentChangeFields() {
   );
 }
 
-function FieldInput({ name, label, ...props }: { name: string; label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return <Label className="text-xs">{label}<Input name={name} className="mt-1" {...props} /></Label>;
+function FieldInput({ name, label, startIcon, ...props }: { name: string; label: string; startIcon?: React.ReactNode } & React.InputHTMLAttributes<HTMLInputElement>) {
+  const id = useId();
+  return (
+    <div>
+      <Label htmlFor={id} className="text-xs font-medium text-muted-foreground">{label}</Label>
+      <Input id={id} name={name} className="mt-1" startIcon={startIcon} {...props} />
+    </div>
+  );
 }
 
 function buildChangeRequest(action: ChangeAction, form: FormData): Record<string, unknown> {

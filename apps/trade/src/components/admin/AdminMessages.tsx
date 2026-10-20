@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/lib/toast";
@@ -305,15 +307,18 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
         </div>
 
         {/* Chat pane */}
-        <div className="flex h-144 flex-col">
+        <Card className="flex h-144 flex-col overflow-hidden">
           {activeUser ? (
             <>
-              <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-2.5">
-                <div className="min-w-0">
-                  <div className="truncate text-xs font-semibold">{thread?.user ? (thread.user.name ?? thread.user.email ?? activeUser.label) : activeUser.label}</div>
-                  {thread?.user && (
-                    <div className="truncate text-xs text-muted-foreground">{thread.user.email ?? "—"} · #{thread.user.accountNo ?? "—"}</div>
-                  )}
+              <div className="flex items-start justify-between gap-2 border-b bg-muted/40 px-4 py-3">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <IdentityTile tone="brand">{initialsOf(thread?.user ? (thread.user.name ?? thread.user.email) : activeUser.label)}</IdentityTile>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{thread?.user ? (thread.user.name ?? thread.user.email ?? activeUser.label) : activeUser.label}</div>
+                    {thread?.user && (
+                      <div className="truncate text-xs text-muted-foreground">{thread.user.email ?? "—"} · #{thread.user.accountNo ?? "—"}</div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <button
@@ -347,9 +352,9 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                     <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                       <div className={`max-w-[80%] ${mine ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
                         <span className={`px-1 text-xs font-semibold uppercase tracking-wide ${mine ? "text-muted-foreground" : "text-muted-foreground"}`}>{label}</span>
-                        <div className={`rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${mine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
+                        <div className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${mine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
                           {message.body}
-                          <div className={`mt-1 flex items-center justify-end gap-1.5 text-xs tnum ${mine ? "opacity-60" : "text-muted-foreground"}`}>
+                          <div className={`mt-1 flex items-center justify-end gap-1.5 text-xs tabular-nums ${mine ? "opacity-60" : "text-muted-foreground"}`}>
                             <span>{fmtDateTime(message.createdAt)}</span>
                             {mine && <span aria-label={message.readAt ? "Read by customer" : "Not yet read"}>{message.readAt ? "✓ Read" : "✓ Sent"}</span>}
                           </div>
@@ -393,7 +398,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               Select a conversation on the left, or start one from the Users tab.
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
       <ConfirmDialog
@@ -417,7 +422,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
         <form className="p-5 space-y-4" onSubmit={broadcast}>
           <div>
             <Label htmlFor="b-title" className="mb-1 block text-xs font-medium">Title</Label>
-            <Input id="b-title" required minLength={3} maxLength={120} value={bTitle} onChange={(e) => setBTitle(e.target.value)} />
+            <Input id="b-title" required minLength={3} maxLength={120} value={bTitle} onChange={(e) => setBTitle(e.target.value)} placeholder="e.g. Scheduled maintenance window" startIcon={<Megaphone size={13} strokeWidth={2} aria-hidden />} />
           </div>
           <div>
             <Label htmlFor="b-body" className="mb-1 block text-xs font-medium">Message</Label>

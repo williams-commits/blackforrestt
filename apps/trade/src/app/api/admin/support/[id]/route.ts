@@ -45,6 +45,22 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         },
       });
       await appendAuditEvent(tx, { domain: "SUPPORT", actorId, action: "SUPPORT_CASE_UPDATED", entityType: "SupportCase", entityId: id, metadata: { fromStatus: existing.status, toStatus: supportCase.status, assignedToId: supportCase.assignedToId } });
+      // Surface the status change to the customer as an in-app notification
+      // so the support badge + toast bridge pick it up immediately.
+      if (supportCase.userId && supportCase.status !== existing.status) {
+        const isResolution = supportCase.status === "RESOLVED" || supportCase.status === "CLOSED";
+        await tx.notification.create({
+          data: {
+            userId: supportCase.userId,
+            type: isResolution ? "ACCOUNT_STATUS" : "ADMIN_MESSAGE",
+            title: isResolution ? `Support case resolved · ${supportCase.reference}` : `Support case update · ${supportCase.reference}`,
+            body: isResolution
+              ? (supportCase.resolutionNote ?? "Your support case has been resolved.")
+              : `Your support case "${supportCase.subject}" is now ${supportCase.status.replaceAll("_", " ").toLowerCase()}.`,
+            metadata: { supportCaseId: supportCase.id, reference: supportCase.reference },
+          },
+        });
+      }
       return supportCase;
     });
     if (!changed) return NextResponse.json({ error: "Support case not found." }, { status: 404 });

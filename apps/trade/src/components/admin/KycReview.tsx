@@ -3,7 +3,6 @@
 import { useId, useState, useEffect, useMemo } from "react";
 import { Ban, CheckCheck, CheckCircle2, ExternalLink, FileSearch, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Pagination } from "@/components/ui/Pagination";
 import { TableSearch } from "@/components/ui/DataTable";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -53,7 +52,6 @@ interface Props {
   canAccessDocuments?: boolean;
 }
 
-const QUEUE_PAGE_SIZE = 8;
 
 /** Admin KYC review dashboard: queue of pending submissions + recent decisions. */
 export function KycReview({
@@ -80,7 +78,6 @@ export function KycReview({
    *  can still open the document with a deliberate click. */
   const [manualDocUrl, setManualDocUrl] = useState<string | null>(null);
   const [queueSearch, setQueueSearch] = useState("");
-  const [queuePage, setQueuePage] = useState(1);
   const noteId = useId();
 
   // Instant client-side narrowing of the queue — name, email, or account number.
@@ -93,11 +90,6 @@ export function KycReview({
     (s.user.accountNo ?? "").includes(needle)
   ), [pending, needle]);
 
-  const queueTotalPages = Math.max(1, Math.ceil(filteredPending.length / QUEUE_PAGE_SIZE));
-  const safeQueuePage = Math.min(queuePage, queueTotalPages);
-  const visiblePending = filteredPending.slice((safeQueuePage - 1) * QUEUE_PAGE_SIZE, safeQueuePage * QUEUE_PAGE_SIZE);
-  useEffect(() => { setQueuePage(1); }, [needle]);
-  useEffect(() => { if (queuePage > queueTotalPages) setQueuePage(queueTotalPages); }, [queuePage, queueTotalPages]);
 
   const reviewedTotalResolved = reviewedTotal ?? reviewed.length;
 
@@ -216,7 +208,7 @@ export function KycReview({
           <TableSearch value={queueSearch} onChange={setQueueSearch} placeholder="Search name, email, account…" label="Search KYC queue" />
           <div className="overflow-hidden">
             <div className="space-y-1.5 p-1.5">
-              {visiblePending.map((s) => (
+              {filteredPending.map((s) => (
                 <button
                   key={s.id}
                   type="button"
@@ -249,9 +241,6 @@ export function KycReview({
                 </div>
               )}
             </div>
-            {filteredPending.length > QUEUE_PAGE_SIZE && (
-              <Pagination page={safeQueuePage} pageSize={QUEUE_PAGE_SIZE} totalItems={filteredPending.length} onPageChange={setQueuePage} label="submissions" compact />
-            )}
           </div>
         </div>
 

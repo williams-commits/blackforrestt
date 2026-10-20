@@ -7,11 +7,14 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/lib/toast";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
+import { SectionHeader } from "@/components/admin/AdminWorkspace";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/Button";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
-import { Check, Play, Plus, Save, Search, UserMinus, UserPlus, X } from "lucide-react";
+import { Check, Play, Plus, Save, Search, UserMinus, UserPlus, X, Users, ArrowLeft, FileText } from "lucide-react";
 import { Label } from "@/components/ui/label";
 
 interface Group {
@@ -110,10 +113,7 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">User Groups</h2>
-        {canManage && <CreateGroupButton onCreated={() => void refresh()} />}
-      </div>
+      <SectionHeader title="User Groups" description="Bulk user management through shared settings, risk profiles, and role assignments." action={canManage ? <CreateGroupButton onCreated={() => void refresh()} /> : undefined} />
 
       {error && <Alert tone="err">{error}</Alert>}
 
@@ -133,9 +133,11 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
           ))}
         </div>
       ) : groups.length === 0 ? (
-        <div className="rounded-xl p-8 text-center">
-          <p className="text-sm text-muted-foreground">No groups yet. Create one to start managing users in bulk.</p>
-        </div>
+        <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/40 p-10 text-center">
+            <Users size={20} strokeWidth={1.75} className="text-muted-foreground" aria-hidden />
+            <p className="text-sm font-medium">No groups yet</p>
+            <p className="text-xs text-muted-foreground">Create one to manage users in bulk.</p>
+          </div>
       ) : (
         <div className="space-y-2">
           {groups.map((g) => {
@@ -143,7 +145,7 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
             const tags = getSettingsSummary(g.settings);
             const hasSettings = Object.keys(g.settings).length > 0;
             return (
-              <div key={g.id} className="rounded-xl overflow-hidden">
+              <div key={g.id} className="rounded-xl bg-card shadow-sm overflow-hidden">
                 {/* Collapsible header row */}
                 <div className="flex items-center gap-3 p-4">
                   <button
@@ -166,7 +168,7 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
                     {tags.length > 0 && (
                       <div className="hidden md:flex items-center gap-1">
                         {tags.map((tag) => (
-                          <span key={tag} className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">{tag}</span>
+                          <Badge key={tag} variant="secondary" className="bg-primary/10 px-1.5 py-0 text-xs text-primary">{tag}</Badge>
                         ))}
                       </div>
                     )}
@@ -361,11 +363,11 @@ function EditGroupButton({ group, onSaved }: { group: Group; onSaved: () => void
               <div>
                 <Label className="mb-1 block text-xs text-muted-foreground">Name</Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)}
-                  className="h-10" />
+                  className="h-10" placeholder="Group name" startIcon={<Users size={13} strokeWidth={2} aria-hidden />} />
               </div>
               <div>
                 <Label className="mb-1 block text-xs text-muted-foreground">Description</Label>
-                <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Optional"
+                <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Optional description" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
                   className="h-10" />
               </div>
               <div>
@@ -552,12 +554,12 @@ function CreateGroupButton({ onCreated }: { onCreated: () => void }) {
         <div className="space-y-3">
           <div>
             <Label className="mb-1 block text-xs text-muted-foreground">Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VIP Traders"
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VIP Traders" startIcon={<Users size={13} strokeWidth={2} aria-hidden />}
               className="h-10" />
           </div>
           <div>
             <Label className="mb-1 block text-xs text-muted-foreground">Description (optional)</Label>
-            <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Short description"
+            <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Short description" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
               className="h-10" />
           </div>
           <div>
@@ -645,18 +647,22 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="text-xs text-primary hover:underline">← Back to groups</button>
+        <Button type="button" size="sm" variant="ghost" onClick={onBack}><ArrowLeft size={13} strokeWidth={2} aria-hidden /> Back to groups</Button>
       </div>
 
       {/* Group header with inline edit */}
-      <div className="flex items-center gap-3">
-        <span className="h-5 w-5 rounded-full" style={{ background: detail.color }} />
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold">{detail.name}</h2>
-          {detail.description && <p className="text-xs text-muted-foreground">{detail.description}</p>}
-        </div>
-        {canManage && <EditGroupButton group={detail} onSaved={() => void refresh()} />}
-      </div>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <span className="size-4 shrink-0 rounded-full" style={{ background: detail.color }} />
+            <div className="min-w-0 flex-1">
+              <CardTitle>{detail.name}</CardTitle>
+              {detail.description && <CardDescription>{detail.description}</CardDescription>}
+            </div>
+            {canManage && <EditGroupButton group={detail} onSaved={() => void refresh()} />}
+          </div>
+        </CardHeader>
+      </Card>
 
       {/* Settings editor */}
       {canManage && (

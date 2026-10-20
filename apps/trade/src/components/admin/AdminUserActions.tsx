@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
-import { Ellipsis } from "lucide-react";
-import { ADMIN_ACTION_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
+import { Ellipsis, Bell } from "lucide-react";
+import { ADMIN_ACTION_ICONS, TabIcon } from "@/components/ui/tabIcons";
 import { fmtDateTime } from "@/lib/dates";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export interface ManagedUserRow {
   id: string;
@@ -38,15 +39,6 @@ type ResetResult =
   | { mode: "temporary"; temporaryPassword: string };
 
 // Icon per account-state action (keys mirror STATUS_LABELS).
-const STATUS_ACTION_ICONS: Record<string, LucideIcon> = {
-  SUSPEND: ADMIN_ACTION_ICONS.suspend,
-  UNSUSPEND: ADMIN_ACTION_ICONS.unsuspend,
-  BLOCK: ADMIN_ACTION_ICONS.block,
-  UNBLOCK: ADMIN_ACTION_ICONS.unblock,
-  SOFT_DELETE: ADMIN_ACTION_ICONS.softDelete,
-  RESTORE: ADMIN_ACTION_ICONS.restore,
-};
-
 const STATUS_LABELS: Record<string, { verb: string; tone: string }> = {
   SUSPEND: { verb: "Suspend", tone: "text-down" },
   UNSUSPEND: { verb: "Unsuspend", tone: "text-up" },
@@ -79,101 +71,13 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
   const [resetResult, setResetResult] = useState<ResetResult | null>(null);
   const [resetMode, setResetMode] = useState<ResetMode>("temporary");
   const [copiedValue, setCopiedValue] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState({ top: 0, right: 8 });
-  const [menuMaxHeight, setMenuMaxHeight] = useState<number | null>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   const state = user.deletedAt ? "deleted" : user.blockedAt ? "blocked" : user.suspendedAt ? "suspended" : "active";
-
-  function openMenu() {
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setMenuPos({ top: rect.bottom + 4, right: Math.max(8, window.innerWidth - rect.right) });
-    }
-    setMenuMaxHeight(null);
-    setMenuOpen(true);
-  }
 
   // Keep the kebab menu inside the viewport: once rendered, measure it
   // against the space under the trigger and flip it ABOVE the kebab when it
   // would run past the bottom edge (rows near the page bottom); clamp with
   // internal scrolling as the last resort on very short viewports.
-  useLayoutEffect(() => {
-    if (!menuOpen) return;
-    const menu = menuRef.current;
-    const trigger = triggerRef.current;
-    if (!menu || !trigger) return;
-    const rect = trigger.getBoundingClientRect();
-    const height = menu.offsetHeight;
-    const gap = 4;
-    const margin = 8;
-    const spaceBelow = window.innerHeight - rect.bottom - gap - margin;
-    if (height <= spaceBelow) {
-      setMenuMaxHeight(null);
-      return;
-    }
-    const spaceAbove = rect.top - gap - margin;
-    if (height <= spaceAbove) {
-      setMenuPos((pos) => ({ ...pos, top: rect.top - gap - height }));
-      setMenuMaxHeight(null);
-    } else {
-      const top = Math.max(margin, window.innerHeight - height - margin);
-      setMenuPos((pos) => ({ ...pos, top }));
-      setMenuMaxHeight(window.innerHeight - top - margin);
-    }
-  }, [menuOpen]);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (menuRef.current && !menuRef.current.contains(target) && triggerRef.current && !triggerRef.current.contains(target)) {
-        setMenuOpen(false);
-      }
-    };
-    const close = () => setMenuOpen(false);
-    // Keyboard entry: land focus on the first item so arrow-key navigation
-    // starts where a mouse user's cursor would.
-    const frame = requestAnimationFrame(() => {
-      menuRef.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
-    });
-    document.addEventListener("mousedown", onPointerDown);
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
-    return () => {
-      cancelAnimationFrame(frame);
-      document.removeEventListener("mousedown", onPointerDown);
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
-    };
-  }, [menuOpen]);
-
-  /** Roving focus within the open menu (Arrow/Home/End), Escape returns to the trigger. */
-  function handleMenuKeyDown(event: React.KeyboardEvent) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      setMenuOpen(false);
-      triggerRef.current?.focus();
-      return;
-    }
-    const items = menuRef.current
-      ? Array.from(menuRef.current.querySelectorAll<HTMLElement>("[role=menuitem]"))
-      : [];
-    if (items.length === 0) return;
-    const currentIndex = items.indexOf(document.activeElement as HTMLElement);
-    let nextIndex = -1;
-    if (event.key === "ArrowDown") nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % items.length;
-    else if (event.key === "ArrowUp") nextIndex = currentIndex < 0 ? items.length - 1 : (currentIndex - 1 + items.length) % items.length;
-    else if (event.key === "Home") nextIndex = 0;
-    else if (event.key === "End") nextIndex = items.length - 1;
-    if (nextIndex >= 0) {
-      event.preventDefault();
-      items[nextIndex].focus();
-    }
-  }
-
   async function submitStatus(action: "SUSPEND" | "UNSUSPEND" | "BLOCK" | "UNBLOCK" | "SOFT_DELETE" | "RESTORE") {
     setBusy(true);
     setError(null);
@@ -296,83 +200,80 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
   return (
     <>
       <div className="flex items-center justify-end gap-1.5">
-        <span className={`rounded px-1.5 py-0.5 text-xs font-semibold uppercase ${state === "active" ? "bg-(--term-success-bg) text-(--term-success-fg)" : state === "suspended" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}`}>
+        <Badge variant="secondary" className={`px-1.5 py-0 text-xs font-semibold uppercase ${state === "active" ? "bg-(--term-success-bg) text-(--term-success-fg)" : state === "suspended" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}`}>
           {state}
-        </span>
-        <button
-          type="button"
-          ref={triggerRef}
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-          aria-label={`Actions for ${user.name ?? user.email ?? user.id}`}
-          onClick={() => (menuOpen ? setMenuOpen(false) : openMenu())}
-          className="flex h-6 w-7 items-center justify-center hover:bg-accent/60 hover:text-foreground"
-        >
-          <TabIcon icon={Ellipsis} size={16} />
-        </button>
+        </Badge>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Actions for ${user.name ?? user.email ?? user.id}`}
+            >
+              <TabIcon icon={Ellipsis} size={16} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => { setError(null); setNote(""); setDialog({ kind: "notify" }); }}>
+              <TabIcon icon={ADMIN_ACTION_ICONS.notify} /> Notify
+              <span className="ml-auto text-xs text-muted-foreground">in-app</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onOpenChat(user)}>
+              <TabIcon icon={ADMIN_ACTION_ICONS.chat} /> Chat
+              <span className="ml-auto text-xs text-muted-foreground">conversation</span>
+            </DropdownMenuItem>
+            {onManageBalance && (
+              <DropdownMenuItem onClick={() => onManageBalance(user)}>
+                <TabIcon icon={ADMIN_ACTION_ICONS.manageBalance} /> Manage balance
+                <span className="ml-auto text-xs text-muted-foreground">audited</span>
+              </DropdownMenuItem>
+            )}
+            {onEditSettings && (
+              <DropdownMenuItem onClick={() => onEditSettings(user)}>
+                <TabIcon icon={ADMIN_ACTION_ICONS.settings} /> Settings
+                <span className="ml-auto text-xs text-muted-foreground">overrides</span>
+              </DropdownMenuItem>
+            )}
+            {onProposeRole && (
+              <>
+                <DropdownMenuItem onClick={() => onProposeRole(user, "ASSIGN_ROLE")}>
+                  <TabIcon icon={ADMIN_ACTION_ICONS.grantRole} /> Assign role
+                  <span className="ml-auto text-xs text-muted-foreground">approval</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onProposeRole(user, "REVOKE_ROLE")}>
+                  <TabIcon icon={ADMIN_ACTION_ICONS.revokeRole} /> Revoke role
+                  <span className="ml-auto text-xs text-muted-foreground">approval</span>
+                </DropdownMenuItem>
+              </>
+            )}
+            {canManage && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => { setError(null); setResetResult(null); setDialog({ kind: "resetPassword" }); }}>
+                  <TabIcon icon={ADMIN_ACTION_ICONS.resetPassword} /> Reset password
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setError(null); setDialog({ kind: "forceSignOut" }); }}>
+                  <TabIcon icon={ADMIN_ACTION_ICONS.forceSignOut} /> Force sign out
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setError(null); setDialog({ kind: "status", action: statusAction }); }}>
+                  <TabIcon icon={ADMIN_ACTION_ICONS.suspend} /> {statusAction.replaceAll("_", " ").toLowerCase()}
+                </DropdownMenuItem>
+                {secondaryAction && (
+                  <DropdownMenuItem variant="destructive" onClick={() => { setError(null); setDialog({ kind: "status", action: secondaryAction }); }}>
+                    <TabIcon icon={ADMIN_ACTION_ICONS.suspend} /> {secondaryAction.replaceAll("_", " ").toLowerCase()}
+                  </DropdownMenuItem>
+                )}
+                {deleteAction && (
+                  <DropdownMenuItem variant="destructive" onClick={() => { setError(null); setDialog({ kind: "hardDelete" }); }}>
+                    <TabIcon icon={ADMIN_ACTION_ICONS.hardDelete} /> Delete permanently
+                  </DropdownMenuItem>
+                )}
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-
-      {menuOpen && typeof document !== "undefined" && createPortal(
-        <div
-          ref={menuRef}
-          role="menu"
-          aria-label={`Actions for ${user.name ?? user.email ?? user.id}`}
-          onKeyDown={handleMenuKeyDown}
-          className="fixed z-9999 w-48 overflow-hidden overflow-y-auto shadow-xl"
-          style={{ top: menuPos.top, right: menuPos.right, maxHeight: menuMaxHeight ?? undefined }}
-        >
-          <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "notify" }); }} label="Notify" hint="Send an in-app notification" icon={<TabIcon icon={ADMIN_ACTION_ICONS.notify} />} />
-          <MenuItemRow onSelect={() => { setMenuOpen(false); onOpenChat(user); }} label="Chat" hint="Open support conversation" icon={<TabIcon icon={ADMIN_ACTION_ICONS.chat} />} />
-          {onManageBalance && (
-            <MenuItemRow onSelect={() => { setMenuOpen(false); onManageBalance(user); }} label="Manage balance" hint="Audited finance operation" icon={<TabIcon icon={ADMIN_ACTION_ICONS.manageBalance} />} />
-          )}
-          {onEditSettings && (
-            <MenuItemRow onSelect={() => { setMenuOpen(false); onEditSettings(user); }} label="Settings" hint="Per-user overrides" icon={<TabIcon icon={ADMIN_ACTION_ICONS.settings} />} />
-          )}
-          {onProposeRole && (
-            <>
-              <div className="my-1 border-t" />
-              <MenuItemRow onSelect={() => { setMenuOpen(false); onProposeRole(user, "ASSIGN_ROLE"); }} label="Grant admin role" hint="Maker-checker approval" icon={<TabIcon icon={ADMIN_ACTION_ICONS.grantRole} />} />
-              <MenuItemRow onSelect={() => { setMenuOpen(false); onProposeRole(user, "REVOKE_ROLE"); }} label="Revoke admin role" hint="Maker-checker approval" icon={<TabIcon icon={ADMIN_ACTION_ICONS.revokeRole} />} />
-            </>
-          )}
-          {canManage && !user.isAdmin && (
-            <>
-              <div className="my-1 border-t" />
-              <MenuItemRow
-                onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setResetResult(null); setResetMode("temporary"); setDialog({ kind: "resetPassword" }); }}
-                label="Reset password"
-                hint="Temporary code or emailed link"
-                icon={<TabIcon icon={ADMIN_ACTION_ICONS.resetPassword} />}
-              />
-              <MenuItemRow
-                onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "forceSignOut" }); }}
-                label="Sign out everywhere"
-                hint="Revokes all active sessions"
-                icon={<TabIcon icon={ADMIN_ACTION_ICONS.forceSignOut} />}
-              />
-              <div className="my-1 border-t" />
-              <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: statusAction }); }} label={STATUS_LABELS[statusAction].verb} tone={STATUS_LABELS[statusAction].tone} icon={<TabIcon icon={STATUS_ACTION_ICONS[statusAction]} />} />
-              {secondaryAction && (
-                <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: secondaryAction }); }} label={STATUS_LABELS[secondaryAction].verb} tone="text-down" icon={<TabIcon icon={STATUS_ACTION_ICONS[secondaryAction]} />} />
-              )}
-              {deleteAction && (
-                <>
-                  <div className="my-1 border-t" />
-                  <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "status", action: deleteAction }); }} label={STATUS_LABELS[deleteAction].verb} tone="text-down" hint="Soft-delete; restorable" icon={<TabIcon icon={STATUS_ACTION_ICONS[deleteAction]} />} />
-              {state === "deleted" && (
-                <>
-                  <div className="my-1 border-t" />
-                  <MenuItemRow onSelect={() => { setMenuOpen(false); setError(null); setNote(""); setDialog({ kind: "hardDelete" }); }} label="Delete permanently" tone="text-down" hint="Purges all records; irreversible" icon={<TabIcon icon={ADMIN_ACTION_ICONS.hardDelete} />} />
-                </>
-              )}
-                </>
-              )}
-            </>
-          )}
-        </div>,
-        document.body,
-      )}
 
       <Dialog
         open={dialog !== null}
@@ -476,7 +377,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
             <>
               <div>
                 <Label htmlFor="notify-title" className="mb-1 block text-xs font-medium">Title</Label>
-                <Input id="notify-title" required minLength={3} maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} />
+                <Input id="notify-title" required minLength={3} maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Scheduled maintenance window" startIcon={<Bell size={13} strokeWidth={2} aria-hidden />} />
               </div>
               <div>
                 <Label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="notify-body">Message</Label>
@@ -569,20 +470,3 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
   );
 }
 
-function MenuItemRow({ onSelect, label, hint, tone = "text-foreground", icon }: { onSelect: () => void; label: string; hint?: string; tone?: string; icon?: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      tabIndex={-1}
-      onClick={onSelect}
-      className="flex items-center gap-3 text-left transition-colors hover:bg-accent/60 focus:bg-muted focus:outline-none"
-    >
-      {icon}
-      <span className={`min-w-0 flex-1 ${tone}`}>
-        <span className="block font-medium">{label}</span>
-        {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
-      </span>
-    </button>
-  );
-}

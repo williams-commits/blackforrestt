@@ -6,7 +6,7 @@ import { validateDepositAddress } from "@/lib/paymentNetworks";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Save } from "lucide-react";
+import { CalendarDays, CalendarRange, Gauge, Gift, Layers, Network, Percent, Plus, RotateCcw, Save, Share2, SlidersHorizontal, Tag, TrendingDown, Wallet, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Label } from "@/components/ui/label";
 
@@ -158,7 +158,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
                   aria-pressed={active}
                   onClick={() => toggleArrayItem(["trading", "allowedCategories"], cat, effectiveCategories)}
                   className={`h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${
-                  active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted hover:text-foreground"
+                  active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                 }`}
                 >
                   {cat}
@@ -169,6 +169,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         </div>
         <NumberInput
           label="Max order volume (lots)"
+          icon={<Layers size={13} strokeWidth={2} aria-hidden />}
           value={s.trading?.maxOrderLots}
           placeholder={defaults ? String(defaults.trading.maxOrderLots) : "100"}
           onChange={(v) => update(["trading", "maxOrderLots"], v)}
@@ -176,6 +177,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         />
         <NumberInput
           label="Margin warning (%)"
+          icon={<Gauge size={13} strokeWidth={2} aria-hidden />}
           value={s.trading?.marginWarningPercent}
           placeholder={defaults ? String(defaults.trading.marginWarningPercent) : "125"}
           onChange={(v) => update(["trading", "marginWarningPercent"], v)}
@@ -205,7 +207,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
                   aria-pressed={active}
                   onClick={() => toggleArrayItem(["deposits", "allowedMethods"], method, effectiveMethods)}
                   className={`h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${
-                  active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted hover:text-foreground"
+                  active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                 }`}
                 >
                   {method}
@@ -244,15 +246,18 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
                     placeholder="Label (optional), e.g. Main USDT"
                     maxLength={40}
                     className="h-8 flex-1"
+                    startIcon={<Tag size={13} strokeWidth={2} aria-hidden />}
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => setWallets(wallets.filter((_, i) => i !== index))}
                     aria-label={`Remove wallet ${index + 1}`}
-                    className="h-7 w-7 shrink-0 transition hover:border-down/40 hover:text-down"
+                    className="h-8 w-8 shrink-0 hover:text-down"
                   >
-                    ✕
-                  </button>
+                    <X size={14} strokeWidth={2} aria-hidden />
+                  </Button>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-[100px_1fr]">
                   <NativeSelect
@@ -269,6 +274,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
                     placeholder="Network, e.g. TRON (TRC20)"
                     maxLength={60}
                     className="h-8"
+                    startIcon={<Network size={13} strokeWidth={2} aria-hidden />}
                   />
                 </div>
                 <Input
@@ -278,6 +284,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
                   maxLength={256}
                   aria-invalid={Boolean(walletErrors[index])}
                   className="h-8 w-full font-mono text-xs"
+                  startIcon={<Wallet size={13} strokeWidth={2} aria-hidden />}
                 />
                 {walletErrors[index] && (
                   <p className="text-xs text-down">{walletErrors[index]}</p>
@@ -305,6 +312,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         />
         <NumberInput
           label="Daily withdrawal limit (USD)"
+          icon={<CalendarDays size={13} strokeWidth={2} aria-hidden />}
           value={s.withdrawals?.dailyLimit ?? undefined}
           placeholder={defaults?.withdrawals.dailyLimit ? String(defaults.withdrawals.dailyLimit) : "No limit"}
           onChange={(v) => update(["withdrawals", "dailyLimit"], v)}
@@ -312,6 +320,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         />
         <NumberInput
           label="Monthly withdrawal limit (USD)"
+          icon={<CalendarRange size={13} strokeWidth={2} aria-hidden />}
           value={s.withdrawals?.monthlyLimit ?? undefined}
           placeholder={defaults?.withdrawals.monthlyLimit ? String(defaults.withdrawals.monthlyLimit) : "No limit"}
           onChange={(v) => update(["withdrawals", "monthlyLimit"], v)}
@@ -323,6 +332,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
       <SettingsSection title="P/L Manipulation">
         <NumberInput
           label="Spread markup (pips)"
+          icon={<SlidersHorizontal size={13} strokeWidth={2} aria-hidden />}
           value={s.pnl?.spreadMarkupPips}
           placeholder="0"
           onChange={(v) => update(["pnl", "spreadMarkupPips"], v)}
@@ -330,6 +340,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         />
         <NumberInput
           label="Commission per lot override (USD)"
+          icon={<Percent size={13} strokeWidth={2} aria-hidden />}
           value={s.pnl?.commissionPerLotOverride ?? undefined}
           placeholder="Use instrument default"
           onChange={(v) => update(["pnl", "commissionPerLotOverride"], v)}
@@ -337,6 +348,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         />
         <NumberInput
           label="P/L adjustment (%)"
+          icon={<TrendingDown size={13} strokeWidth={2} aria-hidden />}
           value={s.pnl?.pnlAdjustmentPercent}
           placeholder="0"
           onChange={(v) => update(["pnl", "pnlAdjustmentPercent"], v)}
@@ -348,6 +360,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
       <SettingsSection title="Balance & Bonus">
         <NumberInput
           label="Demo starting balance (USD)"
+          icon={<Wallet size={13} strokeWidth={2} aria-hidden />}
           value={s.balance?.demoStartingBalance}
           placeholder={defaults ? String(defaults.balance.demoStartingBalance) : "10000"}
           onChange={(v) => update(["balance", "demoStartingBalance"], v)}
@@ -355,6 +368,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         />
         <NumberInput
           label="Max credit/bonus (USD)"
+          icon={<Gift size={13} strokeWidth={2} aria-hidden />}
           value={s.balance?.maxCreditBonus}
           placeholder={defaults ? String(defaults.balance.maxCreditBonus) : "5000"}
           onChange={(v) => update(["balance", "maxCreditBonus"], v)}
@@ -371,6 +385,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         />
         <NumberInput
           label="Referrer reward (USD)"
+          icon={<Share2 size={13} strokeWidth={2} aria-hidden />}
           value={s.referrals?.referrerReward}
           placeholder={defaults ? String(defaults.referrals.referrerReward) : "25"}
           onChange={(v) => update(["referrals", "referrerReward"], v)}
@@ -378,6 +393,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         />
         <NumberInput
           label="Referred reward (USD)"
+          icon={<Gift size={13} strokeWidth={2} aria-hidden />}
           value={s.referrals?.referredReward}
           placeholder={defaults ? String(defaults.referrals.referredReward) : "10"}
           onChange={(v) => update(["referrals", "referredReward"], v)}
@@ -403,13 +419,9 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
         {dirty && !saving && !hasWalletErrors && (
           <>
             <span className="text-xs text-primary">Unsaved changes</span>
-            <button
-              type="button"
-              onClick={() => setS(initial)}
-              className="text-xs font-medium transition hover:text-foreground"
-            >
-              Reset
-            </button>
+            <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setS(initial)}>
+              <RotateCcw size={13} strokeWidth={2} aria-hidden /> Reset
+            </Button>
           </>
         )}
       </div>
@@ -443,12 +455,14 @@ function NumberInput({
   placeholder,
   onChange,
   hint,
+  icon,
 }: {
   label: string;
   value: number | undefined;
   placeholder?: string;
   onChange: (v: number | undefined) => void;
   hint?: string;
+  icon?: React.ReactNode;
 }) {
   return (
     <div>
@@ -458,6 +472,7 @@ function NumberInput({
         value={value ?? ""}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
+        startIcon={icon}
       />
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>

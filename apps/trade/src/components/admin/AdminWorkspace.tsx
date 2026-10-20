@@ -31,7 +31,7 @@ import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDownToLine, ArrowLeftRight, Ban, CheckCircle2, DollarSign, Download, FileText, LifeBuoy, ScrollText, ShieldAlert, SlidersHorizontal, UserRound } from "lucide-react";
+import { ArrowDownToLine, ArrowLeftRight, Ban, Braces, CheckCircle2, Coins, DollarSign, Download, FileText, LifeBuoy, Percent, ScrollText, ShieldAlert, SlidersHorizontal, Tag, TrendingDown, TrendingUp, UserRound } from "lucide-react";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -833,10 +833,15 @@ function UserBalanceDialog({
               <MetricCard label="Equity" value={formatUsd(data.metrics?.equity ?? "0")} />
             </div>
             <form onSubmit={submit} className="p-4">
-              <div className="inline-flex gap-1 rounded-xl bg-muted p-1" role="group" aria-label="Balance adjustment type">
-                <button type="button" onClick={() => setAction("CREDIT")} aria-pressed={action === "CREDIT"} className={`rounded-lg px-3 py-2 text-xs font-medium transition ${action === "CREDIT" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Top up balance</button>
-                <button type="button" onClick={() => setAction("DEBIT")} aria-pressed={action === "DEBIT"} className={`rounded-lg px-3 py-2 text-xs font-medium transition ${action === "DEBIT" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Deduct balance</button>
-              </div>
+              <ChipGroup
+                ariaLabel="Balance adjustment type"
+                value={action}
+                onChange={setAction}
+                options={[
+                  { value: "CREDIT" as const, label: "Top up balance" },
+                  { value: "DEBIT" as const, label: "Deduct balance" },
+                ]}
+              />
               <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,12rem)_1fr_auto] md:items-end">
                 <Label className="text-xs font-medium">Amount (USD)
                   <Input type="number" inputMode="decimal" min="0.00000001" max="1000000" step="0.00000001" required value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 h-10" placeholder="0.00" startIcon={<DollarSign size={13} strokeWidth={2} aria-hidden />} />
@@ -1569,7 +1574,7 @@ function InstrumentsPanel({ canManage }: { canManage: boolean }) {
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Instrument configuration" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} />{canManage && <ChangeHint text="Propose instrument changes from the Approvals module; a separate reviewer must execute them." />}
     <RecordList<InstrumentRow>
       ariaLabel="Instrument"
-      title="Instruments"
+      title="Symbols"
       description={`${resource.data.instruments.length} configured`}
       rows={resource.data.instruments}
       rowKey={(i) => i.symbol}
@@ -1617,7 +1622,7 @@ function RiskPanel({ canManage }: { canManage: boolean }) {
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Risk controls" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} /><div className="flex flex-wrap gap-2">{Object.entries(resource.data.exposure).map(([key, value]) => <Badge key={key} variant="secondary">{key.replaceAll(/([A-Z])/g, " $1")}: <strong className="ml-1 tabular-nums">{value}</strong></Badge>)}</div>{canManage && <ChangeHint text="Risk changes are proposed in Approvals and become effective only after a separate checker executes them." />}
     <RecordList<RiskRuleRow>
       ariaLabel="Rule"
-      title="Risk rules"
+      title="Rules"
       description={`${resource.data.rules.length} rules`}
       rows={resource.data.rules}
       rowKey={(r) => r.id}
@@ -1672,7 +1677,7 @@ function AuditPanel({ canVerify, canExport }: { canVerify: boolean; canExport: b
   async function verify() { try { const result = await requestJson<{ valid: boolean; checkedEvents: number }>("/api/admin/audit/verify", { method: "POST" }); toast.success(`Chain ${result.valid ? "valid" : "invalid"}`, `Checked ${result.checkedEvents} events.`); await resource.refresh(); } catch (cause) { toast.error("Verification failed", cause instanceof Error ? cause.message : "Verification failed."); } }
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex flex-wrap items-start justify-between gap-3"><SectionHeader title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} /><div className="flex gap-2">{canVerify && <Button type="button" size="sm" onClick={() => void verify()}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Verify chain</Button>}{canExport && <Button type="button" size="sm" variant="outline" asChild><a href="/api/admin/audit/export?format=csv&limit=500"><Download size={13} strokeWidth={2} aria-hidden /> Export CSV</a></Button>}</div></div><RecordList<AuditEventRow>
       ariaLabel="Event"
-      title="Audit trail"
+      title="Events"
       description={`${resource.data.events.length} events${resource.data.redacted ? " · export-redacted view" : ""}`}
       rows={resource.data.events}
       rowKey={(e) => String(e.sequence)}
@@ -2023,15 +2028,15 @@ function RoleChangeFields({ userId, label }: { userId?: string; label?: string }
 function RiskChangeFields() {
   return (
     <div className="mt-3 grid gap-3 md:grid-cols-3">
-      <FieldInput name="code" label="Rule code" placeholder="MAX_ORDER_VOLUME" required />
-      <FieldInput name="name" label="Rule name" required />
+      <FieldInput name="code" label="Rule code" placeholder="MAX_ORDER_VOLUME" required startIcon={<ShieldAlert size={13} strokeWidth={2} aria-hidden />} />
+      <FieldInput name="name" label="Rule name" required startIcon={<Tag size={13} strokeWidth={2} aria-hidden />} />
       <Label className="text-xs">Severity
         <NativeSelect name="severity" className="mt-1" defaultValue="WARNING">
           <option>INFO</option><option>WARNING</option><option>BLOCKING</option>
         </NativeSelect>
       </Label>
-      <FieldInput name="description" label="Description" required />
-      <FieldInput name="configuration" label="Configuration JSON" placeholder='{"maxLots":"50"}' required />
+      <FieldInput name="description" label="Description" required startIcon={<FileText size={13} strokeWidth={2} aria-hidden />} />
+      <FieldInput name="configuration" label="Configuration JSON" placeholder='{"maxLots":"50"}' required startIcon={<Braces size={13} strokeWidth={2} aria-hidden />} />
       <Label className="flex items-center gap-2 self-end pb-2 text-xs"><Checkbox name="enabled" defaultChecked /> Enabled</Label>
     </div>
   );
@@ -2041,10 +2046,10 @@ function InstrumentChangeFields() {
   return (
     <div className="mt-3 grid gap-3 md:grid-cols-3">
       <FieldInput name="symbol" label="Symbol" placeholder="EURUSD" required startIcon={<CandlestickChart size={13} strokeWidth={2} aria-hidden />} />
-      <FieldInput name="marginPerLot" label="Margin per lot" type="number" step="0.00000001" required />
-      <FieldInput name="commissionPerLot" label="Commission per lot" type="number" step="0.00000001" required />
-      <FieldInput name="swapLongPips" label="Long swap pips" type="number" step="0.00000001" required />
-      <FieldInput name="swapShortPips" label="Short swap pips" type="number" step="0.00000001" required />
+      <FieldInput name="marginPerLot" label="Margin per lot" type="number" step="0.00000001" required startIcon={<Coins size={13} strokeWidth={2} aria-hidden />} />
+      <FieldInput name="commissionPerLot" label="Commission per lot" type="number" step="0.00000001" required startIcon={<Percent size={13} strokeWidth={2} aria-hidden />} />
+      <FieldInput name="swapLongPips" label="Long swap pips" type="number" step="0.00000001" required startIcon={<TrendingUp size={13} strokeWidth={2} aria-hidden />} />
+      <FieldInput name="swapShortPips" label="Short swap pips" type="number" step="0.00000001" required startIcon={<TrendingDown size={13} strokeWidth={2} aria-hidden />} />
       <Label className="flex items-center gap-2 self-end pb-2 text-xs"><Checkbox name="active" defaultChecked /> Active</Label>
     </div>
   );

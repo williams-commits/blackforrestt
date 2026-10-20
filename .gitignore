@@ -41,3 +41,6 @@ apps/trade/.env
 fixes
 .agents/
 skills-lock.json
+.mimosa/
+.video_agent/
+DESIGN.md

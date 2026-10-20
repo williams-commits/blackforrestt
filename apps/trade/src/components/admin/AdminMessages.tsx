@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
-import { Megaphone, Send } from "lucide-react";
+import { Megaphone, RotateCw, Search, Send, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
@@ -248,7 +248,9 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
       {error && (
         <Alert tone="err" className="flex items-center justify-between gap-2 text-xs">
           <span>{error}</span>
-          <button type="button" onClick={() => void loadThreads()} className="shrink-0 font-medium underline underline-offset-2">Retry</button>
+          <Button type="button" size="sm" variant="ghost" className="h-7 shrink-0 px-2 text-xs" onClick={() => void loadThreads()}>
+            <RotateCw size={13} strokeWidth={2} aria-hidden /> Retry
+          </Button>
         </Alert>
       )}
 
@@ -262,6 +264,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search name, email, account…"
               aria-label="Search conversations"
+              startIcon={<Search size={13} strokeWidth={2} aria-hidden />}
             />
             <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Checkbox checked={unreadOnly} onCheckedChange={(checked) => setUnreadOnly(checked === true)} aria-label="Unread only" />
@@ -320,16 +323,20 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                     )}
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <button
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
                     type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-down hover:text-down"
                     onClick={() => setDeleteOpen(true)}
-                    className="text-xs font-medium text-down/80 hover:text-down hover:underline underline-offset-2"
                     title="Permanently delete this conversation (audited)"
                   >
-                    delete
-                  </button>
-                  <button type="button" onClick={() => { setActiveUser(null); setThread(null); }} className="text-xs text-muted-foreground hover:text-foreground">close</button>
+                    <Trash2 size={13} strokeWidth={2} aria-hidden /> Delete
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => { setActiveUser(null); setThread(null); }}>
+                    <X size={13} strokeWidth={2} aria-hidden /> Close
+                  </Button>
                 </div>
               </div>
               <div
@@ -341,9 +348,11 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               >
                 {threadLoading && !thread && <div className="space-y-2" role="status" aria-label="Loading thread"><Skeleton className="h-8 w-2/3" /><Skeleton className="h-8 w-1/2" /><Skeleton className="h-8 w-3/4" /></div>}
                 {thread && thread.hasMore && (
-                  <button type="button" onClick={loadEarlier} className="mx-auto block text-xs hover:text-foreground">
-                    Load earlier messages
-                  </button>
+                  <div className="flex justify-center">
+                    <Button type="button" size="sm" variant="ghost" onClick={loadEarlier}>
+                      <RotateCw size={13} strokeWidth={2} aria-hidden /> Load earlier messages
+                    </Button>
+                  </div>
                 )}
                 {thread?.messages.map((message) => {
                   const mine = thread.viewerId === message.senderId;
@@ -369,7 +378,9 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               {threadError && (
                 <div className="mx-4 mb-2"><Alert tone="err" className="flex items-center justify-between gap-2 text-xs">
                   <span>{threadError}</span>
-                  <button type="button" onClick={() => activeUser && void loadThread(activeUser.id, limit)} className="shrink-0 font-medium underline underline-offset-2">Retry</button>
+                  <Button type="button" size="sm" variant="ghost" className="h-7 shrink-0 px-2 text-xs" onClick={() => activeUser && void loadThread(activeUser.id, limit)}>
+                    <RotateCw size={13} strokeWidth={2} aria-hidden /> Retry
+                  </Button>
                 </Alert></div>
               )}
               <form onSubmit={send} className="flex items-end gap-2 border-t border-border p-3">
@@ -389,7 +400,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                   className="flex-1 resize-none"
                 />
                 <Button type="submit" size="sm" variant="brand" disabled={sending || !draft.trim()}>
-                  {sending ? "…" : "Send"}
+                  {sending ? "…" : (<><Send size={13} strokeWidth={2} aria-hidden /> Send</>)}
                 </Button>
               </form>
             </>

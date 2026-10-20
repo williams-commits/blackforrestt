@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
-import { Ellipsis, Bell } from "lucide-react";
+import { Ellipsis, Bell, Check, Copy } from "lucide-react";
+import { ChipGroup } from "@/components/ui/ChipGroup";
 import { ADMIN_ACTION_ICONS, TabIcon } from "@/components/ui/tabIcons";
 import { fmtDateTime } from "@/lib/dates";
 import { Input } from "@/components/ui/Input";
@@ -312,9 +313,10 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <code className="min-w-0 flex-1 py-2.5 text-center font-mono text-xl font-bold tracking-widest">{resetResult.temporaryPassword}</code>
-                    <button type="button" onClick={() => void copyValue(resetResult.temporaryPassword)} className="shrink-0 py-2.5 hover:bg-accent/60">
-                      {copiedValue ? "✓ Copied" : "Copy"}
-                    </button>
+                    <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => void copyValue(resetResult.temporaryPassword)}>
+                      {copiedValue ? <Check size={13} strokeWidth={2} aria-hidden /> : <Copy size={13} strokeWidth={2} aria-hidden />}
+                      {copiedValue ? "Copied" : "Copy"}
+                    </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Case-sensitive, 6 characters. Deliver it to the user through a secure channel — the user should
@@ -347,9 +349,10 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                         onClick={(e) => (e.target as HTMLInputElement).select()}
                         className="min-w-0 flex-1 font-mono text-xs"
                       />
-                      <button type="button" onClick={() => void copyValue(resetResult.previewUrl!)} className="shrink-0 hover:bg-accent/60">
-                        {copiedValue ? "✓ Copied" : "Copy"}
-                      </button>
+                      <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => void copyValue(resetResult.previewUrl!)}>
+                        {copiedValue ? <Check size={13} strokeWidth={2} aria-hidden /> : <Copy size={13} strokeWidth={2} aria-hidden />}
+                        {copiedValue ? "Copied" : "Copy"}
+                      </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">Hand this to the user through a secure channel — anyone with the link can set the password.</p>
                   </div>
@@ -357,7 +360,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
               </>
             )}
             <div className="flex justify-end">
-              <button type="button" onClick={() => { setDialog(null); setError(null); setResetResult(null); }} className="hover:bg-accent/60">Close</button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => { setDialog(null); setError(null); setResetResult(null); }}>Close</Button>
             </div>
           </div>
         ) : (
@@ -412,24 +415,16 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
             </p>
           ) : dialog?.kind === "resetPassword" ? (
             <div className="space-y-3">
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Reset method">
-                <button
-                  type="button"
-                  onClick={() => setResetMode("temporary")}
-                  aria-pressed={resetMode === "temporary"}
-                  className={`rounded px-3 py-2 text-xs font-semibold ${resetMode === "temporary" ? "bg-primary text-primary-foreground" : "border border-border bg-card hover:bg-accent/60"}`}
-                >
-                  Generate temporary password
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setResetMode("link")}
-                  aria-pressed={resetMode === "link"}
-                  className={`rounded px-3 py-2 text-xs font-semibold ${resetMode === "link" ? "bg-primary text-primary-foreground" : "border border-border bg-card hover:bg-accent/60"}`}
-                >
-                  Email reset link
-                </button>
-              </div>
+              <ChipGroup
+                ariaLabel="Reset method"
+                className="flex-wrap"
+                value={resetMode}
+                onChange={(mode) => setResetMode(mode)}
+                options={[
+                  { value: "temporary", label: "Generate temporary password" },
+                  { value: "link", label: "Email reset link" },
+                ]}
+              />
               {resetMode === "temporary" ? (
                 <p className="text-xs text-muted-foreground">
                   Generates a random 6-character alphanumeric password and sets it on{" "}

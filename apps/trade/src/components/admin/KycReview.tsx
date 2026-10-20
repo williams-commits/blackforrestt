@@ -1,10 +1,10 @@
 "use client";
 
 import { useId, useState, useEffect, useMemo } from "react";
-import { Ban, CheckCheck, CheckCircle2, ExternalLink, FileSearch, ShieldCheck } from "lucide-react";
+import { Ban, CheckCheck, CheckCircle2, ExternalLink, FileSearch, Search, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { TableSearch } from "@/components/ui/DataTable";
 import { Input } from "@/components/ui/Input";
+import { fmtAgo } from "@/lib/dates";
 import { Textarea } from "@/components/ui/Textarea";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/Alert";
@@ -205,7 +205,14 @@ export function KycReview({
               {needle ? `${filteredPending.length}/${pending.length}` : pending.length}
             </span>
           </div>
-          <TableSearch value={queueSearch} onChange={setQueueSearch} placeholder="Search name, email, account…" label="Search KYC queue" />
+          <Input
+            type="search"
+            value={queueSearch}
+            onChange={(e) => setQueueSearch(e.target.value)}
+            placeholder="Search name, email, account…"
+            aria-label="Search KYC queue"
+            startIcon={<Search size={14} strokeWidth={2} aria-hidden />}
+          />
           <div className="overflow-hidden">
             <div className="space-y-1.5 p-1.5">
               {filteredPending.map((s) => (
@@ -473,16 +480,6 @@ function Detail({ label, value }: { label: string; value: string }) {
       <dd className="mt-0.5">{value}</dd>
     </div>
   );
-}
-
-function fmtAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 function fmtSize(bytes: number): string {

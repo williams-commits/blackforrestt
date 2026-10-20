@@ -14,8 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/Button";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
-import { Check, Play, Plus, Save, Search, UserMinus, UserPlus, X, Users, ArrowLeft, FileText } from "lucide-react";
+import { Check, Play, Plus, Save, Search, UserMinus, UserPlus, X, Users, ArrowLeft, ArrowRight, ChevronRight, Coins, DollarSign, FileText, Pencil, SlidersHorizontal } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { SimpleDialog } from "@/components/ui/Dialog";
 
 interface Group {
   id: string;
@@ -43,20 +44,7 @@ interface GroupMember {
 }
 
 interface GroupDetail extends Group {
-  members: Array<{
-    id: string;
-    assignedAt: string;
-    user: {
-      id: string;
-      name: string | null;
-      email: string | null;
-      accountNo: string | null;
-      verified: boolean;
-      balance: number;
-      equity: number;
-      floatingPl: number;
-    };
-  }>;
+  members: GroupMember[];
 }
 
 /** Settings preset summaries for the group list view. */
@@ -152,12 +140,12 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
                     onClick={() => toggleExpand(g.id)}
                     className="flex items-center gap-2 min-w-0 flex-1 text-left"
                   >
-                    <svg
-                      width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                    <ChevronRight
+                      size={14}
+                      strokeWidth={2.5}
+                      aria-hidden
                       className={`text-muted-foreground transition-transform shrink-0 ${isExpanded ? "rotate-90" : ""}`}
-                    >
-                      <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    />
                     <span className="h-3 w-3 rounded-full shrink-0" style={{ background: g.color }} />
                     <span className="font-semibold text-sm truncate">{g.name}</span>
                     {g.description && <span className="text-xs text-muted-foreground truncate hidden sm:inline">— {g.description}</span>}
@@ -178,12 +166,9 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
                   {/* Actions */}
                   <div className="flex items-center gap-1 shrink-0">
                     {canManage && <EditGroupButton group={g} onSaved={() => void refresh()} />}
-                    <button
-                      onClick={() => setSelected(g.id)}
-                      className="rounded-md bg-muted px-3 py-1 text-xs font-medium text-foreground hover:bg-muted transition"
-                    >
-                      Open →
-                    </button>
+                    <Button type="button" size="sm" variant="secondary" onClick={() => setSelected(g.id)}>
+                      Open <ArrowRight size={13} strokeWidth={2} aria-hidden />
+                    </Button>
                   </div>
                 </div>
 
@@ -296,12 +281,12 @@ function GroupMemberPreview({ groupId }: { groupId: string }) {
       </div>
       <div className="flex flex-wrap gap-1.5">
         {members.slice(0, 8).map((m, i) => (
-          <span key={i} className="rounded-full py-0.5 text-xs">
+          <span key={i} className="rounded-full bg-muted px-2.5 py-0.5 text-xs">
             {m.user.name ?? m.user.email ?? "Unknown"}
           </span>
         ))}
         {members.length > 8 && (
-          <span className="rounded-full py-0.5 text-xs text-muted-foreground">
+          <span className="rounded-full bg-muted/60 px-2.5 py-0.5 text-xs text-muted-foreground">
             +{members.length - 8} more
           </span>
         )}
@@ -342,51 +327,51 @@ function EditGroupButton({ group, onSaved }: { group: Group; onSaved: () => void
 
   return (
     <>
-      <button
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
         onClick={() => setOpen(true)}
-        className="rounded-md p-1.5 text-muted-foreground hover:text-primary hover:bg-accent/60 transition"
         aria-label="Edit group"
         title="Edit name, description, color"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-        </svg>
-      </button>
+        <Pencil size={14} strokeWidth={2} aria-hidden />
+      </Button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
-          <div className="max-w-md rounded-xl p-6 shadow-card" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold mb-4">Edit Group</h3>
-            {err && <Alert tone="err" className="mb-3">{err}</Alert>}
-            <div className="space-y-3">
-              <div>
-                <Label className="mb-1 block text-xs text-muted-foreground">Name</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)}
-                  className="h-10" placeholder="Group name" startIcon={<Users size={13} strokeWidth={2} aria-hidden />} />
-              </div>
-              <div>
-                <Label className="mb-1 block text-xs text-muted-foreground">Description</Label>
-                <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Optional description" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
-                  className="h-10" />
-              </div>
-              <div>
-                <Label className="mb-1 block text-xs text-muted-foreground">Color</Label>
-                <div className="flex items-center gap-2">
-                  <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-12" />
-                  <span className="text-xs text-muted-foreground font-mono">{color}</span>
-                </div>
-              </div>
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}><X size={13} strokeWidth={2} aria-hidden /> Cancel</Button>
-              <Button type="button" onClick={() => void submit()} disabled={saving || name.length < 2} loading={saving} loadingLabel="Saving">
-                <Save size={13} strokeWidth={2} aria-hidden /> Save
-              </Button>
+      <SimpleDialog
+        open={open}
+        onClose={() => { if (!saving) setOpen(false); }}
+        title="Edit Group"
+        description="Rename the group, adjust its description, or change its accent color."
+        className="max-w-md"
+      >
+        <div className="p-5 space-y-3">
+          {err && <Alert tone="err">{err}</Alert>}
+          <div>
+            <Label className="mb-1 block text-xs text-muted-foreground">Name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)}
+              className="h-10" placeholder="Group name" startIcon={<Users size={13} strokeWidth={2} aria-hidden />} />
+          </div>
+          <div>
+            <Label className="mb-1 block text-xs text-muted-foreground">Description</Label>
+            <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Optional description" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
+              className="h-10" />
+          </div>
+          <div>
+            <Label className="mb-1 block text-xs text-muted-foreground">Color</Label>
+            <div className="flex items-center gap-2">
+              <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-12" />
+              <span className="text-xs text-muted-foreground font-mono">{color}</span>
             </div>
           </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="ghost" disabled={saving} onClick={() => setOpen(false)}><X size={13} strokeWidth={2} aria-hidden /> Cancel</Button>
+            <Button type="button" onClick={() => void submit()} disabled={saving || name.length < 2} loading={saving} loadingLabel="Saving">
+              <Save size={13} strokeWidth={2} aria-hidden /> Save
+            </Button>
+          </div>
         </div>
-      )}
+      </SimpleDialog>
     </>
   );
 }
@@ -449,58 +434,63 @@ function AddMemberButton({ groupId, onAdded, existingIds }: { groupId: string; o
         <UserPlus size={13} strokeWidth={2} aria-hidden /> Add Member
       </Button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
-          <div className="max-w-md rounded-xl p-6 shadow-card" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold mb-4">Add Member</h3>
-            {err && <Alert tone="err" className="mb-3">{err}</Alert>}
-            <div className="flex gap-2 mb-3">
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by name, email, or account no…"
-                className="flex-1"
-                autoFocus
-              />
-              <Button type="button" size="sm" variant="outline" onClick={() => void search(query)}><Search size={13} strokeWidth={2} aria-hidden /> Search</Button>
-            </div>
+      <SimpleDialog
+        open={open}
+        onClose={() => { if (!adding) setOpen(false); }}
+        title="Add Member"
+        description="Search traders by name, email, or account number and add them to this group."
+        className="max-w-md"
+      >
+        <div className="p-5 space-y-3">
+          {err && <Alert tone="err">{err}</Alert>}
+          <div className="flex gap-2">
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name, email, or account no…"
+              className="flex-1"
+              autoFocus
+              startIcon={<Search size={13} strokeWidth={2} aria-hidden />}
+            />
+            <Button type="button" size="sm" variant="outline" onClick={() => void search(query)}><Search size={13} strokeWidth={2} aria-hidden /> Search</Button>
+          </div>
 
-            <div className="max-h-64 overflow-y-auto border-border">
-              {searching && <p className="p-3 text-xs text-muted-foreground">Searching…</p>}
-              {!searching && results.length === 0 && query.length >= 2 && (
-                <p className="p-3 text-xs text-muted-foreground">No users found.</p>
-              )}
-              {!searching && query.length < 2 && (
-                <p className="p-3 text-xs text-muted-foreground">Type at least 2 characters to search.</p>
-              )}
-              {results.map((u) => {
-                const already = existingIds.includes(u.id);
-                return (
-                  <div key={u.id} className="flex items-center justify-between border-b border-border last:border-0">
-                    <div className="min-w-0">
-                      <div className="text-xs font-medium truncate">{u.name ?? "Unknown"}</div>
-                      <div className="text-xs text-muted-foreground truncate">{u.email} · {u.accountNo ?? "—"}</div>
-                    </div>
-                    <button
-                      onClick={() => already ? undefined : void add(u.id)}
-                      disabled={already || adding === u.id}
-                      className={`shrink-0 rounded-md px-3 py-1 text-xs font-medium transition ${
-                        already ? "bg-muted text-muted-foreground cursor-default" : "bg-primary text-primary-foreground hover:brightness-110 disabled:opacity-50"
-                      }`}
-                    >
-                      {already ? "In group" : adding === u.id ? "Adding…" : "Add"}
-                    </button>
+          <div className="max-h-64 overflow-y-auto rounded-lg bg-muted/30">
+            {searching && <p className="p-3 text-xs text-muted-foreground">Searching…</p>}
+            {!searching && results.length === 0 && query.length >= 2 && (
+              <p className="p-3 text-xs text-muted-foreground">No users found.</p>
+            )}
+            {!searching && query.length < 2 && (
+              <p className="p-3 text-xs text-muted-foreground">Type at least 2 characters to search.</p>
+            )}
+            {results.map((u) => {
+              const already = existingIds.includes(u.id);
+              return (
+                <div key={u.id} className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2 last:border-0">
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium truncate">{u.name ?? "Unknown"}</div>
+                    <div className="text-xs text-muted-foreground truncate">{u.email} · {u.accountNo ?? "—"}</div>
                   </div>
-                );
-              })}
-            </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={already ? "secondary" : "default"}
+                    disabled={already || adding === u.id}
+                    onClick={() => already ? undefined : void add(u.id)}
+                  >
+                    {already ? <Check size={13} strokeWidth={2} aria-hidden /> : <UserPlus size={13} strokeWidth={2} aria-hidden />}
+                    {already ? "In group" : adding === u.id ? "Adding…" : "Add"}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
 
-            <div className="mt-4 flex justify-end">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}><Check size={13} strokeWidth={2} aria-hidden /> Done</Button>
-            </div>
+          <div className="flex justify-end">
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}><Check size={13} strokeWidth={2} aria-hidden /> Done</Button>
           </div>
         </div>
-      )}
+      </SimpleDialog>
     </>
   );
 }
@@ -547,37 +537,40 @@ function CreateGroupButton({ onCreated }: { onCreated: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
-      <div className="max-w-md rounded-xl p-6 shadow-card" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-base font-bold mb-4">Create Group</h3>
-        {err && <Alert tone="err" className="mb-3">{err}</Alert>}
-        <div className="space-y-3">
-          <div>
-            <Label className="mb-1 block text-xs text-muted-foreground">Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VIP Traders" startIcon={<Users size={13} strokeWidth={2} aria-hidden />}
-              className="h-10" />
-          </div>
-          <div>
-            <Label className="mb-1 block text-xs text-muted-foreground">Description (optional)</Label>
-            <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Short description" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
-              className="h-10" />
-          </div>
-          <div>
-            <Label className="mb-1 block text-xs text-muted-foreground">Color</Label>
-            <div className="flex items-center gap-2">
-              <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-12" />
-              <span className="text-xs text-muted-foreground font-mono">{color}</span>
-            </div>
+    <SimpleDialog
+      open={open}
+      onClose={() => { if (!saving) setOpen(false); }}
+      title="Create Group"
+      description="Groups bundle users under shared settings, risk profiles, and role assignments."
+      className="max-w-md"
+    >
+      <div className="p-5 space-y-3">
+        {err && <Alert tone="err">{err}</Alert>}
+        <div>
+          <Label className="mb-1 block text-xs text-muted-foreground">Name</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VIP Traders" startIcon={<Users size={13} strokeWidth={2} aria-hidden />}
+            className="h-10" />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs text-muted-foreground">Description (optional)</Label>
+          <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Short description" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
+            className="h-10" />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs text-muted-foreground">Color</Label>
+          <div className="flex items-center gap-2">
+            <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-12" />
+            <span className="text-xs text-muted-foreground font-mono">{color}</span>
           </div>
         </div>
-        <div className="mt-5 flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={() => setOpen(false)}><X size={13} strokeWidth={2} aria-hidden /> Cancel</Button>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" disabled={saving} onClick={() => setOpen(false)}><X size={13} strokeWidth={2} aria-hidden /> Cancel</Button>
           <Button type="button" onClick={() => void submit()} disabled={saving || name.length < 2} loading={saving} loadingLabel="Creating">
             <Plus size={13} strokeWidth={2} aria-hidden /> Create
           </Button>
         </div>
       </div>
-    </div>
+    </SimpleDialog>
   );
 }
 
@@ -642,7 +635,7 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
       </div>
     );
   }
-  if (error || !detail) return <div className="text-sm text-down">{error ?? "Group not found"}</div>;
+  if (error || !detail) return <Alert tone="err">{error ?? "Group not found."}</Alert>;
 
   return (
     <div className="space-y-5">
@@ -676,18 +669,11 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
       )}
 
       {/* Members */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold">Members ({detail.members.length})</h3>
-          {canManage && <AddMemberButton groupId={detail.id} onAdded={() => void refresh()} existingIds={detail.members.map((m) => m.user.id)} />}
-        </div>
-        {detail.members.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No members yet.</p>
-        ) : (
-          <RecordList<GroupMember>
+      <RecordList<GroupMember>
             ariaLabel="Member"
             title="Members"
             description={`${detail.members.length} members`}
+            toolbarEnd={canManage ? <AddMemberButton groupId={detail.id} onAdded={() => void refresh()} existingIds={detail.members.map((m) => m.user.id)} /> : undefined}
             rows={detail.members}
             rowKey={(m) => m.id}
             search={{ placeholder: "Search name or email…", text: (m) => `${m.user.name ?? ""} ${m.user.email ?? ""} ${m.user.accountNo ?? ""}` }}
@@ -745,9 +731,6 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
             )}
             emptyTitle="No members yet."
           />
-        )}
-      </div>
-
       <ConfirmDialog
         open={removing !== null}
         title="Remove member from group?"
@@ -768,18 +751,22 @@ function BulkActions({ groupId, groupName, memberCount }: { groupId: string; gro
     <div className="rounded-xl bg-panel/50 p-4">
       <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3">Bulk Actions ({memberCount} members)</h4>
       <div className="flex flex-wrap gap-2">
-        <button
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
           onClick={() => setDialog("balance")}
-          className="px-4 font-semibold hover:bg-accent/60 transition"
         >
-          Adjust All Balances
-        </button>
-        <button
+          <Coins size={13} strokeWidth={2} aria-hidden /> Adjust All Balances
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
           onClick={() => setDialog("pnl")}
-          className="px-4 font-semibold hover:bg-accent/60 transition"
         >
-          Set P/L for All Positions
-        </button>
+          <SlidersHorizontal size={13} strokeWidth={2} aria-hidden /> Set P/L for All Positions
+        </Button>
       </div>
 
       {dialog === "balance" && (
@@ -788,8 +775,8 @@ function BulkActions({ groupId, groupName, memberCount }: { groupId: string; gro
           subtitle={`This will apply the same credit/debit to all ${memberCount} members.`}
           fields={[
             { key: "action", label: "Action", type: "select", options: ["CREDIT", "DEBIT"], default: "CREDIT" },
-            { key: "amount", label: "Amount (USD)", type: "number", default: "100" },
-            { key: "reason", label: "Audited reason", type: "text", default: "" },
+            { key: "amount", label: "Amount (USD)", type: "number", default: "100", icon: <DollarSign size={13} strokeWidth={2} aria-hidden /> },
+            { key: "reason", label: "Audited reason", type: "text", default: "", icon: <FileText size={13} strokeWidth={2} aria-hidden /> },
           ]}
           endpoint={`/api/admin/groups/${groupId}/balance`}
           onClose={() => setDialog(null)}
@@ -800,8 +787,8 @@ function BulkActions({ groupId, groupName, memberCount }: { groupId: string; gro
           title={`Set P/L — ${groupName}`}
           subtitle={`Sets a target gross P/L for ALL open positions across all ${memberCount} members.`}
           fields={[
-            { key: "targetProfit", label: "Target profit (USD)", type: "number", default: "0" },
-            { key: "reason", label: "Audited reason", type: "text", default: "" },
+            { key: "targetProfit", label: "Target profit (USD)", type: "number", default: "0", icon: <DollarSign size={13} strokeWidth={2} aria-hidden /> },
+            { key: "reason", label: "Audited reason", type: "text", default: "", icon: <FileText size={13} strokeWidth={2} aria-hidden /> },
           ]}
           endpoint={`/api/admin/groups/${groupId}/pnl`}
           onClose={() => setDialog(null)}
@@ -817,6 +804,7 @@ interface BulkField {
   type: "select" | "number" | "text";
   options?: string[];
   default: string;
+  icon?: React.ReactNode;
 }
 
 function BulkDialog({ title, subtitle, fields, endpoint, onClose }: {
@@ -862,41 +850,44 @@ function BulkDialog({ title, subtitle, fields, endpoint, onClose }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="max-w-md rounded-xl p-6 shadow-card" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-base font-bold mb-1">{title}</h3>
-        <p className="text-xs text-muted-foreground mb-4">{subtitle}</p>
-        {err && <Alert tone="err" className="mb-3">{err}</Alert>}
-        {result && <Alert tone="ok" className="mb-3">{result}</Alert>}
-        <div className="space-y-3">
-          {fields.map((f) => (
-            <div key={f.key}>
-              <Label className="mb-1 block text-xs text-muted-foreground">{f.label}</Label>
-              {f.type === "select" ? (
-                <NativeSelect
-                  value={values[f.key]}
-                  onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                >
-                  {f.options?.map((o) => <option key={o} value={o}>{o}</option>)}
-                </NativeSelect>
-              ) : (
-                <Input
-                  type={f.type === "number" ? "number" : "text"}
-                  value={values[f.key]}
-                  onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="mt-5 flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}><X size={13} strokeWidth={2} aria-hidden /> Close</Button>
+    <SimpleDialog
+      open
+      onClose={() => { if (!saving) onClose(); }}
+      title={title}
+      description={subtitle}
+      className="max-w-md"
+    >
+      <div className="p-5 space-y-3">
+        {err && <Alert tone="err">{err}</Alert>}
+        {result && <Alert tone="ok">{result}</Alert>}
+        {fields.map((f) => (
+          <div key={f.key}>
+            <Label className="mb-1 block text-xs text-muted-foreground">{f.label}</Label>
+            {f.type === "select" ? (
+              <NativeSelect
+                value={values[f.key]}
+                onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+              >
+                {f.options?.map((o) => <option key={o} value={o}>{o}</option>)}
+              </NativeSelect>
+            ) : (
+              <Input
+                type={f.type === "number" ? "number" : "text"}
+                value={values[f.key]}
+                onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+                startIcon={f.icon}
+              />
+            )}
+          </div>
+        ))}
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" disabled={saving} onClick={onClose}><X size={13} strokeWidth={2} aria-hidden /> Close</Button>
           <Button type="button" onClick={() => void submit()} disabled={saving} loading={saving} loadingLabel="Processing">
             <Play size={13} strokeWidth={2} aria-hidden /> Execute
           </Button>
         </div>
       </div>
-    </div>
+    </SimpleDialog>
   );
 }
 
@@ -955,15 +946,17 @@ function SettingsPreview({ settings }: { settings: Record<string, unknown> }) {
 function CollapsibleSection({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-border bg-card/50 overflow-hidden">
+    <div className="rounded-lg bg-card/50 overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-accent/60/50 transition"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-accent/60 transition"
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-          className={`text-muted-foreground transition-transform shrink-0 ${open ? "rotate-90" : ""}`}>
-          <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <ChevronRight
+          size={12}
+          strokeWidth={2.5}
+          aria-hidden
+          className={`text-muted-foreground transition-transform shrink-0 ${open ? "rotate-90" : ""}`}
+        />
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</span>
       </button>
       {open && <div className="px-3 pb-3 pt-1">{children}</div>}

@@ -7,7 +7,7 @@ import { IdentityTile } from "@/components/ui/Initial";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Button } from "@/components/ui/Button";
 import { useCommandDialog } from "@/components/ui/useCommandDialog";
-import { FilterChip } from "@/components/ui/DataTable";
+import { Alert } from "@/components/ui/Alert";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { MethodDetailsGrid } from "@/components/payments/MethodDetailsGrid";
 import { fmtDateTime } from "@/lib/dates";
@@ -124,35 +124,12 @@ export function PaymentsReview({
   }
 
   return (
-    <section aria-labelledby="payments-heading" className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 id="payments-heading" className="text-sm font-semibold">Manual payment queue</h2>
-          <p className="text-xs text-muted-foreground">{reviewPolicy}</p>
-        </div>
-        <span className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">{requests.length} Total</span>
-      </div>
-      {error && <div role="alert" className="rounded border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">{error}</div>}
-      <div className="flex flex-wrap items-center gap-2">
-        {(["ALL", "DEPOSIT", "WITHDRAWAL"] as const).map((value) => (
-          <FilterChip key={value} active={typeFilter === value} onClick={() => setTypeFilter(value)}>
-            {value === "ALL" ? "All" : value === "DEPOSIT" ? "Deposits" : "Withdrawals"}
-          </FilterChip>
-        ))}
-        <CsvExportButton
-          filename="payment-queue"
-          columns={["Created", "Client", "Account", "Type", "Status", "Method", "Amount", "Reference"]}
-          rows={filtered.map((r) => [
-            fmtDateTime(r.createdAt), r.user.name ?? r.user.email ?? "Unknown", r.user.accountNo ?? "",
-            r.type, r.status, r.methodLabel, `${r.asset} ${r.amount}`, r.userReference ?? "",
-          ])}
-          disabled={filtered.length === 0}
-        />
-      </div>
+    <section aria-label="Manual payment queue" className="space-y-3">
+      {error && <Alert tone="err">{error}</Alert>}
       <RecordList<PaymentRequestRow>
         ariaLabel="Request"
-        title="Queue"
-        description={`${filtered.length} requests · ${reviewPolicy}`}
+        title="Manual payment queue"
+        description={`${filtered.length} of ${requests.length} requests · ${reviewPolicy}`}
         rows={filtered}
         rowKey={(r) => r.id}
         search={{ placeholder: "Search client, reference, or method…", text: (r) => `${r.user.name ?? ""} ${r.user.email ?? ""} ${r.userReference ?? ""} ${r.methodLabel}` }}

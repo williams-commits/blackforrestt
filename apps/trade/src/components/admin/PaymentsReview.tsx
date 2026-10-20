@@ -12,6 +12,7 @@ import { CsvExportButton } from "@/components/ui/CsvExport";
 import { MethodDetailsGrid } from "@/components/payments/MethodDetailsGrid";
 import { fmtDateTime } from "@/lib/dates";
 import { createDeviceId } from "@/lib/device";
+import { SectionHeader } from "./SectionHeader";
 
 export interface PaymentRequestRow {
   id: string;
@@ -124,12 +125,13 @@ export function PaymentsReview({
   }
 
   return (
-    <section aria-label="Manual payment queue" className="space-y-3">
+    <section aria-label="Manual payment review" className="space-y-3">
+      <SectionHeader className="mb-0" title="Manual payment review" description={reviewPolicy} />
       {error && <Alert tone="err">{error}</Alert>}
       <RecordList<PaymentRequestRow>
         ariaLabel="Request"
-        title="Manual payment queue"
-        description={`${filtered.length} of ${requests.length} requests · ${reviewPolicy}`}
+        title="Payment queue"
+        description={`${filtered.length} of ${requests.length} requests`}
         rows={filtered}
         rowKey={(r) => r.id}
         search={{ placeholder: "Search client, reference, or method…", text: (r) => `${r.user.name ?? ""} ${r.user.email ?? ""} ${r.userReference ?? ""} ${r.methodLabel}` }}

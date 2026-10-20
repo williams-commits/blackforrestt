@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, CircleAlert, Eye, Lock, Play, RefreshCw, Unlock, X } from "lucide-react";
+import { CheckCircle2, CircleAlert, Eye, Lock, Play, Unlock, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { IdentityTile } from "@/components/ui/Initial";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SectionHeader } from "./SectionHeader";
 
 interface RunRow {
   id: string;
@@ -184,37 +185,35 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold">Reconciliation operations</h2>
-          <p className="text-xs text-muted-foreground mt-1">Replay-safe ledger, projection, position and payment checks.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => void refresh()}><RefreshCw size={13} strokeWidth={2} aria-hidden /> Refresh</Button>
+      <SectionHeader
+        title="Reconciliation operations"
+        description="Replay-safe ledger, projection, position and payment checks."
+        onRefresh={() => void refresh()}
+        action={<>
           {canManage && (
             <Button size="sm" loading={busy === "run"} loadingLabel="Running reconciliation" disabled={busy !== null} onClick={() => void runNow()}>
               <Play size={13} strokeWidth={2} aria-hidden /> Run now
             </Button>
           )}
           {canManage && (blocks.length > 0 || cases.length > 0) && (
-            <button
-              type="button"
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-down"
               disabled={busy !== null}
               onClick={() => { setActionNote(""); setBulkSummary(""); setActionDialog({ kind: "bulk" }); }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-down/50 px-3 py-2 text-xs font-medium text-down hover:bg-down/10 disabled:opacity-50"
               title="Releases every active block and resolves every unresolved case across all users — not just this page."
             >
               <Unlock size={13} strokeWidth={2} aria-hidden /> {busy === "bulk" ? "Resolving all…" : "Release all & resolve all"}
-            </button>
+            </Button>
           )}
-        </div>
-      </div>
+        </>}
+      />
 
       {error && <Alert tone="err">{error}</Alert>}
       {bulkSummary && !error && <Alert tone="ok">{bulkSummary}</Alert>}
 
       <section>
-        <h3 className="text-sm font-semibold mb-2">Active blocks [{blocks.length}]</h3>
         <RecordList<BlockRow>
           ariaLabel="Block"
           title="Active blocks"
@@ -256,7 +255,6 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
       </section>
 
       <section>
-        <h3 className="text-sm font-semibold mb-2">Cases [{cases.length}]</h3>
         <RecordList<CaseRow>
           ariaLabel="Case"
           title="Cases"
@@ -312,7 +310,6 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
       </section>
 
       <section>
-        <h3 className="text-sm font-semibold mb-2">Recent runs</h3>
         <RecordList<RunRow>
           ariaLabel="Run"
           title="Recent runs"

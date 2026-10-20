@@ -7,6 +7,7 @@ import { ReconciliationReview } from "./ReconciliationReview";
 import { AdminUserActions } from "./AdminUserActions";
 import { AdminMessages } from "./AdminMessages";
 import { GroupsPanel } from "./GroupsPanel";
+import { SectionHeader } from "./SectionHeader";
 import { SettingsForm, type UserSettingsConfig } from "./SettingsForm";
 import { Button } from "@/components/ui/Button";
 import { SimpleDialog, SimpleDialog as Dialog } from "@/components/ui/Dialog";
@@ -15,7 +16,7 @@ import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 import { ADMIN_TAB_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
-import { CandlestickChart, ClipboardCheck, CreditCard, IdCard, RefreshCw, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, Wallet, X } from "lucide-react";
+import { CandlestickChart, ClipboardCheck, CreditCard, IdCard, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, Wallet, X } from "lucide-react";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { createDeviceId } from "@/lib/device";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";
@@ -287,15 +288,16 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
   return (
     <div className="space-y-5">
       <section className="p-4 shadow-panel">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold">Enterprise operations console</h1>
-            <p className="mt-1 text-xs text-muted-foreground">Signed in as {userName}. Every command is role-gated and audit chained.</p>
-          </div>
-          <div className="flex flex-wrap justify-end gap-1.5" aria-label="Active administrative roles">
-            {roles.map((role) => <span key={role} className="rounded bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">{role.replaceAll("_", " ")}</span>)}
-          </div>
-        </div>
+        <SectionHeader
+          size="xl"
+          title="Enterprise operations console"
+          description={`Signed in as ${userName}. Every command is role-gated and audit chained.`}
+          action={
+            <div className="flex flex-wrap justify-end gap-1.5" aria-label="Active administrative roles">
+              {roles.map((role) => <span key={role} className="rounded bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">{role.replaceAll("_", " ")}</span>)}
+            </div>
+          }
+        />
       </section>
 
       <div className="lg:grid lg:grid-cols-[13.5rem_minmax(0,1fr)] lg:gap-5">
@@ -370,10 +372,6 @@ function ModuleState({ loading, error, onRetry, children }: { loading: boolean; 
   return <>{children}</>;
 }
 
-export function SectionHeader({ title, description, onRefresh, action }: { title: string; description: string; onRefresh?: () => void; action?: React.ReactNode }) {
-  return <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold tracking-tight">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{description}</p></div><div className="flex shrink-0 items-center gap-2">{action}{onRefresh && <Button type="button" size="sm" variant="outline" onClick={onRefresh}><RefreshCw size={13} strokeWidth={2} aria-hidden />Refresh</Button>}</div></div>;
-}
-
 /** Icons for the overview stat grid — inferred from the stat key. */
 const OVERVIEW_STAT_ICONS: Record<string, LucideIcon> = {
   users: Users,
@@ -392,7 +390,7 @@ interface OverviewResponse {
 }
 function OverviewPanel() {
   const resource = useResource<OverviewResponse>("/api/admin/overview", 15_000);
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><Alert tone="info"><strong>Environment.</strong> Execution provider: {resource.data.environment.executionProvider}; market data: {resource.data.environment.marketDataMode}.</Alert><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{Object.entries(resource.data.stats).map(([key, value]) => {
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Platform overview" description="Live counters across users, positions, review queues, and balances — polled every 15 seconds." onRefresh={() => void resource.refresh()} /><Alert tone="info"><strong>Environment.</strong> Execution provider: {resource.data.environment.executionProvider}; market data: {resource.data.environment.marketDataMode}.</Alert><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{Object.entries(resource.data.stats).map(([key, value]) => {
               const StatGlyph = OVERVIEW_STAT_ICONS[key];
               return <StatCard key={key} label={key.replaceAll(/([A-Z])/g, " $1")} value={value.toLocaleString("en-US")} icon={StatGlyph ? <StatGlyph size={16} strokeWidth={1.75} aria-hidden /> : undefined} />;
             })}</div></div>}</ModuleState>;

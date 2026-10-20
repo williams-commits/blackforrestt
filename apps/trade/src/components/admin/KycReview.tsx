@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
+import { SectionHeader } from "./SectionHeader";
 
 interface Submission {
   id: string;
@@ -187,14 +188,17 @@ export function KycReview({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
-        <h1 className="text-lg font-semibold">KYC Verification Queue</h1>
-        <div className="flex gap-4 text-sm">
-          <Stat label="Pending" value={pending.length} cls="text-primary" />
-          <Stat label="Reviewed" value={reviewedTotalResolved} />
-          <Stat label="Total submissions" value={totalCount} />
-        </div>
-      </div>
+      <SectionHeader
+        title="KYC verification queue"
+        description="Identity submissions, sealed documents, and audited review decisions — oldest first."
+        action={
+          <div className="flex gap-4 text-sm">
+            <Stat label="Pending" value={pending.length} cls="text-primary" />
+            <Stat label="Reviewed" value={reviewedTotalResolved} />
+            <Stat label="Total submissions" value={totalCount} />
+          </div>
+        }
+      />
 
       <div className="grid lg:grid-cols-[320px_minmax(0,1fr)] gap-4">
         {/* Queue list */}

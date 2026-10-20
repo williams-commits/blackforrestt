@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
+import { SectionHeader } from "./SectionHeader";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/lib/toast";
@@ -231,19 +232,17 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
   });
 
   return (
-    <section className="space-y-3" aria-labelledby="admin-messages-heading">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 id="admin-messages-heading" className="text-sm font-semibold">Customer messages</h2>
-          <p className="text-xs text-muted-foreground mt-1">
-            Shared team inbox — every operator sees the same threads.{" "}
-            {totalUnread > 0
-              ? <span className="font-medium text-primary">{totalUnread} unread message{totalUnread === 1 ? "" : "s"}</span>
-              : "All caught up."}
-          </p>
-        </div>
-        <Button type="button" size="sm" onClick={() => { setBError(null); setBResult(null); setBroadcastOpen(true); }}><Megaphone size={13} strokeWidth={2} aria-hidden /> New broadcast</Button>
-      </div>
+    <section className="space-y-3" aria-label="Customer messages">
+      <SectionHeader
+        className="mb-0"
+        title="Customer messages"
+        description={<>Shared team inbox — every operator sees the same threads.{" "}
+          {totalUnread > 0
+            ? <span className="font-medium text-primary">{totalUnread} unread message{totalUnread === 1 ? "" : "s"}</span>
+            : "All caught up."}
+        </>}
+        action={<Button type="button" size="sm" onClick={() => { setBError(null); setBResult(null); setBroadcastOpen(true); }}><Megaphone size={13} strokeWidth={2} aria-hidden /> New broadcast</Button>}
+      />
 
       {error && (
         <Alert tone="err" className="flex items-center justify-between gap-2 text-xs">

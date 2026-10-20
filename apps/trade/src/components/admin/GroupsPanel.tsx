@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/lib/toast";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
-import { SectionHeader } from "@/components/admin/AdminWorkspace";
+import { SectionHeader } from "./SectionHeader";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
-import { Ellipsis, Bell, Check, Copy } from "lucide-react";
+import { Ellipsis, Bell, Check, Copy, FileText, KeyRound, LogOut, Mail, MessageSquare, Send, Trash2, X } from "lucide-react";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { ADMIN_ACTION_ICONS, TabIcon } from "@/components/ui/tabIcons";
 import { fmtDateTime } from "@/lib/dates";
@@ -312,7 +312,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 </Alert>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <code className="min-w-0 flex-1 py-2.5 text-center font-mono text-xl font-bold tracking-widest">{resetResult.temporaryPassword}</code>
+                    <code className="min-w-0 flex-1 rounded-xl bg-muted px-3 py-2.5 text-center font-mono text-xl font-bold tracking-widest">{resetResult.temporaryPassword}</code>
                     <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => void copyValue(resetResult.temporaryPassword)}>
                       {copiedValue ? <Check size={13} strokeWidth={2} aria-hidden /> : <Copy size={13} strokeWidth={2} aria-hidden />}
                       {copiedValue ? "Copied" : "Copy"}
@@ -360,7 +360,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
               </>
             )}
             <div className="flex justify-end">
-              <Button type="button" size="sm" variant="ghost" onClick={() => { setDialog(null); setError(null); setResetResult(null); }}>Close</Button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => { setDialog(null); setError(null); setResetResult(null); }}><X size={13} strokeWidth={2} aria-hidden /> Close</Button>
             </div>
           </div>
         ) : (
@@ -384,7 +384,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
               </div>
               <div>
                 <Label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="notify-body">Message</Label>
-                <Textarea id="notify-body" required minLength={3} maxLength={2000} rows={5} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write the in-app notification…" />
+                <Textarea id="notify-body" required minLength={3} maxLength={2000} rows={5} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write the in-app notification…" startIcon={<MessageSquare size={13} strokeWidth={2} aria-hidden />} />
               </div>
             </>
           ) : dialog?.kind === "hardDelete" ? (
@@ -400,6 +400,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="GDPR erasure request, fraud cleanup, or compliance reference…"
                 className="resize-none"
+                startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
               />
               <p className="mt-2 text-xs text-down">
                 This cannot be undone. The account, positions, transactions, documents, and chat history are
@@ -443,7 +444,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           ) : (
             <div>
               <Label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="status-note">Note (optional, shown to the user in-app)</Label>
-              <Textarea id="status-note" maxLength={500} rows={4} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason shown to the user…" />
+              <Textarea id="status-note" maxLength={500} rows={4} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason shown to the user…" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />} />
               {(user.suspendedAt || user.blockedAt || user.deletedAt) && (
                 <p className="mt-2 text-xs text-muted-foreground">
                   Since: {fmtDateTime(user.suspendedAt ?? user.blockedAt ?? user.deletedAt!)}
@@ -453,9 +454,17 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           )}
           {error && <Alert tone="err">{error}</Alert>}
           <div className="flex justify-end gap-2">
-            <Button type="button" size="sm" disabled={busy} onClick={() => { setDialog(null); setError(null); }}>Cancel</Button>
+            <Button type="button" size="sm" disabled={busy} onClick={() => { setDialog(null); setError(null); }}><X size={13} strokeWidth={2} aria-hidden /> Cancel</Button>
             <Button type="submit" size="sm" variant={dialog?.kind === "status" ? "destructive" : "default"} disabled={busy} loading={busy}>
-              {busy ? "Working…" : dialog?.kind === "notify" ? "Send notification" : dialog?.kind === "resetPassword" ? (resetMode === "temporary" ? "Generate password" : "Send reset link") : dialog?.kind === "forceSignOut" ? "Sign out everywhere" : dialog?.kind === "hardDelete" ? "Delete permanently" : "Confirm"}
+              {busy ? "Working…" : dialog?.kind === "notify"
+                ? <><Send size={13} strokeWidth={2} aria-hidden /> Send notification</>
+              : dialog?.kind === "resetPassword"
+                ? <>{resetMode === "temporary" ? <KeyRound size={13} strokeWidth={2} aria-hidden /> : <Mail size={13} strokeWidth={2} aria-hidden />} {resetMode === "temporary" ? "Generate password" : "Send reset link"}</>
+              : dialog?.kind === "forceSignOut"
+                ? <><LogOut size={13} strokeWidth={2} aria-hidden /> Sign out everywhere</>
+              : dialog?.kind === "hardDelete"
+                ? <><Trash2 size={13} strokeWidth={2} aria-hidden /> Delete permanently</>
+              : <><Check size={13} strokeWidth={2} aria-hidden /> Confirm</>}
             </Button>
           </div>
         </form>

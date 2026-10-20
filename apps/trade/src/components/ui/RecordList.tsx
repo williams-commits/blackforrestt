@@ -364,9 +364,9 @@ export function RecordList<T>({
           {detail != null && (
             <div className="space-y-5 px-4 pb-6">
               {renderDetailHero?.(detail)}
-              <dl className="space-y-3">
+              <dl className="flex flex-wrap gap-x-6 gap-y-2.5">
                 {(renderDetailMeta?.(detail) ?? []).map((meta) => (
-                  <div key={meta.label} className="flex items-center justify-between gap-4 text-sm">
+                  <div key={meta.label} className="flex min-w-44 flex-1 basis-44 items-center justify-between gap-4 text-sm">
                     <dt className="shrink-0 text-muted-foreground">{meta.label}</dt>
                     <dd className="min-w-0 text-right font-medium tabular-nums text-foreground">{meta.value}</dd>
                   </div>

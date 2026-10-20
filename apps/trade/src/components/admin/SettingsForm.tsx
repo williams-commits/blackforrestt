@@ -433,7 +433,7 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl p-4">
+    <div className="rounded-xl bg-muted/30 p-4">
       <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">{title}</h4>
       <div className="space-y-3">{children}</div>
     </div>

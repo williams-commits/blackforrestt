@@ -32,7 +32,7 @@ import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDownToLine, ArrowLeftRight, Ban, Braces, CheckCircle2, Coins, DollarSign, Download, FileText, LifeBuoy, Percent, ScrollText, ShieldAlert, SlidersHorizontal, Tag, TrendingDown, TrendingUp, UserRound } from "lucide-react";
+import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Ban, Braces, CheckCircle2, Coins, DollarSign, Download, FileText, LifeBuoy, Percent, RefreshCw, ScrollText, ShieldAlert, SlidersHorizontal, Tag, TrendingDown, TrendingUp, UserRound } from "lucide-react";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -710,7 +710,7 @@ function UserSettingsDialog({ user, open, onClose }: { user: UserRow | null; ope
   if (!open || !user) return null;
 
   return (
-    <Dialog open={open} onClose={saving ? () => undefined : onClose} title="User Settings" description={`${user.name ?? "Unnamed"} · ${user.email ?? "—"}`} className="sm:max-w-lg">
+    <Dialog open={open} onClose={saving ? () => undefined : onClose} title={`User settings · ${user.name ?? user.email ?? "User"}`} description="Per-user overrides for trading, deposits, withdrawals, P/L, and referrals. Empty fields inherit the group or global default." className="sm:max-w-lg">
       <div className="max-h-[74dvh] overflow-y-auto px-5 py-4">
         {error && <Alert tone="err" className="mb-3">{error}</Alert>}
         {loading ? (
@@ -830,7 +830,7 @@ function UserBalanceDialog({
               <MetricCard label="Locked" value={formatUsd(data.wallet?.locked ?? "0")} />
               <MetricCard label="Equity" value={formatUsd(data.metrics?.equity ?? "0")} />
             </div>
-            <form onSubmit={submit} className="p-4">
+            <form onSubmit={submit} className="rounded-xl bg-muted/30 p-4">
               <ChipGroup
                 ariaLabel="Balance adjustment type"
                 value={action}
@@ -847,21 +847,18 @@ function UserBalanceDialog({
                 <Label className="text-xs font-medium">Audited reason
                   <Input type="text" minLength={5} maxLength={500} required value={reason} onChange={(event) => setReason(event.target.value)} className="mt-1 h-10" placeholder="Ticket, customer request, or correction reason" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />} />
                 </Label>
-                <Button type="submit" variant={action === "CREDIT" ? "default" : "destructive"} loading={busy} loadingLabel="Posting adjustment">{action === "CREDIT" ? "Post top-up" : "Post deduction"}</Button>
+                <Button type="submit" variant={action === "CREDIT" ? "default" : "destructive"} loading={busy} loadingLabel="Posting adjustment">{action === "CREDIT" ? <><ArrowDownToLine size={13} strokeWidth={2} aria-hidden /> Post top-up</> : <><ArrowUpFromLine size={13} strokeWidth={2} aria-hidden /> Post deduction</>}</Button>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">Deductions cannot exceed the user’s available balance. Margin and pending withdrawals are never silently consumed.</p>
             </form>
             {error ? <Alert tone="err">{error}</Alert> : null}
             {notice ? <Alert tone="ok">{notice}</Alert> : null}
-            <section aria-labelledby="user-transaction-history">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <div><h3 id="user-transaction-history" className="text-sm font-semibold">Customer transaction history</h3><p className="text-xs text-muted-foreground">Deposits, withdrawals, trading settlements, bonuses, fees, and administrative adjustments.</p></div>
-                <Button size="sm" variant="ghost" onClick={() => void load()} disabled={loading}>Refresh</Button>
-              </div>
+            <section aria-label="Transaction history">
               <RecordList<UserFinanceTransaction>
                     ariaLabel="Transaction"
-                    title="History"
-                    description={`${transactions.length} records`}
+                    title="Transaction history"
+                    description={`${transactions.length} records · deposits, withdrawals, settlements, bonuses, fees, and adjustments`}
+                    toolbarEnd={<Button size="sm" variant="ghost" onClick={() => void load()} disabled={loading}><RefreshCw size={13} strokeWidth={2} aria-hidden /> Refresh</Button>}
                     rows={transactions}
                     rowKey={(t) => t.id}
                     search={{ placeholder: "Search type, description, or reference…", text: (t) => `${t.type} ${t.description ?? ""} ${t.reference ?? ""}` }}
@@ -925,7 +922,7 @@ function UserBalanceDialog({
 }
 
 function MetricCard({ label, value }: { label: string; value: string }) {
-  return <div className="p-3"><div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div><div className="mt-1 text-lg font-semibold tnum">{value}</div></div>;
+  return <div className="rounded-xl bg-muted/30 p-3"><div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div><div className="mt-1 text-lg font-semibold tnum">{value}</div></div>;
 }
 
 function formatUsd(value: string | number): string {

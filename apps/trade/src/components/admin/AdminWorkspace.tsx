@@ -16,9 +16,10 @@ import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 import { ADMIN_TAB_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
-import { CandlestickChart, ClipboardCheck, CreditCard, IdCard, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, Wallet, X } from "lucide-react";
+import { CandlestickChart, ClipboardCheck, CreditCard, HeartPulse, IdCard, LayoutDashboard, BookOpenText, ListTree, Plus, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, Wallet, X } from "lucide-react";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { createDeviceId } from "@/lib/device";
+import { cn } from "@/lib/utils";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";
 import { toast } from "@/lib/toast";
 import { NativeSelect } from "@/components/ui/NativeSelect";
@@ -290,6 +291,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
       <section className="p-4 shadow-panel">
         <SectionHeader
           size="xl"
+          icon={<ShieldCheck size={20} strokeWidth={2} aria-hidden />}
           title="Enterprise operations console"
           description={`Signed in as ${userName}. Every command is role-gated and audit chained.`}
           action={
@@ -390,7 +392,7 @@ interface OverviewResponse {
 }
 function OverviewPanel() {
   const resource = useResource<OverviewResponse>("/api/admin/overview", 15_000);
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Platform overview" description="Live counters across users, positions, review queues, and balances — polled every 15 seconds." onRefresh={() => void resource.refresh()} /><Alert tone="info"><strong>Environment.</strong> Execution provider: {resource.data.environment.executionProvider}; market data: {resource.data.environment.marketDataMode}.</Alert><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{Object.entries(resource.data.stats).map(([key, value]) => {
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader icon={<LayoutDashboard size={16} strokeWidth={2} aria-hidden />} title="Platform overview" description="Live counters across users, positions, review queues, and balances — polled every 15 seconds." onRefresh={() => void resource.refresh()} /><Alert tone="info"><strong>Environment.</strong> Execution provider: {resource.data.environment.executionProvider}; market data: {resource.data.environment.marketDataMode}.</Alert><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{Object.entries(resource.data.stats).map(([key, value]) => {
               const StatGlyph = OVERVIEW_STAT_ICONS[key];
               return <StatCard key={key} label={key.replaceAll(/([A-Z])/g, " $1")} value={value.toLocaleString("en-US")} icon={StatGlyph ? <StatGlyph size={16} strokeWidth={1.75} aria-hidden /> : undefined} />;
             })}</div></div>}</ModuleState>;
@@ -428,7 +430,7 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat, onProposeRole }: 
     <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>
       {resource.data ? (
         <div>
-          <SectionHeader title="Users and access" description="Identity, verification, account exposure, active roles, sessions, reconciliation restrictions, and audited balance operations." onRefresh={() => void resource.refresh()} />
+          <SectionHeader icon={<Users size={16} strokeWidth={2} aria-hidden />} title="Users and access" description="Identity, verification, account exposure, active roles, sessions, reconciliation restrictions, and audited balance operations." onRefresh={() => void resource.refresh()} />
           {truncated && (
             <Alert tone="info" className="mb-3">
               Showing the first {resource.data.users.length} of {resource.data.total} accounts — use the search to narrow.
@@ -539,21 +541,21 @@ function PaginatedUsers({
         icon: null,
         tone: u.online ? "up" : "muted",
         title: (
-          <span className="flex items-center gap-2">
-            <IdentityTile tone={u.online ? "up" : "muted"} className={u.online ? "ring-2 ring-up/30 ring-offset-2 ring-offset-card" : undefined}>
+          <span className="flex min-w-0 items-center gap-2">
+            <IdentityTile tone={u.online ? "up" : "muted"} className={cn("shrink-0", u.online ? "ring-2 ring-up/30 ring-offset-2 ring-offset-card" : undefined)}>
               {initialsOf(u.name ?? u.email)}
             </IdentityTile>
-            {u.name ?? "Unnamed"}
-            {u.online && <span className="relative flex size-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-up opacity-60" /><span className="relative inline-flex size-2 rounded-full bg-up" /></span>}
+            <span className="truncate">{u.name ?? "Unnamed"}</span>
+            {u.online && <span className="relative flex size-2 shrink-0"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-up opacity-60" /><span className="relative inline-flex size-2 rounded-full bg-up" /></span>}
           </span>
         ),
         secondary: (
-          <span className="flex flex-wrap items-center gap-1">
-            {u.email ?? "—"} · #{u.accountNo ?? "—"}
-            {!u.verified && <Badge variant="secondary" className="px-1.5 py-0 text-xs">unverified</Badge>}
-            {u.lockedUntil && <Badge variant="secondary" className="bg-down/10 px-1.5 py-0 text-xs text-down">locked</Badge>}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="min-w-0 truncate">{u.email ?? "—"} · #{u.accountNo ?? "—"}</span>
+            {!u.verified && <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-xs">unverified</Badge>}
+            {u.lockedUntil && <Badge variant="secondary" className="shrink-0 bg-down/10 px-1.5 py-0 text-xs text-down">locked</Badge>}
             {u.adminRoles.length > 0 && (
-              <Badge variant="secondary" className="bg-primary/10 px-1.5 py-0 text-xs text-primary">
+              <Badge variant="secondary" className="shrink-0 bg-primary/10 px-1.5 py-0 text-xs text-primary">
                 {u.adminRoles[0].role.toLowerCase()}
                 {u.adminRoles.length > 1 ? ` +${u.adminRoles.length - 1}` : ""}
               </Badge>
@@ -916,7 +918,7 @@ function UserBalanceDialog({
           </div>
         ) : null}
       </div>
-      <div className="flex shrink-0 justify-end border-t px-4 py-3 sm:px-5"><Button variant="ghost" onClick={onClose} disabled={busy}>Close</Button></div>
+      <div className="flex shrink-0 justify-end border-t px-4 py-3 sm:px-5"><Button variant="ghost" onClick={onClose} disabled={busy}><X size={13} strokeWidth={2} aria-hidden /> Close</Button></div>
     </Dialog>
   );
 }
@@ -986,7 +988,7 @@ function LedgerPanel() {
   ]));
 
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-5">
-    <SectionHeader title="Double-entry ledger" description="Posted transaction headers and immutable debit/credit entries." onRefresh={() => void resource.refresh()} />
+    <SectionHeader icon={<BookOpenText size={16} strokeWidth={2} aria-hidden />} title="Double-entry ledger" description="Posted transaction headers and immutable debit/credit entries." onRefresh={() => void resource.refresh()} />
     <div className="flex flex-wrap gap-2">{resource.data.trialBalance.map((row) => <span key={`${row.asset}:${row.direction}`}>{row.asset} {row.direction}: <strong className="tabular-nums">{fmtExecNumber(row.amount)}</strong></span>)}</div>
     {resource.data.total > all.length && (
       <Alert tone="info">Showing the {all.length} most recent postings of {resource.data.total.toLocaleString("en-US")} — narrow the window with the search or kind filters.</Alert>
@@ -1219,7 +1221,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
   };
 
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4">
-    <SectionHeader title="Execution and position surveillance" description={resource.data.providerWarning} onRefresh={() => void resource.refresh()} />
+    <SectionHeader icon={<CandlestickChart size={16} strokeWidth={2} aria-hidden />} title="Execution and position surveillance" description={resource.data.providerWarning} onRefresh={() => void resource.refresh()} />
     <div className="flex flex-wrap gap-2">
       <Badge variant="secondary" className="bg-primary/10 text-primary">{resource.data.executionMode}</Badge>
       <Badge variant="secondary">Feed: {resource.data.marketDataMode}</Badge>
@@ -1417,6 +1419,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
             value={profitReason}
             onChange={(e) => setProfitReason(e.target.value)}
             placeholder="e.g. Dealer correction — customer reported incorrect mark…"
+            startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
           />
         </div>
         <div className="flex justify-end gap-2">
@@ -1450,6 +1453,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
             value={closeReason}
             onChange={(e) => setCloseReason(e.target.value)}
             placeholder="e.g. Dealer close at customer request…"
+            startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
           />
         </div>
         <div className="flex justify-end gap-2">
@@ -1504,7 +1508,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
     setBusy(id); setError(null);
     try { await requestJson(`/api/admin/support/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status, resolutionNote }) }); await resource.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update case."); } finally { setBusy(null); }
   }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex justify-between"><SectionHeader title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} />{canManage && <Button loading={busy === "create"} onClick={() => void createCase()}>New case</Button>}</div>{error && <Alert tone="err" className="mb-3">{error}</Alert>}<RecordList<SupportCase>
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><SectionHeader icon={<LifeBuoy size={16} strokeWidth={2} aria-hidden />} title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} action={canManage ? <Button size="sm" loading={busy === "create"} onClick={() => void createCase()}><Plus size={13} strokeWidth={2} aria-hidden /> New case</Button> : undefined} />{error && <Alert tone="err" className="mb-3">{error}</Alert>}<RecordList<SupportCase>
       ariaLabel="Case"
       title="Cases"
       description={`${resource.data.cases.length} cases`}
@@ -1566,7 +1570,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
 interface InstrumentRow extends Record<string, unknown> { symbol: string; name: string; category: string; active: boolean; marginPerLot: string; commissionPerLot: string; swapLongPips: string; swapShortPips: string; feedSymbol: string | null }
 function InstrumentsPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<{ instruments: InstrumentRow[]; mutationPolicy: string }>("/api/admin/instruments");
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Instrument configuration" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} />{canManage && <ChangeHint text="Propose instrument changes from the Approvals module; a separate reviewer must execute them." />}
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader icon={<ListTree size={16} strokeWidth={2} aria-hidden />} title="Instrument configuration" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} />{canManage && <ChangeHint text="Propose instrument changes from the Approvals module; a separate reviewer must execute them." />}
     <RecordList<InstrumentRow>
       ariaLabel="Instrument"
       title="Symbols"
@@ -1614,7 +1618,7 @@ function InstrumentsPanel({ canManage }: { canManage: boolean }) {
 interface RiskRuleRow extends Record<string, unknown> { id: string; code: string; name: string; severity: string; enabled: boolean; version: number; configuration: unknown; updatedAt: string }
 function RiskPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<{ rules: RiskRuleRow[]; exposure: Record<string, number>; mutationPolicy: string }>("/api/admin/risk");
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader title="Risk controls" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} /><div className="flex flex-wrap gap-2">{Object.entries(resource.data.exposure).map(([key, value]) => <Badge key={key} variant="secondary">{key.replaceAll(/([A-Z])/g, " $1")}: <strong className="ml-1 tabular-nums">{value}</strong></Badge>)}</div>{canManage && <ChangeHint text="Risk changes are proposed in Approvals and become effective only after a separate checker executes them." />}
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader icon={<ShieldAlert size={16} strokeWidth={2} aria-hidden />} title="Risk controls" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} /><div className="flex flex-wrap gap-2">{Object.entries(resource.data.exposure).map(([key, value]) => <Badge key={key} variant="secondary">{key.replaceAll(/([A-Z])/g, " $1")}: <strong className="ml-1 tabular-nums">{value}</strong></Badge>)}</div>{canManage && <ChangeHint text="Risk changes are proposed in Approvals and become effective only after a separate checker executes them." />}
     <RecordList<RiskRuleRow>
       ariaLabel="Rule"
       title="Rules"
@@ -1670,7 +1674,7 @@ interface AuditEventRow extends Record<string, unknown> { sequence: string; doma
 function AuditPanel({ canVerify, canExport }: { canVerify: boolean; canExport: boolean }) {
   const resource = useResource<{ events: AuditEventRow[]; redacted: boolean }>("/api/admin/audit?limit=150");
   async function verify() { try { const result = await requestJson<{ valid: boolean; checkedEvents: number }>("/api/admin/audit/verify", { method: "POST" }); toast.success(`Chain ${result.valid ? "valid" : "invalid"}`, `Checked ${result.checkedEvents} events.`); await resource.refresh(); } catch (cause) { toast.error("Verification failed", cause instanceof Error ? cause.message : "Verification failed."); } }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><div className="flex flex-wrap items-start justify-between gap-3"><SectionHeader title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} /><div className="flex gap-2">{canVerify && <Button type="button" size="sm" onClick={() => void verify()}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Verify chain</Button>}{canExport && <Button type="button" size="sm" variant="outline" asChild><a href="/api/admin/audit/export?format=csv&limit=500"><Download size={13} strokeWidth={2} aria-hidden /> Export CSV</a></Button>}</div></div><RecordList<AuditEventRow>
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><SectionHeader icon={<ScrollText size={16} strokeWidth={2} aria-hidden />} title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} action={<>{canVerify && <Button type="button" size="sm" onClick={() => void verify()}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Verify chain</Button>}{canExport && <Button type="button" size="sm" variant="outline" asChild><a href="/api/admin/audit/export?format=csv&limit=500"><Download size={13} strokeWidth={2} aria-hidden /> Export CSV</a></Button>}</>} /><RecordList<AuditEventRow>
       ariaLabel="Event"
       title="Events"
       description={`${resource.data.events.length} events${resource.data.redacted ? " · export-redacted view" : ""}`}
@@ -1732,7 +1736,7 @@ function HealthPanel() {
   const resource = useResource<HealthResponse>("/api/admin/service-health");
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && (
     <div>
-      <SectionHeader title="Service health" description={`Checked ${fmtAgo(resource.data.checkedAt)} · provider ${resource.data.executionProvider} · market data ${resource.data.marketDataMode}.`} onRefresh={() => void resource.refresh()} />
+      <SectionHeader icon={<HeartPulse size={16} strokeWidth={2} aria-hidden />} title="Service health" description={`Checked ${fmtAgo(resource.data.checkedAt)} · provider ${resource.data.executionProvider} · market data ${resource.data.marketDataMode}.`} onRefresh={() => void resource.refresh()} />
       <div className="mb-4 flex items-center gap-2.5 rounded-xl bg-card p-4 shadow-sm">
         <span className={`h-3 w-3 rounded-full ${resource.data.status === "HEALTHY" ? "bg-up" : "bg-down"}`} aria-hidden />
         <span className="text-sm font-semibold">{resource.data.status === "HEALTHY" ? "All systems operational" : "Degraded — one or more services are down"}</span>
@@ -1839,6 +1843,7 @@ function ChangesPanel({
       {resource.data && (
         <div className="space-y-4">
           <SectionHeader
+            icon={<ClipboardCheck size={16} strokeWidth={2} aria-hidden />}
             title="Maker-checker approvals"
             description="Access, risk, and instrument changes require a different authorized reviewer. Command keys make submissions replay-safe."
             onRefresh={() => void resource.refresh()}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
-import { Megaphone, RotateCw, Search, Send, Trash2, X } from "lucide-react";
+import { Megaphone, MessageSquare, RotateCw, Search, Send, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
@@ -235,6 +235,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
     <section className="space-y-3" aria-label="Customer messages">
       <SectionHeader
         className="mb-0"
+        icon={<MessageSquare size={16} strokeWidth={2} aria-hidden />}
         title="Customer messages"
         description={<>Shared team inbox — every operator sees the same threads.{" "}
           {totalUnread > 0
@@ -397,6 +398,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                   placeholder="Reply… (Enter to send, Shift+Enter for a new line)"
                   aria-label="Reply message"
                   className="flex-1 resize-none"
+                  startIcon={<MessageSquare size={13} strokeWidth={2} aria-hidden />}
                 />
                 <Button type="submit" size="sm" variant="brand" disabled={sending || !draft.trim()}>
                   {sending ? "…" : (<><Send size={13} strokeWidth={2} aria-hidden /> Send</>)}
@@ -431,17 +433,17 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
       >
         <form className="p-5 space-y-4" onSubmit={broadcast}>
           <div>
-            <Label htmlFor="b-title" className="mb-1 block text-xs font-medium">Title</Label>
+            <Label htmlFor="b-title" className="mb-1 block text-xs font-medium text-muted-foreground">Title</Label>
             <Input id="b-title" required minLength={3} maxLength={120} value={bTitle} onChange={(e) => setBTitle(e.target.value)} placeholder="e.g. Scheduled maintenance window" startIcon={<Megaphone size={13} strokeWidth={2} aria-hidden />} />
           </div>
           <div>
-            <Label htmlFor="b-body" className="mb-1 block text-xs font-medium">Message</Label>
-            <Textarea id="b-body" required minLength={3} maxLength={2000} rows={5} value={bBody} onChange={(e) => setBBody(e.target.value)} placeholder="Message every customer will receive…" />
+            <Label htmlFor="b-body" className="mb-1 block text-xs font-medium text-muted-foreground">Message</Label>
+            <Textarea id="b-body" required minLength={3} maxLength={2000} rows={5} value={bBody} onChange={(e) => setBBody(e.target.value)} placeholder="Message every customer will receive…" startIcon={<Megaphone size={13} strokeWidth={2} aria-hidden />} />
           </div>
           {bError && <Alert tone="err">{bError}</Alert>}
           {bResult && <Alert tone="ok">{bResult}</Alert>}
           <div className="flex justify-end gap-2">
-            <Button type="button" size="sm" disabled={bBusy} onClick={() => setBroadcastOpen(false)}>Close</Button>
+            <Button type="button" size="sm" disabled={bBusy} onClick={() => setBroadcastOpen(false)}><X size={13} strokeWidth={2} aria-hidden /> Close</Button>
             <Button type="submit" size="sm" loading={bBusy} loadingLabel="Sending"><Send size={13} strokeWidth={2} aria-hidden /> Send broadcast</Button>
           </div>
         </form>

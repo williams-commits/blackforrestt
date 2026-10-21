@@ -2,21 +2,28 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
+import { LogOut } from "lucide-react";
+
+import { Button } from "@/components/ui/Button";
 
 /** Compact sign-out for the dark operations header. */
 export function AdminSignOutButton() {
   const [busy, setBusy] = useState(false);
   return (
-    <button
+    <Button
       type="button"
+      size="sm"
+      variant="outline"
+      className="text-down hover:text-down"
       disabled={busy}
+      loading={busy}
+      loadingLabel="Signing out"
       onClick={() => {
         setBusy(true);
         void signOut({ redirect: false }).then(() => { window.location.assign("/"); });
       }}
-      className="rounded border border-(--term-console-border) bg-(--term-console-active) px-2.5 py-1 text-xs font-medium text-(--term-console-soft) transition hover:border-red-400/50 hover:text-red-300 disabled:opacity-50"
     >
-      {busy ? "Signing out…" : "Sign out"}
-    </button>
+      <LogOut size={13} strokeWidth={2} aria-hidden /> Sign out
+    </Button>
   );
 }

@@ -268,14 +268,14 @@ export function RecordList<T>({
                     onClick={() => activate(row)}
                     className="cursor-pointer"
                   >
-                    <TableCell className="max-w-75 pl-6">
+                    <TableCell className="max-w-75 pl-6 pr-4">
                       <div className="flex items-center gap-3">
                         {lead.icon != null && (
                           <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", toneClass(lead.tone))}>
                             {lead.icon}
                           </span>
                         )}
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-medium text-foreground">{lead.title}</div>
                           {lead.secondary != null && (
                             <div className="truncate text-xs text-muted-foreground">{lead.secondary}</div>
@@ -364,9 +364,9 @@ export function RecordList<T>({
           {detail != null && (
             <div className="space-y-5 px-4 pb-6">
               {renderDetailHero?.(detail)}
-              <dl className="flex flex-wrap gap-x-6 gap-y-2.5">
+              <dl className="space-y-3">
                 {(renderDetailMeta?.(detail) ?? []).map((meta) => (
-                  <div key={meta.label} className="flex min-w-44 flex-1 basis-44 items-center justify-between gap-4 text-sm">
+                  <div key={meta.label} className="flex items-center justify-between gap-4 text-sm">
                     <dt className="shrink-0 text-muted-foreground">{meta.label}</dt>
                     <dd className="min-w-0 text-right font-medium tabular-nums text-foreground">{meta.value}</dd>
                   </div>

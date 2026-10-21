@@ -379,7 +379,7 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
           {dialog?.kind === "notify" ? (
             <>
               <div>
-                <Label htmlFor="notify-title" className="mb-1 block text-xs font-medium">Title</Label>
+                <Label htmlFor="notify-title" className="mb-1 block text-xs font-medium text-muted-foreground">Title</Label>
                 <Input id="notify-title" required minLength={3} maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Scheduled maintenance window" startIcon={<Bell size={13} strokeWidth={2} aria-hidden />} />
               </div>
               <div>
@@ -402,11 +402,11 @@ export function AdminUserActions({ user, onChanged, onOpenChat, onManageBalance,
                 className="resize-none"
                 startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
               />
-              <p className="mt-2 text-xs text-down">
+              <Alert tone="err" className="mt-2 text-xs">
                 This cannot be undone. The account, positions, transactions, documents, and chat history are
                 destroyed immediately. The audit entry recording this deletion is permanent. Accounts that ever
                 moved funds are protected by the ledger and will be refused.
-              </p>
+              </Alert>
             </div>
           ) : dialog?.kind === "forceSignOut" ? (
             <p className="text-xs text-muted-foreground">

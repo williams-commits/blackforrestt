@@ -17,6 +17,7 @@ export function SectionHeader({
   description,
   onRefresh,
   action,
+  icon,
   size = "lg",
   className,
 }: {
@@ -26,17 +27,32 @@ export function SectionHeader({
   onRefresh?: () => void;
   /** Right-aligned custom controls (badges, primary actions, stats). */
   action?: ReactNode;
+  /** Leading Lucide icon in a tonal tile — the tab's identity mark. */
+  icon?: ReactNode;
   /** "xl" is the console banner; default is the per-tab header. */
   size?: "lg" | "xl";
   className?: string;
 }) {
   return (
     <div className={cn("flex flex-wrap items-start justify-between gap-3", size !== "xl" && "mb-5", className)}>
-      <div className="min-w-0">
-        <h2 className={cn("font-semibold tracking-tight", size === "xl" ? "text-xl" : "text-lg")}>{title}</h2>
-        {description != null && (
-          <p className={cn("mt-1 text-muted-foreground", size === "xl" ? "text-xs" : "text-sm")}>{description}</p>
+      <div className="flex min-w-0 items-start gap-3">
+        {icon != null && (
+          <span
+            aria-hidden
+            className={cn(
+              "flex shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary",
+              size === "xl" ? "size-10" : "size-8",
+            )}
+          >
+            {icon}
+          </span>
         )}
+        <div className="min-w-0">
+          <h2 className={cn("font-semibold tracking-tight", size === "xl" ? "text-xl" : "text-lg")}>{title}</h2>
+          {description != null && (
+            <p className={cn("mt-1 text-muted-foreground", size === "xl" ? "text-xs" : "text-sm")}>{description}</p>
+          )}
+        </div>
       </div>
       {(action || onRefresh) && (
         <div className="flex shrink-0 flex-wrap items-center gap-2">

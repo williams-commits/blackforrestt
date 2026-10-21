@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, useEffect, useMemo } from "react";
-import { Ban, CheckCheck, CheckCircle2, ExternalLink, FileSearch, Search, ShieldCheck } from "lucide-react";
+import { Ban, CheckCheck, CheckCircle2, ChevronDown, ExternalLink, FileSearch, FileText, IdCard, Search, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { fmtAgo } from "@/lib/dates";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
+import { ChipGroup } from "@/components/ui/ChipGroup";
 import { SectionHeader } from "./SectionHeader";
 
 interface Submission {
@@ -79,17 +80,60 @@ export function KycReview({
    *  can still open the document with a deliberate click. */
   const [manualDocUrl, setManualDocUrl] = useState<string | null>(null);
   const [queueSearch, setQueueSearch] = useState("");
+  const [docFilter, setDocFilter] = useState<string>("ALL");
+  const [queueVisible, setQueueVisible] = useState(10);
   const noteId = useId();
 
-  // Instant client-side narrowing of the queue — name, email, or account number.
+  // Older decision pages fetched by the "Load more" control. The parent polls
+  // a fresh 50-row head every 15s; these older tails survive the poll (merged
+  // + deduped below) so the loaded list never collapses back to 50.
+  const [olderReviewed, setOlderReviewed] = useState<Submission[]>([]);
+  const [exhausted, setExhausted] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const decisions = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: Submission[] = [];
+    for (const submission of [...reviewed, ...olderReviewed]) {
+      if (seen.has(submission.id)) continue;
+      seen.add(submission.id);
+      merged.push(submission);
+    }
+    return merged;
+  }, [reviewed, olderReviewed]);
+
+  async function loadMoreDecisions() {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const response = await fetch(`/api/admin/kyc/workspace?reviewedOffset=${decisions.length}`, { cache: "no-store" });
+      const data = (await response.json().catch(() => null)) as { reviewed?: Submission[]; error?: string } | null;
+      if (!response.ok || !data?.reviewed) throw new Error(data?.error ?? "Unable to load older decisions.");
+      setOlderReviewed((current) => [...current, ...data.reviewed!]);
+      if (data.reviewed.length < 50) setExhausted(true);
+    } catch {
+      setExhausted(true);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  // Instant client-side narrowing of the queue — name, email, account number,
+  // and an optional document-type chip filter derived from the queue itself.
   const needle = queueSearch.trim().toLowerCase();
+  const docTypes = useMemo(
+    () => Array.from(new Set(pending.map((s) => s.docType).filter((d): d is string => Boolean(d)))),
+    [pending],
+  );
   const filteredPending = useMemo(() => pending.filter((s) =>
-    !needle ||
+    (docFilter === "ALL" || s.docType === docFilter) &&
+    (!needle ||
     `${s.firstName ?? ""} ${s.lastName ?? ""}`.toLowerCase().includes(needle) ||
     (s.user.name ?? "").toLowerCase().includes(needle) ||
     (s.user.email ?? "").toLowerCase().includes(needle) ||
     (s.user.accountNo ?? "").includes(needle)
-  ), [pending, needle]);
+  )), [pending, needle, docFilter]);
+  const visiblePending = filteredPending.slice(0, queueVisible);
 
 
   const reviewedTotalResolved = reviewedTotal ?? reviewed.length;
@@ -189,6 +233,7 @@ export function KycReview({
   return (
     <div>
       <SectionHeader
+        icon={<IdCard size={16} strokeWidth={2} aria-hidden />}
         title="KYC verification queue"
         description="Identity submissions, sealed documents, and audited review decisions — oldest first."
         action={
@@ -206,20 +251,33 @@ export function KycReview({
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-xs font-medium uppercase text-muted-foreground">Pending review · oldest first</h2>
             <span className="text-xs text-muted-foreground tnum" aria-live="polite">
-              {needle ? `${filteredPending.length}/${pending.length}` : pending.length}
+              {(needle || docFilter !== "ALL") ? `${filteredPending.length}/${pending.length}` : pending.length}
             </span>
           </div>
           <Input
             type="search"
             value={queueSearch}
-            onChange={(e) => setQueueSearch(e.target.value)}
+            onChange={(e) => { setQueueSearch(e.target.value); setQueueVisible(20); }}
             placeholder="Search name, email, account…"
             aria-label="Search KYC queue"
             startIcon={<Search size={14} strokeWidth={2} aria-hidden />}
           />
+          {docTypes.length > 1 && (
+            <ChipGroup
+              className="flex-wrap"
+              size="sm"
+              ariaLabel="Filter queue by document type"
+              value={docFilter}
+              onChange={(value) => { setDocFilter(value); setQueueVisible(20); }}
+              options={[
+                { value: "ALL", label: "All" },
+                ...docTypes.map((docType) => ({ value: docType, label: docType })),
+              ]}
+            />
+          )}
           <div className="overflow-hidden">
             <div className="space-y-1.5 p-1.5">
-              {filteredPending.map((s) => (
+              {visiblePending.map((s) => (
                 <button
                   key={s.id}
                   type="button"
@@ -248,7 +306,14 @@ export function KycReview({
               ))}
               {filteredPending.length === 0 && (
                 <div className="rounded-xl bg-muted/40 p-6 text-center text-sm text-muted-foreground">
-                  {needle ? `No pending submissions match “${queueSearch.trim()}”.` : "Queue is empty — no pending submissions."}
+                  {(needle || docFilter !== "ALL") ? "No pending submissions match." : "Queue is empty — no pending submissions."}
+                </div>
+              )}
+              {visiblePending.length < filteredPending.length && (
+                <div className="flex justify-center pt-1">
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setQueueVisible((v) => v + 10)}>
+                    <ChevronDown size={13} strokeWidth={2} aria-hidden /> Show more · {visiblePending.length} of {filteredPending.length}
+                  </Button>
                 </div>
               )}
             </div>
@@ -323,6 +388,7 @@ export function KycReview({
                                   onChange={(e) => setAccessReason(e.target.value)}
                                   placeholder="Reason for compliance access"
                                   className="flex-1"
+                                  startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
                                 />
                                 <Button
                                   type="button"
@@ -375,6 +441,7 @@ export function KycReview({
                   onChange={(e) => setRejectNote(e.target.value)}
                   placeholder="e.g. Document is expired — please resubmit with a valid ID."
                   className="resize-none"
+                  startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
                 />
               </div>}
 
@@ -420,8 +487,11 @@ export function KycReview({
           <RecordList<Submission>
             ariaLabel="Decision"
             title="Recent decisions"
-            description={reviewedTotalResolved > reviewed.length ? `${reviewed.length} most recent of ${reviewedTotalResolved}` : `${reviewed.length} decisions`}
-            rows={reviewed}
+            description={decisions.length < reviewedTotalResolved ? `${decisions.length} of ${reviewedTotalResolved} decisions` : `${decisions.length} decisions`}
+            rows={decisions}
+            hasMore={!exhausted && decisions.length < reviewedTotalResolved}
+            onLoadMore={() => void loadMoreDecisions()}
+            loadingMore={loadingMore}
             rowKey={(r) => r.id}
             search={{ placeholder: "Search name or email…", text: (r) => `${r.firstName ?? ""} ${r.lastName ?? ""} ${r.user.email ?? ""}` }}
             leading={(r) => ({

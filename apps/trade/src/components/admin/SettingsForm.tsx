@@ -466,7 +466,7 @@ function NumberInput({
 }) {
   return (
     <div>
-      <Label className="mb-1 block text-xs text-muted-foreground">{label}</Label>
+      <Label className="mb-1 block text-xs font-medium text-muted-foreground">{label}</Label>
       <Input
         type="number"
         value={value ?? ""}

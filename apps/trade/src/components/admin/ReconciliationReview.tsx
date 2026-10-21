@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, CircleAlert, Eye, Lock, Play, Unlock, X } from "lucide-react";
+import { CheckCircle2, CircleAlert, Eye, FileText, Lock, Play, Scale, Unlock, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Label } from "@/components/ui/label";
@@ -186,6 +186,7 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
   return (
     <div className="space-y-6">
       <SectionHeader
+        icon={<Scale size={16} strokeWidth={2} aria-hidden />}
         title="Reconciliation operations"
         description="Replay-safe ledger, projection, position and payment checks."
         onRefresh={() => void refresh()}
@@ -385,6 +386,7 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
               value={actionNote}
               onChange={(event) => setActionNote(event.target.value)}
               placeholder="Describe the verified resolution…"
+              startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
             />
           </div>
           <div className="flex justify-end gap-2">

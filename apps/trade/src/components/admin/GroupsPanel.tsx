@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/Button";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
-import { Check, Play, Plus, Save, Search, UserMinus, UserPlus, X, Users, ArrowLeft, ArrowRight, ChevronRight, Coins, DollarSign, FileText, Pencil, SlidersHorizontal } from "lucide-react";
+import { Check, Play, Plus, Save, Search, UserMinus, UserPlus, Users, UsersRound, X, ArrowLeft, ArrowRight, ChevronRight, Coins, DollarSign, FileText, Pencil, SlidersHorizontal } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { SimpleDialog } from "@/components/ui/Dialog";
 
@@ -101,7 +101,7 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
 
   return (
     <div className="space-y-4">
-      <SectionHeader title="User Groups" description="Bulk user management through shared settings, risk profiles, and role assignments." action={canManage ? <CreateGroupButton onCreated={() => void refresh()} /> : undefined} />
+      <SectionHeader icon={<UsersRound size={16} strokeWidth={2} aria-hidden />} title="User Groups" description="Bulk user management through shared settings, risk profiles, and role assignments." action={canManage ? <CreateGroupButton onCreated={() => void refresh()} /> : undefined} />
 
       {error && <Alert tone="err">{error}</Alert>}
 
@@ -348,17 +348,17 @@ function EditGroupButton({ group, onSaved }: { group: Group; onSaved: () => void
         <div className="p-5 space-y-3">
           {err && <Alert tone="err">{err}</Alert>}
           <div>
-            <Label className="mb-1 block text-xs text-muted-foreground">Name</Label>
+            <Label className="mb-1 block text-xs font-medium text-muted-foreground">Name</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)}
               className="h-10" placeholder="Group name" startIcon={<Users size={13} strokeWidth={2} aria-hidden />} />
           </div>
           <div>
-            <Label className="mb-1 block text-xs text-muted-foreground">Description</Label>
+            <Label className="mb-1 block text-xs font-medium text-muted-foreground">Description</Label>
             <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Optional description" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
               className="h-10" />
           </div>
           <div>
-            <Label className="mb-1 block text-xs text-muted-foreground">Color</Label>
+            <Label className="mb-1 block text-xs font-medium text-muted-foreground">Color</Label>
             <div className="flex items-center gap-2">
               <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-12" />
               <span className="text-xs text-muted-foreground font-mono">{color}</span>
@@ -547,17 +547,17 @@ function CreateGroupButton({ onCreated }: { onCreated: () => void }) {
       <div className="p-5 space-y-3">
         {err && <Alert tone="err">{err}</Alert>}
         <div>
-          <Label className="mb-1 block text-xs text-muted-foreground">Name</Label>
+          <Label className="mb-1 block text-xs font-medium text-muted-foreground">Name</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. VIP Traders" startIcon={<Users size={13} strokeWidth={2} aria-hidden />}
             className="h-10" />
         </div>
         <div>
-          <Label className="mb-1 block text-xs text-muted-foreground">Description (optional)</Label>
+          <Label className="mb-1 block text-xs font-medium text-muted-foreground">Description (optional)</Label>
           <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Short description" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
             className="h-10" />
         </div>
         <div>
-          <Label className="mb-1 block text-xs text-muted-foreground">Color</Label>
+          <Label className="mb-1 block text-xs font-medium text-muted-foreground">Color</Label>
           <div className="flex items-center gap-2">
             <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-12" />
             <span className="text-xs text-muted-foreground font-mono">{color}</span>
@@ -862,7 +862,7 @@ function BulkDialog({ title, subtitle, fields, endpoint, onClose }: {
         {result && <Alert tone="ok">{result}</Alert>}
         {fields.map((f) => (
           <div key={f.key}>
-            <Label className="mb-1 block text-xs text-muted-foreground">{f.label}</Label>
+            <Label className="mb-1 block text-xs font-medium text-muted-foreground">{f.label}</Label>
             {f.type === "select" ? (
               <NativeSelect
                 value={values[f.key]}

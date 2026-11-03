@@ -35,7 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Ban, Braces, CheckCircle2, Coins, DollarSign, Download, FileText, LifeBuoy, Percent, RefreshCw, ScrollText, ShieldAlert, SlidersHorizontal, Tag, TrendingDown, TrendingUp, UserRound } from "lucide-react";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -416,9 +416,22 @@ function OverviewPanel() {
             description="A live view of account activity, trading operations, and review queues."
             onRefresh={() => void resource.refresh()}
           />
-          <Alert tone="info">
-            <strong>Environment.</strong> Execution provider: {overview.environment.executionProvider}; market data: {overview.environment.marketDataMode}.
-          </Alert>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <AdminSummaryCard
+              label="Execution environment"
+              value={overview.environment.simulationOnly ? "Simulation only" : formatAdminValue(overview.environment.executionProvider)}
+              detail={overview.environment.simulationOnly
+                ? "Live execution is disabled in this environment."
+                : overview.environment.executionProvider === "NOT_CONFIGURED"
+                  ? "No execution provider is connected."
+                  : "Configured execution provider."}
+            />
+            <AdminSummaryCard
+              label="Market data"
+              value={marketDataLabel(overview.environment.marketDataMode)}
+              detail="Price feed source."
+            />
+          </div>
           {OVERVIEW_STAT_GROUPS.map((group) => {
             const stats = group.keys.filter((key) => key in overview.stats);
             if (stats.length === 0) return null;
@@ -461,6 +474,43 @@ function OverviewStatCard({ label, value, icon }: { label: string; value: number
   );
 }
 
+function AdminSummaryCard({ label, value, detail, valueClassName }: { label: string; value: string; detail?: string; valueClassName?: string }) {
+  return (
+    <Card className="gap-2 py-4 shadow-panel">
+      <CardHeader className="px-4 py-0">
+        <CardTitle className="text-sm">{label}</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4">
+        <p className={cn("text-lg font-semibold leading-tight", valueClassName)}>{value}</p>
+        {detail && <p className="mt-1 text-xs text-muted-foreground">{detail}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function formatAdminValue(value: string): string {
+  return value
+    .trim()
+    .replaceAll(/[_-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function marketDataLabel(mode: string): string {
+  const labels: Record<string, string> = {
+    alphavantage: "Alpha Vantage",
+    finnhub: "Finnhub",
+    lse: "London Strategic Edge",
+    simulation: "Simulation feed",
+    sifting: "Sifting",
+    tickerlayer: "TickerLayer",
+  };
+  return labels[mode.toLowerCase()] ?? formatAdminValue(mode);
+}
+
+function executionModeLabel(mode: string): string {
+  return mode === "INTERNAL" ? "Internal engine" : formatAdminValue(mode);
+}
+
 interface UserRow {
   id: string; email: string | null; name: string | null; accountNo: string | null; verified: boolean;
   /** Brand family the user signed up under (null = primary/legacy). */
@@ -496,7 +546,7 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat, onProposeRole }: 
           <SectionHeader eyebrow="Operations" icon={<Users size={18} strokeWidth={2} aria-hidden />} title="Users and access" description="Identity, verification, account exposure, active roles, sessions, reconciliation restrictions, and audited balance operations." onRefresh={() => void resource.refresh()} />
           {truncated && (
             <Alert tone="info">
-              Showing the first {resource.data.users.length} of {resource.data.total} accounts — use the search to narrow.
+              Showing {resource.data.users.length.toLocaleString("en-US")} of {resource.data.total.toLocaleString("en-US")} accounts. Search by name, email, or account number to find a match.
             </Alert>
           )}
           <PaginatedUsers
@@ -1039,6 +1089,16 @@ function LedgerPanel() {
   const [kindFilter, setKindFilter] = useState<string>("ALL");
 
   const all = useMemo(() => resource.data?.transactions ?? [], [resource.data]);
+  const trialBalanceByAsset = useMemo(() => {
+    const balances = new Map<string, { credit: string; debit: string }>();
+    for (const row of resource.data?.trialBalance ?? []) {
+      const balance = balances.get(row.asset) ?? { credit: "0", debit: "0" };
+      if (row.direction === "CREDIT") balance.credit = row.amount;
+      else if (row.direction === "DEBIT") balance.debit = row.amount;
+      balances.set(row.asset, balance);
+    }
+    return [...balances.entries()];
+  }, [resource.data?.trialBalance]);
   // Kind chips cover the posting kinds present in the loaded window.
   const kinds = useMemo(() => [...new Set(all.map((t) => t.kind))].sort(), [all]);
   const filtered = useMemo(() => all.filter((t) => kindFilter === "ALL" || t.kind === kindFilter), [all, kindFilter]);
@@ -1052,18 +1112,35 @@ function LedgerPanel() {
 
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4">
     <SectionHeader eyebrow="Finance" icon={<BookOpenText size={18} strokeWidth={2} aria-hidden />} title="Double-entry ledger" description="Posted transaction headers and immutable debit/credit entries." onRefresh={() => void resource.refresh()} />
-    <div className="flex flex-wrap gap-2">{resource.data.trialBalance.map((row) => <span key={`${row.asset}:${row.direction}`}>{row.asset} {row.direction}: <strong className="tabular-nums">{fmtExecNumber(row.amount)}</strong></span>)}</div>
-    {resource.data.total > all.length && (
-      <Alert tone="info">Showing the {all.length} most recent postings of {resource.data.total.toLocaleString("en-US")} — narrow the window with the search or kind filters.</Alert>
-    )}
+    <Card className="gap-3 py-4 shadow-panel">
+      <CardHeader className="px-4 py-0">
+        <CardTitle className="text-sm">Ledger control totals</CardTitle>
+        <CardDescription>Cumulative debits and credits, grouped by asset.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-2 px-4 sm:grid-cols-2">
+        {trialBalanceByAsset.map(([asset, balance]) => (
+          <div key={asset} className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Credits · {asset}</p>
+              <p className="mt-1 truncate text-sm font-semibold tabular-nums">{fmtExecNumber(balance.credit)}</p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Debits · {asset}</p>
+              <p className="mt-1 truncate text-sm font-semibold tabular-nums">{fmtExecNumber(balance.debit)}</p>
+            </div>
+          </div>
+        ))}
+        {trialBalanceByAsset.length === 0 && <p className="text-sm text-muted-foreground">No ledger totals are available.</p>}
+      </CardContent>
+    </Card>
     <RecordList<LedgerTransactionView>
       ariaLabel="Posting"
       title="Postings"
-      description={`${filtering ? `${filtered.length} of ${all.length}` : `${all.length}`} postings`}
+      description={`${filtering ? `${filtered.length} matching · ` : ""}${all.length.toLocaleString("en-US")} newest of ${resource.data.total.toLocaleString("en-US")} total`}
       rows={filtered}
       rowKey={(t) => t.id}
       search={{
-        placeholder: "Search reference, kind, description, or user…",
+        placeholder: "Search latest postings by reference, description, or user…",
         text: (t) => `${t.reference} ${t.kind} ${t.description} ${t.user?.email ?? ""} ${t.user?.accountNo ?? ""}`,
       }}
       leading={(t) => ({
@@ -1285,10 +1362,10 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
 
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4">
     <SectionHeader eyebrow="Finance" icon={<CandlestickChart size={18} strokeWidth={2} aria-hidden />} title="Execution and position surveillance" description={resource.data.providerWarning} onRefresh={() => void resource.refresh()} />
-    <div className="flex flex-wrap gap-2">
-      <Badge variant="secondary" className="bg-primary/10 text-primary">{resource.data.executionMode}</Badge>
-      <Badge variant="secondary">Feed: {resource.data.marketDataMode}</Badge>
-      <Badge variant="secondary" className={resource.data.engineReady ? "bg-(--term-success-bg) text-(--term-success-fg)" : "bg-(--term-danger-bg) text-(--term-danger-fg)"}>Engine {resource.data.engineReady ? "ready" : "starting"}</Badge>
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <AdminSummaryCard label="Execution model" value={executionModeLabel(resource.data.executionMode)} />
+      <AdminSummaryCard label="Market data" value={marketDataLabel(resource.data.marketDataMode)} detail="Price feed source." />
+      <HealthCard name="Trading engine" status={resource.data.engineReady ? "UP" : "STARTING"} detail={resource.data.engineReady ? "Ready to process positions." : "Waiting for engine startup."} />
     </div>
     {error && <Alert tone="err">{error}</Alert>}
     {resource.data.total > allPositions.length && (
@@ -1633,7 +1710,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
 interface InstrumentRow extends Record<string, unknown> { symbol: string; name: string; category: string; active: boolean; marginPerLot: string; commissionPerLot: string; swapLongPips: string; swapShortPips: string; feedSymbol: string | null }
 function InstrumentsPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<{ instruments: InstrumentRow[]; mutationPolicy: string }>("/api/admin/instruments");
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Platform" icon={<ListTree size={18} strokeWidth={2} aria-hidden />} title="Instrument configuration" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} />{canManage && <ChangeHint text="Propose instrument changes from the Approvals module; a separate reviewer must execute them." />}
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Platform" icon={<ListTree size={18} strokeWidth={2} aria-hidden />} title="Instrument configuration" description="Manage symbol availability, trading terms, and market-data mappings." onRefresh={() => void resource.refresh()} />{canManage && <ChangeHint title="Two-person approval" text={resource.data.mutationPolicy} />}
     <RecordList<InstrumentRow>
       ariaLabel="Instrument"
       title="Symbols"
@@ -1681,7 +1758,22 @@ function InstrumentsPanel({ canManage }: { canManage: boolean }) {
 interface RiskRuleRow extends Record<string, unknown> { id: string; code: string; name: string; severity: string; enabled: boolean; version: number; configuration: unknown; updatedAt: string }
 function RiskPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<{ rules: RiskRuleRow[]; exposure: Record<string, number>; mutationPolicy: string }>("/api/admin/risk");
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Risk & compliance" icon={<ShieldAlert size={18} strokeWidth={2} aria-hidden />} title="Risk controls" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} /><div className="flex flex-wrap gap-2">{Object.entries(resource.data.exposure).map(([key, value]) => <Badge key={key} variant="secondary">{key.replaceAll(/([A-Z])/g, " $1")}: <strong className="ml-1 tabular-nums">{value}</strong></Badge>)}</div>{canManage && <ChangeHint text="Risk changes are proposed in Approvals and become effective only after a separate checker executes them." />}
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Risk & compliance" icon={<ShieldAlert size={18} strokeWidth={2} aria-hidden />} title="Risk controls" description="Monitor account exposure and the rules protecting trading activity." onRefresh={() => void resource.refresh()} />
+    <div className="grid gap-3 sm:grid-cols-2">
+      <AdminSummaryCard
+        label="Active reconciliation blocks"
+        value={resource.data.exposure.activeReconciliationBlocks.toLocaleString("en-US")}
+        detail={resource.data.exposure.activeReconciliationBlocks === 0 ? "No accounts are currently blocked." : "Accounts currently restricted by reconciliation."}
+        valueClassName={resource.data.exposure.activeReconciliationBlocks === 0 ? "text-up" : "text-down"}
+      />
+      <AdminSummaryCard
+        label="Accounts below margin warning"
+        value={resource.data.exposure.accountsBelowWarningMarginLevel.toLocaleString("en-US")}
+        detail={resource.data.exposure.accountsBelowWarningMarginLevel === 0 ? "No accounts are below the warning threshold." : "Accounts below the configured margin threshold."}
+        valueClassName={resource.data.exposure.accountsBelowWarningMarginLevel === 0 ? "text-up" : "text-down"}
+      />
+    </div>
+    {canManage && <ChangeHint title="Two-person approval" text={resource.data.mutationPolicy} />}
     <RecordList<RiskRuleRow>
       ariaLabel="Rule"
       title="Rules"
@@ -1799,7 +1891,13 @@ function HealthPanel() {
   const resource = useResource<HealthResponse>("/api/admin/service-health");
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && (
     <div className="space-y-4">
-      <SectionHeader eyebrow="Platform" icon={<HeartPulse size={18} strokeWidth={2} aria-hidden />} title="Service health" description={`Checked ${fmtAgo(resource.data.checkedAt)} · provider ${resource.data.executionProvider} · market data ${resource.data.marketDataMode}.`} onRefresh={() => void resource.refresh()} />
+      <SectionHeader
+        eyebrow="Platform"
+        icon={<HeartPulse size={18} strokeWidth={2} aria-hidden />}
+        title="Service health"
+        description={`Checked ${fmtAgo(resource.data.checkedAt)} · ${resource.data.simulationOnly ? "simulation-only trading" : `${formatAdminValue(resource.data.executionProvider)} execution`} · ${marketDataLabel(resource.data.marketDataMode)} market data.`}
+        onRefresh={() => void resource.refresh()}
+      />
       <div className="flex items-center gap-2.5 rounded-xl bg-card p-4 shadow-panel">
         <span className={`h-3 w-3 rounded-full ${resource.data.status === "HEALTHY" ? "bg-up" : "bg-down"}`} aria-hidden />
         <span className="text-sm font-semibold">{resource.data.status === "HEALTHY" ? "All systems operational" : "Degraded — one or more services are down"}</span>
@@ -2164,4 +2262,10 @@ function buildChangeRequest(action: ChangeAction, form: FormData): Record<string
   };
 }
 
-function ChangeHint({ text }: { text: string }) { return <Alert tone="info" className="mb-3">{text}</Alert>; }
+function ChangeHint({ title, text }: { title: string; text: string }) {
+  return (
+    <Alert tone="info" className="mb-3">
+      <strong>{title}.</strong> {text}
+    </Alert>
+  );
+}

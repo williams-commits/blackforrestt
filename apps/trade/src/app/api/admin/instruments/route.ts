@@ -28,7 +28,7 @@ export async function GET() {
         feedSymbol: item.feedSymbol,
         updatedAt: item.updatedAt.toISOString(),
       })),
-      mutationPolicy: "Changes require an approved maker-checker AdminChangeRequest.",
+      mutationPolicy: "Submit instrument changes through Approvals. A second authorized reviewer must approve them before they take effect.",
     });
   } catch (error) {
     const status = error instanceof AdminError ? error.status : 500;

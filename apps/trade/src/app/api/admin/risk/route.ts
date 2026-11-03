@@ -16,7 +16,7 @@ export async function GET() {
     return NextResponse.json({
       rules: rules.map((rule) => ({ ...rule, createdAt: rule.createdAt.toISOString(), updatedAt: rule.updatedAt.toISOString() })),
       exposure: { activeReconciliationBlocks: criticalBlocks, accountsBelowWarningMarginLevel: marginAlerts },
-      mutationPolicy: "Risk-rule changes require a separate approver.",
+      mutationPolicy: "Submit risk rule changes through Approvals. A different authorized reviewer must approve them before they take effect.",
     });
   } catch (error) {
     const status = error instanceof AdminError ? error.status : 500;

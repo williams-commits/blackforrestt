@@ -27,6 +27,16 @@ const CATEGORY_LABEL: Record<InstrumentCategory, string> = {
   STOCK: "Stocks",
 };
 const FAVORITES_KEY = "blckforest:watchlist-favorites";
+const FAVORITES_CHANGED_EVENT = "blckforest:watchlist-favorites-changed";
+
+function readFavorites(): string[] {
+  try {
+    const stored: unknown = JSON.parse(window.localStorage.getItem(FAVORITES_KEY) ?? "[]");
+    return Array.isArray(stored) ? stored.filter((symbol): symbol is string => typeof symbol === "string") : [];
+  } catch {
+    return [];
+  }
+}
 
 /** Left rail: searchable, category-grouped watchlist of the live instrument
  *  list (store — hydrated from the server list, refreshed by the socket).
@@ -37,22 +47,28 @@ export function InstrumentSelector({ activeSymbol, onSelect, headerAction }: Pro
   const [query, setQuery] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
 
-  // Customizable watchlist: stars persist per browser.
+  // The rail and the instrument-switcher each render this selector. Keep them
+  // in sync in the same tab as well as across tabs.
   useEffect(() => {
-    try {
-      const stored = JSON.parse(window.localStorage.getItem(FAVORITES_KEY) ?? "[]");
-      if (Array.isArray(stored)) setFavorites(stored.filter((s) => typeof s === "string"));
-    } catch { /* corrupted entry — start fresh */ }
+    const syncFavorites = () => setFavorites(readFavorites());
+    syncFavorites();
+    window.addEventListener(FAVORITES_CHANGED_EVENT, syncFavorites);
+    window.addEventListener("storage", syncFavorites);
+    return () => {
+      window.removeEventListener(FAVORITES_CHANGED_EVENT, syncFavorites);
+      window.removeEventListener("storage", syncFavorites);
+    };
   }, []);
 
   const toggleFavorite = (symbol: string) => {
-    setFavorites((prev) => {
-      const next = prev.includes(symbol) ? prev.filter((s) => s !== symbol) : [...prev, symbol];
-      try {
-        window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
-      } catch { /* storage unavailable — this session only */ }
-      return next;
-    });
+    const next = favorites.includes(symbol)
+      ? favorites.filter((item) => item !== symbol)
+      : [...favorites, symbol];
+    setFavorites(next);
+    try {
+      window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+    } catch { /* storage unavailable — this session only */ }
+    window.dispatchEvent(new Event(FAVORITES_CHANGED_EVENT));
   };
 
   const filtered = useMemo(() => {
@@ -195,4 +211,3 @@ export function InstrumentSelector({ activeSymbol, onSelect, headerAction }: Pro
     </div>
   );
 }
-

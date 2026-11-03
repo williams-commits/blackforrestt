@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useForexSocket } from "@/hooks/useForexSocket";
 import { useForexStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import type { CandleInterval, InstrumentView } from "@/lib/types";
+import type { CandleInterval, InstrumentView, PositionSide } from "@/lib/types";
 import { AccountBar } from "./AccountBar";
 import { ChartPanel } from "./ChartPanel";
 import { TradePanel } from "./TradePanel";
@@ -32,11 +32,12 @@ interface Props {
 
 const WATCHLIST_STORAGE_KEY = "blckforest:watchlist";
 const DOCK_STORAGE_KEY = "blckforest:dock";
+const DOCK_HEIGHT_STORAGE_KEY = "blckforest:dock-height";
+const MIN_DOCK_HEIGHT = 144;
+const DEFAULT_DOCK_HEIGHT = 280;
 
-/** Responsive professional trading workspace. Desktop (lg+) is a deliberate
- *  three-track grid — market discovery | chart (dominant, minmax(0,1fr)) |
- *  execution ticket — over an activity dock; tablet keeps chart + ticket and
- *  phones stack with the order sheet. */
+/** Responsive trading workspace: market discovery and chart above a resizable
+ *  activity dock; order entry stays in a left drawer at every breakpoint. */
 export function Dashboard({
   instrument,
   instruments,
@@ -75,15 +76,32 @@ export function Dashboard({
     } catch { /* non-critical */ }
   };
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [mobileOrderOpen, setMobileOrderOpen] = useState(false);
+  const [tradeOpen, setTradeOpen] = useState(false);
+  const [tradeSide, setTradeSide] = useState<PositionSide | null>(null);
   const [watchlistOpen, setWatchlistOpen] = useState(true);
   const [dockOpen, setDockOpen] = useState(true);
+  const [dockHeight, setDockHeight] = useState(DEFAULT_DOCK_HEIGHT);
+  const [viewportHeight, setViewportHeight] = useState(900);
+  const dockHeightRef = useRef(DEFAULT_DOCK_HEIGHT);
+  const dockResizeRef = useRef<{ startY: number; startHeight: number } | null>(null);
+
+  const openTrade = useCallback((side: PositionSide | null = null) => {
+    setTradeSide(side);
+    setTradeOpen(true);
+  }, []);
 
   useEffect(() => {
     if (initialInterval && initialInterval !== useForexStore.getState().interval) {
       setInterval(initialInterval);
     }
   }, [initialInterval, setInterval]);
+
+  useEffect(() => {
+    const updateViewportHeight = () => setViewportHeight(window.innerHeight);
+    updateViewportHeight();
+    window.addEventListener("resize", updateViewportHeight);
+    return () => window.removeEventListener("resize", updateViewportHeight);
+  }, []);
 
   // Hydrate the watchlist from the server-resolved list so the rail renders
   // real instruments immediately; the socket's live list replaces it on connect.
@@ -98,14 +116,14 @@ export function Dashboard({
     rememberMobileSymbol(activeInstrument.symbol);
   }, [activeInstrument.symbol]);
 
-  // Center Trade action: on the chart it opens the ticket in place; arriving
-  // from another screen (flag set by the tab bar) opens it on mount.
+  // The Trade destination in the mobile tab bar opens the same ticket drawer
+  // as the chart's Buy/Sell actions.
   useEffect(() => {
-    if (consumeOpenOrderFlag()) setMobileOrderOpen(true);
-    const onOpenOrder = () => setMobileOrderOpen(true);
+    if (consumeOpenOrderFlag()) openTrade();
+    const onOpenOrder = () => openTrade();
     window.addEventListener(OPEN_ORDER_EVENT, onOpenOrder);
     return () => window.removeEventListener(OPEN_ORDER_EVENT, onOpenOrder);
-  }, []);
+  }, [openTrade]);
 
   // Rail/dock collapse choices persist per workstation (defaults: open).
   useEffect(() => {
@@ -113,7 +131,32 @@ export function Dashboard({
     if (storedWatchlist != null) setWatchlistOpen(storedWatchlist !== "collapsed");
     const storedDock = window.localStorage.getItem(DOCK_STORAGE_KEY);
     if (storedDock != null) setDockOpen(storedDock !== "collapsed");
+    const storedHeight = Number(window.localStorage.getItem(DOCK_HEIGHT_STORAGE_KEY));
+    if (Number.isFinite(storedHeight) && storedHeight >= MIN_DOCK_HEIGHT) {
+      dockHeightRef.current = storedHeight;
+      setDockHeight(storedHeight);
+    }
   }, []);
+
+  const closeTrade = (open: boolean) => {
+    setTradeOpen(open);
+    if (!open) setTradeSide(null);
+  };
+
+  const resizeDock = (clientY: number) => {
+    const drag = dockResizeRef.current;
+    if (!drag) return;
+    const maxHeight = Math.max(MIN_DOCK_HEIGHT, Math.floor(window.innerHeight * 0.55));
+    const nextHeight = Math.min(maxHeight, Math.max(MIN_DOCK_HEIGHT, drag.startHeight + drag.startY - clientY));
+    dockHeightRef.current = nextHeight;
+    setDockHeight(nextHeight);
+  };
+
+  const finishDockResize = () => {
+    if (!dockResizeRef.current) return;
+    dockResizeRef.current = null;
+    window.localStorage.setItem(DOCK_HEIGHT_STORAGE_KEY, String(dockHeightRef.current));
+  };
 
   const toggleWatchlist = () => {
     setWatchlistOpen((open) => {
@@ -134,16 +177,15 @@ export function Dashboard({
       <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} walletAddresses={walletAddresses} marginWarningPercent={marginWarningPercent} />
       <MarketStatusBanner marketDataMode={marketDataMode} wsStatus={status} />
 
-      {/* Chart + discovery rail + order panel — tablet (md) gets chart +
-          ticket side-by-side; desktop (lg) adds the market rail. The chart
-          always takes the dominant minmax(0,1fr) track. No dividing lines:
-          the shell surface (bg-panel) separates the canvas cards tonally. */}
+      {/* Keep the chart dominant at every breakpoint. The market rail is
+          optional; order entry lives in a left drawer rather than narrowing
+          the chart into a permanent third column. */}
       <div
         className={cn(
-          "grid grid-cols-1 gap-0 bg-panel md:min-h-0 md:flex-1 md:grid-cols-[minmax(0,1fr)_300px]",
+          "grid grid-cols-1 gap-0 bg-panel md:min-h-0 md:flex-1",
           watchlistOpen
-            ? "lg:grid-cols-[240px_minmax(0,1fr)_340px]"
-            : "lg:grid-cols-[2.5rem_minmax(0,1fr)_340px]",
+            ? "lg:grid-cols-[240px_minmax(0,1fr)]"
+            : "lg:grid-cols-[2.5rem_minmax(0,1fr)]",
         )}
       >
         {/* Market discovery rail — desktop only; collapses to a slim strip. */}
@@ -186,40 +228,80 @@ export function Dashboard({
           tabIndex={-1}
           className="relative min-h-75 p-1 sm:min-h-100 md:min-h-0"
         >
-          <ChartPanel instrument={activeInstrument} onSwitchInstrument={() => setSwitcherOpen(true)} />
+          <ChartPanel
+            instrument={activeInstrument}
+            onSwitchInstrument={() => setSwitcherOpen(true)}
+            onOpenTrade={openTrade}
+          />
         </main>
+      </div>
 
-        {/* Order column — live market context above the ticket; hidden on
-            phones (the full-screen ticket covers it), inline from md up */}
-        <aside className="hidden min-h-0 flex-col bg-panel md:flex">
-          <MarketMarkers instrument={instrument} />
-          <div className="min-h-0 flex-1">
-            <TradePanel instrument={activeInstrument} onSwitchInstrument={() => setSwitcherOpen(true)} />
+      {/* The dock can be resized on pointer and keyboard at tablet/desktop
+          widths. Mobile retains a natural-height, scrollable activity area. */}
+      <div
+        className={cn(
+          "shrink-0 bg-panel pb-[calc(env(safe-area-inset-bottom)+3.5rem)] md:pb-0",
+          dockOpen ? "min-h-50 h-60 sm:h-88 md:h-[var(--dock-height)]" : "h-9",
+        )}
+        style={{ "--dock-height": `${dockHeight}px` } as React.CSSProperties}
+      >
+        {dockOpen && (
+          <div
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Resize activity dock"
+            aria-valuemin={MIN_DOCK_HEIGHT}
+            aria-valuemax={Math.max(MIN_DOCK_HEIGHT, Math.floor(viewportHeight * 0.55))}
+            aria-valuenow={dockHeight}
+            tabIndex={0}
+            onPointerDown={(event) => {
+              dockResizeRef.current = { startY: event.clientY, startHeight: dockHeight };
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerMove={(event) => resizeDock(event.clientY)}
+            onPointerUp={finishDockResize}
+            onPointerCancel={finishDockResize}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+              event.preventDefault();
+              const delta = event.key === "ArrowUp" ? 24 : -24;
+              setDockHeight((current) => {
+                const maxHeight = Math.max(MIN_DOCK_HEIGHT, Math.floor(window.innerHeight * 0.55));
+                const next = Math.min(maxHeight, Math.max(MIN_DOCK_HEIGHT, current + delta));
+                dockHeightRef.current = next;
+                window.localStorage.setItem(DOCK_HEIGHT_STORAGE_KEY, String(next));
+                return next;
+              });
+            }}
+            className="hidden h-2 cursor-row-resize touch-none items-center justify-center bg-panel-2 transition-colors hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-brand md:flex"
+          >
+            <span className="h-0.5 w-10 rounded-full bg-text-faint/50" aria-hidden />
           </div>
-        </aside>
+        )}
+        <div className={dockOpen ? "h-[calc(100%-0.5rem)] md:h-[calc(100%-0.5rem)]" : "h-full"}>
+          <PositionsTable instruments={instruments} collapsed={!dockOpen} onToggleCollapsed={toggleDock} />
+        </div>
       </div>
 
-      {/* Activity dock — collapses to its tab strip on short laptops so the
-          chart and order controls keep their space. Phones get bottom
-          padding so the fixed tab bar never covers the last rows. */}
-      <div className={cn("shrink-0 bg-panel pb-[calc(env(safe-area-inset-bottom)+3.5rem)] md:pb-0", dockOpen ? "min-h-50 h-60 sm:h-88 md:h-64 lg:h-70" : "h-9")}>
-        <PositionsTable instruments={instruments} collapsed={!dockOpen} onToggleCollapsed={toggleDock} />
-      </div>
-
-      {/* Mobile order entry — a dedicated full-screen ticket ("new screen"):
-          the sticky Trade button opens it, Escape/backdrop/close returns. The
-          panel's own footer pads env(safe-area-inset-bottom). */}
-      <Sheet open={mobileOrderOpen} onOpenChange={setMobileOrderOpen}>
+      {/* One order-entry drawer for every screen size. A Buy/Sell shortcut
+          opens the ticket with that side highlighted; it never submits. */}
+      <Sheet open={tradeOpen} onOpenChange={closeTrade}>
         <SheetContent
-          side="bottom"
-          className="top-0 h-dvh gap-0 rounded-none p-0 md:hidden sm:max-w-none"
+          side="left"
+          className="top-0 h-dvh gap-0 rounded-none p-0"
+          style={{ width: "min(100vw, 28rem)" }}
         >
           <SheetHeader className="border-b border-border-soft pb-2 pt-3">
-            <SheetTitle>Trade {activeInstrument.symbol}</SheetTitle>
+            <SheetTitle>{tradeSide ? `${tradeSide === "BUY" ? "Buy" : "Sell"} ${activeInstrument.symbol}` : `Trade ${activeInstrument.symbol}`}</SheetTitle>
             <SheetDescription>Review the order details before submitting.</SheetDescription>
           </SheetHeader>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <TradePanel instrument={activeInstrument} onSwitchInstrument={() => setSwitcherOpen(true)} />
+            <MarketMarkers instrument={activeInstrument} />
+            <TradePanel
+              instrument={activeInstrument}
+              initialSide={tradeSide}
+              onSwitchInstrument={() => setSwitcherOpen(true)}
+            />
           </div>
         </SheetContent>
       </Sheet>

@@ -69,6 +69,40 @@ export interface OpenResult {
   commissionTotal: Prisma.Decimal;
 }
 
+/** Validate protective levels relative to a position's entry or live mark. */
+export function protectionLevelError(
+  side: PositionSide,
+  stopLoss: number | null,
+  takeProfit: number | null,
+  referenceRate: number,
+  referenceLabel = "entry price",
+): string | null {
+  if (!Number.isFinite(referenceRate) || referenceRate <= 0) {
+    return "A valid reference price is required.";
+  }
+  for (const [name, value] of [["stop loss", stopLoss], ["take profit", takeProfit]] as const) {
+    if (value != null && (!Number.isFinite(value) || value <= 0 || value > Number.MAX_SAFE_INTEGER)) {
+      return `Invalid ${name}.`;
+    }
+  }
+  if (side === "BUY") {
+    if (stopLoss != null && stopLoss >= referenceRate) {
+      return `Buy stop loss must be below the ${referenceLabel}.`;
+    }
+    if (takeProfit != null && takeProfit <= referenceRate) {
+      return `Buy take profit must be above the ${referenceLabel}.`;
+    }
+  } else {
+    if (stopLoss != null && stopLoss <= referenceRate) {
+      return `Sell stop loss must be above the ${referenceLabel}.`;
+    }
+    if (takeProfit != null && takeProfit >= referenceRate) {
+      return `Sell take profit must be below the ${referenceLabel}.`;
+    }
+  }
+  return null;
+}
+
 /**
  * Number of pips between entry and current rate, signed by direction.
  * Positive = in profit for the given side.

@@ -115,3 +115,23 @@ export async function closePosition(positionId: string): Promise<{ ok: boolean; 
     return { ok: false, error: "Network error closing position." };
   }
 }
+
+/** Update an open CFD's protective levels without touching its entry price. */
+export async function updatePositionProtection(
+  positionId: string,
+  levels: { stopLoss: number | null; takeProfit: number | null },
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const response = await fetch(`/api/positions/${encodeURIComponent(positionId)}/protection`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(levels),
+    });
+    if (!response.ok) {
+      return { ok: false, error: await readApiError(response, "Failed to update stop-loss and take-profit.") };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Network error updating position protection." };
+  }
+}

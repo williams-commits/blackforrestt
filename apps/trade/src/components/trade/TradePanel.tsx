@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/Input";
 
 interface Props {
   instrument: InstrumentView;
+  initialSide?: PositionSide | null;
   /** Opens the instrument switcher slide-out (the ticket's selector button). */
   onSwitchInstrument?: () => void;
 }
@@ -29,7 +30,7 @@ interface Props {
  * Shows live bid/ask, volume with quick-select, margin/commission preview,
  * and prominent Sell/Buy buttons with the dealing rate.
  */
-export function TradePanel({ instrument, onSwitchInstrument }: Props) {
+export function TradePanel({ instrument, initialSide = null, onSwitchInstrument }: Props) {
   const [type, setType] = useState<"CFD" | "STRIKE">("CFD");
   const [volume, setVolume] = useState("0.10");
   // Quick order entry: remember the last-used size across visits so a
@@ -45,7 +46,7 @@ export function TradePanel({ instrument, onSwitchInstrument }: Props) {
   }, [volume]);
   // Armed side: tapping a live rate card focuses that side of the ticket —
   // the matching submit button is emphasized. Arming never submits.
-  const [armed, setArmed] = useState<"BUY" | "SELL" | null>(null);
+  const [armed, setArmed] = useState<PositionSide | null>(initialSide);
   const [strikeRate, setStrikeRate] = useState("");
   const [expiryMinutes, setExpiryMinutes] = useState("5");
   const [stopLoss, setStopLoss] = useState("");
@@ -58,6 +59,9 @@ export function TradePanel({ instrument, onSwitchInstrument }: Props) {
     const timer = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);
   }, []);
+  useEffect(() => {
+    setArmed(initialSide);
+  }, [initialSide]);
   const volumeId = useId();
   const strikeId = useId();
   const stopLossId = useId();

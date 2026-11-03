@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, Save, X } from "lucide-react";
 import { useForexStore } from "@/lib/store";
-import { closePosition } from "@/hooks/useOpenPosition";
+import { closePosition, updatePositionProtection } from "@/hooks/useOpenPosition";
 import { useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -12,6 +12,8 @@ import { TerminalTable } from "@/components/trade/TerminalTable";
 import { toast } from "@/lib/toast";
 import { SimpleTabs as Tabs } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { SimpleDialog } from "@/components/ui/Dialog";
 import { fmtPrice, fmtNum } from "@/lib/format";
 import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";
 import type { InstrumentView, PositionView } from "@/lib/types";
@@ -40,6 +42,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
   const positions = useForexStore((s) => s.positions);
   const [busy, setBusy] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("open");
+  const [editingPosition, setEditingPosition] = useState<PositionView | null>(null);
 
   const digitsFor = (symbol: string) => instruments.find((i) => i.symbol === symbol)?.digits ?? 5;
   // Match AccountBar's floatingPl: profit + swap (excludes commission, which is
@@ -101,10 +104,22 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
           {tab === "open" ? (
             <>
               <div className="md:hidden">
-                <OpenPositionCards positions={positions} digitsFor={digitsFor} busy={busy} setBusy={setBusy} />
+                <OpenPositionCards
+                  positions={positions}
+                  digitsFor={digitsFor}
+                  busy={busy}
+                  setBusy={setBusy}
+                  onEditProtection={setEditingPosition}
+                />
               </div>
               <div className="hidden md:block">
-                <OpenPositionsTable positions={positions} digitsFor={digitsFor} busy={busy} setBusy={setBusy} />
+                <OpenPositionsTable
+                  positions={positions}
+                  digitsFor={digitsFor}
+                  busy={busy}
+                  setBusy={setBusy}
+                  onEditProtection={setEditingPosition}
+                />
               </div>
             </>
           ) : (
@@ -118,6 +133,14 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
             </>
           )}
         </div>
+      )}
+      {editingPosition && (
+        <ProtectionDialog
+          key={editingPosition.id}
+          position={editingPosition}
+          digits={digitsFor(editingPosition.symbol)}
+          onClose={() => setEditingPosition(null)}
+        />
       )}
     </div>
   );
@@ -182,11 +205,13 @@ function OpenPositionCards({
   digitsFor,
   busy,
   setBusy,
+  onEditProtection,
 }: {
   positions: PositionView[];
   digitsFor: (s: string) => number;
   busy: string | null;
   setBusy: (v: string | null) => void;
+  onEditProtection: (position: PositionView) => void;
 }) {
   const router = useRouter();
   const close = makeCloseHandler(busy, setBusy);
@@ -219,6 +244,12 @@ function OpenPositionCards({
                 <span aria-hidden>·</span>
                 <span>{fmtTime(p.openedAt)}</span>
               </div>
+              {p.type === "CFD" && (
+                <div className="mt-1 flex flex-wrap gap-x-2 text-(length:--term-text-2xs) tnum text-text-faint">
+                  <span>S/L {p.stopLoss != null ? fmtPrice(p.stopLoss, digits) : "—"}</span>
+                  <span>T/P {p.takeProfit != null ? fmtPrice(p.takeProfit, digits) : "—"}</span>
+                </div>
+              )}
             </div>
             <div className="flex shrink-0 flex-col items-end leading-tight">
               <span className={`text-sm font-bold tnum ${up ? "text-up" : "text-down"}`}>
@@ -226,15 +257,32 @@ function OpenPositionCards({
               </span>
               <span className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">P/L USD</span>
             </div>
-            <button
-              type="button"
-              disabled={closing}
-              aria-label={`Close ${p.symbol} position`}
-              onClick={(event) => { event.stopPropagation(); void close(p); }}
-              className="flex h-11 shrink-0 items-center justify-center gap-1 rounded-lg bg-down/15 px-3 text-xs font-semibold text-down transition active:scale-95 disabled:opacity-50"
-            >
-              {closing ? "…" : "✕ Close"}
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              {p.type === "CFD" && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Edit stop-loss and take-profit for ${p.symbol}`}
+                  title="Edit S/L and T/P"
+                  onClick={(event) => { event.stopPropagation(); onEditProtection(p); }}
+                >
+                  <Pencil aria-hidden />
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={closing}
+                aria-label={`Close ${p.symbol} position`}
+                onClick={(event) => { event.stopPropagation(); void close(p); }}
+                className="h-11 px-2.5 text-xs"
+              >
+                <X aria-hidden />
+                {closing ? "Closing" : "Close"}
+              </Button>
+            </div>
           </li>
         );
       })}
@@ -250,11 +298,13 @@ function OpenPositionsTable({
   digitsFor,
   busy,
   setBusy,
+  onEditProtection,
 }: {
   positions: PositionView[];
   digitsFor: (s: string) => number;
   busy: string | null;
   setBusy: (v: string | null) => void;
+  onEditProtection: (position: PositionView) => void;
 }) {
   const router = useRouter();
   const close = makeCloseHandler(busy, setBusy);
@@ -272,6 +322,18 @@ function OpenPositionsTable({
       { id: "commission", header: "Commission", meta: { cellClass: "text-right hidden lg:table-cell", headerClass: "text-right hidden lg:table-cell" }, cell: (info) => <span className="tnum text-text-muted">{fmtNum((info.row.original as PositionView).commission + (info.row.original as PositionView).tradingCommission, 2)}</span> },
       { accessorKey: "currentRate", header: "Current", meta: { cellClass: "text-right", headerClass: "text-right" }, cell: (info) => <span className="tnum">{fmtPrice(info.getValue() as number, digitsFor(info.row.original.symbol))}</span> },
       { id: "netProfit", header: "Net P/L", meta: { cellClass: "text-right", headerClass: "text-right" }, cell: (info) => { const p = info.row.original; const up = p.netProfit >= 0; return <span className={`tnum font-bold ${up ? "text-up" : "text-down"}`}>{up ? "+" : ""}{fmtNum(p.netProfit, 2)}</span>; } },
+      { id: "editProtection", header: "", cell: (info) => { const p = info.row.original; return p.type === "CFD" ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Edit stop-loss and take-profit for ${p.symbol}`}
+          title="Edit S/L and T/P"
+          onClick={(event) => { event.stopPropagation(); onEditProtection(p); }}
+        >
+          <Pencil aria-hidden />
+        </Button>
+      ) : null; } },
       { id: "close", header: "", cell: (info) => { const p = info.row.original; return (
         <Button
           variant="ghost"
@@ -281,13 +343,13 @@ function OpenPositionsTable({
           onClick={(event) => { event.stopPropagation(); void close(p); }}
           className="h-8 w-8 p-0 text-xs text-text-muted hover:bg-down/10 hover:text-down"
         >
-          {busy === p.id ? "…" : "✕"}
+          {busy === p.id ? "…" : <X aria-hidden />}
         </Button>
       ); } },
     ],
     // close/busy are stable per render set; digitsFor identity is stable upstream
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [busy, digitsFor],
+    [busy, digitsFor, onEditProtection],
   );
 
   return (
@@ -299,6 +361,117 @@ function OpenPositionsTable({
       onRowClick={(p) => router.push(`/trade/${p.symbol}`)}
       emptyState={<EmptyState title="No open positions" hint="Use the trade panel to open a position" />}
     />
+  );
+}
+
+function ProtectionDialog({
+  position,
+  digits,
+  onClose,
+}: {
+  position: PositionView;
+  digits: number;
+  onClose: () => void;
+}) {
+  const [stopLoss, setStopLoss] = useState(position.stopLoss?.toString() ?? "");
+  const [takeProfit, setTakeProfit] = useState(position.takeProfit?.toString() ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const parseLevel = (value: string): number | null | undefined => {
+      if (!value.trim()) return null;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+    };
+    const parsedStopLoss = parseLevel(stopLoss);
+    const parsedTakeProfit = parseLevel(takeProfit);
+    if (parsedStopLoss === undefined || parsedTakeProfit === undefined) {
+      setError("Enter a positive price for each level, or leave it blank to clear it.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    const result = await updatePositionProtection(position.id, {
+      stopLoss: parsedStopLoss,
+      takeProfit: parsedTakeProfit,
+    });
+    setSaving(false);
+    if (!result.ok) {
+      setError(result.error ?? "Unable to update position protection.");
+      return;
+    }
+    toast.success("Protection levels updated", `${position.symbol} entry price was not changed.`);
+    onClose();
+  };
+
+  return (
+    <SimpleDialog
+      open
+      onClose={onClose}
+      icon={<Pencil size={14} strokeWidth={2} aria-hidden />}
+      title={`Edit ${position.symbol} protection`}
+      description="Adjust the stop-loss or take-profit on this open CFD position."
+      className="sm:max-w-md"
+    >
+      <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-4 p-4 sm:p-5">
+        <div className="rounded-lg bg-panel-2 px-3 py-2.5 text-xs">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-text-faint">Position</span>
+            <span className="font-medium text-text"><SideBadge side={position.side} type={position.type} /></span>
+          </div>
+          <div className="mt-1 flex items-center justify-between gap-3">
+            <span className="text-text-faint">Entry price — unchanged</span>
+            <span className="tnum font-semibold text-text">{fmtPrice(position.openRate, digits)}</span>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label htmlFor="position-stop-loss" className="flex flex-col gap-1.5 text-xs font-medium text-text-muted">
+            Stop-loss
+            <Input
+              id="position-stop-loss"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step={Math.pow(10, -digits)}
+              value={stopLoss}
+              onChange={(event) => setStopLoss(event.target.value)}
+              placeholder="Not set"
+              aria-describedby="position-protection-hint"
+            />
+          </label>
+          <label htmlFor="position-take-profit" className="flex flex-col gap-1.5 text-xs font-medium text-text-muted">
+            Take-profit
+            <Input
+              id="position-take-profit"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step={Math.pow(10, -digits)}
+              value={takeProfit}
+              onChange={(event) => setTakeProfit(event.target.value)}
+              placeholder="Not set"
+              aria-describedby="position-protection-hint"
+            />
+          </label>
+        </div>
+        <p id="position-protection-hint" className="text-xs text-text-faint">
+          Levels must remain on the protective side of the current market price. Leave a field blank to remove that level.
+        </p>
+        {error && <p role="alert" className="text-xs font-medium text-down">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="brand" size="sm" loading={saving} loadingLabel="Saving…">
+            <Save aria-hidden />
+            Save levels
+          </Button>
+        </div>
+      </form>
+    </SimpleDialog>
   );
 }
 

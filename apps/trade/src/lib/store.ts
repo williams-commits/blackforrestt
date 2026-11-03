@@ -22,6 +22,7 @@ const MAX_CANDLES = 500;
 interface ForexState {
   symbol: string | null;
   interval: CandleInterval;
+  snapshotVersion: number;
   quote: Quote | null;
   candles: Candle[];
   instruments: InstrumentView[];
@@ -50,6 +51,7 @@ interface ForexState {
 export const useForexStore = create<ForexState>((set) => ({
   symbol: null,
   interval: "5m",
+  snapshotVersion: 0,
   quote: null,
   candles: [],
   instruments: [],
@@ -64,6 +66,7 @@ export const useForexStore = create<ForexState>((set) => ({
       // newly selected chart.
       if (snapshot.symbol !== state.symbol || snapshot.interval !== state.interval) return state;
       return {
+        snapshotVersion: state.snapshotVersion + 1,
         candles: snapshot.candles.slice(-MAX_CANDLES),
         quote: snapshot.quote,
         instruments: snapshot.instruments.length ? snapshot.instruments : state.instruments,

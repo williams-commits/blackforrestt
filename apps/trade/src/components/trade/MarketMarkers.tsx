@@ -149,14 +149,14 @@ export function MarketMarkers({ instrument }: { instrument: InstrumentView }) {
             />
           )}
 
-          {/* Market depth — real volume-by-price profile of the loaded window.
-              The bucket holding the live price is highlighted. */}
+          {/* This is candle activity aggregated by price, not live bid/ask book
+              liquidity; the bucket holding the live price is highlighted. */}
           {depth && (
             <div>
               <div className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">
-                Market depth · volume by price
+                Candle volume profile
               </div>
-              <div className="mt-1 space-y-0.5" role="img" aria-label="Volume by price depth profile">
+              <div className="mt-1 space-y-0.5" role="img" aria-label="Historical candle volume aggregated by price">
                 {depth.volumes.map((volume, index) => {
                   const bucketLow = depth.low + index * depth.size;
                   const bucketHigh = bucketLow + depth.size;

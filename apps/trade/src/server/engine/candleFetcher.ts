@@ -57,6 +57,7 @@ export async function fetchCandles(
   symbol: string,
   interval: CandleInterval,
   count: number,
+  before?: number,
 ): Promise<Candle[] | null> {
   if (getMarketDataMode() !== "finnhub") return null;
   const candleMode = getFinnhubCandleMode();
@@ -68,7 +69,7 @@ export async function fetchCandles(
 
   const resolution = RESOLUTION_MAP[interval];
   const seconds = INTERVAL_SECONDS[interval];
-  const to = Math.floor(Date.now() / 1000);
+  const to = Math.min(before ?? Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000));
   const from = to - seconds * count;
   const endpoint =
     entry === "forex"

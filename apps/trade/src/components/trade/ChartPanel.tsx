@@ -1,7 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ZoomIn, ZoomOut } from "lucide-react";
+import {
+  Maximize2,
+  Minimize2,
+  MoreHorizontal,
+  History,
+  TrendingDown,
+  TrendingUp,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import {
@@ -26,10 +35,13 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuLabel,
+  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/Button";
 import { useForexStore } from "@/lib/store";
 import { TIMEFRAMES, type Candle, type CandleInterval, type InstrumentView } from "@/lib/types";
 import { fmtPrice } from "@/lib/format";
@@ -49,6 +61,8 @@ interface Props {
   instrument: InstrumentView;
   /** Opens the instrument switcher slide-out (the identity button). */
   onSwitchInstrument?: () => void;
+  /** Opens the order drawer; a side is a shortcut, never an order submission. */
+  onOpenTrade?: (side: "BUY" | "SELL") => void;
 }
 
 type ChartType = "candles" | "line";
@@ -61,6 +75,8 @@ const EMA_STORAGE_KEY = "blckforest:chart-ema";
 const BB_STORAGE_KEY = "blckforest:chart-bollinger";
 const RSI_STORAGE_KEY = "blckforest:chart-rsi";
 const MACD_STORAGE_KEY = "blckforest:chart-macd";
+const MAX_CHART_CANDLES = 90_000;
+const HISTORY_WINDOW_SECONDS = 60 * 24 * 60 * 60;
 
 function isInterval(value: string | null): value is CandleInterval {
   return value != null && (TIMEFRAMES as readonly string[]).includes(value);
@@ -70,25 +86,30 @@ function isInterval(value: string | null): value is CandleInterval {
  *  Theme switches restyle the chart in place via applyOptions — the chart is
  *  never disposed on theme change (disposing mid-paint races lightweight-
  *  charts' render loop and throws "Object is disposed"). */
-function chartThemeOptions(dim: boolean) {
+function chartThemeOptions() {
+  const styles = getComputedStyle(document.documentElement);
+  const token = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback;
+  const canvas = token("--color-canvas", "#ffffff");
+  const text = token("--color-text-faint", "#6b7280");
+  const panel = token("--color-panel-2", "#eef1f4");
+  const border = token("--color-border", "#d5dbe3");
+  const grid = token("--color-border-soft", "#e7ebef");
   return {
     layout: {
-      background: { type: ColorType.Solid, color: dim ? "#0e1116" : "#ffffff" },
-      textColor: dim ? "#9aa7b4" : "#6b7280",
-      // Pane dividers (RSI/MACD panes) follow the scale borders — the library
-      // default is a hard line that glares in dim mode.
-      panes: { separatorColor: dim ? "#2a323d" : "#dee2e6" },
+      background: { type: ColorType.Solid, color: canvas },
+      textColor: text,
+      panes: { separatorColor: border },
     },
     grid: {
-      vertLines: { color: dim ? "rgba(42,50,61,0.5)" : "rgba(222,226,230,0.55)" },
-      horzLines: { color: dim ? "rgba(42,50,61,0.5)" : "rgba(222,226,230,0.55)" },
+      vertLines: { color: grid },
+      horzLines: { color: grid },
     },
     crosshair: {
-      vertLine: { color: dim ? "rgba(154,167,180,0.5)" : "rgba(134,142,150,0.65)", labelBackgroundColor: dim ? "#1c232c" : "#343a40" },
-      horzLine: { color: dim ? "rgba(154,167,180,0.5)" : "rgba(134,142,150,0.65)", labelBackgroundColor: dim ? "#1c232c" : "#343a40" },
+      vertLine: { color: text, labelBackgroundColor: panel },
+      horzLine: { color: text, labelBackgroundColor: panel },
     },
-    rightPriceScale: { borderColor: dim ? "#2a323d" : "#dee2e6" },
-    timeScale: { borderColor: dim ? "#2a323d" : "#dee2e6" },
+    rightPriceScale: { borderColor: border },
+    timeScale: { borderColor: border },
   } as const;
 }
 
@@ -106,12 +127,14 @@ function volumeColors(dim: boolean) {
 }
 
 /** Professional responsive chart with persistent timeframe and trading controls. */
-export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
+export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { theme } = useTheme();
   const isDim = theme === "dim";
+  const isDimRef = useRef(isDim);
+  isDimRef.current = isDim;
   const panelRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -129,7 +152,11 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const watermarkRef = useRef<ITextWatermarkPluginApi<Time> | null>(null);
   const prevCandleCount = useRef(0);
-  const candlesRef = useRef<Candle[]>([]);
+  const appliedDataKeyRef = useRef("");
+  const lastAppliedCandleTimeRef = useRef<number | null>(null);
+  const chartCandlesRef = useRef<Candle[]>([]);
+  const historyCandlesRef = useRef<Candle[]>([]);
+  const historyRequestRef = useRef<string | null>(null);
   const barSpacingRef = useRef(8);
   const userZoomedRef = useRef(false);
 
@@ -137,6 +164,7 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
   const setInterval = useForexStore((state) => state.setInterval);
   const candles = useForexStore((state) => state.candles);
   const quote = useForexStore((state) => state.quote);
+  const snapshotVersion = useForexStore((state) => state.snapshotVersion);
 
   const [chartType, setChartType] = useState<ChartType>("candles");
   const [showMA, setShowMA] = useState(false);
@@ -151,8 +179,9 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
   const [rsiPeriod] = useState(14);
   const [hoveredOhlc, setHoveredOhlc] = useState<DisplayOhlc | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
-
-  candlesRef.current = candles;
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyExhausted, setHistoryExhausted] = useState(false);
+  const [historyMessage, setHistoryMessage] = useState("");
 
   const syncKey = useMemo(
     () => `${instrument.symbol}-${interval}-${chartType}`,
@@ -183,11 +212,83 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
     setShowRSI(storedFlag(RSI_STORAGE_KEY, true));
     setShowMACD(storedFlag(MACD_STORAGE_KEY, false));
   }, [searchParams, setInterval]);
+  const historyKey = useMemo(
+    () => `${instrument.symbol}-${interval}`,
+    [instrument.symbol, interval],
+  );
+  const historyKeyRef = useRef(historyKey);
+  historyKeyRef.current = historyKey;
+
+  const replaceChartData = useCallback((data: Candle[]) => {
+    const colors = volumeColors(isDimRef.current);
+    if (chartType === "candles") {
+      seriesRef.current?.setData(data.map((candle) => ({
+        time: candle.time as UTCTimestamp,
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close,
+      })));
+    } else {
+      lineSeriesRef.current?.setData(data.map((candle) => ({
+        time: candle.time as UTCTimestamp,
+        value: candle.close,
+      })));
+    }
+    volumeSeriesRef.current?.setData(data.map((candle) => ({
+      time: candle.time as UTCTimestamp,
+      value: candle.volume,
+      color: candle.close >= candle.open ? colors.up : colors.down,
+    })));
+    if (maSeriesRef.current) {
+      const points = data.length >= maPeriod ? computeSMASeries(data, maPeriod) : [];
+      maSeriesRef.current.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.value })));
+    }
+    if (emaSeriesRef.current) {
+      const points = data.length >= emaPeriod ? computeEMASeries(data, emaPeriod) : [];
+      emaSeriesRef.current.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.value })));
+    }
+    if (bbUpperRef.current && bbMiddleRef.current && bbLowerRef.current) {
+      const points = data.length >= bollingerPeriod
+        ? computeBollinger(data, bollingerPeriod, bollingerStdDev)
+        : [];
+      bbUpperRef.current.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.upper })));
+      bbMiddleRef.current.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.middle })));
+      bbLowerRef.current.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.lower })));
+    }
+    if (rsiSeriesRef.current) {
+      const points = data.length > rsiPeriod ? computeRSISeries(data, rsiPeriod) : [];
+      rsiSeriesRef.current.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.value })));
+    }
+    if (macdHistRef.current && macdLineRef.current && macdSignalRef.current) {
+      const points = data.length >= 35 ? computeMACD(data) : [];
+      macdHistRef.current.setData(points.map((point) => ({
+        time: point.time as UTCTimestamp,
+        value: point.histogram,
+        color: point.histogram >= 0 ? colors.up : colors.down,
+      })));
+      macdLineRef.current.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.macd })));
+      macdSignalRef.current.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.signal })));
+    }
+  }, [bollingerPeriod, bollingerStdDev, chartType, emaPeriod, maPeriod, rsiPeriod]);
 
   useEffect(() => {
     prevCandleCount.current = 0;
+    appliedDataKeyRef.current = "";
+    lastAppliedCandleTimeRef.current = null;
+    userZoomedRef.current = false;
+    barSpacingRef.current = 8;
     setHoveredOhlc(null);
   }, [syncKey]);
+
+  useEffect(() => {
+    chartCandlesRef.current = [];
+    historyCandlesRef.current = [];
+    historyRequestRef.current = null;
+    setHistoryLoading(false);
+    setHistoryExhausted(false);
+    setHistoryMessage("");
+  }, [historyKey]);
 
   useEffect(() => {
     const handleFullscreen = () => setFullscreen(document.fullscreenElement === panelRef.current);
@@ -203,7 +304,7 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
     // kept in sync by the live-restyle effect; isDim is intentionally not a
     // dependency — the chart is only disposed when the chart TYPE changes.
     const dim = isDim;
-    const theme = chartThemeOptions(dim);
+    const theme = chartThemeOptions();
     const chart = createChart(container, {
       autoSize: true,
       ...theme,
@@ -276,7 +377,7 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
         return;
       }
       const time = Number(param.time ?? 0);
-      const candle = candlesRef.current.find((item) => item.time === time);
+      const candle = findCandleByTime(chartCandlesRef.current, time);
       if (!candle) {
         setHoveredOhlc(null);
         return;
@@ -316,12 +417,12 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
-    const theme = chartThemeOptions(isDim);
+    const theme = chartThemeOptions();
     chart.applyOptions({ ...theme, crosshair: { ...theme.crosshair, mode: CrosshairMode.Normal } });
     seriesRef.current?.applyOptions(candleColors(isDim));
-    const colors = volumeColors(isDim);
+    const colors = volumeColors(isDimRef.current);
     volumeSeriesRef.current?.setData(
-      candlesRef.current.map((candle) => ({
+      chartCandlesRef.current.map((candle) => ({
         time: candle.time as UTCTimestamp,
         value: candle.volume,
         color: candle.close >= candle.open ? colors.up : colors.down,
@@ -394,7 +495,7 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
       lastValueVisible: false,
     });
     maSeriesRef.current = movingAverage;
-    const currentCandles = useForexStore.getState().candles;
+    const currentCandles = chartCandlesRef.current;
     if (currentCandles.length >= maPeriod) movingAverage.setData(computeSMA(currentCandles, maPeriod));
 
     return () => {
@@ -416,7 +517,7 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
     }
     const s = chart.addSeries(LineSeries, { color: "#f97316", lineWidth: 2, priceLineVisible: false, lastValueVisible: true });
     emaSeriesRef.current = s;
-    const c = useForexStore.getState().candles as Candle[];
+    const c = chartCandlesRef.current;
     if (c.length >= emaPeriod) s.setData(computeEMASeries(c, emaPeriod).map((p) => ({ time: p.time as UTCTimestamp, value: p.value })));
     return () => { if (emaSeriesRef.current === s && chartRef.current === chart) { chart.removeSeries(s); emaSeriesRef.current = null; } };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -434,7 +535,7 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
     const upper = mk("rgba(100,116,139,0.6)", 1); bbUpperRef.current = upper;
     const middle = mk("#6366f1", 2); bbMiddleRef.current = middle;
     const lower = mk("rgba(100,116,139,0.6)", 1); bbLowerRef.current = lower;
-    const c = useForexStore.getState().candles as Candle[];
+    const c = chartCandlesRef.current;
     if (c.length >= bollingerPeriod) {
       const bb = computeBollinger(c, bollingerPeriod, bollingerStdDev);
       upper.setData(bb.map((p) => ({ time: p.time as UTCTimestamp, value: p.upper })));
@@ -463,7 +564,7 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
     rsiSeriesRef.current = s;
     s.createPriceLine({ price: 70, color: "rgba(220,38,38,0.4)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "70" });
     s.createPriceLine({ price: 30, color: "rgba(22,128,59,0.4)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "30" });
-    const c = useForexStore.getState().candles as Candle[];
+    const c = chartCandlesRef.current;
     if (c.length > rsiPeriod) s.setData(computeRSISeries(c, rsiPeriod).map((p) => ({ time: p.time as UTCTimestamp, value: p.value })));
     return () => { if (rsiSeriesRef.current === s && chartRef.current === chart) { chart.removeSeries(s); rsiSeriesRef.current = null; } };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -482,7 +583,7 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
     const line = chart.addSeries(LineSeries, { color: "#2563eb", lineWidth: 2, priceLineVisible: false, lastValueVisible: true }, paneIndex);
     const signal = chart.addSeries(LineSeries, { color: "#dc2626", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, paneIndex);
     macdHistRef.current = hist; macdLineRef.current = line; macdSignalRef.current = signal;
-    const c = useForexStore.getState().candles as Candle[];
+    const c = chartCandlesRef.current;
     if (c.length >= 35) {
       const macd = computeMACD(c);
       hist.setData(macd.map((p) => ({ time: p.time as UTCTimestamp, value: p.histogram, color: p.histogram >= 0 ? "rgba(22,128,59,0.5)" : "rgba(220,38,38,0.5)" })));
@@ -501,92 +602,84 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
   const candleCount = candles.length;
   useEffect(() => {
     const series = chartType === "candles" ? seriesRef.current : lineSeriesRef.current;
-    if (!series || candleCount === 0) return;
-    prevCandleCount.current = candleCount;
+    const last = candles[candleCount - 1];
+    if (!series || !last) return;
 
-    // Save the user's visible range before setData() — setData() resets the
-    // scroll/zoom position. We restore it after if the user has manually zoomed.
-    let savedRange: LogicalRange | null = null;
-    if (userZoomedRef.current) {
-      savedRange = chartRef.current?.timeScale().getVisibleLogicalRange() ?? null;
-    }
+    const dataKey = `${syncKey}:${snapshotVersion}`;
+    const previousCount = prevCandleCount.current;
+    const previousTime = lastAppliedCandleTimeRef.current;
+    const sameCandle = candleCount === previousCount && last.time === previousTime;
+    const newCandle =
+      previousTime != null &&
+      last.time > previousTime &&
+      (candleCount === previousCount || candleCount === previousCount + 1);
+    const incremental =
+      appliedDataKeyRef.current === dataKey &&
+      previousCount > 0 &&
+      (sameCandle || newCandle) &&
+      chartCandlesRef.current.length > 0;
 
-    const upColor = isDim ? "rgba(76,186,106,0.32)" : "rgba(43,138,62,0.32)";
-    const downColor = isDim ? "rgba(241,91,91,0.30)" : "rgba(224,49,49,0.30)";
+    if (incremental) {
+      const chartCandles = chartCandlesRef.current;
+      const chartLast = chartCandles[chartCandles.length - 1];
+      if (chartLast.time === last.time) chartCandles[chartCandles.length - 1] = last;
+      else if (last.time > chartLast.time) chartCandles.push(last);
+      else return;
 
-    if (chartType === "candles") {
-      seriesRef.current?.setData(
-        candles.map((candle) => ({
-          time: candle.time as UTCTimestamp,
-          open: candle.open,
-          high: candle.high,
-          low: candle.low,
-          close: candle.close,
-        })),
-      );
+      if (chartCandles.length > MAX_CHART_CANDLES) {
+        chartCandles.splice(0, chartCandles.length - MAX_CHART_CANDLES);
+        replaceChartData(chartCandles);
+      } else {
+        if (chartType === "candles") {
+          seriesRef.current?.update({
+            time: last.time as UTCTimestamp,
+            open: last.open,
+            high: last.high,
+            low: last.low,
+            close: last.close,
+          });
+        } else {
+          lineSeriesRef.current?.update({ time: last.time as UTCTimestamp, value: last.close });
+        }
+        const colors = volumeColors(isDimRef.current);
+        volumeSeriesRef.current?.update({
+          time: last.time as UTCTimestamp,
+          value: last.volume,
+          color: last.close >= last.open ? colors.up : colors.down,
+        });
+      }
+      if (newCandle && !userZoomedRef.current) {
+        chartRef.current?.timeScale().scrollToRealTime();
+      }
     } else {
-      lineSeriesRef.current?.setData(
-        candles.map((candle) => ({ time: candle.time as UTCTimestamp, value: candle.close })),
+      // Full data replacement is reserved for a new subscription or a server
+      // snapshot. Ordinary live ticks update only the last chart bar.
+      const savedRange: LogicalRange | null = userZoomedRef.current
+        ? chartRef.current?.timeScale().getVisibleLogicalRange() ?? null
+        : null;
+      const latestStart = candles[0]?.time ?? 0;
+      const windowStart = Math.floor(Date.now() / 1000) - HISTORY_WINDOW_SECONDS;
+      const older = historyCandlesRef.current.filter(
+        (candle) => candle.time < latestStart && candle.time >= windowStart,
       );
+      const currentWindow = candles.filter((candle) => candle.time >= windowStart);
+      chartCandlesRef.current = mergeCandles(older, currentWindow);
+      replaceChartData(chartCandlesRef.current);
+      if (!userZoomedRef.current) {
+        chartRef.current?.timeScale().fitContent();
+      } else if (savedRange) {
+        chartRef.current?.timeScale().setVisibleLogicalRange(savedRange);
+      }
     }
 
-    volumeSeriesRef.current?.setData(
-      candles.map((candle) => ({
-        time: candle.time as UTCTimestamp,
-        value: candle.volume,
-        color: candle.close >= candle.open ? upColor : downColor,
-      })),
-    );
-    if (maSeriesRef.current && candleCount >= maPeriod) {
-      maSeriesRef.current.setData(computeSMASeries(candles, maPeriod).map((p) => ({ time: p.time as UTCTimestamp, value: p.value })));
-    }
-    if (emaSeriesRef.current && candleCount >= emaPeriod) {
-      emaSeriesRef.current.setData(computeEMASeries(candles, emaPeriod).map((p) => ({ time: p.time as UTCTimestamp, value: p.value })));
-    }
-    if (bbUpperRef.current && bbMiddleRef.current && bbLowerRef.current && candleCount >= bollingerPeriod) {
-      const bb = computeBollinger(candles, bollingerPeriod, bollingerStdDev);
-      bbUpperRef.current.setData(bb.map((p) => ({ time: p.time as UTCTimestamp, value: p.upper })));
-      bbMiddleRef.current.setData(bb.map((p) => ({ time: p.time as UTCTimestamp, value: p.middle })));
-      bbLowerRef.current.setData(bb.map((p) => ({ time: p.time as UTCTimestamp, value: p.lower })));
-    }
-    if (rsiSeriesRef.current && candleCount > rsiPeriod) {
-      rsiSeriesRef.current.setData(computeRSISeries(candles, rsiPeriod).map((p) => ({ time: p.time as UTCTimestamp, value: p.value })));
-    }
-    if (macdHistRef.current && macdLineRef.current && macdSignalRef.current && candleCount >= 35) {
-      const macd = computeMACD(candles);
-      macdHistRef.current.setData(macd.map((p) => ({ time: p.time as UTCTimestamp, value: p.histogram, color: p.histogram >= 0 ? upColor : downColor })));
-      macdLineRef.current.setData(macd.map((p) => ({ time: p.time as UTCTimestamp, value: p.macd })));
-      macdSignalRef.current.setData(macd.map((p) => ({ time: p.time as UTCTimestamp, value: p.signal })));
-    }
-    // Only auto-fit when the user hasn't manually zoomed. If they have zoomed,
-    // restore their saved visible range (setData resets it).
-    if (!userZoomedRef.current) {
-      chartRef.current?.timeScale().fitContent();
-    } else if (savedRange) {
-      chartRef.current?.timeScale().setVisibleLogicalRange(savedRange);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [syncKey, candleCount, candles, chartType, maPeriod]);
+    appliedDataKeyRef.current = dataKey;
+    prevCandleCount.current = candleCount;
+    lastAppliedCandleTimeRef.current = last.time;
+  }, [syncKey, snapshotVersion, candleCount, candles, chartType, replaceChartData]);
 
   useEffect(() => {
     if (candles.length === 0) return;
     const last = candles[candles.length - 1];
-    if (chartType === "candles") {
-      seriesRef.current?.update({
-        time: last.time as UTCTimestamp,
-        open: last.open,
-        high: last.high,
-        low: last.low,
-        close: last.close,
-      });
-    } else {
-      lineSeriesRef.current?.update({ time: last.time as UTCTimestamp, value: last.close });
-    }
-    volumeSeriesRef.current?.update({
-      time: last.time as UTCTimestamp,
-      value: last.volume,
-      color: last.close >= last.open ? "rgba(22,128,59,0.32)" : "rgba(220,38,38,0.30)",
-    });
     if (maSeriesRef.current && candles.length >= maPeriod) {
       const window = candles.slice(-maPeriod);
       const value = window.reduce((sum, candle) => sum + candle.close, 0) / maPeriod;
@@ -634,6 +727,83 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
     return { ...last, close: live, up: live >= last.open };
   }, [candles, quote]);
   const ohlc = hoveredOhlc ?? latestOhlc;
+
+  const loadEarlierCandles = useCallback(async () => {
+    if (historyRequestRef.current) return;
+    const requestKey = historyKey;
+    const before = chartCandlesRef.current[0]?.time;
+    if (before == null) {
+      setHistoryMessage("Chart history is not ready yet.");
+      return;
+    }
+    const windowStart = Math.floor(Date.now() / 1000) - HISTORY_WINDOW_SECONDS;
+    if (before <= windowStart) {
+      setHistoryExhausted(true);
+      setHistoryMessage("The chart has reached the 60-day history limit.");
+      return;
+    }
+
+    historyRequestRef.current = requestKey;
+    setHistoryLoading(true);
+    setHistoryMessage("");
+    try {
+      const params = new URLSearchParams({
+        symbol: instrument.symbol,
+        interval,
+        before: String(before),
+        limit: "2000",
+      });
+      const response = await fetch(`/api/market/history?${params.toString()}`, { cache: "no-store" });
+      if (historyKeyRef.current !== requestKey) return;
+      const payload = (await response.json().catch(() => null)) as
+        | { candles?: Candle[]; historyAvailable?: boolean; hasMore?: boolean; message?: string; error?: string }
+        | null;
+      if (!response.ok) {
+        throw new Error(payload?.error ?? payload?.message ?? "Historical candles could not be loaded.");
+      }
+      if (!payload?.historyAvailable) {
+        setHistoryExhausted(true);
+        setHistoryMessage(payload?.message ?? "Older candles are unavailable from the configured market-data feed.");
+        return;
+      }
+
+      const existing = chartCandlesRef.current;
+      const older = (payload.candles ?? []).filter((candle) => candle.time < before && candle.time >= windowStart);
+      const merged = mergeCandles(older, existing);
+      const added = merged.length - existing.length;
+      if (added <= 0) {
+        setHistoryExhausted(!payload.hasMore);
+        setHistoryMessage(payload.hasMore
+          ? "The feed returned no new candles for this range."
+          : "No earlier candles are available from the configured feed.");
+        return;
+      }
+
+      const visibleRange = chartRef.current?.timeScale().getVisibleLogicalRange() ?? null;
+      const liveStart = useForexStore.getState().candles[0]?.time ?? before;
+      historyCandlesRef.current = merged.filter((candle) => candle.time < liveStart);
+      chartCandlesRef.current = merged;
+      replaceChartData(merged);
+      userZoomedRef.current = true;
+      if (visibleRange) {
+        chartRef.current?.timeScale().setVisibleLogicalRange({
+          from: visibleRange.from + added,
+          to: visibleRange.to + added,
+        });
+      }
+      setHistoryExhausted(!payload.hasMore || merged[0]!.time <= windowStart);
+      setHistoryMessage(`Loaded ${added.toLocaleString()} earlier candles.`);
+    } catch (error) {
+      if (historyKeyRef.current === requestKey) {
+        setHistoryMessage(error instanceof Error ? error.message : "Historical candles could not be loaded.");
+      }
+    } finally {
+      if (historyRequestRef.current === requestKey) {
+        historyRequestRef.current = null;
+        setHistoryLoading(false);
+      }
+    }
+  }, [historyKey, instrument.symbol, interval, replaceChartData]);
 
   const selectTimeframe = useCallback(
     (next: CandleInterval) => {
@@ -810,12 +980,16 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
             </svg>
           </ChartButton>
           <IndicatorsMenu groups={indicatorGroups} />
-          <ChartButton label="Zoom in" onClick={() => zoom("in")}><ZoomIn size={14} strokeWidth={2} aria-hidden /></ChartButton>
-          <ChartButton label="Zoom out" onClick={() => zoom("out")}><ZoomOut size={14} strokeWidth={2} aria-hidden /></ChartButton>
-          <ChartButton label="Fit all candles" onClick={() => fitChart()}>Fit</ChartButton>
-          <ChartButton label={fullscreen ? "Exit full screen" : "Full screen"} active={fullscreen} onClick={() => void toggleFullscreen()}>
-            {fullscreen ? "Exit" : "Full"}
-          </ChartButton>
+          <ViewControlsMenu
+            fullscreen={fullscreen}
+            onZoomIn={() => zoom("in")}
+            onZoomOut={() => zoom("out")}
+            onFit={fitChart}
+            onToggleFullscreen={() => void toggleFullscreen()}
+            onLoadEarlier={loadEarlierCandles}
+            historyLoading={historyLoading}
+            historyExhausted={historyExhausted}
+          />
         </div>
 
         {/* Desktop: all controls inline (chart-type, indicators, zoom, fit, fullscreen, timeframes) */}
@@ -834,12 +1008,16 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
             </svg>
           </ChartButton>
           <IndicatorsMenu groups={indicatorGroups} />
-          <ChartButton label="Zoom in" onClick={() => zoom("in")}><ZoomIn size={14} strokeWidth={2} aria-hidden /></ChartButton>
-          <ChartButton label="Zoom out" onClick={() => zoom("out")}><ZoomOut size={14} strokeWidth={2} aria-hidden /></ChartButton>
-          <ChartButton label="Fit all candles" onClick={() => fitChart()}>Fit</ChartButton>
-          <ChartButton label={fullscreen ? "Exit full screen" : "Full screen"} active={fullscreen} onClick={() => void toggleFullscreen()}>
-            {fullscreen ? "Exit" : "Full"}
-          </ChartButton>
+          <ViewControlsMenu
+            fullscreen={fullscreen}
+            onZoomIn={() => zoom("in")}
+            onZoomOut={() => zoom("out")}
+            onFit={fitChart}
+            onToggleFullscreen={() => void toggleFullscreen()}
+            onLoadEarlier={loadEarlierCandles}
+            historyLoading={historyLoading}
+            historyExhausted={historyExhausted}
+          />
           <div className="mx-1 h-4 w-px shrink-0 bg-panel-3" />
           <ChipGroup
             ariaLabel="Chart timeframe"
@@ -850,6 +1028,44 @@ export function ChartPanel({ instrument, onSwitchInstrument }: Props) {
           />
         </div>
       </div>
+
+      {historyMessage && (
+        <div role="status" className="shrink-0 bg-panel px-3 py-1 text-(length:--term-text-2xs) text-text-faint">
+          {historyMessage}
+        </div>
+      )}
+
+      {onOpenTrade && (
+        <div className="flex shrink-0 items-center gap-2 bg-panel px-2 py-1.5 sm:px-3">
+          <span className="shrink-0 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">
+            Spread <span className="tnum text-text-muted">{fmtPrice((quote?.symbol === instrument.symbol ? quote.ask - quote.bid : instrument.ask - instrument.bid), instrument.digits)}</span>
+          </span>
+          <div className="ml-auto grid min-w-0 flex-1 grid-cols-2 gap-1 sm:flex-none">
+            <Button
+              type="button"
+              variant="sell"
+              size="sm"
+              aria-label={`Open sell ticket at ${fmtPrice(quote?.symbol === instrument.symbol ? quote.bid : instrument.bid, instrument.digits)}`}
+              onClick={() => onOpenTrade("SELL")}
+              className="h-10 min-w-0 px-2 sm:h-8 sm:px-3"
+            >
+              <TrendingDown size={14} strokeWidth={2} aria-hidden />
+              Sell <span className="truncate tnum">{fmtPrice(quote?.symbol === instrument.symbol ? quote.bid : instrument.bid, instrument.digits)}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="buy"
+              size="sm"
+              aria-label={`Open buy ticket at ${fmtPrice(quote?.symbol === instrument.symbol ? quote.ask : instrument.ask, instrument.digits)}`}
+              onClick={() => onOpenTrade("BUY")}
+              className="h-10 min-w-0 px-2 sm:h-8 sm:px-3"
+            >
+              <TrendingUp size={14} strokeWidth={2} aria-hidden />
+              Buy <span className="truncate tnum">{fmtPrice(quote?.symbol === instrument.symbol ? quote.ask : instrument.ask, instrument.digits)}</span>
+            </Button>
+          </div>
+        </div>
+      )}
 
       {ohlc ? (
         <div className="flex shrink-0 items-center gap-2 overflow-x-auto bg-panel px-3 py-1 text-(length:--term-text-2xs) tnum md:hidden">
@@ -934,6 +1150,62 @@ function IndicatorsMenu({ groups }: { groups: IndicatorGroup[] }) {
   );
 }
 
+function ViewControlsMenu({
+  fullscreen,
+  onZoomIn,
+  onZoomOut,
+  onFit,
+  onToggleFullscreen,
+  onLoadEarlier,
+  historyLoading,
+  historyExhausted,
+}: {
+  fullscreen: boolean;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onFit: () => void;
+  onToggleFullscreen: () => void;
+  onLoadEarlier: () => void;
+  historyLoading: boolean;
+  historyExhausted: boolean;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <ChartButton label="Chart view controls">
+          <MoreHorizontal size={15} strokeWidth={2} aria-hidden />
+        </ChartButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={4} className="min-w-48">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Chart view</DropdownMenuLabel>
+          <DropdownMenuItem onSelect={onZoomIn}><ZoomIn />Zoom in</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onZoomOut}><ZoomOut />Zoom out</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onFit}>Fit all candles</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onToggleFullscreen}>
+            {fullscreen ? <Minimize2 /> : <Maximize2 />}
+            {fullscreen ? "Exit full screen" : "Full screen"}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>History</DropdownMenuLabel>
+          <DropdownMenuItem
+            disabled={historyLoading || historyExhausted}
+            onSelect={onLoadEarlier}
+          >
+            <History />
+            {historyLoading ? "Loading earlier candles…" : "Load earlier candles"}
+          </DropdownMenuItem>
+          <DropdownMenuLabel className="px-2 py-1 text-(length:--term-text-2xs) font-normal normal-case tracking-normal text-text-faint">
+            Provider history is capped at 60 days.
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function ChartButton({
   label,
   active = false,
@@ -990,6 +1262,27 @@ function OhlcField({ label, value, up, digits }: { label: string; value: number;
       <span className={up ? "text-up" : "text-down"}>{fmtPrice(value, digits)}</span>
     </span>
   );
+}
+
+function findCandleByTime(candles: Candle[], time: number): Candle | null {
+  let low = 0;
+  let high = candles.length - 1;
+  while (low <= high) {
+    const middle = low + Math.floor((high - low) / 2);
+    const candle = candles[middle];
+    if (candle.time === time) return candle;
+    if (candle.time < time) low = middle + 1;
+    else high = middle - 1;
+  }
+  return null;
+}
+
+function mergeCandles(...groups: Candle[][]): Candle[] {
+  const candlesByTime = new Map<number, Candle>();
+  for (const group of groups) {
+    for (const candle of group) candlesByTime.set(candle.time, candle);
+  }
+  return Array.from(candlesByTime.values()).sort((a, b) => a.time - b.time);
 }
 
 /** O(n) rolling simple moving average over N candles. */

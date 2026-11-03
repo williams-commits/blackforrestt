@@ -36,6 +36,7 @@ import {
   marginFor,
   markPosition,
   openPosition,
+  protectionLevelError,
   accrueSwap,
   strikeDistanceLimitPercent,
   strikeRateAllowed,
@@ -966,6 +967,79 @@ class Hub {
     });
   }
 
+  async updatePositionProtectionReq(
+    userId: string,
+    positionId: string,
+    stopLoss: number | null,
+    takeProfit: number | null,
+  ): Promise<OpenPositionResult | null> {
+    return userMutationMutex.runExclusive(userId, async () => {
+      const positions = this.openPositions.get(userId);
+      const index = positions?.findIndex((position) => position.id === positionId) ?? -1;
+      if (!positions || index < 0) return null;
+
+      const current = positions[index];
+      if (current.type !== "CFD") {
+        throw new TradingError("Stop-loss and take-profit can only be changed on CFD positions.", "VALIDATION");
+      }
+      const state = this.instruments.get(current.symbol);
+      if (!state) throw new TradingError("The position instrument is unavailable.", "CONFLICT");
+
+      const userSettings = await resolveUserSettings(userId);
+      const closeSide = current.side === "BUY" ? "SELL" : "BUY";
+      const baseMarkRate = state.sim.rateFor(closeSide);
+      const markup = Number(state.pipSize) * userSettings.pnl.spreadMarkupPips;
+      const markRate = current.side === "BUY" ? baseMarkRate - markup : baseMarkRate + markup;
+      const cfg = this.cfg(state);
+      const normalizedStopLoss = stopLoss == null ? null : Number(stopLoss.toFixed(cfg.digits));
+      const normalizedTakeProfit = takeProfit == null ? null : Number(takeProfit.toFixed(cfg.digits));
+      const validationError = protectionLevelError(
+        current.side,
+        normalizedStopLoss,
+        normalizedTakeProfit,
+        markRate,
+        "current market price",
+      );
+      if (validationError) throw new TradingError(validationError, "VALIDATION");
+
+      await withSerializableRetry(
+        async (tx) => {
+          const update = await tx.position.updateMany({
+            where: { id: positionId, userId, status: "OPEN", type: "CFD" },
+            data: {
+              stopLoss: normalizedStopLoss == null ? null : decimal(normalizedStopLoss),
+              takeProfit: normalizedTakeProfit == null ? null : decimal(normalizedTakeProfit),
+            },
+          });
+          if (update.count !== 1) {
+            throw new TradingError("The position changed before its protection levels were saved.", "CONFLICT");
+          }
+          await appendAuditEvent(tx, {
+            actorId: userId,
+            action: "POSITION_PROTECTION_UPDATED",
+            entityType: "Position",
+            entityId: positionId,
+            metadata: {
+              symbol: current.symbol,
+              side: current.side,
+              previousStopLoss: current.stopLoss,
+              previousTakeProfit: current.takeProfit,
+              stopLoss: normalizedStopLoss,
+              takeProfit: normalizedTakeProfit,
+            },
+          });
+        },
+        { operation: `position protection update ${positionId}` },
+      );
+
+      const updated = { ...positions[index], stopLoss: normalizedStopLoss, takeProfit: normalizedTakeProfit };
+      positions[index] = updated;
+      const view = this.toView(updated, cfg);
+      this.broadcast({ kind: "position", userId, position: view });
+      return { position: view, metrics: await this.calculateMetrics(userId) };
+    });
+  }
+
   /** Caller must hold the user's mutation lock. */
   private async closePositionInternal(
     userId: string,
@@ -1464,21 +1538,13 @@ class Hub {
       throw new TradingError("CFD positions do not accept strike or expiry fields.", "VALIDATION");
     }
 
-    if (input.side === "BUY") {
-      if (input.stopLoss != null && input.stopLoss >= entryRate) {
-        throw new TradingError("Buy stop loss must be below the entry price.", "VALIDATION");
-      }
-      if (input.takeProfit != null && input.takeProfit <= entryRate) {
-        throw new TradingError("Buy take profit must be above the entry price.", "VALIDATION");
-      }
-    } else {
-      if (input.stopLoss != null && input.stopLoss <= entryRate) {
-        throw new TradingError("Sell stop loss must be above the entry price.", "VALIDATION");
-      }
-      if (input.takeProfit != null && input.takeProfit >= entryRate) {
-        throw new TradingError("Sell take profit must be below the entry price.", "VALIDATION");
-      }
-    }
+    const protectionError = protectionLevelError(
+      input.side,
+      input.stopLoss,
+      input.takeProfit,
+      entryRate,
+    );
+    if (protectionError) throw new TradingError(protectionError, "VALIDATION");
   }
 
   private cfg(state: InstrumentState): InstrumentCfg {

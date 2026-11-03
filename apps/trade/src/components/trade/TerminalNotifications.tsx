@@ -32,10 +32,20 @@ export function TerminalNotifications() {
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const counter = useRef(0);
+  const seenPositionEvents = useRef(new Set<string>());
 
   useEffect(() => {
     const onRealtime = (event: Event) => {
       const message = (event as CustomEvent<ServerMessage>).detail;
+      if (message?.type === "position") {
+        const key = `${message.position.id}:${message.position.status}`;
+        if (seenPositionEvents.current.has(key)) return;
+        seenPositionEvents.current.add(key);
+        if (seenPositionEvents.current.size > 500) {
+          const oldest = seenPositionEvents.current.values().next().value;
+          if (oldest) seenPositionEvents.current.delete(oldest);
+        }
+      }
       const next: Omit<LiveEvent, "id" | "time"> | null = (() => {
         if (message?.type === "position") {
           const position = message.position;

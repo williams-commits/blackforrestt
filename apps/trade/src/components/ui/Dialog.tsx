@@ -178,9 +178,11 @@ export function SimpleDialog({
   children: React.ReactNode;
   className?: string;
 }) {
+  const descriptionId = React.useId();
+
   return (
     <DialogRoot open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className={className} aria-describedby={description ? undefined : "legacy-dialog-desc"}>
+      <DialogContent className={className} aria-describedby={description ? descriptionId : undefined}>
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-4 py-3 sm:px-5 sm:py-4">
           <div>
             <DialogTitle className="text-sm font-semibold text-text">
@@ -188,7 +190,7 @@ export function SimpleDialog({
               {title}
             </DialogTitle>
             {description ? (
-              <DialogDescription id="legacy-dialog-desc" className="mt-1 text-xs text-text-muted">
+              <DialogDescription id={descriptionId} className="mt-1 text-xs text-text-muted">
                 {description}
               </DialogDescription>
             ) : null}

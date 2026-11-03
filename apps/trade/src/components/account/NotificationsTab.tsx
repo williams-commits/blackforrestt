@@ -51,6 +51,7 @@ const TYPE_TONES: Record<string, string> = {
  *  detail modal (opening an unread item marks it read). */
 export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: () => void; onOpenMessages?: () => void }) {
   const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [accumulated, setAccumulated] = useState<NotificationRow[]>([]);
   const [selected, setSelected] = useState<NotificationRow | null>(null);
@@ -101,29 +102,36 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
 
   async function markRead(id: string) {
     try {
-      await fetch("/api/notifications", {
+      const response = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ids: [id] }),
       });
+      const payload = await response.json().catch(() => null) as { error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error ?? "Unable to mark this notification as read.");
+      setSelected((current) => current?.id === id ? { ...current, readAt: new Date().toISOString() } : current);
+      setActionError(null);
       void queryClient.invalidateQueries({ queryKey: ["account-notifications"] });
       onActivity?.();
-    } catch {
-      // Failure surfaces via the invalidated query's own error state.
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : "Unable to mark this notification as read.");
     }
   }
 
   async function markAllRead() {
     setBusy(true);
+    setActionError(null);
     try {
-      await fetch("/api/notifications", {
+      const response = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ all: true }),
       });
+      const payload = await response.json().catch(() => null) as { error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error ?? "Unable to mark notifications as read.");
       await queryClient.invalidateQueries({ queryKey: ["account-notifications"] });
-    } catch {
-      // Failure surfaces via the invalidated query's own error state.
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : "Unable to mark notifications as read.");
     } finally {
       setBusy(false);
     }
@@ -158,6 +166,7 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
       </CardHeader>
       <CardContent className="space-y-2">
         {error && <Alert tone="err">{error}</Alert>}
+        {actionError && selected === null && <Alert tone="err">{actionError}</Alert>}
 
         {isPending && page === 1 ? (
           <div className="space-y-2" role="status" aria-label="Loading notifications">
@@ -185,7 +194,7 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
                       // Opening the detail modal marks the notification read —
                       // the user has seen it; no second click required.
                       if (!item.readAt) void markRead(item.id);
-                      setSelected(item.readAt ? item : { ...item, readAt: new Date().toISOString() });
+                      setSelected(item);
                     }}
                     className={`w-full rounded-xl p-3.5 text-left transition-colors bg-muted/30 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
                       item.readAt ? "bg-card" : "bg-primary/10"
@@ -234,6 +243,7 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
       >
         {selected && (
           <div className="space-y-4 px-5 py-4">
+            {actionError && <Alert tone="err">{actionError}</Alert>}
             <div className="flex items-center gap-2.5">
               <span className={`flex size-9 items-center justify-center rounded-full ${notificationTileClass(selected.type)}`}>
                 {(() => { const M = notificationMeta(selected.type); return <M.icon size={15} strokeWidth={2} aria-hidden />; })()}

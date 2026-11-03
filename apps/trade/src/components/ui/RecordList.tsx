@@ -265,7 +265,16 @@ export function RecordList<T>({
                 return (
                   <TableRow
                     key={rowKey(row)}
-                    onClick={() => activate(row)}
+                    onClick={(event) => {
+                      if (
+                        event.target instanceof HTMLElement &&
+                        event.target !== event.currentTarget &&
+                        event.target.closest("a, button, input, select, textarea, [role='button'], [role='link'], [role='checkbox']")
+                      ) {
+                        return;
+                      }
+                      activate(row);
+                    }}
                     className="cursor-pointer"
                   >
                     <TableCell className="max-w-75 pl-6 pr-4">
@@ -292,7 +301,17 @@ export function RecordList<T>({
                       </TableCell>
                     ))}
                     <TableCell className="pr-4 text-muted-foreground">
-                      <ChevronRight size={14} strokeWidth={2} aria-hidden className="opacity-60" />
+                      <button
+                        type="button"
+                        aria-label={`Open ${ariaLabel.toLowerCase()} details`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          activate(row);
+                        }}
+                        className="inline-flex size-8 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <ChevronRight size={14} strokeWidth={2} aria-hidden className="opacity-60" />
+                      </button>
                     </TableCell>
                   </TableRow>
                 );

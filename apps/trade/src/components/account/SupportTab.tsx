@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,6 +47,8 @@ const STATUS_LABELS: Record<SupportCase["status"], string> = {
 /** Support on the enterprise RecordList — new-case Card on top, cases list
  *  with a side-slide detail (description, resolution, status) below. */
 export function SupportTab() {
+  const subjectId = useId();
+  const messageId = useId();
 
   // New case form state
   const [subject, setSubject] = useState<string>(CATEGORIES[0]);
@@ -128,9 +130,9 @@ export function SupportTab() {
           )}
           <form onSubmit={submit} className="space-y-4">
             <div>
-              <Label className="text-xs font-medium text-muted-foreground">Subject</Label>
+              <Label htmlFor={subjectId} className="text-xs font-medium text-muted-foreground">Subject</Label>
               <Select value={subject} onValueChange={setSubject}>
-                <SelectTrigger aria-label="Subject" className="h-10 w-full" startIcon={<Tag size={13} strokeWidth={2} aria-hidden />}>
+                <SelectTrigger id={subjectId} className="h-10 w-full" startIcon={<Tag size={13} strokeWidth={2} aria-hidden />}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -141,8 +143,9 @@ export function SupportTab() {
               </Select>
             </div>
             <div>
-              <Label className="text-xs font-medium text-muted-foreground">Message</Label>
+              <Label htmlFor={messageId} className="text-xs font-medium text-muted-foreground">Message</Label>
               <Textarea
+                id={messageId}
                 required
                 minLength={10}
                 rows={4}
@@ -150,7 +153,6 @@ export function SupportTab() {
                 onChange={(e) => setMessage(e.target.value)}
                 className="resize-none"
                 placeholder="Describe your issue or question…"
-                aria-label="Message"
               />
             </div>
             {(queryError instanceof Error ? queryError.message : actionError) && <Alert tone="err">{queryError instanceof Error ? queryError.message : actionError}</Alert>}

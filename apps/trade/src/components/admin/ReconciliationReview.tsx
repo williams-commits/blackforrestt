@@ -184,9 +184,10 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <SectionHeader
-        icon={<Scale size={16} strokeWidth={2} aria-hidden />}
+        eyebrow="Finance"
+        icon={<Scale size={18} strokeWidth={2} aria-hidden />}
         title="Reconciliation operations"
         description="Replay-safe ledger, projection, position and payment checks."
         onRefresh={() => void refresh()}

@@ -79,7 +79,7 @@ export default async function AdminPage() {
         </div>
       </header>
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-screen-2xl px-4 py-6">
-        <AdminWorkspace userName={userName} roles={context.roles} permissions={context.permissions} simpleApproval={simplePaymentApproval()} />
+        <AdminWorkspace permissions={context.permissions} simpleApproval={simplePaymentApproval()} />
       </main>
     </div>
   );

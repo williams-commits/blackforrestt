@@ -16,7 +16,7 @@ import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 import { ADMIN_TAB_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
-import { CandlestickChart, ClipboardCheck, CreditCard, HeartPulse, IdCard, LayoutDashboard, BookOpenText, ListTree, Plus, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, Wallet, X } from "lucide-react";
+import { CandlestickChart, ClipboardCheck, CreditCard, HeartPulse, IdCard, LayoutDashboard, BookOpenText, ListTree, Plus, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, X } from "lucide-react";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { createDeviceId } from "@/lib/device";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 
 import type { ManagedUserRow } from "@/components/admin/AdminUserActions";
-import { StatCard } from "@/components/ui/StatCard";
 import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Alert } from "@/components/ui/Alert";
@@ -59,8 +58,6 @@ type TabKey =
   | "groups";
 
 interface Props {
-  userName: string;
-  roles: string[];
   permissions: Permission[];
   simpleApproval?: boolean;
 }
@@ -160,7 +157,7 @@ interface BadgeStats {
   stats?: { pendingKyc?: number; pendingPayments?: number; pendingChanges?: number };
 }
 
-export function AdminWorkspace({ userName, roles, permissions, simpleApproval = false }: Props) {
+export function AdminWorkspace({ permissions, simpleApproval = false }: Props) {
   const allowedTabs = useMemo(
     () => TAB_DEFINITIONS.filter((tab) => permissions.includes(tab.permission)),
     [permissions],
@@ -287,21 +284,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
   };
 
   return (
-    <div className="space-y-5">
-      <section className="p-4 shadow-panel">
-        <SectionHeader
-          size="xl"
-          icon={<ShieldCheck size={20} strokeWidth={2} aria-hidden />}
-          title="Enterprise operations console"
-          description={`Signed in as ${userName}. Every command is role-gated and audit chained.`}
-          action={
-            <div className="flex flex-wrap justify-end gap-1.5" aria-label="Active administrative roles">
-              {roles.map((role) => <span key={role} className="rounded bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">{role.replaceAll("_", " ")}</span>)}
-            </div>
-          }
-        />
-      </section>
-
+    <div>
       <div className="lg:grid lg:grid-cols-[13.5rem_minmax(0,1fr)] lg:gap-5">
         {/* Desktop: grouped vertical sidebar. Mobile/tablet: horizontal pills. */}
         <nav aria-label="Administrative modules" className="hidden lg:block">
@@ -326,7 +309,7 @@ export function AdminWorkspace({ userName, roles, permissions, simpleApproval = 
           </nav>
         </ScrollFade>
 
-        <div className="min-w-0 space-y-5">
+        <div className="min-w-0 space-y-4">
 
       {tab === "overview" && <OverviewPanel />}
       {tab === "users" && <UsersPanel canAdjustBalance={can("USER_BALANCE_ADJUST")} canManage={can("USER_ACCESS_MANAGE")} onOpenChat={(user) => { setChatWith({ userId: user.id, label: user.name ?? user.email ?? user.id }); setTab("messages"); }} onProposeRole={can("USER_ACCESS_MANAGE") ? (user, action) => { setRoleChangeFor({ userId: user.id, label: user.name ?? user.email ?? user.id, action }); setTab("changes"); } : undefined} />}
@@ -376,15 +359,44 @@ function ModuleState({ loading, error, onRetry, children }: { loading: boolean; 
 
 /** Icons for the overview stat grid — inferred from the stat key. */
 const OVERVIEW_STAT_ICONS: Record<string, LucideIcon> = {
-  users: Users,
-  onlineUsers: Users,
+  totalUsers: Users,
+  verifiedUsers: ShieldCheck,
+  usersOnline: Users,
+  usersLoggedIn: UserRound,
+  usersTrading: CandlestickChart,
   openPositions: CandlestickChart,
+  closedPositions: CandlestickChart,
   pendingKyc: IdCard,
   pendingPayments: CreditCard,
+  openReconciliationCases: Scale,
+  activeBlocks: ShieldAlert,
+  openSupportCases: LifeBuoy,
   pendingChanges: ClipboardCheck,
-  totalBalance: Wallet,
-  totalEquity: Scale,
+  auditEvents: ScrollText,
 };
+
+const OVERVIEW_STAT_LABELS: Record<string, string> = {
+  totalUsers: "Total users",
+  verifiedUsers: "Verified users",
+  usersOnline: "Users online",
+  usersLoggedIn: "Users logged in",
+  usersTrading: "Users trading",
+  openPositions: "Open positions",
+  closedPositions: "Closed positions",
+  pendingKyc: "Pending KYC",
+  pendingPayments: "Pending payments",
+  openReconciliationCases: "Open reconciliation cases",
+  activeBlocks: "Active blocks",
+  openSupportCases: "Open support cases",
+  pendingChanges: "Pending changes",
+  auditEvents: "Audit events",
+};
+
+const OVERVIEW_STAT_GROUPS: Array<{ label: string; keys: string[] }> = [
+  { label: "Accounts & activity", keys: ["totalUsers", "verifiedUsers", "usersOnline", "usersLoggedIn", "usersTrading"] },
+  { label: "Trading & finance", keys: ["openPositions", "closedPositions", "pendingKyc", "pendingPayments"] },
+  { label: "Risk & service", keys: ["openReconciliationCases", "activeBlocks", "openSupportCases", "pendingChanges", "auditEvents"] },
+];
 
 interface OverviewResponse {
   environment: { simulationOnly: boolean; executionProvider: string; marketDataMode: string };
@@ -392,10 +404,61 @@ interface OverviewResponse {
 }
 function OverviewPanel() {
   const resource = useResource<OverviewResponse>("/api/admin/overview", 15_000);
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader icon={<LayoutDashboard size={16} strokeWidth={2} aria-hidden />} title="Platform overview" description="Live counters across users, positions, review queues, and balances — polled every 15 seconds." onRefresh={() => void resource.refresh()} /><Alert tone="info"><strong>Environment.</strong> Execution provider: {resource.data.environment.executionProvider}; market data: {resource.data.environment.marketDataMode}.</Alert><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{Object.entries(resource.data.stats).map(([key, value]) => {
-              const StatGlyph = OVERVIEW_STAT_ICONS[key];
-              return <StatCard key={key} label={key.replaceAll(/([A-Z])/g, " $1")} value={value.toLocaleString("en-US")} icon={StatGlyph ? <StatGlyph size={16} strokeWidth={1.75} aria-hidden /> : undefined} />;
-            })}</div></div>}</ModuleState>;
+  const overview = resource.data;
+  return (
+    <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>
+      {overview && (
+        <div className="space-y-5">
+          <SectionHeader
+            eyebrow="Operations"
+            icon={<LayoutDashboard size={18} strokeWidth={2} aria-hidden />}
+            title="Platform overview"
+            description="A live view of account activity, trading operations, and review queues."
+            onRefresh={() => void resource.refresh()}
+          />
+          <Alert tone="info">
+            <strong>Environment.</strong> Execution provider: {overview.environment.executionProvider}; market data: {overview.environment.marketDataMode}.
+          </Alert>
+          {OVERVIEW_STAT_GROUPS.map((group) => {
+            const stats = group.keys.filter((key) => key in overview.stats);
+            if (stats.length === 0) return null;
+            return (
+              <section key={group.label} className="space-y-3" aria-label={group.label}>
+                <h2 className="text-sm font-semibold tracking-tight text-foreground">{group.label}</h2>
+                <div className="grid grid-cols-2 gap-3 xl:grid-cols-3 2xl:grid-cols-4">
+                  {stats.map((key) => {
+                    const StatGlyph = OVERVIEW_STAT_ICONS[key];
+                    return (
+                      <OverviewStatCard
+                        key={key}
+                        label={OVERVIEW_STAT_LABELS[key] ?? key}
+                        value={overview.stats[key]}
+                        icon={StatGlyph ? <StatGlyph size={16} strokeWidth={1.75} aria-hidden /> : undefined}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      )}
+    </ModuleState>
+  );
+}
+
+function OverviewStatCard({ label, value, icon }: { label: string; value: number; icon?: React.ReactNode }) {
+  return (
+    <Card className="shadow-panel">
+      <CardContent className="flex items-start gap-3 p-4">
+        {icon && <IdentityTile tone="brand">{icon}</IdentityTile>}
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-muted-foreground">{label}</p>
+          <p className="mt-1 text-2xl font-semibold leading-none tabular-nums">{value.toLocaleString("en-US")}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 interface UserRow {
@@ -429,10 +492,10 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat, onProposeRole }: 
   return (
     <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>
       {resource.data ? (
-        <div>
-          <SectionHeader icon={<Users size={16} strokeWidth={2} aria-hidden />} title="Users and access" description="Identity, verification, account exposure, active roles, sessions, reconciliation restrictions, and audited balance operations." onRefresh={() => void resource.refresh()} />
+        <div className="space-y-4">
+          <SectionHeader eyebrow="Operations" icon={<Users size={18} strokeWidth={2} aria-hidden />} title="Users and access" description="Identity, verification, account exposure, active roles, sessions, reconciliation restrictions, and audited balance operations." onRefresh={() => void resource.refresh()} />
           {truncated && (
-            <Alert tone="info" className="mb-3">
+            <Alert tone="info">
               Showing the first {resource.data.users.length} of {resource.data.total} accounts — use the search to narrow.
             </Alert>
           )}
@@ -941,8 +1004,8 @@ interface KycSubmission {
   submittedAt: string | null; reviewedAt: string | null; user: { email: string | null; name: string | null; accountNo: string | null };
 }
 function KycPanel({ canDecide, canAccess }: { canDecide: boolean; canAccess: boolean }) {
-  const resource = useResource<{ pending: KycSubmission[]; reviewed: KycSubmission[]; total: number; reviewedTotal?: number }>("/api/admin/kyc/workspace", 15_000);
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <KycReview pending={resource.data.pending} reviewed={resource.data.reviewed} totalCount={resource.data.total} reviewedTotal={resource.data.reviewedTotal} canDecide={canDecide} canAccessDocuments={canAccess} onQueueChange={() => void resource.refresh()} />}</ModuleState>;
+  const resource = useResource<{ pending: KycSubmission[]; reviewed: KycSubmission[]; total: number; pendingTotal?: number; reviewedTotal?: number }>("/api/admin/kyc/workspace", 15_000);
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <KycReview pending={resource.data.pending} pendingTotal={resource.data.pendingTotal} reviewed={resource.data.reviewed} totalCount={resource.data.total} reviewedTotal={resource.data.reviewedTotal} canDecide={canDecide} canAccessDocuments={canAccess} onQueueChange={() => void resource.refresh()} />}</ModuleState>;
 }
 
 function PaymentsPanel({ canPrepare, canApprove, simpleApproval = false }: { canPrepare: boolean; canApprove: boolean; simpleApproval?: boolean }) {
@@ -987,8 +1050,8 @@ function LedgerPanel() {
     entry.asset, Number(entry.amount).toFixed(8),
   ]));
 
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-5">
-    <SectionHeader icon={<BookOpenText size={16} strokeWidth={2} aria-hidden />} title="Double-entry ledger" description="Posted transaction headers and immutable debit/credit entries." onRefresh={() => void resource.refresh()} />
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4">
+    <SectionHeader eyebrow="Finance" icon={<BookOpenText size={18} strokeWidth={2} aria-hidden />} title="Double-entry ledger" description="Posted transaction headers and immutable debit/credit entries." onRefresh={() => void resource.refresh()} />
     <div className="flex flex-wrap gap-2">{resource.data.trialBalance.map((row) => <span key={`${row.asset}:${row.direction}`}>{row.asset} {row.direction}: <strong className="tabular-nums">{fmtExecNumber(row.amount)}</strong></span>)}</div>
     {resource.data.total > all.length && (
       <Alert tone="info">Showing the {all.length} most recent postings of {resource.data.total.toLocaleString("en-US")} — narrow the window with the search or kind filters.</Alert>
@@ -1074,10 +1137,10 @@ function LedgerPanel() {
             {t.entries.map((entry) => (
               <div key={entry.id} className="flex items-center justify-between gap-2 rounded-lg bg-card px-3 py-2 text-xs">
                 <span className="flex min-w-0 items-center gap-2">
-                  <RecordStatusChip tone={entry.direction === "DEBIT" ? "down" : "up"}>{entry.direction}</RecordStatusChip>
+                  <RecordStatusChip tone={entry.direction === "DEBIT" ? "down" : "up"}>{entry.asset} {entry.direction}</RecordStatusChip>
                   <span className="truncate" title={`${entry.account.name} (${entry.account.code})`}>{entry.account.name}</span>
                 </span>
-                <span className="shrink-0 font-medium tabular-nums">{entry.asset} {fmtExecNumber(entry.amount)}</span>
+                <span className="shrink-0 font-medium tabular-nums">{fmtExecNumber(entry.amount)}</span>
               </div>
             ))}
           </div>
@@ -1221,7 +1284,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
   };
 
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4">
-    <SectionHeader icon={<CandlestickChart size={16} strokeWidth={2} aria-hidden />} title="Execution and position surveillance" description={resource.data.providerWarning} onRefresh={() => void resource.refresh()} />
+    <SectionHeader eyebrow="Finance" icon={<CandlestickChart size={18} strokeWidth={2} aria-hidden />} title="Execution and position surveillance" description={resource.data.providerWarning} onRefresh={() => void resource.refresh()} />
     <div className="flex flex-wrap gap-2">
       <Badge variant="secondary" className="bg-primary/10 text-primary">{resource.data.executionMode}</Badge>
       <Badge variant="secondary">Feed: {resource.data.marketDataMode}</Badge>
@@ -1508,7 +1571,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
     setBusy(id); setError(null);
     try { await requestJson(`/api/admin/support/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status, resolutionNote }) }); await resource.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update case."); } finally { setBusy(null); }
   }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><SectionHeader icon={<LifeBuoy size={16} strokeWidth={2} aria-hidden />} title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} action={canManage ? <Button size="sm" loading={busy === "create"} onClick={() => void createCase()}><Plus size={13} strokeWidth={2} aria-hidden /> New case</Button> : undefined} />{error && <Alert tone="err" className="mb-3">{error}</Alert>}<RecordList<SupportCase>
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Platform" icon={<LifeBuoy size={18} strokeWidth={2} aria-hidden />} title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} action={canManage ? <Button size="sm" loading={busy === "create"} onClick={() => void createCase()}><Plus size={13} strokeWidth={2} aria-hidden /> New case</Button> : undefined} />{error && <Alert tone="err">{error}</Alert>}<RecordList<SupportCase>
       ariaLabel="Case"
       title="Cases"
       description={`${resource.data.cases.length} cases`}
@@ -1555,7 +1618,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
             <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">{c.description}</p>
           </div>
           {canManage && c.status !== "RESOLVED" && c.status !== "CLOSED" && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               {c.status === "OPEN" && <Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => void updateCase(c.id, "IN_PROGRESS")}><UserRound size={13} strokeWidth={2} aria-hidden /> Assign to me</Button>}
               <Button type="button" size="sm" disabled={busy !== null} onClick={() => void updateCase(c.id, "RESOLVED")}><CheckCircle2 size={13} strokeWidth={2} aria-hidden /> Resolve</Button>
             </div>
@@ -1570,7 +1633,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
 interface InstrumentRow extends Record<string, unknown> { symbol: string; name: string; category: string; active: boolean; marginPerLot: string; commissionPerLot: string; swapLongPips: string; swapShortPips: string; feedSymbol: string | null }
 function InstrumentsPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<{ instruments: InstrumentRow[]; mutationPolicy: string }>("/api/admin/instruments");
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader icon={<ListTree size={16} strokeWidth={2} aria-hidden />} title="Instrument configuration" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} />{canManage && <ChangeHint text="Propose instrument changes from the Approvals module; a separate reviewer must execute them." />}
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Platform" icon={<ListTree size={18} strokeWidth={2} aria-hidden />} title="Instrument configuration" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} />{canManage && <ChangeHint text="Propose instrument changes from the Approvals module; a separate reviewer must execute them." />}
     <RecordList<InstrumentRow>
       ariaLabel="Instrument"
       title="Symbols"
@@ -1618,7 +1681,7 @@ function InstrumentsPanel({ canManage }: { canManage: boolean }) {
 interface RiskRuleRow extends Record<string, unknown> { id: string; code: string; name: string; severity: string; enabled: boolean; version: number; configuration: unknown; updatedAt: string }
 function RiskPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<{ rules: RiskRuleRow[]; exposure: Record<string, number>; mutationPolicy: string }>("/api/admin/risk");
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader icon={<ShieldAlert size={16} strokeWidth={2} aria-hidden />} title="Risk controls" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} /><div className="flex flex-wrap gap-2">{Object.entries(resource.data.exposure).map(([key, value]) => <Badge key={key} variant="secondary">{key.replaceAll(/([A-Z])/g, " $1")}: <strong className="ml-1 tabular-nums">{value}</strong></Badge>)}</div>{canManage && <ChangeHint text="Risk changes are proposed in Approvals and become effective only after a separate checker executes them." />}
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Risk & compliance" icon={<ShieldAlert size={18} strokeWidth={2} aria-hidden />} title="Risk controls" description={resource.data.mutationPolicy} onRefresh={() => void resource.refresh()} /><div className="flex flex-wrap gap-2">{Object.entries(resource.data.exposure).map(([key, value]) => <Badge key={key} variant="secondary">{key.replaceAll(/([A-Z])/g, " $1")}: <strong className="ml-1 tabular-nums">{value}</strong></Badge>)}</div>{canManage && <ChangeHint text="Risk changes are proposed in Approvals and become effective only after a separate checker executes them." />}
     <RecordList<RiskRuleRow>
       ariaLabel="Rule"
       title="Rules"
@@ -1674,7 +1737,7 @@ interface AuditEventRow extends Record<string, unknown> { sequence: string; doma
 function AuditPanel({ canVerify, canExport }: { canVerify: boolean; canExport: boolean }) {
   const resource = useResource<{ events: AuditEventRow[]; redacted: boolean }>("/api/admin/audit?limit=150");
   async function verify() { try { const result = await requestJson<{ valid: boolean; checkedEvents: number }>("/api/admin/audit/verify", { method: "POST" }); toast.success(`Chain ${result.valid ? "valid" : "invalid"}`, `Checked ${result.checkedEvents} events.`); await resource.refresh(); } catch (cause) { toast.error("Verification failed", cause instanceof Error ? cause.message : "Verification failed."); } }
-  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div><SectionHeader icon={<ScrollText size={16} strokeWidth={2} aria-hidden />} title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} action={<>{canVerify && <Button type="button" size="sm" onClick={() => void verify()}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Verify chain</Button>}{canExport && <Button type="button" size="sm" variant="outline" asChild><a href="/api/admin/audit/export?format=csv&limit=500"><Download size={13} strokeWidth={2} aria-hidden /> Export CSV</a></Button>}</>} /><RecordList<AuditEventRow>
+  return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Risk & compliance" icon={<ScrollText size={18} strokeWidth={2} aria-hidden />} title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} action={<>{canVerify && <Button type="button" size="sm" onClick={() => void verify()}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Verify chain</Button>}{canExport && <Button type="button" size="sm" variant="outline" asChild><a href="/api/admin/audit/export?format=csv&limit=500"><Download size={13} strokeWidth={2} aria-hidden /> Export CSV</a></Button>}</>} /><RecordList<AuditEventRow>
       ariaLabel="Event"
       title="Events"
       description={`${resource.data.events.length} events${resource.data.redacted ? " · export-redacted view" : ""}`}
@@ -1735,9 +1798,9 @@ interface HealthResponse {
 function HealthPanel() {
   const resource = useResource<HealthResponse>("/api/admin/service-health");
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && (
-    <div>
-      <SectionHeader icon={<HeartPulse size={16} strokeWidth={2} aria-hidden />} title="Service health" description={`Checked ${fmtAgo(resource.data.checkedAt)} · provider ${resource.data.executionProvider} · market data ${resource.data.marketDataMode}.`} onRefresh={() => void resource.refresh()} />
-      <div className="mb-4 flex items-center gap-2.5 rounded-xl bg-card p-4 shadow-sm">
+    <div className="space-y-4">
+      <SectionHeader eyebrow="Platform" icon={<HeartPulse size={18} strokeWidth={2} aria-hidden />} title="Service health" description={`Checked ${fmtAgo(resource.data.checkedAt)} · provider ${resource.data.executionProvider} · market data ${resource.data.marketDataMode}.`} onRefresh={() => void resource.refresh()} />
+      <div className="flex items-center gap-2.5 rounded-xl bg-card p-4 shadow-panel">
         <span className={`h-3 w-3 rounded-full ${resource.data.status === "HEALTHY" ? "bg-up" : "bg-down"}`} aria-hidden />
         <span className="text-sm font-semibold">{resource.data.status === "HEALTHY" ? "All systems operational" : "Degraded — one or more services are down"}</span>
       </div>
@@ -1843,7 +1906,8 @@ function ChangesPanel({
       {resource.data && (
         <div className="space-y-4">
           <SectionHeader
-            icon={<ClipboardCheck size={16} strokeWidth={2} aria-hidden />}
+            eyebrow="Risk & compliance"
+            icon={<ClipboardCheck size={18} strokeWidth={2} aria-hidden />}
             title="Maker-checker approvals"
             description="Access, risk, and instrument changes require a different authorized reviewer. Command keys make submissions replay-safe."
             onRefresh={() => void resource.refresh()}
@@ -2101,4 +2165,3 @@ function buildChangeRequest(action: ChangeAction, form: FormData): Record<string
 }
 
 function ChangeHint({ text }: { text: string }) { return <Alert tone="info" className="mb-3">{text}</Alert>; }
-

@@ -15,6 +15,19 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const reviewedOffset = Math.max(0, Number(searchParams.get("reviewedOffset") ?? 0) || 0);
 
+    const pendingCursor = searchParams.get("pendingCursor");
+    if (pendingCursor) {
+      const pending = await prisma.kycSubmission.findMany({
+        where: { status: "PENDING" },
+        orderBy: [{ submittedAt: "asc" }, { id: "asc" }],
+        cursor: { id: pendingCursor },
+        skip: 1,
+        take: 50,
+        include: { user: { select: { email: true, name: true, accountNo: true } } },
+      });
+      return NextResponse.json({ pending: pending.map(serialize) });
+    }
+
     // Paged tail fetch for the "Recent decisions" load-more: returns just the
     // next reviewed page past the offset, skipping the workspace queries.
     if (searchParams.has("reviewedOffset")) {
@@ -28,13 +41,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ reviewed: reviewed.map(serialize) });
     }
 
-    const [pending, reviewed, total, reviewedTotal] = await Promise.all([
-      prisma.kycSubmission.findMany({ where: { status: "PENDING" }, orderBy: { submittedAt: "asc" }, take: 200, include: { user: { select: { email: true, name: true, accountNo: true } } } }),
+    const [pending, reviewed, total, pendingTotal, reviewedTotal] = await Promise.all([
+      prisma.kycSubmission.findMany({ where: { status: "PENDING" }, orderBy: [{ submittedAt: "asc" }, { id: "asc" }], take: 50, include: { user: { select: { email: true, name: true, accountNo: true } } } }),
       prisma.kycSubmission.findMany({ where: { status: { in: ["APPROVED", "REJECTED"] } }, orderBy: { reviewedAt: "desc" }, take: 50, include: { user: { select: { email: true, name: true, accountNo: true } } } }),
       prisma.kycSubmission.count(),
+      prisma.kycSubmission.count({ where: { status: "PENDING" } }),
       prisma.kycSubmission.count({ where: { status: { in: ["APPROVED", "REJECTED"] } } }),
     ]);
-    return NextResponse.json({ pending: pending.map(serialize), reviewed: reviewed.map(serialize), total, reviewedTotal });
+    return NextResponse.json({ pending: pending.map(serialize), reviewed: reviewed.map(serialize), total, pendingTotal, reviewedTotal });
   } catch (error) {
     const status = error instanceof AdminError ? error.status : 500;
     return NextResponse.json({ error: status === 500 ? "Unable to load KYC workspace." : (error as Error).message }, { status });

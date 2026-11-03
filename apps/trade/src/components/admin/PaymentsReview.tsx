@@ -10,7 +10,14 @@ import { Alert } from "@/components/ui/Alert";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/Textarea";
-import { SimpleDialog } from "@/components/ui/Dialog";
+import {
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogRoot,
+  DialogTitle,
+} from "@/components/ui/Dialog";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { MethodDetailsGrid } from "@/components/payments/MethodDetailsGrid";
 import { fmtDateTime } from "@/lib/dates";
@@ -119,8 +126,8 @@ export function PaymentsReview({
   }
 
   return (
-    <section aria-label="Manual payment review" className="space-y-3">
-      <SectionHeader icon={<CreditCard size={16} strokeWidth={2} aria-hidden />} title="Manual payment review" description={reviewPolicy} />
+    <section aria-label="Manual payment review" className="space-y-4">
+      <SectionHeader eyebrow="Finance" icon={<CreditCard size={18} strokeWidth={2} aria-hidden />} title="Manual payment review" description={reviewPolicy} />
       {error && <Alert tone="err">{error}</Alert>}
       <RecordList<PaymentRequestRow>
         ariaLabel="Request"
@@ -197,7 +204,7 @@ export function PaymentsReview({
             <IdentityTile size="lg" tone={r.type === "DEPOSIT" ? "up" : "down"}>
               {r.type === "DEPOSIT" ? <ArrowDownToLine size={20} strokeWidth={2} aria-hidden /> : <ArrowUpFromLine size={20} strokeWidth={2} aria-hidden />}
             </IdentityTile>
-            <div className="text-sm font-medium">{r.type === "DEPOSIT" ? "Deposit · credit" : "Withdrawal · debit"}</div>
+            <div className="text-sm font-medium">{r.asset} {r.type === "DEPOSIT" ? "CREDIT" : "DEBIT"}</div>
             <div className={`text-2xl font-semibold tabular-nums ${r.type === "DEPOSIT" ? "text-up" : "text-down"}`}>
               {r.type === "DEPOSIT" ? "+" : "−"} {r.asset} {Number(r.amount).toFixed(2)}
             </div>
@@ -237,69 +244,83 @@ export function PaymentsReview({
         emptyTitle="No pending payment requests."
       />
 
-      <SimpleDialog
+      <DialogRoot
         open={decision !== null}
-        onClose={() => { if (!busy) setDecision(null); }}
-        title={decision ? `${decision.action === "PREPARE" ? "Prepare" : decision.action === "APPROVE" ? "Approve settlement" : "Reject"} ${decision.request.type.toLowerCase()} · ${decision.request.user.name ?? decision.request.user.email ?? "client"}` : ""}
-        description={
-          decision?.action === "APPROVE"
-            ? simpleApproval
-              ? "Confirm the ledger settlement. Leave the reference blank to auto-generate one."
-              : "Record the external settlement reference before posting the final ledger settlement."
-            : "The review note becomes part of the audited payment lifecycle."
-        }
-        className="sm:max-w-md"
+        onOpenChange={(open) => { if (!open && !busy) setDecision(null); }}
       >
-        <form onSubmit={submitDecision} className="p-5 space-y-4">
-          {decision?.action === "APPROVE" && (
+        <DialogContent className="gap-0 p-0 sm:max-w-md">
+          <DialogHeader className="flex-row items-start gap-3 border-b px-5 py-4 pr-12 text-left">
+            <IdentityTile size="sm" tone={decision?.action === "REJECT" ? "down" : "brand"}>
+              {decision?.action === "PREPARE"
+                ? <ClipboardCheck size={16} strokeWidth={2} aria-hidden />
+                : decision?.action === "APPROVE"
+                  ? <ShieldCheck size={16} strokeWidth={2} aria-hidden />
+                  : <Ban size={16} strokeWidth={2} aria-hidden />}
+            </IdentityTile>
+            <div className="min-w-0">
+              <DialogTitle className="text-sm font-semibold">
+                {decision ? `${decision.action === "PREPARE" ? "Prepare" : decision.action === "APPROVE" ? "Approve settlement" : "Reject"} ${decision.request.type.toLowerCase()} · ${decision.request.user.name ?? decision.request.user.email ?? "client"}` : ""}
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-xs">
+                {decision?.action === "APPROVE"
+                  ? simpleApproval
+                    ? "Confirm the ledger settlement. Leave the reference blank to auto-generate one."
+                    : "Record the external settlement reference before posting the final ledger settlement."
+                  : "The review note becomes part of the audited payment lifecycle."}
+              </DialogDescription>
+            </div>
+          </DialogHeader>
+          <form onSubmit={submitDecision} className="flex flex-col gap-4 p-5">
+            {decision?.action === "APPROVE" && (
+              <div>
+                <Label htmlFor="payment-reference" className="mb-1 block text-xs font-medium text-muted-foreground">
+                  Settlement reference {simpleApproval ? "(optional — auto-generated when blank)" : "(required)"}
+                </Label>
+                <Input
+                  id="payment-reference"
+                  type="text"
+                  maxLength={190}
+                  value={externalReference}
+                  onChange={(e) => setExternalReference(e.target.value)}
+                  placeholder={simpleApproval ? "Auto-generated if blank" : "Bank/payment settlement reference"}
+                  startIcon={<Hash size={13} strokeWidth={2} aria-hidden />}
+                />
+              </div>
+            )}
             <div>
-              <Label htmlFor="payment-reference" className="mb-1 block text-xs font-medium text-muted-foreground">
-                Settlement reference {simpleApproval ? "(optional — auto-generated when blank)" : "(required)"}
+              <Label htmlFor="payment-note" className="mb-1 block text-xs font-medium text-muted-foreground">
+                {decision?.action === "REJECT" ? "Rejection reason (required)" : "Review note (optional)"}
               </Label>
-              <Input
-                id="payment-reference"
-                type="text"
-                maxLength={190}
-                value={externalReference}
-                onChange={(e) => setExternalReference(e.target.value)}
-                placeholder={simpleApproval ? "Auto-generated if blank" : "Bank/payment settlement reference"}
-                startIcon={<Hash size={13} strokeWidth={2} aria-hidden />}
+              <Textarea
+                id="payment-note"
+                maxLength={1000}
+                rows={3}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder={decision?.action === "REJECT" ? "Explain why the request is rejected." : "Optional operational note"}
+                startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
               />
             </div>
-          )}
-          <div>
-            <Label htmlFor="payment-note" className="mb-1 block text-xs font-medium text-muted-foreground">
-              {decision?.action === "REJECT" ? "Rejection reason (required)" : "Review note (optional)"}
-            </Label>
-            <Textarea
-              id="payment-note"
-              maxLength={1000}
-              rows={3}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={decision?.action === "REJECT" ? "Explain why the request is rejected." : "Optional operational note"}
-              startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
-            />
-          </div>
-          {error && <Alert tone="err">{error}</Alert>}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" disabled={busy !== null} onClick={() => setDecision(null)}>
-              <X size={13} strokeWidth={2} aria-hidden /> Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant={decision?.action === "REJECT" ? "destructive" : "default"}
-              loading={busy !== null}
-              loadingLabel="Submitting"
-              disabled={Boolean(decision && decision.action === "APPROVE" && !simpleApproval && externalReference.trim().length < 3) || Boolean(decision?.action === "REJECT" && note.trim().length < 3)}
-            >
-              {decision?.action === "PREPARE" ? <><ClipboardCheck size={13} strokeWidth={2} aria-hidden /> Prepare request</>
-                : decision?.action === "APPROVE" ? <><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Approve settlement</>
-                : <><Ban size={13} strokeWidth={2} aria-hidden /> Reject request</>}
-            </Button>
-          </div>
-        </form>
-      </SimpleDialog>
+            {error && <Alert tone="err">{error}</Alert>}
+            <DialogFooter className="flex-row justify-end">
+              <Button type="button" variant="ghost" disabled={busy !== null} onClick={() => setDecision(null)}>
+                <X size={13} strokeWidth={2} aria-hidden /> Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant={decision?.action === "REJECT" ? "destructive" : "default"}
+                loading={busy !== null}
+                loadingLabel="Submitting"
+                disabled={Boolean(decision && decision.action === "APPROVE" && !simpleApproval && externalReference.trim().length < 3) || Boolean(decision?.action === "REJECT" && note.trim().length < 3)}
+              >
+                {decision?.action === "PREPARE" ? <><ClipboardCheck size={13} strokeWidth={2} aria-hidden /> Prepare request</>
+                  : decision?.action === "APPROVE" ? <><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Approve settlement</>
+                  : <><Ban size={13} strokeWidth={2} aria-hidden /> Reject request</>}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </DialogRoot>
     </section>
   );
 }

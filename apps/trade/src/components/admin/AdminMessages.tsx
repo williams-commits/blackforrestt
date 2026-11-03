@@ -232,10 +232,10 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
   });
 
   return (
-    <section className="space-y-3" aria-label="Customer messages">
+    <section className="space-y-4" aria-label="Customer messages">
       <SectionHeader
-        className="mb-0"
-        icon={<MessageSquare size={16} strokeWidth={2} aria-hidden />}
+        eyebrow="Platform"
+        icon={<MessageSquare size={18} strokeWidth={2} aria-hidden />}
         title="Customer messages"
         description={<>Shared team inbox — every operator sees the same threads.{" "}
           {totalUnread > 0

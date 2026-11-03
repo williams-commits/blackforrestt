@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, LayoutGrid } from "lucide-react";
+import { BadgeCheck, LayoutGrid, UserRound } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { AccountOverview } from "./AccountOverview";
@@ -25,6 +25,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { useBrand } from "@/components/providers";
 import { AccountReconciliationStatus, type ReconciliationStatus } from "./AccountReconciliationStatus";
 import type { WalletAddressEntry } from "@/server/userSettings";
+import { IdentityTile } from "@/components/ui/Initial";
 
 type Tab = "overview" | "positions" | "transactions" | "payments" | "reports" | "verification" | "notifications" | "messages" | "support" | "settings" | "referrals";
 const ACCOUNT_TAB_STORAGE_KEY = "blckforest:account-tab";
@@ -395,10 +396,13 @@ export function AccountShell(props: Props) {
         </button>
 
         {/* Page heading + contextual action */}
-        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">My Account</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Manage your trading account, funds and profile.</p>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card p-4 shadow-panel">
+          <div className="flex min-w-0 items-center gap-3">
+            <IdentityTile size="lg" tone="brand"><UserRound size={20} strokeWidth={2} aria-hidden /></IdentityTile>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight">My Account</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Manage your trading account, funds and profile.</p>
+            </div>
           </div>
           {verificationNeeded && (
             <Button type="button" size="sm" variant="outline" onClick={() => selectTab("verification")}>

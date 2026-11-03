@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, useEffect, useMemo } from "react";
+import { useId, useState, useEffect, useMemo, useRef } from "react";
 import { Ban, CheckCheck, CheckCircle2, ChevronDown, ExternalLink, FileSearch, FileText, IdCard, Search, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -45,6 +45,7 @@ interface DocumentView {
 
 interface Props {
   pending: Submission[];
+  pendingTotal?: number;
   reviewed: Submission[];
   totalCount: number;
   /** Total reviewed submissions in the database — the list is capped at the 50 most recent. */
@@ -58,6 +59,7 @@ interface Props {
 /** Admin KYC review dashboard: queue of pending submissions + recent decisions. */
 export function KycReview({
   pending: initialPending,
+  pendingTotal,
   reviewed,
   totalCount,
   reviewedTotal,
@@ -66,9 +68,7 @@ export function KycReview({
   canAccessDocuments = false,
 }: Props) {
   const [pending, setPending] = useState(initialPending);
-
-  // Sync local state when the parent's polled data changes (auto-sync).
-  useEffect(() => { setPending(initialPending); }, [initialPending]);
+  const decidedPendingIds = useRef(new Set<string>());
   const [selected, setSelected] = useState<Submission | null>(pending[0] ?? null);
   const [rejectNote, setRejectNote] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
@@ -82,7 +82,23 @@ export function KycReview({
   const [queueSearch, setQueueSearch] = useState("");
   const [docFilter, setDocFilter] = useState<string>("ALL");
   const [queueVisible, setQueueVisible] = useState(10);
+  const [loadingMorePending, setLoadingMorePending] = useState(false);
+  const [pendingLoadError, setPendingLoadError] = useState<string | null>(null);
+  const [pendingExhausted, setPendingExhausted] = useState(false);
   const noteId = useId();
+
+  // Keep the first page fresh while retaining pages already loaded by the operator.
+  useEffect(() => {
+    setPendingExhausted(false);
+    setPending((current) => {
+      const seen = new Set<string>();
+      return [...initialPending, ...current].filter((submission) => {
+        if (decidedPendingIds.current.has(submission.id) || seen.has(submission.id)) return false;
+        seen.add(submission.id);
+        return true;
+      });
+    });
+  }, [initialPending]);
 
   // Older decision pages fetched by the "Load more" control. The parent polls
   // a fresh 50-row head every 15s; these older tails survive the poll (merged
@@ -90,6 +106,7 @@ export function KycReview({
   const [olderReviewed, setOlderReviewed] = useState<Submission[]>([]);
   const [exhausted, setExhausted] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [decisionsLoadError, setDecisionsLoadError] = useState<string | null>(null);
 
   const decisions = useMemo(() => {
     const seen = new Set<string>();
@@ -105,16 +122,40 @@ export function KycReview({
   async function loadMoreDecisions() {
     if (loadingMore) return;
     setLoadingMore(true);
+    setDecisionsLoadError(null);
     try {
       const response = await fetch(`/api/admin/kyc/workspace?reviewedOffset=${decisions.length}`, { cache: "no-store" });
       const data = (await response.json().catch(() => null)) as { reviewed?: Submission[]; error?: string } | null;
       if (!response.ok || !data?.reviewed) throw new Error(data?.error ?? "Unable to load older decisions.");
       setOlderReviewed((current) => [...current, ...data.reviewed!]);
       if (data.reviewed.length < 50) setExhausted(true);
-    } catch {
-      setExhausted(true);
+    } catch (cause) {
+      setDecisionsLoadError(cause instanceof Error ? cause.message : "Unable to load older decisions.");
     } finally {
       setLoadingMore(false);
+    }
+  }
+
+  async function loadMorePending() {
+    const cursor = pending[pending.length - 1];
+    if (loadingMorePending || !cursor) return;
+    setLoadingMorePending(true);
+    setPendingLoadError(null);
+    try {
+      const response = await fetch(`/api/admin/kyc/workspace?pendingCursor=${encodeURIComponent(cursor.id)}`, { cache: "no-store" });
+      const data = (await response.json().catch(() => null)) as { pending?: Submission[]; error?: string } | null;
+      if (!response.ok || !data?.pending) throw new Error(data?.error ?? "Unable to load more pending submissions.");
+      const next = data.pending.filter((submission) => !decidedPendingIds.current.has(submission.id));
+      setPending((current) => {
+        const seen = new Set(current.map((submission) => submission.id));
+        return [...current, ...next.filter((submission) => !seen.has(submission.id))];
+      });
+      setQueueVisible((visible) => visible + 10);
+      if (data.pending.length < 50) setPendingExhausted(true);
+    } catch (cause) {
+      setPendingLoadError(cause instanceof Error ? cause.message : "Unable to load more pending submissions.");
+    } finally {
+      setLoadingMorePending(false);
     }
   }
 
@@ -136,6 +177,8 @@ export function KycReview({
   const visiblePending = filteredPending.slice(0, queueVisible);
 
 
+  const pendingTotalResolved = pendingTotal ?? pending.length;
+  const hasMorePending = !pendingExhausted && pending.length < pendingTotalResolved;
   const reviewedTotalResolved = reviewedTotal ?? reviewed.length;
 
   function updatePending(next: Submission[]) {
@@ -215,6 +258,7 @@ export function KycReview({
 
       // Remove from queue only after the server commits the decision.
       const next = pending.filter((submission) => submission.id !== selected.id);
+      decidedPendingIds.current.add(selected.id);
       updatePending(next);
       // Advance to the next submission in the visible (filtered) queue — or
       // the previous one when the last item was decided — so reviewing flows
@@ -231,14 +275,15 @@ export function KycReview({
   }
 
   return (
-    <div>
+    <div className="space-y-4">
       <SectionHeader
-        icon={<IdCard size={16} strokeWidth={2} aria-hidden />}
+        eyebrow="Finance"
+        icon={<IdCard size={18} strokeWidth={2} aria-hidden />}
         title="KYC verification queue"
         description="Identity submissions, sealed documents, and audited review decisions — oldest first."
         action={
-          <div className="flex gap-4 text-sm">
-            <Stat label="Pending" value={pending.length} cls="text-primary" />
+          <div className="flex flex-wrap gap-2">
+            <Stat label="Pending" value={pendingTotalResolved} cls="text-primary" />
             <Stat label="Reviewed" value={reviewedTotalResolved} />
             <Stat label="Total submissions" value={totalCount} />
           </div>
@@ -251,7 +296,7 @@ export function KycReview({
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-xs font-medium uppercase text-muted-foreground">Pending review · oldest first</h2>
             <span className="text-xs text-muted-foreground tnum" aria-live="polite">
-              {(needle || docFilter !== "ALL") ? `${filteredPending.length}/${pending.length}` : pending.length}
+              {(needle || docFilter !== "ALL") ? `${filteredPending.length} matches · ${pending.length}/${pendingTotalResolved} loaded` : `${pending.length}/${pendingTotalResolved}`}
             </span>
           </div>
           <Input
@@ -309,10 +354,23 @@ export function KycReview({
                   {(needle || docFilter !== "ALL") ? "No pending submissions match." : "Queue is empty — no pending submissions."}
                 </div>
               )}
-              {visiblePending.length < filteredPending.length && (
+              {pendingLoadError && <Alert tone="err" className="text-xs">{pendingLoadError}</Alert>}
+              {(visiblePending.length < filteredPending.length || hasMorePending) && (
                 <div className="flex justify-center pt-1">
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setQueueVisible((v) => v + 10)}>
-                    <ChevronDown size={13} strokeWidth={2} aria-hidden /> Show more · {visiblePending.length} of {filteredPending.length}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    loading={loadingMorePending}
+                    onClick={() => {
+                      if (visiblePending.length < filteredPending.length) setQueueVisible((visible) => visible + 10);
+                      else void loadMorePending();
+                    }}
+                  >
+                    <ChevronDown size={13} strokeWidth={2} aria-hidden />
+                    {visiblePending.length < filteredPending.length
+                      ? `Show more · ${visiblePending.length} of ${filteredPending.length}`
+                      : `Load more · ${pending.length} of ${pendingTotalResolved}`}
                   </Button>
                 </div>
               )}
@@ -484,6 +542,7 @@ export function KycReview({
 
           {/* Recent decisions */}
           <div className="mt-8">
+          {decisionsLoadError && <Alert tone="err" className="mb-3">{decisionsLoadError}</Alert>}
           <RecordList<Submission>
             ariaLabel="Decision"
             title="Recent decisions"
@@ -540,10 +599,10 @@ export function KycReview({
 
 function Stat({ label, value, cls = "" }: { label: string; value: number; cls?: string }) {
   return (
-    <span className="flex items-baseline gap-1">
-      <span className={`text-lg font-bold tnum ${cls}`}>{value}</span>
-      <span className="text-muted-foreground text-xs">{label}</span>
-    </span>
+    <div className="min-w-24 rounded-lg bg-muted/50 px-3 py-2">
+      <div className={`text-lg font-semibold leading-none tabular-nums ${cls}`}>{value.toLocaleString("en-US")}</div>
+      <div className="mt-1 text-[11px] text-muted-foreground">{label}</div>
+    </div>
   );
 }
 

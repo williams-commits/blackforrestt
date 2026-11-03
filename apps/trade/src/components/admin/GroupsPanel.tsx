@@ -101,7 +101,7 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
 
   return (
     <div className="space-y-4">
-      <SectionHeader icon={<UsersRound size={16} strokeWidth={2} aria-hidden />} title="User Groups" description="Bulk user management through shared settings, risk profiles, and role assignments." action={canManage ? <CreateGroupButton onCreated={() => void refresh()} /> : undefined} />
+      <SectionHeader eyebrow="Operations" icon={<UsersRound size={18} strokeWidth={2} aria-hidden />} title="User groups" description="Manage shared account settings, risk profiles, and role assignments." action={canManage ? <CreateGroupButton onCreated={() => void refresh()} /> : undefined} />
 
       {error && <Alert tone="err">{error}</Alert>}
 

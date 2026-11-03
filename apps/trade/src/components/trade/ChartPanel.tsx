@@ -167,6 +167,8 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
   const snapshotVersion = useForexStore((state) => state.snapshotVersion);
 
   const [chartType, setChartType] = useState<ChartType>("candles");
+  const chartTypeRef = useRef(chartType);
+  chartTypeRef.current = chartType;
   const [showMA, setShowMA] = useState(false);
   const [showEMA, setShowEMA] = useState(false);
   const [showBollinger, setShowBollinger] = useState(false);
@@ -221,20 +223,17 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
 
   const replaceChartData = useCallback((data: Candle[]) => {
     const colors = volumeColors(isDimRef.current);
-    if (chartType === "candles") {
-      seriesRef.current?.setData(data.map((candle) => ({
-        time: candle.time as UTCTimestamp,
-        open: candle.open,
-        high: candle.high,
-        low: candle.low,
-        close: candle.close,
-      })));
-    } else {
-      lineSeriesRef.current?.setData(data.map((candle) => ({
-        time: candle.time as UTCTimestamp,
-        value: candle.close,
-      })));
-    }
+    seriesRef.current?.setData(data.map((candle) => ({
+      time: candle.time as UTCTimestamp,
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+    })));
+    lineSeriesRef.current?.setData(data.map((candle) => ({
+      time: candle.time as UTCTimestamp,
+      value: candle.close,
+    })));
     volumeSeriesRef.current?.setData(data.map((candle) => ({
       time: candle.time as UTCTimestamp,
       value: candle.volume,
@@ -270,7 +269,7 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
       macdLineRef.current.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.macd })));
       macdSignalRef.current.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.signal })));
     }
-  }, [bollingerPeriod, bollingerStdDev, chartType, emaPeriod, maPeriod, rsiPeriod]);
+  }, [bollingerPeriod, bollingerStdDev, emaPeriod, maPeriod, rsiPeriod]);
 
   useEffect(() => {
     prevCandleCount.current = 0;
@@ -329,7 +328,6 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
       },
     });
 
-    let priceSeries: ISeriesApi<"Candlestick"> | ISeriesApi<"Line">;
     // Instrument-correct precision: without an explicit priceFormat the chart
     // defaults to 2 decimals, which collapses the right-hand price scale of
     // high-precision instruments (5-digit FX pairs) into identical labels.
@@ -338,28 +336,23 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
       precision: instrument.digits,
       minMove: Math.pow(10, -instrument.digits),
     };
-    if (chartType === "candles") {
-      const series = chart.addSeries(CandlestickSeries, {
-        ...candleColors(dim),
-        priceLineVisible: true,
-        lastValueVisible: true,
-        priceFormat,
-      });
-      seriesRef.current = series;
-      lineSeriesRef.current = null;
-      priceSeries = series;
-    } else {
-      const series = chart.addSeries(LineSeries, {
-        color: "#f97316",
-        lineWidth: 2,
-        priceLineVisible: true,
-        lastValueVisible: true,
-        priceFormat,
-      });
-      lineSeriesRef.current = series;
-      seriesRef.current = null;
-      priceSeries = series;
-    }
+    const candleSeries = chart.addSeries(CandlestickSeries, {
+      ...candleColors(dim),
+      priceLineVisible: true,
+      lastValueVisible: true,
+      priceFormat,
+      visible: chartTypeRef.current === "candles",
+    });
+    seriesRef.current = candleSeries;
+    const lineSeries = chart.addSeries(LineSeries, {
+      color: "#f97316",
+      lineWidth: 2,
+      priceLineVisible: true,
+      lastValueVisible: true,
+      priceFormat,
+      visible: chartTypeRef.current === "line",
+    });
+    lineSeriesRef.current = lineSeries;
 
     const volumeSeries = chart.addSeries(HistogramSeries, {
       priceFormat: { type: "volume" },
@@ -371,7 +364,8 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
     volumeSeriesRef.current = volumeSeries;
 
     const crosshairHandler = (param: MouseEventParams) => {
-      const point = param.seriesData.get(priceSeries);
+      const activeSeries = chartTypeRef.current === "candles" ? candleSeries : lineSeries;
+      const point = param.seriesData.get(activeSeries);
       if (!point) {
         setHoveredOhlc(null);
         return;
@@ -407,9 +401,14 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
       macdLineRef.current = null;
       macdSignalRef.current = null;
     };
-    // isDim intentionally excluded: theme switches restyle via applyOptions
-    // (effect below) instead of disposing the chart.
+    // Chart type and theme changes restyle the existing chart; disposal is
+    // reserved for unmount so canvas rendering is not raced by chart teardown.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    seriesRef.current?.applyOptions({ visible: chartType === "candles" });
+    lineSeriesRef.current?.applyOptions({ visible: chartType === "line" });
   }, [chartType]);
 
   // ── Live theme restyle: applyOptions keeps the chart (and the user's zoom
@@ -477,7 +476,7 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
       ],
     });
     return safeDetach;
-  }, [instrument.symbol, instrument.name, interval, isDim, chartType]);
+  }, [instrument.symbol, instrument.name, interval, isDim]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -504,7 +503,7 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
         maSeriesRef.current = null;
       }
     };
-  }, [showMA, chartType, maPeriod]);
+  }, [showMA, maPeriod]);
 
   // ── EMA overlay (pane 0) ────────────────────────────────────────────────
   useEffect(() => {
@@ -521,7 +520,7 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
     if (c.length >= emaPeriod) s.setData(computeEMASeries(c, emaPeriod).map((p) => ({ time: p.time as UTCTimestamp, value: p.value })));
     return () => { if (emaSeriesRef.current === s && chartRef.current === chart) { chart.removeSeries(s); emaSeriesRef.current = null; } };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showEMA, chartType, emaPeriod]);
+  }, [showEMA, emaPeriod]);
 
   // ── Bollinger Bands overlay (pane 0) ────────────────────────────────────
   useEffect(() => {
@@ -549,7 +548,7 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
       if (bbLowerRef.current === lower) bbLowerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showBollinger, chartType, bollingerPeriod, bollingerStdDev]);
+  }, [showBollinger, bollingerPeriod, bollingerStdDev]);
 
   // ── RSI oscillator (pane 1) ─────────────────────────────────────────────
   useEffect(() => {
@@ -568,7 +567,7 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
     if (c.length > rsiPeriod) s.setData(computeRSISeries(c, rsiPeriod).map((p) => ({ time: p.time as UTCTimestamp, value: p.value })));
     return () => { if (rsiSeriesRef.current === s && chartRef.current === chart) { chart.removeSeries(s); rsiSeriesRef.current = null; } };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showRSI, chartType, rsiPeriod]);
+  }, [showRSI, rsiPeriod]);
 
   // ── MACD oscillator (pane 2) ────────────────────────────────────────────
   useEffect(() => {
@@ -597,13 +596,12 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
       if (macdSignalRef.current === signal) macdSignalRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showMACD, showRSI, chartType]);
+  }, [showMACD, showRSI]);
 
   const candleCount = candles.length;
   useEffect(() => {
-    const series = chartType === "candles" ? seriesRef.current : lineSeriesRef.current;
     const last = candles[candleCount - 1];
-    if (!series || !last) return;
+    if (!seriesRef.current || !lineSeriesRef.current || !last) return;
 
     const dataKey = `${syncKey}:${snapshotVersion}`;
     const previousCount = prevCandleCount.current;
@@ -630,17 +628,14 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
         chartCandles.splice(0, chartCandles.length - MAX_CHART_CANDLES);
         replaceChartData(chartCandles);
       } else {
-        if (chartType === "candles") {
-          seriesRef.current?.update({
-            time: last.time as UTCTimestamp,
-            open: last.open,
-            high: last.high,
-            low: last.low,
-            close: last.close,
-          });
-        } else {
-          lineSeriesRef.current?.update({ time: last.time as UTCTimestamp, value: last.close });
-        }
+        seriesRef.current.update({
+          time: last.time as UTCTimestamp,
+          open: last.open,
+          high: last.high,
+          low: last.low,
+          close: last.close,
+        });
+        lineSeriesRef.current.update({ time: last.time as UTCTimestamp, value: last.close });
         const colors = volumeColors(isDimRef.current);
         volumeSeriesRef.current?.update({
           time: last.time as UTCTimestamp,

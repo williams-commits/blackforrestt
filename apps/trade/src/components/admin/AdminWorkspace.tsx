@@ -11,12 +11,12 @@ import { SectionHeader } from "./SectionHeader";
 import { SettingsForm, type UserSettingsConfig } from "./SettingsForm";
 import { Button } from "@/components/ui/Button";
 import { SimpleDialog, SimpleDialog as Dialog } from "@/components/ui/Dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useCommandDialog } from "@/components/ui/useCommandDialog";
-import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 import { ADMIN_TAB_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
-import { CandlestickChart, ClipboardCheck, CreditCard, HeartPulse, IdCard, LayoutDashboard, BookOpenText, ListTree, Plus, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, X } from "lucide-react";
+import { CandlestickChart, ClipboardCheck, CreditCard, HeartPulse, IdCard, LayoutDashboard, LayoutGrid, BookOpenText, ListTree, Plus, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, X } from "lucide-react";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { createDeviceId } from "@/lib/device";
 import { cn } from "@/lib/utils";
@@ -164,6 +164,7 @@ export function AdminWorkspace({ permissions, simpleApproval = false }: Props) {
   );
   const allowedKeys = useMemo(() => new Set(allowedTabs.map((t) => t.key)), [allowedTabs]);
   const [tab, setTabState] = useState<TabKey>(allowedTabs[0]?.key ?? "overview");
+  const [navOpen, setNavOpen] = useState(false);
   const [chatWith, setChatWith] = useState<{ userId: string; label: string } | null>(null);
   // Role change prefill from the Users tab — opens the Approvals composer
   // with the target already selected (admin creation via UI, maker-checker).
@@ -256,7 +257,7 @@ export function AdminWorkspace({ permissions, simpleApproval = false }: Props) {
 
   const can = useCallback((permission: Permission) => permissions.includes(permission), [permissions]);
 
-  const tabButton = (item: { key: TabKey; label: string }, sidebar: boolean) => {
+  const tabButton = (item: { key: TabKey; label: string }, mode: "sidebar" | "sheet") => {
     const active = tab === item.key;
     const badge = badgeFor(item.key);
     const tabIcon = ADMIN_TAB_ICONS[item.key];
@@ -264,18 +265,21 @@ export function AdminWorkspace({ permissions, simpleApproval = false }: Props) {
       <button
         key={item.key}
         type="button"
-        onClick={() => setTab(item.key)}
+        onClick={() => {
+          setTab(item.key);
+          if (mode === "sheet") setNavOpen(false);
+        }}
         aria-current={active ? "page" : undefined}
         className={`flex items-center gap-2 whitespace-nowrap text-xs font-medium transition ${
-          sidebar
+          mode === "sidebar"
             ? `w-full rounded-md px-3 py-2 text-left ${active ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`
-            : `border-b-2 px-3 py-2.5 ${active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`
+            : `w-full rounded-md px-3 py-2.5 text-left text-sm ${active ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`
         }`}
       >
-        {tabIcon && <TabIcon icon={tabIcon} />}
+        {tabIcon && <TabIcon icon={tabIcon} size={mode === "sheet" ? 16 : 14} />}
         <span>{item.label}</span>
         {badge != null && badge > 0 && (
-          <span className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${active ? "bg-primary text-primary-foreground" : "bg-(--term-warning-bg) text-(--term-warning-fg)"}`}>
+          <span className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${mode === "sheet" ? "ml-auto " : ""}${active ? "bg-primary text-primary-foreground" : "bg-(--term-warning-bg) text-(--term-warning-fg)"}`}>
             {badge}
           </span>
         )}
@@ -283,31 +287,53 @@ export function AdminWorkspace({ permissions, simpleApproval = false }: Props) {
     );
   };
 
+  const groupedNav = (mode: "sidebar" | "sheet") => (
+    <nav aria-label="Administrative modules">
+      {NAV_SECTIONS.map((section) => {
+        const items = allowedTabs.filter((t) => section.tabs.includes(t.key));
+        if (items.length === 0) return null;
+        return (
+          <div key={section.label} className="mb-2 last:mb-0">
+            <p className={mode === "sidebar"
+              ? "mb-1 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground"
+              : "px-3 pt-3 pb-1.5 text-xs font-medium text-muted-foreground first:pt-1"}>{section.label}</p>
+            <ul className={mode === "sidebar" ? "space-y-0.5" : undefined}>
+              {items.map((item) => (
+                <li key={item.key}>{tabButton(item, mode)}</li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+    </nav>
+  );
+  const activeTab = allowedTabs.find((item) => item.key === tab);
+  const activeBadge = badgeFor(tab);
+
   return (
     <div>
       <div className="lg:grid lg:grid-cols-[13.5rem_minmax(0,1fr)] lg:gap-5">
-        {/* Desktop: grouped vertical sidebar. Mobile/tablet: horizontal pills. */}
-        <nav aria-label="Administrative modules" className="hidden lg:block">
+        {/* Desktop: grouped vertical sidebar. Mobile/tablet: grouped section sheet. */}
+        <div className="hidden lg:block">
           <div className="sticky top-20 space-y-4 p-3">
-            {NAV_SECTIONS.map((section) => {
-              const items = allowedTabs.filter((t) => section.tabs.includes(t.key));
-              if (items.length === 0) return null;
-              return (
-                <div key={section.label}>
-                  <p className="mb-1 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">{section.label}</p>
-                  <div className="space-y-0.5">
-                    {items.map((item) => tabButton(item, true))}
-                  </div>
-                </div>
-              );
-            })}
+            {groupedNav("sidebar")}
           </div>
-        </nav>
-        <ScrollFade className="mb-4 lg:hidden">
-          <nav aria-label="Administrative modules" className="flex gap-1 pb-1">
-            {allowedTabs.map((item) => tabButton(item, false))}
-          </nav>
-        </ScrollFade>
+        </div>
+        <button
+          type="button"
+          onClick={() => setNavOpen(true)}
+          aria-haspopup="dialog"
+          className="mb-5 flex w-full items-center justify-between gap-3 rounded-xl bg-card px-4 py-3 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:hidden"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <LayoutGrid size={16} strokeWidth={2} aria-hidden className="shrink-0 text-muted-foreground" />
+            <span className="truncate text-sm font-medium">{activeTab?.label ?? "Overview"}</span>
+            {activeBadge != null && activeBadge > 0 && (
+              <span className="rounded-full bg-primary px-1.5 py-0.5 text-xs font-bold text-primary-foreground">{activeBadge}</span>
+            )}
+          </span>
+          <span className="shrink-0 text-xs font-medium text-muted-foreground">All sections</span>
+        </button>
 
         <div className="min-w-0 space-y-4">
 
@@ -336,6 +362,17 @@ export function AdminWorkspace({ permissions, simpleApproval = false }: Props) {
       )}
         </div>
       </div>
+      <Sheet open={navOpen} onOpenChange={setNavOpen}>
+        <SheetContent side="left" className="w-80 gap-0 overflow-y-auto p-0 sm:max-w-none">
+          <SheetHeader className="border-b pb-3 pt-4">
+            <SheetTitle>Administrative modules</SheetTitle>
+            <SheetDescription>Jump to any part of the operations console.</SheetDescription>
+          </SheetHeader>
+          <div className="p-2">
+            {groupedNav("sheet")}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

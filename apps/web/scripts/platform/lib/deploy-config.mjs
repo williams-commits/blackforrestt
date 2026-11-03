@@ -30,8 +30,8 @@ export function envValue(envFile, name) {
 }
 
 /** Resolve a list of domain selectors against the registry. A selector may
- *  be a registry KEY ("gbfxs") or a served HOST ("gbfxs.com") — hosts are
- *  accepted because DOMAIN/DOMAIN_N env slots naturally hold hosts.
+ *  be a registry KEY ("gbfxs") or a served HOST ("gbfxs.com") — both are
+ *  supported selectors for DEPLOY_DOMAINS.
  *  Every selector must resolve; unknown names fail loudly (never silently
  *  widen the deployment scope). */
 export function resolveDomainSelectors(all, selectors) {

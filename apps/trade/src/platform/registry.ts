@@ -69,6 +69,12 @@ export function normalizeHost(host: string | null | undefined): string {
   return bare.startsWith("www.") ? bare.slice(4) : bare;
 }
 
+/** A host alias intended for local brand testing, such as gbfxs.localhost. */
+export function localDevelopmentHost(host: string | null | undefined): string | null {
+  const normalized = normalizeHost(host);
+  return normalized.endsWith(".localhost") ? normalized : null;
+}
+
 /** True when host IS the apex or a subdomain of it (trade.gbfxs.com ⊑ gbfxs.com). */
 export function hostWithinApex(host: string, apex: string): boolean {
   return host === apex || host.endsWith(`.${apex}`);

@@ -6,10 +6,11 @@ troubleshooting Black Forest Digital + CRM. Every operation below is a
 the Makefile wraps the underlying scripts (`deploy/*.sh`) and always passes the
 mandatory compose flags for you.
 
-The deployment serves **one or two domains from the same stack** — a single
-brand (`blackforrestt.com` alone) or a dual-brand family (any second domain,
-e.g. `gbfxs.com`). Both are pure `.env.production` configuration; no code or
-Caddyfile edits are ever needed.
+The deployment serves the registered brand families from one shared stack.
+Each family is declared through the Web app's platform domain CLI; runtime
+host lists and identity overrides live in `.env.production`, and Caddy site
+files are rendered from the manifests. Add a family with the CLI rather than
+hand-editing central routing or Caddy configuration.
 
 For specialized procedures, this guide cross-references:
 [`MULTI_DOMAIN_SETUP.md`](MULTI_DOMAIN_SETUP.md) (brand families),
@@ -95,8 +96,9 @@ Local infrastructure (Postgres/Redis/MinIO) comes from the repo-root
 ## Architecture
 
 ```
-Internet → Caddy (80/443, automatic HTTPS) → app:3000 (Next.js + WebSocket)
-                                            → crm:3000  (CRM, crm.<domain>)
+Internet → Caddy (80/443, automatic HTTPS) → app:3000   (Web / marketing)
+                                            → trade:3000 (terminal, account, admin + WebSocket)
+                                            → crm:3000   (CRM, crm.<domain>)
                  ├── postgres:5432  (blackforrestt + blckforest_crm)  internal only
                  ├── redis:6379     (throttles, scheduler leases)      internal only
                  ├── minio:9000     (KYC + payment-proof objects)       internal only
@@ -106,11 +108,12 @@ Internet → Caddy (80/443, automatic HTTPS) → app:3000 (Next.js + WebSocket)
 | Service | Purpose | Public port |
 |---|---|---|
 | `caddy` | HTTPS termination, reverse proxy, HTTP/3 | 80, 443 |
-| `app` | Platform: Next.js + Auth.js + WebSocket engine + trading hub | none |
+| `app` | Web: marketing, domain resolution, public APIs | none |
+| `trade` | Shared trading app: terminal, account, admin, engine + WebSocket | none |
 | `crm` | CRM module (own database, own auth) | none (via `crm.<domain>`) |
 | `postgres` / `redis` / `minio` / `clamav` / `malware-scanner` | data + scanning services | none |
 
-**Three Docker networks:** `edge` (Caddy ↔ app/crm), `backend` (internal data
+**Three Docker networks:** `edge` (Caddy ↔ app/trade/crm), `backend` (internal data
 services, `internal: true`), `egress` (app → external APIs).
 
 **Constraints:**
@@ -211,8 +214,7 @@ Then edit the values only you can set (`nano .env.production`):
 
 | Variable | Value |
 |---|---|
-| `DOMAIN` | `yourdomain.com` |
-| `TRADE_DOMAIN` | `trade.yourdomain.com` (authenticated app host) |
+| `BRAND_DOMAIN` | `yourdomain.com` (canonical host for a registered domain family) |
 | `APP_ORIGIN` | `https://yourdomain.com,https://trade.yourdomain.com` (every origin the platform answers on — see dual-domain below) |
 | `AUTH_URL` | `https://trade.yourdomain.com` |
 | `CADDY_EMAIL` | `ops@yourdomain.com` |
@@ -233,11 +235,12 @@ APP_ORIGIN=https://yourdomain.com,https://trade.yourdomain.com,https://thesecond
 BRAND_OVERRIDES={"theseconddomain.com":{"name":"Second Brand","tradeEnabled":true}}
 ```
 
-Domains are data-driven (`src/domains/<key>/domain.config.ts`); deploy only the domains you want with `DEPLOY_DOMAINS`. The second
-brand — the render step and middleware skip it cleanly. That is the entire
-single ↔ dual switch: the `DOMAIN_N`/`TRADE_DOMAIN_N` pairs + `BRAND_DOMAINS`
-+ appending the new origins to `APP_ORIGIN`. Add a third brand the same way
-by adding its manifest and redeploying — or `npm run domain:deploy -- <key>`.
+Domains are data-driven (`apps/web/src/domains/<key>/domain.config.ts`).
+Create a new family with the platform CLI, set `BRAND_DOMAINS` in canonical-
+first order, and include all apex and trade origins in `APP_ORIGIN`. Use
+`DEPLOY_DOMAINS` to scope a deployment and the platform CLI to render/deploy
+that domain's Caddy site; no numbered host slots or manual Caddy edits are
+used.
 
 **CRM module (both shapes):**
 

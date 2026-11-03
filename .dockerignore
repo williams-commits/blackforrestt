@@ -12,3 +12,8 @@ tsconfig.tsbuildinfo
 tests/fixtures/
 uploads/
 .zcode
+.turbo/
+skills-lock.json
+.mimosa/
+.video_agent/
+DESIGN.md

@@ -10,13 +10,14 @@ next one. Security properties of the shared architecture live in
 ## Architecture in one paragraph
 
 Every brand is a **domain family**: an apex (marketing site) plus a trade
-subdomain (login, terminal, account, admin). All families hit the same app;
-the **middleware** routes each family's app traffic to its own trade
-subdomain, and **per-request brand resolution** (Host header →
-`BRAND_OVERRIDES` profile) drives theming, logo, favicon, PWA manifest,
+subdomain (login, terminal, account, admin). The shared Web and Trade apps
+serve all families. **Middleware** routes
+each family's app traffic to its configured trade subdomain, and
+**per-request brand resolution** (Host header → manifest
+defaults + `BRAND_OVERRIDES`) drives theming, logo, favicon, PWA manifest,
 hero copy, emails, deposit wallets, referral links, and SEO. The FIRST entry
-of `BRAND_DOMAINS` is canonical (default trade-host fallback, primary email
-identity). Registration stamps each user with `User.brandDomain`, so
+of `BRAND_DOMAINS` is canonical (trade-host fallback, primary email identity).
+Registration stamps each user with `User.brandDomain`, so
 server-side behavior (emails, wallets, referral hosts) follows the family the
 customer signed up under — even for queued jobs with no request context.
 
@@ -24,16 +25,17 @@ customer signed up under — even for queued jobs with no request context.
 
 Two layers (see `docs/ARCHITECTURE.md`):
 
-1. **Code layer** — the domain registry `src/domains/registry.ts`, one
-   explicit `domain.config.ts` per family (`src/domains/<key>/`). Carries
-   hosts, design selections (`landingDesign` / `publicDesign`), brand
-   identity defaults, and features. `npm run test:domains` validates it.
+1. **Code layer** — one explicit `domain.config.ts` per family
+   (`src/domains/<key>/`), discovered into the generated, read-only
+   `src/domains/.generated/domains.ts` registry. It carries hosts, design
+   selections (`landingDesign` / `publicDesign`), brand identity defaults,
+   and features. The platform CLI regenerates registries; `npm run test:domains`
+   validates them.
 2. **Env layer** — the operational override surface below. Production can
    add mirror hosts or override any code default WITHOUT a rebuild (the
-   custom server reads env at boot). Note: when a `BRAND_OVERRIDES` entry
-   EXISTS for an apex, its `tradeEnabled` flag is authoritative even when
-   absent (absent = not enabled → canonical trade host); the registry's code
-   default applies only when no entry exists.
+   custom server reads env at boot). An explicit `tradeHost` or
+   `tradeEnabled` override wins; otherwise the domain manifest's
+   `tradeEnabled` default applies.
 
 Env variables:
 
@@ -44,41 +46,40 @@ Env variables:
 | `BRAND_DOMAINS` | Comma-separated apex list, canonical first. |
 | `BRAND_OVERRIDES` | JSON map: apex → brand profile (see below). |
 | `APP_ORIGIN` | Origin gate allowlist — every live origin, comma-separated. |
-| `TRADE_SUBDOMAIN` | Subdomain label when no `TRADE_DOMAIN_N` pair exists (default `trade`). |
+| `TRADE_SUBDOMAIN` | Subdomain label used for manifest-enabled trade hosts (default `trade`). |
 
-⚠️ **`BRAND_DOMAIN` must hold a single domain.** A comma list in it happens
-to work in most code paths but produces a **malformed CSP header** (the CSP
-builder splices `BRAND_DOMAIN` in at build time; a comma splits CSP
-directives). Use `BRAND_DOMAINS` for the list.
+Use `BRAND_DOMAINS` for the canonical-first family list. `BRAND_DOMAIN` is
+the legacy single-domain fallback when `BRAND_DOMAINS` is unset.
 
 ### BRAND_OVERRIDES fields
 
 ```json
 {
   "gbfxs.com": {
-    "name": "Global Forex Services", "shortName": "Global Forex Services", "legalName": "Global Forex Services Ltd",
+    "name": "Global Forex Services", "shortName": "GFX", "legalName": "Global Forex Services Ltd",
     "supportEmail": "support@gbfxs.com",
     "address": "Airedale House, 423 Kirkstall Road, Leeds, England, LS4 2EW",
-    "trademark": "Global Forex Services™",
-    "wordmark": ["Agile", "FGS"],
+    "trademark": "GFX™",
+    "wordmark": ["Global Forex", "Services"],
     "tradeEnabled": true,
-    "accentColor": "#00644e",
-    "emailColor": "#00644e",
-    "glyph": { "viewBox": "0 0 24 24", "paths": [{"d": "M4 20v-5.5h3.4V20H4Z"}] },
+    "accentColor": "#f0b90b",
+    "emailColor": "#f0b90b",
+    "logoLockup": "brackets",
+    "logoWord": "gbfxs",
     "ogImage": "/brands/gbfxs/og.png",
-    "heroBadge": "Global Forex Services — Multi-asset execution",
-    "heroSubtitle": "…",
     "emailFrom": "Global Forex Services <no-reply@gbfxs.com>",
     "depositWallets": "USDT:TRON (TRC20):T…; BTC:Bitcoin:bc1q…"
   }
 }
 ```
 
-- Domains **without** an entry inherit the primary brand (mirror phase).
-- `tradeEnabled` is only needed when a family's trade host exists WITHOUT a
-  `TRADE_DOMAIN_N` pair. With the pair set, login routing follows
-  automatically (env pairs win, then `tradeEnabled`, then the canonical host).
-- Invalid JSON safely falls back to primary branding everywhere.
+- Unregistered mirror domains without an entry inherit the primary brand;
+  registered domains use their manifest defaults.
+- `tradeHost` explicitly names a family's trade host; otherwise
+  `tradeEnabled` selects `TRADE_SUBDOMAIN.<apex>`. If neither enables a family,
+  routing falls back to the canonical trade host.
+- Invalid JSON is ignored; registered domains still use their manifest
+  defaults, while unregistered mirrors use the primary defaults.
 - `emailFrom` requires the sending domain to be verified at the email
   provider (SPF/DKIM) **first** — otherwise that family's transactional email
   delivery fails. Omit until verified; the primary sender is the fallback.
@@ -94,8 +95,8 @@ directives). Use `BRAND_DOMAINS` for the list.
 
 | Surface | Behavior |
 | --- | --- |
-| Theme (buttons/links/badges) | `accentColor` injected per host in the root layout. |
-| Logo / favicon / QR mark | `wordmark` + `glyph` via the brand context and `/brand/icon.svg`. |
+| Theme (buttons/links/badges) | The Web root applies the resolved accent per host; the Trade root resolves the same family profile and applies its scoped app treatment. |
+| Logo / favicon / QR mark | Brand-aware logo and favicon routes use the resolved profile; Trade's logo request is served by the family Web host. |
 | Landing hero | `heroBadge` / `heroSubtitle` override the translated defaults. |
 | Landing design | `landingDesign` in the domain manifest picks the design package under `src/designs/`: `"default"`, `"gbfxs"` (dark-institutional fintech with live terminal, markets tabs, photo backdrops) or `"convertio"` (Coinbase-inspired: dark hero + product mockups, light editorial interior). `BRAND_OVERRIDES[host].landingTemplate` overrides per host at runtime (legacy value `"agile"` aliases to `gbfxs`). Brands share everything except their selected designs. |
 | PWA manifest | `/manifest.webmanifest` resolves per host. |
@@ -107,43 +108,55 @@ directives). Use `BRAND_DOMAINS` for the list.
 
 ## Runbook: add brand #3 (e.g. `newbrand.com`)
 
-Recommended path: a domain package + env (no Caddyfile edits — the renderer
-generates site blocks plus `www.` → apex redirects from the env). Env-only
-still works for mirror domains that reuse the default design: copy
-`src/domains/_template/` when the family needs its own identity/design, then:
+Use the platform CLI; do not copy packages or hand-edit generated registries
+or Caddy configuration. See `docs/domains/ADDING_A_DOMAIN.md` for options.
 
-0. **Domain package (recommended)**: `cp -r src/domains/_template
-   src/domains/newbrand`, fill `domain.config.ts` + `content.ts`, register in
-   `src/domains/registry.ts` — see `.platform/workflows/new-domain.md`.
-1. **DNS**: point `newbrand.com` (and `trade.newbrand.com`) at the server.
-2. **`.env.production`**:
+1. **Create and configure the package**:
+   ```bash
+   cd apps/web
+   npm run platform -- domain create --key=newbrand --host=newbrand.com \
+     --trade-host=trade.newbrand.com --design=default --public-design=default
+   ```
+   Edit the generated package's content, navigation, SEO, and assets as needed.
+2. **Configure runtime origins** in `.env.production`:
    ```bash
    BRAND_DOMAINS=blackforrestt.com,gbfxs.com,newbrand.com
-   # append to APP_ORIGIN:
-   #   https://newbrand.com,https://trade.newbrand.com
-   # add a "newbrand.com":{…} entry to BRAND_OVERRIDES (template above)
+   # Include https://newbrand.com and https://trade.newbrand.com in APP_ORIGIN.
+   # Add BRAND_OVERRIDES only for values that intentionally differ from the
+   # manifest defaults (for example email sender or deposit wallets).
    ```
-3. **Assets (optional)**: drop `public/brands/newbrand/og.png` (1200×630) and
+3. **Validate and diagnose**:
+   ```bash
+   npm run platform -- domain validate newbrand
+   npm run platform -- domain doctor newbrand
+   ```
+4. **DNS**: point `newbrand.com` (and `trade.newbrand.com`) at the server.
+5. **Assets (optional)**: drop `public/brands/newbrand/og.png` (1200×630) and
    set `"ogImage"`. Favicon is generated — no asset needed.
-4. **Emails as the new brand (optional)**: verify the domain at the provider,
+6. **Emails as the new brand (optional)**: verify the domain at the provider,
    then add `"emailFrom"`.
-5. **Deposit wallets (required for real money)**: add `"depositWallets"`
+7. **Deposit wallets (required for real money)**: add `"depositWallets"`
    with the brand's own addresses.
-6. **Deploy** — `deploy/deploy.sh` re-renders Caddy (TLS auto-provisioned),
+8. **Preview and deploy** — use `npm run platform -- domain deploy newbrand --dry-run`
+   before the deployment host applies the generated per-domain Caddy site.
+   `deploy/deploy.sh` re-renders Caddy (TLS auto-provisioned),
    the app picks up the new families at runtime (brand env is not build-baked;
-   only the CSP origins in `next.config.ts` are build-time).
-7. **Verify**: `https://newbrand.com` shows the new brand; `/login` hops to
-   `trade.newbrand.com`; `robots.txt`/`sitemap.xml` reference the new host;
-   a test signup's emails/wallets/referral link use the new family.
+   CSP origins are derived from the registry when the app starts).
+9. **Verify**: `https://newbrand.com` shows the new brand; `/login` hops to
+   `trade.newbrand.com`; `robots.txt`/`sitemap.xml` reference the new host.
+   The doctor reports production health as informational; verify
+   `https://newbrand.com/api/health` from the deployment environment.
 
 ## Local development
 
 - Brand config comes from `.env` **at process start** — restart `npm run dev`
   after editing it (hot reload covers code only).
-- Map hosts for browser testing: add `127.0.0.1 gbfxs.com
-  trade.gbfxs.com` to `/etc/hosts`, then browse `http://gbfxs.com:3000`.
-- The middleware strips ports for host matching, so `:3000` URLs route
-  correctly (e.g. `gbfxs.com:3000/login` → `trade.gbfxs.com:3000`).
+- The GBFXS manifest includes `gbfxs.localhost` for local brand testing:
+  browse `http://gbfxs.localhost:3000`. Trade/auth routes preserve that host
+  while forwarding to the local Trade app on port 3101, so its request-level
+  brand profile matches the website.
+- For real hostnames, map the apex and trade hosts to `127.0.0.1` in
+  `/etc/hosts`; the middleware strips ports for host matching.
 - `curl -H "x-forwarded-host: gbfxs.com" http://localhost:3000/…` simulates
   a host without touching DNS.
 - Regression suite: `npm run test:multibrand` (wallet layering, referral

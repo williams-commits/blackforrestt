@@ -7,6 +7,7 @@ import {
   brandDomainList,
   familyTradeHost,
   isLocalHost,
+  localDevelopmentHost,
   normalizeHost,
 } from "@/platform/registry";
 
@@ -17,8 +18,9 @@ const LOCALES = ["en", "fr", "de", "es", "ja", "zh", "ru", "ar", "ko"] as const;
 const DEFAULT_LOCALE = "en";
 const LOCALE_COOKIE = "NEXT_LOCALE";
 
-// Domain/host resolution (brand domain list, trade-host pairs, tradeEnabled)
-// lives in ONE place: src/domains/registry.ts — a zero-dependency module, so
+// Domain/host resolution (brand domain list, trade-host overrides, and
+// tradeEnabled) lives in ONE place: src/platform/registry.ts — a zero-
+// dependency module, so
 // importing it here cannot disturb the middleware bundle (the historical
 // reason this logic was duplicated).
 
@@ -140,8 +142,8 @@ function publicOrigin(req: Request): string {
  *
  * - Apex domains (e.g. blackforrestt.com AND any mirror domains configured in
  *   BRAND_DOMAINS): marketing + public market data only. Trade/auth/admin
- *   routes redirect to the CANONICAL trade subdomain (trade.<first domain>),
- *   so authentication/cookies always live on one host.
+ *   routes redirect to that family's configured trade subdomain, so
+ *   authentication/cookies stay on the intended host.
  * - Trade subdomains (e.g. trade.blackforrestt.com): authenticated app only.
  *   Marketing content routes redirect back to the apex of the same domain
  *   family, keeping mirror-domain visitors on the domain they arrived on.
@@ -161,17 +163,16 @@ function domainRedirect(req: Request): NextResponse | null {
   // "www." (registry normalizeHost).
   const apex = normalizeHost(requestHost(req));
 
-  // Local development: trade/auth routes live in the EXTRACTED trade app
-  // (apps/trade, default http://localhost:3101) — forward to it instead of
-  // 404ing. Everything else stays on the web origin (no host redirects).
-  // *.localhost dev hosts (gbfxs.localhost etc.) behave like plain localhost:
-  // brand resolution still works via the registry hosts lists, but host-based
-  // redirects never fire — trade/auth paths forward to the local trade app.
+  // Local development: trade/auth routes live in the extracted Trade app.
+  // Preserve a registered *.localhost host so the Trade app resolves the same
+  // brand instead of falling back to the primary localhost brand.
   if (isLocalHost(apex) || apex.endsWith(".localhost")) {
     const incomingLocal = new URL(req.url);
     const localPath = `${incomingLocal.pathname}${incomingLocal.search}`;
     if (TRADE_DOMAIN_PREFIXES.some((p) => incomingLocal.pathname === p || incomingLocal.pathname.startsWith(`${p}/`))) {
-      const tradeOrigin = process.env.TRADE_DEV_ORIGIN ?? "http://localhost:3101";
+      const tradeOrigin = new URL(process.env.TRADE_DEV_ORIGIN ?? "http://localhost:3101");
+      const brandHost = localDevelopmentHost(apex);
+      if (brandHost) tradeOrigin.hostname = brandHost;
       return NextResponse.redirect(new URL(localPath, tradeOrigin), 307);
     }
     return null;
@@ -184,7 +185,7 @@ function domainRedirect(req: Request): NextResponse | null {
   const { pathname } = url;
 
   // On any apex domain (primary or mirror): bounce trade/auth/admin routes to
-  // that family's trade host (from DOMAIN_N/TRADE_DOMAIN_N or tradeEnabled);
+  // that family's trade host (override, manifest tradeEnabled, or fallback);
   // families without one fall back to the canonical trade host.
   if (domains.includes(apex) && pathname !== "/") {
     if (TRADE_DOMAIN_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {

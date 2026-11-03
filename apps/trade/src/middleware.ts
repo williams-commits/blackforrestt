@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { localDevelopmentHost } from "@/platform/registry";
 
 /**
  * Trade-app edge routing. The trading platform serves ONLY its own routes;
@@ -36,7 +37,9 @@ export function middleware(req: NextRequest) {
 
   const host = (req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "").split(",")[0]!.trim();
   if (isLocalHost(host)) {
-    const webOrigin = process.env.WEB_DEV_ORIGIN ?? "http://localhost:3000";
+    const webOrigin = new URL(process.env.WEB_DEV_ORIGIN ?? "http://localhost:3000");
+    const localHost = localDevelopmentHost(host)?.replace(/^trade\./, "");
+    if (localHost) webOrigin.hostname = localHost;
     return NextResponse.redirect(new URL(`${pathname}${search}`, webOrigin), 307);
   }
 

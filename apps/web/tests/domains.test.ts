@@ -6,8 +6,8 @@
  *
  *  1. REGISTRY INTEGRITY — one explicit config per domain, unique hosts,
  *     every design selection resolvable, default domain first.
- *  2. HOST RESOLUTION — the ONE resolution layer's precedence rules (env
- *     pairs → tradeEnabled → canonical; env overrides → code defaults).
+ *  2. HOST RESOLUTION — the ONE resolution layer's precedence rules
+ *     (trade-host override → tradeEnabled → canonical; env overrides → code defaults).
  *  3. BRAND LAYERING — BRAND_OVERRIDES > registry code defaults > primary
  *     env defaults; a domain never renders another domain's identity.
  *  4. IMPORT BOUNDARIES — content has no JSX/i18n imports; registry chain is
@@ -30,6 +30,7 @@ import {
   familyTradeHost,
   resolveHostContext,
   normalizeHost,
+  localDevelopmentHost,
   type EnvLike,
 } from "../src/platform/registry.js";
 import { brandProfileForDomain } from "../src/lib/branding.js";
@@ -140,6 +141,12 @@ test("resolution: host → domain identity + designs (code defaults)", () => {
   assert.equal(normalizeHost("WWW.Gbfxs.com:443"), "gbfxs.com");
   assert.equal(normalizeHost("Trade.GBFXS.com"), "trade.gbfxs.com");
   assert.equal(resolveHostContext("www.blackforrestt.com", NO_DOMAIN_ENV).domain.key, "blackforrest");
+});
+
+test("resolution: local brand aliases normalize without losing their family host", () => {
+  assert.equal(localDevelopmentHost("gbfxs.localhost:3000"), "gbfxs.localhost");
+  assert.equal(localDevelopmentHost("trade.gbfxs.localhost:3101"), "trade.gbfxs.localhost");
+  assert.equal(localDevelopmentHost("localhost:3000"), null);
 });
 
 test("resolution: unknown hosts fall back to the default domain", () => {

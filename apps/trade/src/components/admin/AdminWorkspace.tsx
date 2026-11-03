@@ -1084,6 +1084,22 @@ function ledgerCreditTotals(entries: LedgerEntryView[]): Map<string, number> {
   return totals;
 }
 
+function ledgerDirectionTotals(entries: LedgerEntryView[], direction: "CREDIT" | "DEBIT"): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const entry of entries) {
+    if (entry.direction !== direction) continue;
+    totals.set(entry.asset, (totals.get(entry.asset) ?? 0) + Number(entry.amount));
+  }
+  return totals;
+}
+
+function normalizeLedgerAmount(value: string): string {
+  const [integer, fraction] = value.split(".");
+  if (fraction == null) return integer;
+  const normalizedFraction = fraction.replace(/0+$/, "");
+  return normalizedFraction ? `${integer}.${normalizedFraction}` : integer;
+}
+
 function LedgerPanel() {
   const resource = useResource<LedgerResponse>("/api/admin/ledger?limit=200", 15_000);
   const [kindFilter, setKindFilter] = useState<string>("ALL");
@@ -1103,6 +1119,9 @@ function LedgerPanel() {
   const kinds = useMemo(() => [...new Set(all.map((t) => t.kind))].sort(), [all]);
   const filtered = useMemo(() => all.filter((t) => kindFilter === "ALL" || t.kind === kindFilter), [all, kindFilter]);
   const filtering = kindFilter !== "ALL";
+  const ledgerBalanced = trialBalanceByAsset.length > 0 && trialBalanceByAsset.every(
+    ([, balance]) => normalizeLedgerAmount(balance.credit) === normalizeLedgerAmount(balance.debit),
+  );
 
   const csvRows = filtered.flatMap((t) => t.entries.map((entry) => [
     t.reference, t.kind, t.status, t.user?.email ?? "system", t.user?.accountNo ?? "",
@@ -1113,20 +1132,23 @@ function LedgerPanel() {
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4">
     <SectionHeader eyebrow="Finance" icon={<BookOpenText size={18} strokeWidth={2} aria-hidden />} title="Double-entry ledger" description="Posted transaction headers and immutable debit/credit entries." onRefresh={() => void resource.refresh()} />
     <Card className="gap-3 py-4 shadow-panel">
-      <CardHeader className="px-4 py-0">
-        <CardTitle className="text-sm">Ledger control totals</CardTitle>
-        <CardDescription>Cumulative debits and credits, grouped by asset.</CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 px-4 py-0">
+        <div className="grid gap-1">
+          <CardTitle className="text-sm">All-time control totals</CardTitle>
+          <CardDescription>Debits and credits across the ledger, grouped by asset.</CardDescription>
+        </div>
+        {ledgerBalanced && <Badge variant="secondary" className="shrink-0 bg-(--term-success-bg) text-(--term-success-fg)">Balanced</Badge>}
       </CardHeader>
-      <CardContent className="grid gap-2 px-4 sm:grid-cols-2">
+      <CardContent className="grid gap-3 px-4 sm:grid-cols-2">
         {trialBalanceByAsset.map(([asset, balance]) => (
-          <div key={asset} className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3">
-            <div className="min-w-0">
+          <div key={asset} className="contents">
+            <div className="min-w-0 rounded-lg bg-muted/40 p-3">
               <p className="text-xs text-muted-foreground">Credits · {asset}</p>
-              <p className="mt-1 truncate text-sm font-semibold tabular-nums">{fmtExecNumber(balance.credit)}</p>
+              <p className="mt-1 truncate text-base font-semibold tabular-nums text-up">{fmtExecNumber(balance.credit)}</p>
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 rounded-lg bg-muted/40 p-3">
               <p className="text-xs text-muted-foreground">Debits · {asset}</p>
-              <p className="mt-1 truncate text-sm font-semibold tabular-nums">{fmtExecNumber(balance.debit)}</p>
+              <p className="mt-1 truncate text-base font-semibold tabular-nums text-down">{fmtExecNumber(balance.debit)}</p>
             </div>
           </div>
         ))}
@@ -1136,11 +1158,11 @@ function LedgerPanel() {
     <RecordList<LedgerTransactionView>
       ariaLabel="Posting"
       title="Postings"
-      description={`${filtering ? `${filtered.length} matching · ` : ""}${all.length.toLocaleString("en-US")} newest of ${resource.data.total.toLocaleString("en-US")} total`}
+      description={`${filtering ? `${filtered.length} matching · ` : ""}Latest ${all.length.toLocaleString("en-US")} of ${resource.data.total.toLocaleString("en-US")} transactions`}
       rows={filtered}
       rowKey={(t) => t.id}
       search={{
-        placeholder: "Search latest postings by reference, description, or user…",
+        placeholder: "Search postings by reference, kind, or account…",
         text: (t) => `${t.reference} ${t.kind} ${t.description} ${t.user?.email ?? ""} ${t.user?.accountNo ?? ""}`,
       }}
       leading={(t) => ({
@@ -1156,18 +1178,23 @@ function LedgerPanel() {
         { key: "effectiveAt", label: "Effective", sortable: true, align: "right", render: (t) => (
           <span className="text-xs text-muted-foreground tabular-nums">{fmtDateTime(t.effectiveAt)}</span>
         ) },
-        { key: "credits", label: "Credits", sortable: true, align: "right", render: (t) => {
-          const totals = ledgerCreditTotals(t.entries);
-          const cls = ledgerKindTextTone(t.kind);
-          return <span className={`font-semibold tabular-nums ${cls}`}>
-            {[...totals.entries()].map(([asset, total]) => `${asset} ${fmtExecNumber(total.toFixed(8))}`).join(" · ")}
-          </span>;
+        { key: "movement", label: "Debit / credit", sortable: true, align: "right", render: (t) => {
+          const credits = ledgerDirectionTotals(t.entries, "CREDIT");
+          const debits = ledgerDirectionTotals(t.entries, "DEBIT");
+          const formatTotals = (totals: Map<string, number>) =>
+            [...totals.entries()].map(([asset, amount]) => `${asset} ${fmtExecNumber(amount.toFixed(8))}`).join(" · ") || "—";
+          return (
+            <div className="grid gap-1 text-right text-xs tabular-nums">
+              <span className="font-medium text-down"><span className="text-muted-foreground">Dr </span>{formatTotals(debits)}</span>
+              <span className="font-medium text-up"><span className="text-muted-foreground">Cr </span>{formatTotals(credits)}</span>
+            </div>
+          );
         } },
       ]}
       sortValue={(t, key) => {
         switch (key) {
           case "effectiveAt": return new Date(t.effectiveAt).getTime();
-          case "credits": return [...ledgerCreditTotals(t.entries).values()].reduce((a, b) => a + b, 0);
+          case "movement": return [...ledgerCreditTotals(t.entries).values()].reduce((a, b) => a + b, 0);
           default: return String((t as unknown as Record<string, unknown>)[key] ?? "");
         }
       }}
@@ -1175,8 +1202,10 @@ function LedgerPanel() {
       filters={
         <ChipGroup
           ariaLabel="Filter postings by kind"
+          size="sm"
           value={kindFilter}
           onChange={(value) => setKindFilter(value)}
+          className="flex-wrap"
           options={[{ value: "ALL", label: "All" }, ...kinds.map((kind) => ({ value: kind, label: kind.replaceAll("_", " ").toLowerCase() }))]}
         />
       }

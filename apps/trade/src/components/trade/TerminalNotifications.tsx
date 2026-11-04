@@ -1,103 +1,114 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Bell, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Bell, Check, TrendingDown, TrendingUp, Wallet, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import type { ServerMessage } from "@/lib/ws/client";
 
-interface LiveEvent {
-  id: number;
-  time: number;
-  tone: "up" | "down" | "brand";
-  icon: "position-up" | "position-down" | "ledger";
-  text: string;
+interface NotificationRow {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
 }
 
-const MAX_EVENTS = 20;
+interface NotificationFeed {
+  notifications: NotificationRow[];
+  unreadCount: number;
+}
+
+const FETCH_LIMIT = 8;
+const POLL_MS = 15_000;
+
+function notificationIcon(type: string) {
+  if (type === "TRADE_OPENED") return TrendingUp;
+  if (type === "TRADE_CLOSED") return TrendingDown;
+  if (type.startsWith("PAYMENT_")) return Wallet;
+  return Bell;
+}
+
+function notificationTone(type: string): string {
+  if (type === "TRADE_OPENED" || type === "PAYMENT_APPROVED") return "text-up";
+  if (type === "TRADE_CLOSED" || type === "PAYMENT_REJECTED") return "text-down";
+  return "text-brand";
+}
 
 /**
- * Real-time terminal notifications — a live feed of what actually happens on
- * the account while you trade: position opens/closes and ledger (balance)
- * changes, sourced from the same `blckforest:realtime` event bus that drives
- * the rest of the UI. Nothing is synthesized; an idle account shows an honest
- * empty state. History is session-scoped (this terminal mount).
+ * Persisted notification feed. Dismissal acknowledges the database row as read,
+ * keeping the unread badge accurate across reloads and other account surfaces.
  */
 export function TerminalNotifications() {
-  const [events, setEvents] = useState<LiveEvent[]>([]);
+  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
-  const counter = useRef(0);
-  const seenPositionEvents = useRef(new Set<string>());
+  const [error, setError] = useState<string | null>(null);
+  const [dismissing, setDismissing] = useState<string | null>(null);
 
-  useEffect(() => {
-    const onRealtime = (event: Event) => {
-      const message = (event as CustomEvent<ServerMessage>).detail;
-      if (message?.type === "position") {
-        const key = `${message.position.id}:${message.position.status}`;
-        if (seenPositionEvents.current.has(key)) return;
-        seenPositionEvents.current.add(key);
-        if (seenPositionEvents.current.size > 500) {
-          const oldest = seenPositionEvents.current.values().next().value;
-          if (oldest) seenPositionEvents.current.delete(oldest);
-        }
-      }
-      const next: Omit<LiveEvent, "id" | "time"> | null = (() => {
-        if (message?.type === "position") {
-          const position = message.position;
-          if (position.status === "OPEN") {
-            return {
-              tone: position.side === "BUY" ? "up" : "down",
-              icon: position.side === "BUY" ? "position-up" : "position-down",
-              text: `${position.symbol} ${position.side} ${position.volume.toFixed(2)} opened`,
-            };
-          }
-          return {
-            tone: position.netProfit >= 0 ? "up" : "down",
-            icon: position.netProfit >= 0 ? "position-up" : "position-down",
-            text: `${position.symbol} closed ${position.netProfit >= 0 ? "+" : ""}${position.netProfit.toFixed(2)}`,
-          };
-        }
-        if (message?.type === "account" && (message as { reason?: string }).reason === "ledger") {
-          return { tone: "brand", icon: "ledger", text: "Account balance updated" };
-        }
-        return null;
-      })();
-      if (!next) return;
-      counter.current += 1;
-      setEvents((prev) => [{ ...next, id: counter.current, time: Date.now() }, ...prev].slice(0, MAX_EVENTS));
-      if (!openRef.current) setUnread((prev) => prev + 1);
-    };
-    window.addEventListener("blckforest:realtime", onRealtime);
-    return () => window.removeEventListener("blckforest:realtime", onRealtime);
+  const refresh = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/notifications?scope=recent&limit=${FETCH_LIMIT}`, {
+        cache: "no-store",
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | (NotificationFeed & { error?: string })
+        | null;
+      if (!response.ok) throw new Error(payload?.error ?? "Unable to load notifications.");
+      setNotifications((payload?.notifications ?? []).filter((item) => item.readAt == null));
+      setUnread(payload?.unreadCount ?? 0);
+      setError(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to load notifications.");
+    }
   }, []);
 
-  // Displayed = read: opening the dropdown marks the session's notifications
-  // seen locally AND settles the server-side unread count (mark all read), so
-  // badges never stay inflated and alerts don't repeat after being shown.
-  const openRef = useRef(false);
-  const settleServerCount = async () => {
+  useEffect(() => {
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), POLL_MS);
+    const onCountsChanged = () => void refresh();
+    window.addEventListener("blckforest:counts-changed", onCountsChanged);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("blckforest:counts-changed", onCountsChanged);
+    };
+  }, [refresh]);
+
+  const dismiss = async (id: string) => {
+    setDismissing(id);
+    setError(null);
     try {
       const response = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ all: true }),
+        body: JSON.stringify({ ids: [id] }),
       });
-      if (response.ok) {
-        window.dispatchEvent(new CustomEvent("blckforest:counts-changed"));
-      }
-    } catch {
-      // Offline — the local badge already cleared; server count settles on
-      // the next poll or open.
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      if (!response.ok) throw new Error(payload?.error ?? "Unable to dismiss notification.");
+      setNotifications((current) => current.filter((item) => item.id !== id));
+      await refresh();
+      window.dispatchEvent(new CustomEvent("blckforest:counts-changed"));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to dismiss notification.");
+    } finally {
+      setDismissing(null);
     }
   };
 
   return (
-    <DropdownMenu open={open} onOpenChange={(next) => { setOpen(next); openRef.current = next; if (next) { setUnread(0); void settleServerCount(); } }}>
+    <DropdownMenu
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) void refresh();
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <button
           type="button"
@@ -112,28 +123,49 @@ export function TerminalNotifications() {
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72 rounded-lg border border-border bg-canvas p-0 text-xs shadow-xl">
-        <div className="border-b border-border-soft bg-panel-2/50 px-3 py-2 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">
-          Live Notifications
+      <DropdownMenuContent align="end" className="w-80 rounded-lg border border-border bg-canvas p-0 text-xs shadow-xl">
+        <div className="flex items-center justify-between border-b border-border-soft bg-panel-2/50 px-3 py-2 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">
+          <span>Notifications</span>
+          <span className="normal-case tabular-nums">{unread} unread</span>
         </div>
-        <div className="max-h-72 overflow-y-auto">
-          {events.length === 0 ? (
+        <div className="max-h-80 overflow-y-auto">
+          {error ? (
+            <p className="px-3 py-4 text-xs text-down" role="alert">{error}</p>
+          ) : notifications.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-text-faint">
-              No live notifications yet — fills and account events appear here in real time.
+              You&apos;re all caught up.
             </p>
           ) : (
             <ul>
-              {events.map((e) => (
-                <li key={e.id} className="flex items-center gap-2 border-b border-border-soft px-3 py-2 last:border-b-0">
-                  <span className={`shrink-0 ${e.tone === "up" ? "text-up" : e.tone === "down" ? "text-down" : "text-brand"}`}>
-                    {e.icon === "ledger" ? <Wallet size={13} strokeWidth={2} aria-hidden /> : e.icon === "position-up" ? <TrendingUp size={13} strokeWidth={2} aria-hidden /> : <TrendingDown size={13} strokeWidth={2} aria-hidden />}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-xs text-text">{e.text}</span>
-                  <span className="shrink-0 text-(length:--term-text-2xs) tnum text-text-faint">
-                    {new Date(e.time).toLocaleTimeString("en-GB", { hour12: false })}
-                  </span>
-                </li>
-              ))}
+              {notifications.map((item) => {
+                const Icon = notificationIcon(item.type);
+                return (
+                  <li key={item.id} className="flex items-start gap-2 border-b border-border-soft px-3 py-2.5 last:border-b-0">
+                    <span className={`mt-0.5 shrink-0 ${notificationTone(item.type)}`}>
+                      <Icon size={13} strokeWidth={2} aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium text-text">{item.title}</p>
+                      <p className="mt-0.5 line-clamp-2 text-(length:--term-text-2xs) text-text-muted">{item.body}</p>
+                      <time className="mt-1 block text-(length:--term-text-2xs) tnum text-text-faint" dateTime={item.createdAt}>
+                        {new Date(item.createdAt).toLocaleTimeString("en-GB", { hour12: false })}
+                      </time>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label={`Dismiss ${item.title}`}
+                      title="Dismiss notification"
+                      disabled={dismissing === item.id}
+                      onClick={() => void dismiss(item.id)}
+                      className="flex size-7 shrink-0 items-center justify-center rounded-md text-text-faint hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50"
+                    >
+                      {dismissing === item.id
+                        ? <Check size={13} strokeWidth={2} aria-hidden />
+                        : <X size={13} strokeWidth={2} aria-hidden />}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

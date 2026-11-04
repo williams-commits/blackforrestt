@@ -17,6 +17,7 @@ import { Slider } from "@/components/ui/slider";
 interface Props {
   instrument: InstrumentView;
   orderController: OpenPositionController;
+  marketDataConnected: boolean;
   initialSide?: PositionSide | null;
   /** Opens the instrument switcher slide-out (the ticket's selector button). */
   onSwitchInstrument?: () => void;
@@ -32,7 +33,13 @@ interface Props {
  * Shows live bid/ask, volume with quick-select, margin/commission preview,
  * and prominent Sell/Buy buttons with the dealing rate.
  */
-export function TradePanel({ instrument, orderController, initialSide = null, onSwitchInstrument }: Props) {
+export function TradePanel({
+  instrument,
+  orderController,
+  marketDataConnected,
+  initialSide = null,
+  onSwitchInstrument,
+}: Props) {
   const [type, setType] = useState<"CFD" | "STRIKE">("CFD");
   const [volume, setVolume] = useState("0.10");
   // Quick order entry: remember the last-used size across visits so a
@@ -81,6 +88,7 @@ export function TradePanel({ instrument, orderController, initialSide = null, on
   const ask = quoteMatches ? quote.ask : instrument.ask;
   const currentQuoteAgeMs = quoteMatches ? quoteAgeMs(quote, now) : null;
   const hasFreshQuote = isExecutableQuote(quote, instrument.symbol, now);
+  const quoteReady = marketDataConnected && hasFreshQuote;
   const spread = ask - bid;
 
   const vol = Number(volume);
@@ -99,8 +107,10 @@ export function TradePanel({ instrument, orderController, initialSide = null, on
 
   async function submit(side: PositionSide): Promise<void> {
     clearMessages();
-    if (!hasFreshQuote) {
-      setValidationError("A fresh executable quote is required. Wait for the live connection to recover before submitting an order.");
+    if (!quoteReady) {
+      setValidationError(marketDataConnected
+        ? "A fresh executable quote is required. Wait for the live connection to recover before submitting an order."
+        : "Market data is disconnected. Reconnect before submitting an order.");
       return;
     }
     if (!hasValidVolume) {
@@ -253,7 +263,7 @@ export function TradePanel({ instrument, orderController, initialSide = null, on
           >
             <span className="text-(length:--term-text-2xs) font-semibold uppercase text-down tracking-wide">Sell{armed === "SELL" ? " · armed" : ""}</span>
             <span className="text-lg font-bold tnum text-down leading-tight mt-0.5">
-              {fmtPrice(bid, instrument.digits)}
+              {quoteReady ? fmtPrice(bid, instrument.digits) : "—"}
             </span>
           </button>
           {/* Buy / Ask */}
@@ -267,12 +277,12 @@ export function TradePanel({ instrument, orderController, initialSide = null, on
           >
             <span className="text-(length:--term-text-2xs) font-semibold uppercase text-up tracking-wide">Buy{armed === "BUY" ? " · armed" : ""}</span>
             <span className="text-lg font-bold tnum text-up leading-tight mt-0.5">
-              {fmtPrice(ask, instrument.digits)}
+              {quoteReady ? fmtPrice(ask, instrument.digits) : "—"}
             </span>
           </button>
         </div>
         <div className="flex items-center justify-center gap-3 mt-2 text-(length:--term-text-2xs) text-text-faint">
-          <span>Spread <span className="tnum text-text-muted font-medium">{fmtPrice(spread, instrument.digits)}</span></span>
+          <span>Spread <span className="tnum text-text-muted font-medium">{quoteReady ? fmtPrice(spread, instrument.digits) : "—"}</span></span>
           <span className="w-px h-3 bg-panel-3" />
           <span>Pip <span className="tnum text-text-muted font-medium">{instrument.pipSize}</span></span>
         </div>
@@ -343,7 +353,7 @@ export function TradePanel({ instrument, orderController, initialSide = null, on
               inputMode="decimal"
               value={strikeRate}
               onChange={(e) => { setStrikeRate(e.target.value); clearMessages(); }}
-              placeholder={`Market: ${fmtPrice(ask, instrument.digits)}`}
+              placeholder={quoteReady ? `Market: ${fmtPrice(ask, instrument.digits)}` : "Waiting for quote"}
               className="mt-1 h-10 rounded-lg px-3 transition-colors"
             />
           </div>
@@ -429,8 +439,8 @@ export function TradePanel({ instrument, orderController, initialSide = null, on
         <SummaryRow label="Pip Value" value={`${fmtNum(pipValue, 2)} USD`} />
         <SummaryRow
           label="Quote Freshness"
-          value={currentQuoteAgeMs == null ? "Waiting" : `${(currentQuoteAgeMs / 1_000).toFixed(1)}s${hasFreshQuote ? "" : " · stale"}`}
-          valueClass={hasFreshQuote ? "text-up font-semibold" : "text-down font-semibold"}
+          value={!marketDataConnected ? "Offline" : currentQuoteAgeMs == null ? "Waiting" : `${(currentQuoteAgeMs / 1_000).toFixed(1)}s${hasFreshQuote ? "" : " · stale"}`}
+          valueClass={quoteReady ? "text-up font-semibold" : "text-down font-semibold"}
         />
         <div className="pt-1.5 mt-1.5">
           <SummaryRow label="Free Margin" value={`${fmtNum(freeMargin, 2)} USD`} valueClass={!hasFunds ? "text-down font-semibold" : "font-semibold"} />
@@ -459,21 +469,21 @@ export function TradePanel({ instrument, orderController, initialSide = null, on
           reachable without covering volume, risk, or margin controls. */}
       <div className="shrink-0 bg-canvas shadow-lift px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="sell" size="default" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting sell order" onClick={() => submit("SELL")} className={`h-16 rounded-lg ${armed === "SELL" ? "ring-2 ring-down ring-offset-2 ring-offset-canvas" : ""}`}>
+          <Button variant="sell" size="default" loading={loading} disabled={!quoteReady || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("SELL")} className={`h-16 w-full min-w-0 rounded-lg px-2 ${armed === "SELL" ? "ring-2 ring-down ring-offset-2 ring-offset-canvas" : ""}`}>
             <span className="flex flex-col items-center leading-tight">
               <span className="text-sm font-bold uppercase tracking-wide">Sell</span>
-              <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{fmtPrice(bid, instrument.digits)}</span>
+              <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{quoteReady ? fmtPrice(bid, instrument.digits) : "—"}</span>
             </span>
           </Button>
-          <Button variant="buy" size="default" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting buy order" onClick={() => submit("BUY")} className={`h-16 rounded-lg ${armed === "BUY" ? "ring-2 ring-up ring-offset-2 ring-offset-canvas" : ""}`}>
+          <Button variant="buy" size="default" loading={loading} disabled={!quoteReady || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("BUY")} className={`h-16 w-full min-w-0 rounded-lg px-2 ${armed === "BUY" ? "ring-2 ring-up ring-offset-2 ring-offset-canvas" : ""}`}>
             <span className="flex flex-col items-center leading-tight">
               <span className="text-sm font-bold uppercase tracking-wide">Buy</span>
-              <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{fmtPrice(ask, instrument.digits)}</span>
+              <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{quoteReady ? fmtPrice(ask, instrument.digits) : "—"}</span>
             </span>
           </Button>
         </div>
         <p className="text-center text-(length:--term-text-2xs) text-text-faint mt-2">
-          {!hasFreshQuote ? "Orders disabled — waiting for a fresh quote" : armed ? `${armed === "BUY" ? "Buy" : "Sell"} armed — confirm with the highlighted button` : type === "CFD" ? "CFD market order — accepted at the displayed executable rate" : `Strike order — settles in ${expiryMinutes} min`}
+          {!marketDataConnected ? "Orders disabled — reconnecting to market data" : !hasFreshQuote ? "Orders disabled — waiting for a fresh quote" : armed ? `${armed === "BUY" ? "Buy" : "Sell"} armed — confirm with the highlighted button` : type === "CFD" ? "CFD market order — accepted at the displayed executable rate" : `Strike order — settles in ${expiryMinutes} min`}
         </p>
       </div>
     </div>

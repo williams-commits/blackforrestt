@@ -78,8 +78,8 @@ function Button({
     >
       {loading ? (
         <>
-          <Loader2 size={14} strokeWidth={2} aria-hidden className="animate-spin" />
-          {loadingLabel ?? "Loading…"}
+          <Loader2 size={14} strokeWidth={2} aria-hidden className="shrink-0 animate-spin" />
+          <span className="min-w-0 flex-1 truncate">{loadingLabel ?? "Loading…"}</span>
         </>
       ) : (
         children

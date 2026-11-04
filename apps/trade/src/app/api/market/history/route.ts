@@ -17,7 +17,7 @@ const QuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(2_000).default(1_000),
 });
 
-const HISTORY_WINDOW_SECONDS = 60 * 24 * 60 * 60;
+const HISTORY_WINDOW_SECONDS = 180 * 24 * 60 * 60;
 
 /** GET /api/market/history — bounded, provider-backed older candle pages. */
 export async function GET(req: Request) {

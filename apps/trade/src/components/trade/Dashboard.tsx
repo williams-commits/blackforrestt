@@ -232,6 +232,7 @@ export function Dashboard({
         >
           <ChartPanel
             instrument={activeInstrument}
+            marketDataConnected={status === "open"}
             onSwitchInstrument={() => setSwitcherOpen(true)}
             onOpenTrade={openTrade}
           />
@@ -242,6 +243,7 @@ export function Dashboard({
           <TradePanel
             instrument={activeInstrument}
             orderController={orderController}
+            marketDataConnected={status === "open"}
             initialSide={tradeSide}
             onSwitchInstrument={() => setSwitcherOpen(true)}
           />
@@ -311,6 +313,7 @@ export function Dashboard({
           <TradePanel
             instrument={activeInstrument}
             orderController={orderController}
+            marketDataConnected={status === "open"}
             initialSide={tradeSide}
             onSwitchInstrument={() => setSwitcherOpen(true)}
           />

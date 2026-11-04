@@ -70,13 +70,16 @@ export async function POST(req: Request) {
   } catch (error) {
     if (error instanceof RateLimitedError) {
       return NextResponse.json(
-        { error: error.message },
+        { error: error.message, code: "RATE_LIMITED" },
         { status: 429, headers: { "Retry-After": String(error.retryAfterSeconds) } },
       );
     }
     console.error("Position rate-limit check failed:", error);
     return NextResponse.json(
-      { error: "Order submission is temporarily unavailable because request protection could not be verified. Please retry." },
+      {
+        error: "Order submission is temporarily unavailable because request protection could not be verified. Please retry.",
+        code: "ORDER_NOT_SUBMITTED",
+      },
       { status: 503 },
     );
   }

@@ -17,12 +17,15 @@ export interface OpenPositionArgs {
   takeProfit?: number | null;
 }
 
-async function readApiError(response: Response, fallback: string): Promise<string> {
+async function readApiError(
+  response: Response,
+  fallback: string,
+): Promise<{ message: string; code?: string }> {
   try {
-    const body = (await response.json()) as { error?: string };
-    return body.error ?? fallback;
+    const body = (await response.json()) as { error?: string; code?: string };
+    return { message: body.error ?? fallback, code: body.code };
   } catch {
-    return fallback;
+    return { message: fallback };
   }
 }
 
@@ -114,8 +117,9 @@ export function useOpenPosition() {
         body: JSON.stringify(args),
       });
       if (!response.ok) {
-        const message = await readApiError(response, "Failed to open position.");
-        const uncertain = response.status === 408 || response.status === 429 || response.status >= 500;
+        const { message, code } = await readApiError(response, "Failed to open position.");
+        const notSubmitted = code === "RATE_LIMITED" || code === "ORDER_NOT_SUBMITTED";
+        const uncertain = !notSubmitted && (response.status === 408 || response.status >= 500);
         if (uncertain) {
           unknownOutcome.current = true;
           setError(`${message} The order may already have been accepted; retry the same order to confirm safely.`);
@@ -172,7 +176,7 @@ export async function closePosition(positionId: string): Promise<{ ok: boolean; 
       method: "POST",
     });
     if (!response.ok) {
-      const message = await readApiError(response, "Failed to close position.");
+      const { message } = await readApiError(response, "Failed to close position.");
       return { ok: false, error: message };
     }
     const data = (await response.json().catch(() => null)) as
@@ -201,7 +205,8 @@ export async function updatePositionProtection(
       body: JSON.stringify(levels),
     });
     if (!response.ok) {
-      return { ok: false, error: await readApiError(response, "Failed to update stop-loss and take-profit.") };
+      const { message } = await readApiError(response, "Failed to update stop-loss and take-profit.");
+      return { ok: false, error: message };
     }
     return { ok: true };
   } catch {

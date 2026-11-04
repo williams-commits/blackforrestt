@@ -109,29 +109,7 @@ export const useForexStore = create<ForexState>((set) => ({
     }),
 
   applyInstruments: (instruments) =>
-    set((state) => {
-      // If the currently-selected symbol's instrument is in the list, derive
-      // a fresh quote from its live bid/ask so the banner and trade panel
-      // stay in sync even when per-symbol WS quote messages aren't arriving.
-      const current = instruments.find((i) => i.symbol === state.symbol);
-      if (current) {
-        return {
-          instruments,
-          quote: {
-            symbol: current.symbol,
-            bid: current.bid,
-            ask: current.ask,
-            mid: current.mid,
-            time: Date.now(),
-            open24h: state.quote?.open24h ?? current.mid,
-            high24h: state.quote?.high24h ?? current.mid,
-            low24h: state.quote?.low24h ?? current.mid,
-            changePct: current.changePct,
-          },
-        };
-      }
-      return { instruments };
-    }),
+    set({ instruments }),
 
   applyAccount: (account) => set({ account }),
 

@@ -56,9 +56,11 @@ import {
   rsi,
   sma,
 } from "@/lib/indicators";
+import { isExecutableQuote } from "@/lib/marketFreshness";
 
 interface Props {
   instrument: InstrumentView;
+  marketDataConnected: boolean;
   /** Opens the instrument switcher slide-out (the identity button). */
   onSwitchInstrument?: () => void;
   /** Selects desktop order entry or opens the mobile ticket; never submits. */
@@ -75,8 +77,8 @@ const EMA_STORAGE_KEY = "blckforest:chart-ema";
 const BB_STORAGE_KEY = "blckforest:chart-bollinger";
 const RSI_STORAGE_KEY = "blckforest:chart-rsi";
 const MACD_STORAGE_KEY = "blckforest:chart-macd";
-const MAX_CHART_CANDLES = 90_000;
-const HISTORY_WINDOW_SECONDS = 60 * 24 * 60 * 60;
+const HISTORY_WINDOW_SECONDS = 180 * 24 * 60 * 60;
+const MAX_CHART_CANDLES = 180 * 24 * 60 + 1_000;
 
 function isInterval(value: string | null): value is CandleInterval {
   return value != null && (TIMEFRAMES as readonly string[]).includes(value);
@@ -134,7 +136,7 @@ function volumeColors(dim: boolean) {
 }
 
 /** Professional responsive chart with persistent timeframe and trading controls. */
-export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Props) {
+export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument, onOpenTrade }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -172,6 +174,7 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
   const candles = useForexStore((state) => state.candles);
   const quote = useForexStore((state) => state.quote);
   const snapshotVersion = useForexStore((state) => state.snapshotVersion);
+  const [marketNow, setMarketNow] = useState(0);
 
   const [chartType, setChartType] = useState<ChartType>("candles");
   const chartTypeRef = useRef(chartType);
@@ -191,6 +194,15 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyExhausted, setHistoryExhausted] = useState(false);
   const [historyMessage, setHistoryMessage] = useState("");
+  const quoteReady = marketDataConnected &&
+    isExecutableQuote(quote, instrument.symbol, marketNow || Date.now());
+  const liveQuote = quoteReady && quote?.symbol === instrument.symbol ? quote : null;
+
+  useEffect(() => {
+    setMarketNow(Date.now());
+    const timer = window.setInterval(() => setMarketNow(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const syncKey = useMemo(
     () => `${instrument.symbol}-${interval}-${chartType}`,
@@ -725,9 +737,9 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
   const latestOhlc = useMemo<DisplayOhlc | null>(() => {
     const last = candles[candles.length - 1];
     if (!last) return null;
-    const live = quote?.mid ?? last.close;
+    const live = liveQuote?.mid ?? last.close;
     return { ...last, close: live, up: live >= last.open };
-  }, [candles, quote]);
+  }, [candles, liveQuote]);
   const ohlc = hoveredOhlc ?? latestOhlc;
 
   const loadEarlierCandles = useCallback(async () => {
@@ -741,7 +753,7 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
     const windowStart = Math.floor(Date.now() / 1000) - HISTORY_WINDOW_SECONDS;
     if (before <= windowStart) {
       setHistoryExhausted(true);
-      setHistoryMessage("The chart has reached the 60-day history limit.");
+      setHistoryMessage("The chart has reached the 180-day history limit.");
       return;
     }
 
@@ -1040,30 +1052,30 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
       {onOpenTrade && (
         <div className="flex shrink-0 items-center gap-2 bg-panel px-2 py-1.5 sm:px-3">
           <span className="shrink-0 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">
-            Spread <span className="tnum text-text-muted">{fmtPrice((quote?.symbol === instrument.symbol ? quote.ask - quote.bid : instrument.ask - instrument.bid), instrument.digits)}</span>
+            Spread <span className="tnum text-text-muted">{liveQuote ? fmtPrice(liveQuote.ask - liveQuote.bid, instrument.digits) : "—"}</span>
           </span>
           <div className="ml-auto grid min-w-0 flex-1 grid-cols-2 gap-1 sm:flex-none">
             <Button
               type="button"
               variant="sell"
               size="sm"
-              aria-label={`Open sell ticket at ${fmtPrice(quote?.symbol === instrument.symbol ? quote.bid : instrument.bid, instrument.digits)}`}
+              aria-label={liveQuote ? `Open sell ticket at ${fmtPrice(liveQuote.bid, instrument.digits)}` : "Open sell ticket — live quote unavailable"}
               onClick={() => onOpenTrade("SELL")}
               className="h-10 min-w-0 px-2 sm:h-8 sm:px-3"
             >
               <TrendingDown size={14} strokeWidth={2} aria-hidden />
-              Sell <span className="truncate tnum">{fmtPrice(quote?.symbol === instrument.symbol ? quote.bid : instrument.bid, instrument.digits)}</span>
+              Sell <span className="truncate tnum">{liveQuote ? fmtPrice(liveQuote.bid, instrument.digits) : "—"}</span>
             </Button>
             <Button
               type="button"
               variant="buy"
               size="sm"
-              aria-label={`Open buy ticket at ${fmtPrice(quote?.symbol === instrument.symbol ? quote.ask : instrument.ask, instrument.digits)}`}
+              aria-label={liveQuote ? `Open buy ticket at ${fmtPrice(liveQuote.ask, instrument.digits)}` : "Open buy ticket — live quote unavailable"}
               onClick={() => onOpenTrade("BUY")}
               className="h-10 min-w-0 px-2 sm:h-8 sm:px-3"
             >
               <TrendingUp size={14} strokeWidth={2} aria-hidden />
-              Buy <span className="truncate tnum">{fmtPrice(quote?.symbol === instrument.symbol ? quote.ask : instrument.ask, instrument.digits)}</span>
+              Buy <span className="truncate tnum">{liveQuote ? fmtPrice(liveQuote.ask, instrument.digits) : "—"}</span>
             </Button>
           </div>
         </div>
@@ -1200,7 +1212,7 @@ function ViewControlsMenu({
             {historyLoading ? "Loading earlier candles…" : "Load earlier candles"}
           </DropdownMenuItem>
           <DropdownMenuLabel className="px-2 py-1 text-(length:--term-text-2xs) font-normal normal-case tracking-normal text-text-faint">
-            Provider history is capped at 60 days.
+            History window: up to 180 days; availability depends on the provider.
           </DropdownMenuLabel>
         </DropdownMenuGroup>
       </DropdownMenuContent>

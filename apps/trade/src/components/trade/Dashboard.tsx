@@ -253,6 +253,7 @@ export function Dashboard({
       {/* The dock can be resized on pointer and keyboard at tablet/desktop
           widths. Mobile retains a natural-height, scrollable activity area. */}
       <div
+        data-activity-dock
         className={cn(
           "shrink-0 bg-panel pb-[calc(env(safe-area-inset-bottom)+3.5rem)] md:pb-0",
           dockOpen ? "min-h-50 h-60 sm:h-88 md:h-(--dock-height)" : "h-9",

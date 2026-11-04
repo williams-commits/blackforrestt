@@ -43,6 +43,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
   const [busy, setBusy] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("open");
   const [editingPosition, setEditingPosition] = useState<PositionView | null>(null);
+  const dockRef = useRef<HTMLDivElement>(null);
 
   const digitsFor = (symbol: string) => instruments.find((i) => i.symbol === symbol)?.digits ?? 5;
   // Match AccountBar's floatingPl: profit + swap (excludes commission, which is
@@ -50,7 +51,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
   const totalFloating = positions.reduce((s, p) => s + p.profit + p.swap, 0);
 
   return (
-    <div className="flex h-full flex-col bg-panel">
+    <div ref={dockRef} className="flex h-full flex-col bg-panel">
       {/* Header: tabs + floating P/L + collapse control */}
       <div className="flex min-h-8 flex-wrap items-center bg-panel-2 px-2 shrink-0 gap-x-1 gap-y-1">
         <Tabs
@@ -73,7 +74,17 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
             { key: "history", label: "Trade History" },
           ]}
           active={tab}
-          onChange={(key) => setTab(key as Tab)}
+          onChange={(key) => {
+            const nextTab = key as Tab;
+            setTab(nextTab);
+            if (nextTab === "history" && window.matchMedia("(max-width: 767px)").matches) {
+              requestAnimationFrame(() => {
+                dockRef.current
+                  ?.closest<HTMLElement>("[data-activity-dock]")
+                  ?.scrollIntoView({ block: "end", behavior: "smooth" });
+              });
+            }
+          }}
         />
         {tab === "open" && positions.length > 0 && (
           <div className="order-3 ml-0 flex w-full items-center justify-end gap-3 sm:order-0 sm:ml-auto sm:w-auto">

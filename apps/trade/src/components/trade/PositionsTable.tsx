@@ -76,7 +76,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
           onChange={(key) => setTab(key as Tab)}
         />
         {tab === "open" && positions.length > 0 && (
-          <div className="order-3 ml-0 flex w-full items-center justify-end gap-3 sm:order-none sm:ml-auto sm:w-auto">
+          <div className="order-3 ml-0 flex w-full items-center justify-end gap-3 sm:order-0 sm:ml-auto sm:w-auto">
             <div className="flex items-center gap-1.5">
               <span className="text-(length:--term-text-2xs) text-text-faint uppercase">Floating P/L</span>
               <span className={`text-(length:--term-text-sm) font-bold tnum ${totalFloating >= 0 ? "text-up" : "text-down"}`}>

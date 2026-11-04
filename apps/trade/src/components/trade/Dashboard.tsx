@@ -255,7 +255,7 @@ export function Dashboard({
       <div
         className={cn(
           "shrink-0 bg-panel pb-[calc(env(safe-area-inset-bottom)+3.5rem)] md:pb-0",
-          dockOpen ? "min-h-50 h-60 sm:h-88 md:h-[var(--dock-height)]" : "h-9",
+          dockOpen ? "min-h-50 h-60 sm:h-88 md:h-(--dock-height)" : "h-9",
         )}
         style={{ "--dock-height": `${dockHeight}px` } as React.CSSProperties}
       >

@@ -52,7 +52,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
   return (
     <div className="flex h-full flex-col bg-panel">
       {/* Header: tabs + floating P/L + collapse control */}
-      <div className="flex h-8 items-center bg-panel-2 px-2 shrink-0 gap-1">
+      <div className="flex min-h-8 flex-wrap items-center bg-panel-2 px-2 shrink-0 gap-x-1 gap-y-1">
         <Tabs
           variant="segmented"
           label="Positions dock"
@@ -76,7 +76,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
           onChange={(key) => setTab(key as Tab)}
         />
         {tab === "open" && positions.length > 0 && (
-          <div className="ml-auto flex items-center gap-3">
+          <div className="order-3 ml-0 flex w-full items-center justify-end gap-3 sm:order-none sm:ml-auto sm:w-auto">
             <div className="flex items-center gap-1.5">
               <span className="text-(length:--term-text-2xs) text-text-faint uppercase">Floating P/L</span>
               <span className={`text-(length:--term-text-sm) font-bold tnum ${totalFloating >= 0 ? "text-up" : "text-down"}`}>
@@ -92,7 +92,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
             aria-label={collapsed ? "Expand activity dock" : "Collapse activity dock"}
             aria-expanded={!collapsed}
             title={collapsed ? "Expand dock" : "Collapse dock"}
-            className={`rounded p-1 text-text-muted transition-colors hover:bg-panel-3 hover:text-text focus-visible:outline-2 focus-visible:outline-brand ${tab !== "open" || positions.length === 0 ? "ml-auto" : ""}`}
+            className="ml-auto shrink-0 rounded p-1 text-text-muted transition-colors hover:bg-panel-3 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
           >
             {collapsed ? <ChevronUp size={14} strokeWidth={2} aria-hidden /> : <ChevronDown size={14} strokeWidth={2} aria-hidden />}
           </button>

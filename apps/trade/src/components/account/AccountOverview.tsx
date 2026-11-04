@@ -61,12 +61,12 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
       {/* Equity hero + identity */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>
-          <CardHeader>
+          <CardHeader className="grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto]">
             <CardTitle>Equity</CardTitle>
             <CardDescription>
               {openCount} open {openCount === 1 ? "position" : "positions"} · live account value including floating P/L
             </CardDescription>
-            <CardAction className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-none sm:flex">
+            <div className="col-start-1 row-start-3 row-span-1 grid w-full grid-cols-2 justify-self-stretch gap-2 sm:col-start-2 sm:row-start-1 sm:row-span-2 sm:w-auto sm:grid-cols-none sm:flex sm:justify-self-end">
               {depositUiEnabled && (
                 <Button type="button" onClick={() => { setWalletMode("deposit"); setWalletOpen(true); }} className="w-full sm:w-auto">
                   <ArrowDownToLine size={14} strokeWidth={2} aria-hidden /> Deposit
@@ -75,7 +75,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
               <Button type="button" variant="outline" onClick={() => { setWalletMode("withdraw"); setWalletOpen(true); }} className="w-full sm:w-auto">
                 <ArrowUpFromLine size={14} strokeWidth={2} aria-hidden /> Withdraw
               </Button>
-            </CardAction>
+            </div>
             <div className="pt-1">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-3">
                 <span className="text-3xl font-semibold tracking-tight tabular-nums">

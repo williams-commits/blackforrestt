@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/Input";
 import { Switch } from "@/components/ui/switch";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { Check, KeyRound, Lock, Pencil, ShieldCheck, User, X, Mail, StarCheck } from "lucide-react";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
@@ -47,17 +47,17 @@ export function SettingsTab({ user }: { user: User }) {
     <div className="space-y-8">
       {/* Account details */}
       <Card>
-        <CardHeader>
+        <CardHeader className="grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto]">
           <CardTitle>Account details</CardTitle>
           <CardDescription>Your identity on the platform.</CardDescription>
-          <CardAction className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => setProfileOpen(true)}>
+          <div className="col-start-1 row-start-3 row-span-1 grid w-full grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:col-start-2 sm:row-start-1 sm:row-span-2 sm:flex sm:w-auto sm:justify-self-end">
+            <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setProfileOpen(true)}>
               <Pencil size={13} strokeWidth={2} aria-hidden /> Edit profile
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => setPasswordOpen(true)}>
+            <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setPasswordOpen(true)}>
               <KeyRound size={13} strokeWidth={2} aria-hidden /> Change password
             </Button>
-          </CardAction>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-4 pb-5">

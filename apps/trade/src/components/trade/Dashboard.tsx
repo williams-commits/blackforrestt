@@ -6,6 +6,7 @@ import { useForexSocket } from "@/hooks/useForexSocket";
 import { useForexStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { CandleInterval, InstrumentView, PositionSide } from "@/lib/types";
+import { useOpenPosition } from "@/hooks/useOpenPosition";
 import { AccountBar } from "./AccountBar";
 import { ChartPanel } from "./ChartPanel";
 import { TradePanel } from "./TradePanel";
@@ -36,8 +37,8 @@ const DOCK_HEIGHT_STORAGE_KEY = "blckforest:dock-height";
 const MIN_DOCK_HEIGHT = 144;
 const DEFAULT_DOCK_HEIGHT = 280;
 
-/** Responsive trading workspace: market discovery and chart above a resizable
- *  activity dock; order entry stays in a left drawer at every breakpoint. */
+/** Responsive trading workspace with a persistent desktop order ticket and a
+ *  right-side mobile ticket, sharing one submission controller. */
 export function Dashboard({
   instrument,
   instruments,
@@ -52,6 +53,7 @@ export function Dashboard({
   const setInterval = useForexStore((state) => state.setInterval);
   const applyInstruments = useForexStore((state) => state.applyInstruments);
   const storeInstruments = useForexStore((state) => state.instruments);
+  const orderController = useOpenPosition();
 
   // In-place instrument switching: the route symbol seeds the workspace, but
   // selecting another instrument only swaps market data (store resubscribes)
@@ -87,6 +89,7 @@ export function Dashboard({
 
   const openTrade = useCallback((side: PositionSide | null = null) => {
     setTradeSide(side);
+    if (window.matchMedia("(min-width: 1024px)").matches) return;
     setTradeOpen(true);
   }, []);
 
@@ -177,15 +180,14 @@ export function Dashboard({
       <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} walletAddresses={walletAddresses} marginWarningPercent={marginWarningPercent} />
       <MarketStatusBanner marketDataMode={marketDataMode} wsStatus={status} />
 
-      {/* Keep the chart dominant at every breakpoint. The market rail is
-          optional; order entry lives in a left drawer rather than narrowing
-          the chart into a permanent third column. */}
+      {/* Keep market discovery, charting, and order entry in stable columns on
+          desktop; smaller screens open the same ticket in a right-side sheet. */}
       <div
         className={cn(
           "grid grid-cols-1 gap-0 bg-panel md:min-h-0 md:flex-1",
           watchlistOpen
-            ? "lg:grid-cols-[240px_minmax(0,1fr)]"
-            : "lg:grid-cols-[2.5rem_minmax(0,1fr)]",
+            ? "lg:grid-cols-[240px_minmax(0,1fr)_340px]"
+            : "lg:grid-cols-[2.5rem_minmax(0,1fr)_340px]",
         )}
       >
         {/* Market discovery rail — desktop only; collapses to a slim strip. */}
@@ -234,6 +236,16 @@ export function Dashboard({
             onOpenTrade={openTrade}
           />
         </main>
+
+        <aside aria-label="Order entry" className="hidden min-h-0 border-l border-border-soft bg-canvas lg:flex lg:flex-col">
+          <MarketMarkers instrument={activeInstrument} />
+          <TradePanel
+            instrument={activeInstrument}
+            orderController={orderController}
+            initialSide={tradeSide}
+            onSwitchInstrument={() => setSwitcherOpen(true)}
+          />
+        </aside>
       </div>
 
       {/* The dock can be resized on pointer and keyboard at tablet/desktop
@@ -287,22 +299,21 @@ export function Dashboard({
           opens the ticket with that side highlighted; it never submits. */}
       <Sheet open={tradeOpen} onOpenChange={closeTrade}>
         <SheetContent
-          side="left"
-          className="top-0 h-dvh gap-0 rounded-none p-0"
-          style={{ width: "min(100vw, 28rem)" }}
+          side="right"
+          className="top-0 flex h-dvh flex-col gap-0 rounded-none p-0"
+          style={{ width: "min(100vw, 23rem)" }}
         >
           <SheetHeader className="border-b border-border-soft pb-2 pt-3">
             <SheetTitle>{tradeSide ? `${tradeSide === "BUY" ? "Buy" : "Sell"} ${activeInstrument.symbol}` : `Trade ${activeInstrument.symbol}`}</SheetTitle>
             <SheetDescription>Review the order details before submitting.</SheetDescription>
           </SheetHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <MarketMarkers instrument={activeInstrument} />
-            <TradePanel
-              instrument={activeInstrument}
-              initialSide={tradeSide}
-              onSwitchInstrument={() => setSwitcherOpen(true)}
-            />
-          </div>
+          <MarketMarkers instrument={activeInstrument} />
+          <TradePanel
+            instrument={activeInstrument}
+            orderController={orderController}
+            initialSide={tradeSide}
+            onSwitchInstrument={() => setSwitcherOpen(true)}
+          />
         </SheetContent>
       </Sheet>
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { useForexStore } from "@/lib/store";
-import { useOpenPosition } from "@/hooks/useOpenPosition";
+import type { OpenPositionController } from "@/hooks/useOpenPosition";
 import { toast } from "@/lib/toast";
 import { fmtPrice, fmtNum } from "@/lib/format";
 import type { InstrumentView, PositionSide } from "@/lib/types";
@@ -12,9 +12,11 @@ import { SimpleTabs as Tabs } from "@/components/ui/Tabs";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { isExecutableQuote, quoteAgeMs } from "@/lib/marketFreshness";
 import { Input } from "@/components/ui/Input";
+import { Slider } from "@/components/ui/slider";
 
 interface Props {
   instrument: InstrumentView;
+  orderController: OpenPositionController;
   initialSide?: PositionSide | null;
   /** Opens the instrument switcher slide-out (the ticket's selector button). */
   onSwitchInstrument?: () => void;
@@ -30,7 +32,7 @@ interface Props {
  * Shows live bid/ask, volume with quick-select, margin/commission preview,
  * and prominent Sell/Buy buttons with the dealing rate.
  */
-export function TradePanel({ instrument, initialSide = null, onSwitchInstrument }: Props) {
+export function TradePanel({ instrument, orderController, initialSide = null, onSwitchInstrument }: Props) {
   const [type, setType] = useState<"CFD" | "STRIKE">("CFD");
   const [volume, setVolume] = useState("0.10");
   // Quick order entry: remember the last-used size across visits so a
@@ -53,7 +55,7 @@ export function TradePanel({ instrument, initialSide = null, onSwitchInstrument 
   const [takeProfit, setTakeProfit] = useState("");
   const [showSLTP, setShowSLTP] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const { openPosition, loading, error, clearError, status, lastAcceptedAt } = useOpenPosition();
+  const { openPosition, loading, error, clearError, status, lastAcceptedAt } = orderController;
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1_000);
@@ -82,6 +84,8 @@ export function TradePanel({ instrument, initialSide = null, onSwitchInstrument 
   const spread = ask - bid;
 
   const vol = Number(volume);
+  const sliderVolume = Number.isFinite(vol) ? Math.min(100, Math.max(0.01, vol)) : 0.1;
+  const sliderValue = Math.round((Math.log(sliderVolume / 0.01) / Math.log(100 / 0.01)) * 1_000);
   const margin = Number.isFinite(vol) ? vol * instrument.marginPerLot : 0;
   const commission = Number.isFinite(vol) ? vol * instrument.commissionPerLot : 0;
   const pipValue = Number.isFinite(vol) ? vol * instrument.pipValue : 0;
@@ -154,7 +158,7 @@ export function TradePanel({ instrument, initialSide = null, onSwitchInstrument 
       }
     }
 
-    const ok = await openPosition({
+    const result = await openPosition({
       symbol: instrument.symbol,
       side,
       volume: vol,
@@ -164,12 +168,14 @@ export function TradePanel({ instrument, initialSide = null, onSwitchInstrument 
       stopLoss: type === "CFD" ? parsedStopLoss : null,
       takeProfit: type === "CFD" ? parsedTakeProfit : null,
     });
-    if (ok) {
+    if (result.ok) {
       // Immediate local confirmation — the DB notification follows separately
       // for history and other sessions.
       toast.success(
-        "Order opened",
-        `${side === "BUY" ? "Buy" : "Sell"} ${vol.toFixed(2)} ${instrument.symbol} at ${entryRate.toFixed(instrument.digits)}.`,
+        result.replayed ? "Order confirmed" : "Order opened",
+        result.replayed
+          ? "This order was already accepted; no additional position was created."
+          : `${side === "BUY" ? "Buy" : "Sell"} ${vol.toFixed(2)} ${instrument.symbol} at ${entryRate.toFixed(instrument.digits)}.`,
       );
       setStopLoss("");
       setTakeProfit("");
@@ -177,7 +183,8 @@ export function TradePanel({ instrument, initialSide = null, onSwitchInstrument 
   }
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
       {/* ── Instrument header — the ticket's asset selector ──────────────── */}
       <div className="bg-panel-2/60 px-3 pt-3 pb-3">
         {onSwitchInstrument ? (
@@ -286,6 +293,31 @@ export function TradePanel({ instrument, initialSide = null, onSwitchInstrument 
             onChange={(e) => { setVolume(e.target.value); clearMessages(); }}
             className="h-11 rounded-lg px-3 font-semibold transition-colors"
           />
+        </div>
+        <div className="mt-3">
+          <div className="mb-2 flex items-center justify-between text-(length:--term-text-2xs)">
+            <span className="text-text-muted">Adjust order size</span>
+            <span className="tnum font-semibold text-text">{sliderVolume.toFixed(2)} lots</span>
+          </div>
+          <Slider
+            aria-label="Order volume in lots"
+            aria-valuetext={`${sliderVolume.toFixed(2)} lots`}
+            min={0}
+            max={1_000}
+            step={1}
+            value={[sliderValue]}
+            onValueChange={(value) => {
+              if (value[0] != null) {
+                const nextVolume = 0.01 * (100 / 0.01) ** (value[0] / 1_000);
+                setVolume(nextVolume.toFixed(2));
+                clearMessages();
+              }
+            }}
+          />
+          <div className="mt-1 flex justify-between text-(length:--term-text-2xs) tnum text-text-faint">
+            <span>0.01 min</span>
+            <span>100 max</span>
+          </div>
         </div>
         <div className="mt-1.5">
           <ChipGroup
@@ -410,6 +442,7 @@ export function TradePanel({ instrument, initialSide = null, onSwitchInstrument 
         {status === "submitting" && <span className="text-brand">Pending provider acceptance</span>}
         {status === "accepted" && <span className="text-up">Accepted and open{lastAcceptedAt ? ` at ${new Date(lastAcceptedAt).toLocaleTimeString()}` : ""}</span>}
         {status === "failed" && <span className="text-down">Rejected or failed</span>}
+        {status === "unknown" && <span className="text-down">Confirmation pending — retry the same order</span>}
         {status === "idle" && <span className="text-text-muted">Ready for submission</span>}
       </div>
 
@@ -420,10 +453,11 @@ export function TradePanel({ instrument, initialSide = null, onSwitchInstrument 
         </div>
       )}
 
-      {/* ── Sell / Buy buttons — pinned to the bottom of the scroll area so
-              the dealing rates are always visible while adjusting the order
-              (especially in the mobile bottom sheet). ──────────────────── */}
-      <div className="sticky bottom-0 z-10 mt-auto bg-canvas shadow-lift px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+      </div>
+
+      {/* Keep order actions outside the scrolling content so they stay
+          reachable without covering volume, risk, or margin controls. */}
+      <div className="shrink-0 bg-canvas shadow-lift px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <div className="grid grid-cols-2 gap-2">
           <Button variant="sell" size="default" loading={loading} disabled={!hasFreshQuote || !hasValidVolume || !hasFunds} loadingLabel="Submitting sell order" onClick={() => submit("SELL")} className={`h-16 rounded-lg ${armed === "SELL" ? "ring-2 ring-down ring-offset-2 ring-offset-canvas" : ""}`}>
             <span className="flex flex-col items-center leading-tight">

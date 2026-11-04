@@ -128,6 +128,7 @@ export interface OpenPositionInput {
 export interface OpenPositionResult {
   position: PositionView;
   metrics: AccountMetricsView;
+  replayed?: boolean;
 }
 
 export type BroadcastFn = (message: HubEmission) => void;
@@ -584,6 +585,27 @@ class Hub {
 
   async openPositionReq(input: OpenPositionInput): Promise<OpenPositionResult> {
     return userMutationMutex.runExclusive(input.userId, async () => {
+      const symbol = input.symbol.trim().toUpperCase();
+      const state = this.instruments.get(symbol);
+      if (!state) throw new TradingError(`Unknown instrument: ${symbol}`, "VALIDATION");
+      const requestFingerprint = fingerprintOpenRequest(input);
+      const replay = await prisma.position.findUnique({
+        where: {
+          userId_idempotencyKey: {
+            userId: input.userId,
+            idempotencyKey: input.idempotencyKey,
+          },
+        },
+      });
+      if (replay) {
+        if (replay.requestFingerprint !== requestFingerprint) {
+          throw new TradingError("Idempotency key is already in use.", "CONFLICT");
+        }
+        const replayedPosition = this.toPosition(replay);
+        const view = { ...this.toView(replayedPosition, this.cfg(state)), status: replay.status };
+        return { position: view, metrics: await this.calculateMetrics(input.userId), replayed: true };
+      }
+
       const reconciliationBlock = await isUserBlocked(input.userId, "TRADE");
       if (reconciliationBlock) {
         throw new TradingError(
@@ -591,9 +613,6 @@ class Hub {
           "BLOCKED",
         );
       }
-      const symbol = input.symbol.trim().toUpperCase();
-      const state = this.instruments.get(symbol);
-      if (!state) throw new TradingError(`Unknown instrument: ${symbol}`, "VALIDATION");
 
       // Resolve per-user/group settings (trading enabled, category access, max lots).
       const policy = await loadTradingRiskPolicy();
@@ -630,24 +649,6 @@ class Hub {
 
       const entryRate = input.side === "BUY" ? effectiveAsk : effectiveBid;
       this.validateOpenInput(input, entryRate);
-      const requestFingerprint = fingerprintOpenRequest(input);
-
-      const replay = await prisma.position.findUnique({
-        where: {
-          userId_idempotencyKey: {
-            userId: input.userId,
-            idempotencyKey: input.idempotencyKey,
-          },
-        },
-      });
-      if (replay) {
-        if (replay.requestFingerprint !== requestFingerprint) {
-          throw new TradingError("Idempotency key is already in use.", "CONFLICT");
-        }
-        const replayedPosition = this.toPosition(replay);
-        const view = { ...this.toView(replayedPosition, cfg), status: replay.status };
-        return { position: view, metrics: await this.calculateMetrics(input.userId) };
-      }
 
       const opened = openPosition({
         userId: input.userId,
@@ -804,6 +805,7 @@ class Hub {
         return {
           position: replayedView,
           metrics: await this.calculateMetrics(input.userId),
+          replayed: true,
         };
       }
 
@@ -815,7 +817,7 @@ class Hub {
       const metrics = await this.recomputeAndBroadcastMetrics(input.userId);
       const view = this.toView(position, cfg);
       this.broadcast({ kind: "position", userId: input.userId, position: view });
-      return { position: view, metrics };
+      return { position: view, metrics, replayed: false };
     });
   }
 

@@ -61,7 +61,7 @@ interface Props {
   instrument: InstrumentView;
   /** Opens the instrument switcher slide-out (the identity button). */
   onSwitchInstrument?: () => void;
-  /** Opens the order drawer; a side is a shortcut, never an order submission. */
+  /** Selects desktop order entry or opens the mobile ticket; never submits. */
   onOpenTrade?: (side: "BUY" | "SELL") => void;
 }
 
@@ -82,34 +82,41 @@ function isInterval(value: string | null): value is CandleInterval {
   return value != null && (TIMEFRAMES as readonly string[]).includes(value);
 }
 
-/** Theme-dependent chart/series options shared by creation and live restyle.
- *  Theme switches restyle the chart in place via applyOptions — the chart is
- *  never disposed on theme change (disposing mid-paint races lightweight-
- *  charts' render loop and throws "Object is disposed"). */
-function chartThemeOptions() {
-  const styles = getComputedStyle(document.documentElement);
-  const token = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback;
-  const canvas = token("--color-canvas", "#ffffff");
-  const text = token("--color-text-faint", "#6b7280");
-  const panel = token("--color-panel-2", "#eef1f4");
-  const border = token("--color-border", "#d5dbe3");
-  const grid = token("--color-border-soft", "#e7ebef");
+/** Chart-library colors stay in RGB/hex formats; Trade's dim CSS tokens use
+ *  OKLCH, which lightweight-charts cannot parse. These RGB values preserve the
+ *  same neutral ramp without changing the app-wide theme tokens. */
+function chartThemeOptions(dim: boolean) {
+  const colors = dim
+    ? {
+        canvas: "#181818",
+        text: "#8c8c8c",
+        panel: "#262626",
+        border: "#2a2a2a",
+        grid: "#262626",
+      }
+    : {
+        canvas: "#ffffff",
+        text: "#66707e",
+        panel: "#eef1f4",
+        border: "#d5dbe3",
+        grid: "#e7ebef",
+      };
   return {
     layout: {
-      background: { type: ColorType.Solid, color: canvas },
-      textColor: text,
-      panes: { separatorColor: border },
+      background: { type: ColorType.Solid, color: colors.canvas },
+      textColor: colors.text,
+      panes: { separatorColor: colors.border },
     },
     grid: {
-      vertLines: { color: grid },
-      horzLines: { color: grid },
+      vertLines: { color: colors.grid },
+      horzLines: { color: colors.grid },
     },
     crosshair: {
-      vertLine: { color: text, labelBackgroundColor: panel },
-      horzLine: { color: text, labelBackgroundColor: panel },
+      vertLine: { color: colors.text, labelBackgroundColor: colors.panel },
+      horzLine: { color: colors.text, labelBackgroundColor: colors.panel },
     },
-    rightPriceScale: { borderColor: border },
-    timeScale: { borderColor: border },
+    rightPriceScale: { borderColor: colors.border },
+    timeScale: { borderColor: colors.border },
   } as const;
 }
 
@@ -303,7 +310,7 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
     // kept in sync by the live-restyle effect; isDim is intentionally not a
     // dependency — the chart is only disposed when the chart TYPE changes.
     const dim = isDim;
-    const theme = chartThemeOptions();
+    const theme = chartThemeOptions(dim);
     const chart = createChart(container, {
       autoSize: true,
       ...theme,
@@ -416,7 +423,7 @@ export function ChartPanel({ instrument, onSwitchInstrument, onOpenTrade }: Prop
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
-    const theme = chartThemeOptions();
+    const theme = chartThemeOptions(isDim);
     chart.applyOptions({ ...theme, crosshair: { ...theme.crosshair, mode: CrosshairMode.Normal } });
     seriesRef.current?.applyOptions(candleColors(isDim));
     const colors = volumeColors(isDimRef.current);

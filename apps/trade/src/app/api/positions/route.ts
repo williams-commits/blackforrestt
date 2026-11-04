@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hub, TradingError } from "@/server/engine/hub";
 import { prisma, resolveUserId } from "@/server/db";
-import { consumeRateLimit } from "@/server/security/rateLimit";
+import { consumeRateLimit, RateLimitedError } from "@/server/security/rateLimit";
 import { auth } from "@/auth";
 import { appendAuditEvent } from "@/server/ledger";
 
@@ -56,14 +56,28 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-  // Per-user order-submission cap: each placement runs Serializable-tx ledger
-  // work and a hash-chained audit append — a runaway client must not flood it.
-  await consumeRateLimit({ scope: "orders", identifier: userId, limit: 60, windowSeconds: 60 });
   const idempotencyKey = req.headers.get("idempotency-key")?.trim();
   if (!idempotencyKey || idempotencyKey.length < 6 || idempotencyKey.length > 128) {
     return NextResponse.json(
       { error: "A valid Idempotency-Key header is required." },
       { status: 400 },
+    );
+  }
+  // Per-user order-submission cap: each placement runs Serializable-tx ledger
+  // work and a hash-chained audit append — a runaway client must not flood it.
+  try {
+    await consumeRateLimit({ scope: "orders", identifier: userId, limit: 60, windowSeconds: 60 });
+  } catch (error) {
+    if (error instanceof RateLimitedError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 429, headers: { "Retry-After": String(error.retryAfterSeconds) } },
+      );
+    }
+    console.error("Position rate-limit check failed:", error);
+    return NextResponse.json(
+      { error: "Order submission is temporarily unavailable because request protection could not be verified. Please retry." },
+      { status: 503 },
     );
   }
   try {
@@ -110,7 +124,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message, code: error.code }, { status });
     }
     console.error("Position open failed:", error);
-    return NextResponse.json({ error: "Unable to open the position." }, { status: 500 });
+    return NextResponse.json(
+      { error: "The order status could not be confirmed. Retry the same order to safely check whether it was accepted." },
+      { status: 500 },
+    );
   }
 }
 

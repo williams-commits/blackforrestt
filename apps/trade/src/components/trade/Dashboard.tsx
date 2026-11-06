@@ -9,8 +9,7 @@ import type { CandleInterval, InstrumentView, PositionSide } from "@/lib/types";
 import { useOpenPosition } from "@/hooks/useOpenPosition";
 import { AccountBar } from "./AccountBar";
 import { ChartPanel } from "./ChartPanel";
-import { TradePanel } from "./TradePanel";
-import { MarketMarkers } from "./MarketMarkers";
+import { TradingSideWorkspace } from "./TradingSideWorkspace";
 import { PositionsTable } from "./PositionsTable";
 import { InstrumentSelector } from "./InstrumentSelector";
 import { InstrumentSwitcherSheet } from "./InstrumentSwitcherSheet";
@@ -238,9 +237,8 @@ export function Dashboard({
           />
         </main>
 
-        <aside aria-label="Order entry" className="hidden min-h-0 border-l border-border-soft bg-canvas lg:flex lg:flex-col">
-          <MarketMarkers instrument={activeInstrument} marketDataConnected={status === "open"} />
-          <TradePanel
+        <aside aria-label="Trading workspace" className="hidden min-h-0 border-l border-border-soft bg-canvas lg:flex">
+          <TradingSideWorkspace
             instrument={activeInstrument}
             orderController={orderController}
             marketDataConnected={status === "open"}
@@ -307,11 +305,10 @@ export function Dashboard({
           style={{ width: "min(100vw, 23rem)" }}
         >
           <SheetHeader className="border-b border-border-soft pb-2 pt-3">
-            <SheetTitle>{tradeSide ? `${tradeSide === "BUY" ? "Buy" : "Sell"} ${activeInstrument.symbol}` : `Trade ${activeInstrument.symbol}`}</SheetTitle>
-            <SheetDescription>Review the order details before submitting.</SheetDescription>
+            <SheetTitle>Trading workspace</SheetTitle>
+            <SheetDescription>Market context, order book, and order ticket.</SheetDescription>
           </SheetHeader>
-          <MarketMarkers instrument={activeInstrument} marketDataConnected={status === "open"} />
-          <TradePanel
+          <TradingSideWorkspace
             instrument={activeInstrument}
             orderController={orderController}
             marketDataConnected={status === "open"}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { ArrowRight, ChevronDown, Radio } from "lucide-react";
 import { useForexStore } from "@/lib/store";
 import type { OpenPositionController } from "@/hooks/useOpenPosition";
 import { toast } from "@/lib/toast";
@@ -75,6 +76,7 @@ export function TradePanel({
   const strikeId = useId();
   const stopLossId = useId();
   const takeProfitId = useId();
+  const riskControlsId = useId();
 
   function clearMessages(): void {
     setValidationError(null);
@@ -89,6 +91,8 @@ export function TradePanel({
   const currentQuoteAgeMs = quoteMatches ? quoteAgeMs(quote, now) : null;
   const hasFreshQuote = isExecutableQuote(quote, instrument.symbol, now);
   const quoteReady = marketDataConnected && hasFreshQuote;
+  const changePct = quoteMatches && quote ? quote.changePct : instrument.changePct;
+  const changeIsPositive = changePct >= 0;
   const spread = ask - bid;
 
   const vol = Number(volume);
@@ -195,7 +199,7 @@ export function TradePanel({
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
       {/* ── Instrument header — the ticket's asset selector ──────────────── */}
-      <div className="bg-panel-2/60 px-3 pt-3 pb-3">
+      <div className="bg-panel-2/60 px-4 py-3">
         {onSwitchInstrument ? (
           <button
             type="button"
@@ -214,9 +218,7 @@ export function TradePanel({
               </span>
               <span className="block truncate text-(length:--term-text-2xs) text-text-faint">{instrument.name}</span>
             </span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true" className="shrink-0 text-text-faint">
-              <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <ArrowRight size={14} strokeWidth={2} aria-hidden className="shrink-0 text-text-faint" />
           </button>
         ) : (
           <div className="flex items-start justify-between">
@@ -233,11 +235,21 @@ export function TradePanel({
           </div>
         )}
 
+        <div className="mt-3 flex items-center justify-between gap-2 px-1">
+          <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${quoteReady ? "text-up" : "text-text-faint"}`}>
+            <Radio size={11} strokeWidth={2} aria-hidden />
+            {quoteReady ? "Live executable quote" : marketDataConnected ? "Waiting for fresh quote" : "Market data offline"}
+          </span>
+          <span className={`shrink-0 text-[10px] font-medium tabular-nums ${changeIsPositive ? "text-up" : "text-down"}`}>
+            {changeIsPositive ? "+" : ""}{changePct.toFixed(2)}% 24h
+          </span>
+        </div>
+
         {/* Trade type toggle — Radix Tabs (segmented): roving focus, arrow keys. */}
         <Tabs
           variant="segmented"
           label="Order type"
-          className="mt-3 rounded-lg bg-panel-2 p-1"
+          className="mt-3 w-full rounded-lg bg-panel-2 p-1"
           triggerClassName="flex-1 py-2.5"
           tabs={[
             { key: "CFD", label: "CFD" },
@@ -250,18 +262,18 @@ export function TradePanel({
 
       {/* ── Bid / Ask — quick entry: tap a side to arm it ────────────────── */}
       <div className="px-4 py-3">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
           {/* Sell / Bid */}
           <button
             type="button"
             aria-pressed={armed === "SELL"}
             onClick={() => setArmed((current) => (current === "SELL" ? null : "SELL"))}
-            className={`flex flex-col items-center justify-center rounded-lg bg-down/10 py-2.5 transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
+            className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg bg-down/10 px-2 py-2.5 transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
               armed === "SELL" ? "ring-2 ring-down" : "hover:bg-down/15"
             }`}
           >
-            <span className="text-(length:--term-text-2xs) font-semibold uppercase text-down tracking-wide">Sell{armed === "SELL" ? " · armed" : ""}</span>
-            <span className="text-lg font-bold tnum text-down leading-tight mt-0.5">
+            <span className="text-(length:--term-text-2xs) font-semibold uppercase text-down tracking-wide">Sell · Bid{armed === "SELL" ? " · armed" : ""}</span>
+            <span className="text-lg font-bold leading-tight tabular-nums text-down">
               {quoteReady ? fmtPrice(bid, instrument.digits) : "—"}
             </span>
           </button>
@@ -270,17 +282,17 @@ export function TradePanel({
             type="button"
             aria-pressed={armed === "BUY"}
             onClick={() => setArmed((current) => (current === "BUY" ? null : "BUY"))}
-            className={`flex flex-col items-center justify-center rounded-lg bg-up/10 py-2.5 transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
+            className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg bg-up/10 px-2 py-2.5 transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
               armed === "BUY" ? "ring-2 ring-up" : "hover:bg-up/15"
             }`}
           >
-            <span className="text-(length:--term-text-2xs) font-semibold uppercase text-up tracking-wide">Buy{armed === "BUY" ? " · armed" : ""}</span>
-            <span className="text-lg font-bold tnum text-up leading-tight mt-0.5">
+            <span className="text-(length:--term-text-2xs) font-semibold uppercase text-up tracking-wide">Buy · Ask{armed === "BUY" ? " · armed" : ""}</span>
+            <span className="text-lg font-bold leading-tight tabular-nums text-up">
               {quoteReady ? fmtPrice(ask, instrument.digits) : "—"}
             </span>
           </button>
         </div>
-        <div className="flex items-center justify-center gap-3 mt-2 text-(length:--term-text-2xs) text-text-faint">
+        <div className="mt-2 flex items-center justify-center gap-3 text-(length:--term-text-2xs) text-text-faint">
           <span>Spread <span className="tnum text-text-muted font-medium">{quoteReady ? fmtPrice(spread, instrument.digits) : "—"}</span></span>
           <span className="w-px h-3 bg-panel-3" />
           <span>Pip <span className="tnum text-text-muted font-medium">{instrument.pipSize}</span></span>
@@ -288,9 +300,9 @@ export function TradePanel({
       </div>
 
       {/* ── Volume ─────────────────────────────────────────────────────────── */}
-      <div className="px-4 pb-3">
-        <label htmlFor={volumeId} className="text-(length:--term-text-2xs) font-medium text-text-muted uppercase tracking-wide">Volume (lots)</label>
-        <div className="relative mt-1">
+      <div className="space-y-3 px-4 pb-4">
+        <div className="space-y-1.5">
+          <label htmlFor={volumeId} className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-muted">Volume (lots)</label>
           <Input
             id={volumeId}
             type="number"
@@ -300,13 +312,13 @@ export function TradePanel({
             max="100"
             value={volume}
             onChange={(e) => { setVolume(e.target.value); clearMessages(); }}
-            className="h-11 rounded-lg px-3 font-semibold transition-colors"
+            className="h-10 rounded-lg px-3 font-semibold tabular-nums transition-colors"
           />
         </div>
-        <div className="mt-3">
-          <div className="mb-2 flex items-center justify-between text-(length:--term-text-2xs)">
-            <span className="text-text-muted">Adjust order size</span>
-            <span className="tnum font-semibold text-text">{sliderVolume.toFixed(2)} lots</span>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-(length:--term-text-2xs)">
+            <span className="text-text-muted">Order size</span>
+            <span className="font-semibold tabular-nums text-text">{sliderVolume.toFixed(2)} lots</span>
           </div>
           <Slider
             aria-label="Order volume in lots"
@@ -323,17 +335,15 @@ export function TradePanel({
               }
             }}
           />
-          <div className="mt-1 flex justify-between text-(length:--term-text-2xs) tnum text-text-faint">
+          <div className="flex justify-between text-(length:--term-text-2xs) tabular-nums text-text-faint">
             <span>0.01 min</span>
             <span>100 max</span>
           </div>
-        </div>
-        <div className="mt-1.5">
           <ChipGroup
             ariaLabel="Quick volume select"
-            className="grid grid-cols-4"
+            className="grid grid-cols-4 gap-1.5"
             chipClassName="w-full"
-            size="md"
+            size="sm"
             value={volume}
             onChange={(v) => { setVolume(v); clearMessages(); }}
             options={[0.01, 0.1, 0.5, 1].map((v) => ({ value: v.toFixed(2), label: v }))}
@@ -343,7 +353,7 @@ export function TradePanel({
 
       {/* ── STRIKE fields ──────────────────────────────────────────────────── */}
       {type === "STRIKE" && (
-        <div className="px-4 pb-3 space-y-2">
+        <div className="space-y-3 px-4 pb-4">
           <div>
             <label htmlFor={strikeId} className="text-(length:--term-text-2xs) font-medium text-text-muted uppercase tracking-wide">Strike Rate</label>
             <Input
@@ -353,11 +363,11 @@ export function TradePanel({
               value={strikeRate}
               onChange={(e) => { setStrikeRate(e.target.value); clearMessages(); }}
               placeholder={quoteReady ? `Market: ${fmtPrice(ask, instrument.digits)}` : "Waiting for quote"}
-              className="mt-1 h-10 rounded-lg px-3 transition-colors"
+              className="mt-1.5 h-10 rounded-lg px-3 transition-colors"
             />
           </div>
-          <div>
-            <label className="text-(length:--term-text-2xs) font-medium text-text-muted uppercase tracking-wide">Expiry</label>
+          <div className="space-y-1.5">
+            <label className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-muted">Expiry</label>
             <ChipGroup
               ariaLabel="Strike expiry"
               className="grid grid-cols-4"
@@ -373,29 +383,19 @@ export function TradePanel({
 
       {/* ── SL / TP (CFD only) ─────────────────────────────────────────────── */}
       {type === "CFD" && (
-        <div className="px-4 pb-3">
+        <div className="px-4 pb-4">
           <button
             type="button"
             aria-expanded={showSLTP}
-            aria-controls="risk-controls"
+            aria-controls={riskControlsId}
             onClick={() => setShowSLTP((v) => !v)}
-            className="flex items-center justify-between w-full text-(length:--term-text-2xs) font-medium text-text-muted uppercase tracking-wide hover:text-text transition-colors py-1"
+            className="flex min-h-9 w-full items-center justify-between gap-3 rounded-md text-left text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-muted transition-colors hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
           >
             <span>Stop Loss / Take Profit</span>
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              className={`transition-transform ${showSLTP ? "rotate-180" : ""}`}
-            >
-              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <ChevronDown size={15} strokeWidth={2} aria-hidden className={`shrink-0 transition-transform ${showSLTP ? "rotate-180" : ""}`} />
           </button>
           {showSLTP && (
-            <div id="risk-controls" className="grid grid-cols-2 gap-2 mt-1.5">
+            <div id={riskControlsId} className="mt-2 grid grid-cols-2 gap-2">
               <div>
                 <div className="relative">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-(length:--term-text-2xs) font-semibold text-down">SL</span>
@@ -432,22 +432,42 @@ export function TradePanel({
       )}
 
       {/* ── Order summary ──────────────────────────────────────────────────── */}
-      <div className="mx-4 mb-3 bg-panel-2 rounded-lg p-3 space-y-1.5">
-        <SummaryRow label="Margin Required" value={`${fmtNum(margin, 2)} USD`} />
-        <SummaryRow label="Commission" value={`${fmtNum(commission, 2)} USD`} />
-        <SummaryRow label="Pip Value" value={`${fmtNum(pipValue, 2)} USD`} />
-        <SummaryRow
-          label="Quote Freshness"
-          value={!marketDataConnected ? "Offline" : currentQuoteAgeMs == null ? "Waiting" : `${(currentQuoteAgeMs / 1_000).toFixed(1)}s${hasFreshQuote ? "" : " · stale"}`}
-          valueClass={quoteReady ? "text-up font-semibold" : "text-down font-semibold"}
-        />
-        <div className="pt-1.5 mt-1.5">
-          <SummaryRow label="Free Margin" value={`${fmtNum(freeMargin, 2)} USD`} valueClass={!hasFunds ? "text-down font-semibold" : "font-semibold"} />
-        </div>
+      <div className="mx-4 mb-4 space-y-3 rounded-lg bg-panel-2 p-3">
+        <section aria-label="Order estimate" className="space-y-2">
+          <h3 className="text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">Order estimate</h3>
+          <div className="space-y-1.5">
+            <SummaryRow label="Margin required" value={`${fmtNum(margin, 2)} USD`} />
+            <SummaryRow label="Commission" value={`${fmtNum(commission, 2)} USD`} />
+            <SummaryRow label="Required to open" value={`${fmtNum(requiredCash, 2)} USD`} valueClass="font-semibold" />
+          </div>
+        </section>
+        <div className="h-px bg-panel-3" aria-hidden />
+        <section aria-label="Account impact" className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">Account impact</h3>
+            <span className="shrink-0 text-(length:--term-text-2xs) tabular-nums text-text-faint">
+              Pip {fmtNum(pipValue, 2)} USD
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            <SummaryRow
+              label="Quote freshness"
+              value={!marketDataConnected ? "Offline" : currentQuoteAgeMs == null ? "Waiting" : `${(currentQuoteAgeMs / 1_000).toFixed(1)}s${hasFreshQuote ? "" : " · stale"}`}
+              valueClass={quoteReady ? "text-up font-semibold" : "text-down font-semibold"}
+            />
+            <SummaryRow label="Free margin" value={`${fmtNum(freeMargin, 2)} USD`} valueClass={!hasFunds ? "text-down font-semibold" : "font-semibold"} />
+            <SummaryRow
+              label="Remaining free margin"
+              value={`${fmtNum(freeMargin - requiredCash, 2)} USD`}
+              valueClass={!hasFunds ? "text-down font-semibold" : "text-up font-medium"}
+            />
+          </div>
+        </section>
       </div>
 
-      <div className="mx-4 mb-2 rounded-lg bg-panel-2 px-3 py-2 text-(length:--term-text-2xs)" role="status" aria-live="polite">
-        <span className="font-semibold text-text">Order lifecycle: </span>
+      <div className="mx-4 mb-3 rounded-md bg-panel-2 px-3 py-2 text-(length:--term-text-2xs) leading-relaxed" role="status" aria-live="polite">
+        <span className="font-semibold text-text">Order status</span>
+        <span className="px-1.5 text-text-faint" aria-hidden>·</span>
         {status === "submitting" && <span className="text-brand">Pending provider acceptance</span>}
         {status === "accepted" && <span className="text-up">Accepted and open{lastAcceptedAt ? ` at ${new Date(lastAcceptedAt).toLocaleTimeString()}` : ""}</span>}
         {status === "failed" && <span className="text-down">Rejected or failed</span>}
@@ -457,7 +477,7 @@ export function TradePanel({
 
       {/* ── Error ──────────────────────────────────────────────────────────── */}
       {(validationError || error) && (
-        <div role="alert" className="mx-4 mb-2 text-(length:--term-text-xs) text-down bg-down/10 rounded-lg px-3 py-2">
+        <div role="alert" className="mx-4 mb-3 rounded-md bg-down/10 px-3 py-2 text-(length:--term-text-xs) leading-relaxed text-down">
           {validationError ?? error}
         </div>
       )}
@@ -466,8 +486,8 @@ export function TradePanel({
 
       {/* Keep order actions outside the scrolling content so they stay
           reachable without covering volume, risk, or margin controls. */}
-      <div className="shrink-0 bg-canvas shadow-lift px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-        <div className="grid grid-cols-2 gap-2">
+      <div className="shrink-0 bg-canvas px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-lift">
+        <div className="grid grid-cols-2 gap-2.5">
           <Button variant="sell" size="default" loading={loading} disabled={!quoteReady || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("SELL")} className={`h-12 w-full min-w-0 rounded-lg px-2 ${armed === "SELL" ? "ring-2 ring-down ring-offset-2 ring-offset-canvas" : ""}`}>
             <span className="flex flex-col items-center leading-tight">
               <span className="text-sm font-bold uppercase tracking-wide">Sell</span>
@@ -481,7 +501,7 @@ export function TradePanel({
             </span>
           </Button>
         </div>
-        <p className="text-(length:--term-text-2xs) text-text-faint mt-2 border border-dotted border-text-faint bg-panel rounded-lg px-2 py-1">
+        <p className="mt-2 rounded-md bg-panel-2 px-3 py-2 text-center text-(length:--term-text-2xs) leading-relaxed text-text-faint">
           {!marketDataConnected ? "Orders disabled — reconnecting to market data" : !hasFreshQuote ? "Orders disabled — waiting for a fresh quote" : armed ? `${armed === "BUY" ? "Buy" : "Sell"} armed — confirm with the highlighted button` : type === "CFD" ? "CFD market order — accepted at the displayed executable rate" : `Strike order — settles in ${expiryMinutes} min`}
         </p>
       </div>
@@ -491,9 +511,9 @@ export function TradePanel({
 
 function SummaryRow({ label, value, valueClass = "" }: { label: string; value: string; valueClass?: string }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-(length:--term-text-xs) text-text-muted">{label}</span>
-      <span className={`text-(length:--term-text-xs) tnum text-text ${valueClass}`}>{value}</span>
+    <div className="flex items-center justify-between gap-3">
+      <span className="min-w-0 text-(length:--term-text-xs) text-text-muted">{label}</span>
+      <span className={`shrink-0 text-(length:--term-text-xs) tabular-nums text-text ${valueClass}`}>{value}</span>
     </div>
   );
 }

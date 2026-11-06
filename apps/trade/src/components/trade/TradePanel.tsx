@@ -468,20 +468,20 @@ export function TradePanel({
           reachable without covering volume, risk, or margin controls. */}
       <div className="shrink-0 bg-canvas shadow-lift px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="sell" size="default" loading={loading} disabled={!quoteReady || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("SELL")} className={`h-16 w-full min-w-0 rounded-lg px-2 ${armed === "SELL" ? "ring-2 ring-down ring-offset-2 ring-offset-canvas" : ""}`}>
+          <Button variant="sell" size="default" loading={loading} disabled={!quoteReady || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("SELL")} className={`h-12 w-full min-w-0 rounded-lg px-2 ${armed === "SELL" ? "ring-2 ring-down ring-offset-2 ring-offset-canvas" : ""}`}>
             <span className="flex flex-col items-center leading-tight">
               <span className="text-sm font-bold uppercase tracking-wide">Sell</span>
               <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{quoteReady ? fmtPrice(bid, instrument.digits) : "—"}</span>
             </span>
           </Button>
-          <Button variant="buy" size="default" loading={loading} disabled={!quoteReady || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("BUY")} className={`h-16 w-full min-w-0 rounded-lg px-2 ${armed === "BUY" ? "ring-2 ring-up ring-offset-2 ring-offset-canvas" : ""}`}>
+          <Button variant="buy" size="default" loading={loading} disabled={!quoteReady || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("BUY")} className={`h-12 w-full min-w-0 rounded-lg px-2 ${armed === "BUY" ? "ring-2 ring-up ring-offset-2 ring-offset-canvas" : ""}`}>
             <span className="flex flex-col items-center leading-tight">
               <span className="text-sm font-bold uppercase tracking-wide">Buy</span>
               <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{quoteReady ? fmtPrice(ask, instrument.digits) : "—"}</span>
             </span>
           </Button>
         </div>
-        <p className="text-center text-(length:--term-text-2xs) text-text-faint mt-2">
+        <p className="text-(length:--term-text-2xs) text-text-faint mt-2 border border-dotted border-text-faint bg-panel rounded-lg px-2 py-1">
           {!marketDataConnected ? "Orders disabled — reconnecting to market data" : !hasFreshQuote ? "Orders disabled — waiting for a fresh quote" : armed ? `${armed === "BUY" ? "Buy" : "Sell"} armed — confirm with the highlighted button` : type === "CFD" ? "CFD market order — accepted at the displayed executable rate" : `Strike order — settles in ${expiryMinutes} min`}
         </p>
       </div>

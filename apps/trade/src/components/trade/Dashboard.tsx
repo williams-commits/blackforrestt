@@ -239,7 +239,7 @@ export function Dashboard({
         </main>
 
         <aside aria-label="Order entry" className="hidden min-h-0 border-l border-border-soft bg-canvas lg:flex lg:flex-col">
-          <MarketMarkers instrument={activeInstrument} />
+          <MarketMarkers instrument={activeInstrument} marketDataConnected={status === "open"} />
           <TradePanel
             instrument={activeInstrument}
             orderController={orderController}
@@ -310,7 +310,7 @@ export function Dashboard({
             <SheetTitle>{tradeSide ? `${tradeSide === "BUY" ? "Buy" : "Sell"} ${activeInstrument.symbol}` : `Trade ${activeInstrument.symbol}`}</SheetTitle>
             <SheetDescription>Review the order details before submitting.</SheetDescription>
           </SheetHeader>
-          <MarketMarkers instrument={activeInstrument} />
+          <MarketMarkers instrument={activeInstrument} marketDataConnected={status === "open"} />
           <TradePanel
             instrument={activeInstrument}
             orderController={orderController}

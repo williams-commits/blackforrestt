@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { ChevronDown, Gauge } from "lucide-react";
 import { useForexStore } from "@/lib/store";
 import { fmtPrice } from "@/lib/format";
@@ -17,6 +17,14 @@ export function MarketMarkers({ instrument }: { instrument: InstrumentView }) {
   const quote = useForexStore((s) => s.quote);
   const candles = useForexStore((s) => s.candles);
   const quoteMatches = quote?.symbol === instrument.symbol;
+
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px) and (min-height: 900px)");
+    const updateDefault = () => setExpanded(desktop.matches);
+    updateDefault();
+    desktop.addEventListener("change", updateDefault);
+    return () => desktop.removeEventListener("change", updateDefault);
+  }, []);
 
   const depth = useMemo(() => {
     if (candles.length < 5) return null;
@@ -44,16 +52,12 @@ export function MarketMarkers({ instrument }: { instrument: InstrumentView }) {
       className="shrink-0 border-b border-border bg-panel-2/60 px-3 py-3"
     >
       <div className="flex items-center justify-between">
-        <h2 className="hidden items-center gap-1.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint lg:flex">
-          <Gauge size={12} strokeWidth={2} aria-hidden />
-          Market depth
-        </h2>
         <button
           type="button"
           aria-expanded={expanded}
           aria-controls={depthId}
           onClick={() => setExpanded((current) => !current)}
-          className="flex w-full items-center justify-between text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint lg:hidden"
+          className="flex w-full items-center justify-between text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint"
         >
           <span className="flex items-center gap-1.5">
             <Gauge size={12} strokeWidth={2} aria-hidden />
@@ -65,13 +69,13 @@ export function MarketMarkers({ instrument }: { instrument: InstrumentView }) {
           />
         </button>
       </div>
-      <p className={cn("mt-1 text-(length:--term-text-2xs) text-text-faint", !expanded && "hidden", "lg:block")}>
+      <p className={cn("mt-1 text-(length:--term-text-2xs) text-text-faint", !expanded && "hidden")}>
         Historical candle volume profile; not a live order book.
       </p>
       {depth ? (
         <div
           id={depthId}
-          className={cn("mt-2 space-y-1", !expanded && "hidden", "lg:block")}
+          className={cn("mt-2 space-y-1", !expanded && "hidden")}
           role="list"
           aria-label="Historical candle volume by price"
         >
@@ -105,7 +109,7 @@ export function MarketMarkers({ instrument }: { instrument: InstrumentView }) {
           })}
         </div>
       ) : (
-        <p className={cn("mt-2 text-(length:--term-text-xs) text-text-faint", !expanded && "hidden", "lg:block")} role="status">
+        <p className={cn("mt-2 text-(length:--term-text-xs) text-text-faint", !expanded && "hidden")} role="status">
           Waiting for enough candle history.
         </p>
       )}

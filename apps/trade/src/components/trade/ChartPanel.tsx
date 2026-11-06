@@ -6,6 +6,7 @@ import {
   Minimize2,
   MoreHorizontal,
   History,
+  GripVertical,
   TrendingDown,
   TrendingUp,
   ZoomIn,
@@ -913,7 +914,7 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
       data-testid="professional-chart-panel"
       className={`flex h-full min-h-112 flex-col overflow-hidden bg-canvas shadow-panel lg:min-h-0 ${fullscreen ? "rounded-none" : "rounded-xl"}`}
     >
-      <div className="flex shrink-0 flex-col bg-panel-2 sm:flex-row sm:items-center">
+      <div className="flex shrink-0 flex-col bg-panel-2 sm:items-stretch 2xl:flex-row 2xl:items-center">
         <div className="flex min-w-0 flex-wrap items-center gap-2 px-3 py-2 sm:py-0">
           {/* Instrument identity IS the asset selector — tap to slide out the
               switcher. */}
@@ -1007,7 +1008,7 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
         </div>
 
         {/* Desktop: all controls inline (chart-type, indicators, zoom, fit, fullscreen, timeframes) */}
-        <div className="hidden min-w-0 items-center gap-1 overflow-x-auto px-2 py-1.5 sm:ml-auto sm:flex">
+        <div className="hidden min-w-0 items-center gap-1 overflow-x-auto px-2 py-1.5 sm:ml-0 sm:flex sm:w-full 2xl:ml-auto 2xl:w-auto">
           <ChartButton label="Candlestick chart" active={chartType === "candles"} onClick={() => selectChartType("candles")}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M7 4v3M7 17v3M7 7v10" strokeLinecap="round" />
@@ -1049,38 +1050,6 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
         </div>
       )}
 
-      {onOpenTrade && (
-        <div className="flex shrink-0 items-center gap-2 bg-panel px-2 py-1.5 sm:px-3">
-          <span className="shrink-0 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">
-            Spread <span className="tnum text-text-muted">{liveQuote ? fmtPrice(liveQuote.ask - liveQuote.bid, instrument.digits) : "—"}</span>
-          </span>
-          <div className="ml-auto grid min-w-0 flex-1 grid-cols-2 gap-1 sm:flex-none">
-            <Button
-              type="button"
-              variant="sell"
-              size="sm"
-              aria-label={liveQuote ? `Open sell ticket at ${fmtPrice(liveQuote.bid, instrument.digits)}` : "Open sell ticket — live quote unavailable"}
-              onClick={() => onOpenTrade("SELL")}
-              className="h-10 min-w-0 px-2 sm:h-8 sm:px-3"
-            >
-              <TrendingDown size={14} strokeWidth={2} aria-hidden />
-              Sell <span className="truncate tnum">{liveQuote ? fmtPrice(liveQuote.bid, instrument.digits) : "—"}</span>
-            </Button>
-            <Button
-              type="button"
-              variant="buy"
-              size="sm"
-              aria-label={liveQuote ? `Open buy ticket at ${fmtPrice(liveQuote.ask, instrument.digits)}` : "Open buy ticket — live quote unavailable"}
-              onClick={() => onOpenTrade("BUY")}
-              className="h-10 min-w-0 px-2 sm:h-8 sm:px-3"
-            >
-              <TrendingUp size={14} strokeWidth={2} aria-hidden />
-              Buy <span className="truncate tnum">{liveQuote ? fmtPrice(liveQuote.ask, instrument.digits) : "—"}</span>
-            </Button>
-          </div>
-        </div>
-      )}
-
       {ohlc ? (
         <div className="flex shrink-0 items-center gap-2 overflow-x-auto bg-panel px-3 py-1 text-(length:--term-text-2xs) tnum md:hidden">
           <OhlcField label="O" value={ohlc.open} up={ohlc.up} digits={instrument.digits} />
@@ -1110,6 +1079,167 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
             ))}
           </div>
         )}
+        {onOpenTrade && (
+          <FloatingTradeControls
+            instrument={instrument}
+            liveQuote={liveQuote}
+            onOpenTrade={onOpenTrade}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FloatingTradeControls({
+  instrument,
+  liveQuote,
+  onOpenTrade,
+}: {
+  instrument: InstrumentView;
+  liveQuote: { bid: number; ask: number } | null;
+  onOpenTrade: (side: "BUY" | "SELL") => void;
+}) {
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ pointerId: number; clientX: number; clientY: number; left: number; top: number } | null>(null);
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+
+  const clampPosition = (left: number, top: number) => {
+    const controls = controlsRef.current;
+    const bounds = controls?.parentElement?.getBoundingClientRect();
+    if (!controls || !bounds) return { left, top };
+    const maxLeft = Math.max(8, bounds.width - controls.offsetWidth - 8);
+    const maxTop = Math.max(8, bounds.height - controls.offsetHeight - 8);
+    return {
+      left: Math.min(maxLeft, Math.max(8, left)),
+      top: Math.min(maxTop, Math.max(8, top)),
+    };
+  };
+
+  useEffect(() => {
+    const parent = controlsRef.current?.parentElement;
+    if (!parent) return;
+    const observer = new ResizeObserver(() => {
+      setPosition((current) => current ? clampPosition(current.left, current.top) : current);
+    });
+    observer.observe(parent);
+    return () => observer.disconnect();
+  }, []);
+
+  const beginDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    const controls = controlsRef.current;
+    const bounds = controls?.parentElement?.getBoundingClientRect();
+    const rect = controls?.getBoundingClientRect();
+    if (!controls || !bounds || !rect) return;
+
+    event.preventDefault();
+    setPosition(clampPosition(rect.left - bounds.left, rect.top - bounds.top));
+    dragRef.current = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      left: rect.left - bounds.left,
+      top: rect.top - bounds.top,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const moveControls = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    setPosition(clampPosition(
+      drag.left + event.clientX - drag.clientX,
+      drag.top + event.clientY - drag.clientY,
+    ));
+  };
+
+  const endDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
+  };
+
+  const nudgeControls = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const offsets: Record<string, [number, number]> = {
+      ArrowLeft: [-12, 0],
+      ArrowRight: [12, 0],
+      ArrowUp: [0, -12],
+      ArrowDown: [0, 12],
+    };
+    const offset = offsets[event.key];
+    if (!offset) return;
+    event.preventDefault();
+    const controls = controlsRef.current;
+    const bounds = controls?.parentElement?.getBoundingClientRect();
+    const rect = controls?.getBoundingClientRect();
+    if (!controls || !bounds || !rect) return;
+    setPosition(clampPosition(
+      (position?.left ?? rect.left - bounds.left) + offset[0],
+      (position?.top ?? rect.top - bounds.top) + offset[1],
+    ));
+  };
+
+  return (
+    <div
+      ref={controlsRef}
+      data-testid="floating-trade-controls"
+      className="pointer-events-auto absolute right-3 top-3 z-20 w-52 select-none overflow-hidden rounded-xl border border-border-soft bg-canvas/95 shadow-xl backdrop-blur-md"
+      style={position ? { left: position.left, top: position.top, right: "auto" } : undefined}
+    >
+      <div className="flex h-7 items-center justify-between bg-panel/80 px-2.5">
+        <span className="flex items-center gap-1.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">
+          <span className={`h-1.5 w-1.5 rounded-full ${liveQuote ? "bg-up" : "bg-down"}`} aria-hidden />
+          Spread
+          <span className="tnum text-text-muted">
+            {liveQuote ? fmtPrice(liveQuote.ask - liveQuote.bid, instrument.digits) : "—"}
+          </span>
+        </span>
+        <button
+          type="button"
+          aria-label="Move trade shortcuts; use arrow keys to reposition"
+          title="Drag to reposition, or use arrow keys"
+          onPointerDown={beginDrag}
+          onPointerMove={moveControls}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onKeyDown={nudgeControls}
+          className="touch-none cursor-grab rounded p-1 text-text-faint transition-colors hover:bg-panel-3 hover:text-text active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-brand"
+        >
+          <GripVertical size={13} strokeWidth={2} aria-hidden />
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5 p-1.5">
+        <Button
+          type="button"
+          variant="sell"
+          size="sm"
+          aria-label={liveQuote ? `Open sell ticket at ${fmtPrice(liveQuote.bid, instrument.digits)}` : "Open sell ticket — live quote unavailable"}
+          onClick={() => onOpenTrade("SELL")}
+          className="h-11 min-w-0 flex-col gap-0 px-1 py-1 leading-tight"
+        >
+          <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide">
+            <TrendingDown size={12} strokeWidth={2} aria-hidden />
+            Sell
+          </span>
+          <span className="max-w-full truncate text-xs tnum">
+            {liveQuote ? fmtPrice(liveQuote.bid, instrument.digits) : "—"}
+          </span>
+        </Button>
+        <Button
+          type="button"
+          variant="buy"
+          size="sm"
+          aria-label={liveQuote ? `Open buy ticket at ${fmtPrice(liveQuote.ask, instrument.digits)}` : "Open buy ticket — live quote unavailable"}
+          onClick={() => onOpenTrade("BUY")}
+          className="h-11 min-w-0 flex-col gap-0 px-1 py-1 leading-tight"
+        >
+          <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide">
+            <TrendingUp size={12} strokeWidth={2} aria-hidden />
+            Buy
+          </span>
+          <span className="max-w-full truncate text-xs tnum">
+            {liveQuote ? fmtPrice(liveQuote.ask, instrument.digits) : "—"}
+          </span>
+        </Button>
       </div>
     </div>
   );

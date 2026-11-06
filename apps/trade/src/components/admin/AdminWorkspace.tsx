@@ -32,12 +32,12 @@ import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Ban, Braces, CheckCircle2, Coins, DollarSign, Download, FileText, LifeBuoy, Percent, RefreshCw, ScrollText, ShieldAlert, SlidersHorizontal, Tag, TrendingDown, TrendingUp, UserRound } from "lucide-react";
+import { ArrowDown, ArrowDownToLine, ArrowLeftRight, ArrowUp, ArrowUpFromLine, Ban, Braces, CheckCircle2, Coins, DollarSign, Download, FileText, LifeBuoy, Percent, RefreshCw, ScrollText, ShieldAlert, SlidersHorizontal, Tag, TrendingDown, TrendingUp, UserRound } from "lucide-react";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/Textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Permission = string;
 type TabKey =
@@ -645,7 +645,7 @@ function PaginatedUsers({
         case "balance": return (Number(a.metrics?.balance ?? 0) - Number(b.metrics?.balance ?? 0)) * dir;
         case "equity": return (Number(a.metrics?.equity ?? 0) - Number(b.metrics?.equity ?? 0)) * dir;
         case "positions": return (a._count.positions - b._count.positions) * dir;
-        default: return (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) * dir;
+        default: return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir;
       }
     });
   }, [users, sort]);
@@ -667,19 +667,32 @@ function PaginatedUsers({
       rowKey={(u) => u.id}
       search={{ placeholder: "Search name, email, or account…", text: (u) => `${u.name ?? ""} ${u.email ?? ""} ${u.accountNo ?? ""}` }}
       filters={
-        <ChipGroup
-          className="flex-wrap"
-          ariaLabel="Sort users"
-          value={sort.key}
-          onChange={onSort}
-          options={[
-            { value: "createdAt", label: "Newest" },
-            { value: "name", label: "Name" },
-            { value: "balance", label: "Balance" },
-            { value: "equity", label: "Equity" },
-            { value: "positions", label: "Positions" },
-          ]}
-        />
+        <div className="flex items-center gap-1">
+          <Select value={sort.key} onValueChange={onSort}>
+            <SelectTrigger size="sm" className="w-36" aria-label="Sort users">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="createdAt">Newest</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="balance">Balance</SelectItem>
+                <SelectItem value="equity">Equity</SelectItem>
+                <SelectItem value="positions">Positions</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            aria-label={`Sort ${sort.direction === "asc" ? "descending" : "ascending"}`}
+            title={`Sort ${sort.direction === "asc" ? "descending" : "ascending"}`}
+            onClick={() => setSort((current) => ({ ...current, direction: current.direction === "asc" ? "desc" : "asc" }))}
+          >
+            {sort.direction === "asc" ? <ArrowUp aria-hidden /> : <ArrowDown aria-hidden />}
+          </Button>
+        </div>
       }
       toolbarEnd={
         <CsvExportButton
@@ -1263,14 +1276,19 @@ function LedgerPanel() {
       }}
       initialSort={{ key: "effectiveAt", direction: "desc" }}
       filters={
-        <ChipGroup
-          ariaLabel="Filter postings by kind"
-          size="sm"
-          value={kindFilter}
-          onChange={(value) => setKindFilter(value)}
-          className="flex-wrap"
-          options={[{ value: "ALL", label: "All" }, ...kinds.map((kind) => ({ value: kind, label: kind.replaceAll("_", " ").toLowerCase() }))]}
-        />
+        <Select value={kindFilter} onValueChange={setKindFilter}>
+          <SelectTrigger size="sm" className="w-44" aria-label="Filter postings by kind">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="ALL">All kinds</SelectItem>
+              {kinds.map((kind) => (
+                <SelectItem key={kind} value={kind}>{kind.replaceAll("_", " ").toLowerCase()}</SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       }
       toolbarEnd={
         <CsvExportButton filename="ledger" columns={["Reference", "Kind", "Status", "User", "Account", "Effective", "Direction", "Account name", "Account code", "Asset", "Amount"]} rows={csvRows} disabled={filtered.length === 0} />
@@ -1479,16 +1497,18 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
       rowKey={(g) => g.key}
       search={{ placeholder: "Search symbol, email, or account…", text: (g) => `${g.label} ${g.accountNo ?? ""} ${g.positions.map((p) => p.symbol).join(" ")}` }}
       filters={
-        <ChipGroup
-          ariaLabel="Filter positions by status"
-          value={statusFilter}
-          onChange={(value) => setStatusFilter(value)}
-          options={[
-            { value: "ALL", label: `All · ${allPositions.length}` },
-            { value: "OPEN", label: `Open · ${openCount}` },
-            { value: "CLOSED", label: `Closed · ${closedCount}` },
-          ]}
-        />
+        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ExecutionStatusFilter)}>
+          <SelectTrigger size="sm" className="w-40" aria-label="Filter positions by status">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="ALL">{`All · ${allPositions.length}`}</SelectItem>
+              <SelectItem value="OPEN">{`Open · ${openCount}`}</SelectItem>
+              <SelectItem value="CLOSED">{`Closed · ${closedCount}`}</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       }
       toolbarEnd={
         <CsvExportButton

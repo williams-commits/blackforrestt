@@ -4,11 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
-import { ChipGroup } from "@/components/ui/ChipGroup";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Badge } from "@/components/ui/badge";
 import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ArrowDownToLine, ArrowUpFromLine, Ban, Upload } from "lucide-react";
 import { IdentityTile } from "@/components/ui/Initial";
@@ -240,16 +240,18 @@ export function PaymentTimeline() {
         initialSort={{ key: "createdAt", direction: "desc" }}
         filters={
           <>
-            <ChipGroup
-              ariaLabel="Filter payment requests by type" className="flex-wrap"
-              value={typeFilter}
-              onChange={(value) => setTypeFilter(value)}
-              options={[
-                { value: "ALL", label: "All" },
-                { value: "DEPOSIT", label: "Deposits" },
-                { value: "WITHDRAWAL", label: "Withdrawals" },
-              ]}
-            />
+            <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as "ALL" | "DEPOSIT" | "WITHDRAWAL")}>
+              <SelectTrigger size="sm" className="w-36" aria-label="Filter payment requests by type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="ALL">All types</SelectItem>
+                  <SelectItem value="DEPOSIT">Deposits</SelectItem>
+                  <SelectItem value="WITHDRAWAL">Withdrawals</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
             {pendingCount > 0 && (
               <Badge variant="secondary" className="border border-primary/30 bg-primary/10 text-primary">
                 {pendingCount} awaiting review

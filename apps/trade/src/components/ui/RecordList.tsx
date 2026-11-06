@@ -120,7 +120,7 @@ export function RecordList<T>({
   initialSort?: { key: string; direction: "asc" | "desc" };
   /** When provided, renders the search pill filtering via this text extractor. */
   search?: { placeholder: string; text: (row: T) => string };
-  /** Caller-composed chip groups / selects — rendered after the search pill. */
+  /** Caller-composed filter controls — rendered after the search pill. */
   filters?: React.ReactNode;
   /** Trailing toolbar slot (CSV export, counters). */
   toolbarEnd?: React.ReactNode;
@@ -252,7 +252,7 @@ export function RecordList<T>({
                   <SlidersHorizontal size={13} strokeWidth={2} aria-hidden />
                   <span>Filters</span>
                 </div>
-                <div className="flex min-w-0 flex-wrap items-center gap-1.5 *:min-w-0 [&_[data-slot=input]]:h-8 [&_[data-slot=input]]:rounded-lg [&_[data-slot=input]]:bg-background/70 [&_[data-slot=input]]:text-xs [&_[data-slot=select-trigger]]:h-8 [&_[data-slot=select-trigger]]:rounded-lg [&_[data-slot=select-trigger]]:bg-background/70 [&_[data-slot=select-trigger]]:px-2.5 [&_[data-slot=select-trigger]]:text-xs [&_[role=group]>button]:h-7 [&_[role=group]>button]:rounded-md [&_[role=group]>button]:px-2.5 [&_[role=group]>button]:text-xs [&_button:not([aria-pressed])]:h-8 [&_button:not([aria-pressed])]:rounded-lg [&_button:not([aria-pressed])]:px-2.5 [&_button:not([aria-pressed])]:text-xs">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5 *:min-w-0 **:data-[slot=input]:h-8 **:data-[slot=input]:rounded-lg **:data-[slot=input]:bg-background/70 **:data-[slot=input]:text-xs **:data-[slot=select-trigger]:h-8 **:data-[slot=select-trigger]:rounded-lg **:data-[slot=select-trigger]:bg-background/70 **:data-[slot=select-trigger]:px-2.5 **:data-[slot=select-trigger]:text-xs [&_button:not([aria-pressed])]:h-8 [&_button:not([aria-pressed])]:rounded-lg [&_button:not([aria-pressed])]:px-2.5 [&_button:not([aria-pressed])]:text-xs">
                   {filters}
                 </div>
               </div>

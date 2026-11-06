@@ -11,7 +11,7 @@ import { DateInput } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RecordList, type RecordDetailMeta } from "@/components/ui/RecordList";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export interface ReportRow {
   id: string;
@@ -162,9 +162,11 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ALL">All sides</SelectItem>
-                    <SelectItem value="BUY">Buy</SelectItem>
-                    <SelectItem value="SELL">Sell</SelectItem>
+                    <SelectGroup>
+                      <SelectItem value="ALL">All sides</SelectItem>
+                      <SelectItem value="BUY">Buy</SelectItem>
+                      <SelectItem value="SELL">Sell</SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
                 <Button type="submit" size="sm" variant="outline">Apply filters</Button>
@@ -176,8 +178,10 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ALL">All symbols</SelectItem>
-                    {symbols.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                    <SelectGroup>
+                      <SelectItem value="ALL">All symbols</SelectItem>
+                      {symbols.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
                 <Select value={side} onValueChange={setLocalSide}>
@@ -185,9 +189,11 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ALL">All sides</SelectItem>
-                    <SelectItem value="BUY">Buy</SelectItem>
-                    <SelectItem value="SELL">Sell</SelectItem>
+                    <SelectGroup>
+                      <SelectItem value="ALL">All sides</SelectItem>
+                      <SelectItem value="BUY">Buy</SelectItem>
+                      <SelectItem value="SELL">Sell</SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </>

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownToLine, ArrowUpFromLine, Ban, ClipboardCheck, CreditCard, FileText, Hash, ShieldCheck, X } from "lucide-react";
 import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { IdentityTile } from "@/components/ui/Initial";
-import { ChipGroup } from "@/components/ui/ChipGroup";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { Input } from "@/components/ui/Input";
@@ -137,16 +137,18 @@ export function PaymentsReview({
         rowKey={(r) => r.id}
         search={{ placeholder: "Search client, reference, or method…", text: (r) => `${r.user.name ?? ""} ${r.user.email ?? ""} ${r.userReference ?? ""} ${r.methodLabel}` }}
         filters={
-          <ChipGroup
-            ariaLabel="Filter payment requests by type"
-            value={typeFilter}
-            onChange={(value) => setTypeFilter(value)}
-            options={[
-              { value: "ALL", label: "All" },
-              { value: "DEPOSIT", label: "Deposits" },
-              { value: "WITHDRAWAL", label: "Withdrawals" },
-            ]}
-          />
+          <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as "ALL" | "DEPOSIT" | "WITHDRAWAL")}>
+            <SelectTrigger size="sm" className="w-36" aria-label="Filter payment requests by type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="ALL">All types</SelectItem>
+                <SelectItem value="DEPOSIT">Deposits</SelectItem>
+                <SelectItem value="WITHDRAWAL">Withdrawals</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         }
         toolbarEnd={
           <CsvExportButton

@@ -7,9 +7,8 @@ import { StatCard } from "@/components/ui/StatCard";
 import { fmtDateTime } from "@/lib/dates";
 import { ArrowDownToLine, ArrowUpFromLine, CandlestickChart, Gift, Percent, Receipt, Repeat, ShieldCheck, SlidersHorizontal, Undo2, type LucideIcon } from "lucide-react";
 import { IdentityTile } from "@/components/ui/Initial";
-import { ChipGroup } from "@/components/ui/ChipGroup";
 import { RecordList, RecordStatusChip, type RecordDetailMeta } from "@/components/ui/RecordList";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Txn {
   id: string;
@@ -148,18 +147,20 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
         initialSort={{ key: "createdAt", direction: "desc" }}
         filters={
           <>
-            <ChipGroup
-              ariaLabel="Filter transactions by status" className="flex-wrap"
-              value={statusFilter}
-              onChange={(value) => setStatusFilter(value)}
-              options={[
-                { value: "ALL", label: "All" },
-                { value: "COMPLETED", label: "Completed" },
-                { value: "PENDING", label: "Pending" },
-                { value: "REJECTED", label: "Rejected" },
-                { value: "CANCELLED", label: "Cancelled" },
-              ]}
-            />
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "ALL" | Txn["status"])}>
+              <SelectTrigger size="sm" className="w-36" aria-label="Filter transactions by status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="ALL">All statuses</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="REJECTED">Rejected</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
             <div className="flex items-center gap-1.5">
               <DateInput value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="From date" className="h-8 w-35" />
               <span className="text-xs text-muted-foreground">→</span>
@@ -170,10 +171,12 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All types</SelectItem>
-                {[...new Set(transactions.map((t) => t.type))].sort().map((type) => (
-                  <SelectItem key={type} value={type}>{TYPE_LABELS[type]}</SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectItem value="ALL">All types</SelectItem>
+                  {[...new Set(transactions.map((t) => t.type))].sort().map((type) => (
+                    <SelectItem key={type} value={type}>{TYPE_LABELS[type]}</SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </>

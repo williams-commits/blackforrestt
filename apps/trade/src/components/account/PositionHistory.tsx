@@ -9,9 +9,8 @@ import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { fmtDateTime } from "@/lib/dates";
 import { CandlestickChart } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { ChipGroup } from "@/components/ui/ChipGroup";
 import { RecordList, RecordStatusChip, type RecordDetailMeta } from "@/components/ui/RecordList";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type PositionRow = {
   id: string;
@@ -121,23 +120,27 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
       initialSort={{ key: "openedAt", direction: "desc" }}
       filters={
         <>
-          <ChipGroup
-            ariaLabel="Filter positions by status" className="flex-wrap"
-            value={statusFilter}
-            onChange={(value) => setStatusFilter(value)}
-            options={[
-              { value: "ALL", label: "All" },
-              { value: "OPEN", label: "Open" },
-              { value: "CLOSED", label: "Closed" },
-            ]}
-          />
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "ALL" | "OPEN" | "CLOSED")}>
+            <SelectTrigger size="sm" className="w-32" aria-label="Filter positions by status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="ALL">All statuses</SelectItem>
+                <SelectItem value="OPEN">Open</SelectItem>
+                <SelectItem value="CLOSED">Closed</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
           <Select value={symbolFilter} onValueChange={setSymbolFilter}>
             <SelectTrigger size="sm" className="w-37.5" aria-label="Filter by symbol">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All symbols</SelectItem>
-              {symbols.map((symbol) => <SelectItem key={symbol} value={symbol}>{symbol}</SelectItem>)}
+              <SelectGroup>
+                <SelectItem value="ALL">All symbols</SelectItem>
+                {symbols.map((symbol) => <SelectItem key={symbol} value={symbol}>{symbol}</SelectItem>)}
+              </SelectGroup>
             </SelectContent>
           </Select>
         </>

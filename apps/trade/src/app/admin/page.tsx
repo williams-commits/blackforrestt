@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Shield } from "lucide-react";
+import { CandlestickChart, Shield, User } from "lucide-react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AdminError, requireAdminContext } from "@/server/admin";
 import { Logo } from "@/components/trade/Logo";
 import { AdminWorkspace } from "@/components/admin/AdminWorkspace";
-import { AdminSignOutButton } from "@/components/admin/AdminSignOutButton";
+import { AccountUserMenu } from "@/components/account/AccountUserMenu";
+import { TradeSearchButton } from "@/components/GlobalSearchPalette";
 import { simplePaymentApproval } from "@/server/payments";
 
 export const dynamic = "force-dynamic";
@@ -35,47 +36,57 @@ export default async function AdminPage() {
 
   return (
     <div className="flat-ui terminal-ui min-h-screen">
-      {/* Operations header — deliberately distinct from the customer app: a
-          dark console bar with the environment badge and the operator's roles,
-          so nobody mistakes production for the trading UI. */}
-      <header className="sticky top-0 z-30 border-b border-(--term-console-border) bg-(--term-console-bg) text-(--term-console-fg)">
-        <div className="flex min-h-12 flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2">
-          <div className="flex items-center gap-3">
-            <Logo inverted />
-            <span className="hidden h-5 w-px bg-(--term-console-border) sm:block" aria-hidden />
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-(--term-console-soft)">
-              <Shield size={14} strokeWidth={2} aria-hidden />
-              Operations Console
-            </span>
-          </div>
+      <header className="sticky top-0 z-30 flex min-h-12 flex-wrap items-center gap-3 bg-card px-3 py-2 sm:flex-nowrap sm:px-4">
+        <Logo />
+        <nav
+          aria-label="Primary"
+          className="order-3 flex w-full items-center gap-1 overflow-x-auto text-xs sm:order-0 sm:w-auto"
+        >
+          <Link
+            href="/trade/AUDCAD"
+            className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground"
+          >
+            <CandlestickChart size={14} strokeWidth={2} aria-hidden />
+            <span className="hidden sm:inline">Trade Terminal</span>
+            <span className="sm:hidden">Trade</span>
+          </Link>
+          <Link
+            href="/account"
+            className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground"
+          >
+            <User size={14} strokeWidth={2} aria-hidden />
+            Account
+          </Link>
+          <Link
+            href="/admin"
+            aria-current="page"
+            className="flex shrink-0 items-center gap-1.5 rounded-md bg-accent px-2 py-1.5 font-semibold text-foreground"
+          >
+            <Shield size={14} strokeWidth={2} aria-hidden />
+            <span className="hidden sm:inline">Operations</span>
+            <span className="sm:hidden">Admin</span>
+          </Link>
+        </nav>
 
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           <span
             className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
               isSimulation
-                ? "border-amber-400/50 bg-amber-400/10 text-amber-300"
-                : "border-red-400/60 bg-red-500/15 text-red-300"
+                ? "border-transparent bg-(--term-warning-bg) text-(--term-warning-fg)"
+                : "border-down/30 bg-down/10 text-down"
             }`}
             title={`Market data mode: ${process.env.MARKET_DATA_MODE ?? "simulation"}`}
           >
             {isSimulation ? "SIM" : "Live"}
           </span>
-
-          <nav className="flex items-center gap-3 text-xs" aria-label="Primary">
-            <Link href="/trade/AUDCAD" className="text-(--term-console-muted) transition hover:text-(--term-console-fg)">Trade</Link>
-            <Link href="/account" className="text-(--term-console-muted) transition hover:text-(--term-console-fg)">Account</Link>
-            <span className="font-medium text-white" aria-current="page">Operations</span>
-          </nav>
-
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            {context.roles.slice(0, 3).map((role) => (
-              <span key={role} className="rounded bg-(--term-console-active) px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-(--term-console-soft) ring-1 ring-inset ring-(--term-console-border)">
-                {role.replaceAll("_", " ")}
-              </span>
-            ))}
-            <span className="hidden h-5 w-px bg-(--term-console-border) sm:block" aria-hidden />
-            <span className="max-w-40 truncate text-xs text-(--term-console-soft)">{userName}</span>
-            <AdminSignOutButton />
-          </div>
+          <TradeSearchButton className="hidden sm:flex" />
+          <AccountUserMenu
+            displayName={userName}
+            email={session?.user?.email ?? ""}
+            accountNo={null}
+            secondaryLabel={context.roles.slice(0, 2).map((role) => role.replaceAll("_", " ")).join(" · ") || "Operations"}
+            isAdmin
+          />
         </div>
       </header>
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-screen-2xl px-4 py-6">

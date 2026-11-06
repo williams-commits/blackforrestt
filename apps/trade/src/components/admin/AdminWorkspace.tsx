@@ -270,16 +270,20 @@ export function AdminWorkspace({ permissions, simpleApproval = false }: Props) {
           if (mode === "sheet") setNavOpen(false);
         }}
         aria-current={active ? "page" : undefined}
-        className={`flex items-center gap-2 whitespace-nowrap text-xs font-medium transition ${
-          mode === "sidebar"
-            ? `w-full rounded-md px-3 py-2 text-left ${active ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`
-            : `w-full rounded-md px-3 py-2.5 text-left text-sm ${active ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`
-        }`}
+        className={cn(
+          "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+          active
+            ? "bg-accent text-accent-foreground"
+            : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+        )}
       >
-        {tabIcon && <TabIcon icon={tabIcon} size={mode === "sheet" ? 16 : 14} />}
-        <span>{item.label}</span>
+        {tabIcon && <TabIcon icon={tabIcon} size={16} />}
+        <span className="min-w-0 truncate">{item.label}</span>
         {badge != null && badge > 0 && (
-          <span className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${mode === "sheet" ? "ml-auto " : ""}${active ? "bg-primary text-primary-foreground" : "bg-(--term-warning-bg) text-(--term-warning-fg)"}`}>
+          <span className={cn(
+            "ml-auto rounded-full px-1.5 py-0.5 text-xs font-bold tabular-nums",
+            active ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+          )}>
             {badge}
           </span>
         )}
@@ -294,10 +298,8 @@ export function AdminWorkspace({ permissions, simpleApproval = false }: Props) {
         if (items.length === 0) return null;
         return (
           <div key={section.label} className="mb-2 last:mb-0">
-            <p className={mode === "sidebar"
-              ? "mb-1 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground"
-              : "px-3 pt-3 pb-1.5 text-xs font-medium text-muted-foreground first:pt-1"}>{section.label}</p>
-            <ul className={mode === "sidebar" ? "space-y-0.5" : undefined}>
+            <p className="px-3 pt-3 pb-1.5 text-xs font-medium text-muted-foreground first:pt-1">{section.label}</p>
+            <ul className="flex flex-col gap-0.5">
               {items.map((item) => (
                 <li key={item.key}>{tabButton(item, mode)}</li>
               ))}
@@ -312,10 +314,10 @@ export function AdminWorkspace({ permissions, simpleApproval = false }: Props) {
 
   return (
     <div>
-      <div className="lg:grid lg:grid-cols-[13.5rem_minmax(0,1fr)] lg:gap-5">
+      <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8 xl:grid-cols-[240px_minmax(0,1fr)]">
         {/* Desktop: grouped vertical sidebar. Mobile/tablet: grouped section sheet. */}
         <div className="hidden lg:block">
-          <div className="sticky top-20 space-y-4 p-3">
+          <div className="sticky top-20 rounded-xl bg-card p-2">
             {groupedNav("sidebar")}
           </div>
         </div>
@@ -363,12 +365,12 @@ export function AdminWorkspace({ permissions, simpleApproval = false }: Props) {
         </div>
       </div>
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
-        <SheetContent side="left" className="w-80 gap-0 overflow-y-auto p-0 sm:max-w-none">
-          <SheetHeader className="border-b pb-3 pt-4">
+        <SheetContent side="left" className="h-full w-[min(20rem,calc(100vw-1rem))] gap-0 overflow-hidden p-0 sm:max-w-none">
+          <SheetHeader className="shrink-0 border-b pb-3 pt-4">
             <SheetTitle>Administrative modules</SheetTitle>
             <SheetDescription>Jump to any part of the operations console.</SheetDescription>
           </SheetHeader>
-          <div className="p-2">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
             {groupedNav("sheet")}
           </div>
         </SheetContent>
@@ -862,7 +864,7 @@ function UserSettingsDialog({ user, open, onClose }: { user: UserRow | null; ope
   if (!open || !user) return null;
 
   return (
-    <Dialog open={open} onClose={saving ? () => undefined : onClose} title={`User settings · ${user.name ?? user.email ?? "User"}`} description="Per-user overrides for trading, deposits, withdrawals, P/L, and referrals. Empty fields inherit the group or global default." className="sm:max-w-lg">
+    <Dialog open={open} onClose={saving ? () => undefined : onClose} title={`User settings · ${user.name ?? user.email ?? "User"}`} description="Per-user overrides for trading, deposits, withdrawals, P/L, and referrals. Empty fields inherit the group or global default." className="sm:max-w-4xl">
       <div className="max-h-[74dvh] overflow-y-auto px-5 py-4">
         {error && <Alert tone="err" className="mb-3">{error}</Alert>}
         {loading ? (

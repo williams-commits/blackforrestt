@@ -22,14 +22,17 @@ export function AccountUserMenu({
   displayName,
   email,
   accountNo,
+  secondaryLabel,
   isAdmin,
 }: {
   displayName: string;
   email: string;
   accountNo: string | null;
+  secondaryLabel?: string;
   isAdmin: boolean;
 }) {
   const initial = (displayName || email || "U").charAt(0).toUpperCase();
+  const accountLabel = secondaryLabel ?? `#${accountNo ?? "—"}`;
 
   return (
     <div className="ml-auto">
@@ -46,7 +49,7 @@ export function AccountUserMenu({
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand">{initial}</span>
               <span className="min-w-0 hidden sm:block">
                 <span className="block truncate text-xs font-medium text-foreground">{displayName}</span>
-                <span className="block truncate text-xs text-muted-foreground">#{accountNo ?? "—"}</span>
+                <span className="block truncate text-xs text-muted-foreground">{accountLabel}</span>
               </span>
               <span aria-hidden="true" className="text-xs text-muted-foreground transition-transform in-data-[state=open]:rotate-180">
                 <ChevronDown size={11} strokeWidth={2.5} aria-hidden />

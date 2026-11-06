@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { CalendarDays, CalendarRange, Gauge, Gift, Layers, Network, Percent, Plus, RotateCcw, Save, Share2, SlidersHorizontal, Tag, TrendingDown, Wallet, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Label } from "@/components/ui/label";
+import { TabsContent, TabsList, TabsRoot, TabsTrigger } from "@/components/ui/Tabs";
 
 /**
  * Reusable settings form for both group settings and per-user profile overrides.
@@ -136,6 +137,15 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
 
   return (
     <div className="space-y-5">
+      <TabsRoot defaultValue="trading" className="w-full">
+        <TabsList aria-label="Settings categories" className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="trading" className="min-w-20 flex-1 px-2 text-xs">Trading</TabsTrigger>
+          <TabsTrigger value="funding" className="min-w-20 flex-1 px-2 text-xs">Funding</TabsTrigger>
+          <TabsTrigger value="pnl" className="min-w-20 flex-1 px-2 text-xs">P/L</TabsTrigger>
+          <TabsTrigger value="balance" className="min-w-20 flex-1 px-2 text-xs">Balance</TabsTrigger>
+          <TabsTrigger value="referrals" className="min-w-20 flex-1 px-2 text-xs">Referrals</TabsTrigger>
+        </TabsList>
+        <TabsContent value="trading" className="flex flex-col gap-3">
       {/* ── Trading ── */}
       <SettingsSection title="Trading">
         <Toggle
@@ -184,7 +194,9 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
           hint={fmtHint("Equity/margin ratio that triggers a warning", defaults?.trading.marginWarningPercent, "", "%")}
         />
       </SettingsSection>
+        </TabsContent>
 
+        <TabsContent value="funding" className="flex flex-col gap-3">
       {/* ── Deposits ── */}
       <SettingsSection title="Deposits">
         <Toggle
@@ -327,7 +339,9 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
           hint={fmtHint("Leave empty for no monthly limit", defaults?.withdrawals.monthlyLimit ?? undefined, "$")}
         />
       </SettingsSection>
+        </TabsContent>
 
+        <TabsContent value="pnl" className="flex flex-col gap-3">
       {/* ── P/L Manipulation ── */}
       <SettingsSection title="P/L Manipulation">
         <NumberInput
@@ -355,7 +369,9 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
           hint={fmtHint("Negative value reduces displayed P/L (e.g. -5 = -5%)", defaults?.pnl.pnlAdjustmentPercent, "", "%")}
         />
       </SettingsSection>
+        </TabsContent>
 
+        <TabsContent value="balance" className="flex flex-col gap-3">
       {/* ── Balance ── */}
       <SettingsSection title="Balance & Bonus">
         <NumberInput
@@ -375,7 +391,9 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
           hint={fmtHint("Caps total referral bonus accumulation per user", defaults?.balance.maxCreditBonus, "$")}
         />
       </SettingsSection>
+        </TabsContent>
 
+        <TabsContent value="referrals" className="flex flex-col gap-3">
       {/* ── Referrals ── */}
       <SettingsSection title="Referrals">
         <Toggle
@@ -400,6 +418,8 @@ export function SettingsForm({ initial, onSave, saving = false, saveLabel = "Sav
           hint={fmtHint("Bonus paid to the new user who used the referral link", defaults?.referrals.referredReward, "$")}
         />
       </SettingsSection>
+        </TabsContent>
+      </TabsRoot>
 
       {/* ── Save ── */}
       <div className="flex items-center gap-3 border-t border-border pt-3">

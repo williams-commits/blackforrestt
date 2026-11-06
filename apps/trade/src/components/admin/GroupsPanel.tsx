@@ -8,7 +8,7 @@ import { toast } from "@/lib/toast";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
 import { SectionHeader } from "./SectionHeader";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +17,7 @@ import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { Check, Play, Plus, Save, Search, UserMinus, UserPlus, Users, UsersRound, X, ArrowLeft, ArrowRight, ChevronRight, Coins, DollarSign, FileText, Pencil, SlidersHorizontal } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { SimpleDialog } from "@/components/ui/Dialog";
+import { TabsContent, TabsList, TabsRoot, TabsTrigger } from "@/components/ui/Tabs";
 
 interface Group {
   id: string;
@@ -637,6 +638,8 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
   }
   if (error || !detail) return <Alert tone="err">{error ?? "Group not found."}</Alert>;
 
+  const settingsSummary = getSettingsSummary(detail.settings);
+
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
@@ -657,18 +660,56 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
         </CardHeader>
       </Card>
 
-      {/* Settings editor */}
-      {canManage && (
-        <SettingsEditor groupId={detail.id} initial={detail.settings as UserSettingsConfig} onSaved={() => void refresh()} />
-      )}
-      {!canManage && <SettingsPreview settings={detail.settings} />}
+      <TabsRoot defaultValue="overview" className="w-full">
+        <TabsList aria-label="Group details" className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="members">Members ({detail.members.length})</TabsTrigger>
+        </TabsList>
 
-      {/* Bulk actions */}
-      {canManage && detail.members.length > 0 && (
-        <BulkActions groupId={detail.id} groupName={detail.name} memberCount={detail.members.length} />
-      )}
+        <TabsContent value="overview" className="flex flex-col gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Group overview</CardTitle>
+              <CardDescription>Membership and configured account overrides.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground">Members</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums">{detail.members.length}</p>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground">Created</p>
+                  <p className="mt-1 text-sm font-medium">{new Date(detail.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-medium text-muted-foreground">Settings overrides</p>
+                {settingsSummary.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {settingsSummary.map((summary) => <Badge key={summary} variant="secondary">{summary}</Badge>)}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No summarized overrides configured.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          {canManage && detail.members.length > 0 && (
+            <BulkActions groupId={detail.id} groupName={detail.name} memberCount={detail.members.length} />
+          )}
+        </TabsContent>
 
-      {/* Members */}
+        <TabsContent value="settings" className="flex flex-col gap-4">
+          {canManage ? (
+            <SettingsEditor groupId={detail.id} initial={detail.settings as UserSettingsConfig} onSaved={() => void refresh()} />
+          ) : (
+            <SettingsPreview settings={detail.settings} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="members" className="min-w-0">
       <RecordList<GroupMember>
             ariaLabel="Member"
             title="Members"
@@ -731,6 +772,8 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
             )}
             emptyTitle="No members yet."
           />
+        </TabsContent>
+      </TabsRoot>
       <ConfirmDialog
         open={removing !== null}
         title="Remove member from group?"

@@ -173,7 +173,7 @@ export function SupportTab() {
       <RecordList<SupportCase>
         ariaLabel="Case"
         title="Your support cases"
-        description={`${cases.length} cases`}
+        count={`${cases.length} cases`}
         rows={cases}
         rowKey={(c) => c.id}
         loading={loading}

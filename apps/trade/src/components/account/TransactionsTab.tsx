@@ -104,7 +104,7 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
       <RecordList<Txn>
         ariaLabel="Transaction"
         title="Transactions"
-        description={`${rows.length} shown`}
+        count={`${rows.length} shown`}
         rows={rows}
         rowKey={(t) => t.id}
         search={{

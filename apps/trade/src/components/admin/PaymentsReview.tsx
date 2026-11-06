@@ -132,7 +132,7 @@ export function PaymentsReview({
       <RecordList<PaymentRequestRow>
         ariaLabel="Request"
         title="Payment queue"
-        description={`${filtered.length} of ${requests.length} requests`}
+        count={`${filtered.length} of ${requests.length} requests`}
         rows={filtered}
         rowKey={(r) => r.id}
         search={{ placeholder: "Search client, reference, or method…", text: (r) => `${r.user.name ?? ""} ${r.user.email ?? ""} ${r.userReference ?? ""} ${r.methodLabel}` }}

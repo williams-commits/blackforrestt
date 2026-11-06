@@ -10,7 +10,6 @@ import { fmtDateTime } from "@/lib/dates";
 import { DateInput } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChipGroup } from "@/components/ui/ChipGroup";
 import { RecordList, type RecordDetailMeta } from "@/components/ui/RecordList";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -99,13 +98,22 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
       <RecordList<ReportRow>
         ariaLabel="Trade"
         title="Closed Trades"
-        description={`${filtered.length} shown${server ? ` of ${server.pagination.total}` : ""}`}
+        count={`${filtered.length} shown${server ? ` of ${server.pagination.total}` : ""}`}
         rows={filtered}
         rowKey={(r) => r.id}
         leading={(r) => ({
           tone: r.side === "BUY" ? "up" : "down",
-          title: <SymbolLink symbol={r.symbol} />,
-          secondary: `${r.type} · ${r.side} · ${r.volume.toFixed(2)} lots`,
+          title: (
+            <span className="flex min-w-0 items-center gap-2 whitespace-normal">
+              <InstrumentIcon symbol={r.symbol} size={14} />
+              <span className="flex min-w-0 flex-col">
+                <SymbolLink symbol={r.symbol} showIcon={false} />
+                <span className="truncate text-xs font-normal text-muted-foreground">
+                  {r.type} · {r.side} · {r.volume.toFixed(2)} lots
+                </span>
+              </span>
+            </span>
+          ),
         })}
         columns={[
           { key: "volume", label: "Volume", sortable: true, align: "right", render: (r) => r.volume.toFixed(2) },
@@ -131,17 +139,17 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
           <>
             {/* Server mode: dates are submitted with the filter form and applied
                 to the list, pagination, and summary alike. Local mode: live filtering. */}
-            <div className="flex items-center gap-1.5">
-              <DateInput value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="Closed after" className="h-8 w-35" />
+            <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 sm:w-auto">
+              <DateInput value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="Closed after" className="h-8 w-full min-w-0 sm:w-35" />
               <span className="text-xs text-muted-foreground">→</span>
-              <DateInput value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="Closed before" className="h-8 w-35" />
+              <DateInput value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="Closed before" className="h-8 w-full min-w-0 sm:w-35" />
             </div>
             {server ? (
               <form action="/reports" method="get" className="flex flex-wrap items-center gap-2">
                 {fromDate && <input type="hidden" name="from" value={fromDate} />}
                 {toDate && <input type="hidden" name="to" value={toDate} />}
                 <Select name="symbol" defaultValue={symbol}>
-                  <SelectTrigger size="sm" className="w-35" aria-label="Filter by symbol">
+                  <SelectTrigger size="sm" className="w-32" aria-label="Filter by symbol">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -150,13 +158,13 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
                   </SelectContent>
                 </Select>
                 <Select name="side" defaultValue={side}>
-                  <SelectTrigger size="sm" className="w-30" aria-label="Filter by side">
+                  <SelectTrigger size="sm" className="w-28" aria-label="Filter by side">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ALL">All sides</SelectItem>
-                    <SelectItem value="BUY">BUY</SelectItem>
-                    <SelectItem value="SELL">SELL</SelectItem>
+                    <SelectItem value="BUY">Buy</SelectItem>
+                    <SelectItem value="SELL">Sell</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button type="submit" size="sm" variant="outline">Apply filters</Button>
@@ -164,7 +172,7 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
             ) : (
               <>
                 <Select value={symbol} onValueChange={setLocalSymbol}>
-                  <SelectTrigger size="sm" className="w-35" aria-label="Filter by symbol">
+                  <SelectTrigger size="sm" className="w-32" aria-label="Filter by symbol">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -172,16 +180,16 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
                     {symbols.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <ChipGroup
-                  ariaLabel="Filter by side" className="flex-wrap"
-                  value={side}
-                  onChange={setLocalSide}
-                  options={[
-                    { value: "ALL", label: "All" },
-                    { value: "BUY", label: "Buy" },
-                    { value: "SELL", label: "Sell" },
-                  ]}
-                />
+                <Select value={side} onValueChange={setLocalSide}>
+                  <SelectTrigger size="sm" className="w-28" aria-label="Filter by side">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All sides</SelectItem>
+                    <SelectItem value="BUY">Buy</SelectItem>
+                    <SelectItem value="SELL">Sell</SelectItem>
+                  </SelectContent>
+                </Select>
               </>
             )}
           </>

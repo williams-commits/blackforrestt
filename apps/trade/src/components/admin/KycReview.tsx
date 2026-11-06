@@ -546,7 +546,7 @@ export function KycReview({
           <RecordList<Submission>
             ariaLabel="Decision"
             title="Recent decisions"
-            description={decisions.length < reviewedTotalResolved ? `${decisions.length} of ${reviewedTotalResolved} decisions` : `${decisions.length} decisions`}
+            count={decisions.length < reviewedTotalResolved ? `${decisions.length} of ${reviewedTotalResolved} decisions` : `${decisions.length} decisions`}
             rows={decisions}
             hasMore={!exhausted && decisions.length < reviewedTotalResolved}
             onLoadMore={() => void loadMoreDecisions()}

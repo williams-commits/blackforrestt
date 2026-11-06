@@ -713,7 +713,7 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
       <RecordList<GroupMember>
             ariaLabel="Member"
             title="Members"
-            description={`${detail.members.length} members`}
+            count={`${detail.members.length} members`}
             toolbarEnd={canManage ? <AddMemberButton groupId={detail.id} onAdded={() => void refresh()} existingIds={detail.members.map((m) => m.user.id)} /> : undefined}
             rows={detail.members}
             rowKey={(m) => m.id}
@@ -791,7 +791,7 @@ function BulkActions({ groupId, groupName, memberCount }: { groupId: string; gro
   const [dialog, setDialog] = useState<"balance" | "pnl" | null>(null);
 
   return (
-    <div className="rounded-xl bg-panel/50 p-4">
+    <div className="rounded-xl bg-card/50 p-4">
       <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3">Bulk Actions ({memberCount} members)</h4>
       <div className="flex flex-wrap gap-2">
         <Button

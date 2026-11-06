@@ -78,9 +78,10 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
     <RecordList<PositionRow>
       ariaLabel="Position"
       title="Position History"
+      count={`${rows.length} positions`}
       description={
         <>
-          {rows.length} shown · Net P/L{" "}
+          Net P/L{" "}
           <span className={`font-semibold ${netTotal >= 0 ? "text-up" : "text-down"}`}>
             {netTotal >= 0 ? "+" : ""}{netTotal.toFixed(2)}
           </span>

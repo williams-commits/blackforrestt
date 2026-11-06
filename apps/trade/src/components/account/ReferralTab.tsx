@@ -153,7 +153,7 @@ export function ReferralTab() {
       <RecordList<ReferralData["referrals"][number]>
         ariaLabel="Referral"
         title="Referral History"
-        description={`${data.referrals.length} referrals`}
+        count={`${data.referrals.length} referrals`}
         rows={data.referrals}
         rowKey={(r) => r.id}
         search={{

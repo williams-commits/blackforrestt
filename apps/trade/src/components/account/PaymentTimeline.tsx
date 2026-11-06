@@ -203,6 +203,7 @@ export function PaymentTimeline() {
       <RecordList<PaymentView>
         ariaLabel="Payment"
         title="Payment requests"
+        count={`${filtered.length} requests`}
         description="Deposit proofs are required and verified before finance review."
         rows={filtered}
         rowKey={(r) => r.id}

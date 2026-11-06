@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Inbox, Search } from "lucide-react";
+import { Activity, ArrowDown, ArrowLeftRight, ArrowUp, ArrowUpDown, BookOpenText, CandlestickChart, ChevronDown, ChevronRight, ClipboardCheck, CreditCard, Inbox, LifeBuoy, List, LockKeyhole, Search, ScrollText, ShieldAlert, SlidersHorizontal, UserRound, Users, UsersRound, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,29 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { IdentityTile } from "@/components/ui/Initial";
+
+const RECORD_TITLE_ICONS: Record<string, LucideIcon> = {
+  "Closed Trades": CandlestickChart,
+  Members: UsersRound,
+  "Payment queue": CreditCard,
+  "Position History": CandlestickChart,
+  "Active blocks": LockKeyhole,
+  Cases: LifeBuoy,
+  "Recent runs": Activity,
+  Accounts: Users,
+  "Transaction history": ArrowLeftRight,
+  Postings: BookOpenText,
+  "Positions by user": UsersRound,
+  Symbols: CandlestickChart,
+  Rules: ShieldAlert,
+  Events: ScrollText,
+  "Change requests": ClipboardCheck,
+  "Payment requests": CreditCard,
+  Transactions: ArrowLeftRight,
+  "Your support cases": LifeBuoy,
+  "Recent decisions": ClipboardCheck,
+  "Referral History": UserRound,
+};
 
 /* ────────────────────────────────────────────────────────────────────────────
    RecordList — the account portal's centralized enterprise record list.
@@ -55,6 +78,7 @@ export interface RecordLeading {
 export function RecordList<T>({
   ariaLabel,
   title,
+  count,
   description,
   rows,
   rowKey,
@@ -84,6 +108,7 @@ export function RecordList<T>({
 }: {
   ariaLabel: string;
   title: string;
+  count?: React.ReactNode;
   description?: React.ReactNode;
   rows: T[];
   rowKey: (row: T) => string;
@@ -178,29 +203,60 @@ export function RecordList<T>({
       : tone === "brand" ? "bg-primary/10 text-primary"
       : tone === "warn" ? "bg-(--term-warning-bg) text-(--term-warning-fg)"
       : "bg-muted text-muted-foreground";
+  const TitleIcon = RECORD_TITLE_ICONS[title] ?? List;
 
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted/70 text-muted-foreground">
+              <TitleIcon size={16} strokeWidth={1.8} aria-hidden />
+            </span>
+            <CardTitle className="truncate">{title}</CardTitle>
+          </div>
+          {count != null && (
+            <Badge variant="secondary" className="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium tabular-nums">
+              {count}
+            </Badge>
+          )}
+        </div>
         {description != null && <CardDescription>{description}</CardDescription>}
         {(search || filters || toolbarEnd) && (
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-2.5 pt-1 *:min-w-0">
-            {search && (
-              <div className="relative w-full sm:w-64">
-                <Search size={14} strokeWidth={2} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={search.placeholder}
-                  aria-label={search.placeholder}
-                  className="h-8 pl-8"
-                />
+          <div className="space-y-2.5 pt-2">
+            {(search || toolbarEnd) && (
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+                {search && (
+                  <div className="relative w-full min-w-0 sm:max-w-sm sm:flex-1">
+                    <Search size={14} strokeWidth={2} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder={search.placeholder}
+                      aria-label={search.placeholder}
+                      className="h-9 pl-8"
+                    />
+                  </div>
+                )}
+                {toolbarEnd && (
+                  <div className="flex min-w-0 items-center justify-end sm:ml-auto">
+                    {toolbarEnd}
+                  </div>
+                )}
               </div>
             )}
-            {filters}
-            {toolbarEnd && <div className="ml-auto">{toolbarEnd}</div>}
+            {filters && (
+              <div className="flex min-w-0 flex-col gap-2 rounded-xl bg-muted/30 p-2 sm:flex-row sm:items-center sm:gap-3">
+                <div className="flex shrink-0 items-center gap-1.5 px-1 text-xs font-medium text-muted-foreground">
+                  <SlidersHorizontal size={13} strokeWidth={2} aria-hidden />
+                  <span>Filters</span>
+                </div>
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5 *:min-w-0 [&_[data-slot=input]]:h-8 [&_[data-slot=input]]:rounded-lg [&_[data-slot=input]]:bg-background/70 [&_[data-slot=input]]:text-xs [&_[data-slot=select-trigger]]:h-8 [&_[data-slot=select-trigger]]:rounded-lg [&_[data-slot=select-trigger]]:bg-background/70 [&_[data-slot=select-trigger]]:px-2.5 [&_[data-slot=select-trigger]]:text-xs [&_[role=group]>button]:h-7 [&_[role=group]>button]:rounded-md [&_[role=group]>button]:px-2.5 [&_[role=group]>button]:text-xs [&_button:not([aria-pressed])]:h-8 [&_button:not([aria-pressed])]:rounded-lg [&_button:not([aria-pressed])]:px-2.5 [&_button:not([aria-pressed])]:text-xs">
+                  {filters}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </CardHeader>

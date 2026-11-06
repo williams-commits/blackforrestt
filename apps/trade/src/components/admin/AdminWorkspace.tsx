@@ -662,7 +662,7 @@ function PaginatedUsers({
     <RecordList<UserRow>
       ariaLabel="Account"
       title="Accounts"
-      description={`${sortedUsers.length} users`}
+      count={`${sortedUsers.length} users`}
       rows={sortedUsers}
       rowKey={(u) => u.id}
       search={{ placeholder: "Search name, email, or account…", text: (u) => `${u.name ?? ""} ${u.email ?? ""} ${u.accountNo ?? ""}` }}
@@ -693,25 +693,27 @@ function PaginatedUsers({
         icon: null,
         tone: u.online ? "up" : "muted",
         title: (
-          <span className="flex min-w-0 items-center gap-2">
+          <span className="flex min-w-0 items-center gap-3 whitespace-normal">
             <IdentityTile tone={u.online ? "up" : "muted"} className={cn("shrink-0", u.online ? "ring-2 ring-up/30 ring-offset-2 ring-offset-card" : undefined)}>
               {initialsOf(u.name ?? u.email)}
             </IdentityTile>
-            <span className="truncate">{u.name ?? "Unnamed"}</span>
-            {u.online && <span className="relative flex size-2 shrink-0"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-up opacity-60" /><span className="relative inline-flex size-2 rounded-full bg-up" /></span>}
-          </span>
-        ),
-        secondary: (
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="min-w-0 truncate">{u.email ?? "—"} · #{u.accountNo ?? "—"}</span>
-            {!u.verified && <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-xs">unverified</Badge>}
-            {u.lockedUntil && <Badge variant="secondary" className="shrink-0 bg-down/10 px-1.5 py-0 text-xs text-down">locked</Badge>}
-            {u.adminRoles.length > 0 && (
-              <Badge variant="secondary" className="shrink-0 bg-primary/10 px-1.5 py-0 text-xs text-primary">
-                {u.adminRoles[0].role.toLowerCase()}
-                {u.adminRoles.length > 1 ? ` +${u.adminRoles.length - 1}` : ""}
-              </Badge>
-            )}
+            <span className="flex min-w-0 flex-col">
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="truncate">{u.name ?? "Unnamed"}</span>
+                {u.online && <span className="relative flex size-2 shrink-0"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-up opacity-60" /><span className="relative inline-flex size-2 rounded-full bg-up" /></span>}
+              </span>
+              <span className="flex min-w-0 items-center gap-1.5 text-xs font-normal text-muted-foreground">
+                <span className="min-w-0 truncate">{u.email ?? "—"} · #{u.accountNo ?? "—"}</span>
+                {!u.verified && <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-xs">unverified</Badge>}
+                {u.lockedUntil && <Badge variant="secondary" className="shrink-0 bg-down/10 px-1.5 py-0 text-xs text-down">locked</Badge>}
+                {u.adminRoles.length > 0 && (
+                  <Badge variant="secondary" className="shrink-0 bg-primary/10 px-1.5 py-0 text-xs text-primary">
+                    {u.adminRoles[0].role.toLowerCase()}
+                    {u.adminRoles.length > 1 ? ` +${u.adminRoles.length - 1}` : ""}
+                  </Badge>
+                )}
+              </span>
+            </span>
           </span>
         ),
       })}
@@ -1031,7 +1033,8 @@ function UserBalanceDialog({
               <RecordList<UserFinanceTransaction>
                     ariaLabel="Transaction"
                     title="Transaction history"
-                    description={`${transactions.length} records · deposits, withdrawals, settlements, bonuses, fees, adjustments, and advance repayments`}
+                    count={`${transactions.length} records`}
+                    description="Deposits, withdrawals, settlements, bonuses, fees, adjustments, and advance repayments."
                     toolbarEnd={<Button size="sm" variant="ghost" onClick={() => void load()} disabled={loading}><RefreshCw size={13} strokeWidth={2} aria-hidden /> Refresh</Button>}
                     rows={transactions}
                     rowKey={(t) => t.id}
@@ -1217,7 +1220,8 @@ function LedgerPanel() {
     <RecordList<LedgerTransactionView>
       ariaLabel="Posting"
       title="Postings"
-      description={`${filtering ? `${filtered.length} matching · ` : ""}Latest ${all.length.toLocaleString("en-US")} of ${resource.data.total.toLocaleString("en-US")} transactions`}
+      count={`${filtered.length} shown`}
+      description={`Latest ${all.length.toLocaleString("en-US")} of ${resource.data.total.toLocaleString("en-US")} transactions${filtering ? ` · ${filtered.length} matching` : ""}`}
       rows={filtered}
       rowKey={(t) => t.id}
       search={{
@@ -1463,9 +1467,10 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
       ariaLabel="Account"
       title="Positions by user"
       sheetWidth="sm:max-w-2xl"
+      count={`${groups.length} accounts`}
       description={
         <>
-          {groups.length} account{groups.length === 1 ? "" : "s"} · {filtering ? `${filtered.length} of ${allPositions.length}` : `${allPositions.length}`} positions
+          {filtering ? `${filtered.length} of ${allPositions.length}` : `${allPositions.length}`} positions
           {" · net P/L "}
           <span className={pnlClass(totalNetPl)}>{fmtExecNumber(totalNetPl.toFixed(2))}</span>
         </>
@@ -1739,7 +1744,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Platform" icon={<LifeBuoy size={18} strokeWidth={2} aria-hidden />} title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} action={canManage ? <Button size="sm" loading={busy === "create"} onClick={() => void createCase()}><Plus size={13} strokeWidth={2} aria-hidden /> New case</Button> : undefined} />{error && <Alert tone="err">{error}</Alert>}<RecordList<SupportCase>
       ariaLabel="Case"
       title="Cases"
-      description={`${resource.data.cases.length} cases`}
+      count={`${resource.data.cases.length} cases`}
       rows={resource.data.cases}
       rowKey={(c) => c.id}
       search={{ placeholder: "Search reference, subject, or category…", text: (c) => `${c.reference} ${c.subject} ${c.category} ${c.description}` }}
@@ -1802,7 +1807,7 @@ function InstrumentsPanel({ canManage }: { canManage: boolean }) {
     <RecordList<InstrumentRow>
       ariaLabel="Instrument"
       title="Symbols"
-      description={`${resource.data.instruments.length} configured`}
+      count={`${resource.data.instruments.length} configured`}
       rows={resource.data.instruments}
       rowKey={(i) => i.symbol}
       search={{ placeholder: "Search symbol, name, or feed…", text: (i) => `${i.symbol} ${i.name} ${i.feedSymbol} ${i.category}` }}
@@ -1865,7 +1870,7 @@ function RiskPanel({ canManage }: { canManage: boolean }) {
     <RecordList<RiskRuleRow>
       ariaLabel="Rule"
       title="Rules"
-      description={`${resource.data.rules.length} rules`}
+      count={`${resource.data.rules.length} rules`}
       rows={resource.data.rules}
       rowKey={(r) => r.id}
       search={{ placeholder: "Search code, name, or severity…", text: (r) => `${r.code} ${r.name} ${r.severity}` }}
@@ -1920,7 +1925,8 @@ function AuditPanel({ canVerify, canExport }: { canVerify: boolean; canExport: b
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Risk & compliance" icon={<ScrollText size={18} strokeWidth={2} aria-hidden />} title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} action={<>{canVerify && <Button type="button" size="sm" onClick={() => void verify()}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Verify chain</Button>}{canExport && <Button type="button" size="sm" variant="outline" asChild><a href="/api/admin/audit/export?format=csv&limit=500"><Download size={13} strokeWidth={2} aria-hidden /> Export CSV</a></Button>}</>} /><RecordList<AuditEventRow>
       ariaLabel="Event"
       title="Events"
-      description={`${resource.data.events.length} events${resource.data.redacted ? " · export-redacted view" : ""}`}
+      count={`${resource.data.events.length} events`}
+      description={resource.data.redacted ? "Export-redacted view." : undefined}
       rows={resource.data.events}
       rowKey={(e) => String(e.sequence)}
       search={{ placeholder: "Search domain, action, entity, or actor…", text: (e) => `${e.domain} ${e.action} ${e.entityType} ${e.entityId ?? ""} ${e.actorId ?? ""}` }}
@@ -2114,7 +2120,7 @@ function ChangesPanel({
           <RecordList<ChangeRow>
             ariaLabel="Request"
             title="Change requests"
-            description={`${resource.data.requests.length} requests`}
+            count={`${resource.data.requests.length} requests`}
             rows={resource.data.requests}
             rowKey={(r) => r.id}
             search={{ placeholder: "Search domain, action, or entity…", text: (r) => `${r.domain} ${r.action} ${r.entityType} ${r.entityId ?? ""} ${r.requestedById}` }}

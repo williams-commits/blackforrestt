@@ -219,7 +219,7 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
         <RecordList<BlockRow>
           ariaLabel="Block"
           title="Active blocks"
-          description={`${blocks.length} active`}
+          count={`${blocks.length} active`}
           rows={blocks}
           rowKey={(b) => b.id}
           leading={(b) => ({
@@ -260,7 +260,7 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
         <RecordList<CaseRow>
           ariaLabel="Case"
           title="Cases"
-          description={`${cases.length} cases`}
+          count={`${cases.length} cases`}
           rows={cases}
           rowKey={(c) => c.id}
           leading={(c) => ({
@@ -315,7 +315,7 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
         <RecordList<RunRow>
           ariaLabel="Run"
           title="Recent runs"
-          description={`${runs.length} runs`}
+          count={`${runs.length} runs`}
           rows={runs}
           rowKey={(r) => r.id}
           leading={(r) => ({

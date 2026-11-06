@@ -8,7 +8,7 @@ export function tradeHref(symbol: string): string {
 }
 
 /** Instrument icon + symbol linking to that market's trade terminal page. */
-export function SymbolLink({ symbol, className = "" }: { symbol: string; className?: string }) {
+export function SymbolLink({ symbol, className = "", showIcon = true }: { symbol: string; className?: string; showIcon?: boolean }) {
   return (
     <Link
       href={tradeHref(symbol)}
@@ -16,7 +16,7 @@ export function SymbolLink({ symbol, className = "" }: { symbol: string; classNa
       aria-label={`Open ${symbol} in the trade terminal`}
       className={`inline-flex items-center gap-1.5 hover:text-brand hover:underline ${className}`}
     >
-      <InstrumentIcon symbol={symbol} size={14} />
+      {showIcon && <InstrumentIcon symbol={symbol} size={14} />}
       {symbol}
     </Link>
   );

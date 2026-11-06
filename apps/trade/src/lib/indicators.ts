@@ -96,6 +96,12 @@ export interface SeriesPoint {
   value: number;
 }
 
+export interface StochasticPoint {
+  time: number;
+  k: number;
+  d: number | null;
+}
+
 /** Rolling SMA series for chart rendering. Returns {time, value}[] skipping warmup. */
 export function computeSMASeries(candles: Candle[], period: number): SeriesPoint[] {
   if (candles.length < period) return [];
@@ -174,6 +180,86 @@ export function computeRSISeries(candles: Candle[], period = 14): SeriesPoint[] 
     avgGain = (avgGain * (period - 1) + gain) / period;
     avgLoss = (avgLoss * (period - 1) + loss) / period;
     result.push({ time: candles[i].time, value: rsi(avgGain, avgLoss) });
+  }
+  return result;
+}
+
+/** Wilder-smoothed Average True Range series. */
+export function computeATRSeries(candles: Candle[], period = 14): SeriesPoint[] {
+  if (period <= 0 || candles.length <= period) return [];
+
+  const trueRange = (index: number) => {
+    const candle = candles[index]!;
+    const previousClose = candles[index - 1]!.close;
+    return Math.max(
+      candle.high - candle.low,
+      Math.abs(candle.high - previousClose),
+      Math.abs(candle.low - previousClose),
+    );
+  };
+  let average = 0;
+  for (let index = 1; index <= period; index += 1) average += trueRange(index);
+  average /= period;
+
+  const result: SeriesPoint[] = [{ time: candles[period]!.time, value: average }];
+  for (let index = period + 1; index < candles.length; index += 1) {
+    average = (average * (period - 1) + trueRange(index)) / period;
+    result.push({ time: candles[index]!.time, value: average });
+  }
+  return result;
+}
+
+/** Fast Stochastic %K with an SMA-smoothed %D signal line. */
+export function computeStochasticSeries(
+  candles: Candle[],
+  period = 14,
+  signalPeriod = 3,
+): StochasticPoint[] {
+  if (period <= 0 || signalPeriod <= 0 || candles.length < period) return [];
+
+  const result: StochasticPoint[] = [];
+  const kValues: number[] = [];
+  for (let index = period - 1; index < candles.length; index += 1) {
+    let highest = -Infinity;
+    let lowest = Infinity;
+    for (let cursor = index - period + 1; cursor <= index; cursor += 1) {
+      highest = Math.max(highest, candles[cursor]!.high);
+      lowest = Math.min(lowest, candles[cursor]!.low);
+    }
+
+    const range = highest - lowest;
+    const k = range === 0 ? 50 : ((candles[index]!.close - lowest) / range) * 100;
+    kValues.push(k);
+    const d = kValues.length >= signalPeriod
+      ? kValues.slice(-signalPeriod).reduce((sum, value) => sum + value, 0) / signalPeriod
+      : null;
+    result.push({ time: candles[index]!.time, k, d });
+  }
+  return result;
+}
+
+/** Session VWAP using typical price and candle volume, reset at UTC midnight. */
+export function computeVWAPSeries(candles: Candle[]): SeriesPoint[] {
+  const result: SeriesPoint[] = [];
+  let session = -1;
+  let volumeTotal = 0;
+  let priceVolumeTotal = 0;
+
+  for (const candle of candles) {
+    const candleSession = Math.floor(candle.time / 86_400);
+    if (candleSession !== session) {
+      session = candleSession;
+      volumeTotal = 0;
+      priceVolumeTotal = 0;
+    }
+    if (candle.volume > 0) {
+      const typicalPrice = (candle.high + candle.low + candle.close) / 3;
+      volumeTotal += candle.volume;
+      priceVolumeTotal += typicalPrice * candle.volume;
+    }
+    if (volumeTotal > 0) {
+      result.push({ time: candle.time, value: priceVolumeTotal / volumeTotal });
+    }
   }
   return result;
 }

@@ -16,6 +16,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import {
   createChart,
+  createSeriesMarkers,
   createTextWatermark,
   ColorType,
   CrosshairMode,
@@ -24,6 +25,7 @@ import {
   HistogramSeries,
   LineSeries,
   type IChartApi,
+  type ISeriesMarkersPluginApi,
   type ISeriesApi,
   type ITextWatermarkPluginApi,
   type MouseEventParams,
@@ -48,16 +50,24 @@ import { TIMEFRAMES, type Candle, type CandleInterval, type InstrumentView } fro
 import { fmtPrice } from "@/lib/format";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import {
+  computeATRSeries,
   computeSMASeries,
   computeEMASeries,
   computeBollinger,
   computeRSISeries,
   computeMACD,
+  computeStochasticSeries,
+  computeVWAPSeries,
   ema,
   rsi,
   sma,
 } from "@/lib/indicators";
 import { isExecutableQuote } from "@/lib/marketFreshness";
+import {
+  CHART_HISTORY_DAYS,
+  CHART_HISTORY_WINDOW_SECONDS,
+  MAX_CHART_HISTORY_CANDLES,
+} from "@/lib/chartHistory";
 
 interface Props {
   instrument: InstrumentView;
@@ -78,8 +88,9 @@ const EMA_STORAGE_KEY = "blckforest:chart-ema";
 const BB_STORAGE_KEY = "blckforest:chart-bollinger";
 const RSI_STORAGE_KEY = "blckforest:chart-rsi";
 const MACD_STORAGE_KEY = "blckforest:chart-macd";
-const HISTORY_WINDOW_SECONDS = 180 * 24 * 60 * 60;
-const MAX_CHART_CANDLES = 180 * 24 * 60 + 1_000;
+const STOCHASTIC_STORAGE_KEY = "blckforest:chart-stochastic";
+const ATR_STORAGE_KEY = "blckforest:chart-atr";
+const VWAP_STORAGE_KEY = "blckforest:chart-vwap";
 
 function isInterval(value: string | null): value is CandleInterval {
   return value != null && (TIMEFRAMES as readonly string[]).includes(value);
@@ -149,6 +160,7 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const historyMarkersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const lineSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const maSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const emaSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
@@ -159,6 +171,10 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
   const macdHistRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const macdLineRef = useRef<ISeriesApi<"Line"> | null>(null);
   const macdSignalRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const stochasticKRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const stochasticDRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const atrSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const vwapSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const watermarkRef = useRef<ITextWatermarkPluginApi<Time> | null>(null);
   const prevCandleCount = useRef(0);
@@ -185,6 +201,9 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
   const [showBollinger, setShowBollinger] = useState(false);
   const [showRSI, setShowRSI] = useState(false);
   const [showMACD, setShowMACD] = useState(false);
+  const [showStochastic, setShowStochastic] = useState(false);
+  const [showATR, setShowATR] = useState(false);
+  const [showVWAP, setShowVWAP] = useState(false);
   const [maPeriod] = useState(20);
   const [emaPeriod] = useState(20);
   const [bollingerPeriod] = useState(20);
@@ -233,6 +252,9 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
     setShowBollinger(storedFlag(BB_STORAGE_KEY, false));
     setShowRSI(storedFlag(RSI_STORAGE_KEY, true));
     setShowMACD(storedFlag(MACD_STORAGE_KEY, false));
+    setShowStochastic(storedFlag(STOCHASTIC_STORAGE_KEY, false));
+    setShowATR(storedFlag(ATR_STORAGE_KEY, false));
+    setShowVWAP(storedFlag(VWAP_STORAGE_KEY, false));
   }, [searchParams, setInterval]);
   const historyKey = useMemo(
     () => `${instrument.symbol}-${interval}`,
@@ -289,6 +311,25 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
       macdLineRef.current.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.macd })));
       macdSignalRef.current.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.signal })));
     }
+    if (stochasticKRef.current && stochasticDRef.current) {
+      const points = computeStochasticSeries(data);
+      stochasticKRef.current.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.k })));
+      stochasticDRef.current.setData(points.flatMap((point) => point.d == null
+        ? []
+        : [{ time: point.time as UTCTimestamp, value: point.d }]));
+    }
+    if (atrSeriesRef.current) {
+      atrSeriesRef.current.setData(computeATRSeries(data).map((point) => ({
+        time: point.time as UTCTimestamp,
+        value: point.value,
+      })));
+    }
+    if (vwapSeriesRef.current) {
+      vwapSeriesRef.current.setData(computeVWAPSeries(data).map((point) => ({
+        time: point.time as UTCTimestamp,
+        value: point.value,
+      })));
+    }
   }, [bollingerPeriod, bollingerStdDev, emaPeriod, maPeriod, rsiPeriod]);
 
   useEffect(() => {
@@ -308,6 +349,22 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
     setHistoryExhausted(false);
     setHistoryMessage("");
   }, [historyKey]);
+
+  useEffect(() => {
+    const markers = historyMarkersRef.current;
+    const oldest = chartCandlesRef.current[0];
+    if (!markers || !historyExhausted || !oldest) {
+      markers?.setMarkers([]);
+      return;
+    }
+    markers.setMarkers([{
+      time: oldest.time as UTCTimestamp,
+      position: "belowBar",
+      shape: "arrowUp",
+      color: "#64748b",
+      text: "End of history",
+    }]);
+  }, [historyExhausted, historyKey]);
 
   useEffect(() => {
     const handleFullscreen = () => setFullscreen(document.fullscreenElement === panelRef.current);
@@ -364,6 +421,7 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
       visible: chartTypeRef.current === "candles",
     });
     seriesRef.current = candleSeries;
+    historyMarkersRef.current = createSeriesMarkers(candleSeries);
     const lineSeries = chart.addSeries(LineSeries, {
       color: "#f97316",
       lineWidth: 2,
@@ -403,6 +461,8 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
 
     return () => {
       chart.unsubscribeCrosshairMove(crosshairHandler);
+      historyMarkersRef.current?.detach();
+      historyMarkersRef.current = null;
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
@@ -420,6 +480,10 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
       macdHistRef.current = null;
       macdLineRef.current = null;
       macdSignalRef.current = null;
+      stochasticKRef.current = null;
+      stochasticDRef.current = null;
+      atrSeriesRef.current = null;
+      vwapSeriesRef.current = null;
     };
     // Chart type and theme changes restyle the existing chart; disposal is
     // reserved for unmount so canvas rendering is not raced by chart teardown.
@@ -570,6 +634,34 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showBollinger, bollingerPeriod, bollingerStdDev]);
 
+  // ── Session VWAP overlay (pane 0) ────────────────────────────────────────
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    if (!showVWAP) {
+      if (vwapSeriesRef.current) chart.removeSeries(vwapSeriesRef.current);
+      vwapSeriesRef.current = null;
+      return;
+    }
+    const series = chart.addSeries(LineSeries, {
+      color: "#0ea5e9",
+      lineWidth: 2,
+      priceLineVisible: false,
+      lastValueVisible: true,
+    });
+    vwapSeriesRef.current = series;
+    series.setData(computeVWAPSeries(chartCandlesRef.current).map((point) => ({
+      time: point.time as UTCTimestamp,
+      value: point.value,
+    })));
+    return () => {
+      if (vwapSeriesRef.current === series && chartRef.current === chart) {
+        chart.removeSeries(series);
+        vwapSeriesRef.current = null;
+      }
+    };
+  }, [showVWAP]);
+
   // ── RSI oscillator (pane 1) ─────────────────────────────────────────────
   useEffect(() => {
     const chart = chartRef.current;
@@ -589,7 +681,47 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showRSI, rsiPeriod]);
 
-  // ── MACD oscillator (pane 2) ────────────────────────────────────────────
+  // ── Stochastic oscillator (after RSI when both are enabled) ──────────────
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    if (!showStochastic) {
+      [stochasticKRef, stochasticDRef].forEach((ref) => {
+        if (ref.current) chart.removeSeries(ref.current);
+        ref.current = null;
+      });
+      return;
+    }
+    const paneIndex = showRSI ? 2 : 1;
+    const kSeries = chart.addSeries(LineSeries, {
+      color: "#7c3aed",
+      lineWidth: 2,
+      priceLineVisible: false,
+      lastValueVisible: true,
+    }, paneIndex);
+    const dSeries = chart.addSeries(LineSeries, {
+      color: "#f59e0b",
+      lineWidth: 1,
+      priceLineVisible: false,
+      lastValueVisible: false,
+    }, paneIndex);
+    stochasticKRef.current = kSeries;
+    stochasticDRef.current = dSeries;
+    kSeries.createPriceLine({ price: 80, color: "rgba(220,38,38,0.4)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "80" });
+    kSeries.createPriceLine({ price: 20, color: "rgba(22,128,59,0.4)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "20" });
+    const points = computeStochasticSeries(chartCandlesRef.current);
+    kSeries.setData(points.map((point) => ({ time: point.time as UTCTimestamp, value: point.k })));
+    dSeries.setData(points.flatMap((point) => point.d == null
+      ? []
+      : [{ time: point.time as UTCTimestamp, value: point.d }]));
+    return () => {
+      [kSeries, dSeries].forEach((series) => { try { chart.removeSeries(series); } catch { /* already removed */ } });
+      if (stochasticKRef.current === kSeries) stochasticKRef.current = null;
+      if (stochasticDRef.current === dSeries) stochasticDRef.current = null;
+    };
+  }, [showStochastic, showRSI]);
+
+  // ── MACD oscillator ──────────────────────────────────────────────────────
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
@@ -597,7 +729,7 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
       [macdHistRef, macdLineRef, macdSignalRef].forEach((r) => { if (r.current) chart.removeSeries(r.current); r.current = null; });
       return;
     }
-    const paneIndex = showRSI ? 2 : 1;
+    const paneIndex = 1 + Number(showRSI) + Number(showStochastic);
     const hist = chart.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false }, paneIndex);
     const line = chart.addSeries(LineSeries, { color: "#2563eb", lineWidth: 2, priceLineVisible: false, lastValueVisible: true }, paneIndex);
     const signal = chart.addSeries(LineSeries, { color: "#dc2626", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, paneIndex);
@@ -616,7 +748,36 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
       if (macdSignalRef.current === signal) macdSignalRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showMACD, showRSI]);
+  }, [showMACD, showRSI, showStochastic]);
+
+  // ── ATR volatility pane ──────────────────────────────────────────────────
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    if (!showATR) {
+      if (atrSeriesRef.current) chart.removeSeries(atrSeriesRef.current);
+      atrSeriesRef.current = null;
+      return;
+    }
+    const paneIndex = 1 + Number(showRSI) + Number(showStochastic) + Number(showMACD);
+    const series = chart.addSeries(LineSeries, {
+      color: "#d97706",
+      lineWidth: 2,
+      priceLineVisible: false,
+      lastValueVisible: true,
+    }, paneIndex);
+    atrSeriesRef.current = series;
+    series.setData(computeATRSeries(chartCandlesRef.current).map((point) => ({
+      time: point.time as UTCTimestamp,
+      value: point.value,
+    })));
+    return () => {
+      if (atrSeriesRef.current === series && chartRef.current === chart) {
+        chart.removeSeries(series);
+        atrSeriesRef.current = null;
+      }
+    };
+  }, [showATR, showRSI, showStochastic, showMACD]);
 
   const candleCount = candles.length;
   useEffect(() => {
@@ -644,8 +805,8 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
       else if (last.time > chartLast.time) chartCandles.push(last);
       else return;
 
-      if (chartCandles.length > MAX_CHART_CANDLES) {
-        chartCandles.splice(0, chartCandles.length - MAX_CHART_CANDLES);
+      if (chartCandles.length > MAX_CHART_HISTORY_CANDLES) {
+        chartCandles.splice(0, chartCandles.length - MAX_CHART_HISTORY_CANDLES);
         replaceChartData(chartCandles);
       } else {
         seriesRef.current.update({
@@ -673,7 +834,7 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
         ? chartRef.current?.timeScale().getVisibleLogicalRange() ?? null
         : null;
       const latestStart = candles[0]?.time ?? 0;
-      const windowStart = Math.floor(Date.now() / 1000) - HISTORY_WINDOW_SECONDS;
+      const windowStart = Math.floor(Date.now() / 1000) - CHART_HISTORY_WINDOW_SECONDS;
       const older = historyCandlesRef.current.filter(
         (candle) => candle.time < latestStart && candle.time >= windowStart,
       );
@@ -732,6 +893,26 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
         macdSignalRef.current.update({ time: lastMACD.time as UTCTimestamp, value: lastMACD.signal });
       }
     }
+    if (stochasticKRef.current && stochasticDRef.current) {
+      const points = computeStochasticSeries(candles);
+      const lastStochastic = points[points.length - 1];
+      if (lastStochastic) {
+        stochasticKRef.current.update({ time: lastStochastic.time as UTCTimestamp, value: lastStochastic.k });
+        if (lastStochastic.d != null) {
+          stochasticDRef.current.update({ time: lastStochastic.time as UTCTimestamp, value: lastStochastic.d });
+        }
+      }
+    }
+    if (atrSeriesRef.current) {
+      const points = computeATRSeries(candles);
+      const lastATR = points[points.length - 1];
+      if (lastATR) atrSeriesRef.current.update({ time: lastATR.time as UTCTimestamp, value: lastATR.value });
+    }
+    if (vwapSeriesRef.current) {
+      const points = computeVWAPSeries(candles);
+      const lastVWAP = points[points.length - 1];
+      if (lastVWAP) vwapSeriesRef.current.update({ time: lastVWAP.time as UTCTimestamp, value: lastVWAP.value });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candles, chartType, maPeriod]);
 
@@ -751,10 +932,10 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
       setHistoryMessage("Chart history is not ready yet.");
       return;
     }
-    const windowStart = Math.floor(Date.now() / 1000) - HISTORY_WINDOW_SECONDS;
+    const windowStart = Math.floor(Date.now() / 1000) - CHART_HISTORY_WINDOW_SECONDS;
     if (before <= windowStart) {
       setHistoryExhausted(true);
-      setHistoryMessage("The chart has reached the 180-day history limit.");
+      setHistoryMessage(`The ${CHART_HISTORY_DAYS}-day history window has been reached.`);
       return;
     }
 
@@ -790,7 +971,7 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
         setHistoryExhausted(!payload.hasMore);
         setHistoryMessage(payload.hasMore
           ? "The feed returned no new candles for this range."
-          : "No earlier candles are available from the configured feed.");
+          : "The configured provider has no earlier candles.");
         return;
       }
 
@@ -806,8 +987,14 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
           to: visibleRange.to + added,
         });
       }
-      setHistoryExhausted(!payload.hasMore || merged[0]!.time <= windowStart);
-      setHistoryMessage(`Loaded ${added.toLocaleString()} earlier candles.`);
+      const reachedWindow = merged[0]!.time <= windowStart;
+      const reachedProviderEnd = !payload.hasMore;
+      setHistoryExhausted(reachedWindow || reachedProviderEnd);
+      setHistoryMessage(reachedWindow
+        ? `The ${CHART_HISTORY_DAYS}-day history window has been reached.`
+        : reachedProviderEnd
+          ? "The configured provider has no earlier candles."
+          : `Loaded ${added.toLocaleString()} earlier candles.`);
     } catch (error) {
       if (historyKeyRef.current === requestKey) {
         setHistoryMessage(error instanceof Error ? error.message : "Historical candles could not be loaded.");
@@ -842,6 +1029,9 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
   const toggleBollinger = () => { setShowBollinger((v) => { const n = !v; window.localStorage.setItem(BB_STORAGE_KEY, String(n)); return n; }); };
   const toggleRSI = () => { setShowRSI((v) => { const n = !v; window.localStorage.setItem(RSI_STORAGE_KEY, String(n)); return n; }); };
   const toggleMACD = () => { setShowMACD((v) => { const n = !v; window.localStorage.setItem(MACD_STORAGE_KEY, String(n)); return n; }); };
+  const toggleStochastic = () => { setShowStochastic((v) => { const n = !v; window.localStorage.setItem(STOCHASTIC_STORAGE_KEY, String(n)); return n; }); };
+  const toggleATR = () => { setShowATR((v) => { const n = !v; window.localStorage.setItem(ATR_STORAGE_KEY, String(n)); return n; }); };
+  const toggleVWAP = () => { setShowVWAP((v) => { const n = !v; window.localStorage.setItem(VWAP_STORAGE_KEY, String(n)); return n; }); };
 
   const zoom = (direction: "in" | "out") => {
     const scale = chartRef.current?.timeScale();
@@ -889,6 +1079,21 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
     const last = macd[macd.length - 1];
     legendChips.push({ color: "#2563eb", label: "MACD (12, 26, 9)", value: last ? last.macd.toFixed(instrument.digits) : null, onRemove: toggleMACD });
   }
+  if (showVWAP) {
+    const points = computeVWAPSeries(candles);
+    const last = points[points.length - 1];
+    legendChips.push({ color: "#0ea5e9", label: "VWAP (UTC session)", value: last ? fmtPrice(last.value, instrument.digits) : null, onRemove: toggleVWAP });
+  }
+  if (showStochastic) {
+    const points = computeStochasticSeries(candles);
+    const last = points[points.length - 1];
+    legendChips.push({ color: "#7c3aed", label: "Stochastic (14, 3)", value: last ? `${last.k.toFixed(1)} / ${last.d?.toFixed(1) ?? "—"}` : null, onRemove: toggleStochastic });
+  }
+  if (showATR) {
+    const points = computeATRSeries(candles);
+    const last = points[points.length - 1];
+    legendChips.push({ color: "#d97706", label: "ATR (14)", value: last ? fmtPrice(last.value, instrument.digits) : null, onRemove: toggleATR });
+  }
 
   const indicatorGroups: IndicatorGroup[] = [
     {
@@ -897,6 +1102,7 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
         { key: "sma", label: `SMA (${maPeriod})`, checked: showMA, toggle: toggleMA },
         { key: "ema", label: `EMA (${emaPeriod})`, checked: showEMA, toggle: toggleEMA },
         { key: "bb", label: `Bollinger (${bollingerPeriod}, ${bollingerStdDev}σ)`, checked: showBollinger, toggle: toggleBollinger },
+        { key: "vwap", label: "VWAP (UTC session)", checked: showVWAP, toggle: toggleVWAP },
       ],
     },
     {
@@ -904,6 +1110,13 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
       entries: [
         { key: "rsi", label: `RSI (${rsiPeriod})`, checked: showRSI, toggle: toggleRSI },
         { key: "macd", label: "MACD (12, 26, 9)", checked: showMACD, toggle: toggleMACD },
+        { key: "stochastic", label: "Stochastic (14, 3)", checked: showStochastic, toggle: toggleStochastic },
+      ],
+    },
+    {
+      group: "Volatility",
+      entries: [
+        { key: "atr", label: "ATR (14)", checked: showATR, toggle: toggleATR },
       ],
     },
   ];
@@ -1045,8 +1258,11 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
       </div>
 
       {historyMessage && (
-        <div role="status" className="shrink-0 bg-panel px-3 py-1 text-(length:--term-text-2xs) text-text-faint">
-          {historyMessage}
+        <div role="status" className="flex shrink-0 items-center gap-1.5 bg-panel px-3 py-1 text-(length:--term-text-2xs) text-text-faint">
+          {historyExhausted ? <History size={12} aria-hidden /> : null}
+          {historyExhausted ? <span className="font-semibold text-text-muted">End of available history</span> : null}
+          {historyExhausted ? <span aria-hidden>·</span> : null}
+          <span>{historyMessage}</span>
         </div>
       )}
 
@@ -1342,7 +1558,7 @@ function ViewControlsMenu({
             {historyLoading ? "Loading earlier candles…" : "Load earlier candles"}
           </DropdownMenuItem>
           <DropdownMenuLabel className="px-2 py-1 text-(length:--term-text-2xs) font-normal normal-case tracking-normal text-text-faint">
-            History window: up to 180 days; availability depends on the provider.
+            History window: up to {CHART_HISTORY_DAYS} days; availability depends on the provider.
           </DropdownMenuLabel>
         </DropdownMenuGroup>
       </DropdownMenuContent>

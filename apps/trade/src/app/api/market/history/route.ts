@@ -6,6 +6,7 @@ import { fetchCandles } from "@/server/engine/candleFetcher";
 import { getMarketDataMode } from "@/server/engine/marketDataMode";
 import { INTERVAL_SECONDS, type CandleInterval } from "@/server/engine/types";
 import { consumeRateLimit, RateLimitedError } from "@/server/security/rateLimit";
+import { CHART_HISTORY_WINDOW_SECONDS } from "@/lib/chartHistory";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,8 +17,6 @@ const QuerySchema = z.object({
   before: z.coerce.number().int().positive(),
   limit: z.coerce.number().int().min(1).max(2_000).default(1_000),
 });
-
-const HISTORY_WINDOW_SECONDS = 180 * 24 * 60 * 60;
 
 /** GET /api/market/history — bounded, provider-backed older candle pages. */
 export async function GET(req: Request) {
@@ -63,7 +62,7 @@ export async function GET(req: Request) {
 
   const { symbol, interval, before, limit } = parsed.data;
   const now = Math.floor(Date.now() / 1000);
-  const windowStart = now - HISTORY_WINDOW_SECONDS;
+  const windowStart = now - CHART_HISTORY_WINDOW_SECONDS;
   const effectiveBefore = Math.min(before, now);
   const pageLimit = Math.min(limit, Math.ceil((effectiveBefore - windowStart) / INTERVAL_SECONDS[interval]));
   if (pageLimit <= 0) {

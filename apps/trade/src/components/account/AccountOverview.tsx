@@ -93,7 +93,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
               <Metric label="Balance" value={money(metrics.balance)} hint="Settled funds: approved deposits/withdrawals and closed-trade P/L. Excludes floating P/L." />
               <Metric label="Free Margin" value={money(metrics.free)} hint="Margin available to open new positions." />
               <Metric label="Margin" value={money(metrics.margin)} hint="Collateral currently held against open positions." icon={<Lock size={12} strokeWidth={1.75} aria-hidden />} />
-              <Metric label="Credit" value={money(metrics.credit)} hint="Bonus or administrative credit granted to the account." />
+              <Metric label="Credit" value={money(metrics.credit)} hint="Outstanding repayable advance. Already included in balance; shown separately for repayment tracking." />
               <Metric
                 label="Margin Level"
                 value={ml != null ? `${ml.toFixed(2)}%` : "—"}

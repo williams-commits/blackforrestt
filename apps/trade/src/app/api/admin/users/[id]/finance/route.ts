@@ -15,7 +15,7 @@ const Query = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(100),
 });
 const AdjustmentBody = z.object({
-  action: z.enum(["CREDIT", "DEBIT"]),
+  action: z.enum(["CREDIT", "DEBIT", "ADVANCE", "REPAY_ADVANCE"]),
   amount: z.union([z.string(), z.number()]).transform((value) => String(value).trim()),
   reason: z.string().trim().min(5).max(500),
 });

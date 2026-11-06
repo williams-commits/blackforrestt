@@ -49,6 +49,7 @@ export interface InstrumentView {
 export interface AccountMetricsView {
   accountNo: string | null;
   balance: number;
+  /** Outstanding repayable advance, already included in balance. */
   credit: number;
   /** Ledger available — the pool the server reserves margin+commission from. */
   available: number;

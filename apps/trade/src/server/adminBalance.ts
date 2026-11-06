@@ -2,14 +2,17 @@ import { prisma, withSerializableRetry } from "@/server/db";
 import {
   appendAuditEvent,
   ensureSystemAccount,
+  ensureUserAdvanceReceivableAccount,
   ensureUserLedgerAccount,
   money,
   postLedgerTransaction,
   refreshLedgerProjections,
+  userAdvanceBalance,
   userLedgerBalances,
+  type LedgerLine,
 } from "@/server/ledger";
 
-export type AdminBalanceAction = "CREDIT" | "DEBIT";
+export type AdminBalanceAction = "CREDIT" | "DEBIT" | "ADVANCE" | "REPAY_ADVANCE";
 
 export class AdminBalanceError extends Error {
   constructor(message: string, readonly status: number) {
@@ -27,7 +30,7 @@ export async function getUserFinanceHistory(userId: string, limit = 100) {
       name: true,
       accountNo: true,
       metrics: {
-        select: { balance: true, equity: true, free: true, margin: true, floatingPl: true },
+        select: { balance: true, credit: true, equity: true, free: true, margin: true, floatingPl: true },
       },
       wallets: {
         where: { asset: "USD" },
@@ -58,6 +61,7 @@ export async function getUserFinanceHistory(userId: string, limit = 100) {
     user: { id: user.id, email: user.email, name: user.name, accountNo: user.accountNo },
     metrics: user.metrics ? {
       balance: user.metrics.balance.toFixed(8),
+      credit: user.metrics.credit.toFixed(8),
       equity: user.metrics.equity.toFixed(8),
       free: user.metrics.free.toFixed(8),
       margin: user.metrics.margin.toFixed(8),
@@ -97,7 +101,9 @@ export async function adjustUserBalance(input: {
     throw new AdminBalanceError("A valid command key is required.", 400);
   }
 
-  const signedAmount = input.action === "CREDIT" ? amount : amount.negated();
+  const signedAmount = input.action === "CREDIT" || input.action === "ADVANCE"
+    ? amount
+    : amount.negated();
   const ledgerReference = `ADMIN_BALANCE:${input.userId}:${input.commandKey}`;
   const transactionReference = `ADMIN-${input.action}-${input.commandKey}`;
 
@@ -111,24 +117,72 @@ export async function adjustUserBalance(input: {
 
     const available = await ensureUserLedgerAccount(tx, input.userId, "AVAILABLE", "USD");
     const adjustment = await ensureSystemAccount(tx, "ADJUSTMENT_EQUITY", "USD");
+    const advanceReceivable = input.action === "ADVANCE" || input.action === "REPAY_ADVANCE"
+      ? await ensureUserAdvanceReceivableAccount(tx, input.userId, "USD")
+      : null;
     const existingPosting = await tx.ledgerTransaction.findUnique({
       where: { reference: ledgerReference },
       select: { id: true },
     });
-    if (!existingPosting && input.action === "DEBIT") {
+    if (!existingPosting && (input.action === "DEBIT" || input.action === "REPAY_ADVANCE")) {
       const balances = await userLedgerBalances(tx, input.userId, "USD");
       if (balances.available.lessThan(amount)) {
         throw new AdminBalanceError(
-          `Deduction exceeds the available balance of USD ${balances.available.toFixed(2)}.`,
+          `Amount exceeds the available balance of USD ${balances.available.toFixed(2)}.`,
+          409,
+        );
+      }
+    }
+    if (!existingPosting && input.action === "REPAY_ADVANCE") {
+      const outstanding = await userAdvanceBalance(tx, input.userId, "USD");
+      if (outstanding.lessThan(amount)) {
+        throw new AdminBalanceError(
+          `Repayment exceeds the outstanding advance credit of USD ${outstanding.toFixed(2)}.`,
           409,
         );
       }
     }
 
+    const descriptionPrefix = {
+      CREDIT: "Administrative balance top-up",
+      DEBIT: "Administrative balance deduction",
+      ADVANCE: "Administrative advance credit",
+      REPAY_ADVANCE: "Advance credit repayment",
+    }[input.action];
+    let lines: LedgerLine[];
+    switch (input.action) {
+      case "CREDIT":
+        lines = [
+          { accountId: adjustment.id, direction: "DEBIT", amount, asset: "USD" },
+          { accountId: available.id, direction: "CREDIT", amount, asset: "USD" },
+        ];
+        break;
+      case "DEBIT":
+        lines = [
+          { accountId: available.id, direction: "DEBIT", amount, asset: "USD" },
+          { accountId: adjustment.id, direction: "CREDIT", amount, asset: "USD" },
+        ];
+        break;
+      case "ADVANCE":
+        if (!advanceReceivable) throw new Error("Advance receivable account was not initialized.");
+        lines = [
+          { accountId: advanceReceivable.id, direction: "DEBIT", amount, asset: "USD" },
+          { accountId: available.id, direction: "CREDIT", amount, asset: "USD" },
+        ];
+        break;
+      case "REPAY_ADVANCE":
+        if (!advanceReceivable) throw new Error("Advance receivable account was not initialized.");
+        lines = [
+          { accountId: available.id, direction: "DEBIT", amount, asset: "USD" },
+          { accountId: advanceReceivable.id, direction: "CREDIT", amount, asset: "USD" },
+        ];
+        break;
+    }
+
     const posted = await postLedgerTransaction(tx, {
       reference: ledgerReference,
       kind: "ADMIN_ADJUSTMENT",
-      description: `${input.action === "CREDIT" ? "Administrative balance top-up" : "Administrative balance deduction"}: ${input.reason.trim()}`,
+      description: `${descriptionPrefix}: ${input.reason.trim()}`,
       createdBy: input.actorId,
       userId: input.userId,
       sourceType: "User",
@@ -140,15 +194,7 @@ export async function adjustUserBalance(input: {
         reason: input.reason.trim(),
         commandKey: input.commandKey,
       },
-      lines: input.action === "CREDIT"
-        ? [
-            { accountId: adjustment.id, direction: "DEBIT", amount, asset: "USD" },
-            { accountId: available.id, direction: "CREDIT", amount, asset: "USD" },
-          ]
-        : [
-            { accountId: available.id, direction: "DEBIT", amount, asset: "USD" },
-            { accountId: adjustment.id, direction: "CREDIT", amount, asset: "USD" },
-          ],
+      lines,
     });
 
     const transaction = await tx.transaction.upsert({
@@ -160,7 +206,7 @@ export async function adjustUserBalance(input: {
         status: "COMPLETED",
         amount: signedAmount,
         asset: "USD",
-        description: input.reason.trim(),
+        description: `${descriptionPrefix}: ${input.reason.trim()}`,
         reference: transactionReference,
       },
     });
@@ -168,7 +214,12 @@ export async function adjustUserBalance(input: {
     if (!posted.replayed) {
       await appendAuditEvent(tx, {
         actorId: input.actorId,
-        action: input.action === "CREDIT" ? "USER_BALANCE_CREDITED" : "USER_BALANCE_DEBITED",
+        action: {
+          CREDIT: "USER_BALANCE_CREDITED",
+          DEBIT: "USER_BALANCE_DEBITED",
+          ADVANCE: "USER_ADVANCE_CREDITED",
+          REPAY_ADVANCE: "USER_ADVANCE_REPAID",
+        }[input.action],
         entityType: "User",
         entityId: input.userId,
         domain: "LEDGER",
@@ -195,6 +246,7 @@ export async function adjustUserBalance(input: {
       },
       metrics: {
         balance: projection.metrics.balance.toFixed(8),
+        credit: projection.metrics.credit.toFixed(8),
         equity: projection.metrics.equity.toFixed(8),
         free: projection.metrics.free.toFixed(8),
         margin: projection.metrics.margin.toFixed(8),

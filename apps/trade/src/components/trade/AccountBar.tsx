@@ -103,7 +103,11 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
           // it reads "not applicable" rather than a broken value.
           valueClass={account?.marginLevel == null ? "text-text-faint" : marginTight ? "text-down font-semibold" : ""}
         />
-        <Metric label="CREDIT" value={fmtUsd(account?.credit)} className="hidden md:flex" />
+        <Metric
+          label="CREDIT"
+          value={fmtUsd(account?.credit)}
+          title="Outstanding repayable advance, already included in balance."
+        />
       </div>
 
       {/* Connection + clock + search + theme toggle. The theme toggle lives in the user
@@ -240,16 +244,18 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
 function Metric({
   label,
   value,
+  title,
   valueClass = "",
   className = "",
 }: {
   label: string;
   value: string;
+  title?: string;
   valueClass?: string;
   className?: string;
 }) {
   return (
-    <div className={`flex flex-col gap-0 shrink-0 leading-tight ${className}`}>
+    <div title={title} className={`flex flex-col gap-0 shrink-0 leading-tight ${className}`}>
       <span className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint leading-none mb-0.5">{label}</span>
       <span className={`text-(length:--term-text-md) tnum leading-none font-semibold ${valueClass}`}>{value}</span>
     </div>

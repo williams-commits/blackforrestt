@@ -10,6 +10,7 @@ import {
   appendAuditEvent,
   getTrialBalance,
   money,
+  userAdvanceBalance,
   userLedgerBalances,
 } from "./ledger";
 
@@ -354,6 +355,7 @@ async function checkUserProjection(userId: string): Promise<PendingCase[]> {
       }),
     ]);
     const floating = money(money(openTotals._sum.profit ?? 0).add(openTotals._sum.swap ?? 0));
+    const credit = await userAdvanceBalance(tx, userId, "USD");
     const expectedLocked = money(balances.margin.add(balances.withdrawalPending));
     const cases: PendingCase[] = [];
 
@@ -387,6 +389,9 @@ async function checkUserProjection(userId: string): Promise<PendingCase[]> {
       }
       if (!metrics.margin.equals(balances.margin)) {
         cases.push(critical(userId, "ACCOUNT_METRICS", "Account margin does not equal reserved margin liability.", balances.margin.toFixed(8), metrics.margin.toFixed(8)));
+      }
+      if (!metrics.credit.equals(credit)) {
+        cases.push(critical(userId, "ACCOUNT_METRICS", "Account credit does not equal outstanding advance receivable.", credit.toFixed(8), metrics.credit.toFixed(8)));
       }
       if (!metrics.floatingPl.equals(floating)) {
         cases.push(critical(userId, "ACCOUNT_METRICS", "Floating P&L does not equal open-position marks.", floating.toFixed(8), metrics.floatingPl.toFixed(8)));

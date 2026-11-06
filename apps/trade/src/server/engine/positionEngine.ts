@@ -274,14 +274,15 @@ export function markPosition(pos: Position, markRate: number, instrument: Instru
 }
 
 /**
- * Recompute account metrics from balance + open positions.
- *   equity      = balance + credit + Σ unrealized profit/swap
+ * Recompute account metrics from balance and open positions.
+ *   equity      = balance + Σ unrealized profit/swap
  *   margin      = Σ margin locked by open positions
  *   marginLevel = equity / margin × 100  (null if margin == 0)
  *   free        = equity − margin
  */
 export interface AccountInput {
   balance: Prisma.Decimal;
+  /** Outstanding repayable advance; already included in balance and informational here. */
   credit: Prisma.Decimal;
   /** Ledger-derived client funds that are neither margin nor withdrawal reserved. */
   available: Prisma.Decimal;
@@ -295,6 +296,7 @@ export interface AccountInput {
 
 export interface AccountOutput {
   balance: Prisma.Decimal;
+  /** Outstanding repayable advance; already included in balance and informational here. */
   credit: Prisma.Decimal;
   /** Ledger available — the pool the server actually reserves margin+commission from. */
   available: Prisma.Decimal;
@@ -312,14 +314,14 @@ export function computeMetrics(input: AccountInput): AccountOutput {
       monetary(0),
     ),
   );
-  const equity = monetary(input.balance.add(input.credit).add(floatingPl));
+  const equity = monetary(input.balance.add(floatingPl));
   const margin = monetary(
     input.margins.reduce((sum, amount) => sum.add(amount), monetary(0)),
   );
   const marginLevel = margin.greaterThan(0)
     ? equity.div(margin).mul(100).toDecimalPlaces(4, Decimal.ROUND_HALF_EVEN)
     : null;
-  const free = monetary(input.available.add(input.credit).add(floatingPl));
+  const free = monetary(input.available.add(floatingPl));
   return { balance: input.balance, credit: input.credit, available: input.available, equity, margin, marginLevel, free, floatingPl };
 }
 

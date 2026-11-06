@@ -98,10 +98,9 @@ export function TradePanel({
   const commission = Number.isFinite(vol) ? vol * instrument.commissionPerLot : 0;
   const pipValue = Number.isFinite(vol) ? vol * instrument.pipValue : 0;
   const requiredCash = margin + commission;
-  // The server reserves margin+commission from LEDGER available (not
-  // free = available+credit+floating) — pre-check the same pool so the
-  // button's verdict matches the server's INSUFFICIENT_FUNDS gate.
-  const freeMargin = account?.available ?? account?.free ?? 0;
+  // Advances are included in ledger available funds; the Credit metric is
+  // informational and must not be added to or subtracted from this pool.
+  const freeMargin = account?.available ?? 0;
   const hasValidVolume = Number.isFinite(vol) && vol >= 0.01 && vol <= 100;
   const hasFunds = account != null && freeMargin + 1e-8 >= requiredCash;
 

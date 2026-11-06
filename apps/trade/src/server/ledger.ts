@@ -118,6 +118,43 @@ export async function ensureUserLedgerAccount(
   });
 }
 
+export async function ensureUserAdvanceReceivableAccount(
+  tx: Tx,
+  userId: string,
+  asset = "USD",
+) {
+  const code = `USER:${userId}:ADVANCE_RECEIVABLE:${asset}`;
+  return tx.ledgerAccount.upsert({
+    where: { code },
+    update: {},
+    create: {
+      code,
+      name: `${asset} user advance receivable`,
+      type: "ASSET",
+      asset,
+      userId,
+    },
+  });
+}
+
+export async function userAdvanceBalance(
+  tx: Tx,
+  userId: string,
+  asset = "USD",
+): Promise<Prisma.Decimal> {
+  const account = await tx.ledgerAccount.findUnique({
+    where: { code: `USER:${userId}:ADVANCE_RECEIVABLE:${asset}` },
+    select: { id: true },
+  });
+  if (!account) return money(0);
+
+  const outstanding = (await ledgerAccountBalance(tx, account.id)).negated();
+  if (outstanding.isNegative()) {
+    throw new LedgerConflictError(`User advance receivable is overpaid for ${userId}.`);
+  }
+  return money(outstanding);
+}
+
 export async function ensureCashClearingAccount(tx: Tx, asset = "USD") {
   return ensureSystemAccount(tx, "CASH_CLEARING", asset);
 }
@@ -386,6 +423,7 @@ export async function refreshLedgerProjections(
   options: { writeWallet?: boolean } = {},
 ) {
   const balances = await userLedgerBalances(tx, userId, asset);
+  const credit = await userAdvanceBalance(tx, userId, asset);
   const openPositionTotals =
     floatingOverride == null
       ? await tx.position.aggregate({
@@ -399,10 +437,9 @@ export async function refreshLedgerProjections(
         openPositionTotals?._sum.swap ?? money(0),
       ),
   );
-  const credit = money(0);
   const balance = money(balances.total);
-  const equity = money(balance.add(credit).add(floating));
-  const free = money(balances.available.add(credit).add(floating));
+  const equity = money(balance.add(floating));
+  const free = money(balances.available.add(floating));
   const marginLevel = balances.margin.greaterThan(0)
     ? equity.div(balances.margin).mul(100).toDecimalPlaces(4, Prisma.Decimal.ROUND_HALF_EVEN)
     : null;
@@ -488,6 +525,7 @@ export async function verifyUserAccountingProjection(userId: string, asset = "US
       }),
     ]);
     const floating = money(openTotals._sum.profit ?? 0).add(openTotals._sum.swap ?? 0);
+    const credit = await userAdvanceBalance(tx, userId, asset);
     const expectedLocked = money(balances.margin.add(balances.withdrawalPending));
     const expectedBalance = money(balances.total);
     const expectedEquity = money(expectedBalance.add(floating));
@@ -511,6 +549,9 @@ export async function verifyUserAccountingProjection(userId: string, asset = "US
       }
       if (!metrics.margin.equals(balances.margin)) {
         violations.push("account margin does not equal reserved margin liability");
+      }
+      if (!metrics.credit.equals(credit)) {
+        violations.push("account credit does not equal outstanding advance receivable");
       }
       if (!metrics.floatingPl.equals(floating)) {
         violations.push("floating P&L does not equal open-position marks");

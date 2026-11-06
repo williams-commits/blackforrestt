@@ -277,8 +277,9 @@ model AccountMetrics {
   userId      String   @unique
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   balance     Decimal  @default(0) @db.Decimal(36, 8)
+  // Outstanding repayable advance; already included in balance, so display-only and not added again.
   credit      Decimal  @default(0) @db.Decimal(36, 8)
-  // Equity = balance + credit + floating PnL.
+  // Equity = balance + floating PnL; credit is already included in balance.
   equity      Decimal  @default(0) @db.Decimal(36, 8)
   // Margin currently locked by open positions.
   margin      Decimal  @default(0) @db.Decimal(36, 8)

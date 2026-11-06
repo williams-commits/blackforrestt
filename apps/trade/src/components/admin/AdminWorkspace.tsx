@@ -812,7 +812,7 @@ interface UserFinanceTransaction {
 }
 interface UserFinanceResponse {
   user: { id: string; email: string | null; name: string | null; accountNo: string | null };
-  metrics: { balance: string; equity: string; free: string; margin: string; floatingPl: string } | null;
+  metrics: { balance: string; credit: string; equity: string; free: string; margin: string; floatingPl: string } | null;
   wallet: { asset: string; free: string; locked: string } | null;
   transactions: UserFinanceTransaction[];
 }
@@ -894,7 +894,7 @@ function UserBalanceDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [action, setAction] = useState<"CREDIT" | "DEBIT">("CREDIT");
+  const [action, setAction] = useState<"CREDIT" | "DEBIT" | "ADVANCE" | "REPAY_ADVANCE">("CREDIT");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   // One idempotency key per logical adjustment: minted when the dialog opens,
@@ -953,7 +953,12 @@ function UserBalanceDialog({
       commandKeyRef.current = `admin-balance-${createDeviceId()}`;
       setAmount("");
       setReason("");
-      toast.success(action === "CREDIT" ? "Balance top-up posted" : "Balance deduction posted");
+      toast.success({
+        CREDIT: "Balance top-up posted",
+        DEBIT: "Balance deduction posted",
+        ADVANCE: "Advance credit issued",
+        REPAY_ADVANCE: "Advance repayment posted",
+      }[action]);
       await Promise.all([load(), onAdjusted()]);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to adjust the balance.");
@@ -976,8 +981,9 @@ function UserBalanceDialog({
         {loading && !data ? <div className="rounded-xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">Loading account finance…</div> : null}
         {data ? (
           <div className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <MetricCard label="Ledger balance" value={formatUsd(data.metrics?.balance ?? "0")} />
+              <MetricCard label="Advance outstanding" value={formatUsd(data.metrics?.credit ?? "0")} />
               <MetricCard label="Available" value={formatUsd(data.wallet?.free ?? data.metrics?.free ?? "0")} />
               <MetricCard label="Locked" value={formatUsd(data.wallet?.locked ?? "0")} />
               <MetricCard label="Equity" value={formatUsd(data.metrics?.equity ?? "0")} />
@@ -987,9 +993,12 @@ function UserBalanceDialog({
                 ariaLabel="Balance adjustment type"
                 value={action}
                 onChange={setAction}
+                className="flex-wrap"
                 options={[
-                  { value: "CREDIT" as const, label: "Top up balance" },
-                  { value: "DEBIT" as const, label: "Deduct balance" },
+                  { value: "CREDIT" as const, label: "Top up" },
+                  { value: "DEBIT" as const, label: "Deduct" },
+                  { value: "ADVANCE" as const, label: "Advance credit" },
+                  { value: "REPAY_ADVANCE" as const, label: "Repay advance" },
                 ]}
               />
               <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,12rem)_1fr_auto] md:items-end">
@@ -999,9 +1008,20 @@ function UserBalanceDialog({
                 <Label className="text-xs font-medium">Audited reason
                   <Input type="text" minLength={5} maxLength={500} required value={reason} onChange={(event) => setReason(event.target.value)} className="mt-1 h-10" placeholder="Ticket, customer request, or correction reason" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />} />
                 </Label>
-                <Button type="submit" variant={action === "CREDIT" ? "default" : "destructive"} loading={busy} loadingLabel="Posting adjustment">{action === "CREDIT" ? <><ArrowDownToLine size={13} strokeWidth={2} aria-hidden /> Post top-up</> : <><ArrowUpFromLine size={13} strokeWidth={2} aria-hidden /> Post deduction</>}</Button>
+                <Button type="submit" variant={action === "DEBIT" ? "destructive" : "default"} loading={busy} loadingLabel="Posting adjustment">
+                  {action === "CREDIT" ? <><ArrowDownToLine size={13} strokeWidth={2} aria-hidden /> Post top-up</> : null}
+                  {action === "DEBIT" ? <><ArrowUpFromLine size={13} strokeWidth={2} aria-hidden /> Post deduction</> : null}
+                  {action === "ADVANCE" ? <><ArrowDownToLine size={13} strokeWidth={2} aria-hidden /> Issue advance</> : null}
+                  {action === "REPAY_ADVANCE" ? <><ArrowUpFromLine size={13} strokeWidth={2} aria-hidden /> Repay advance</> : null}
+                </Button>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">Deductions cannot exceed the user’s available balance. Margin and pending withdrawals are never silently consumed.</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {action === "ADVANCE"
+                  ? "Advance funds are added to balance; the outstanding amount is shown as Credit and deducted once from equity and free margin."
+                  : action === "REPAY_ADVANCE"
+                    ? "Repayment reduces available balance and outstanding Credit. It cannot exceed either amount; margin and pending withdrawals are not consumed."
+                    : "Deductions cannot exceed available balance. Margin and pending withdrawals are never silently consumed."}
+              </p>
             </form>
             {error ? <Alert tone="err">{error}</Alert> : null}
             {notice ? <Alert tone="ok">{notice}</Alert> : null}
@@ -1009,7 +1029,7 @@ function UserBalanceDialog({
               <RecordList<UserFinanceTransaction>
                     ariaLabel="Transaction"
                     title="Transaction history"
-                    description={`${transactions.length} records · deposits, withdrawals, settlements, bonuses, fees, and adjustments`}
+                    description={`${transactions.length} records · deposits, withdrawals, settlements, bonuses, fees, adjustments, and advance repayments`}
                     toolbarEnd={<Button size="sm" variant="ghost" onClick={() => void load()} disabled={loading}><RefreshCw size={13} strokeWidth={2} aria-hidden /> Refresh</Button>}
                     rows={transactions}
                     rowKey={(t) => t.id}

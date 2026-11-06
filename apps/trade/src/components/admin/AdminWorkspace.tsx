@@ -16,7 +16,7 @@ import { useCommandDialog } from "@/components/ui/useCommandDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 import { ADMIN_TAB_ICONS, TabIcon, type LucideIcon } from "@/components/ui/tabIcons";
-import { CandlestickChart, ClipboardCheck, CreditCard, HeartPulse, IdCard, LayoutDashboard, LayoutGrid, BookOpenText, ListTree, Plus, RotateCcw, Scale, ShieldCheck, TriangleAlert, Users, X } from "lucide-react";
+import { ClipboardCheck, CreditCard, HeartPulse, IdCard, LayoutDashboard, LayoutGrid, BookOpenText, ListTree, Plus, RotateCcw, Scale, ShieldCheck, Users, X } from "lucide-react";
 import { CsvExportButton } from "@/components/ui/CsvExport";
 import { createDeviceId } from "@/lib/device";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,7 @@ import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowDownToLine, ArrowLeftRight, ArrowUp, ArrowUpFromLine, Ban, Braces, CheckCircle2, Coins, DollarSign, Download, FileText, LifeBuoy, Percent, RefreshCw, ScrollText, ShieldAlert, SlidersHorizontal, Tag, TrendingDown, TrendingUp, UserRound } from "lucide-react";
+import { ArrowDown, ArrowDownToLine, ArrowLeftRight, ArrowUp, ArrowUpFromLine, Ban, Braces, CandlestickChart, CheckCircle2, Coins, DollarSign, Download, FileText, LifeBuoy, Percent, RefreshCw, ScrollText, Server, ShieldAlert, SlidersHorizontal, Tag, TrendingDown, TrendingUp, TriangleAlert, UserRound } from "lucide-react";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -458,6 +458,7 @@ function OverviewPanel() {
           <div className="grid gap-3 sm:grid-cols-2">
             <AdminSummaryCard
               label="Execution environment"
+              icon={Server}
               value={overview.environment.simulationOnly ? "Simulation only" : formatAdminValue(overview.environment.executionProvider)}
               detail={overview.environment.simulationOnly
                 ? "Live execution is disabled in this environment."
@@ -467,6 +468,7 @@ function OverviewPanel() {
             />
             <AdminSummaryCard
               label="Market data"
+              icon={CandlestickChart}
               value={marketDataLabel(overview.environment.marketDataMode)}
               detail="Price feed source."
             />
@@ -513,11 +515,14 @@ function OverviewStatCard({ label, value, icon }: { label: string; value: number
   );
 }
 
-function AdminSummaryCard({ label, value, detail, valueClassName }: { label: string; value: string; detail?: string; valueClassName?: string }) {
+function AdminSummaryCard({ label, value, detail, valueClassName, icon: Icon }: { label: string; value: string; detail?: string; valueClassName?: string; icon: LucideIcon }) {
   return (
     <Card className="gap-2 py-4 shadow-panel">
       <CardHeader className="px-4 py-0">
-        <CardTitle className="text-sm">{label}</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Icon size={15} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+          {label}
+        </CardTitle>
       </CardHeader>
       <CardContent className="px-4">
         <p className={cn("text-lg font-semibold leading-tight", valueClassName)}>{value}</p>
@@ -1209,7 +1214,10 @@ function LedgerPanel() {
     <Card className="gap-3 py-4 shadow-panel">
       <CardHeader className="flex flex-row items-start justify-between gap-3 px-4 py-0">
         <div className="grid gap-1">
-          <CardTitle className="text-sm">All-time control totals</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Scale size={15} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+            All-time control totals
+          </CardTitle>
           <CardDescription>Debits and credits across the ledger, grouped by asset.</CardDescription>
         </div>
         {ledgerBalanced && <Badge variant="secondary" className="shrink-0 bg-(--term-success-bg) text-(--term-success-fg)">Balanced</Badge>}
@@ -1473,8 +1481,8 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4">
     <SectionHeader eyebrow="Finance" icon={<CandlestickChart size={18} strokeWidth={2} aria-hidden />} title="Execution and position surveillance" description={resource.data.providerWarning} onRefresh={() => void resource.refresh()} />
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      <AdminSummaryCard label="Execution model" value={executionModeLabel(resource.data.executionMode)} />
-      <AdminSummaryCard label="Market data" value={marketDataLabel(resource.data.marketDataMode)} detail="Price feed source." />
+      <AdminSummaryCard label="Execution model" icon={CandlestickChart} value={executionModeLabel(resource.data.executionMode)} />
+      <AdminSummaryCard label="Market data" icon={CandlestickChart} value={marketDataLabel(resource.data.marketDataMode)} detail="Price feed source." />
       <HealthCard name="Trading engine" status={resource.data.engineReady ? "UP" : "STARTING"} detail={resource.data.engineReady ? "Ready to process positions." : "Waiting for engine startup."} />
     </div>
     {error && <Alert tone="err">{error}</Alert>}
@@ -1875,12 +1883,14 @@ function RiskPanel({ canManage }: { canManage: boolean }) {
     <div className="grid gap-3 sm:grid-cols-2">
       <AdminSummaryCard
         label="Active reconciliation blocks"
+        icon={Ban}
         value={resource.data.exposure.activeReconciliationBlocks.toLocaleString("en-US")}
         detail={resource.data.exposure.activeReconciliationBlocks === 0 ? "No accounts are currently blocked." : "Accounts currently restricted by reconciliation."}
         valueClassName={resource.data.exposure.activeReconciliationBlocks === 0 ? "text-up" : "text-down"}
       />
       <AdminSummaryCard
         label="Accounts below margin warning"
+        icon={TriangleAlert}
         value={resource.data.exposure.accountsBelowWarningMarginLevel.toLocaleString("en-US")}
         detail={resource.data.exposure.accountsBelowWarningMarginLevel === 0 ? "No accounts are below the warning threshold." : "Accounts below the configured margin threshold."}
         valueClassName={resource.data.exposure.accountsBelowWarningMarginLevel === 0 ? "text-up" : "text-down"}

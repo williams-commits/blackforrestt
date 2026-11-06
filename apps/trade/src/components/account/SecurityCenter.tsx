@@ -177,7 +177,10 @@ export function SecurityCenter() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Security center</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <ShieldCheck size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+          Security center
+        </CardTitle>
         <CardDescription>
           MFA: {enabled ? `enabled · ${remaining} recovery codes remaining` : "not enabled"}
         </CardDescription>

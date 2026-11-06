@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Building2, Check, User, IdCard, Circle, FileText, Globe, Hash, MapPin, UserRound } from "lucide-react";
+import { BadgeCheck, Building2, Check, ClipboardCheck, User, IdCard, Circle, FileText, Globe, Hash, MapPin, UserRound } from "lucide-react";
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -121,7 +121,8 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
           {status === "NOT_SUBMITTED" || status === "REJECTED" ? (
         <Card>
           <CardHeader>
-            <CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <BadgeCheck size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
               {status === "REJECTED" ? "Re-submit verification" : "Verify your identity"}
             </CardTitle>
           </CardHeader>
@@ -206,7 +207,10 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
           {status === "PENDING" && kyc && (
             <Card>
               <CardHeader>
-                <CardTitle>Submitted details</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+                  Submitted details
+                </CardTitle>
                 <CardDescription>Under compliance review — this is what we received.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -222,7 +226,10 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
           {status === "APPROVED" && kyc && (
             <Card>
               <CardHeader>
-                <CardTitle>Verified identity</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <BadgeCheck size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+                  Verified identity
+                </CardTitle>
                 <CardDescription>Your compliance record on file.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -243,7 +250,10 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
           <Card>
             <CardHeader className="gap-2">
               <div className="flex items-center justify-between gap-3">
-                <CardTitle id="verification-checklist-heading">Verification checklist</CardTitle>
+                <CardTitle id="verification-checklist-heading" className="flex items-center gap-2">
+                  <ClipboardCheck size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+                  Verification checklist
+                </CardTitle>
                 <span className="text-xs font-semibold tnum text-muted-foreground">{progress}% complete</span>
               </div>
             </CardHeader>

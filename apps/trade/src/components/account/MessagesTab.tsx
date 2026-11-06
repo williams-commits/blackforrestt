@@ -258,7 +258,10 @@ function OperatorInbox({ threads }: { threads: { threads: ThreadRow[]; totalUnre
       {/* Recent conversations */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent conversations</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+            Recent conversations
+          </CardTitle>
           <CardDescription>Newest activity first.</CardDescription>
         </CardHeader>
         <CardContent className="px-0 pb-0">

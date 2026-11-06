@@ -115,7 +115,10 @@ export function ReferralTab() {
     <div className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle>Your Referral Link</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Share2 size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+            Your Referral Link
+          </CardTitle>
           <CardDescription>Share this link. When your referral makes their first deposit, you both earn a bonus.</CardDescription>
           <div className="flex items-center gap-2 pt-2">
             <Input

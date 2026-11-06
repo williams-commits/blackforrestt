@@ -385,7 +385,8 @@ export function KycReview({
               <CardHeader>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <CardTitle className="text-base">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <IdCard size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
                       {selected.firstName} {selected.lastName}
                     </CardTitle>
                     <CardDescription>

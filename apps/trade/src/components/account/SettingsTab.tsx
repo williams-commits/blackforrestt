@@ -48,7 +48,10 @@ export function SettingsTab({ user }: { user: User }) {
       {/* Account details */}
       <Card>
         <CardHeader className="grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto]">
-          <CardTitle>Account details</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <User size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+            Account details
+          </CardTitle>
           <CardDescription>Your identity on the platform.</CardDescription>
           <div className="col-start-1 row-start-3 row-span-1 grid w-full grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:col-start-2 sm:row-start-1 sm:row-span-2 sm:flex sm:w-auto sm:justify-self-end">
             <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setProfileOpen(true)}>

@@ -172,7 +172,10 @@ export function KycDocuments() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Identity and proof-of-address documents</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <FileText size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+          Identity and proof-of-address documents
+        </CardTitle>
         <CardDescription>
           Upload at least one identity document and one proof-of-address document. Files are scanned and sealed in private storage.
         </CardDescription>

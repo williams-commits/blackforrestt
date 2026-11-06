@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/Alert";
 import { Bell, CheckCheck, ChevronDown, MessageCircle, X } from "lucide-react";
-import { ChipGroup } from "@/components/ui/ChipGroup";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";
@@ -47,7 +47,7 @@ const TYPE_TONES: Record<string, string> = {
 };
 
 /** Persisted notification feed — tonal rows with unread emphasis, category
- *  chips, mark-all-read, and Load more over the paginated API. Rows open a
+ *  filtering, mark-all-read, and Load more over the paginated API. Rows open a
  *  detail modal (opening an unread item marks it read). */
 export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: () => void; onOpenMessages?: () => void }) {
   const [busy, setBusy] = useState(false);
@@ -142,19 +142,25 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Notifications</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Bell size={16} strokeWidth={2} aria-hidden />
+          Notifications
+        </CardTitle>
         <CardDescription>Your full notification history — available whenever you sign in.</CardDescription>
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <ChipGroup
-            ariaLabel="Filter notifications by category" className="flex-wrap"
-            value={group}
-            onChange={(value) => { setGroup(value); setPage(1); setAccumulated([]); }}
-            options={Object.entries(GROUP_LABELS).map(([key, label]) => ({
-              value: key,
-              label: `${label}${groupCounts[key] > 0 ? ` · ${groupCounts[key] > 99 ? "99+" : groupCounts[key]}` : ""}`,
-            }))}
-          />
-        </div>
+        <Select value={group} onValueChange={(value) => { setGroup(value); setPage(1); setAccumulated([]); }}>
+          <SelectTrigger size="sm" className="w-48" aria-label="Filter notifications by category">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {Object.entries(GROUP_LABELS).map(([key, label]) => (
+                <SelectItem key={key} value={key}>
+                  {`${label}${groupCounts[key] > 0 ? ` · ${groupCounts[key] > 99 ? "99+" : groupCounts[key]}` : ""}`}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         {unreadCount > 0 && (
           <CardAction className="flex items-center gap-2">
             <Badge className="bg-primary text-primary-foreground">{unreadCount} unread</Badge>

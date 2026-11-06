@@ -119,7 +119,10 @@ export function SupportTab() {
       {/* Create new case */}
       <Card>
         <CardHeader>
-          <CardTitle>Open a support case</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <LifeBuoy size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+            Open a support case
+          </CardTitle>
           <CardDescription>Our team typically responds within one business day. Your case reference will appear below once submitted.</CardDescription>
         </CardHeader>
         <CardContent>

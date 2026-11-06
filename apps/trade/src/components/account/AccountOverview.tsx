@@ -7,7 +7,7 @@ import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowDownToLine, ArrowRight, ArrowUpFromLine, Info, Lock, Wallet } from "lucide-react";
+import { ArrowDownToLine, ArrowRight, ArrowUpFromLine, ChartNoAxesCombined, Info, Lock, UserRound, Wallet } from "lucide-react";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 import { InfoHint } from "@/components/ui/InfoHint";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -62,7 +62,10 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>
           <CardHeader className="grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto]">
-            <CardTitle>Equity</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <ChartNoAxesCombined size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+              Equity
+            </CardTitle>
             <CardDescription>
               {openCount} open {openCount === 1 ? "position" : "positions"} · live account value including floating P/L
             </CardDescription>
@@ -113,7 +116,10 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
         {/* Identity + verification — compact companion column */}
         <Card>
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <UserRound size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+              Profile
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
@@ -158,7 +164,10 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
       {/* Wallets */}
       <Card>
         <CardHeader>
-          <CardTitle>Wallets</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+            Wallets
+          </CardTitle>
           {walletLocked > 0 && (
             <CardDescription>{money(walletLocked)} locked in pending operations</CardDescription>
           )}

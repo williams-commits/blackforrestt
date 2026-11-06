@@ -652,7 +652,10 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
           <div className="flex items-center gap-3">
             <span className="size-4 shrink-0 rounded-full" style={{ background: detail.color }} />
             <div className="min-w-0 flex-1">
-              <CardTitle>{detail.name}</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <UsersRound size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+                {detail.name}
+              </CardTitle>
               {detail.description && <CardDescription>{detail.description}</CardDescription>}
             </div>
             {canManage && <EditGroupButton group={detail} onSaved={() => void refresh()} />}
@@ -670,7 +673,10 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
         <TabsContent value="overview" className="flex flex-col gap-4">
           <Card>
             <CardHeader>
-              <CardTitle>Group overview</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Users size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
+                Group overview
+              </CardTitle>
               <CardDescription>Membership and configured account overrides.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">

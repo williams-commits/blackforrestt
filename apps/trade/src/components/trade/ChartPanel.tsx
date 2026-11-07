@@ -9,6 +9,7 @@ import {
   GripVertical,
   TrendingDown,
   TrendingUp,
+  Scaling,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
@@ -1541,7 +1542,10 @@ function ViewControlsMenu({
           <DropdownMenuLabel>Chart view</DropdownMenuLabel>
           <DropdownMenuItem onSelect={onZoomIn}><ZoomIn />Zoom in</DropdownMenuItem>
           <DropdownMenuItem onSelect={onZoomOut}><ZoomOut />Zoom out</DropdownMenuItem>
-          <DropdownMenuItem onSelect={onFit}>Fit all candles</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onFit}>
+            <Scaling />
+            Fit all candles
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={onToggleFullscreen}>
             {fullscreen ? <Minimize2 /> : <Maximize2 />}
             {fullscreen ? "Exit full screen" : "Full screen"}

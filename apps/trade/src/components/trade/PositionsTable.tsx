@@ -2,7 +2,17 @@
 
 import { useCallback, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Pencil, Save, X } from "lucide-react";
+import {
+  Briefcase,
+  History,
+  PanelBottomClose,
+  PanelBottomOpen,
+  Pencil,
+  Save,
+  TrendingDown,
+  TrendingUp,
+  X,
+} from "lucide-react";
 import { useForexStore } from "@/lib/store";
 import { closePosition, updatePositionProtection } from "@/hooks/useOpenPosition";
 import { useMemo } from "react";
@@ -52,61 +62,80 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
 
   return (
     <div ref={dockRef} className="flex h-full flex-col bg-panel">
-      {/* Header: tabs + floating P/L + collapse control */}
-      <div className="flex min-h-8 flex-wrap items-center bg-panel-2 px-2 shrink-0 gap-x-1 gap-y-1">
-        <Tabs
-          variant="segmented"
-          label="Positions dock"
-          tabs={[
-            {
-              key: "open",
-              label: (
-                <>
-                  Open Positions
-                  {positions.length > 0 && (
-                    <span className="ml-1 text-(length:--term-text-2xs) bg-canvas/25 rounded-full px-1.5 py-px font-medium">
-                      {positions.length}
-                    </span>
-                  )}
-                </>
-              ),
-            },
-            { key: "history", label: "Trade History" },
-          ]}
-          active={tab}
-          onChange={(key) => {
-            const nextTab = key as Tab;
-            setTab(nextTab);
-            if (nextTab === "history" && window.matchMedia("(max-width: 767px)").matches) {
-              requestAnimationFrame(() => {
-                dockRef.current
-                  ?.closest<HTMLElement>("[data-activity-dock]")
-                  ?.scrollIntoView({ block: "end", behavior: "smooth" });
-              });
-            }
-          }}
-        />
-        {tab === "open" && positions.length > 0 && (
-          <div className="order-3 ml-0 flex w-full items-center justify-end gap-3 sm:order-0 sm:ml-auto sm:w-auto">
-            <div className="flex items-center gap-1.5">
-              <span className="text-(length:--term-text-2xs) text-text-faint uppercase">Floating P/L</span>
-              <span className={`text-(length:--term-text-sm) font-bold tnum ${totalFloating >= 0 ? "text-up" : "text-down"}`}>
-                {totalFloating >= 0 ? "+" : ""}{fmtNum(totalFloating, 2)} USD
-              </span>
-            </div>
-          </div>
-        )}
+      <div className={`grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 bg-panel-2 px-2 md:flex md:gap-3 md:py-0 ${collapsed ? "py-0" : "gap-y-1.5 py-1.5"}`}>
+        <div className="col-start-1 row-start-1 min-w-0 md:flex-none">
+          <Tabs
+            variant="segmented"
+            label="Positions dock"
+            className="grid h-auto w-full grid-cols-2 p-0 md:flex md:w-fit md:p-0.75"
+            triggerClassName={`h-8 min-h-8 px-2 text-xs md:px-3 ${collapsed ? "" : "h-10 min-h-10 md:h-8 md:min-h-8"}`}
+            tabs={[
+              {
+                key: "open",
+                label: (
+                  <>
+                    <Briefcase size={14} aria-hidden />
+                    <span>Open Positions</span>
+                    {positions.length > 0 && (
+                      <span className="ml-0.5 rounded-full bg-canvas/25 px-1.5 py-px text-(length:--term-text-2xs) font-semibold tabular-nums">
+                        {positions.length}
+                      </span>
+                    )}
+                  </>
+                ),
+              },
+              {
+                key: "history",
+                label: (
+                  <>
+                    <History size={14} aria-hidden />
+                    <span>Trade History</span>
+                  </>
+                ),
+              },
+            ]}
+            active={tab}
+            onChange={(key) => {
+              const nextTab = key as Tab;
+              setTab(nextTab);
+              if (nextTab === "history" && window.matchMedia("(max-width: 767px)").matches) {
+                requestAnimationFrame(() => {
+                  dockRef.current
+                    ?.closest<HTMLElement>("[data-activity-dock]")
+                    ?.scrollIntoView({ block: "end", behavior: "smooth" });
+                });
+              }
+            }}
+          />
+        </div>
         {onToggleCollapsed && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-sm"
             onClick={onToggleCollapsed}
             aria-label={collapsed ? "Expand activity dock" : "Collapse activity dock"}
             aria-expanded={!collapsed}
             title={collapsed ? "Expand dock" : "Collapse dock"}
-            className="ml-auto shrink-0 rounded p-1 text-text-muted transition-colors hover:bg-panel-3 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
+            className="col-start-2 row-start-1 min-h-10 min-w-10 rounded-md bg-canvas/40 text-text-muted transition-colors hover:bg-panel-3 hover:text-text md:order-3 md:min-h-8 md:min-w-8"
           >
-            {collapsed ? <ChevronUp size={14} strokeWidth={2} aria-hidden /> : <ChevronDown size={14} strokeWidth={2} aria-hidden />}
-          </button>
+            {collapsed ? <PanelBottomOpen size={16} strokeWidth={2} aria-hidden /> : <PanelBottomClose size={16} strokeWidth={2} aria-hidden />}
+          </Button>
+        )}
+        {tab === "open" && positions.length > 0 && (
+          <div className={`col-span-2 row-start-2 flex items-center justify-between rounded-md bg-canvas/40 px-2 py-1.5 md:order-2 md:ml-auto md:flex md:w-auto md:justify-start md:gap-2 md:rounded-none md:bg-transparent md:px-0 md:py-0 ${collapsed ? "hidden md:flex" : ""}`}>
+            <div className="flex items-center gap-1.5">
+              <span className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">Floating P/L</span>
+              {totalFloating >= 0 ? (
+                <TrendingUp size={14} className="text-up" aria-hidden />
+              ) : (
+                <TrendingDown size={14} className="text-down" aria-hidden />
+              )}
+            </div>
+            <span className={`text-(length:--term-text-sm) font-bold tabular-nums ${totalFloating >= 0 ? "text-up" : "text-down"}`}>
+              {totalFloating >= 0 ? "+" : ""}{fmtNum(totalFloating, 2)} USD
+            </span>
+          </div>
         )}
       </div>
 
@@ -240,59 +269,61 @@ function OpenPositionCards({
           <li
             key={p.id}
             onClick={rowNavigate(router, p.symbol)}
-            className={`flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors active:bg-panel-2 ${index % 2 === 1 ? "bg-panel-2/40" : ""}`}
+            className={`grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-3 py-3 transition-colors active:bg-panel-2 ${index % 2 === 1 ? "bg-panel-2/40" : ""}`}
           >
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <SideBadge side={p.side} type={p.type} />
                 <span className="text-sm font-bold">{p.symbol}</span>
                 <span className="text-(length:--term-text-xs) text-text-faint tnum">{fmtNum(p.volume, 2)}</span>
               </div>
-              <div className="mt-0.5 flex items-center gap-1.5 text-(length:--term-text-2xs) tnum text-text-faint">
-                <span>{fmtPrice(p.openRate, digits)}</span>
-                <span aria-hidden>→</span>
-                <span className="font-medium text-text-muted">{fmtPrice(p.currentRate, digits)}</span>
-                <span aria-hidden>·</span>
-                <span>{fmtTime(p.openedAt)}</span>
+              <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-(length:--term-text-2xs) tnum text-text-faint">
+                <span className="whitespace-nowrap">
+                  {fmtPrice(p.openRate, digits)} <span aria-hidden>→</span>{" "}
+                  <span className="font-medium text-text-muted">{fmtPrice(p.currentRate, digits)}</span>
+                </span>
+                <span className="whitespace-nowrap">{fmtTime(p.openedAt)}</span>
               </div>
               {p.type === "CFD" && (
-                <div className="mt-1 flex flex-wrap gap-x-2 text-(length:--term-text-2xs) tnum text-text-faint">
+                <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-(length:--term-text-2xs) tnum text-text-faint">
                   <span>S/L {p.stopLoss != null ? fmtPrice(p.stopLoss, digits) : "—"}</span>
                   <span>T/P {p.takeProfit != null ? fmtPrice(p.takeProfit, digits) : "—"}</span>
                 </div>
               )}
             </div>
-            <div className="flex shrink-0 flex-col items-end leading-tight">
-              <span className={`text-sm font-bold tnum ${up ? "text-up" : "text-down"}`}>
-                {up ? "+" : ""}{fmtNum(p.netProfit, 2)}
-              </span>
-              <span className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">P/L USD</span>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              {p.type === "CFD" && (
+            <div className="flex shrink-0 flex-col items-end gap-2 leading-tight">
+              <div className="flex flex-col items-end">
+                <span className={`text-sm font-bold tnum ${up ? "text-up" : "text-down"}`}>
+                  {up ? "+" : ""}{fmtNum(p.netProfit, 2)}
+                </span>
+                <span className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">P/L USD</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {p.type === "CFD" && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Edit stop-loss and take-profit for ${p.symbol}`}
+                    title="Edit S/L and T/P"
+                    onClick={(event) => { event.stopPropagation(); onEditProtection(p); }}
+                  >
+                    <Pencil aria-hidden />
+                  </Button>
+                )}
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Edit stop-loss and take-profit for ${p.symbol}`}
-                  title="Edit S/L and T/P"
-                  onClick={(event) => { event.stopPropagation(); onEditProtection(p); }}
+                  variant="destructive"
+                  size="sm"
+                  disabled={closing}
+                  aria-label={`Close ${p.symbol} position`}
+                  onClick={(event) => { event.stopPropagation(); void close(p); }}
+                  className="h-11 px-2.5 text-xs"
                 >
-                  <Pencil aria-hidden />
+                  <X aria-hidden />
+                  {closing ? "Closing" : "Close"}
                 </Button>
-              )}
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={closing}
-                aria-label={`Close ${p.symbol} position`}
-                onClick={(event) => { event.stopPropagation(); void close(p); }}
-                className="h-11 px-2.5 text-xs"
-              >
-                <X aria-hidden />
-                {closing ? "Closing" : "Close"}
-              </Button>
+              </div>
             </div>
           </li>
         );

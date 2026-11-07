@@ -33,18 +33,18 @@ export function TradingSideWorkspace({
       orientation="vertical"
       value={activeTab}
       onValueChange={(value) => setActiveTab(value as WorkspaceTab)}
-      className={cn("min-h-0 flex-1 flex-row gap-0", className)}
+      className={cn("min-h-0 w-full flex-1 self-stretch flex-row gap-0", className)}
     >
       <TabsList
-        variant="line"
+        variant="default"
         aria-label="Trading workspace"
-        className="h-full shrink-0 justify-start gap-1 border-r border-border-soft bg-panel p-2"
+        className="h-full w-14 shrink-0 self-stretch justify-start gap-2 rounded-none border-r border-border-soft bg-panel px-2 py-3"
       >
         <TabsTrigger
           value="market"
           aria-label="Market overview"
           title="Market overview"
-          className="h-10 w-10 flex-none justify-center rounded-md p-0 text-text-faint data-[state=active]:bg-brand-soft data-[state=active]:text-brand"
+          className="h-10 w-10 flex-none justify-center data-[orientation=vertical]:justify-center rounded-lg p-0 text-text-faint hover:bg-panel-2 data-[state=active]:bg-brand-soft data-[state=active]:text-brand"
         >
           <CandlestickChart size={17} strokeWidth={1.8} aria-hidden />
         </TabsTrigger>
@@ -52,7 +52,7 @@ export function TradingSideWorkspace({
           value="book"
           aria-label="Order book"
           title="Order book"
-          className="h-10 w-10 flex-none justify-center rounded-md p-0 text-text-faint data-[state=active]:bg-brand-soft data-[state=active]:text-brand"
+          className="h-10 w-10 flex-none justify-center data-[orientation=vertical]:justify-center rounded-lg p-0 text-text-faint hover:bg-panel-2 data-[state=active]:bg-brand-soft data-[state=active]:text-brand"
         >
           <BookOpen size={17} strokeWidth={1.8} aria-hidden />
         </TabsTrigger>
@@ -60,13 +60,13 @@ export function TradingSideWorkspace({
           value="trade"
           aria-label="Trade ticket"
           title="Trade ticket"
-          className="h-10 w-10 flex-none justify-center rounded-md p-0 text-text-faint data-[state=active]:bg-brand-soft data-[state=active]:text-brand"
+          className="h-10 w-10 flex-none justify-center data-[orientation=vertical]:justify-center rounded-lg p-0 text-text-faint hover:bg-panel-2 data-[state=active]:bg-brand-soft data-[state=active]:text-brand"
         >
           <ArrowLeftRight size={17} strokeWidth={1.8} aria-hidden />
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent forceMount value="market" className="min-h-0 min-w-0 flex-1 overflow-hidden">
+      <TabsContent forceMount value="market" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <MarketMarkers
           instrument={instrument}
           marketDataConnected={marketDataConnected}
@@ -74,7 +74,7 @@ export function TradingSideWorkspace({
         />
       </TabsContent>
 
-      <TabsContent forceMount value="book" className="min-h-0 min-w-0 flex-1 overflow-hidden">
+      <TabsContent forceMount value="book" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <MarketMarkers
           instrument={instrument}
           marketDataConnected={marketDataConnected}
@@ -82,7 +82,7 @@ export function TradingSideWorkspace({
         />
       </TabsContent>
 
-      <TabsContent forceMount value="trade" className="min-h-0 min-w-0 flex-1 overflow-hidden">
+      <TabsContent forceMount value="trade" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <TradePanel
           instrument={instrument}
           orderController={orderController}

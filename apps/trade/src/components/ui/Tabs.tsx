@@ -25,7 +25,7 @@ function TabsRoot({
 }
 
 const tabsListVariants = cva(
-  "group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground data-[orientation=horizontal]:h-9 data-[orientation=vertical]:h-fit data-[orientation=vertical]:flex-col data-[orientation=horizontal]:flex-row data-[variant=line]:rounded-none",
+  "group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground data-[orientation=horizontal]:h-9 data-[orientation=vertical]:h-full data-[orientation=vertical]:flex-col data-[orientation=horizontal]:flex-row data-[variant=line]:rounded-none",
   {
     variants: {
       variant: {

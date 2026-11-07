@@ -1371,16 +1371,13 @@ class Hub {
     }
     if (!persist) return;
 
-    const writeChunkSize = 25;
-    for (let offset = 0; offset < outputs.length; offset += writeChunkSize) {
-      const chunk = outputs.slice(offset, offset + writeChunkSize);
+    // Each projection performs several ledger aggregates. Keep each user in
+    // its own transaction so a batch of users cannot exceed Prisma's default
+    // interactive-transaction timeout.
+    for (const { userId } of outputs) {
       await withSerializableRetry(
-        async (tx) => {
-          for (const { userId } of chunk) {
-            await refreshLedgerProjections(tx, userId, "USD", this.floatingForUser(userId), { writeWallet: false });
-          }
-        },
-        { operation: "market metric projection batch" },
+        (tx) => refreshLedgerProjections(tx, userId, "USD", this.floatingForUser(userId), { writeWallet: false }),
+        { operation: `market metric projection for ${userId}` },
       );
     }
   }

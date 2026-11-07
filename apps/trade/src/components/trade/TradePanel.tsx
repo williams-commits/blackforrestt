@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { ArrowRight, ChevronDown, Radio } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronDown, Radio } from "lucide-react";
 import { useForexStore } from "@/lib/store";
 import type { OpenPositionController } from "@/hooks/useOpenPosition";
 import { toast } from "@/lib/toast";
@@ -486,18 +486,24 @@ export function TradePanel({
 
       {/* Keep order actions outside the scrolling content so they stay
           reachable without covering volume, risk, or margin controls. */}
-      <div className="shrink-0 bg-canvas px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-lift">
+      <div className="relative z-10 shrink-0 border-t border-border-soft bg-canvas px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-lift">
         <div className="grid grid-cols-2 gap-2.5">
-          <Button variant="sell" size="default" loading={loading} disabled={!quoteReady || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("SELL")} className={`h-12 w-full min-w-0 rounded-lg px-2 ${armed === "SELL" ? "ring-2 ring-down ring-offset-2 ring-offset-canvas" : ""}`}>
-            <span className="flex flex-col items-center leading-tight">
-              <span className="text-sm font-bold uppercase tracking-wide">Sell</span>
-              <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{quoteReady ? fmtPrice(bid, instrument.digits) : "—"}</span>
+          <Button variant="sell" size="default" loading={loading} disabled={!quoteReady || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("SELL")} className={`h-14 w-full min-w-0 rounded-lg px-2 ${armed === "SELL" ? "ring-2 ring-down ring-offset-2 ring-offset-canvas" : ""}`}>
+            <span className="flex flex-col items-center gap-0.5 leading-tight">
+              <span className="flex items-center gap-1 text-sm font-bold uppercase tracking-wide">
+                <ArrowDownRight size={14} strokeWidth={2.25} aria-hidden />
+                Sell · Bid
+              </span>
+              <span className="text-(length:--term-text-xs) font-medium tabular-nums opacity-90">{quoteReady ? fmtPrice(bid, instrument.digits) : "—"}</span>
             </span>
           </Button>
-          <Button variant="buy" size="default" loading={loading} disabled={!quoteReady || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("BUY")} className={`h-12 w-full min-w-0 rounded-lg px-2 ${armed === "BUY" ? "ring-2 ring-up ring-offset-2 ring-offset-canvas" : ""}`}>
-            <span className="flex flex-col items-center leading-tight">
-              <span className="text-sm font-bold uppercase tracking-wide">Buy</span>
-              <span className="text-(length:--term-text-xs) font-normal opacity-90 tnum">{quoteReady ? fmtPrice(ask, instrument.digits) : "—"}</span>
+          <Button variant="buy" size="default" loading={loading} disabled={!quoteReady || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("BUY")} className={`h-14 w-full min-w-0 rounded-lg px-2 ${armed === "BUY" ? "ring-2 ring-up ring-offset-2 ring-offset-canvas" : ""}`}>
+            <span className="flex flex-col items-center gap-0.5 leading-tight">
+              <span className="flex items-center gap-1 text-sm font-bold uppercase tracking-wide">
+                <ArrowUpRight size={14} strokeWidth={2.25} aria-hidden />
+                Buy · Ask
+              </span>
+              <span className="text-(length:--term-text-xs) font-medium tabular-nums opacity-90">{quoteReady ? fmtPrice(ask, instrument.digits) : "—"}</span>
             </span>
           </Button>
         </div>

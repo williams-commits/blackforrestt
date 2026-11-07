@@ -117,7 +117,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
             aria-label={collapsed ? "Expand activity dock" : "Collapse activity dock"}
             aria-expanded={!collapsed}
             title={collapsed ? "Expand dock" : "Collapse dock"}
-            className="col-start-2 row-start-1 min-h-10 min-w-10 rounded-md bg-canvas/40 text-text-muted transition-colors hover:bg-panel-3 hover:text-text md:order-3 md:min-h-8 md:min-w-8"
+            className={`col-start-2 row-start-1 min-h-10 min-w-10 rounded-md bg-canvas/40 text-text-muted transition-colors hover:bg-panel-3 hover:text-text md:order-3 md:min-h-8 md:min-w-8 ${tab === "history" ? "md:ml-auto" : ""}`}
           >
             {collapsed ? <PanelBottomOpen size={16} strokeWidth={2} aria-hidden /> : <PanelBottomClose size={16} strokeWidth={2} aria-hidden />}
           </Button>

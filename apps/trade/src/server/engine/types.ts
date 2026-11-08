@@ -110,6 +110,16 @@ export type WsServerMessage =
   | { type: "account_snapshot"; account: AccountMetricsView; positions: PositionView[] }
   | { type: "quote"; quote: Quote }
   | { type: "candle"; symbol: string; interval: CandleInterval; candle: Candle }
+  | { type: "candles"; symbol: string; interval: CandleInterval; candles: Candle[] }
+  | {
+      type: "candle_history_status";
+      status: {
+        symbol: string;
+        interval: CandleInterval;
+        state: "loading" | "ready";
+        source: "finnhub" | "simulated";
+      };
+    }
   | { type: "position"; position: PositionView }
   | { type: "account"; account: AccountMetricsView; reason?: "ledger" }
   | { type: "activity"; counts: ActivityBadgeCounts }

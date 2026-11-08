@@ -32,7 +32,7 @@ interface FinnhubTradeMessage {
   data: FinnhubTrade[];
 }
 
-export type PriceCallback = (symbol: string, price: number) => void;
+export type PriceCallback = (symbol: string, price: number, volume?: number) => void;
 
 export class FeedClient {
   private ws: WebSocket | null = null;
@@ -107,20 +107,28 @@ export class FeedClient {
         // Use the newest valid trade per symbol. WebSocket batches are not
         // guaranteed to be sorted and stale trades must not move the market
         // backwards after a reconnect.
-        const latestBySymbol = new Map<string, { price: number; timestamp: number }>();
+        const latestBySymbol = new Map<string, { price: number; timestamp: number; volume: number }>();
         for (const trade of msg.data) {
           const ourSymbol = symbolFromFeed(trade.s);
           if (!ourSymbol || !Number.isFinite(trade.p) || trade.p <= 0 || !Number.isFinite(trade.t)) continue;
           const current = latestBySymbol.get(ourSymbol);
-          if (!current || trade.t > current.timestamp) {
-            latestBySymbol.set(ourSymbol, { price: trade.p, timestamp: trade.t });
+          const volume = Number.isFinite(trade.v) && trade.v > 0 ? trade.v : 0;
+          if (!current) {
+            latestBySymbol.set(ourSymbol, { price: trade.p, timestamp: trade.t, volume });
+          } else {
+            const isNewer = trade.t > current.timestamp;
+            latestBySymbol.set(ourSymbol, {
+              price: isNewer ? trade.p : current.price,
+              timestamp: isNewer ? trade.t : current.timestamp,
+              volume: current.volume + volume,
+            });
           }
         }
         for (const [symbol, trade] of latestBySymbol) {
           const previousTimestamp = this.lastTimestampBySymbol.get(symbol) ?? 0;
           if (trade.timestamp < previousTimestamp) continue;
           this.lastTimestampBySymbol.set(symbol, trade.timestamp);
-          this.onPrice(symbol, trade.price);
+          this.onPrice(symbol, trade.price, trade.volume);
         }
       } catch {
         // Non-JSON or unexpected format — ignore.

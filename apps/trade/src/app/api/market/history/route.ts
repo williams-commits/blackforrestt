@@ -51,16 +51,20 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Historical data is temporarily unavailable." }, { status: 503 });
   }
 
-  if (getMarketDataMode() !== "finnhub") {
+  const { symbol, interval, before, limit } = parsed.data;
+  const marketDataMode = getMarketDataMode();
+  const historyFetcher = marketDataMode === "finnhub" ? fetchCandles : null;
+  if (!historyFetcher) {
     return NextResponse.json({
       candles: [],
       historyAvailable: false,
       hasMore: false,
-      message: "The configured market-data provider does not support older-candle retrieval.",
+      message: marketDataMode === "simulation"
+        ? "Historical market candles are unavailable while simulation mode is active."
+        : "The configured market-data provider does not support older-candle retrieval for this instrument.",
     });
   }
 
-  const { symbol, interval, before, limit } = parsed.data;
   const now = Math.floor(Date.now() / 1000);
   const windowStart = now - CHART_HISTORY_WINDOW_SECONDS;
   const effectiveBefore = Math.min(before, now);
@@ -70,7 +74,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const fetched = await fetchCandles(symbol, interval as CandleInterval, pageLimit, effectiveBefore);
+    const fetched = await historyFetcher(symbol, interval as CandleInterval, pageLimit, effectiveBefore);
     if (!fetched) {
       return NextResponse.json({
         candles: [],

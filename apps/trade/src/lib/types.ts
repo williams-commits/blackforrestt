@@ -14,6 +14,13 @@ export interface Candle {
   volume: number;
 }
 
+export interface CandleHistoryStatus {
+  symbol: string;
+  interval: CandleInterval;
+  state: "loading" | "ready";
+  source: "finnhub" | "simulated";
+}
+
 export interface Quote {
   symbol: string;
   bid: number;

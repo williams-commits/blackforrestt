@@ -12,6 +12,9 @@ import {
   Scaling,
   ZoomIn,
   ZoomOut,
+  Database,
+  LoaderCircle,
+  TriangleAlert,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
@@ -73,6 +76,7 @@ import {
 interface Props {
   instrument: InstrumentView;
   marketDataConnected: boolean;
+  marketDataMode: string;
   /** Opens the instrument switcher slide-out (the identity button). */
   onSwitchInstrument?: () => void;
   /** Selects desktop order entry or opens the mobile ticket; never submits. */
@@ -149,7 +153,7 @@ function volumeColors(dim: boolean) {
 }
 
 /** Professional responsive chart with persistent timeframe and trading controls. */
-export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument, onOpenTrade }: Props) {
+export function ChartPanel({ instrument, marketDataConnected, marketDataMode, onSwitchInstrument, onOpenTrade }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -190,6 +194,11 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
   const interval = useForexStore((state) => state.interval);
   const setInterval = useForexStore((state) => state.setInterval);
   const candles = useForexStore((state) => state.candles);
+  const candleHistoryStatus = useForexStore((state) => state.candleHistoryStatus);
+  const currentHistoryStatus =
+    candleHistoryStatus?.symbol === instrument.symbol && candleHistoryStatus.interval === interval
+      ? candleHistoryStatus
+      : null;
   const quote = useForexStore((state) => state.quote);
   const snapshotVersion = useForexStore((state) => state.snapshotVersion);
   const [marketNow, setMarketNow] = useState(0);
@@ -392,7 +401,7 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
       kineticScroll: { mouse: true, touch: true },
       rightPriceScale: {
         ...theme.rightPriceScale,
-        scaleMargins: { top: 0.08, bottom: 0.24 },
+        scaleMargins: { top: 0.08, bottom: 0.20 },
         minimumWidth: 74,
       },
       timeScale: {
@@ -439,7 +448,7 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
       priceLineVisible: false,
       lastValueVisible: false,
     });
-    volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+    volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
     volumeSeriesRef.current = volumeSeries;
 
     const crosshairHandler = (param: MouseEventParams) => {
@@ -928,6 +937,15 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
   const loadEarlierCandles = useCallback(async () => {
     if (historyRequestRef.current) return;
     const requestKey = historyKey;
+    if (marketDataMode === "finnhub" && currentHistoryStatus?.state !== "ready") {
+      setHistoryMessage("Waiting for the selected timeframe's history source.");
+      return;
+    }
+    if (marketDataMode === "finnhub" && currentHistoryStatus?.source === "simulated") {
+      setHistoryExhausted(true);
+      setHistoryMessage("Finnhub history is unavailable for this timeframe; simulated candles are kept separate.");
+      return;
+    }
     const before = chartCandlesRef.current[0]?.time;
     if (before == null) {
       setHistoryMessage("Chart history is not ready yet.");
@@ -1006,7 +1024,7 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
         setHistoryLoading(false);
       }
     }
-  }, [historyKey, instrument.symbol, interval, replaceChartData]);
+  }, [currentHistoryStatus, historyKey, instrument.symbol, interval, marketDataMode, replaceChartData]);
 
   const selectTimeframe = useCallback(
     (next: CandleInterval) => {
@@ -1182,6 +1200,37 @@ export function ChartPanel({ instrument, marketDataConnected, onSwitchInstrument
               <OhlcField label="C" value={ohlc.close} up={ohlc.up} digits={instrument.digits} />
               <span className="text-text-faint">Vol {Math.round(ohlc.volume).toLocaleString("en-US")}</span>
             </div>
+          ) : null}
+          {marketDataMode === "finnhub" && currentHistoryStatus ? (
+            <span
+              role="status"
+              aria-label={currentHistoryStatus.state === "loading"
+                ? "Loading selected timeframe candles from Finnhub."
+                : currentHistoryStatus.source === "finnhub"
+                  ? "Chart history for this timeframe is sourced from Finnhub."
+                  : "Finnhub did not provide this timeframe; the chart is using simulated history."}
+              title={currentHistoryStatus.state === "loading"
+                ? "Loading selected timeframe candles from Finnhub."
+                : currentHistoryStatus.source === "finnhub"
+                  ? "Chart history for this timeframe is sourced from Finnhub."
+                  : "Finnhub did not provide this timeframe; the chart is using simulated history."}
+              className="inline-flex shrink-0 items-center gap-1 rounded bg-panel-3 px-1.5 py-0.5 text-(length:--term-text-2xs) text-text-muted"
+            >
+              {currentHistoryStatus.state === "loading" ? (
+                <LoaderCircle size={12} className="animate-spin" aria-hidden />
+              ) : currentHistoryStatus.source === "finnhub" ? (
+                <Database size={12} aria-hidden />
+              ) : (
+                <TriangleAlert size={12} aria-hidden />
+              )}
+              <span className="hidden sm:inline">
+                {currentHistoryStatus.state === "loading"
+                  ? "Loading candles"
+                  : currentHistoryStatus.source === "finnhub"
+                    ? "Finnhub history"
+                    : "Simulated history"}
+              </span>
+            </span>
           ) : null}
         </div>
 
@@ -1562,7 +1611,7 @@ function ViewControlsMenu({
             {historyLoading ? "Loading earlier candles…" : "Load earlier candles"}
           </DropdownMenuItem>
           <DropdownMenuLabel className="px-2 py-1 text-(length:--term-text-2xs) font-normal normal-case tracking-normal text-text-faint">
-            History window: up to {CHART_HISTORY_DAYS} days; availability depends on the provider.
+            History loads progressively; up to {CHART_HISTORY_DAYS} days where the market-data source supports it.
           </DropdownMenuLabel>
         </DropdownMenuGroup>
       </DropdownMenuContent>

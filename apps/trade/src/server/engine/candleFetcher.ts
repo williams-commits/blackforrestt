@@ -23,6 +23,10 @@ const RESOLUTION_MAP: Record<CandleInterval, string> = {
   "4h": "240",
   "1d": "D",
 };
+const DEFAULT_CANDLE_DELAY_MS = 1_050;
+
+let candleRequestQueue: Promise<void> = Promise.resolve();
+let lastCandleRequestAt = 0;
 
 type RestCapability = "unknown" | "available" | "denied";
 let restCapability: RestCapability = "unknown";
@@ -50,6 +54,22 @@ function handleEntitlementDenied(status: number): never | null {
   }
   if (mode === "required") throw new Error(message);
   return null;
+}
+
+function scheduleCandleRequest(url: string): Promise<Response> {
+  const configured = Number(process.env.FINNHUB_CANDLE_DELAY_MS ?? DEFAULT_CANDLE_DELAY_MS);
+  const minDelayMs = Number.isFinite(configured) ? Math.max(250, configured) : DEFAULT_CANDLE_DELAY_MS;
+  const request = candleRequestQueue.then(async () => {
+    const wait = Math.max(0, lastCandleRequestAt + minDelayMs - Date.now());
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    lastCandleRequestAt = Date.now();
+    return fetch(url, {
+      signal: AbortSignal.timeout(10_000),
+      headers: { "User-Agent": "blckforest-market-adapter/1.0" },
+    });
+  });
+  candleRequestQueue = request.then(() => undefined, () => undefined);
+  return request;
 }
 
 /** Fetch historical candles for one instrument at one interval. */
@@ -80,10 +100,7 @@ export async function fetchCandles(
   const url = `${endpoint}?symbol=${encodeURIComponent(feedSymbol)}&resolution=${resolution}&from=${from}&to=${to}&token=${apiKey}`;
 
   try {
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(10_000),
-      headers: { "User-Agent": "blckforest-market-adapter/1.0" },
-    });
+    const response = await scheduleCandleRequest(url);
     if (response.status === 401 || response.status === 403) return handleEntitlementDenied(response.status);
     if (!response.ok) {
       console.warn(`📉 Finnhub candle request ${symbol} ${interval} failed with HTTP ${response.status}; simulated history retained.`);
@@ -147,12 +164,9 @@ export async function seedCandleHistory(
 
   console.log(`📊 Checking Finnhub historical-candle access for ${symbols.length} instruments…`);
   let fetched = 0;
-  const configuredDelay = Number(process.env.FINNHUB_CANDLE_DELAY_MS ?? 1_050);
-  const requestDelayMs = Number.isFinite(configuredDelay) ? Math.max(250, configuredDelay) : 1_050;
 
   for (let index = 0; index < symbols.length; index += 1) {
     if (restCapability === "denied") break;
-    if (index > 0) await sleep(requestDelayMs);
     const symbol = symbols[index];
     const candles = await fetchCandles(symbol, "1m", 300);
     if (!candles?.length) continue;
@@ -165,8 +179,4 @@ export async function seedCandleHistory(
   } else {
     console.log(`📊 Historical source: ${fetched}/${symbols.length} instruments seeded from Finnhub; remaining instruments use simulation.`);
   }
-}
-
-function sleep(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }

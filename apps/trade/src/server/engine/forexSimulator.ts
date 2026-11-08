@@ -89,6 +89,8 @@ export class ForexSimulator {
   // from the random walk to "live mode" for this instrument. If no live price
   // arrives within LIVE_TIMEOUT_MS, it falls back to simulation.
   private lastLiveMs = 0;
+  private pendingLiveVolume = 0;
+  private hasLiveVolume = false;
   private static readonly LIVE_TIMEOUT_MS = 15_000; // 15s without a tick → simulate
 
   constructor(cfg: InstrumentConfig) {
@@ -126,10 +128,14 @@ export class ForexSimulator {
    * updates 24h rolling stats. The next tick() will skip the random walk and
    * use this price instead.
    */
-  setPrice(price: number): void {
+  setPrice(price: number, volume?: number): void {
     if (!isFinite(price) || price <= 0) return;
     this.mid = round(price, this.tickSize);
     this.lastLiveMs = Date.now();
+    if (volume != null && Number.isFinite(volume) && volume >= 0) {
+      this.pendingLiveVolume += volume;
+      this.hasLiveVolume = true;
+    }
     this.high24h = Math.max(this.high24h, this.mid);
     this.low24h = Math.min(this.low24h, this.mid);
   }
@@ -139,18 +145,15 @@ export class ForexSimulator {
     return this.lastLiveMs > 0 && Date.now() - this.lastLiveMs < ForexSimulator.LIVE_TIMEOUT_MS;
   }
 
-  /**
-   * Replace synthetic candle history with real OHLC data from the Finnhub REST
-   * API. Only replaces the requested interval; others keep their seeded history.
-   */
+  /** Replace one interval's simulated history with candles from the market-data provider. */
   seedCandles(interval: CandleInterval, realCandles: Candle[]): void {
     if (!realCandles || realCandles.length === 0) return;
     this.candles[interval] = realCandles.slice(-1000);
     this.current[interval] = realCandles[realCandles.length - 1] ?? null;
-    // Sync mid to the latest real close.
+    // Keep an already-arrived live quote from being overwritten by async history seeding.
     const last = realCandles[realCandles.length - 1];
-    this.mid = round(last.close, this.tickSize);
     if (this.lastLiveMs === 0) {
+      this.mid = round(last.close, this.tickSize);
       this.open24h = last.open;
       this.high24h = last.high;
       this.low24h = last.low;
@@ -212,6 +215,8 @@ export class ForexSimulator {
 
     // Aggregate into candles (runs in both live and sim modes).
     const updated: CandleInterval[] = [];
+    const liveVolume = this.pendingLiveVolume;
+    this.pendingLiveVolume = 0;
     for (const interval of Object.keys(this.candles) as CandleInterval[]) {
       const secs = INTERVAL_SECONDS[interval];
       const bucket = Math.floor(nowSec / secs) * secs;
@@ -237,7 +242,7 @@ export class ForexSimulator {
         cur.low = Math.min(cur.low, this.mid);
         cur.close = this.mid;
       }
-      cur.volume += 1 + this.rng() * 3;
+      cur.volume += this.isLive && this.hasLiveVolume ? liveVolume : 1 + this.rng() * 3;
       updated.push(interval);
     }
 

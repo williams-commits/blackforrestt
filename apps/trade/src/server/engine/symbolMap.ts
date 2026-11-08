@@ -53,7 +53,6 @@ export const FEED_SYMBOL_MAP: Record<string, FeedSymbolEntry> = {
   XPDUSD: { symbol: "XPDUSD", feedSymbol: "OANDA:XPD_USD",    candleEndpoint: "forex", category: "COMMODITY" },
   NGUSD:  { symbol: "NGUSD",  feedSymbol: "OANDA:NATGAS_USD", candleEndpoint: "forex", category: "COMMODITY" },
   HGUSD:  { symbol: "HGUSD",  feedSymbol: "OANDA:XCU_USD",    candleEndpoint: "forex", category: "COMMODITY" },
-
   // ── Indices (US ETFs + European/Asian via OANDA CFDs) ─────────────────────
   US30:   { symbol: "US30",   feedSymbol: "DIA",            candleEndpoint: "stock", category: "INDEX" },
   NAS100: { symbol: "NAS100", feedSymbol: "QQQ",            candleEndpoint: "stock", category: "INDEX" },
@@ -63,7 +62,6 @@ export const FEED_SYMBOL_MAP: Record<string, FeedSymbolEntry> = {
   FRA40:  { symbol: "FRA40",  feedSymbol: "OANDA:FR40_EUR", candleEndpoint: "forex", category: "INDEX" },
   JPN225: { symbol: "JPN225", feedSymbol: "OANDA:JP225_USD",candleEndpoint: "forex", category: "INDEX" },
   VIX:    { symbol: "VIX",    feedSymbol: "OANDA:VIX_USD",  candleEndpoint: "forex", category: "INDEX" },
-
   // ── Crypto ───────────────────────────────────────────────────────────────
   BTCUSD:   { symbol: "BTCUSD",   feedSymbol: "BINANCE:BTCUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
   ETHUSD:   { symbol: "ETHUSD",   feedSymbol: "BINANCE:ETHUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },

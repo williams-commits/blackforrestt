@@ -16,6 +16,8 @@ export function useForexSocket(symbol: string, interval: CandleInterval) {
   const setMarket = useForexStore((s) => s.setMarket);
   const applySnapshot = useForexStore((s) => s.applySnapshot);
   const applyQuote = useForexStore((s) => s.applyQuote);
+  const applyCandles = useForexStore((s) => s.applyCandles);
+  const applyCandleHistoryStatus = useForexStore((s) => s.applyCandleHistoryStatus);
   const applyCandle = useForexStore((s) => s.applyCandle);
   const applyInstruments = useForexStore((s) => s.applyInstruments);
   const applyAccount = useForexStore((s) => s.applyAccount);
@@ -50,6 +52,14 @@ export function useForexSocket(symbol: string, interval: CandleInterval) {
         case "candle":
           if (msg.symbol === symbol && msg.interval === interval) applyCandle(msg.candle);
           break;
+        case "candles":
+          if (msg.symbol === symbol && msg.interval === interval) applyCandles(msg.candles);
+          break;
+        case "candle_history_status":
+          if (msg.status.symbol === symbol && msg.status.interval === interval) {
+            applyCandleHistoryStatus(msg.status);
+          }
+          break;
         case "instruments":
           applyInstruments(msg.instruments);
           break;
@@ -70,6 +80,8 @@ export function useForexSocket(symbol: string, interval: CandleInterval) {
     interval,
     applySnapshot,
     applyQuote,
+    applyCandles,
+    applyCandleHistoryStatus,
     applyCandle,
     applyInstruments,
     applyAccount,

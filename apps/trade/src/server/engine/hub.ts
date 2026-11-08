@@ -25,7 +25,7 @@ import {
 } from "../ledger";
 import { ForexSimulator } from "./forexSimulator";
 import { getFeedClient, type FeedClient } from "./feedClient";
-import { seedCandleHistory } from "./candleFetcher";
+import { fetchCandles, seedCandleHistory } from "./candleFetcher";
 import { getAlphavantageFeed, type AlphaVantageFeed } from "./alphavantageFeed";
 import { seedAlphavantageCandles } from "./alphavantageCandles";
 import { getGenericFeed, type GenericFeed } from "./genericFeed";
@@ -136,6 +136,16 @@ export type BroadcastFn = (message: HubEmission) => void;
 export type HubEmission =
   | { kind: "quote"; quote: Quote }
   | { kind: "candle"; symbol: string; interval: CandleInterval; candle: Candle }
+  | { kind: "candles"; symbol: string; interval: CandleInterval; candles: Candle[] }
+  | {
+      kind: "candle_history_status";
+      status: {
+        symbol: string;
+        interval: CandleInterval;
+        state: "loading" | "ready";
+        source: "finnhub" | "simulated";
+      };
+    }
   | { kind: "position"; userId: string; position: PositionView }
   | { kind: "account"; userId: string; account: AccountMetricsView; reason?: "ledger" }
   | { kind: "instruments"; instruments: InstrumentView[] }
@@ -161,6 +171,8 @@ class Hub {
   private avFeed: AlphaVantageFeed | null = null;
   private genericFeed: GenericFeed | null = null;
   private projectionRefreshes = new Map<string, Promise<AccountMetricsView>>();
+  private candleHistoryRequests = new Map<string, Promise<"finnhub" | "simulated">>();
+  private seededCandleIntervals = new Set<string>();
 
   setBroadcaster(fn: BroadcastFn): void {
     this.broadcast = fn;
@@ -311,14 +323,23 @@ class Hub {
 
   private startLiveFeed(symbols: string[]): void {
     const mode = getMarketDataMode();
-    const onPrice = (symbol: string, price: number) => this.setLivePrice(symbol, price);
-    if (mode === "alphavantage") {
+    const onPrice = (symbol: string, price: number, volume?: number) => this.setLivePrice(symbol, price, volume);
+    if (mode === "simulation") {
+      this.feedClient = getFeedClient(onPrice);
+      this.feedClient.start(symbols);
+      return;
+    }
+
+    if (mode === "alphavantage" && symbols.length > 0) {
       this.avFeed = getAlphavantageFeed(onPrice);
       this.avFeed.start(symbols);
-    } else if (mode === "tickerlayer" || mode === "sifting" || mode === "lse") {
+    } else if (
+      symbols.length > 0 &&
+      (mode === "tickerlayer" || mode === "sifting" || mode === "lse")
+    ) {
       this.genericFeed = getGenericFeed(onPrice);
       this.genericFeed.start(symbols);
-    } else {
+    } else if (symbols.length > 0) {
       this.feedClient = getFeedClient(onPrice);
       this.feedClient.start(symbols);
     }
@@ -330,10 +351,18 @@ class Hub {
       const state = this.instruments.get(symbol);
       if (!state) return;
       state.sim.seedCandles(interval, candles);
-      const latest = candles[candles.length - 1];
-      if (latest) this.broadcast({ kind: "candle", symbol, interval, candle: latest });
+      this.broadcast({ kind: "candles", symbol, interval, candles });
     };
     try {
+      if (mode === "finnhub") {
+        console.log("📊 Finnhub candle history will load on demand for each selected instrument and timeframe.");
+        return;
+      }
+      if (mode === "simulation") {
+        await seedCandleHistory(symbols, onCandles);
+        return;
+      }
+
       if (mode === "alphavantage") {
         await seedAlphavantageCandles(symbols, onCandles);
       } else {
@@ -344,8 +373,52 @@ class Hub {
     }
   }
 
-  setLivePrice(symbol: string, price: number): void {
-    this.instruments.get(symbol)?.sim.setPrice(price);
+  setLivePrice(symbol: string, price: number, volume?: number): void {
+    this.instruments.get(symbol)?.sim.setPrice(price, volume);
+  }
+
+  async seedCandleInterval(symbol: string, interval: CandleInterval): Promise<void> {
+    if (getMarketDataMode() !== "finnhub") return;
+    const key = `${symbol}:${interval}`;
+    this.broadcast({
+      kind: "candle_history_status",
+      status: { symbol, interval, state: "loading", source: "simulated" },
+    });
+
+    if (this.seededCandleIntervals.has(key)) {
+      this.broadcast({
+        kind: "candle_history_status",
+        status: { symbol, interval, state: "ready", source: "finnhub" },
+      });
+      return;
+    }
+
+    let request = this.candleHistoryRequests.get(key);
+    if (!request) {
+      request = (async () => {
+        try {
+          const candles = await fetchCandles(symbol, interval, 300);
+          if (!candles?.length) return "simulated" as const;
+          const state = this.instruments.get(symbol);
+          if (!state) return "simulated" as const;
+          state.sim.seedCandles(interval, candles);
+          this.broadcast({ kind: "candles", symbol, interval, candles });
+          return "finnhub" as const;
+        } catch (error) {
+          console.warn(`Historical candle seeding failed for ${symbol} ${interval}; simulated history remains active.`, error);
+          return "simulated" as const;
+        }
+      })();
+      this.candleHistoryRequests.set(key, request);
+    }
+
+    const source = await request;
+    if (source === "finnhub") this.seededCandleIntervals.add(key);
+    else if (this.candleHistoryRequests.get(key) === request) this.candleHistoryRequests.delete(key);
+    this.broadcast({
+      kind: "candle_history_status",
+      status: { symbol, interval, state: "ready", source },
+    });
   }
 
   private startTicking(): void {

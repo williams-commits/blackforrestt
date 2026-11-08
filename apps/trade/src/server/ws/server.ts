@@ -220,6 +220,29 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
         }
         break;
       }
+      case "candles": {
+        const payload = JSON.stringify({
+          type: "candles",
+          symbol: emission.symbol,
+          interval: emission.interval,
+          candles: emission.candles,
+        });
+        for (const client of clientsBySymbol.get(emission.symbol) ?? []) {
+          if (client.subs.get(emission.symbol) === emission.interval) {
+            sendRaw(client.ws, payload);
+          }
+        }
+        break;
+      }
+      case "candle_history_status": {
+        const payload = JSON.stringify({ type: "candle_history_status", status: emission.status });
+        for (const client of clientsBySymbol.get(emission.status.symbol) ?? []) {
+          if (client.subs.get(emission.status.symbol) === emission.status.interval) {
+            sendRaw(client.ws, payload);
+          }
+        }
+        break;
+      }
       case "position": {
         const payload = JSON.stringify({ type: "position", position: emission.position });
         for (const client of clientsByUser.get(emission.userId) ?? []) {
@@ -398,6 +421,7 @@ async function handleMessage(
     type: "snapshot",
     snapshot: hub.snapshot(message.symbol, message.interval, client.userId),
   });
+  void hub.seedCandleInterval(message.symbol, message.interval);
   // Market subscriptions only need a read-only account view. Persisted ledger
   // projections are updated by financial mutations and periodic engine passes.
   send(client.ws, { type: "account", account: await hub.readAccountMetrics(client.userId) });

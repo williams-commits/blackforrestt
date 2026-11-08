@@ -4,6 +4,7 @@
 import type {
   AccountMetricsView,
   Candle,
+  CandleHistoryStatus,
   CandleInterval,
   InstrumentView,
   PositionView,
@@ -15,6 +16,8 @@ export type ServerMessage =
   | { type: "account_snapshot"; account: AccountMetricsView; positions: PositionView[] }
   | { type: "quote"; quote: Quote }
   | { type: "candle"; symbol: string; interval: CandleInterval; candle: Candle }
+  | { type: "candles"; symbol: string; interval: CandleInterval; candles: Candle[] }
+  | { type: "candle_history_status"; status: CandleHistoryStatus }
   | { type: "position"; position: PositionView }
   | { type: "account"; account: AccountMetricsView; reason?: "ledger" }
   | { type: "activity"; counts: { notifications: number; messages: number; operatorMessages: number; supportCases: number } }

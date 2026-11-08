@@ -11,6 +11,7 @@ import { create } from "zustand";
 import type {
   AccountMetricsView,
   Candle,
+  CandleHistoryStatus,
   CandleInterval,
   InstrumentView,
   PositionView,
@@ -25,6 +26,7 @@ interface ForexState {
   snapshotVersion: number;
   quote: Quote | null;
   candles: Candle[];
+  candleHistoryStatus: CandleHistoryStatus | null;
   instruments: InstrumentView[];
   account: AccountMetricsView | null;
   positions: PositionView[];
@@ -40,6 +42,8 @@ interface ForexState {
     account: AccountMetricsView | null;
   }) => void;
   applyQuote: (quote: Quote) => void;
+  applyCandles: (candles: Candle[]) => void;
+  applyCandleHistoryStatus: (status: CandleHistoryStatus) => void;
   applyCandle: (candle: Candle) => void;
   applyInstruments: (instruments: InstrumentView[]) => void;
   applyAccount: (account: AccountMetricsView) => void;
@@ -54,11 +58,12 @@ export const useForexStore = create<ForexState>((set) => ({
   snapshotVersion: 0,
   quote: null,
   candles: [],
+  candleHistoryStatus: null,
   instruments: [],
   account: null,
   positions: [],
 
-  setMarket: (symbol, interval) => set({ symbol, interval, candles: [], quote: null }),
+  setMarket: (symbol, interval) => set({ symbol, interval, candles: [], quote: null, candleHistoryStatus: null }),
 
   applySnapshot: (snapshot) =>
     set((state) => {
@@ -90,6 +95,21 @@ export const useForexStore = create<ForexState>((set) => ({
           : instrument,
       ),
     })),
+
+  applyCandles: (candles) =>
+    set((state) => ({
+      snapshotVersion: state.snapshotVersion + 1,
+      candles: candles.slice(-MAX_CANDLES),
+    })),
+
+  applyCandleHistoryStatus: (candleHistoryStatus) =>
+    set((state) => {
+      if (
+        candleHistoryStatus.symbol !== state.symbol ||
+        candleHistoryStatus.interval !== state.interval
+      ) return state;
+      return { candleHistoryStatus };
+    }),
 
   applyCandle: (candle) =>
     set((state) => {

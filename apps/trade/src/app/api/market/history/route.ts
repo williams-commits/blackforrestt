@@ -6,7 +6,7 @@ import { fetchCandles } from "@/server/engine/candleFetcher";
 import { getMarketDataMode } from "@/server/engine/marketDataMode";
 import { INTERVAL_SECONDS, type CandleInterval } from "@/server/engine/types";
 import { consumeRateLimit, RateLimitedError } from "@/server/security/rateLimit";
-import { CHART_HISTORY_WINDOW_SECONDS } from "@/lib/chartHistory";
+import { CHART_HISTORY_WINDOW_SECONDS, MAX_CHART_HISTORY_CANDLES } from "@/lib/chartHistory";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,10 +15,10 @@ const QuerySchema = z.object({
   symbol: z.string().trim().min(1).max(32).regex(/^[A-Za-z0-9._-]+$/).transform((value) => value.toUpperCase()),
   interval: z.enum(["1m", "5m", "15m", "1h", "4h", "1d"]),
   before: z.coerce.number().int().positive(),
-  limit: z.coerce.number().int().min(1).max(2_000).default(1_000),
+  limit: z.coerce.number().int().min(1).max(MAX_CHART_HISTORY_CANDLES).default(MAX_CHART_HISTORY_CANDLES),
 });
 
-/** GET /api/market/history — bounded, provider-backed older candle pages. */
+/** GET /api/market/history — bounded, provider-backed history up to 360 days. */
 export async function GET(req: Request) {
   const parsed = QuerySchema.safeParse(Object.fromEntries(new URL(req.url).searchParams));
   if (!parsed.success) {
@@ -68,9 +68,11 @@ export async function GET(req: Request) {
   const now = Math.floor(Date.now() / 1000);
   const windowStart = now - CHART_HISTORY_WINDOW_SECONDS;
   const effectiveBefore = Math.min(before, now);
-  const pageLimit = Math.min(limit, Math.ceil((effectiveBefore - windowStart) / INTERVAL_SECONDS[interval]));
+  const candlesInWindow = Math.ceil((effectiveBefore - windowStart) / INTERVAL_SECONDS[interval]);
+  const pageLimit = Math.min(limit, candlesInWindow);
+  const windowReached = pageLimit >= candlesInWindow;
   if (pageLimit <= 0) {
-    return NextResponse.json({ candles: [], historyAvailable: true, hasMore: false, windowStart });
+    return NextResponse.json({ candles: [], historyAvailable: true, hasMore: false, windowStart, windowReached: true });
   }
 
   try {
@@ -87,8 +89,9 @@ export async function GET(req: Request) {
     return NextResponse.json({
       candles,
       historyAvailable: true,
-      hasMore: candles.length > 0 && candles[0]!.time > windowStart,
+      hasMore: !windowReached && candles.length > 0 && candles[0]!.time > windowStart,
       windowStart,
+      windowReached,
     });
   } catch (error) {
     console.error(`Historical candle fetch failed for ${symbol} ${interval}:`, error);

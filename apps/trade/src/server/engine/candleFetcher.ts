@@ -15,12 +15,12 @@ import type { Candle, CandleInterval } from "./types";
 import { INTERVAL_SECONDS } from "./types";
 
 const FINNHUB_BASE = "https://finnhub.io/api/v1";
-const RESOLUTION_MAP: Record<CandleInterval, string> = {
+const FOUR_HOUR_SECONDS = 4 * 60 * 60;
+const RESOLUTION_MAP: Record<Exclude<CandleInterval, "4h">, string> = {
   "1m": "1",
   "5m": "5",
   "15m": "15",
   "1h": "60",
-  "4h": "240",
   "1d": "D",
 };
 const DEFAULT_CANDLE_DELAY_MS = 1_050;
@@ -40,6 +40,26 @@ interface FinnhubCandleResponse {
   v?: number[];
   t: number[];
   s: string;
+}
+
+export function aggregateFourHourCandles(hourlyCandles: Candle[]): Candle[] {
+  const buckets = new Map<number, Candle>();
+  const orderedCandles = [...hourlyCandles].sort((left, right) => left.time - right.time);
+
+  for (const candle of orderedCandles) {
+    const time = Math.floor(candle.time / FOUR_HOUR_SECONDS) * FOUR_HOUR_SECONDS;
+    const bucket = buckets.get(time);
+    if (bucket) {
+      bucket.high = Math.max(bucket.high, candle.high);
+      bucket.low = Math.min(bucket.low, candle.low);
+      bucket.close = candle.close;
+      bucket.volume += candle.volume;
+    } else {
+      buckets.set(time, { ...candle, time });
+    }
+  }
+
+  return [...buckets.values()];
 }
 
 function handleEntitlementDenied(status: number): never | null {
@@ -87,10 +107,14 @@ export async function fetchCandles(
   const feedSymbol = feedSymbolFor(symbol);
   if (!entry || !feedSymbol) return null;
 
-  const resolution = RESOLUTION_MAP[interval];
   const seconds = INTERVAL_SECONDS[interval];
   const to = Math.min(before ?? Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000));
-  const from = to - seconds * count;
+  const requestedFrom = to - seconds * count;
+  const isFourHour = interval === "4h";
+  const from = isFourHour
+    ? Math.floor(requestedFrom / FOUR_HOUR_SECONDS) * FOUR_HOUR_SECONDS
+    : requestedFrom;
+  const resolution = isFourHour ? "60" : RESOLUTION_MAP[interval];
   const endpoint =
     entry === "forex"
       ? `${FINNHUB_BASE}/forex/candle`
@@ -138,7 +162,8 @@ export async function fetchCandles(
       ) continue;
       candles.push(point);
     }
-    return candles.length > 0 ? candles : null;
+    const result = isFourHour ? aggregateFourHourCandles(candles) : candles;
+    return result.length > 0 ? result : null;
   } catch (error) {
     if (getFinnhubCandleMode() === "required") throw error;
     console.warn(`📉 Finnhub candle adapter unavailable (${error instanceof Error ? error.message : String(error)}); simulated history retained.`);

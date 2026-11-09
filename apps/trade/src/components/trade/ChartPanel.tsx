@@ -966,12 +966,19 @@ export function ChartPanel({ instrument, marketDataConnected, marketDataMode, on
         symbol: instrument.symbol,
         interval,
         before: String(before),
-        limit: "2000",
+        limit: String(MAX_CHART_HISTORY_CANDLES),
       });
       const response = await fetch(`/api/market/history?${params.toString()}`, { cache: "no-store" });
       if (historyKeyRef.current !== requestKey) return;
       const payload = (await response.json().catch(() => null)) as
-        | { candles?: Candle[]; historyAvailable?: boolean; hasMore?: boolean; message?: string; error?: string }
+        | {
+            candles?: Candle[];
+            historyAvailable?: boolean;
+            hasMore?: boolean;
+            windowReached?: boolean;
+            message?: string;
+            error?: string;
+          }
         | null;
       if (!response.ok) {
         throw new Error(payload?.error ?? payload?.message ?? "Historical candles could not be loaded.");
@@ -1006,7 +1013,7 @@ export function ChartPanel({ instrument, marketDataConnected, marketDataMode, on
           to: visibleRange.to + added,
         });
       }
-      const reachedWindow = merged[0]!.time <= windowStart;
+      const reachedWindow = payload.windowReached ?? merged[0]!.time <= windowStart;
       const reachedProviderEnd = !payload.hasMore;
       setHistoryExhausted(reachedWindow || reachedProviderEnd);
       setHistoryMessage(reachedWindow
@@ -1025,6 +1032,24 @@ export function ChartPanel({ instrument, marketDataConnected, marketDataMode, on
       }
     }
   }, [currentHistoryStatus, historyKey, instrument.symbol, interval, marketDataMode, replaceChartData]);
+
+  useEffect(() => {
+    if (
+      marketDataMode !== "finnhub" ||
+      currentHistoryStatus?.state !== "ready" ||
+      currentHistoryStatus.source !== "finnhub" ||
+      candles.length === 0 ||
+      historyExhausted
+    ) return;
+    void loadEarlierCandles();
+  }, [
+    candles.length,
+    currentHistoryStatus,
+    historyExhausted,
+    historyKey,
+    loadEarlierCandles,
+    marketDataMode,
+  ]);
 
   const selectTimeframe = useCallback(
     (next: CandleInterval) => {
@@ -1611,7 +1636,7 @@ function ViewControlsMenu({
             {historyLoading ? "Loading earlier candles…" : "Load earlier candles"}
           </DropdownMenuItem>
           <DropdownMenuLabel className="px-2 py-1 text-(length:--term-text-2xs) font-normal normal-case tracking-normal text-text-faint">
-            History loads progressively; up to {CHART_HISTORY_DAYS} days where the market-data source supports it.
+            Loads up to {CHART_HISTORY_DAYS} days for each timeframe when the provider supports it.
           </DropdownMenuLabel>
         </DropdownMenuGroup>
       </DropdownMenuContent>

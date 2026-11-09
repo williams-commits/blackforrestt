@@ -77,7 +77,7 @@ export function TerminalTable<T extends object>({
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className={`whitespace-nowrap px-2 py-1.5 text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint ${String((header.column.columnDef.meta as { headerClass?: string } | undefined)?.headerClass ?? "")}`}
+                    className={`whitespace-nowrap px-3 py-2.5 text-(length:--term-text-xs) font-semibold uppercase tracking-[0.12em] text-text-muted align-middle ${String((header.column.columnDef.meta as { headerClass?: string } | undefined)?.headerClass ?? "")}`}
                   >
                     {header.isPlaceholder
                       ? null
@@ -110,7 +110,7 @@ export function TerminalTable<T extends object>({
                       {row.getVisibleCells().map((cell) => (
                         <td
                           key={cell.id}
-                          className={`whitespace-nowrap px-2 py-1 text-(length:--term-text-xs) ${String((cell.column.columnDef.meta as { cellClass?: string } | undefined)?.cellClass ?? "")}`}
+                          className={`whitespace-nowrap px-3 py-1.5 text-(length:--term-text-xs) ${String((cell.column.columnDef.meta as { cellClass?: string } | undefined)?.cellClass ?? "")}`}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
@@ -143,7 +143,7 @@ export function TerminalTable<T extends object>({
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className={`whitespace-nowrap px-2 py-1 text-(length:--term-text-xs) ${String((cell.column.columnDef.meta as { cellClass?: string } | undefined)?.cellClass ?? "")}`}
+                      className={`whitespace-nowrap px-3 py-1.5 text-(length:--term-text-xs) ${String((cell.column.columnDef.meta as { cellClass?: string } | undefined)?.cellClass ?? "")}`}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>

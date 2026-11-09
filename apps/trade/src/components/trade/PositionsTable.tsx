@@ -62,7 +62,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
 
   return (
     <div ref={dockRef} className="flex h-full flex-col bg-panel">
-      <div className={`grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 bg-panel-2 px-2 md:flex md:gap-3 md:py-0 mb-0.5 ${collapsed ? "py-0" : "gap-y-1.5 py-1.5"}`}>
+      <div className={`grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 bg-panel-2 px-2 md:flex md:gap-3 md:px-3 md:py-1 mb-0.5 ${collapsed ? "py-0" : "gap-y-1.5 py-1.5"}`}>
         <div className="col-start-1 row-start-1 min-w-0 md:flex-none">
           <Tabs
             variant="segmented"
@@ -117,14 +117,14 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
             aria-label={collapsed ? "Expand activity dock" : "Collapse activity dock"}
             aria-expanded={!collapsed}
             title={collapsed ? "Expand dock" : "Collapse dock"}
-            className={`col-start-2 row-start-1 min-h-10 min-w-10 rounded-md bg-canvas/40 text-text-muted transition-colors hover:bg-panel-3 hover:text-text md:order-3 md:min-h-8 md:min-w-8 ${tab === "history" ? "md:ml-auto" : ""}`}
+            className={`col-start-2 row-start-1 ml-auto size-9 rounded-md bg-canvas/50 text-text-muted transition-colors hover:bg-panel-3 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand md:order-3 md:size-8 ${tab === "open" && positions.length > 0 ? "md:ml-0" : "md:ml-auto"}`}
           >
             {collapsed ? <PanelBottomOpen size={16} strokeWidth={2} aria-hidden /> : <PanelBottomClose size={16} strokeWidth={2} aria-hidden />}
           </Button>
         )}
         {tab === "open" && positions.length > 0 && (
           <div
-            className={`col-span-2 row-start-2 flex items-center justify-between rounded-lg border border-white/5 bg-linear-to-r from-canvas/55 via-canvas/40 to-canvas/30 px-2.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] md:order-2 md:ml-auto md:flex md:w-auto md:justify-start md:gap-2 md:rounded-md md:border-transparent md:bg-transparent md:px-0 md:py-0 ${collapsed ? "hidden md:flex" : ""}`}
+            className={`col-span-2 row-start-2 flex items-center justify-between rounded-lg border border-white/5 bg-linear-to-r from-canvas/55 via-canvas/40 to-canvas/30 px-2.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] md:order-2 md:ml-auto md:flex md:w-auto md:justify-start md:gap-2 md:rounded-md md:border-transparent md:bg-transparent md:px-2 md:py-1 ${collapsed ? "hidden md:flex" : ""}`}
           >
             <div className="flex min-w-0 items-center gap-1.5">
               <span className="text-(length:--term-text-2xs) font-medium uppercase tracking-[0.14em] text-text-faint">P/L</span>

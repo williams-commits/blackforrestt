@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Maximize2,
   Minimize2,
@@ -85,6 +85,8 @@ interface Props {
 
 type ChartType = "candles" | "line";
 type DisplayOhlc = Candle & { up: boolean };
+type HoverReadoutUpdater = (candle: DisplayOhlc | null) => void;
+type RegisterHoverReadout = (updater: HoverReadoutUpdater) => () => void;
 
 const TIMEFRAME_STORAGE_KEY = "blckforest:chart-timeframe";
 const CHART_TYPE_STORAGE_KEY = "blckforest:chart-type";
@@ -219,7 +221,12 @@ export function ChartPanel({ instrument, marketDataConnected, marketDataMode, on
   const [bollingerPeriod] = useState(20);
   const [bollingerStdDev] = useState(2);
   const [rsiPeriod] = useState(14);
-  const [hoveredOhlc, setHoveredOhlc] = useState<DisplayOhlc | null>(null);
+  const hoverReadoutUpdatersRef = useRef(new Set<HoverReadoutUpdater>());
+  const lastHoveredSignatureRef = useRef<string | null>(null);
+  const registerHoverReadout = useCallback<RegisterHoverReadout>((updater) => {
+    hoverReadoutUpdatersRef.current.add(updater);
+    return () => hoverReadoutUpdatersRef.current.delete(updater);
+  }, []);
   const [fullscreen, setFullscreen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyExhausted, setHistoryExhausted] = useState(false);
@@ -348,7 +355,8 @@ export function ChartPanel({ instrument, marketDataConnected, marketDataMode, on
     lastAppliedCandleTimeRef.current = null;
     userZoomedRef.current = false;
     barSpacingRef.current = 8;
-    setHoveredOhlc(null);
+    lastHoveredSignatureRef.current = null;
+    for (const updater of hoverReadoutUpdatersRef.current) updater(null);
   }, [syncKey]);
 
   useEffect(() => {
@@ -455,16 +463,26 @@ export function ChartPanel({ instrument, marketDataConnected, marketDataMode, on
       const activeSeries = chartTypeRef.current === "candles" ? candleSeries : lineSeries;
       const point = param.seriesData.get(activeSeries);
       if (!point) {
-        setHoveredOhlc(null);
+        if (lastHoveredSignatureRef.current !== null) {
+          lastHoveredSignatureRef.current = null;
+          for (const updater of hoverReadoutUpdatersRef.current) updater(null);
+        }
         return;
       }
       const time = Number(param.time ?? 0);
       const candle = findCandleByTime(chartCandlesRef.current, time);
       if (!candle) {
-        setHoveredOhlc(null);
+        if (lastHoveredSignatureRef.current !== null) {
+          lastHoveredSignatureRef.current = null;
+          for (const updater of hoverReadoutUpdatersRef.current) updater(null);
+        }
         return;
       }
-      setHoveredOhlc({ ...candle, up: candle.close >= candle.open });
+      const signature = `${candle.time}:${candle.open}:${candle.high}:${candle.low}:${candle.close}:${candle.volume}`;
+      if (signature === lastHoveredSignatureRef.current) return;
+      lastHoveredSignatureRef.current = signature;
+      const hovered = { ...candle, up: candle.close >= candle.open };
+      for (const updater of hoverReadoutUpdatersRef.current) updater(hovered);
     };
     chart.subscribeCrosshairMove(crosshairHandler);
     chartRef.current = chart;
@@ -932,7 +950,6 @@ export function ChartPanel({ instrument, marketDataConnected, marketDataMode, on
     const live = liveQuote?.mid ?? last.close;
     return { ...last, close: live, up: live >= last.open };
   }, [candles, liveQuote]);
-  const ohlc = hoveredOhlc ?? latestOhlc;
 
   const loadEarlierCandles = useCallback(async () => {
     if (historyRequestRef.current) return;
@@ -1217,15 +1234,13 @@ export function ChartPanel({ instrument, marketDataConnected, marketDataMode, on
               )}
             </span>
           )}
-          {ohlc ? (
-            <div className="hidden min-w-0 items-center gap-2 text-(length:--term-text-2xs) tnum md:flex">
-              <OhlcField label="O" value={ohlc.open} up={ohlc.up} digits={instrument.digits} />
-              <OhlcField label="H" value={ohlc.high} up={ohlc.up} digits={instrument.digits} />
-              <OhlcField label="L" value={ohlc.low} up={ohlc.up} digits={instrument.digits} />
-              <OhlcField label="C" value={ohlc.close} up={ohlc.up} digits={instrument.digits} />
-              <span className="text-text-faint">Vol {Math.round(ohlc.volume).toLocaleString("en-US")}</span>
-            </div>
-          ) : null}
+          <ChartOhlcReadout
+            latest={latestOhlc}
+            digits={instrument.digits}
+            resetKey={historyKey}
+            register={registerHoverReadout}
+            compact={false}
+          />
           {marketDataMode === "finnhub" && currentHistoryStatus ? (
             <span
               role="status"
@@ -1341,14 +1356,13 @@ export function ChartPanel({ instrument, marketDataConnected, marketDataMode, on
         </div>
       )}
 
-      {ohlc ? (
-        <div className="flex shrink-0 items-center gap-2 overflow-x-auto bg-panel px-3 py-1 text-(length:--term-text-2xs) tnum md:hidden">
-          <OhlcField label="O" value={ohlc.open} up={ohlc.up} digits={instrument.digits} />
-          <OhlcField label="H" value={ohlc.high} up={ohlc.up} digits={instrument.digits} />
-          <OhlcField label="L" value={ohlc.low} up={ohlc.up} digits={instrument.digits} />
-          <OhlcField label="C" value={ohlc.close} up={ohlc.up} digits={instrument.digits} />
-        </div>
-      ) : null}
+      <ChartOhlcReadout
+        latest={latestOhlc}
+        digits={instrument.digits}
+        resetKey={historyKey}
+        register={registerHoverReadout}
+        compact
+      />
 
       <div className="relative min-h-112 flex-1 lg:min-h-0">
         <div ref={containerRef} data-testid="professional-chart-canvas" className="h-full w-full touch-none" />
@@ -1701,6 +1715,51 @@ function OhlcField({ label, value, up, digits }: { label: string; value: number;
     </span>
   );
 }
+
+const ChartOhlcReadout = memo(function ChartOhlcReadout({
+  latest,
+  digits,
+  resetKey,
+  register,
+  compact,
+}: {
+  latest: DisplayOhlc | null;
+  digits: number;
+  resetKey: string;
+  register: RegisterHoverReadout;
+  compact: boolean;
+}) {
+  const [hovered, setHovered] = useState<DisplayOhlc | null>(null);
+
+  useEffect(() => {
+    const unregister = register(setHovered);
+    return () => unregister();
+  }, [register]);
+
+  useEffect(() => {
+    setHovered(null);
+  }, [resetKey]);
+
+  const candle = hovered ?? latest;
+  if (!candle) return null;
+
+  return compact ? (
+    <div className="flex shrink-0 items-center gap-2 overflow-x-auto bg-panel px-3 py-1 text-(length:--term-text-2xs) tnum md:hidden">
+      <OhlcField label="O" value={candle.open} up={candle.up} digits={digits} />
+      <OhlcField label="H" value={candle.high} up={candle.up} digits={digits} />
+      <OhlcField label="L" value={candle.low} up={candle.up} digits={digits} />
+      <OhlcField label="C" value={candle.close} up={candle.up} digits={digits} />
+    </div>
+  ) : (
+    <div className="hidden min-w-0 items-center gap-2 text-(length:--term-text-2xs) tnum md:flex">
+      <OhlcField label="O" value={candle.open} up={candle.up} digits={digits} />
+      <OhlcField label="H" value={candle.high} up={candle.up} digits={digits} />
+      <OhlcField label="L" value={candle.low} up={candle.up} digits={digits} />
+      <OhlcField label="C" value={candle.close} up={candle.up} digits={digits} />
+      <span className="text-text-faint">Vol {Math.round(candle.volume).toLocaleString("en-US")}</span>
+    </div>
+  );
+});
 
 function findCandleByTime(candles: Candle[], time: number): Candle | null {
   let low = 0;

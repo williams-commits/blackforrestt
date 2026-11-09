@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Briefcase,
+  ChartCandlestick,
   History,
   PanelBottomClose,
   PanelBottomOpen,
@@ -62,7 +62,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
 
   return (
     <div ref={dockRef} className="flex h-full flex-col bg-panel">
-      <div className={`grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 bg-panel-2 px-2 md:flex md:gap-3 md:py-0 ${collapsed ? "py-0" : "gap-y-1.5 py-1.5"}`}>
+      <div className={`grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 bg-panel-2 px-2 md:flex md:gap-3 md:py-0 mb-0.5 ${collapsed ? "py-0" : "gap-y-1.5 py-1.5"}`}>
         <div className="col-start-1 row-start-1 min-w-0 md:flex-none">
           <Tabs
             variant="segmented"
@@ -74,8 +74,8 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
                 key: "open",
                 label: (
                   <>
-                    <Briefcase size={14} aria-hidden />
-                    <span>Open Positions</span>
+                    <ChartCandlestick size={14} aria-hidden />
+                    <span>Positions</span>
                     {positions.length > 0 && (
                       <span className="ml-0.5 rounded-full bg-canvas/25 px-1.5 py-px text-(length:--term-text-2xs) font-semibold tabular-nums">
                         {positions.length}
@@ -89,7 +89,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
                 label: (
                   <>
                     <History size={14} aria-hidden />
-                    <span>Trade History</span>
+                    <span>History</span>
                   </>
                 ),
               },
@@ -123,16 +123,21 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
           </Button>
         )}
         {tab === "open" && positions.length > 0 && (
-          <div className={`col-span-2 row-start-2 flex items-center justify-between rounded-md bg-canvas/40 px-2 py-1.5 md:order-2 md:ml-auto md:flex md:w-auto md:justify-start md:gap-2 md:rounded-none md:bg-transparent md:px-0 md:py-0 ${collapsed ? "hidden md:flex" : ""}`}>
-            <div className="flex items-center gap-1.5">
-              <span className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint">Floating P/L</span>
-              {totalFloating >= 0 ? (
-                <TrendingUp size={14} className="text-up" aria-hidden />
-              ) : (
-                <TrendingDown size={14} className="text-down" aria-hidden />
-              )}
+          <div
+            className={`col-span-2 row-start-2 flex items-center justify-between rounded-lg border border-white/5 bg-linear-to-r from-canvas/55 via-canvas/40 to-canvas/30 px-2.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] md:order-2 md:ml-auto md:flex md:w-auto md:justify-start md:gap-2 md:rounded-md md:border-transparent md:bg-transparent md:px-0 md:py-0 ${collapsed ? "hidden md:flex" : ""}`}
+          >
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="text-(length:--term-text-2xs) font-medium uppercase tracking-[0.14em] text-text-faint">P/L</span>
+              <div
+                className={`flex h-5 w-5 items-center justify-center rounded-full ${
+                  totalFloating >= 0 ? "bg-up/12 text-up" : "bg-down/12 text-down"
+                }`}
+                aria-hidden="true"
+              >
+                {totalFloating >= 0 ? <TrendingUp size={12} strokeWidth={2.4} /> : <TrendingDown size={12} strokeWidth={2.4} />}
+              </div>
             </div>
-            <span className={`text-(length:--term-text-sm) font-bold tabular-nums ${totalFloating >= 0 ? "text-up" : "text-down"}`}>
+            <span className={`text-(length:--term-text-sm) font-bold tabular-nums tracking-tight ${totalFloating >= 0 ? "text-up" : "text-down"}`}>
               {totalFloating >= 0 ? "+" : ""}{fmtNum(totalFloating, 2)} USD
             </span>
           </div>
@@ -564,7 +569,15 @@ function useHistoryData() {
 
 function HistoryEmptyState({ loading, error, retry }: { loading: boolean; error: string | null; retry: () => void }) {
   if (loading) {
-    return <div role="status" className="flex items-center justify-center h-full text-text-faint text-xs">Loading trade history…</div>;
+    return (
+      <div role="status" className="flex min-h-32 w-full items-center justify-center gap-3 px-4 text-xs text-text-faint">
+        <svg className="h-4 w-4 shrink-0 animate-spin text-text-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+          <path className="opacity-75" d="M4 12a8 8 0 0 1 8-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+        <span>Loading trade history…</span>
+      </div>
+    );
   }
   if (error) {
     return (

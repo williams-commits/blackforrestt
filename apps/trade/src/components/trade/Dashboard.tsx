@@ -287,7 +287,7 @@ export function Dashboard({
                 return next;
               });
             }}
-            className="hidden h-2 cursor-row-resize touch-none items-center justify-center bg-panel-2 transition-colors hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-brand md:flex"
+            className="hidden cursor-row-resize touch-none items-center justify-center bg-panel-2 transition-colors hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-brand md:flex"
           >
             <span className="h-0.5 w-10 rounded-full bg-text-faint/50" aria-hidden />
           </div>

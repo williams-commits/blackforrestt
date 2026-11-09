@@ -993,6 +993,7 @@ export function ChartPanel({ instrument, marketDataConnected, marketDataMode, on
             historyAvailable?: boolean;
             hasMore?: boolean;
             windowReached?: boolean;
+            coverageDays?: number;
             message?: string;
             error?: string;
           }
@@ -1034,9 +1035,9 @@ export function ChartPanel({ instrument, marketDataConnected, marketDataMode, on
       const reachedProviderEnd = !payload.hasMore;
       setHistoryExhausted(reachedWindow || reachedProviderEnd);
       setHistoryMessage(reachedWindow
-        ? `The ${CHART_HISTORY_DAYS}-day history window has been reached.`
+        ? `Loaded ${merged.length.toLocaleString()} candles across the ${CHART_HISTORY_DAYS}-day history window. Use Fit all candles to view the full range.`
         : reachedProviderEnd
-          ? "The configured provider has no earlier candles."
+          ? `Finnhub returned about ${payload.coverageDays ?? 0} days of candles for this timeframe; the full ${CHART_HISTORY_DAYS}-day range is not available.`
           : `Loaded ${added.toLocaleString()} earlier candles.`);
     } catch (error) {
       if (historyKeyRef.current === requestKey) {

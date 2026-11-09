@@ -11,7 +11,11 @@ import {
   CHART_HISTORY_WINDOW_SECONDS,
   MAX_CHART_HISTORY_CANDLES,
 } from "../src/lib/chartHistory.js";
-import { aggregateFourHourCandles } from "../src/server/engine/candleFetcher.js";
+import {
+  aggregateFourHourCandles,
+  fetchCandles,
+  planCandleRequestRanges,
+} from "../src/server/engine/candleFetcher.js";
 
 test("chart history bounds include a full 360 days of one-minute candles", () => {
   assert.equal(CHART_HISTORY_DAYS, 360);
@@ -25,6 +29,86 @@ test("four-hour history coverage fits inside the chart candle limit", () => {
       MAX_CHART_HISTORY_CANDLES >= Math.ceil(CHART_HISTORY_WINDOW_SECONDS / intervalSeconds),
       `history limit should cover ${intervalSeconds}-second candles`,
     );
+  }
+});
+
+test("provider request plans cover all 360-day intervals without gaps", () => {
+  const providerIntervals = [
+    { seconds: 60, providerSeconds: 60 },
+    { seconds: 300, providerSeconds: 300 },
+    { seconds: 900, providerSeconds: 900 },
+    { seconds: 3_600, providerSeconds: 3_600 },
+    { seconds: 14_400, providerSeconds: 3_600 },
+    { seconds: 86_400, providerSeconds: 86_400 },
+  ];
+
+  for (const { seconds, providerSeconds } of providerIntervals) {
+    const from = 1_000_000;
+    const targetBars = Math.ceil(CHART_HISTORY_WINDOW_SECONDS / seconds);
+    const providerBars = targetBars * (seconds / providerSeconds);
+    const to = from + providerBars * providerSeconds;
+    const ranges = planCandleRequestRanges(from, to, providerSeconds);
+    assert.equal(ranges[0]?.from, from);
+    assert.equal(ranges.at(-1)?.to, to);
+    for (let index = 1; index < ranges.length; index += 1) {
+      assert.equal(ranges[index - 1]?.to, ranges[index]?.from);
+    }
+  }
+});
+
+test("full intraday history is split into contiguous provider-safe requests", () => {
+  const from = 1_000;
+  const to = from + 10_001 * 300;
+  const ranges = planCandleRequestRanges(from, to, 300, 10_000);
+
+  assert.deepEqual(ranges, [
+    { from, to: from + 10_000 * 300 },
+    { from: from + 10_000 * 300, to },
+  ]);
+});
+
+test("Finnhub fetches every provider-sized page in a long intraday range", async () => {
+  const priorMode = process.env.MARKET_DATA_MODE;
+  const priorKey = process.env.FINNHUB_API_KEY;
+  const priorDelay = process.env.FINNHUB_CANDLE_DELAY_MS;
+  const priorFetch = globalThis.fetch;
+  const requestRanges: Array<{ from: number; to: number }> = [];
+  process.env.MARKET_DATA_MODE = "finnhub";
+  process.env.FINNHUB_API_KEY = "unit-test-key";
+  process.env.FINNHUB_CANDLE_DELAY_MS = "250";
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    const range = {
+      from: Number(url.searchParams.get("from")),
+      to: Number(url.searchParams.get("to")),
+    };
+    requestRanges.push(range);
+    return new Response(JSON.stringify({
+      s: "ok",
+      t: [range.from],
+      o: [1],
+      h: [2],
+      l: [0.5],
+      c: [1.5],
+      v: [3],
+    }), { status: 200 });
+  }) as typeof fetch;
+
+  try {
+    const to = 1_800_000_000;
+    const candles = await fetchCandles("GBPUSD", "5m", 10_001, to);
+    assert.equal(requestRanges.length, 2);
+    assert.equal(candles?.length, 2);
+    assert.ok(requestRanges[0]!.from < requestRanges[1]!.from);
+    assert.equal(requestRanges[0]!.to + 1, requestRanges[1]!.from);
+  } finally {
+    globalThis.fetch = priorFetch;
+    if (priorMode === undefined) delete process.env.MARKET_DATA_MODE;
+    else process.env.MARKET_DATA_MODE = priorMode;
+    if (priorKey === undefined) delete process.env.FINNHUB_API_KEY;
+    else process.env.FINNHUB_API_KEY = priorKey;
+    if (priorDelay === undefined) delete process.env.FINNHUB_CANDLE_DELAY_MS;
+    else process.env.FINNHUB_CANDLE_DELAY_MS = priorDelay;
   }
 });
 

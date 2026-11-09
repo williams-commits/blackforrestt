@@ -16,6 +16,7 @@ import { INTERVAL_SECONDS } from "./types";
 
 const FINNHUB_BASE = "https://finnhub.io/api/v1";
 const FOUR_HOUR_SECONDS = 4 * 60 * 60;
+const FINNHUB_PAGE_CANDLES = 10_000;
 const RESOLUTION_MAP: Record<Exclude<CandleInterval, "4h">, string> = {
   "1m": "1",
   "5m": "5",
@@ -40,6 +41,37 @@ interface FinnhubCandleResponse {
   v?: number[];
   t: number[];
   s: string;
+}
+
+export interface CandleRequestRange {
+  from: number;
+  to: number;
+}
+
+export function planCandleRequestRanges(
+  from: number,
+  to: number,
+  candleSeconds: number,
+  maxCandles = FINNHUB_PAGE_CANDLES,
+): CandleRequestRange[] {
+  if (
+    !Number.isFinite(from) ||
+    !Number.isFinite(to) ||
+    !Number.isFinite(candleSeconds) ||
+    !Number.isInteger(maxCandles) ||
+    from >= to ||
+    candleSeconds <= 0 ||
+    maxCandles <= 0
+  ) return [];
+
+  const ranges: CandleRequestRange[] = [];
+  const chunkSeconds = candleSeconds * maxCandles;
+  for (let rangeFrom = from; rangeFrom < to;) {
+    const rangeTo = Math.min(to, rangeFrom + chunkSeconds);
+    ranges.push({ from: rangeFrom, to: rangeTo });
+    rangeFrom = rangeTo;
+  }
+  return ranges;
 }
 
 export function aggregateFourHourCandles(hourlyCandles: Candle[]): Candle[] {
@@ -111,6 +143,7 @@ export async function fetchCandles(
   const to = Math.min(before ?? Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000));
   const requestedFrom = to - seconds * count;
   const isFourHour = interval === "4h";
+  const sourceSeconds = isFourHour ? INTERVAL_SECONDS["1h"] : seconds;
   const from = isFourHour
     ? Math.floor(requestedFrom / FOUR_HOUR_SECONDS) * FOUR_HOUR_SECONDS
     : requestedFrom;
@@ -121,47 +154,61 @@ export async function fetchCandles(
       : entry === "crypto"
         ? `${FINNHUB_BASE}/crypto/candle`
         : `${FINNHUB_BASE}/stock/candle`;
-  const url = `${endpoint}?symbol=${encodeURIComponent(feedSymbol)}&resolution=${resolution}&from=${from}&to=${to}&token=${apiKey}`;
 
   try {
-    const response = await scheduleCandleRequest(url);
-    if (response.status === 401 || response.status === 403) return handleEntitlementDenied(response.status);
-    if (!response.ok) {
-      console.warn(`📉 Finnhub candle request ${symbol} ${interval} failed with HTTP ${response.status}; simulated history retained.`);
-      return null;
-    }
-    restCapability = "available";
-    const data = (await response.json()) as FinnhubCandleResponse;
-    const length = data.t?.length ?? 0;
-    if (
-      data.s !== "ok" ||
-      length === 0 ||
-      data.o?.length !== length ||
-      data.h?.length !== length ||
-      data.l?.length !== length ||
-      data.c?.length !== length
-    ) return null;
+    const requests = planCandleRequestRanges(from, to, sourceSeconds);
+    const candlesByTime = new Map<number, Candle>();
+    for (const range of requests) {
+      const url = `${endpoint}?symbol=${encodeURIComponent(feedSymbol)}&resolution=${resolution}&from=${range.from}&to=${range.to - 1}&token=${apiKey}`;
+      const response = await scheduleCandleRequest(url);
+      if (response.status === 401 || response.status === 403) return handleEntitlementDenied(response.status);
+      if (!response.ok) {
+        console.warn(`📉 Finnhub candle request ${symbol} ${interval} failed with HTTP ${response.status}; simulated history retained.`);
+        return null;
+      }
 
-    const candles: Candle[] = [];
-    for (let index = 0; index < length; index += 1) {
-      const point = {
-        time: data.t[index],
-        open: data.o[index],
-        high: data.h[index],
-        low: data.l[index],
-        close: data.c[index],
-        volume: data.v?.[index] ?? 0,
-      };
+      const data = (await response.json()) as FinnhubCandleResponse;
+      if (data.s === "no_data") {
+        restCapability = "available";
+        continue;
+      }
+      const length = data.t?.length ?? 0;
       if (
-        !Number.isFinite(point.time) ||
-        !Number.isFinite(point.open) ||
-        !Number.isFinite(point.high) ||
-        !Number.isFinite(point.low) ||
-        !Number.isFinite(point.close) ||
-        point.open <= 0 || point.high <= 0 || point.low <= 0 || point.close <= 0 || point.low > point.high
-      ) continue;
-      candles.push(point);
+        data.s !== "ok" ||
+        data.o?.length !== length ||
+        data.h?.length !== length ||
+        data.l?.length !== length ||
+        data.c?.length !== length
+      ) {
+        console.warn(`📉 Finnhub candle request ${symbol} ${interval} returned an invalid response; simulated history retained.`);
+        return null;
+      }
+      restCapability = "available";
+
+      for (let index = 0; index < length; index += 1) {
+        const point = {
+          time: data.t[index],
+          open: data.o[index],
+          high: data.h[index],
+          low: data.l[index],
+          close: data.c[index],
+          volume: data.v?.[index] ?? 0,
+        };
+        if (
+          !Number.isFinite(point.time) ||
+          point.time < range.from ||
+          point.time >= range.to ||
+          !Number.isFinite(point.open) ||
+          !Number.isFinite(point.high) ||
+          !Number.isFinite(point.low) ||
+          !Number.isFinite(point.close) ||
+          point.open <= 0 || point.high <= 0 || point.low <= 0 || point.close <= 0 || point.low > point.high
+        ) continue;
+        candlesByTime.set(point.time, point);
+      }
     }
+
+    const candles = [...candlesByTime.values()].sort((left, right) => left.time - right.time);
     const result = isFourHour ? aggregateFourHourCandles(candles) : candles;
     return result.length > 0 ? result : null;
   } catch (error) {

@@ -6,7 +6,11 @@ import { fetchCandles } from "@/server/engine/candleFetcher";
 import { getMarketDataMode } from "@/server/engine/marketDataMode";
 import { INTERVAL_SECONDS, type CandleInterval } from "@/server/engine/types";
 import { consumeRateLimit, RateLimitedError } from "@/server/security/rateLimit";
-import { CHART_HISTORY_WINDOW_SECONDS, MAX_CHART_HISTORY_CANDLES } from "@/lib/chartHistory";
+import {
+  CHART_HISTORY_DAYS,
+  CHART_HISTORY_WINDOW_SECONDS,
+  MAX_CHART_HISTORY_CANDLES,
+} from "@/lib/chartHistory";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,9 +74,16 @@ export async function GET(req: Request) {
   const effectiveBefore = Math.min(before, now);
   const candlesInWindow = Math.ceil((effectiveBefore - windowStart) / INTERVAL_SECONDS[interval]);
   const pageLimit = Math.min(limit, candlesInWindow);
-  const windowReached = pageLimit >= candlesInWindow;
+  const requestedWindowComplete = pageLimit >= candlesInWindow;
   if (pageLimit <= 0) {
-    return NextResponse.json({ candles: [], historyAvailable: true, hasMore: false, windowStart, windowReached: true });
+    return NextResponse.json({
+      candles: [],
+      historyAvailable: true,
+      hasMore: false,
+      windowStart,
+      windowReached: true,
+      coverageDays: CHART_HISTORY_DAYS,
+    });
   }
 
   try {
@@ -86,12 +97,18 @@ export async function GET(req: Request) {
       });
     }
     const candles = fetched.filter((candle) => candle.time >= windowStart && candle.time < effectiveBefore);
+    const earliestCandle = candles[0]?.time;
+    const coverageDays = earliestCandle == null
+      ? 0
+      : Math.min(CHART_HISTORY_DAYS, Math.ceil((now - earliestCandle) / 86_400));
+    const windowReached = earliestCandle != null && earliestCandle <= windowStart + 3 * 86_400;
     return NextResponse.json({
       candles,
       historyAvailable: true,
-      hasMore: !windowReached && candles.length > 0 && candles[0]!.time > windowStart,
+      hasMore: !requestedWindowComplete && candles.length > 0 && !windowReached,
       windowStart,
       windowReached,
+      coverageDays,
     });
   } catch (error) {
     console.error(`Historical candle fetch failed for ${symbol} ${interval}:`, error);

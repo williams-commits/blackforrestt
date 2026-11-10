@@ -374,7 +374,18 @@ class Hub {
   }
 
   setLivePrice(symbol: string, price: number, volume?: number): void {
-    this.instruments.get(symbol)?.sim.setPrice(price, volume);
+    const state = this.instruments.get(symbol);
+    if (!state) return;
+
+    const rebasedIntervals = state.sim.setPrice(price, volume);
+    for (const interval of rebasedIntervals) {
+      this.broadcast({
+        kind: "candles",
+        symbol,
+        interval,
+        candles: state.sim.getCandles(interval, 1_000),
+      });
+    }
   }
 
   async seedCandleInterval(symbol: string, interval: CandleInterval): Promise<void> {

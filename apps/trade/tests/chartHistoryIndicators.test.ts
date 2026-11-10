@@ -16,6 +16,25 @@ import {
   fetchCandles,
   planCandleRequestRanges,
 } from "../src/server/engine/candleFetcher.js";
+import { FEED_SYMBOL_MAP } from "../src/server/engine/symbolMap.js";
+import { tradingViewSymbolFor } from "../src/lib/tradingViewSymbols.js";
+
+test("TradingView symbols map known terminal instruments to chartable markets", () => {
+  assert.equal(tradingViewSymbolFor("AUDCAD", "FOREX"), "OANDA:AUDCAD");
+  assert.equal(tradingViewSymbolFor("BTCUSD", "CRYPTO"), "BINANCE:BTCUSDT");
+  assert.equal(tradingViewSymbolFor("US30", "INDEX"), "TVC:DJI");
+  assert.equal(tradingViewSymbolFor("AAPL", "STOCK"), "NASDAQ:AAPL");
+  assert.equal(tradingViewSymbolFor("UNKNOWN", "FOREX"), null);
+});
+
+test("every configured terminal instrument has a TradingView chart symbol", () => {
+  for (const instrument of Object.values(FEED_SYMBOL_MAP)) {
+    assert.ok(
+      tradingViewSymbolFor(instrument.symbol, instrument.category),
+      `${instrument.symbol} should have a TradingView symbol`,
+    );
+  }
+});
 
 test("chart history bounds include a full 360 days of one-minute candles", () => {
   assert.equal(CHART_HISTORY_DAYS, 360);

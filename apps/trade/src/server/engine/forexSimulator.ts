@@ -78,6 +78,7 @@ export class ForexSimulator {
     "4h": null,
     "1d": null,
   };
+  private readonly providerHistoryIntervals = new Set<CandleInterval>();
 
   private open24h: number;
   private high24h: number;
@@ -128,9 +129,15 @@ export class ForexSimulator {
    * updates 24h rolling stats. The next tick() will skip the random walk and
    * use this price instead.
    */
-  setPrice(price: number, volume?: number): void {
-    if (!isFinite(price) || price <= 0) return;
-    this.mid = round(price, this.tickSize);
+  setPrice(price: number, volume?: number): CandleInterval[] {
+    if (!isFinite(price) || price <= 0) return [];
+    const nextMid = round(price, this.tickSize);
+    const firstLivePrice = this.lastLiveMs === 0;
+    const rebasedIntervals = firstLivePrice
+      ? this.rebaseSimulatedHistory(nextMid)
+      : [];
+    if (firstLivePrice) this.base = nextMid;
+    this.mid = nextMid;
     this.lastLiveMs = Date.now();
     if (volume != null && Number.isFinite(volume) && volume >= 0) {
       this.pendingLiveVolume += volume;
@@ -138,6 +145,7 @@ export class ForexSimulator {
     }
     this.high24h = Math.max(this.high24h, this.mid);
     this.low24h = Math.min(this.low24h, this.mid);
+    return rebasedIntervals;
   }
 
   /** Whether this instrument currently has a live feed (recent price received). */
@@ -148,6 +156,7 @@ export class ForexSimulator {
   /** Replace one interval's simulated history with candles from the market-data provider. */
   seedCandles(interval: CandleInterval, realCandles: Candle[]): void {
     if (!realCandles || realCandles.length === 0) return;
+    this.providerHistoryIntervals.add(interval);
     this.candles[interval] = realCandles.slice(-1000);
     this.current[interval] = realCandles[realCandles.length - 1] ?? null;
     // Keep an already-arrived live quote from being overwritten by async history seeding.
@@ -158,6 +167,38 @@ export class ForexSimulator {
       this.high24h = last.high;
       this.low24h = last.low;
     }
+  }
+
+  private rebaseSimulatedHistory(price: number): CandleInterval[] {
+    const rebasedIntervals: CandleInterval[] = [];
+
+    for (const interval of Object.keys(this.candles) as CandleInterval[]) {
+      if (this.providerHistoryIntervals.has(interval)) continue;
+      const candles = this.candles[interval];
+      const lastClose = candles.at(-1)?.close;
+      if (!lastClose || !Number.isFinite(lastClose)) continue;
+
+      const scale = price / lastClose;
+      const lastIndex = candles.length - 1;
+      const rebased = candles.map((candle, index) => {
+        const open = round(candle.open * scale, this.tickSize);
+        const close = index === lastIndex
+          ? price
+          : round(candle.close * scale, this.tickSize);
+        return {
+          ...candle,
+          open,
+          high: Math.max(round(candle.high * scale, this.tickSize), open, close),
+          low: Math.min(round(candle.low * scale, this.tickSize), open, close),
+          close,
+        };
+      });
+      this.candles[interval] = rebased;
+      this.current[interval] = rebased.at(-1) ?? null;
+      rebasedIntervals.push(interval);
+    }
+
+    return rebasedIntervals;
   }
 
   /** Pre-populate candles per interval so the chart isn't empty on load. */

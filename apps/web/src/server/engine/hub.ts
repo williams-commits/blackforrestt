@@ -274,20 +274,8 @@ class Hub {
       symbols.push(row.symbol);
     }
 
-    const allOpen = await prisma.position.findMany({ where: { status: "OPEN" } });
-    for (const databasePosition of allOpen) {
-      if (!this.instruments.has(databasePosition.symbol)) {
-        console.warn(`Ignoring open position ${databasePosition.id}: inactive/unknown symbol ${databasePosition.symbol}.`);
-        continue;
-      }
-      const positions = this.openPositions.get(databasePosition.userId) ?? [];
-      positions.push(this.toPosition(databasePosition));
-      this.openPositions.set(databasePosition.userId, positions);
-    }
-
-    console.log(
-      `⚙️ Hub initialized with ${this.instruments.size} instruments and ${allOpen.length} durable open positions.`,
-    );
+    // The Web app serves public market data only. Trade owns durable positions.
+    console.log(`⚙️ Market-data hub initialized with ${this.instruments.size} instruments (quote-only).`);
 
     this.startTicking();
     this.startLiveFeed(symbols);

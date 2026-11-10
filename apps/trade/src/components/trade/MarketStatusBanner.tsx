@@ -36,22 +36,59 @@ export function MarketStatusBanner({
     <div
       role="status"
       aria-live="polite"
-      className={`flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 px-3 py-1 text-(length:--term-text-2xs) ${offline || stale ? "bg-down/10 text-down" : "bg-brand-soft text-brand"}`}
+      className={`flex min-h-10 flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2 text-(length:--term-text-2xs) ${offline || stale ? "bg-down/5 text-down" : "bg-brand-soft/60 text-brand"}`}
     >
-      <span className="flex items-center gap-x-1">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-          <ellipse cx="12" cy="5" rx="9" ry="3"/>
-          <path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
-          <path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6"/>
-        </svg> {source}
+      <span className="inline-flex items-center gap-2 font-medium">
+        <svg
+          aria-hidden="true"
+          focusable="false"
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <ellipse cx="12" cy="5" rx="9" ry="3" />
+          <path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
+          <path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6" />
+        </svg>
+        <span>{source}</span>
       </span>
-      <span className="flex items-center gap-x-1"> 
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M12 6v6l4 4"/>
-        </svg> {offline ? "offline" : wsStatus} | {ageMs == null ? "waiting for quote" : `${(ageMs / 1_000).toFixed(1)}s old${stale ? " · stale" : ""}`}
+      <span className="inline-flex items-center gap-2">
+        <svg
+          aria-hidden="true"
+          focusable="false"
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v6l4 4" />
+        </svg>
+        <span>
+          <span className="sr-only">Connection: </span>
+          <span className="font-medium">{offline ? "Offline" : wsStatus}</span>
+          <span className="mx-1.5 opacity-50" aria-hidden="true">·</span>
+          <span className="sr-only">Quote age: </span>
+          {ageMs == null
+            ? "Waiting for quote"
+            : `${(ageMs / 1_000).toFixed(1)}s old${stale ? " · stale" : ""}`}
+        </span>
       </span>
-      {(offline || stale) && <span className="font-semibold">New orders are blocked until a fresh quote is received.</span>}
+      {(offline || stale) && (
+        <span className="inline-flex items-center gap-2 font-medium">
+          <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+          New orders are blocked until a fresh quote is received.
+        </span>
+      )}
     </div>
   );
 }

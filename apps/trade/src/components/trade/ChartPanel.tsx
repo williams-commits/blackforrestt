@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 import {
   ChevronDown,
+  ChevronUp,
   GripVertical,
   Maximize2,
   Minimize2,
@@ -279,6 +280,7 @@ function FloatingTradeControls({
   const controlsRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ pointerId: number; clientX: number; clientY: number; left: number; top: number } | null>(null);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   const clampPosition = useCallback((left: number, top: number) => {
     const controls = controlsRef.current;
@@ -291,12 +293,14 @@ function FloatingTradeControls({
   }, []);
 
   useEffect(() => {
-    const parent = controlsRef.current?.parentElement;
-    if (!parent) return;
+    const controls = controlsRef.current;
+    const parent = controls?.parentElement;
+    if (!controls || !parent) return;
     const observer = new ResizeObserver(() => {
       setPosition((current) => current ? clampPosition(current.left, current.top) : current);
     });
     observer.observe(parent);
+    observer.observe(controls);
     return () => observer.disconnect();
   }, [clampPosition]);
 
@@ -355,32 +359,49 @@ function FloatingTradeControls({
     <div
       ref={controlsRef}
       data-testid="floating-trade-controls"
-      className="pointer-events-auto absolute right-2 top-16 z-20 w-44 select-none overflow-hidden rounded-xl border border-border-soft bg-canvas/95 shadow-xl backdrop-blur-md sm:right-3 sm:top-3 sm:w-52"
+      className={`pointer-events-auto absolute right-2 top-16 z-20 select-none overflow-hidden rounded-xl border border-border-soft bg-canvas/95 shadow-xl backdrop-blur-md sm:right-3 sm:top-3 ${
+        collapsed ? "w-40 sm:w-44" : "w-44 sm:w-52"
+      }`}
       style={position ? { left: position.left, top: position.top, right: "auto" } : undefined}
     >
-      <div className="flex h-7 items-center justify-between bg-panel/80 px-2.5">
+      <div className="flex min-h-9 items-center justify-between gap-1 bg-panel/80 px-2">
         <span className="flex items-center gap-1.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">
           <span className={`h-1.5 w-1.5 rounded-full ${liveQuote ? "bg-up" : "bg-down"}`} aria-hidden />
           Spread
-          <span className="tabular-nums text-text-muted">
+          <span className="tabular-nums text-text">
             {liveQuote ? fmtPrice(liveQuote.ask - liveQuote.bid, instrument.digits) : "—"}
           </span>
         </span>
-        <button
-          type="button"
-          aria-label="Move trade shortcuts; use arrow keys to reposition"
-          title="Drag to reposition, or use arrow keys"
-          onPointerDown={beginDrag}
-          onPointerMove={moveControls}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-          onKeyDown={nudgeControls}
-          className="touch-none cursor-grab rounded p-1 text-text-faint transition-colors hover:bg-panel-3 hover:text-text active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-brand"
-        >
-          <GripVertical size={13} strokeWidth={2} aria-hidden />
-        </button>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <button
+            type="button"
+            aria-label="Move trade shortcuts; use arrow keys to reposition"
+            title="Drag to reposition, or use arrow keys"
+            onPointerDown={beginDrag}
+            onPointerMove={moveControls}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            onKeyDown={nudgeControls}
+            className="touch-none cursor-grab rounded p-1 text-text-faint transition-colors hover:bg-panel-3 hover:text-text active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-brand"
+          >
+            <GripVertical size={13} strokeWidth={2} aria-hidden />
+          </button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={collapsed ? "Expand Buy and Sell controls" : "Collapse Buy and Sell controls"}
+            aria-expanded={!collapsed}
+            aria-controls="floating-trade-actions"
+            title={collapsed ? "Expand trade actions" : "Collapse trade actions"}
+            onClick={() => setCollapsed((value) => !value)}
+            className="h-7 w-7"
+          >
+            {collapsed ? <ChevronDown size={15} aria-hidden /> : <ChevronUp size={15} aria-hidden />}
+          </Button>
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-1.5 p-1.5">
+      <div id="floating-trade-actions" hidden={collapsed} className="grid grid-cols-2 gap-1.5 p-1.5">
         <Button
           type="button"
           variant="sell"

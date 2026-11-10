@@ -72,10 +72,10 @@ export function ChartPanel({
       ref={panelRef}
       data-testid="professional-chart-panel"
       className={`flex h-full min-h-112 flex-col overflow-hidden bg-canvas shadow-panel lg:min-h-0 ${
-        fullscreen ? "rounded-none" : "rounded-xl"
+        fullscreen ? "rounded-none" : "rounded-none"
       }`}
     >
-      <div className="flex shrink-0 flex-col gap-1.5 bg-panel-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex shrink-0 flex-col gap-1.5 bg-panel-2 px-3 py-0.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {onSwitchInstrument ? (
             <button

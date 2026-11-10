@@ -8,14 +8,15 @@
  * single store is simplest.
  */
 import { create } from "zustand";
-import type {
-  AccountMetricsView,
-  Candle,
-  CandleHistoryStatus,
-  CandleInterval,
-  InstrumentView,
-  PositionView,
-  Quote,
+import {
+  DEFAULT_MARKET_DATA_INTERVAL,
+  type AccountMetricsView,
+  type Candle,
+  type CandleHistoryStatus,
+  type CandleInterval,
+  type InstrumentView,
+  type PositionView,
+  type Quote,
 } from "@/lib/types";
 
 const MAX_CANDLES = 500;
@@ -48,13 +49,12 @@ interface ForexState {
   applyInstruments: (instruments: InstrumentView[]) => void;
   applyAccount: (account: AccountMetricsView) => void;
   applyPosition: (position: PositionView) => void;
-  setInterval: (interval: CandleInterval) => void;
   setPositions: (positions: PositionView[]) => void;
 }
 
 export const useForexStore = create<ForexState>((set) => ({
   symbol: null,
-  interval: "5m",
+  interval: DEFAULT_MARKET_DATA_INTERVAL,
   snapshotVersion: 0,
   quote: null,
   candles: [],
@@ -147,6 +147,5 @@ export const useForexStore = create<ForexState>((set) => ({
       return { positions: [position, ...state.positions] };
     }),
 
-  setInterval: (interval) => set({ interval, candles: [] }),
   setPositions: (positions) => set({ positions }),
 }));

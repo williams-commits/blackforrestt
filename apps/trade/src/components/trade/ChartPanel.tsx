@@ -10,16 +10,19 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import { Button } from "@/components/ui/Button";
-import { ChipGroup } from "@/components/ui/ChipGroup";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { useForexStore } from "@/lib/store";
-import { TIMEFRAMES, type CandleInterval, type InstrumentView, type Quote } from "@/lib/types";
+import {
+  DEFAULT_MARKET_DATA_INTERVAL,
+  type CandleInterval,
+  type InstrumentView,
+  type Quote,
+} from "@/lib/types";
 import { fmtPrice } from "@/lib/format";
 import { isExecutableQuote } from "@/lib/marketFreshness";
-import { tradingViewSymbolFor } from "@/lib/tradingViewSymbols";
+import { tradingViewIntervalFor, tradingViewSymbolFor } from "@/lib/tradingViewSymbols";
 
 interface Props {
   instrument: InstrumentView;
@@ -29,20 +32,6 @@ interface Props {
   onOpenTrade?: (side: "BUY" | "SELL") => void;
 }
 
-const TIMEFRAME_STORAGE_KEY = "blckforest:chart-timeframe";
-const TRADINGVIEW_INTERVALS: Record<CandleInterval, string> = {
-  "1m": "1",
-  "5m": "5",
-  "15m": "15",
-  "1h": "60",
-  "4h": "240",
-  "1d": "D",
-};
-
-function isInterval(value: string | null): value is CandleInterval {
-  return value != null && (TIMEFRAMES as readonly string[]).includes(value);
-}
-
 export function ChartPanel({
   instrument,
   marketDataConnected,
@@ -50,13 +39,8 @@ export function ChartPanel({
   onSwitchInstrument,
   onOpenTrade,
 }: Props) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { theme } = useTheme();
   const panelRef = useRef<HTMLDivElement>(null);
-  const interval = useForexStore((state) => state.interval);
-  const setInterval = useForexStore((state) => state.setInterval);
   const quote = useForexStore((state) => state.quote);
   const [now, setNow] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
@@ -73,33 +57,10 @@ export function ChartPanel({
   }, []);
 
   useEffect(() => {
-    const queryInterval = searchParams.get("tf");
-    const storedInterval = window.localStorage.getItem(TIMEFRAME_STORAGE_KEY);
-    const preferred = isInterval(queryInterval)
-      ? queryInterval
-      : isInterval(storedInterval)
-        ? storedInterval
-        : null;
-    if (preferred && preferred !== useForexStore.getState().interval) setInterval(preferred);
-  }, [searchParams, setInterval]);
-
-  useEffect(() => {
     const handleFullscreen = () => setFullscreen(document.fullscreenElement === panelRef.current);
     document.addEventListener("fullscreenchange", handleFullscreen);
     return () => document.removeEventListener("fullscreenchange", handleFullscreen);
   }, []);
-
-  const selectTimeframe = useCallback(
-    (next: CandleInterval) => {
-      if (next === interval) return;
-      window.localStorage.setItem(TIMEFRAME_STORAGE_KEY, next);
-      setInterval(next);
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("tf", next);
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    },
-    [interval, pathname, router, searchParams, setInterval],
-  );
 
   const toggleFullscreen = async () => {
     const panel = panelRef.current;
@@ -162,26 +123,12 @@ export function ChartPanel({
           ) : (
             <span className="text-xs font-medium text-text-faint">Quote unavailable</span>
           )}
-          <span
-            role="status"
-            title="TradingView supplies chart data. App market data remains the source for quotes and order execution."
-            className="inline-flex shrink-0 items-center rounded bg-panel-3 px-1.5 py-0.5 text-(length:--term-text-2xs) text-text-muted"
-          >
-            TradingView chart
-          </span>
           <span className="hidden text-(length:--term-text-2xs) text-text-faint xl:inline">
             App quote · {marketDataMode === "finnhub" ? "Finnhub" : marketDataMode}
           </span>
         </div>
 
-        <div className="flex min-w-0 items-center justify-between gap-2 overflow-x-auto sm:justify-end">
-          <ChipGroup
-            ariaLabel="Chart timeframe"
-            size="sm"
-            value={interval}
-            onChange={selectTimeframe}
-            options={TIMEFRAMES.map((timeframe) => ({ value: timeframe, label: timeframe }))}
-          />
+        <div className="flex shrink-0 items-center justify-end">
           <Button
             type="button"
             variant="ghost"
@@ -198,9 +145,9 @@ export function ChartPanel({
       <div className="relative min-h-112 flex-1 lg:min-h-0">
         {tradingViewSymbol ? (
           <TradingViewChart
-            key={`${tradingViewSymbol}-${interval}-${theme}`}
+            key={`${tradingViewSymbol}-${theme}`}
             symbol={tradingViewSymbol}
-            interval={interval}
+            interval={DEFAULT_MARKET_DATA_INTERVAL}
             theme={theme === "dim" ? "dark" : "light"}
           />
         ) : (
@@ -251,20 +198,25 @@ function TradingViewChart({
 
     const widget = document.createElement("div");
     widget.className = "tradingview-widget-container__widget";
-    widget.style.height = "calc(100% - 24px)";
+    widget.style.height = "calc(100% - 18px)";
     widget.style.width = "100%";
 
     const attribution = document.createElement("div");
     attribution.className = "tradingview-widget-copyright";
-    attribution.style.height = "24px";
-    attribution.style.padding = "4px 10px 0";
+    attribution.style.height = "18px";
+    attribution.style.display = "flex";
+    attribution.style.justifyContent = "flex-end";
+    attribution.style.alignItems = "center";
+    attribution.style.padding = "0 10px";
     attribution.style.fontSize = "10px";
+    attribution.style.lineHeight = "1";
     const attributionLink = document.createElement("a");
     attributionLink.href = `https://www.tradingview.com/symbols/${encodeURIComponent(symbol.split(":").at(-1) ?? symbol)}/`;
     attributionLink.target = "_blank";
     attributionLink.rel = "noopener nofollow";
     attributionLink.textContent = "TradingView";
-    attribution.append("Chart by ", attributionLink);
+    attributionLink.style.color = "inherit";
+    attribution.append(attributionLink);
 
     const script = document.createElement("script");
     script.type = "text/javascript";
@@ -273,7 +225,7 @@ function TradingViewChart({
     script.textContent = JSON.stringify({
       autosize: true,
       symbol,
-      interval: TRADINGVIEW_INTERVALS[interval],
+      interval: tradingViewIntervalFor(interval),
       timezone: "Etc/UTC",
       theme,
       style: "1",
@@ -282,11 +234,11 @@ function TradingViewChart({
       calendar: false,
       details: false,
       hotlist: false,
-      hide_side_toolbar: true,
-      hide_top_toolbar: true,
+      hide_side_toolbar: false,
+      hide_top_toolbar: false,
       hide_legend: false,
       save_image: false,
-      withdateranges: false,
+      withdateranges: true,
       support_host: "https://www.tradingview.com",
     });
     const handleLoad = () => setStatus("ready");

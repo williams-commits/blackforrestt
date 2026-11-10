@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { resolveUserId } from "@/server/db";
 import { listInstrumentViews } from "@/server/instruments";
 import { Dashboard } from "@/components/trade/Dashboard";
-import { TIMEFRAMES, type CandleInterval, type InstrumentView } from "@/lib/types";
+import type { InstrumentView } from "@/lib/types";
 import { getMarketDataMode } from "@/server/engine/marketDataMode";
 import { resolveUserSettings } from "@/server/userSettings";
 
@@ -22,18 +22,10 @@ export async function generateMetadata({ params }: { params: Promise<{ symbol: s
 
 interface PageProps {
   params: Promise<{ symbol: string }>;
-  searchParams: Promise<{ tf?: string | string[] }>;
 }
 
-function resolveInterval(value: string | string[] | undefined): CandleInterval | null {
-  const candidate = Array.isArray(value) ? value[0] : value;
-  return candidate && (TIMEFRAMES as readonly string[]).includes(candidate)
-    ? (candidate as CandleInterval)
-    : null;
-}
-
-export default async function TradePage({ params, searchParams }: PageProps) {
-  const [{ symbol: symbolParam }, query] = await Promise.all([params, searchParams]);
+export default async function TradePage({ params }: PageProps) {
+  const { symbol: symbolParam } = await params;
   const instruments: InstrumentView[] = await listInstrumentViews();
 
   const instrument = instruments.find((i) => i.symbol.toUpperCase() === symbolParam.toUpperCase());
@@ -49,7 +41,6 @@ export default async function TradePage({ params, searchParams }: PageProps) {
     <Dashboard
       instrument={instrument}
       instruments={instruments}
-      initialInterval={resolveInterval(query.tf)}
       marketDataMode={getMarketDataMode()}
       depositUiEnabled={settings.deposits.uiEnabled}
       disabledPaymentMethods={["CARD", "BANK_TRANSFER", "CRYPTO"].filter(

@@ -5,7 +5,7 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useForexSocket } from "@/hooks/useForexSocket";
 import { useForexStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import type { CandleInterval, InstrumentView, PositionSide } from "@/lib/types";
+import { DEFAULT_MARKET_DATA_INTERVAL, type InstrumentView, type PositionSide } from "@/lib/types";
 import { useOpenPosition } from "@/hooks/useOpenPosition";
 import { AccountBar } from "./AccountBar";
 import { ChartPanel } from "./ChartPanel";
@@ -21,7 +21,6 @@ import type { WalletAddressEntry } from "@/server/userSettings";
 interface Props {
   instrument: InstrumentView;
   instruments: InstrumentView[];
-  initialInterval?: CandleInterval | null;
   marketDataMode: string;
   depositUiEnabled?: boolean;
   disabledPaymentMethods?: string[];
@@ -41,15 +40,12 @@ const DEFAULT_DOCK_HEIGHT = 280;
 export function Dashboard({
   instrument,
   instruments,
-  initialInterval = null,
   marketDataMode,
   depositUiEnabled = true,
   disabledPaymentMethods = [],
   walletAddresses = [],
   marginWarningPercent = 125,
 }: Props) {
-  const interval = useForexStore((state) => state.interval);
-  const setInterval = useForexStore((state) => state.setInterval);
   const applyInstruments = useForexStore((state) => state.applyInstruments);
   const storeInstruments = useForexStore((state) => state.instruments);
   const orderController = useOpenPosition();
@@ -63,7 +59,7 @@ export function Dashboard({
     storeInstruments.find((i) => i.symbol.toUpperCase() === activeSymbol.toUpperCase()) ??
     instruments.find((i) => i.symbol.toUpperCase() === activeSymbol.toUpperCase()) ??
     instrument;
-  const { status } = useForexSocket(activeInstrument.symbol, interval);
+  const { status } = useForexSocket(activeInstrument.symbol, DEFAULT_MARKET_DATA_INTERVAL);
 
   const switchInstrument = (symbol: string) => {
     if (symbol === activeInstrument.symbol) return;
@@ -91,12 +87,6 @@ export function Dashboard({
     if (window.matchMedia("(min-width: 1024px)").matches) return;
     setTradeOpen(true);
   }, []);
-
-  useEffect(() => {
-    if (initialInterval && initialInterval !== useForexStore.getState().interval) {
-      setInterval(initialInterval);
-    }
-  }, [initialInterval, setInterval]);
 
   useEffect(() => {
     const updateViewportHeight = () => setViewportHeight(window.innerHeight);

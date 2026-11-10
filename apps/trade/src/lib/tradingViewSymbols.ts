@@ -1,4 +1,17 @@
-import type { InstrumentCategory } from "./types";
+import type { CandleInterval, InstrumentCategory } from "./types";
+
+const TRADINGVIEW_INTERVALS: Record<CandleInterval, string> = {
+  "1m": "1",
+  "5m": "5",
+  "15m": "15",
+  "1h": "60",
+  "4h": "240",
+  "1d": "D",
+};
+
+export function tradingViewIntervalFor(interval: CandleInterval): string {
+  return TRADINGVIEW_INTERVALS[interval];
+}
 
 const SYMBOL_OVERRIDES: Record<string, string> = {
   US30: "TVC:DJI",

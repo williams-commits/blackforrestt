@@ -6,6 +6,7 @@ import {
   computeVWAPSeries,
   type Candle,
 } from "../src/lib/indicators.js";
+import { DEFAULT_MARKET_DATA_INTERVAL, type CandleInterval } from "../src/lib/types.js";
 import {
   CHART_HISTORY_DAYS,
   CHART_HISTORY_WINDOW_SECONDS,
@@ -17,7 +18,7 @@ import {
   planCandleRequestRanges,
 } from "../src/server/engine/candleFetcher.js";
 import { FEED_SYMBOL_MAP } from "../src/server/engine/symbolMap.js";
-import { tradingViewSymbolFor } from "../src/lib/tradingViewSymbols.js";
+import { tradingViewIntervalFor, tradingViewSymbolFor } from "../src/lib/tradingViewSymbols.js";
 
 test("TradingView symbols map known terminal instruments to chartable markets", () => {
   assert.equal(tradingViewSymbolFor("AUDCAD", "FOREX"), "OANDA:AUDCAD");
@@ -34,6 +35,15 @@ test("every configured terminal instrument has a TradingView chart symbol", () =
       `${instrument.symbol} should have a TradingView symbol`,
     );
   }
+});
+
+test("TradingView intervals map correctly and the initial chart uses 5 minutes", () => {
+  const intervals = ["1m", "5m", "15m", "1h", "4h", "1d"] as const satisfies readonly CandleInterval[];
+  assert.deepEqual(
+    intervals.map(tradingViewIntervalFor),
+    ["1", "5", "15", "60", "240", "D"],
+  );
+  assert.equal(tradingViewIntervalFor(DEFAULT_MARKET_DATA_INTERVAL), "5");
 });
 
 test("chart history bounds include a full 360 days of one-minute candles", () => {

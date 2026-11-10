@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useForexSocket } from "@/hooks/useForexSocket";
 import { useForexStore } from "@/lib/store";
+import { DEFAULT_MARKET_DATA_INTERVAL } from "@/lib/types";
 import { ConnectionDot } from "./ConnectionDot";
 import { InstrumentSelector } from "./InstrumentSelector";
 import { Logo } from "./Logo";
@@ -16,11 +17,10 @@ import type { InstrumentView } from "@/lib/types";
  * connect; per-tick quotes keep rows live. Rows navigate to the chart.
  */
 export function MarketsClient({ instruments }: { instruments: InstrumentView[] }) {
-  const interval = useForexStore((s) => s.interval);
   const applyInstruments = useForexStore((s) => s.applyInstruments);
   const activeSymbol = useForexStore((s) => s.symbol);
   const anchor = instruments[0]!.symbol;
-  const { status } = useForexSocket(anchor, interval);
+  const { status } = useForexSocket(anchor, DEFAULT_MARKET_DATA_INTERVAL);
 
   useEffect(() => {
     if (useForexStore.getState().instruments.length === 0) {

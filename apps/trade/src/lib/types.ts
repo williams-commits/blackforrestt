@@ -4,6 +4,7 @@ export type PositionType = "CFD" | "STRIKE";
 export type PositionSide = "BUY" | "SELL";
 export type PositionStatus = "OPEN" | "CLOSED";
 export type CandleInterval = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
+export const DEFAULT_MARKET_DATA_INTERVAL: CandleInterval = "5m";
 
 export interface Candle {
   time: number;

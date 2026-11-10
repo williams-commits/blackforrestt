@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronDown, Radio } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronDown, Clock3, Radio } from "lucide-react";
 import { useForexStore } from "@/lib/store";
 import type { OpenPositionController } from "@/hooks/useOpenPosition";
 import { toast } from "@/lib/toast";
@@ -93,11 +93,14 @@ export function TradePanel({
   const hasFreshQuote = isExecutableQuote(quote, instrument.symbol, now);
   const quoteReady = marketDataConnected && hasFreshQuote && instrument.marketHours.canTrade;
   const nextOpenLabel = formatNextMarketOpen(instrument.marketHours);
-  const marketStateLabel = !instrument.marketHours.isOpen
-    ? `Market closed${nextOpenLabel ? ` · opens ${nextOpenLabel}` : ""}`
-    : instrument.marketHours.canTrade
-      ? "Market open"
-      : "Market open · waiting for a fresh quote";
+  const sessionLabel = instrument.marketHours.isOpen ? "Open" : "Closed";
+  const quoteStateLabel = !marketDataConnected
+    ? "Data offline"
+    : !instrument.marketHours.isOpen
+      ? "Session closed"
+      : quoteReady
+        ? "Live quote"
+        : "Waiting for quote";
   const changePct = quoteMatches && quote ? quote.changePct : instrument.changePct;
   const changeIsPositive = changePct >= 0;
   const spread = ask - bid;
@@ -251,14 +254,34 @@ export function TradePanel({
         )}
 
         <div className="mt-3 flex items-center justify-between gap-2 px-1">
-          <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${quoteReady ? "text-up" : "text-text-faint"}`}>
+          <span className={`inline-flex min-w-0 items-center gap-1 text-(length:--term-text-2xs) font-medium ${quoteReady ? "text-up" : "text-text-faint"}`}>
             <Radio size={11} strokeWidth={2} aria-hidden />
-            {!marketDataConnected ? "Market data offline" : quoteReady ? "Live executable quote" : marketStateLabel}
+            <span className="truncate">{quoteStateLabel}</span>
           </span>
-          <span className={`shrink-0 text-[10px] font-medium tabular-nums ${changeIsPositive ? "text-up" : "text-down"}`}>
+          <span className={`shrink-0 text-(length:--term-text-2xs) font-medium tabular-nums ${changeIsPositive ? "text-up" : "text-down"}`}>
             {changeIsPositive ? "+" : ""}{changePct.toFixed(2)}% 24h
           </span>
         </div>
+
+        {!instrument.marketHours.isOpen && (
+          <div
+            role="status"
+            className="mx-1 mt-2 flex min-w-0 items-start gap-2 rounded-xl bg-panel/75 px-3 py-2.5 shadow-card ring-1 ring-border-soft backdrop-blur-xl"
+          >
+            <Clock3 size={15} strokeWidth={1.8} aria-hidden className="mt-0.5 shrink-0 text-brand" />
+            <div className="min-w-0 space-y-0.5">
+              <p className="text-(length:--term-text-xs) font-semibold text-text">Session closed</p>
+              <p className="wrap-break-words text-(length:--term-text-2xs) leading-relaxed text-text-muted">
+                {instrument.marketHours.venue === "Schedule unavailable"
+                  ? "Trading hours are not configured for this market."
+                  : `Outside regular trading hours for ${instrument.marketHours.venue}.`}
+              </p>
+              <p className="wrap-break-words text-(length:--term-text-2xs) font-medium leading-relaxed text-brand">
+                {nextOpenLabel ? `Opens ${nextOpenLabel}` : "Next opening time is unavailable."}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Trade type toggle — Radix Tabs (segmented): roving focus, arrow keys. */}
         <Tabs
@@ -468,9 +491,9 @@ export function TradePanel({
           </div>
           <div className="space-y-1.5">
             <SummaryRow
-              label="Market session"
-              value={`${instrument.marketHours.venue} · ${marketStateLabel}`}
-              valueClass={quoteReady ? "text-up font-semibold" : "text-down font-semibold"}
+              label="Session"
+              value={sessionLabel}
+              valueClass={instrument.marketHours.isOpen ? "text-up font-semibold" : "text-down font-semibold"}
             />
             <SummaryRow
               label="Quote freshness"
@@ -494,12 +517,12 @@ export function TradePanel({
         {status === "accepted" && <span className="text-up">Accepted and open{lastAcceptedAt ? ` at ${new Date(lastAcceptedAt).toLocaleTimeString()}` : ""}</span>}
         {status === "failed" && <span className="text-down">Rejected or failed</span>}
         {status === "unknown" && <span className="text-down">Confirmation pending — retry the same order</span>}
-        {status === "idle" && <span className={quoteReady ? "text-text-muted" : "text-down"}>{quoteReady ? "Ready for submission" : marketStateLabel}</span>}
+        {status === "idle" && <span className={quoteReady ? "text-text-muted" : "text-down"}>{quoteReady ? "Ready for submission" : quoteStateLabel}</span>}
       </div>
 
       {/* ── Error ──────────────────────────────────────────────────────────── */}
       {(validationError || error) && (
-        <div role="alert" className="mx-4 mb-3 rounded-md bg-down/10 px-3 py-2 text-(length:--term-text-xs) leading-relaxed text-down">
+        <div role="alert" className="mx-4 mb-3 wrap-break-words rounded-md bg-down/10 px-3 py-2 text-(length:--term-text-xs) leading-relaxed text-down">
           {validationError ?? error}
         </div>
       )}
@@ -529,8 +552,8 @@ export function TradePanel({
             </span>
           </Button>
         </div>
-        <p className="mt-2 rounded-md bg-panel-2 px-3 py-2 text-center text-(length:--term-text-2xs) leading-relaxed text-text-faint">
-          {!marketDataConnected ? "Orders disabled — reconnecting to market data" : !instrument.marketHours.isOpen ? marketStateLabel : !quoteReady ? "Orders disabled — waiting for a fresh quote" : armed ? `${armed === "BUY" ? "Buy" : "Sell"} armed — confirm with the highlighted button` : type === "CFD" ? "CFD market order — accepted at the displayed executable rate" : `Strike order — settles in ${expiryMinutes} min`}
+        <p className="mt-2 wrap-break-words rounded-md bg-panel-2 px-3 py-2 text-center text-(length:--term-text-2xs) leading-relaxed text-text-faint">
+          {!marketDataConnected ? "Orders disabled · market data offline" : !instrument.marketHours.isOpen ? "Orders disabled · session closed" : !quoteReady ? "Orders disabled · waiting for quote" : armed ? `${armed === "BUY" ? "Buy" : "Sell"} armed · confirm to submit` : type === "CFD" ? "CFD market order · accepted at the displayed rate" : `Strike order · settles in ${expiryMinutes} min`}
         </p>
       </div>
     </div>
@@ -541,7 +564,7 @@ function SummaryRow({ label, value, valueClass = "" }: { label: string; value: s
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="min-w-0 text-(length:--term-text-xs) text-text-muted">{label}</span>
-      <span className={`shrink-0 text-(length:--term-text-xs) tabular-nums text-text ${valueClass}`}>{value}</span>
+      <span className={`min-w-0 wrap-break-words text-right text-(length:--term-text-xs) tabular-nums text-text ${valueClass}`}>{value}</span>
     </div>
   );
 }

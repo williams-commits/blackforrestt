@@ -249,7 +249,14 @@ function SideBadge({ side, type }: { side: "BUY" | "SELL"; type: "CFD" | "STRIKE
 function marketExecutionStatus(marketHours: InstrumentView["marketHours"] | undefined): string | null {
   if (!marketHours) return "Market status unavailable";
   if (marketHours.canTrade) return null;
-  if (marketHours.isOpen) return "Waiting for a fresh quote";
+  if (marketHours.isOpen) return "Waiting for quote";
+  return "Market closed";
+}
+
+function marketExecutionTitle(marketHours: InstrumentView["marketHours"] | undefined): string {
+  if (!marketHours) return "Market status unavailable";
+  if (marketHours.canTrade) return "Market open · executable quote available";
+  if (marketHours.isOpen) return "Market open · waiting for a fresh quote";
   const nextOpenLabel = formatNextMarketOpen(marketHours);
   return nextOpenLabel ? `Market closed · opens ${nextOpenLabel}` : "Market closed";
 }
@@ -311,7 +318,10 @@ function OpenPositionCards({
                 <span className="whitespace-nowrap">{fmtTime(p.openedAt)}</span>
               </div>
               {marketStatus && (
-                <span className="mt-1 inline-flex items-center gap-1 text-(length:--term-text-2xs) font-medium leading-tight text-text-faint">
+                <span
+                  title={marketExecutionTitle(marketHours)}
+                  className="mt-1 inline-flex max-w-full items-center gap-1 truncate text-(length:--term-text-2xs) font-medium leading-tight text-text-faint"
+                >
                   <Clock3 size={10} strokeWidth={1.8} aria-hidden />
                   {marketStatus}
                 </span>
@@ -349,7 +359,7 @@ function OpenPositionCards({
                   size="sm"
                   disabled={closing || !canClose}
                   aria-label={`Close ${p.symbol} position`}
-                  title={marketStatus ?? "Close position at the current market rate"}
+                  title={marketExecutionTitle(marketHours)}
                   onClick={(event) => { event.stopPropagation(); void close(p); }}
                   className="h-11 px-2.5 text-xs"
                 >
@@ -397,7 +407,10 @@ function OpenPositionsTable({
           <div className="flex flex-col items-start">
             <span className="font-semibold"><SymbolLink symbol={symbol} /></span>
             {marketStatus && (
-              <span className="inline-flex items-center gap-1 text-(length:--term-text-2xs) font-medium leading-tight text-text-faint">
+              <span
+                title={marketExecutionTitle(marketHoursFor(symbol))}
+                className="inline-flex max-w-28 items-center gap-1 truncate text-(length:--term-text-2xs) font-medium leading-tight text-text-faint"
+              >
                 <Clock3 size={10} strokeWidth={1.8} aria-hidden />
                 {marketStatus}
               </span>
@@ -429,14 +442,13 @@ function OpenPositionsTable({
         const p = info.row.original;
         const marketHours = marketHoursFor(p.symbol);
         const canClose = marketHours?.canTrade ?? false;
-        const marketStatus = marketExecutionStatus(marketHours);
         return (
           <Button
             variant="ghost"
             size="icon-sm"
             disabled={busy === p.id || !canClose}
             aria-label={`Close ${p.symbol} position`}
-            title={marketStatus ?? "Close position at the current market rate"}
+            title={marketExecutionTitle(marketHours)}
             onClick={(event) => { event.stopPropagation(); void close(p); }}
             className="h-8 w-8 p-0 text-xs text-text-muted hover:bg-down/10 hover:text-down"
           >

@@ -113,6 +113,11 @@ export function InstrumentSelector({ activeSymbol, onSelect, headerAction }: Pro
     const active = i.symbol === activeSymbol;
     const isFavorite = favorites.includes(i.symbol);
     const nextOpenLabel = formatNextMarketOpen(i.marketHours);
+    const marketStatusTitle = i.marketHours.isOpen
+      ? "Waiting for a fresh executable quote"
+      : nextOpenLabel
+        ? `Market closed · opens ${nextOpenLabel}`
+        : "Market closed · next opening time unavailable";
     return (
       <div key={i.symbol} className="group/row">
         <div
@@ -135,10 +140,13 @@ export function InstrumentSelector({ activeSymbol, onSelect, headerAction }: Pro
                   {i.name}
                 </div>
                 {i.marketHours.state !== "OPEN" && (
-                  <div className="truncate text-(length:--term-text-2xs) font-medium leading-tight text-text-faint">
+                  <div
+                    title={marketStatusTitle}
+                    className="truncate text-(length:--term-text-2xs) font-medium leading-tight text-text-faint"
+                  >
                     {i.marketHours.isOpen
-                      ? "Waiting for fresh quote"
-                      : `Closed${nextOpenLabel ? ` · opens ${nextOpenLabel}` : ""}`}
+                      ? "Waiting for quote"
+                      : "Closed"}
                   </div>
                 )}
               </div>

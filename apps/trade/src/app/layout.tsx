@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Montserrat, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Providers } from "@/components/providers";
@@ -9,7 +9,7 @@ import "./globals.css";
 
 // Same font variables the platform design system expects (globals.css
 // reads --font-sans-loaded / --font-mono-loaded in its @theme block).
-const sans = Montserrat({ subsets: ["latin"], display: "swap", variable: "--font-sans-loaded" });
+const sans = Inter({ subsets: ["latin"], display: "swap", variable: "--font-sans-loaded" });
 const mono = JetBrains_Mono({ subsets: ["latin"], display: "swap", variable: "--font-mono-loaded" });
 
 export const metadata: Metadata = {

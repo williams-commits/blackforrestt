@@ -36,7 +36,7 @@ export function formatNextMarketOpen(view: MarketHoursView, locale = "en-US"): s
 
 const MINUTE_MS = 60_000;
 const SAMPLE_STEP_MS = 5 * MINUTE_MS;
-const MAX_QUOTE_AGE_MS = 15_000;
+const MAX_QUOTE_AGE_MS = 60_000;
 
 const ALL_DAY: Partial<Record<number, readonly (readonly [number, number])[]>> = {
   0: [[0, 1440]],

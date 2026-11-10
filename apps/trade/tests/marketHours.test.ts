@@ -70,10 +70,13 @@ test("Tokyo index session observes the lunch break and Japanese year-end closure
 
 test("an open session remains non-executable until a fresh quote arrives", () => {
   const now = at("2026-11-10T15:00:00Z");
-  const waiting = marketHoursForSymbol("AAPL", now, now - 60_000);
+  const stale = marketHoursForSymbol("AAPL", now, now - 60_001);
+  const freshAtLimit = marketHoursForSymbol("AAPL", now, now - 60_000);
   const fresh = marketHoursForSymbol("AAPL", now, now);
-  assert.equal(waiting.state, "WAITING_FOR_QUOTE");
-  assert.equal(waiting.canTrade, false);
+  assert.equal(stale.state, "WAITING_FOR_QUOTE");
+  assert.equal(stale.canTrade, false);
+  assert.equal(freshAtLimit.state, "OPEN");
+  assert.equal(freshAtLimit.canTrade, true);
   assert.equal(fresh.state, "OPEN");
   assert.equal(fresh.canTrade, true);
 });

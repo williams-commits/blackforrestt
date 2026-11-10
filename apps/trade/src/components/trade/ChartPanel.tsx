@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/Button";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { useForexStore } from "@/lib/store";
 import {
-  DEFAULT_MARKET_DATA_INTERVAL,
   type CandleInterval,
   type InstrumentView,
   type Quote,
@@ -41,9 +40,12 @@ export function ChartPanel({
   const { theme } = useTheme();
   const panelRef = useRef<HTMLDivElement>(null);
   const quote = useForexStore((state) => state.quote);
+  const interval = useForexStore((state) => state.interval);
   const [now, setNow] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
   const tradingViewSymbol = tradingViewSymbolFor(instrument.symbol, instrument.category);
+  const watermarkCurrency =
+    instrument.base && instrument.quote ? `${instrument.base} / ${instrument.quote}` : instrument.symbol;
   const liveQuote =
     marketDataConnected && isExecutableQuote(quote, instrument.symbol, now || Date.now())
       ? quote
@@ -149,7 +151,7 @@ export function ChartPanel({
           <TradingViewChart
             key={`${tradingViewSymbol}-${theme}`}
             symbol={tradingViewSymbol}
-            interval={DEFAULT_MARKET_DATA_INTERVAL}
+            interval={interval}
             theme={theme === "dim" ? "dark" : "light"}
           />
         ) : (
@@ -163,6 +165,21 @@ export function ChartPanel({
             </p>
           </div>
         )}
+        {tradingViewSymbol ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 z-10 grid place-items-center overflow-hidden"
+          >
+            <div className="flex -translate-y-1 flex-col items-center">
+              <span className="select-none whitespace-nowrap text-5xl font-semibold tracking-[-0.06em] text-text/10 sm:text-7xl">
+                {watermarkCurrency}
+              </span>
+              <span className="mt-1 rounded bg-canvas/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-text/25 backdrop-blur-[1px]">
+                {interval}
+              </span>
+            </div>
+          </div>
+        ) : null}
         {onOpenTrade ? (
           <FloatingTradeControls
             instrument={instrument}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForexStore } from "@/lib/store";
 import type { SocketStatus } from "@/lib/ws/client";
 import { MAX_EXECUTABLE_QUOTE_AGE_MS, quoteAgeMs } from "@/lib/marketFreshness";
+import {Radio, ClockFading} from "lucide-react";
 
 export function MarketStatusBanner({
   marketDataMode,
@@ -24,7 +25,7 @@ export function MarketStatusBanner({
   const offline = wsStatus === "closed" || wsStatus === "unauthorized";
   const sourceLabel: Record<string, string> = {
     simulation: "internal price feed",
-    finnhub: "Finnhub market data",
+    finnhub: "Live feed",
     alphavantage: "Alpha Vantage market data",
     tickerlayer: "TickerLayer market data",
     sifting: "Sifting market data",
@@ -36,43 +37,14 @@ export function MarketStatusBanner({
     <div
       role="status"
       aria-live="polite"
-      className={`flex min-h-10 flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2 text-(length:--term-text-2xs) ${offline || stale ? "bg-down/5 text-down" : "bg-brand-soft/60 text-brand"}`}
+      className={`flex min-h-8 flex-wrap items-center gap-x-5 gap-y-1 px-4 py-0.5 text-(length:--term-text-2xs) border-y border-border-soft bg-canvas`}
     >
       <span className="inline-flex items-center gap-2 font-medium">
-        <svg
-          aria-hidden="true"
-          focusable="false"
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <ellipse cx="12" cy="5" rx="9" ry="3" />
-          <path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
-          <path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6" />
-        </svg>
+        <Radio size={12} className="animate-pulse duration-300 transition-all" />
         <span>{source}</span>
       </span>
       <span className="inline-flex items-center gap-2">
-        <svg
-          aria-hidden="true"
-          focusable="false"
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 6v6l4 4" />
-        </svg>
+        <ClockFading size={12} />
         <span>
           <span className="sr-only">Connection: </span>
           <span className="font-medium">{offline ? "Offline" : wsStatus}</span>

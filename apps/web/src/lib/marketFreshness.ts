@@ -1,6 +1,6 @@
 import type { Quote } from "./types";
 
-export const MAX_EXECUTABLE_QUOTE_AGE_MS = 15_000;
+export const MAX_EXECUTABLE_QUOTE_AGE_MS = 60_000;
 
 export function quoteAgeMs(quote: Quote | null, now = Date.now()): number | null {
   return quote ? Math.max(0, now - quote.time) : null;

@@ -76,6 +76,7 @@ test("quote freshness blocks missing, mismatched, and stale execution data", () 
     changePct: 0.1,
   };
   assert.equal(isExecutableQuote(quote, "EURUSD", now), true);
+  assert.equal(isExecutableQuote({ ...quote, time: now - MAX_EXECUTABLE_QUOTE_AGE_MS }, "EURUSD", now), true);
   assert.equal(isExecutableQuote(quote, "GBPUSD", now), false);
   assert.equal(isExecutableQuote({ ...quote, time: now - MAX_EXECUTABLE_QUOTE_AGE_MS - 1 }, "EURUSD", now), false);
   assert.equal(isExecutableQuote(null, "EURUSD", now), false);

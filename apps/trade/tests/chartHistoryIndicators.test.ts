@@ -19,6 +19,7 @@ import {
 } from "../src/server/engine/candleFetcher.js";
 import { AV_SYMBOL_MAP } from "../src/server/engine/alphavantageMap.js";
 import { FEED_SYMBOL_MAP } from "../src/server/engine/symbolMap.js";
+import { snapshotQuoteSymbolsFor } from "../src/server/engine/feedClient.js";
 import { translateSymbol } from "../src/server/engine/genericFeed.js";
 import { tradingViewIntervalFor, tradingViewSymbolFor } from "../src/lib/tradingViewSymbols.js";
 import { ForexSimulator } from "../src/server/engine/forexSimulator.js";
@@ -90,6 +91,19 @@ test("new instruments use the intended provider tickers", () => {
     ticker: "XCU/USD",
     endpoint: "forex",
   });
+});
+
+test("Finnhub snapshots include listed commodity funds that are not categorized as stocks", () => {
+  assert.deepEqual(
+    snapshotQuoteSymbolsFor([
+      "CORNUSD",
+      "WEATUSD",
+      "SOYBUSD",
+      "AAPL",
+      "EURUSD",
+    ]),
+    ["CORNUSD", "WEATUSD", "SOYBUSD", "AAPL"],
+  );
 });
 
 test("a quiet live instrument holds its last market price instead of simulating a new one", () => {

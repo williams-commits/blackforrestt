@@ -81,7 +81,7 @@ export function MarketMarkers({
       <section aria-label="Order book" className="flex h-full min-h-0 flex-col bg-canvas">
         <PanelHeading
           icon={<Radio size={15} strokeWidth={1.8} aria-hidden />}
-          eyebrow="Level 1"
+          eyebrow="Market"
           title="Order Book"
           detail={instrument.symbol}
           status={isLive ? "Live" : "Unavailable"}

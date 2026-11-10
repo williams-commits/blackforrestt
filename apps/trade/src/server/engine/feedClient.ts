@@ -21,7 +21,19 @@ import { getMarketDataMode, requireFinnhubKey } from "./marketDataMode";
 const FINNHUB_WS_URL = "wss://ws.finnhub.io";
 const FINNHUB_REST_URL = "https://finnhub.io/api/v1/quote";
 const SNAPSHOT_INTERVAL_MS = 30_000;
-const SNAPSHOT_CRYPTO_SYMBOLS = new Set(["SOLUSD", "POLUSD"]);
+const SNAPSHOT_OVERRIDE_SYMBOLS = new Set([
+  "SOLUSD",
+  "POLUSD",
+  "CORNUSD",
+  "WEATUSD",
+  "SOYBUSD",
+]);
+
+export function snapshotQuoteSymbolsFor(symbols: readonly string[]): string[] {
+  return symbols.filter((symbol) =>
+    FEED_SYMBOL_MAP[symbol]?.category === "STOCK" || SNAPSHOT_OVERRIDE_SYMBOLS.has(symbol),
+  );
+}
 
 interface FinnhubTrade {
   s: string; // feed symbol
@@ -63,9 +75,7 @@ export class FeedClient {
     }
     requireFinnhubKey();
     if (this.isStarting || (this.ws && this.ws.readyState <= WebSocket.OPEN)) return;
-    this.snapshotSymbols = symbols.filter((symbol) =>
-      FEED_SYMBOL_MAP[symbol]?.category === "STOCK" || SNAPSHOT_CRYPTO_SYMBOLS.has(symbol),
-    );
+    this.snapshotSymbols = snapshotQuoteSymbolsFor(symbols);
     this.intentionallyClosed = false;
     this.isStarting = true;
     this.connect();

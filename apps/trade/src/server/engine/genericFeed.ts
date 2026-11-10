@@ -47,7 +47,7 @@ export function translateSymbol(symbol: string, mode: MarketDataMode): { ticker:
       const pair = forexToPair(symbol);
       return pair ? { ticker: pair, endpoint: "forex" } : null;
     }
-    if (cat === "CRYPTO") return { ticker: symbol === "MATICUSD" ? "POLUSD" : symbol, endpoint: "crypto" };
+    if (cat === "CRYPTO") return { ticker: symbol, endpoint: "crypto" };
     return { ticker: etfProxy(symbol), endpoint: "stock" };
   }
   if (mode === "sifting") {
@@ -55,7 +55,7 @@ export function translateSymbol(symbol: string, mode: MarketDataMode): { ticker:
       const pair = forexToPair(symbol);
       return pair ? { ticker: pair, endpoint: "forex" } : null;
     }
-    if (cat === "CRYPTO") return { ticker: symbol === "MATICUSD" ? "POLUSD" : symbol, endpoint: "crypto" };
+    if (cat === "CRYPTO") return { ticker: symbol, endpoint: "crypto" };
     return { ticker: etfProxy(symbol), endpoint: "stock" };
   }
   if (mode === "lse") {
@@ -63,7 +63,7 @@ export function translateSymbol(symbol: string, mode: MarketDataMode): { ticker:
       const pair = forexToPair(symbol);
       return pair ? { ticker: pair, endpoint: "fx" } : null;
     }
-    if (cat === "CRYPTO") return { ticker: symbol === "MATICUSD" ? "POLUSD" : symbol, endpoint: "crypto" };
+    if (cat === "CRYPTO") return { ticker: symbol, endpoint: "crypto" };
     return { ticker: etfProxy(symbol), endpoint: "equity" };
   }
   return null;
@@ -118,9 +118,9 @@ const PROVIDERS: Record<string, ProviderConfig> = {
 // ── Symbol helpers ─────────────────────────────────────────────────────────
 
 function inferCategory(symbol: string): InstrumentCategory {
-  if (/^(BTC|ETH|SOL|XRP|ADA|DOGE|LINK|AVAX|MATIC|LTC|BCH|DOT|UNI|ATOM)USD$/.test(symbol)) return "CRYPTO";
-  if (/^(AAPL|MSFT|NVDA|TSLA|AMZN|GOOGL|META|AMD|JPM)$/.test(symbol)) return "STOCK";
-  if (/^(US30|NAS100|SPX500|GER40|UK100|FRA40|JPN225|VIX)$/.test(symbol)) return "INDEX";
+  if (/^(BTC|ETH|SOL|XRP|ADA|DOGE|LINK|AVAX|POL|LTC|BCH|DOT|UNI|ATOM)USD$/.test(symbol)) return "CRYPTO";
+  if (/^(AAPL|MSFT|NVDA|TSLA|AMZN|GOOGL|META|AMD|JPM|VIXY)$/.test(symbol)) return "STOCK";
+  if (/^(US30|NAS100|SPX500|GER40|UK100|FRA40|JPN225)$/.test(symbol)) return "INDEX";
   if (/^(XAU|XAG|WTI|XBR|XPT|XPD|NG|HG|CORN|WEAT|SOYB)USD$/.test(symbol)) return "COMMODITY";
   return "FOREX";
 }
@@ -140,7 +140,7 @@ function forexToPair(symbol: string): string | null {
 function etfProxy(symbol: string): string {
   const map: Record<string, string> = {
     US30: "DIA", NAS100: "QQQ", SPX500: "SPY", GER40: "EWG", UK100: "EWU",
-    FRA40: "EWQ", JPN225: "EWJ", VIX: "VIXY",
+    FRA40: "EWQ", JPN225: "EWJ", VIXY: "VIXY",
     WTIUSD: "USO", XBRUSD: "BNO", XPTUSD: "PLT", XPDUSD: "PALL",
     NGUSD: "UNG", HGUSD: "CPER",
     XAUUSD: "GLD", XAGUSD: "SLV",

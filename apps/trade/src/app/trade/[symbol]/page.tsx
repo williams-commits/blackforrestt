@@ -7,6 +7,10 @@ import { getMarketDataMode } from "@/server/engine/marketDataMode";
 import { resolveUserSettings } from "@/server/userSettings";
 
 export const dynamic = "force-dynamic";
+const LEGACY_SYMBOL_REDIRECTS: Record<string, string> = {
+  MATICUSD: "POLUSD",
+  VIX: "VIXY",
+};
 
 import type { Metadata } from "next";
 
@@ -26,6 +30,8 @@ interface PageProps {
 
 export default async function TradePage({ params }: PageProps) {
   const { symbol: symbolParam } = await params;
+  const legacySymbol = LEGACY_SYMBOL_REDIRECTS[symbolParam.toUpperCase()];
+  if (legacySymbol) redirect(`/trade/${legacySymbol}`);
   const instruments: InstrumentView[] = await listInstrumentViews();
 
   const instrument = instruments.find((i) => i.symbol.toUpperCase() === symbolParam.toUpperCase());

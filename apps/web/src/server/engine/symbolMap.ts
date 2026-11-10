@@ -61,7 +61,7 @@ export const FEED_SYMBOL_MAP: Record<string, FeedSymbolEntry> = {
   UK100:  { symbol: "UK100",  feedSymbol: "OANDA:UK100_GBP",candleEndpoint: "forex", category: "INDEX" },
   FRA40:  { symbol: "FRA40",  feedSymbol: "OANDA:FR40_EUR", candleEndpoint: "forex", category: "INDEX" },
   JPN225: { symbol: "JPN225", feedSymbol: "OANDA:JP225_USD",candleEndpoint: "forex", category: "INDEX" },
-  VIX:    { symbol: "VIX",    feedSymbol: "OANDA:VIX_USD",  candleEndpoint: "forex", category: "INDEX" },
+  VIXY:   { symbol: "VIXY",   feedSymbol: "VIXY",           candleEndpoint: "stock", category: "STOCK" },
 
   // ── Crypto ───────────────────────────────────────────────────────────────
   BTCUSD:   { symbol: "BTCUSD",   feedSymbol: "BINANCE:BTCUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
@@ -72,7 +72,7 @@ export const FEED_SYMBOL_MAP: Record<string, FeedSymbolEntry> = {
   DOGEUSD:  { symbol: "DOGEUSD",  feedSymbol: "BINANCE:DOGEUSDT",  candleEndpoint: "crypto", category: "CRYPTO" },
   LINKUSD:  { symbol: "LINKUSD",  feedSymbol: "BINANCE:LINKUSDT",  candleEndpoint: "crypto", category: "CRYPTO" },
   AVAXUSD:  { symbol: "AVAXUSD",  feedSymbol: "BINANCE:AVAXUSDT",  candleEndpoint: "crypto", category: "CRYPTO" },
-  MATICUSD: { symbol: "MATICUSD", feedSymbol: "BINANCE:POLUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  POLUSD:   { symbol: "POLUSD",   feedSymbol: "BINANCE:POLUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
   LTCUSD:   { symbol: "LTCUSD",   feedSymbol: "BINANCE:LTCUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
   BCHUSD:   { symbol: "BCHUSD",   feedSymbol: "BINANCE:BCHUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
   DOTUSD:   { symbol: "DOTUSD",   feedSymbol: "BINANCE:DOTUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },

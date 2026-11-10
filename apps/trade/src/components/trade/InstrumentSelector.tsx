@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Star } from "lucide-react";
+import { ChevronDown, Star } from "lucide-react";
 import { useForexStore } from "@/lib/store";
 import { fmtPrice, fmtPct } from "@/lib/format";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
@@ -46,6 +46,7 @@ export function InstrumentSelector({ activeSymbol, onSelect, headerAction }: Pro
   const instruments = useForexStore((s) => s.instruments);
   const [query, setQuery] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<InstrumentCategory>>(() => new Set());
 
   // The rail and the instrument-switcher each render this selector. Keep them
   // in sync in the same tab as well as across tabs.
@@ -69,6 +70,15 @@ export function InstrumentSelector({ activeSymbol, onSelect, headerAction }: Pro
       window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
     } catch { /* storage unavailable — this session only */ }
     window.dispatchEvent(new Event(FAVORITES_CHANGED_EVENT));
+  };
+
+  const toggleCategory = (category: InstrumentCategory) => {
+    setCollapsedCategories((current) => {
+      const next = new Set(current);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
   };
 
   const filtered = useMemo(() => {
@@ -190,12 +200,27 @@ export function InstrumentSelector({ activeSymbol, onSelect, headerAction }: Pro
         {CATEGORY_ORDER.map((cat) => {
           const items = grouped.get(cat) ?? [];
           if (items.length === 0) return null;
+          const collapsed = collapsedCategories.has(cat) && query.trim() === "";
           return (
             <li key={cat}>
-              <div className="bg-panel-2/60 px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint sticky top-0 z-10">
-                {CATEGORY_LABEL[cat]}
+              <button
+                type="button"
+                aria-expanded={!collapsed}
+                aria-controls={`market-category-${cat.toLowerCase()}`}
+                onClick={() => toggleCategory(cat)}
+                className="sticky top-0 z-10 flex w-full items-center gap-1 bg-panel-2/60 px-1.5 py-1 text-left text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint transition-colors hover:bg-panel-2 hover:text-text-muted focus-visible:outline-2 focus-visible:outline-brand"
+              >
+                <ChevronDown
+                  size={12}
+                  aria-hidden
+                  className={`shrink-0 transition-transform ${collapsed ? "-rotate-90" : ""}`}
+                />
+                <span>{CATEGORY_LABEL[cat]}</span>
+                <span className="ml-auto tabular-nums">{items.length}</span>
+              </button>
+              <div id={`market-category-${cat.toLowerCase()}`} className={collapsed ? "hidden" : undefined}>
+                {items.map((i) => row(i))}
               </div>
-              {items.map((i) => row(i))}
             </li>
           );
         })}

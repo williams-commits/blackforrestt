@@ -160,6 +160,7 @@ interface CloseRequest {
 
 class Hub {
   private instruments = new Map<string, InstrumentState>();
+  private readonly marketDataTimestamps = new Map<string, number>();
   private openPositions = new Map<string, Position[]>();
   private broadcast: BroadcastFn = () => undefined;
   private tickTimer: NodeJS.Timeout | null = null;
@@ -323,7 +324,8 @@ class Hub {
 
   private startLiveFeed(symbols: string[]): void {
     const mode = getMarketDataMode();
-    const onPrice = (symbol: string, price: number, volume?: number) => this.setLivePrice(symbol, price, volume);
+    const onPrice = (symbol: string, price: number, volume?: number, timestamp?: number) =>
+      this.setLivePrice(symbol, price, volume, timestamp);
     if (mode === "simulation") {
       this.feedClient = getFeedClient(onPrice);
       this.feedClient.start(symbols);
@@ -373,9 +375,12 @@ class Hub {
     }
   }
 
-  setLivePrice(symbol: string, price: number, volume?: number): void {
+  setLivePrice(symbol: string, price: number, volume?: number, timestamp = Date.now()): void {
     const state = this.instruments.get(symbol);
     if (!state) return;
+    const previousTimestamp = this.marketDataTimestamps.get(symbol) ?? 0;
+    if (timestamp < previousTimestamp) return;
+    this.marketDataTimestamps.set(symbol, timestamp);
 
     const rebasedIntervals = state.sim.setPrice(price, volume);
     for (const interval of rebasedIntervals) {

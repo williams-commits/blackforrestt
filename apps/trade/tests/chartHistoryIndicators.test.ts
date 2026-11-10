@@ -21,17 +21,19 @@ import { AV_SYMBOL_MAP } from "../src/server/engine/alphavantageMap.js";
 import { FEED_SYMBOL_MAP } from "../src/server/engine/symbolMap.js";
 import { translateSymbol } from "../src/server/engine/genericFeed.js";
 import { tradingViewIntervalFor, tradingViewSymbolFor } from "../src/lib/tradingViewSymbols.js";
+import { ForexSimulator } from "../src/server/engine/forexSimulator.js";
 
 test("TradingView symbols map known terminal instruments to chartable markets", () => {
   assert.equal(tradingViewSymbolFor("AUDCAD", "FOREX"), "OANDA:AUDCAD");
   assert.equal(tradingViewSymbolFor("BTCUSD", "CRYPTO"), "BINANCE:BTCUSDT");
   assert.equal(tradingViewSymbolFor("US30", "INDEX"), "OANDA:US30USD");
   assert.equal(tradingViewSymbolFor("AAPL", "STOCK"), "NASDAQ:AAPL");
-  assert.equal(tradingViewSymbolFor("VIX", "INDEX"), "TVC:VIX");
+  assert.equal(tradingViewSymbolFor("VIX", "INDEX"), null);
+  assert.equal(tradingViewSymbolFor("VIXY", "STOCK"), "CBOE:VIXY");
   assert.equal(tradingViewSymbolFor("CORNUSD", "COMMODITY"), "AMEX:CORN");
   assert.equal(tradingViewSymbolFor("WEATUSD", "COMMODITY"), "AMEX:WEAT");
   assert.equal(tradingViewSymbolFor("SOYBUSD", "COMMODITY"), "AMEX:SOYB");
-  assert.equal(tradingViewSymbolFor("MATICUSD", "CRYPTO"), "BINANCE:POLUSDT");
+  assert.equal(tradingViewSymbolFor("POLUSD", "CRYPTO"), "BINANCE:POLUSDT");
   assert.equal(tradingViewSymbolFor("NGUSD", "COMMODITY"), "OANDA:NATGASUSD");
   assert.equal(tradingViewSymbolFor("HGUSD", "COMMODITY"), "OANDA:XCUUSD");
   assert.equal(tradingViewSymbolFor("JPN225", "INDEX"), "OANDA:JP225USD");
@@ -65,9 +67,11 @@ test("every configured instrument has mappings for each app feed adapter", () =>
 });
 
 test("new instruments use the intended provider tickers", () => {
-  assert.equal(FEED_SYMBOL_MAP.MATICUSD?.feedSymbol, "BINANCE:POLUSDT");
-  assert.equal(AV_SYMBOL_MAP.MATICUSD?.feedSymbol, "POL");
-  assert.deepEqual(translateSymbol("MATICUSD", "tickerlayer"), {
+  assert.equal(FEED_SYMBOL_MAP.POLUSD?.feedSymbol, "BINANCE:POLUSDT");
+  assert.equal(AV_SYMBOL_MAP.POLUSD?.feedSymbol, "POL");
+  assert.equal(FEED_SYMBOL_MAP.VIXY?.feedSymbol, "VIXY");
+  assert.equal(AV_SYMBOL_MAP.VIXY?.feedSymbol, "VIXY");
+  assert.deepEqual(translateSymbol("POLUSD", "tickerlayer"), {
     ticker: "POLUSD",
     endpoint: "crypto",
   });
@@ -86,6 +90,26 @@ test("new instruments use the intended provider tickers", () => {
     ticker: "XCU/USD",
     endpoint: "forex",
   });
+});
+
+test("a quiet live instrument holds its last market price instead of simulating a new one", () => {
+  const simulator = new ForexSimulator({
+    symbol: "AMZN",
+    basePrice: 250,
+    digits: 2,
+    spread: 0.02,
+    volatility: 0.22,
+    reversion: 0.02,
+  });
+  simulator.setPrice(266.93);
+  const originalNow = Date.now;
+  try {
+    Date.now = () => originalNow() + 60_000;
+    simulator.tick();
+    assert.equal(simulator.getQuote().mid, 266.93);
+  } finally {
+    Date.now = originalNow;
+  }
 });
 
 test("TradingView intervals map correctly and the initial chart uses 5 minutes", () => {

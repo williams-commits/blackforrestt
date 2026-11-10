@@ -148,6 +148,7 @@ interface CloseRequest {
 
 class Hub {
   private instruments = new Map<string, InstrumentState>();
+  private readonly marketDataTimestamps = new Map<string, number>();
   private openPositions = new Map<string, Position[]>();
   private broadcast: BroadcastFn = () => undefined;
   private tickTimer: NodeJS.Timeout | null = null;
@@ -309,7 +310,7 @@ class Hub {
 
   private startLiveFeed(symbols: string[]): void {
     const mode = getMarketDataMode();
-    const onPrice = (symbol: string, price: number) => this.setLivePrice(symbol, price);
+    const onPrice = (symbol: string, price: number, timestamp?: number) => this.setLivePrice(symbol, price, timestamp);
     if (mode === "alphavantage") {
       this.avFeed = getAlphavantageFeed(onPrice);
       this.avFeed.start(symbols);
@@ -342,8 +343,13 @@ class Hub {
     }
   }
 
-  setLivePrice(symbol: string, price: number): void {
-    this.instruments.get(symbol)?.sim.setPrice(price);
+  setLivePrice(symbol: string, price: number, timestamp = Date.now()): void {
+    const state = this.instruments.get(symbol);
+    if (!state) return;
+    const previousTimestamp = this.marketDataTimestamps.get(symbol) ?? 0;
+    if (timestamp < previousTimestamp) return;
+    this.marketDataTimestamps.set(symbol, timestamp);
+    state.sim.setPrice(price);
   }
 
   private startTicking(): void {

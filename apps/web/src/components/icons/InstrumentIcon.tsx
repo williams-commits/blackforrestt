@@ -56,6 +56,7 @@ const CRYPTO: Record<string, BadgeDef> = {
   LINKUSD: { bg: "#2a5ada", label: "⬡" },
   AVAXUSD: { bg: "#e84142", label: "▲" },
   MATICUSD: { bg: "#8247e5", label: "⬢" },
+  POLUSD: { bg: "#8247e5", label: "⬢" },
   LTCUSD: { bg: "#345d9d", label: "Ł" },
   BCHUSD: { bg: "#8dc351", label: "B" },
   DOTUSD: { bg: "#e6007a", label: "●" },
@@ -103,6 +104,7 @@ const STOCKS: Record<string, BadgeDef> = {
   META: { bg: "#0866ff", label: "M" },
   AMD: { bg: "#ed1c24", label: "A" },
   JPM: { bg: "#117aca", label: "JPM", fontSize: 0.3 },
+  VIXY: { bg: "#312e81", label: "VIXY", fontSize: 0.3 },
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────

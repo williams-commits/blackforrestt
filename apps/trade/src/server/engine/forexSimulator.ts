@@ -86,10 +86,10 @@ export class ForexSimulator {
   private windowStartMs: number;
 
   // ── Live feed support ────────────────────────────────────────────────────
-  // When a live trade price arrives via setPrice(), the simulator switches
-  // from the random walk to "live mode" for this instrument. If no live price
-  // arrives within LIVE_TIMEOUT_MS, it falls back to simulation.
+  // Once an external market price has initialized this instrument, do not
+  // replace it with a synthetic random walk when the market/feed goes quiet.
   private lastLiveMs = 0;
+  private hasReceivedLivePrice = false;
   private pendingLiveVolume = 0;
   private hasLiveVolume = false;
   private static readonly LIVE_TIMEOUT_MS = 15_000; // 15s without a tick → simulate
@@ -125,13 +125,13 @@ export class ForexSimulator {
   // ── Live feed injection ───────────────────────────────────────────────────
 
   /**
-   * Inject a real trade price from the live feed. Snaps to tick size and
-   * updates 24h rolling stats. The next tick() will skip the random walk and
-   * use this price instead.
+   * Inject a provider price. Snaps to tick size and updates 24h rolling stats;
+   * after the first provider price, synthetic ticks no longer move the market.
    */
   setPrice(price: number, volume?: number): CandleInterval[] {
     if (!isFinite(price) || price <= 0) return [];
     const nextMid = round(price, this.tickSize);
+    this.hasReceivedLivePrice = true;
     const firstLivePrice = this.lastLiveMs === 0;
     const rebasedIntervals = firstLivePrice
       ? this.rebaseSimulatedHistory(nextMid)
@@ -245,7 +245,7 @@ export class ForexSimulator {
 
     // Only run the random walk if we DON'T have a recent live price.
     // When in live mode, mid is already set by setPrice() from the feed.
-    if (!this.isLive) {
+    if (!this.hasReceivedLivePrice) {
       // Mean-reverting random walk (Ornstein-Uhlenbeck-ish) per second.
       const dt = 1 / (365 * 24 * 3600);
       const sigma = this.vol * Math.sqrt(dt);

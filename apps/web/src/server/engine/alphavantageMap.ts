@@ -61,7 +61,7 @@ export const AV_SYMBOL_MAP: Record<string, AvSymbolEntry> = {
   UK100:  { symbol: "UK100",  feedSymbol: "EWU",   endpoint: "stock", category: "INDEX" },
   FRA40:  { symbol: "FRA40",  feedSymbol: "EWQ",   endpoint: "stock", category: "INDEX" },
   JPN225: { symbol: "JPN225", feedSymbol: "EWJ",   endpoint: "stock", category: "INDEX" },
-  VIX:    { symbol: "VIX",    feedSymbol: "VIXY",  endpoint: "stock", category: "INDEX" },
+  VIXY:   { symbol: "VIXY",   feedSymbol: "VIXY",  endpoint: "stock", category: "STOCK" },
 
   // ── Crypto — from/to pair ───────────────────────────────────────────────
   BTCUSD:   { symbol: "BTCUSD",   feedSymbol: "BTC",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
@@ -72,7 +72,7 @@ export const AV_SYMBOL_MAP: Record<string, AvSymbolEntry> = {
   DOGEUSD:  { symbol: "DOGEUSD",  feedSymbol: "DOGE",  feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
   LINKUSD:  { symbol: "LINKUSD",  feedSymbol: "LINK",  feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
   AVAXUSD:  { symbol: "AVAXUSD",  feedSymbol: "AVAX",  feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
-  MATICUSD: { symbol: "MATICUSD", feedSymbol: "POL",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  POLUSD:   { symbol: "POLUSD",   feedSymbol: "POL",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
   LTCUSD:   { symbol: "LTCUSD",   feedSymbol: "LTC",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
   BCHUSD:   { symbol: "BCHUSD",   feedSymbol: "BCH",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
   DOTUSD:   { symbol: "DOTUSD",   feedSymbol: "DOT",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },

@@ -28,13 +28,19 @@ export const INSTRUMENT_IMAGES: Record<string, string> = {
   // Crypto
   BTCUSD: "btc.svg",
   ETHUSD: "eth.svg",
-  SOLUSD: "sol.png",
+  SOLUSD: "solana.svg",
   XRPUSD: "xrp.png",
   ADAUSD: "ada.png",
   DOGEUSD: "doge.png",
   LINKUSD: "link.png",
   AVAXUSD: "avax.png",
   MATICUSD: "matic.png",
+  POLUSD: "polygon.svg",
+  LTCUSD: "litecoin.svg",
+  BCHUSD: "bitcoincash.svg",
+  DOTUSD: "polkadot.svg",
+  UNIUSD: "uniswap.svg",
+  ATOMUSD: "cosmos.svg",
   // Commodities
   XAUUSD: "xau.svg",
   XAGUSD: "xag.svg",
@@ -53,11 +59,20 @@ export const INSTRUMENT_IMAGES: Record<string, string> = {
   FRA40: "fr.png",
   JPN225: "nikkei225.svg",
   VIX: "vix.svg",
+  VIXY: "vixy.svg",
   // Stocks
   AAPL: "apple.svg",
   MSFT: "microsoft.svg",
   NVDA: "nvidia.svg",
   TSLA: "tesla.svg",
+  AMZN: "amazon.svg",
+  GOOGL: "google.svg",
+  META: "meta.svg",
+  AMD: "amd.svg",
+  JPM: "jpm.svg",
+  CORNUSD: "corn.svg",
+  WEATUSD: "weat.svg",
+  SOYBUSD: "soyb.svg",
 };
 
 /** Asset for a symbol (uppercase), or null when unmapped. */

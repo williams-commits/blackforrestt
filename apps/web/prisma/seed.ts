@@ -595,21 +595,21 @@ const INSTRUMENTS: SeedInstrument[] = [
     feedSymbol: "OANDA:JP225_USD",
   },
   {
-    symbol: "VIX",
-    name: "Volatility Index (VIX)",
-    category: "INDEX",
-    base: "VIX",
+    symbol: "VIXY",
+    name: "ProShares VIX Short-Term Futures ETF",
+    category: "STOCK",
+    base: "VIXY",
     quote: "USD",
     digits: 2,
     pipSize: "0.01",
-    pipValue: "100",
+    pipValue: "1",
     contractSize: "1",
-    marginPerLot: "1000",
-    commissionPerLot: "7",
-    swapLongPips: "1.5",
-    swapShortPips: "0.5",
-    basePrice: "13.50",
-    feedSymbol: "OANDA:VIX_USD",
+    marginPerLot: "25",
+    commissionPerLot: "1",
+    swapLongPips: "0",
+    swapShortPips: "0",
+    basePrice: "18.21",
+    feedSymbol: "VIXY",
   },
   // ── More Crypto ─────────────────────────────────────────────────────────────
   {
@@ -715,20 +715,20 @@ const INSTRUMENTS: SeedInstrument[] = [
     feedSymbol: "BINANCE:AVAXUSDT",
   },
   {
-    symbol: "MATICUSD",
-    name: "Polygon Ecosystem Token vs US Dollar",
+    symbol: "POLUSD",
+    name: "POL vs US Dollar",
     category: "CRYPTO",
     base: "POL",
     quote: "USD",
-    digits: 4,
-    pipSize: "0.0001",
+    digits: 5,
+    pipSize: "0.00001",
     pipValue: "1",
     contractSize: "1",
     marginPerLot: "1000",
     commissionPerLot: "7",
     swapLongPips: "5.0",
     swapShortPips: "2.5",
-    basePrice: "0.2000",
+    basePrice: "0.08872",
     feedSymbol: "BINANCE:POLUSDT",
   },
   {
@@ -1048,6 +1048,11 @@ async function main() {
     });
     console.log(`  ✓ ${i.symbol}`);
   }
+
+  await prisma.instrument.updateMany({
+    where: { symbol: { in: ["MATICUSD", "VIX"] } },
+    data: { active: false },
+  });
 
   console.log("✅ Seed complete.");
 }

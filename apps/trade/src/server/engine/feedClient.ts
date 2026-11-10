@@ -15,10 +15,13 @@
  * simulator adds a dealing spread around the mid for quoting/fills.
  */
 import WebSocket from "ws";
-import { feedSymbolFor, symbolFromFeed } from "./symbolMap";
+import { FEED_SYMBOL_MAP, feedSymbolFor, symbolFromFeed } from "./symbolMap";
 import { getMarketDataMode, requireFinnhubKey } from "./marketDataMode";
 
 const FINNHUB_WS_URL = "wss://ws.finnhub.io";
+const FINNHUB_REST_URL = "https://finnhub.io/api/v1/quote";
+const SNAPSHOT_INTERVAL_MS = 30_000;
+const SNAPSHOT_CRYPTO_SYMBOLS = new Set(["SOLUSD", "POLUSD"]);
 
 interface FinnhubTrade {
   s: string; // feed symbol
@@ -32,7 +35,7 @@ interface FinnhubTradeMessage {
   data: FinnhubTrade[];
 }
 
-export type PriceCallback = (symbol: string, price: number, volume?: number) => void;
+export type PriceCallback = (symbol: string, price: number, volume?: number, timestamp?: number) => void;
 
 export class FeedClient {
   private ws: WebSocket | null = null;
@@ -43,6 +46,9 @@ export class FeedClient {
   private isStarting = false;
   private intentionallyClosed = false;
   private readonly lastTimestampBySymbol = new Map<string, number>();
+  private readonly snapshotFailures = new Set<string>();
+  private snapshotSymbols: string[] = [];
+  private snapshotTimer: NodeJS.Timeout | null = null;
 
   constructor(onPrice: PriceCallback) {
     this.onPrice = onPrice;
@@ -57,9 +63,14 @@ export class FeedClient {
     }
     requireFinnhubKey();
     if (this.isStarting || (this.ws && this.ws.readyState <= WebSocket.OPEN)) return;
+    this.snapshotSymbols = symbols.filter((symbol) =>
+      FEED_SYMBOL_MAP[symbol]?.category === "STOCK" || SNAPSHOT_CRYPTO_SYMBOLS.has(symbol),
+    );
     this.intentionallyClosed = false;
     this.isStarting = true;
     this.connect();
+    void this.pollSnapshotQuotes();
+    this.snapshotTimer = setInterval(() => void this.pollSnapshotQuotes(), SNAPSHOT_INTERVAL_MS);
   }
 
   /** Gracefully stop and clean up. */
@@ -68,6 +79,10 @@ export class FeedClient {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
+    }
+    if (this.snapshotTimer) {
+      clearInterval(this.snapshotTimer);
+      this.snapshotTimer = null;
     }
     if (this.ws) {
       this.ws.removeAllListeners();
@@ -128,7 +143,7 @@ export class FeedClient {
           const previousTimestamp = this.lastTimestampBySymbol.get(symbol) ?? 0;
           if (trade.timestamp < previousTimestamp) continue;
           this.lastTimestampBySymbol.set(symbol, trade.timestamp);
-          this.onPrice(symbol, trade.price, trade.volume);
+          this.onPrice(symbol, trade.price, trade.volume, trade.timestamp);
         }
       } catch {
         // Non-JSON or unexpected format — ignore.
@@ -147,6 +162,37 @@ export class FeedClient {
       console.warn(`📡 Finnhub WS closed (code ${code}: ${reason.toString()}) — reconnecting…`);
       this.scheduleReconnect();
     });
+  }
+
+  private async pollSnapshotQuotes(): Promise<void> {
+    const token = requireFinnhubKey();
+    await Promise.all(this.snapshotSymbols.map(async (symbol) => {
+      const feedSymbol = feedSymbolFor(symbol);
+      if (!feedSymbol) return;
+
+      try {
+        const params = new URLSearchParams({ symbol: feedSymbol, token });
+        const response = await fetch(`${FINNHUB_REST_URL}?${params}`, {
+          signal: AbortSignal.timeout(8_000),
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const quote = await response.json() as { c?: unknown; t?: unknown };
+        if (
+          typeof quote.c !== "number" || !Number.isFinite(quote.c) || quote.c <= 0 ||
+          typeof quote.t !== "number" || !Number.isFinite(quote.t) || quote.t <= 0
+        ) {
+          throw new Error("Finnhub returned no current quote");
+        }
+        this.snapshotFailures.delete(symbol);
+        this.onPrice(symbol, quote.c, undefined, quote.t * 1_000);
+      } catch (error) {
+        if (this.snapshotFailures.has(symbol)) return;
+        this.snapshotFailures.add(symbol);
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(`📡 Finnhub quote snapshot failed for ${symbol}: ${message}`);
+      }
+    }));
   }
 
   private scheduleReconnect(): void {

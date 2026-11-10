@@ -26,6 +26,7 @@ const MARKETING_PREFIXES = [
 
 const isMarketingPath = (pathname: string) =>
   pathname !== "/brand/logo.svg" &&
+  pathname !== "/brand/icon.svg" &&
   MARKETING_PREFIXES.some((p) => pathname === p || (p !== "/" && pathname.startsWith(`${p}/`)));
 
 function isLocalHost(host: string): boolean {

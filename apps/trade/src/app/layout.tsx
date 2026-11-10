@@ -15,6 +15,11 @@ const mono = JetBrains_Mono({ subsets: ["latin"], display: "swap", variable: "--
 export const metadata: Metadata = {
   title: "BlackForest Trade",
   description: "Trading terminal",
+  icons: {
+    icon: "/brand/icon.svg",
+    shortcut: "/brand/icon.svg",
+    apple: "/brand/icon.svg",
+  },
 };
 
 /*

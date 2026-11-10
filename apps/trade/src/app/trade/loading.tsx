@@ -19,7 +19,7 @@ export default function TradeLoading() {
       </div>
 
       {/* Positions strip */}
-      <Skeleton className="h-60 min-h-50 shrink-0 rounded-none sm:h-88 md:h-64 lg:h-70" />
+      <Skeleton className="min-h-50 h-[min(50dvh,30rem)] shrink-0 rounded-none sm:h-[min(50dvh,34rem)] md:h-64 lg:h-70" />
     </div>
   );
 }

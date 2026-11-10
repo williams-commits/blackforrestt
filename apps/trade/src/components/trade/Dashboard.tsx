@@ -217,7 +217,7 @@ export function Dashboard({
         <main
           id="main-content"
           tabIndex={-1}
-          className="relative min-h-75 p-1 sm:min-h-100 md:min-h-0"
+          className="relative min-h-75 min-w-0 p-1 sm:min-h-100 md:min-h-0"
         >
           <ChartPanel
             instrument={activeInstrument}
@@ -238,13 +238,15 @@ export function Dashboard({
         </aside>
       </div>
 
-      {/* The dock can be resized on pointer and keyboard at tablet/desktop
-          widths. Mobile retains a natural-height, scrollable activity area. */}
+      {/* Desktop dock resizing is persisted; the mobile dock scales to the
+          viewport and keeps its rows internally scrollable. */}
       <div
         data-activity-dock
         className={cn(
-          "shrink-0 bg-panel pb-[calc(env(safe-area-inset-bottom)+3.5rem)] md:pb-0",
-          dockOpen ? "min-h-50 h-60 sm:h-88 md:h-(--dock-height)" : "h-9",
+          "min-w-0 shrink-0 bg-panel pb-[calc(env(safe-area-inset-bottom)+3.5rem)] md:pb-0",
+          dockOpen
+            ? "min-h-50 h-[min(50dvh,30rem)] sm:h-[min(50dvh,34rem)] md:h-(--dock-height)"
+            : "h-9",
         )}
         style={{ "--dock-height": `${dockHeight}px` } as React.CSSProperties}
       >
@@ -291,20 +293,22 @@ export function Dashboard({
       <Sheet open={tradeOpen} onOpenChange={closeTrade}>
         <SheetContent
           side="right"
-          className="top-0 flex h-dvh flex-col gap-0 rounded-none p-0"
-          style={{ width: "min(100vw, 23rem)" }}
+          className="inset-y-0 right-0 flex h-dvh w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none p-0 sm:max-w-none md:w-92 md:max-w-lg"
         >
-          <SheetHeader className="border-b border-border-soft pb-2 pt-3">
+          <SheetHeader className="w-full shrink-0 border-b border-border-soft pb-2 pl-4 pr-12 pt-3">
             <SheetTitle>Trading workspace</SheetTitle>
             <SheetDescription>Market context, order book, and order ticket.</SheetDescription>
           </SheetHeader>
-          <TradingSideWorkspace
-            instrument={activeInstrument}
-            orderController={orderController}
-            marketDataConnected={status === "open"}
-            initialSide={tradeSide}
-            onSwitchInstrument={() => setSwitcherOpen(true)}
-          />
+          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+            <TradingSideWorkspace
+              instrument={activeInstrument}
+              orderController={orderController}
+              marketDataConnected={status === "open"}
+              initialSide={tradeSide}
+              onSwitchInstrument={() => setSwitcherOpen(true)}
+              compactNavigation
+            />
+          </div>
         </SheetContent>
       </Sheet>
 

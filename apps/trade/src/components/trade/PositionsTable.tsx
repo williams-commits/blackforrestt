@@ -265,8 +265,8 @@ function marketExecutionTitle(marketHours: InstrumentView["marketHours"] | undef
  * Phone layout for open positions. Each position is a full-width card: the
  * thumb-sized Close button sits at the right edge of every card so closing a
  * trade never requires scrolling — horizontally to reveal a table column or
- * vertically past the floating Trade button. The bottom padding keeps the last
- * card's Close clear of the fixed Trade FAB.
+ * vertically past the floating Trade button. The dock's mobile safe-area
+ * padding keeps the final card clear of the fixed tab bar.
  */
 function OpenPositionCards({
   positions,
@@ -290,7 +290,7 @@ function OpenPositionCards({
   }
 
   return (
-    <ul className="pb-24">
+    <ul>
       {positions.map((p, index) => {
         const digits = digitsFor(p.symbol);
         const up = p.netProfit >= 0;
@@ -671,7 +671,7 @@ function HistoryCards({ digitsFor }: { digitsFor: (s: string) => number }) {
   }
 
   return (
-    <div className="pb-24">
+    <div>
       <ul>
         {history.map((p, index) => {
           const digits = digitsFor(p.symbol);

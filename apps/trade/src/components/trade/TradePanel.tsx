@@ -214,8 +214,8 @@ export function TradePanel({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+    <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
       {/* ── Instrument header — the ticket's asset selector ──────────────── */}
       <div className="bg-panel-2/60 px-4 py-3">
         {onSwitchInstrument ? (

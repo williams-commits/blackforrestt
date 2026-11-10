@@ -17,6 +17,7 @@ export function TradingSideWorkspace({
   marketDataConnected,
   initialSide = null,
   onSwitchInstrument,
+  compactNavigation = false,
   className,
 }: {
   instrument: InstrumentView;
@@ -24,27 +25,42 @@ export function TradingSideWorkspace({
   marketDataConnected: boolean;
   initialSide?: PositionSide | null;
   onSwitchInstrument?: () => void;
+  compactNavigation?: boolean;
   className?: string;
 }) {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("trade");
 
   return (
     <TabsRoot
-      orientation="vertical"
+      orientation={compactNavigation ? "horizontal" : "vertical"}
       value={activeTab}
       onValueChange={(value) => setActiveTab(value as WorkspaceTab)}
-      className={cn("min-h-0 w-full flex-1 self-stretch flex-row gap-0", className)}
+      className={cn(
+        "min-h-0 min-w-0 w-full flex-1 self-stretch gap-0 overflow-hidden",
+        compactNavigation ? "flex-col" : "flex-row",
+        className,
+      )}
     >
       <TabsList
         variant="default"
         aria-label="Trading workspace"
-        className="h-full w-14 shrink-0 self-stretch justify-start gap-2 rounded-none border-r border-border-soft bg-panel px-2 py-3"
+        className={cn(
+          "shrink-0 rounded-none bg-panel",
+          compactNavigation
+            ? "h-11 w-full self-auto justify-around gap-1 border-b border-border-soft px-3 py-1"
+            : "h-full w-14 self-stretch justify-start gap-2 border-r border-border-soft px-2 py-3",
+        )}
       >
         <TabsTrigger
           value="market"
           aria-label="Market overview"
           title="Market overview"
-          className="h-10 w-10 flex-none justify-center data-[orientation=vertical]:justify-center rounded-lg p-0 text-text-faint hover:bg-panel-2 data-[state=active]:bg-brand-soft data-[state=active]:text-brand"
+          className={cn(
+            "h-10 rounded-lg p-0 text-text-faint hover:bg-panel-2 data-[state=active]:bg-brand-soft data-[state=active]:text-brand",
+            compactNavigation
+              ? "w-auto flex-1 justify-center"
+              : "w-10 flex-none justify-center data-[orientation=vertical]:justify-center",
+          )}
         >
           <CandlestickChart size={17} strokeWidth={1.8} aria-hidden />
         </TabsTrigger>
@@ -52,7 +68,12 @@ export function TradingSideWorkspace({
           value="book"
           aria-label="Order book"
           title="Order book"
-          className="h-10 w-10 flex-none justify-center data-[orientation=vertical]:justify-center rounded-lg p-0 text-text-faint hover:bg-panel-2 data-[state=active]:bg-brand-soft data-[state=active]:text-brand"
+          className={cn(
+            "h-10 rounded-lg p-0 text-text-faint hover:bg-panel-2 data-[state=active]:bg-brand-soft data-[state=active]:text-brand",
+            compactNavigation
+              ? "w-auto flex-1 justify-center"
+              : "w-10 flex-none justify-center data-[orientation=vertical]:justify-center",
+          )}
         >
           <BookOpen size={17} strokeWidth={1.8} aria-hidden />
         </TabsTrigger>
@@ -60,7 +81,12 @@ export function TradingSideWorkspace({
           value="trade"
           aria-label="Trade ticket"
           title="Trade ticket"
-          className="h-10 w-10 flex-none justify-center data-[orientation=vertical]:justify-center rounded-lg p-0 text-text-faint hover:bg-panel-2 data-[state=active]:bg-brand-soft data-[state=active]:text-brand"
+          className={cn(
+            "h-10 rounded-lg p-0 text-text-faint hover:bg-panel-2 data-[state=active]:bg-brand-soft data-[state=active]:text-brand",
+            compactNavigation
+              ? "w-auto flex-1 justify-center"
+              : "w-10 flex-none justify-center data-[orientation=vertical]:justify-center",
+          )}
         >
           <ArrowLeftRight size={17} strokeWidth={1.8} aria-hidden />
         </TabsTrigger>

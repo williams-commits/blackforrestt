@@ -71,47 +71,47 @@ export function ChartPanel({
     <div
       ref={panelRef}
       data-testid="professional-chart-panel"
-      className={`flex h-full min-h-112 flex-col overflow-hidden bg-canvas shadow-panel lg:min-h-0 ${
+      className={`flex h-full min-h-[min(55dvh,28rem)] min-w-0 w-full flex-col overflow-hidden bg-canvas shadow-panel lg:min-h-0 ${
         fullscreen ? "rounded-none" : "rounded-none"
       }`}
     >
-      <div className="flex shrink-0 flex-col gap-1.5 bg-panel-2 px-3 py-0.5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className="flex min-h-11 shrink-0 items-center justify-between gap-1.5 bg-panel-2 px-2 py-1 sm:px-3">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
           {onSwitchInstrument ? (
             <button
               type="button"
               onClick={onSwitchInstrument}
               aria-haspopup="dialog"
               title="Switch instrument"
-              className="flex min-w-0 items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand"
+              className="flex min-w-0 items-center gap-1.5 rounded-md px-1 py-1 text-left transition-colors hover:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand sm:gap-2 sm:px-1.5"
             >
               <InstrumentIcon symbol={instrument.symbol} size={20} />
-              <span className="text-sm font-bold tracking-tight">{instrument.symbol}</span>
-              <span className="hidden min-w-0 truncate text-(length:--term-text-2xs) font-medium text-text-faint sm:inline">
+              <span className="shrink-0 text-sm font-bold tracking-tight">{instrument.symbol}</span>
+              <span className="hidden min-w-0 truncate text-(length:--term-text-2xs) font-medium text-text-faint xl:inline">
                 {instrument.name}
               </span>
-              <span className="rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium uppercase text-brand">
+              <span className="max-[359px]:hidden shrink-0 rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium uppercase text-brand">
                 {instrument.category}
               </span>
-              <ChevronDown size={13} aria-hidden className="shrink-0 text-text-faint" />
+              <ChevronDown size={13} aria-hidden className="hidden shrink-0 text-text-faint sm:block" />
             </button>
           ) : (
-            <>
+            <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
               <InstrumentIcon symbol={instrument.symbol} size={20} />
-              <span className="text-sm font-bold tracking-tight">{instrument.symbol}</span>
-              <span className="text-(length:--term-text-2xs) font-medium text-text-faint">{instrument.name}</span>
-              <span className="rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium uppercase text-brand">
+              <span className="shrink-0 text-sm font-bold tracking-tight">{instrument.symbol}</span>
+              <span className="hidden min-w-0 truncate text-(length:--term-text-2xs) font-medium text-text-faint xl:inline">{instrument.name}</span>
+              <span className="max-[359px]:hidden shrink-0 rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-medium uppercase text-brand">
                 {instrument.category}
               </span>
-            </>
+            </div>
           )}
           {liveQuote ? (
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-base font-bold leading-none tabular-nums text-text">
+            <span className="ml-auto flex min-w-0 shrink-0 items-baseline gap-1 sm:gap-1.5">
+              <span className="text-sm font-bold leading-none tabular-nums text-text sm:text-base">
                 {fmtPrice(liveQuote.mid, instrument.digits)}
               </span>
               {liveQuote.changePct !== 0 ? (
-                <span className={`text-(length:--term-text-2xs) font-semibold leading-none tabular-nums ${
+                <span className={`max-[379px]:hidden text-(length:--term-text-2xs) font-semibold leading-none tabular-nums sm:inline ${
                   liveQuote.changePct > 0 ? "text-up" : "text-down"
                 }`}>
                   {liveQuote.changePct > 0 ? "▲" : "▼"} {Math.abs(liveQuote.changePct).toFixed(2)}%
@@ -119,26 +119,31 @@ export function ChartPanel({
               ) : null}
             </span>
           ) : (
-            <span className="text-xs font-medium text-text-faint">Quote unavailable</span>
+            <span
+              aria-label="Quote unavailable"
+              title="Quote unavailable"
+              className="ml-auto min-w-0 truncate text-(length:--term-text-2xs) font-medium text-text-faint"
+            >
+              <span className="max-[359px]:hidden">Quote unavailable</span>
+              <span aria-hidden className="hidden max-[359px]:inline">—</span>
+            </span>
           )}
-          {tradingViewSymbol ? null : null}
         </div>
 
-        <div className="flex shrink-0 items-center justify-end">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={fullscreen ? "Exit full screen" : "Full screen"}
-            title={fullscreen ? "Exit full screen" : "Full screen"}
-            onClick={() => void toggleFullscreen()}
-          >
-            {fullscreen ? <Minimize2 size={15} aria-hidden /> : <Maximize2 size={15} aria-hidden />}
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={fullscreen ? "Exit full screen" : "Full screen"}
+          title={fullscreen ? "Exit full screen" : "Full screen"}
+          onClick={() => void toggleFullscreen()}
+          className="h-8 w-8 shrink-0"
+        >
+          {fullscreen ? <Minimize2 size={15} aria-hidden /> : <Maximize2 size={15} aria-hidden />}
+        </Button>
       </div>
 
-      <div className="relative min-h-112 flex-1 lg:min-h-0">
+      <div className="relative min-h-[min(55dvh,28rem)] min-w-0 flex-1 lg:min-h-0">
         {tradingViewSymbol ? (
           <TradingViewChart
             key={`${tradingViewSymbol}-${theme}`}
@@ -350,7 +355,7 @@ function FloatingTradeControls({
     <div
       ref={controlsRef}
       data-testid="floating-trade-controls"
-      className="pointer-events-auto absolute right-3 top-3 z-20 w-52 select-none overflow-hidden rounded-xl border border-border-soft bg-canvas/95 shadow-xl backdrop-blur-md"
+      className="pointer-events-auto absolute right-2 top-16 z-20 w-44 select-none overflow-hidden rounded-xl border border-border-soft bg-canvas/95 shadow-xl backdrop-blur-md sm:right-3 sm:top-3 sm:w-52"
       style={position ? { left: position.left, top: position.top, right: "auto" } : undefined}
     >
       <div className="flex h-7 items-center justify-between bg-panel/80 px-2.5">

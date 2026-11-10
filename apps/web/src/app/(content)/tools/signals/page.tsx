@@ -70,7 +70,13 @@ function SignalCard({ signal: s }: { signal: Signal }) {
   const t = useTranslations("signals");
   const buy = s.side === "BUY";
   const rr = Math.abs(s.target - s.entry) / Math.abs(s.entry - s.stop);
-  const digits = s.symbol.includes("JPY") ? 3 : /^(BTC|ETH|US30|NAS100|SPX500|AAPL|MSFT|NVDA|TSLA)/.test(s.symbol) ? 2 : 5;
+  const digits = s.symbol.includes("JPY")
+    ? 3
+    : /^(DOTUSD|UNIUSD|ATOMUSD|LINKUSD|AVAXUSD)$/.test(s.symbol)
+      ? 3
+      : /^(BTCUSD|ETHUSD|LTCUSD|BCHUSD|US30|NAS100|SPX500|AAPL|MSFT|NVDA|TSLA|AMZN|GOOGL|META|AMD|JPM|CORNUSD|WEATUSD|SOYBUSD)$/.test(s.symbol)
+        ? 2
+        : 5;
   const confidenceMap = {
     high: { label: t("highConf"), cls: "bg-up/15 text-up" },
     medium: { label: t("medConf"), cls: "bg-brand-soft text-brand" },

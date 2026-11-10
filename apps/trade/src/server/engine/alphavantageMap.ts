@@ -72,13 +72,27 @@ export const AV_SYMBOL_MAP: Record<string, AvSymbolEntry> = {
   DOGEUSD:  { symbol: "DOGEUSD",  feedSymbol: "DOGE",  feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
   LINKUSD:  { symbol: "LINKUSD",  feedSymbol: "LINK",  feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
   AVAXUSD:  { symbol: "AVAXUSD",  feedSymbol: "AVAX",  feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
-  MATICUSD: { symbol: "MATICUSD", feedSymbol: "MATIC", feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  MATICUSD: { symbol: "MATICUSD", feedSymbol: "POL",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  LTCUSD:   { symbol: "LTCUSD",   feedSymbol: "LTC",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  BCHUSD:   { symbol: "BCHUSD",   feedSymbol: "BCH",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  DOTUSD:   { symbol: "DOTUSD",   feedSymbol: "DOT",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  UNIUSD:   { symbol: "UNIUSD",   feedSymbol: "UNI",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  ATOMUSD:  { symbol: "ATOMUSD",  feedSymbol: "ATOM",  feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
 
   // ── Stocks ──────────────────────────────────────────────────────────────
   AAPL: { symbol: "AAPL", feedSymbol: "AAPL", endpoint: "stock", category: "STOCK" },
   MSFT: { symbol: "MSFT", feedSymbol: "MSFT", endpoint: "stock", category: "STOCK" },
   NVDA: { symbol: "NVDA", feedSymbol: "NVDA", endpoint: "stock", category: "STOCK" },
   TSLA: { symbol: "TSLA", feedSymbol: "TSLA", endpoint: "stock", category: "STOCK" },
+  AMZN: { symbol: "AMZN", feedSymbol: "AMZN", endpoint: "stock", category: "STOCK" },
+  GOOGL: { symbol: "GOOGL", feedSymbol: "GOOGL", endpoint: "stock", category: "STOCK" },
+  META: { symbol: "META", feedSymbol: "META", endpoint: "stock", category: "STOCK" },
+  AMD: { symbol: "AMD", feedSymbol: "AMD", endpoint: "stock", category: "STOCK" },
+  JPM: { symbol: "JPM", feedSymbol: "JPM", endpoint: "stock", category: "STOCK" },
+
+  CORNUSD: { symbol: "CORNUSD", feedSymbol: "CORN", endpoint: "stock", category: "COMMODITY" },
+  WEATUSD: { symbol: "WEATUSD", feedSymbol: "WEAT", endpoint: "stock", category: "COMMODITY" },
+  SOYBUSD: { symbol: "SOYBUSD", feedSymbol: "SOYB", endpoint: "stock", category: "COMMODITY" },
 };
 
 /** Reverse lookup for correlating AV responses back to our symbols. */

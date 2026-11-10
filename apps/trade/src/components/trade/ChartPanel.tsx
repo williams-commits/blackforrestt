@@ -27,7 +27,6 @@ import { tradingViewIntervalFor, tradingViewSymbolFor } from "@/lib/tradingViewS
 interface Props {
   instrument: InstrumentView;
   marketDataConnected: boolean;
-  marketDataMode: string;
   onSwitchInstrument?: () => void;
   onOpenTrade?: (side: "BUY" | "SELL") => void;
 }
@@ -35,7 +34,6 @@ interface Props {
 export function ChartPanel({
   instrument,
   marketDataConnected,
-  marketDataMode,
   onSwitchInstrument,
   onOpenTrade,
 }: Props) {
@@ -123,9 +121,7 @@ export function ChartPanel({
           ) : (
             <span className="text-xs font-medium text-text-faint">Quote unavailable</span>
           )}
-          <span className="hidden text-(length:--term-text-2xs) text-text-faint xl:inline">
-            App quote · {marketDataMode === "finnhub" ? "Finnhub" : marketDataMode}
-          </span>
+          {tradingViewSymbol ? null : null}
         </div>
 
         <div className="flex shrink-0 items-center justify-end">
@@ -198,25 +194,8 @@ function TradingViewChart({
 
     const widget = document.createElement("div");
     widget.className = "tradingview-widget-container__widget";
-    widget.style.height = "calc(100% - 18px)";
+    widget.style.height = "100%";
     widget.style.width = "100%";
-
-    const attribution = document.createElement("div");
-    attribution.className = "tradingview-widget-copyright";
-    attribution.style.height = "18px";
-    attribution.style.display = "flex";
-    attribution.style.justifyContent = "flex-end";
-    attribution.style.alignItems = "center";
-    attribution.style.padding = "0 10px";
-    attribution.style.fontSize = "10px";
-    attribution.style.lineHeight = "1";
-    const attributionLink = document.createElement("a");
-    attributionLink.href = `https://www.tradingview.com/symbols/${encodeURIComponent(symbol.split(":").at(-1) ?? symbol)}/`;
-    attributionLink.target = "_blank";
-    attributionLink.rel = "noopener nofollow";
-    attributionLink.textContent = "TradingView";
-    attributionLink.style.color = "inherit";
-    attribution.append(attributionLink);
 
     const script = document.createElement("script");
     script.type = "text/javascript";
@@ -246,7 +225,7 @@ function TradingViewChart({
     script.addEventListener("load", handleLoad);
     script.addEventListener("error", handleError);
 
-    widgetContainer.append(widget, attribution, script);
+    widgetContainer.append(widget, script);
     container.replaceChildren(widgetContainer);
 
     return () => {

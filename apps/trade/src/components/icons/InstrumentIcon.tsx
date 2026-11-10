@@ -3,7 +3,7 @@
 import { ASSET_DIR, currencyFlag, instrumentImage } from "./instrumentAssets";
 
 /**
- * InstrumentIcon — renders a circular badge for any of the 45 trading
+ * InstrumentIcon — renders a circular badge for any trading
  * instruments. Real imagery first (currency flags, crypto/index/stock logos
  * from the shared instrumentAssets map), with the inline SVG/CSS badges as
  * the fallback for anything unmapped — CSP-safe either way (local assets).
@@ -56,6 +56,11 @@ const CRYPTO: Record<string, BadgeDef> = {
   LINKUSD: { bg: "#2a5ada", label: "⬡" },
   AVAXUSD: { bg: "#e84142", label: "▲" },
   MATICUSD: { bg: "#8247e5", label: "⬢" },
+  LTCUSD: { bg: "#345d9d", label: "Ł" },
+  BCHUSD: { bg: "#8dc351", label: "B" },
+  DOTUSD: { bg: "#e6007a", label: "●" },
+  UNIUSD: { bg: "#ff007a", label: "U" },
+  ATOMUSD: { bg: "#2e3148", label: "A" },
   // Bare asset tickers (wallet/deposit flows) — same brand identities.
   USDT: { bg: "#26a17b", label: "₮" },
   USDC: { bg: "#2775ca", label: "$" },
@@ -72,6 +77,9 @@ const COMMODITIES: Record<string, BadgeDef> = {
   XPDUSD: { bg: "linear-gradient(135deg,#dadada,#9c9c9c)", label: "Pd", color: "#333" },
   NGUSD: { bg: "#0d6efd", label: "Gas", fontSize: 0.32 },
   HGUSD: { bg: "linear-gradient(135deg,#b87333,#8b4513)", label: "Cu" },
+  CORNUSD: { bg: "#d9a441", label: "C" },
+  WEATUSD: { bg: "#c59a52", label: "W" },
+  SOYBUSD: { bg: "#6d8b45", label: "S" },
 };
 
 const INDICES: Record<string, BadgeDef> = {
@@ -90,6 +98,11 @@ const STOCKS: Record<string, BadgeDef> = {
   MSFT: { bg: "#00a4ef", label: "" },
   NVDA: { bg: "#76b900", label: "" },
   TSLA: { bg: "#cc0000", label: "T" },
+  AMZN: { bg: "#ff9900", label: "a" },
+  GOOGL: { bg: "#4285f4", label: "G" },
+  META: { bg: "#0866ff", label: "M" },
+  AMD: { bg: "#ed1c24", label: "A" },
+  JPM: { bg: "#117aca", label: "JPM", fontSize: 0.3 },
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────

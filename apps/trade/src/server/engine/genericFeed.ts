@@ -16,6 +16,11 @@ export type PriceCallback = (symbol: string, price: number) => void;
 const POLL_INTERVAL_MS = 12_000;
 const RATE_LIMIT_BACKOFF_MS = 60_000;
 const TIMEOUT_MS = 10_000;
+const LISTED_COMMODITY_TICKERS: Record<string, string> = {
+  CORNUSD: "CORN",
+  WEATUSD: "WEAT",
+  SOYBUSD: "SOYB",
+};
 
 // ── Provider config ─────────────────────────────────────────────────────────
 
@@ -28,17 +33,21 @@ interface ProviderConfig {
 }
 
 /** Translate our symbol to the provider's convention. Returns the ticker the provider expects. */
-function translateSymbol(symbol: string, mode: MarketDataMode): { ticker: string; endpoint: string } | null {
+export function translateSymbol(symbol: string, mode: MarketDataMode): { ticker: string; endpoint: string } | null {
   // All three providers accept standard tickers for stocks/ETFs/crypto.
   // For forex, the convention varies; we do best-effort mapping.
   const cat = inferCategory(symbol);
+  const listedCommodityTicker = LISTED_COMMODITY_TICKERS[symbol];
+  if (listedCommodityTicker) {
+    return { ticker: listedCommodityTicker, endpoint: mode === "lse" ? "equity" : "stock" };
+  }
   if (mode === "tickerlayer") {
     if (cat === "FOREX" || cat === "COMMODITY") {
       // TickerLayer: /forex/quote/{symbol} with OANDA-style or standard pairs
       const pair = forexToPair(symbol);
       return pair ? { ticker: pair, endpoint: "forex" } : null;
     }
-    if (cat === "CRYPTO") return { ticker: symbol, endpoint: "crypto" };
+    if (cat === "CRYPTO") return { ticker: symbol === "MATICUSD" ? "POLUSD" : symbol, endpoint: "crypto" };
     return { ticker: etfProxy(symbol), endpoint: "stock" };
   }
   if (mode === "sifting") {
@@ -46,7 +55,7 @@ function translateSymbol(symbol: string, mode: MarketDataMode): { ticker: string
       const pair = forexToPair(symbol);
       return pair ? { ticker: pair, endpoint: "forex" } : null;
     }
-    if (cat === "CRYPTO") return { ticker: symbol, endpoint: "crypto" };
+    if (cat === "CRYPTO") return { ticker: symbol === "MATICUSD" ? "POLUSD" : symbol, endpoint: "crypto" };
     return { ticker: etfProxy(symbol), endpoint: "stock" };
   }
   if (mode === "lse") {
@@ -54,7 +63,7 @@ function translateSymbol(symbol: string, mode: MarketDataMode): { ticker: string
       const pair = forexToPair(symbol);
       return pair ? { ticker: pair, endpoint: "fx" } : null;
     }
-    if (cat === "CRYPTO") return { ticker: symbol, endpoint: "crypto" };
+    if (cat === "CRYPTO") return { ticker: symbol === "MATICUSD" ? "POLUSD" : symbol, endpoint: "crypto" };
     return { ticker: etfProxy(symbol), endpoint: "equity" };
   }
   return null;
@@ -109,15 +118,20 @@ const PROVIDERS: Record<string, ProviderConfig> = {
 // ── Symbol helpers ─────────────────────────────────────────────────────────
 
 function inferCategory(symbol: string): InstrumentCategory {
-  if (/^(BTC|ETH|SOL|XRP|ADA|DOGE|LINK|AVAX|MATIC)USD$/.test(symbol)) return "CRYPTO";
-  if (/^(AAPL|MSFT|NVDA|TSLA)$/.test(symbol)) return "STOCK";
+  if (/^(BTC|ETH|SOL|XRP|ADA|DOGE|LINK|AVAX|MATIC|LTC|BCH|DOT|UNI|ATOM)USD$/.test(symbol)) return "CRYPTO";
+  if (/^(AAPL|MSFT|NVDA|TSLA|AMZN|GOOGL|META|AMD|JPM)$/.test(symbol)) return "STOCK";
   if (/^(US30|NAS100|SPX500|GER40|UK100|FRA40|JPN225|VIX)$/.test(symbol)) return "INDEX";
-  if (/^(XAU|XAG|WTI|XBR|XPT|XPD|NG|HG)USD$/.test(symbol)) return "COMMODITY";
+  if (/^(XAU|XAG|WTI|XBR|XPT|XPD|NG|HG|CORN|WEAT|SOYB)USD$/.test(symbol)) return "COMMODITY";
   return "FOREX";
 }
 
 /** Map our forex/commodity symbol to a slash pair (e.g. EURUSD → EUR/USD). */
 function forexToPair(symbol: string): string | null {
+  const commodityPairs: Record<string, string> = {
+    NGUSD: "NATGAS/USD",
+    HGUSD: "XCU/USD",
+  };
+  if (commodityPairs[symbol]) return commodityPairs[symbol];
   if (symbol.length !== 6) return null;
   return `${symbol.slice(0, 3)}/${symbol.slice(3)}`;
 }

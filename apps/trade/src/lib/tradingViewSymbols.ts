@@ -14,18 +14,23 @@ export function tradingViewIntervalFor(interval: CandleInterval): string {
 }
 
 const SYMBOL_OVERRIDES: Record<string, string> = {
-  US30: "TVC:DJI",
-  NAS100: "NASDAQ:NDX",
-  SPX500: "SP:SPX",
-  GER40: "XETR:DAX",
-  UK100: "TVC:UKX",
+  US30: "OANDA:US30USD",
+  NAS100: "OANDA:NAS100USD",
+  SPX500: "OANDA:SPX500USD",
+  GER40: "OANDA:DE30EUR",
+  UK100: "OANDA:UK100GBP",
   FRA40: "EURONEXT:PX1",
-  JPN225: "TVC:NI225",
-  VIX: "CBOE:VIX",
+  JPN225: "OANDA:JP225USD",
+  VIX: "TVC:VIX",
   WTIUSD: "TVC:USOIL",
   XBRUSD: "TVC:UKOIL",
-  NGUSD: "TVC:NATGAS",
-  HGUSD: "TVC:COPPER",
+  NGUSD: "OANDA:NATGASUSD",
+  HGUSD: "OANDA:XCUUSD",
+  MATICUSD: "BINANCE:POLUSDT",
+  CORNUSD: "AMEX:CORN",
+  WEATUSD: "AMEX:WEAT",
+  SOYBUSD: "AMEX:SOYB",
+  JPM: "NYSE:JPM",
 };
 
 export function tradingViewSymbolFor(

@@ -8,6 +8,7 @@
     "start": "NODE_ENV=production node --env-file-if-exists=.env --import tsx server.ts",
     "stop:server": "lsof -ti:3101 | xargs kill -9",
     "stop:clean": "lsof -ti :3101 | xargs kill -9; rm -rf .next && npm run dev",
+    "verify:tradingview-symbols": "tsx scripts/verify-tradingview-symbols.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
     "db:generate": "prisma generate",

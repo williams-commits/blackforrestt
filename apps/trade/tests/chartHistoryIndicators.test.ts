@@ -17,14 +17,30 @@ import {
   fetchCandles,
   planCandleRequestRanges,
 } from "../src/server/engine/candleFetcher.js";
+import { AV_SYMBOL_MAP } from "../src/server/engine/alphavantageMap.js";
 import { FEED_SYMBOL_MAP } from "../src/server/engine/symbolMap.js";
+import { translateSymbol } from "../src/server/engine/genericFeed.js";
 import { tradingViewIntervalFor, tradingViewSymbolFor } from "../src/lib/tradingViewSymbols.js";
 
 test("TradingView symbols map known terminal instruments to chartable markets", () => {
   assert.equal(tradingViewSymbolFor("AUDCAD", "FOREX"), "OANDA:AUDCAD");
   assert.equal(tradingViewSymbolFor("BTCUSD", "CRYPTO"), "BINANCE:BTCUSDT");
-  assert.equal(tradingViewSymbolFor("US30", "INDEX"), "TVC:DJI");
+  assert.equal(tradingViewSymbolFor("US30", "INDEX"), "OANDA:US30USD");
   assert.equal(tradingViewSymbolFor("AAPL", "STOCK"), "NASDAQ:AAPL");
+  assert.equal(tradingViewSymbolFor("VIX", "INDEX"), "TVC:VIX");
+  assert.equal(tradingViewSymbolFor("CORNUSD", "COMMODITY"), "AMEX:CORN");
+  assert.equal(tradingViewSymbolFor("WEATUSD", "COMMODITY"), "AMEX:WEAT");
+  assert.equal(tradingViewSymbolFor("SOYBUSD", "COMMODITY"), "AMEX:SOYB");
+  assert.equal(tradingViewSymbolFor("MATICUSD", "CRYPTO"), "BINANCE:POLUSDT");
+  assert.equal(tradingViewSymbolFor("NGUSD", "COMMODITY"), "OANDA:NATGASUSD");
+  assert.equal(tradingViewSymbolFor("HGUSD", "COMMODITY"), "OANDA:XCUUSD");
+  assert.equal(tradingViewSymbolFor("JPN225", "INDEX"), "OANDA:JP225USD");
+  assert.equal(tradingViewSymbolFor("UK100", "INDEX"), "OANDA:UK100GBP");
+  assert.equal(tradingViewSymbolFor("GER40", "INDEX"), "OANDA:DE30EUR");
+  assert.equal(tradingViewSymbolFor("SPX500", "INDEX"), "OANDA:SPX500USD");
+  assert.equal(tradingViewSymbolFor("NAS100", "INDEX"), "OANDA:NAS100USD");
+  assert.equal(tradingViewSymbolFor("US30", "INDEX"), "OANDA:US30USD");
+  assert.equal(tradingViewSymbolFor("JPM", "STOCK"), "NYSE:JPM");
   assert.equal(tradingViewSymbolFor("UNKNOWN", "FOREX"), null);
 });
 
@@ -35,6 +51,41 @@ test("every configured terminal instrument has a TradingView chart symbol", () =
       `${instrument.symbol} should have a TradingView symbol`,
     );
   }
+});
+
+test("every configured instrument has mappings for each app feed adapter", () => {
+  const symbols = Object.keys(FEED_SYMBOL_MAP).sort();
+  assert.deepEqual(Object.keys(AV_SYMBOL_MAP).sort(), symbols);
+
+  for (const symbol of symbols) {
+    for (const mode of ["tickerlayer", "sifting", "lse"] as const) {
+      assert.ok(translateSymbol(symbol, mode), `${symbol} should map for ${mode}`);
+    }
+  }
+});
+
+test("new instruments use the intended provider tickers", () => {
+  assert.equal(FEED_SYMBOL_MAP.MATICUSD?.feedSymbol, "BINANCE:POLUSDT");
+  assert.equal(AV_SYMBOL_MAP.MATICUSD?.feedSymbol, "POL");
+  assert.deepEqual(translateSymbol("MATICUSD", "tickerlayer"), {
+    ticker: "POLUSD",
+    endpoint: "crypto",
+  });
+  assert.equal(FEED_SYMBOL_MAP.LTCUSD?.feedSymbol, "BINANCE:LTCUSDT");
+  assert.equal(FEED_SYMBOL_MAP.AMZN?.feedSymbol, "AMZN");
+  assert.equal(FEED_SYMBOL_MAP.CORNUSD?.feedSymbol, "CORN");
+  assert.deepEqual(translateSymbol("CORNUSD", "tickerlayer"), {
+    ticker: "CORN",
+    endpoint: "stock",
+  });
+  assert.deepEqual(translateSymbol("NGUSD", "tickerlayer"), {
+    ticker: "NATGAS/USD",
+    endpoint: "forex",
+  });
+  assert.deepEqual(translateSymbol("HGUSD", "tickerlayer"), {
+    ticker: "XCU/USD",
+    endpoint: "forex",
+  });
 });
 
 test("TradingView intervals map correctly and the initial chart uses 5 minutes", () => {

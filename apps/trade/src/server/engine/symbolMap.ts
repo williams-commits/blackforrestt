@@ -6,9 +6,8 @@
  * Conventions:
  *   Forex / Commodities → OANDA: prefix, underscore pair separator.
  *   Crypto              → BINANCE: prefix, no separator, USDT quote.
- *   Indices             → ETF proxy tickers (DIA / QQQ / SPY) — the Finnhub
- *                          free tier doesn't expose raw index data; ETFs that
- *                          track each index are the closest free alternative.
+ * Indices             → Finnhub OANDA CFDs where available, with ETF proxies
+ *                          for the US indices.
  *
  * Reverse map (Finnhub symbol → ours) is also built for fast lookup in the
  * WebSocket message handler, where we receive { s: "OANDA:EUR_USD", p, t }.
@@ -71,13 +70,28 @@ export const FEED_SYMBOL_MAP: Record<string, FeedSymbolEntry> = {
   DOGEUSD:  { symbol: "DOGEUSD",  feedSymbol: "BINANCE:DOGEUSDT",  candleEndpoint: "crypto", category: "CRYPTO" },
   LINKUSD:  { symbol: "LINKUSD",  feedSymbol: "BINANCE:LINKUSDT",  candleEndpoint: "crypto", category: "CRYPTO" },
   AVAXUSD:  { symbol: "AVAXUSD",  feedSymbol: "BINANCE:AVAXUSDT",  candleEndpoint: "crypto", category: "CRYPTO" },
-  MATICUSD: { symbol: "MATICUSD", feedSymbol: "BINANCE:MATICUSDT", candleEndpoint: "crypto", category: "CRYPTO" },
+  MATICUSD: { symbol: "MATICUSD", feedSymbol: "BINANCE:POLUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  LTCUSD:   { symbol: "LTCUSD",   feedSymbol: "BINANCE:LTCUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  BCHUSD:   { symbol: "BCHUSD",   feedSymbol: "BINANCE:BCHUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  DOTUSD:   { symbol: "DOTUSD",   feedSymbol: "BINANCE:DOTUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  UNIUSD:   { symbol: "UNIUSD",   feedSymbol: "BINANCE:UNIUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  ATOMUSD:  { symbol: "ATOMUSD",  feedSymbol: "BINANCE:ATOMUSDT",  candleEndpoint: "crypto", category: "CRYPTO" },
 
   // ── Stocks ───────────────────────────────────────────────────────────────
   AAPL: { symbol: "AAPL", feedSymbol: "AAPL", candleEndpoint: "stock", category: "STOCK" },
   MSFT: { symbol: "MSFT", feedSymbol: "MSFT", candleEndpoint: "stock", category: "STOCK" },
   NVDA: { symbol: "NVDA", feedSymbol: "NVDA", candleEndpoint: "stock", category: "STOCK" },
   TSLA: { symbol: "TSLA", feedSymbol: "TSLA", candleEndpoint: "stock", category: "STOCK" },
+  AMZN: { symbol: "AMZN", feedSymbol: "AMZN", candleEndpoint: "stock", category: "STOCK" },
+  GOOGL: { symbol: "GOOGL", feedSymbol: "GOOGL", candleEndpoint: "stock", category: "STOCK" },
+  META: { symbol: "META", feedSymbol: "META", candleEndpoint: "stock", category: "STOCK" },
+  AMD: { symbol: "AMD", feedSymbol: "AMD", candleEndpoint: "stock", category: "STOCK" },
+  JPM: { symbol: "JPM", feedSymbol: "JPM", candleEndpoint: "stock", category: "STOCK" },
+
+  // Listed commodity funds keep the chart and quote feed on the same market.
+  CORNUSD: { symbol: "CORNUSD", feedSymbol: "CORN", candleEndpoint: "stock", category: "COMMODITY" },
+  WEATUSD: { symbol: "WEATUSD", feedSymbol: "WEAT", candleEndpoint: "stock", category: "COMMODITY" },
+  SOYBUSD: { symbol: "SOYBUSD", feedSymbol: "SOYB", candleEndpoint: "stock", category: "COMMODITY" },
 };
 
 /** Reverse lookup: Finnhub symbol → our symbol. */

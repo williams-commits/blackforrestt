@@ -118,7 +118,7 @@ export function MarketMarkers({
               <div className="flex items-start gap-2">
                 <CircleHelp size={14} strokeWidth={1.8} aria-hidden className="mt-0.5 shrink-0 text-text-faint" />
                 <p className="text-[11px] leading-relaxed text-text-faint">
-                  This feed provides best bid and ask prices only. Order sizes and deeper liquidity levels are not available.
+                  This feed provides best bid and ask price.
                 </p>
               </div>
             </div>
@@ -242,9 +242,6 @@ export function MarketMarkers({
                 <span>{fmtPrice(profile.low, instrument.digits)} low</span>
                 <span>{fmtPrice(profile.low + profile.bucketSize * profile.volumes.length, instrument.digits)} high</span>
               </div>
-              <p className="mt-3 text-[10px] leading-relaxed text-text-faint">
-                Historical candle volume is grouped by closing-price range. It is not exchange order-book volume.
-              </p>
             </>
           ) : (
             <p className="mt-3 rounded-md bg-panel px-3 py-4 text-center text-xs text-text-faint" role="status">

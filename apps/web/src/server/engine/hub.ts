@@ -1616,7 +1616,7 @@ export const hub: Hub = hubGlobal.__blckforest_hub ?? new Hub();
 // Always cache on globalThis. The custom server (server.ts) and the Next.js
 // bundled API routes resolve this module through different import paths, so
 // without a shared global each bundle gets its own instance: server.ts
-// initializes one (45 instruments), the route handler gets a fresh empty one,
+// initializes one (58 instruments), the route handler gets a fresh empty one,
 // and hub.isReady() returns false forever → /api/health stays 503 → Caddy's
 // service_healthy dependency never resolves → ports 80/443 never open.
 hubGlobal.__blckforest_hub = hub;

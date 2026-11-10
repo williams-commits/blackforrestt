@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChartCandlestick,
+  Clock3,
   History,
   PanelBottomClose,
   PanelBottomOpen,
@@ -27,6 +28,7 @@ import { SimpleDialog } from "@/components/ui/Dialog";
 import { fmtPrice, fmtNum } from "@/lib/format";
 import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";
 import type { InstrumentView, PositionView } from "@/lib/types";
+import { formatNextMarketOpen } from "@/lib/marketHours";
 
 interface Props {
   instruments: InstrumentView[];
@@ -55,6 +57,10 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
   const [editingPosition, setEditingPosition] = useState<PositionView | null>(null);
   const dockRef = useRef<HTMLDivElement>(null);
 
+  const marketHoursFor = useCallback(
+    (symbol: string) => instruments.find((instrument) => instrument.symbol === symbol)?.marketHours,
+    [instruments],
+  );
   const digitsFor = (symbol: string) => instruments.find((i) => i.symbol === symbol)?.digits ?? 5;
   // Match AccountBar's floatingPl: profit + swap (excludes commission, which is
   // already booked into balance at order-open to avoid double-counting in equity).
@@ -152,6 +158,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
                 <OpenPositionCards
                   positions={positions}
                   digitsFor={digitsFor}
+                  marketHoursFor={marketHoursFor}
                   busy={busy}
                   setBusy={setBusy}
                   onEditProtection={setEditingPosition}
@@ -161,6 +168,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
                 <OpenPositionsTable
                   positions={positions}
                   digitsFor={digitsFor}
+                  marketHoursFor={marketHoursFor}
                   busy={busy}
                   setBusy={setBusy}
                   onEditProtection={setEditingPosition}
@@ -238,6 +246,14 @@ function SideBadge({ side, type }: { side: "BUY" | "SELL"; type: "CFD" | "STRIKE
   );
 }
 
+function marketExecutionStatus(marketHours: InstrumentView["marketHours"] | undefined): string | null {
+  if (!marketHours) return "Market status unavailable";
+  if (marketHours.canTrade) return null;
+  if (marketHours.isOpen) return "Waiting for a fresh quote";
+  const nextOpenLabel = formatNextMarketOpen(marketHours);
+  return nextOpenLabel ? `Market closed · opens ${nextOpenLabel}` : "Market closed";
+}
+
 /**
  * Phone layout for open positions. Each position is a full-width card: the
  * thumb-sized Close button sits at the right edge of every card so closing a
@@ -248,12 +264,14 @@ function SideBadge({ side, type }: { side: "BUY" | "SELL"; type: "CFD" | "STRIKE
 function OpenPositionCards({
   positions,
   digitsFor,
+  marketHoursFor,
   busy,
   setBusy,
   onEditProtection,
 }: {
   positions: PositionView[];
   digitsFor: (s: string) => number;
+  marketHoursFor: (s: string) => InstrumentView["marketHours"] | undefined;
   busy: string | null;
   setBusy: (v: string | null) => void;
   onEditProtection: (position: PositionView) => void;
@@ -270,6 +288,9 @@ function OpenPositionCards({
         const digits = digitsFor(p.symbol);
         const up = p.netProfit >= 0;
         const closing = busy === p.id;
+        const marketHours = marketHoursFor(p.symbol);
+        const canClose = marketHours?.canTrade ?? false;
+        const marketStatus = marketExecutionStatus(marketHours);
         return (
           <li
             key={p.id}
@@ -289,6 +310,12 @@ function OpenPositionCards({
                 </span>
                 <span className="whitespace-nowrap">{fmtTime(p.openedAt)}</span>
               </div>
+              {marketStatus && (
+                <span className="mt-1 inline-flex items-center gap-1 text-(length:--term-text-2xs) font-medium leading-tight text-text-faint">
+                  <Clock3 size={10} strokeWidth={1.8} aria-hidden />
+                  {marketStatus}
+                </span>
+              )}
               {p.type === "CFD" && (
                 <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-(length:--term-text-2xs) tnum text-text-faint">
                   <span>S/L {p.stopLoss != null ? fmtPrice(p.stopLoss, digits) : "—"}</span>
@@ -320,8 +347,9 @@ function OpenPositionCards({
                   type="button"
                   variant="destructive"
                   size="sm"
-                  disabled={closing}
+                  disabled={closing || !canClose}
                   aria-label={`Close ${p.symbol} position`}
+                  title={marketStatus ?? "Close position at the current market rate"}
                   onClick={(event) => { event.stopPropagation(); void close(p); }}
                   className="h-11 px-2.5 text-xs"
                 >
@@ -343,12 +371,14 @@ function OpenPositionCards({
 function OpenPositionsTable({
   positions,
   digitsFor,
+  marketHoursFor,
   busy,
   setBusy,
   onEditProtection,
 }: {
   positions: PositionView[];
   digitsFor: (s: string) => number;
+  marketHoursFor: (s: string) => InstrumentView["marketHours"] | undefined;
   busy: string | null;
   setBusy: (v: string | null) => void;
   onEditProtection: (position: PositionView) => void;
@@ -360,7 +390,21 @@ function OpenPositionsTable({
     () => [
       { accessorKey: "openedAt", header: "Time", meta: { cellClass: "hidden sm:table-cell", headerClass: "hidden sm:table-cell" }, cell: (info) => <span className="tnum text-text-muted">{fmtTime(info.getValue() as number)}</span> },
       { id: "type", header: "Type", cell: (info) => { const p = info.row.original; return <SideBadge side={p.side} type={p.type} />; } },
-      { accessorKey: "symbol", header: "Asset", cell: (info) => <span className="font-semibold"><SymbolLink symbol={info.getValue() as string} /></span> },
+      { accessorKey: "symbol", header: "Asset", cell: (info) => {
+        const symbol = info.getValue() as string;
+        const marketStatus = marketExecutionStatus(marketHoursFor(symbol));
+        return (
+          <div className="flex flex-col items-start">
+            <span className="font-semibold"><SymbolLink symbol={symbol} /></span>
+            {marketStatus && (
+              <span className="inline-flex items-center gap-1 text-(length:--term-text-2xs) font-medium leading-tight text-text-faint">
+                <Clock3 size={10} strokeWidth={1.8} aria-hidden />
+                {marketStatus}
+              </span>
+            )}
+          </div>
+        );
+      } },
       { accessorKey: "volume", header: "Volume", meta: { cellClass: "text-right", headerClass: "text-right" }, cell: (info) => <span className="tnum">{fmtNum(info.getValue() as number, 2)}</span> },
       { accessorKey: "openRate", header: "Open Rate", meta: { cellClass: "text-right", headerClass: "text-right" }, cell: (info) => <span className="tnum">{fmtPrice(info.getValue() as number, digitsFor(info.row.original.symbol))}</span> },
       { id: "stopLoss", header: "S/L", meta: { cellClass: "text-right hidden md:table-cell", headerClass: "text-right hidden md:table-cell" }, cell: (info) => { const p = info.row.original; return <span className="tnum text-text-muted">{p.stopLoss != null ? fmtPrice(p.stopLoss, digitsFor(p.symbol)) : "—"}</span>; } },
@@ -381,22 +425,29 @@ function OpenPositionsTable({
           <Pencil aria-hidden />
         </Button>
       ) : null; } },
-      { id: "close", header: "", cell: (info) => { const p = info.row.original; return (
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={busy === p.id}
-          aria-label={`Close ${p.symbol} position`}
-          onClick={(event) => { event.stopPropagation(); void close(p); }}
-          className="h-8 w-8 p-0 text-xs text-text-muted hover:bg-down/10 hover:text-down"
-        >
-          {busy === p.id ? "…" : <X aria-hidden />}
-        </Button>
-      ); } },
+      { id: "close", header: "", cell: (info) => {
+        const p = info.row.original;
+        const marketHours = marketHoursFor(p.symbol);
+        const canClose = marketHours?.canTrade ?? false;
+        const marketStatus = marketExecutionStatus(marketHours);
+        return (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            disabled={busy === p.id || !canClose}
+            aria-label={`Close ${p.symbol} position`}
+            title={marketStatus ?? "Close position at the current market rate"}
+            onClick={(event) => { event.stopPropagation(); void close(p); }}
+            className="h-8 w-8 p-0 text-xs text-text-muted hover:bg-down/10 hover:text-down"
+          >
+            {busy === p.id ? "…" : <X aria-hidden />}
+          </Button>
+        );
+      } },
     ],
     // close/busy are stable per render set; digitsFor identity is stable upstream
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [busy, digitsFor, onEditProtection],
+    [busy, digitsFor, marketHoursFor, onEditProtection],
   );
 
   return (

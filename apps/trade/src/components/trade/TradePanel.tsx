@@ -12,6 +12,7 @@ import { ChipGroup } from "@/components/ui/ChipGroup";
 import { SimpleTabs as Tabs } from "@/components/ui/Tabs";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { isExecutableQuote, quoteAgeMs } from "@/lib/marketFreshness";
+import { formatNextMarketOpen } from "@/lib/marketHours";
 import { Input } from "@/components/ui/Input";
 import { Slider } from "@/components/ui/slider";
 
@@ -90,7 +91,13 @@ export function TradePanel({
   const ask = quoteMatches ? quote.ask : instrument.ask;
   const currentQuoteAgeMs = quoteMatches ? quoteAgeMs(quote, now) : null;
   const hasFreshQuote = isExecutableQuote(quote, instrument.symbol, now);
-  const quoteReady = marketDataConnected && hasFreshQuote;
+  const quoteReady = marketDataConnected && hasFreshQuote && instrument.marketHours.canTrade;
+  const nextOpenLabel = formatNextMarketOpen(instrument.marketHours);
+  const marketStateLabel = !instrument.marketHours.isOpen
+    ? `Market closed${nextOpenLabel ? ` · opens ${nextOpenLabel}` : ""}`
+    : instrument.marketHours.canTrade
+      ? "Market open"
+      : "Market open · waiting for a fresh quote";
   const changePct = quoteMatches && quote ? quote.changePct : instrument.changePct;
   const changeIsPositive = changePct >= 0;
   const spread = ask - bid;
@@ -110,6 +117,14 @@ export function TradePanel({
 
   async function submit(side: PositionSide): Promise<void> {
     clearMessages();
+    if (!instrument.marketHours.isOpen) {
+      setValidationError(`The ${instrument.symbol} market is closed.${nextOpenLabel ? ` It reopens ${nextOpenLabel}.` : ""}`);
+      return;
+    }
+    if (!instrument.marketHours.canTrade) {
+      setValidationError("The market is open, but a fresh executable quote is required before placing an order.");
+      return;
+    }
     if (!quoteReady) {
       setValidationError(marketDataConnected
         ? "A fresh executable quote is required. Wait for the live connection to recover before submitting an order."
@@ -238,7 +253,7 @@ export function TradePanel({
         <div className="mt-3 flex items-center justify-between gap-2 px-1">
           <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${quoteReady ? "text-up" : "text-text-faint"}`}>
             <Radio size={11} strokeWidth={2} aria-hidden />
-            {quoteReady ? "Live executable quote" : marketDataConnected ? "Waiting for fresh quote" : "Market data offline"}
+            {!marketDataConnected ? "Market data offline" : quoteReady ? "Live executable quote" : marketStateLabel}
           </span>
           <span className={`shrink-0 text-[10px] font-medium tabular-nums ${changeIsPositive ? "text-up" : "text-down"}`}>
             {changeIsPositive ? "+" : ""}{changePct.toFixed(2)}% 24h
@@ -267,6 +282,7 @@ export function TradePanel({
           <button
             type="button"
             aria-pressed={armed === "SELL"}
+            disabled={!quoteReady}
             onClick={() => setArmed((current) => (current === "SELL" ? null : "SELL"))}
             className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg bg-down/10 px-2 py-2.5 transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
               armed === "SELL" ? "ring-2 ring-down" : "hover:bg-down/15"
@@ -281,6 +297,7 @@ export function TradePanel({
           <button
             type="button"
             aria-pressed={armed === "BUY"}
+            disabled={!quoteReady}
             onClick={() => setArmed((current) => (current === "BUY" ? null : "BUY"))}
             className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg bg-up/10 px-2 py-2.5 transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
               armed === "BUY" ? "ring-2 ring-up" : "hover:bg-up/15"
@@ -451,6 +468,11 @@ export function TradePanel({
           </div>
           <div className="space-y-1.5">
             <SummaryRow
+              label="Market session"
+              value={`${instrument.marketHours.venue} · ${marketStateLabel}`}
+              valueClass={quoteReady ? "text-up font-semibold" : "text-down font-semibold"}
+            />
+            <SummaryRow
               label="Quote freshness"
               value={!marketDataConnected ? "Offline" : currentQuoteAgeMs == null ? "Waiting" : `${(currentQuoteAgeMs / 1_000).toFixed(1)}s${hasFreshQuote ? "" : " · stale"}`}
               valueClass={quoteReady ? "text-up font-semibold" : "text-down font-semibold"}
@@ -472,7 +494,7 @@ export function TradePanel({
         {status === "accepted" && <span className="text-up">Accepted and open{lastAcceptedAt ? ` at ${new Date(lastAcceptedAt).toLocaleTimeString()}` : ""}</span>}
         {status === "failed" && <span className="text-down">Rejected or failed</span>}
         {status === "unknown" && <span className="text-down">Confirmation pending — retry the same order</span>}
-        {status === "idle" && <span className="text-text-muted">Ready for submission</span>}
+        {status === "idle" && <span className={quoteReady ? "text-text-muted" : "text-down"}>{quoteReady ? "Ready for submission" : marketStateLabel}</span>}
       </div>
 
       {/* ── Error ──────────────────────────────────────────────────────────── */}
@@ -508,7 +530,7 @@ export function TradePanel({
           </Button>
         </div>
         <p className="mt-2 rounded-md bg-panel-2 px-3 py-2 text-center text-(length:--term-text-2xs) leading-relaxed text-text-faint">
-          {!marketDataConnected ? "Orders disabled — reconnecting to market data" : !hasFreshQuote ? "Orders disabled — waiting for a fresh quote" : armed ? `${armed === "BUY" ? "Buy" : "Sell"} armed — confirm with the highlighted button` : type === "CFD" ? "CFD market order — accepted at the displayed executable rate" : `Strike order — settles in ${expiryMinutes} min`}
+          {!marketDataConnected ? "Orders disabled — reconnecting to market data" : !instrument.marketHours.isOpen ? marketStateLabel : !quoteReady ? "Orders disabled — waiting for a fresh quote" : armed ? `${armed === "BUY" ? "Buy" : "Sell"} armed — confirm with the highlighted button` : type === "CFD" ? "CFD market order — accepted at the displayed executable rate" : `Strike order — settles in ${expiryMinutes} min`}
         </p>
       </div>
     </div>

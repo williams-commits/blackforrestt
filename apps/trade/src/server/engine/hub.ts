@@ -14,6 +14,7 @@ import { userMutationMutex } from "../locks";
 import { isUserBlocked } from "../reconciliation";
 import { loadTradingRiskPolicy } from "../riskPolicy";
 import { resolveUserSettings } from "../userSettings";
+import { marketHoursForSymbol } from "../../lib/marketHours";
 import {
   appendAuditEvent,
   ensureSystemAccount,
@@ -217,7 +218,7 @@ class Hub {
   }
 
   instrumentView(state: InstrumentState): InstrumentView {
-    const quote = state.sim.getQuote();
+    const quote = this.quoteFor(state);
     return {
       symbol: state.symbol,
       name: state.name,
@@ -234,7 +235,21 @@ class Hub {
       ask: quote.ask,
       mid: quote.mid,
       changePct: quote.changePct,
+      marketHours: quote.marketHours,
     };
+  }
+
+  private quoteFor(state: InstrumentState): Quote {
+    const quoteTimestamp = this.marketDataTimestamps.get(state.symbol) ?? 0;
+    return {
+      ...state.sim.getQuote(),
+      time: quoteTimestamp,
+      marketHours: marketHoursForSymbol(state.symbol, Date.now(), quoteTimestamp),
+    };
+  }
+
+  private canExecuteMarket(state: InstrumentState): boolean {
+    return this.quoteFor(state).marketHours.canTrade;
   }
 
   /** Idempotently load durable state and start market services. */
@@ -511,8 +526,16 @@ class Hub {
   }
 
   private tickMarket(state: InstrumentState): void {
+    const now = Date.now();
+    if (!marketHoursForSymbol(state.symbol, now, 0).isOpen) {
+      this.broadcast({ kind: "quote", quote: this.quoteFor(state) });
+      return;
+    }
+    if (getMarketDataMode() === "simulation") {
+      this.marketDataTimestamps.set(state.symbol, now);
+    }
     const { updatedIntervals } = state.sim.tick();
-    const quote = state.sim.getQuote();
+    const quote = this.quoteFor(state);
     this.broadcast({ kind: "quote", quote });
 
     for (const interval of updatedIntervals) {
@@ -544,6 +567,7 @@ class Hub {
         if (!state) continue;
 
         const cfg = this.cfg(state);
+        const canExecute = this.canExecuteMarket(state);
         let markRate = state.sim.rateFor(position.side === "BUY" ? "SELL" : "BUY");
         const pnlPercent = userPnlPercent;
 
@@ -554,7 +578,7 @@ class Hub {
         }
 
         const withSwap = accrueSwap(position, cfg);
-        const marked = markPosition(withSwap, markRate, cfg);
+        const marked = markPosition(withSwap, markRate, cfg, Date.now(), canExecute);
         // Recompute the P/L percentage adjustment from gross (never
         // accumulated — see applyPnlAdjustment).
         marked.position = applyPnlAdjustment(marked.position, pnlPercent);
@@ -643,7 +667,12 @@ class Hub {
             break;
           }
 
-          const worst = positions.reduce((candidate, position) =>
+          const executable = positions.filter((position) => {
+            const state = this.instruments.get(position.symbol);
+            return state != null && this.canExecuteMarket(state);
+          });
+          if (executable.length === 0) break;
+          const worst = executable.reduce((candidate, position) =>
             position.netProfit.lessThan(candidate.netProfit) ? position : candidate,
           );
           const state = this.instruments.get(worst.symbol);
@@ -716,8 +745,17 @@ class Hub {
       if (input.volume > effectiveMaxLots) {
         throw new TradingError(`Order volume exceeds the ${effectiveMaxLots}-lot limit.`, "BLOCKED");
       }
-      const executableQuote = state.sim.getQuote();
-      if (Date.now() - executableQuote.time > policy.maxQuoteAgeMs) {
+      const executableQuote = this.quoteFor(state);
+      if (!executableQuote.marketHours.isOpen) {
+        throw new TradingError(
+          `The ${state.symbol} market is closed. New orders resume at the next session.`,
+          "BLOCKED",
+        );
+      }
+      if (
+        !executableQuote.marketHours.canTrade ||
+        Date.now() - executableQuote.time > policy.maxQuoteAgeMs
+      ) {
         throw new TradingError("The executable quote is stale. Wait for market data to recover.", "BLOCKED");
       }
 
@@ -1015,6 +1053,9 @@ class Hub {
       const current = positions[index];
       const state = this.instruments.get(current.symbol);
       if (!state) throw new TradingError("The position instrument is unavailable.", "CONFLICT");
+      if (!this.canExecuteMarket(state)) {
+        throw new TradingError("This position cannot be closed while its market is closed or waiting for a fresh quote.", "BLOCKED");
+      }
       const cfg = this.cfg(state);
       const closeRate = state.sim.rateFor(current.side === "BUY" ? "SELL" : "BUY");
       // Same dealer P/L adjustment the tick loop applies, so the booked close
@@ -1046,6 +1087,9 @@ class Hub {
       const current = positions[index];
       const state = this.instruments.get(current.symbol);
       if (!state) return null;
+      if (!this.canExecuteMarket(state)) {
+        throw new TradingError("This position cannot be closed while its market is closed or waiting for a fresh quote.", "BLOCKED");
+      }
       const cfg = this.cfg(state);
       const closeRate = state.sim.rateFor(current.side === "BUY" ? "SELL" : "BUY");
       // Same dealer P/L adjustment the tick loop applies, so the booked close
@@ -1145,6 +1189,10 @@ class Hub {
     const index = positions?.findIndex((position) => position.id === positionId) ?? -1;
     if (!positions || index < 0) return null;
     const position = positions[index];
+    const state = this.instruments.get(position.symbol);
+    if (!state || !this.canExecuteMarket(state)) {
+      throw new TradingError("This position cannot be closed while its market is closed or waiting for a fresh quote.", "BLOCKED");
+    }
 
     const margin = marginFor(position.volume, cfg.marginPerLot);
     const allInNet = position.netProfit;
@@ -1573,7 +1621,7 @@ class Hub {
       symbol,
       interval,
       candles: state?.sim.getCandles(interval, 300) ?? [],
-      quote: state?.sim.getQuote() ?? null,
+      quote: state ? this.quoteFor(state) : null,
       instruments: this.listInstruments().map((instrument) => this.instrumentView(instrument)),
       positions,
       account: null as AccountMetricsView | null,

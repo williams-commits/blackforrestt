@@ -225,13 +225,17 @@ function TradingViewChart({
     script.addEventListener("load", handleLoad);
     script.addEventListener("error", handleError);
 
-    widgetContainer.append(widget, script);
+    widgetContainer.append(widget);
     container.replaceChildren(widgetContainer);
+    const scriptTimer = window.setTimeout(() => {
+      widgetContainer.append(script);
+    }, 0);
 
     return () => {
+      window.clearTimeout(scriptTimer);
       script.removeEventListener("load", handleLoad);
       script.removeEventListener("error", handleError);
-      container.replaceChildren();
+      widgetContainer.remove();
     };
   }, [interval, retry, symbol, theme]);
 

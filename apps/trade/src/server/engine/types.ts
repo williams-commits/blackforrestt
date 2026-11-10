@@ -5,6 +5,8 @@
  * and the JSON payloads exchanged over the WebSocket.
  */
 
+import type { MarketHoursView } from "../../lib/marketHours";
+
 export type PositionType = "CFD" | "STRIKE";
 export type PositionSide = "BUY" | "SELL";
 export type PositionStatus = "OPEN" | "CLOSED";
@@ -32,6 +34,7 @@ export interface Quote {
   high24h: number;
   low24h: number;
   changePct: number;
+  marketHours: MarketHoursView;
 }
 
 /** Instrument metadata + live quote, as seen by the client. */
@@ -53,6 +56,7 @@ export interface InstrumentView {
   ask: number;
   mid: number;
   changePct: number;
+  marketHours: MarketHoursView;
 }
 
 /** A position snapshot sent over the wire. */

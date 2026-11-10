@@ -8,6 +8,7 @@ import { fmtPrice, fmtPct } from "@/lib/format";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import type { InstrumentCategory, InstrumentView } from "@/lib/types";
 import { Input } from "@/components/ui/Input";
+import { formatNextMarketOpen } from "@/lib/marketHours";
 
 interface Props {
   /** In-place selection (terminal): switch instrument without navigation. */
@@ -111,6 +112,7 @@ export function InstrumentSelector({ activeSymbol, onSelect, headerAction }: Pro
     const up = i.changePct >= 0;
     const active = i.symbol === activeSymbol;
     const isFavorite = favorites.includes(i.symbol);
+    const nextOpenLabel = formatNextMarketOpen(i.marketHours);
     return (
       <div key={i.symbol} className="group/row">
         <div
@@ -132,6 +134,13 @@ export function InstrumentSelector({ activeSymbol, onSelect, headerAction }: Pro
                 <div className="text-(length:--term-text-2xs) text-text-faint truncate leading-tight">
                   {i.name}
                 </div>
+                {i.marketHours.state !== "OPEN" && (
+                  <div className="truncate text-(length:--term-text-2xs) font-medium leading-tight text-text-faint">
+                    {i.marketHours.isOpen
+                      ? "Waiting for fresh quote"
+                      : `Closed${nextOpenLabel ? ` · opens ${nextOpenLabel}` : ""}`}
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex shrink-0 flex-col items-end leading-tight">

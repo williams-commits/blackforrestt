@@ -1,5 +1,7 @@
 /** Client-side shared types for the forex broker UI. */
 
+import type { MarketHoursView } from "./marketHours";
+
 export type PositionType = "CFD" | "STRIKE";
 export type PositionSide = "BUY" | "SELL";
 export type PositionStatus = "OPEN" | "CLOSED";
@@ -32,6 +34,7 @@ export interface Quote {
   high24h: number;
   low24h: number;
   changePct: number;
+  marketHours: MarketHoursView;
 }
 
 export type InstrumentCategory = "FOREX" | "COMMODITY" | "INDEX" | "CRYPTO" | "STOCK";
@@ -52,6 +55,7 @@ export interface InstrumentView {
   ask: number;
   mid: number;
   changePct: number;
+  marketHours: MarketHoursView;
 }
 
 export interface AccountMetricsView {

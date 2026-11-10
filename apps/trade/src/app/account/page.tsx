@@ -8,6 +8,7 @@ import { AccountUserMenu } from "@/components/account/AccountUserMenu";
 import { TradeSearchButton } from "@/components/GlobalSearchPalette";
 import { MobileTabBar } from "@/components/trade/MobileTabBar";
 import type { InstrumentView } from "@/lib/types";
+import { marketHoursForSymbol } from "@/lib/marketHours";
 import { ADDRESS_DOCUMENT_TYPES, IDENTITY_DOCUMENT_TYPES } from "@/lib/kyc";
 import { resolveUserSettings } from "@/server/userSettings";
 import { adminMessageThreads, countUnreadDirectMessages } from "@/server/adminUserManagement";
@@ -134,6 +135,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       ask: Number(i.basePrice),
       mid: Number(i.basePrice),
       changePct: 0,
+      marketHours: marketHoursForSymbol(i.symbol, Date.now(), 0),
     };
   }
 
@@ -268,6 +270,5 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
     </div>
   );
 }
-
 
 

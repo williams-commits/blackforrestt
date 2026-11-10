@@ -232,7 +232,13 @@ export interface MarkResult {
   realized: Prisma.Decimal; // realized net PnL if closed
 }
 
-export function markPosition(pos: Position, markRate: number, instrument: InstrumentCfg, now = Date.now()): MarkResult {
+export function markPosition(
+  pos: Position,
+  markRate: number,
+  instrument: InstrumentCfg,
+  now = Date.now(),
+  evaluateExits = true,
+): MarkResult {
   const updated: Position = { ...pos, currentRate: round(markRate, instrument) };
   const entry = pos.type === "STRIKE" && pos.strikeRate != null ? pos.strikeRate : pos.openRate;
   const pips = pipsBetween(pos.side, entry, markRate, instrument.pipSize);
@@ -246,7 +252,7 @@ export function markPosition(pos: Position, markRate: number, instrument: Instru
   let closeReason: MarkResult["closeReason"];
 
   // Stop loss / take profit (only for CFD; STRIKE settles at expiry).
-  if (pos.type === "CFD") {
+  if (evaluateExits && pos.type === "CFD") {
     if (pos.stopLoss != null) {
       const hit = pos.side === "BUY" ? markRate <= pos.stopLoss : markRate >= pos.stopLoss;
       if (hit) {
@@ -264,7 +270,7 @@ export function markPosition(pos: Position, markRate: number, instrument: Instru
   }
 
   // STRIKE expiry settlement.
-  if (pos.type === "STRIKE" && pos.openedTillMs != null && now >= pos.openedTillMs) {
+  if (evaluateExits && pos.type === "STRIKE" && pos.openedTillMs != null && now >= pos.openedTillMs) {
     shouldClose = true;
     closeReason = "EXPIRY";
   }

@@ -13,6 +13,7 @@
  */
 import type { Candle, CandleInterval, Quote } from "./types";
 import { INTERVAL_SECONDS } from "./types";
+import { marketHoursForSymbol } from "../../lib/marketHours";
 
 export interface InstrumentConfig {
   symbol: string;
@@ -239,13 +240,13 @@ export class ForexSimulator {
   }
 
   /** Advance one tick (called by the hub on its interval). */
-  tick(): { updatedIntervals: CandleInterval[] } {
+  tick(advanceMarket = true): { updatedIntervals: CandleInterval[] } {
     const nowSec = Math.floor(Date.now() / 1000);
     const nowMs = Date.now();
 
     // Only run the random walk if we DON'T have a recent live price.
     // When in live mode, mid is already set by setPrice() from the feed.
-    if (!this.hasReceivedLivePrice) {
+    if (advanceMarket && !this.hasReceivedLivePrice) {
       // Mean-reverting random walk (Ornstein-Uhlenbeck-ish) per second.
       const dt = 1 / (365 * 24 * 3600);
       const sigma = this.vol * Math.sqrt(dt);
@@ -304,16 +305,18 @@ export class ForexSimulator {
     const bid = round(this.mid - this.spread / 2, this.tickSize);
     const ask = round(this.mid + this.spread / 2, this.tickSize);
     const changePct = this.open24h > 0 ? ((this.mid - this.open24h) / this.open24h) * 100 : 0;
+    const time = Date.now();
     return {
       symbol: this.symbol,
       bid,
       ask,
       mid: this.mid,
-      time: Date.now(),
+      time,
       open24h: this.open24h,
       high24h: this.high24h,
       low24h: this.low24h,
       changePct,
+      marketHours: marketHoursForSymbol(this.symbol, time, time),
     };
   }
 

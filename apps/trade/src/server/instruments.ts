@@ -1,6 +1,7 @@
 import { hub } from "@/server/engine/hub";
 import { prisma } from "@/server/db";
 import type { InstrumentView } from "@/lib/types";
+import { marketHoursForSymbol } from "@/lib/marketHours";
 
 /**
  * Server instrument list for terminal entry points (`/` and `/trade/[symbol]`):
@@ -33,5 +34,6 @@ export async function listInstrumentViews(): Promise<InstrumentView[]> {
     ask: Number(r.basePrice),
     mid: Number(r.basePrice),
     changePct: 0,
+    marketHours: marketHoursForSymbol(r.symbol, Date.now(), 0),
   }));
 }

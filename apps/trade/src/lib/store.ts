@@ -91,6 +91,7 @@ export const useForexStore = create<ForexState>((set) => ({
               ask: quote.ask,
               mid: quote.mid,
               changePct: quote.changePct,
+              marketHours: quote.marketHours,
             }
           : instrument,
       ),

@@ -182,7 +182,7 @@ export function Dashboard({
         {/* Market discovery rail — desktop only; collapses to a slim strip. */}
         <aside className="hidden min-h-0 lg:block">
           {watchlistOpen ? (
-            <div className="flex h-full flex-col bg-panel">
+            <div className="flex h-full flex-col bg-canvas border-r border-border-soft">
               <InstrumentSelector
                 activeSymbol={activeInstrument.symbol}
                 onSelect={switchInstrument}

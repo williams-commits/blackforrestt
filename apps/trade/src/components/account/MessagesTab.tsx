@@ -164,7 +164,7 @@ export function MessagesTab() {
                 <span className={`px-1 text-xs font-semibold ${mine ? "text-muted-foreground" : "text-muted-foreground"}`}>
                   {mine ? "You" : `Support · ${message.senderName}`}
                 </span>
-                <div className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${mine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
+                <div className={`wrap-break-words rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${mine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
                   {message.body}
                   <div className={`mt-1 flex items-center justify-end gap-1.5 text-xs ${mine ? "opacity-60" : "text-muted-foreground"}`}>
                     <span className="tnum">{fmtDateTime(message.createdAt)}</span>
@@ -189,7 +189,7 @@ export function MessagesTab() {
         </div>
       )}
 
-      <form onSubmit={send} className="flex items-end gap-2 border-t border-border p-3">
+      <form onSubmit={send} className="flex flex-col items-stretch gap-2 border-t border-border p-3 sm:flex-row sm:items-end">
         <Textarea
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
@@ -203,9 +203,9 @@ export function MessagesTab() {
           maxLength={4000}
           placeholder="Type a message… (Enter to send, Shift+Enter for a new line)"
           aria-label="Message body"
-          className="flex-1 resize-none"
+          className="w-full min-w-0 flex-1 resize-none"
         />
-        <Button type="submit" size="sm" variant="default" loading={sending} disabled={!draft.trim()}><Send size={12} strokeWidth={2} aria-hidden /> Send</Button>
+        <Button type="submit" size="sm" variant="default" loading={sending} disabled={!draft.trim()} className="w-full sm:w-auto"><Send size={12} strokeWidth={2} aria-hidden /> Send</Button>
       </form>
     </div>
   );

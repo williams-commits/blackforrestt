@@ -121,7 +121,7 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
       filters={
         <>
           <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "ALL" | "OPEN" | "CLOSED")}>
-            <SelectTrigger size="sm" className="w-32" aria-label="Filter positions by status">
+            <SelectTrigger size="sm" className="w-full md:w-32" aria-label="Filter positions by status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -133,7 +133,7 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
             </SelectContent>
           </Select>
           <Select value={symbolFilter} onValueChange={setSymbolFilter}>
-            <SelectTrigger size="sm" className="w-37.5" aria-label="Filter by symbol">
+            <SelectTrigger size="sm" className="w-full md:w-37.5" aria-label="Filter by symbol">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

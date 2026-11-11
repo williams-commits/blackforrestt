@@ -114,32 +114,34 @@ export function ReferralTab() {
   return (
     <div className="space-y-8">
       <Card>
-        <CardHeader>
+        <CardHeader className="grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto]">
           <CardTitle className="flex items-center gap-2">
             <Share2 size={16} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />
             Your Referral Link
           </CardTitle>
           <CardDescription>Share this link. When your referral makes their first deposit, you both earn a bonus.</CardDescription>
-          <div className="flex items-center gap-2 pt-2">
-            <Input
-              readOnly
-              value={`https://${data.link}`}
-              className="h-10 flex-1 truncate font-mono text-sm"
-              onClick={(e) => (e.target as HTMLInputElement).select()}
-              aria-label="Referral link"
-              startIcon={<Share2 size={13} strokeWidth={2} />}
-            />
+          <div className="col-span-full flex min-w-0 flex-col gap-2 pt-2 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1">
+              <Input
+                readOnly
+                value={`https://${data.link}`}
+                className="h-10 truncate font-mono text-sm"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+                aria-label="Referral link"
+                startIcon={<Share2 size={13} strokeWidth={2} />}
+              />
+            </div>
             <Button
               type="button"
               variant="default"
               onClick={() => void copyLink()}
-              className="h-10 shrink-0"
+              className="h-10 w-full shrink-0 sm:w-auto"
               aria-label="Copy referral link"
             >
               {copied ? <><Check size={14} strokeWidth={2.5} aria-hidden /> Copied</> : <><Copy size={14} strokeWidth={2} aria-hidden /> Copy</>}
             </Button>
           </div>
-          <CardAction className="items-center gap-2 text-sm">
+          <CardAction className="col-start-1 row-start-3 row-span-1 justify-self-start items-center gap-2 text-sm sm:col-start-2 sm:row-start-1 sm:row-span-2 sm:justify-self-end">
             <span className="text-muted-foreground">Code:</span>
             <Badge variant="secondary" className="font-mono tracking-wide">{data.code}</Badge>
           </CardAction>

@@ -393,7 +393,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
               <p className="text-xs text-muted-foreground">For PCI safety, never enter a full card number or CVV. Only the brand and final four digits are collected.</p>
               {!isDeposit && <p className="text-xs text-muted-foreground">Card withdrawals are refunds: use the original verified card deposit reference — the brand and last four digits must match an approved card deposit on your account.</p>}
               <Input required maxLength={120} value={card.cardholderName} onChange={(e) => setCard((v) => ({...v, cardholderName:e.target.value}))} placeholder="Cardholder name" aria-label="Cardholder name" className="h-10" startIcon={<UserRound size={13} strokeWidth={2} aria-hidden />} />
-              <div className="grid grid-cols-2 gap-2"><Select value={card.cardBrand} onValueChange={(value) => setCard((v)=>({...v,cardBrand:value}))}>
+              <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2"><Select value={card.cardBrand} onValueChange={(value) => setCard((v)=>({...v,cardBrand:value}))}>
                   <SelectTrigger aria-label="Card brand" className="h-10" startIcon={<CreditCard size={13} strokeWidth={2} aria-hidden />}><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="VISA">VISA</SelectItem><SelectItem value="MASTERCARD">MASTERCARD</SelectItem><SelectItem value="AMEX">AMEX</SelectItem><SelectItem value="OTHER">OTHER</SelectItem></SelectContent>
                 </Select><Input required inputMode="numeric" pattern="\d{4}" maxLength={4} value={card.last4} onChange={(e)=>setCard((v)=>({...v,last4:e.target.value.replace(/\D/g,"").slice(0,4)}))} placeholder="Last 4 digits" aria-label="Last four card digits" className="h-10" startIcon={<Hash size={13} strokeWidth={2} aria-hidden />} /></div>
@@ -402,7 +402,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
             {method === "BANK_TRANSFER" && <>
               <Input required maxLength={120} value={bank.accountName} onChange={(e)=>setBank((v)=>({...v,accountName:e.target.value}))} placeholder={isDeposit ? "Sender account name" : "Beneficiary account name"} aria-label="Account name" className="h-10" startIcon={<UserRound size={13} strokeWidth={2} aria-hidden />} />
               {!isDeposit && <Input required maxLength={128} value={bank.accountNumber} onChange={(e)=>setBank((v)=>({...v,accountNumber:e.target.value}))} placeholder="Account number or IBAN" aria-label="Account number or IBAN" className="h-10" startIcon={<Landmark size={13} strokeWidth={2} aria-hidden />} />}
-              <div className="grid grid-cols-[1fr_100px] gap-2"><Input required maxLength={120} value={bank.institution} onChange={(e)=>setBank((v)=>({...v,institution:e.target.value}))} placeholder="Bank / institution" aria-label="Bank or institution" className="h-10 min-w-0" startIcon={<Landmark size={13} strokeWidth={2} aria-hidden />} /><Input required maxLength={2} value={bank.country} onChange={(e)=>setBank((v)=>({...v,country:e.target.value.toUpperCase()}))} placeholder="US" aria-label="Country code" className="h-10 uppercase" /></div>
+              <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-[minmax(0,1fr)_100px]"><Input required maxLength={120} value={bank.institution} onChange={(e)=>setBank((v)=>({...v,institution:e.target.value}))} placeholder="Bank / institution" aria-label="Bank or institution" className="h-10 min-w-0" startIcon={<Landmark size={13} strokeWidth={2} aria-hidden />} /><Input required maxLength={2} value={bank.country} onChange={(e)=>setBank((v)=>({...v,country:e.target.value.toUpperCase()}))} placeholder="US" aria-label="Country code" className="h-10 uppercase" /></div>
               {isDeposit ? <Input required maxLength={160} value={bank.transferReference} onChange={(e)=>setBank((v)=>({...v,transferReference:e.target.value}))} placeholder="Bank transfer reference" aria-label="Bank transfer reference" className="h-10" startIcon={<Receipt size={13} strokeWidth={2} aria-hidden />} /> : <Input maxLength={64} value={bank.routingCode} onChange={(e)=>setBank((v)=>({...v,routingCode:e.target.value}))} placeholder="Routing / SWIFT / BIC (optional)" aria-label="Routing or SWIFT code" className="h-10" startIcon={<Hash size={13} strokeWidth={2} aria-hidden />} />}
             </>}
             {method === "CRYPTO" && <>
@@ -476,7 +476,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                   select, not free text. Deposits keep free entry unless admin
                   wallets are configured (wallet selection drives the values). */}
               {!isDeposit ? (
-                <div className="grid grid-cols-[150px_1fr] gap-2">
+                <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-[150px_minmax(0,1fr)]">
                   <Select
                     value={cryptoDetails.asset}
                     onValueChange={(asset) => {
@@ -502,7 +502,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                   </Select>
                 </div>
               ) : !(walletAddresses.length > 0) && (
-                <div className="grid grid-cols-[150px_1fr] gap-2">
+                <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-[150px_minmax(0,1fr)]">
                   <Select value={cryptoDetails.asset} onValueChange={(asset)=>{setWalletIndex(null); setCryptoDetails((v)=>({...v,asset}));}}>
                       <SelectTrigger aria-label="Crypto asset" className="h-10 w-full" startIcon={<Bitcoin size={13} strokeWidth={2} aria-hidden />}><SelectValue /></SelectTrigger>
                       <SelectContent><SelectItem value="USDT">USDT</SelectItem><SelectItem value="USDC">USDC</SelectItem><SelectItem value="BTC">BTC</SelectItem><SelectItem value="ETH">ETH</SelectItem></SelectContent>

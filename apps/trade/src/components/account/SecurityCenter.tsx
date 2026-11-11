@@ -188,17 +188,17 @@ export function SecurityCenter() {
       <CardContent className="space-y-5">
         {/* ── MFA enrollment ── */}
         {!enabled && !secret && (
-          <div className="flex gap-2">
-            <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Current password" aria-label="Current password for MFA enrollment" className="h-10 flex-1" />
-            <Button type="button" loading={loading} onClick={() => void startEnrollment()}><ShieldCheck size={14} strokeWidth={2} aria-hidden /> Start MFA setup</Button>
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+            <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Current password" aria-label="Current password for MFA enrollment" className="h-10 min-w-0 flex-1" />
+            <Button type="button" loading={loading} onClick={() => void startEnrollment()} className="w-full sm:w-auto"><ShieldCheck size={14} strokeWidth={2} aria-hidden /> Start MFA setup</Button>
           </div>
         )}
       {secret && (
         <div className="space-y-3 rounded border border-primary/30 bg-primary/10 p-3">
           <p className="break-all font-mono text-xs">{secret}</p>
-          <div className="flex gap-2">
-            <Input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="Six-digit code" aria-label="Authenticator code" className="h-10 flex-1" />
-            <Button type="button" loading={loading} onClick={() => void confirmEnrollment()}><ShieldCheck size={14} strokeWidth={2} aria-hidden /> Enable MFA</Button>
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+            <Input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="Six-digit code" aria-label="Authenticator code" className="h-10 min-w-0 flex-1" />
+            <Button type="button" loading={loading} onClick={() => void confirmEnrollment()} className="w-full sm:w-auto"><ShieldCheck size={14} strokeWidth={2} aria-hidden /> Enable MFA</Button>
           </div>
         </div>
       )}
@@ -223,7 +223,7 @@ export function SecurityCenter() {
 
       {/* ── Active sessions ── */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
           <div>
             <h4 className="text-xs font-semibold text-foreground">Active sessions</h4>
             <p className="text-xs text-muted-foreground">
@@ -237,6 +237,7 @@ export function SecurityCenter() {
               variant="destructive"
               loading={loading}
               onClick={() => void revokeOthers()}
+              className="w-full sm:w-auto"
             >
               <LogOut size={13} strokeWidth={2} aria-hidden /> Sign out all others ({otherCount})
             </Button>

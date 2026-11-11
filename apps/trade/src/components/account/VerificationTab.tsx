@@ -132,11 +132,11 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
                 <Alert tone="err">Previous submission rejected: {kyc.note}</Alert>
               ) : null}
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="First name" name="firstName" placeholder="e.g. Alex" icon={<UserRound size={13} strokeWidth={2} />} defaultValue={kyc?.firstName ?? ""} required maxLength={100} />
                 <Field label="Last name" name="lastName" placeholder="e.g. Mercer" icon={<UserRound size={13} strokeWidth={2} />} defaultValue={kyc?.lastName ?? ""} required maxLength={100} />
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field
                   label="Date of birth"
                   name="dob"
@@ -145,7 +145,7 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
                   min={dateYearsAgo(120)}
                   max={dateYearsAgo(18)}
                 />
-                <div>
+                <div className="min-w-0">
                   <Label htmlFor="country-field" className="text-xs font-medium text-muted-foreground">Country</Label>
                   <Select name="country" defaultValue="">
                     <SelectTrigger id="country-field" className="h-10 w-full" startIcon={<Globe size={13} strokeWidth={2} aria-hidden />}>
@@ -160,12 +160,12 @@ export function VerificationTab({ kyc, checklist, onSubmitted }: Props) {
                 </div>
               </div>
               <Field label="Address" name="address" placeholder="Street and number" icon={<MapPin size={13} strokeWidth={2} />} required maxLength={200} />
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="City" name="city" placeholder="e.g. London" icon={<Building2 size={13} strokeWidth={2} />} required maxLength={100} />
                 <Field label="Postal code" name="postalCode" placeholder="e.g. EC1A 1BB" icon={<Hash size={13} strokeWidth={2} />} maxLength={32} />
               </div>
 
-                <div>
+                <div className="min-w-0">
                   <Label htmlFor={docTypeId} className="text-xs font-medium text-muted-foreground">
                     Document type
                   </Label>
@@ -364,7 +364,7 @@ function Field({
 }) {
   const id = useId();
   return (
-    <div>
+    <div className="min-w-0">
       <Label htmlFor={id} className="text-xs font-medium text-muted-foreground">
         {label}
       </Label>
@@ -378,6 +378,7 @@ function Field({
         min={min}
         max={max}
         maxLength={maxLength}
+        className="h-10 w-full min-w-0"
       />
       ) : (
       <Input

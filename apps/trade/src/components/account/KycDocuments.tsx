@@ -182,7 +182,7 @@ export function KycDocuments() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] sm:items-end">
-          <div>
+          <div className="min-w-0">
             <Label htmlFor={selectId} className="text-xs font-medium text-muted-foreground">Document type</Label>
             <Select value={selectedType} onValueChange={(value) => setSelectedType(value as KycDocumentType)}>
               <SelectTrigger id={selectId} className="h-10 w-full" startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}>
@@ -206,17 +206,17 @@ export function KycDocuments() {
               </SelectContent>
             </Select>
           </div>
-          <div>
+          <div className="min-w-0">
             <Label htmlFor={fileId} className="text-xs font-medium text-muted-foreground">File</Label>
             <input
               id={fileId}
               type="file"
               accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
               onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-              className="block h-10 transition-colors file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-xs file:text-muted-foreground"
+              className="block h-10 w-full min-w-0 max-w-full text-xs transition-colors file:mr-2 file:rounded-md file:border-0 file:bg-muted file:px-2 file:py-1.5 file:text-xs file:text-muted-foreground"
             />
           </div>
-          <Button type="button" variant="default" loading={loading} loadingLabel="Uploading" onClick={() => void upload()}>
+          <Button type="button" variant="default" loading={loading} loadingLabel="Uploading" onClick={() => void upload()} className="w-full sm:w-auto">
             <Upload size={13} strokeWidth={2} aria-hidden /> Upload and verify
           </Button>
         </div>

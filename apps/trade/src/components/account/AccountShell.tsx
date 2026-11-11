@@ -419,7 +419,7 @@ export function AccountShell(props: Props) {
           </Alert>
         )}
 
-        <div role="tabpanel" aria-label={activeTabLabel}>
+        <div role="tabpanel" aria-label={activeTabLabel} className="min-w-0">
 
         {tab === "overview" && (
           <AccountOverview

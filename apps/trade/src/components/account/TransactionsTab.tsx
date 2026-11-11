@@ -148,7 +148,7 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
         filters={
           <>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "ALL" | Txn["status"])}>
-              <SelectTrigger size="sm" className="w-36" aria-label="Filter transactions by status">
+              <SelectTrigger size="sm" className="w-full md:w-36" aria-label="Filter transactions by status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -161,13 +161,18 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-1.5">
-              <DateInput value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="From date" className="h-8 w-35" />
-              <span className="text-xs text-muted-foreground">→</span>
-              <DateInput value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="To date" className="h-8 w-35" />
+            <div className="grid w-full min-w-0 grid-cols-1 gap-2 md:w-auto md:grid-cols-2 md:items-center">
+              <label className="min-w-0 space-y-1 md:min-w-35">
+                <span className="text-xs text-muted-foreground md:sr-only">From date</span>
+                <DateInput value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="From date" className="h-8 w-full min-w-0" />
+              </label>
+              <label className="min-w-0 space-y-1 md:min-w-35">
+                <span className="text-xs text-muted-foreground md:sr-only">To date</span>
+                <DateInput value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="To date" className="h-8 w-full min-w-0" />
+              </label>
             </div>
             <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as "ALL" | Txn["type"])}>
-              <SelectTrigger size="sm" className="w-40" aria-label="Filter by type">
+              <SelectTrigger size="sm" className="w-full md:w-40" aria-label="Filter by type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

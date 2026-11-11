@@ -241,7 +241,7 @@ export function PaymentTimeline() {
         filters={
           <>
             <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as "ALL" | "DEPOSIT" | "WITHDRAWAL")}>
-              <SelectTrigger size="sm" className="w-36" aria-label="Filter payment requests by type">
+              <SelectTrigger size="sm" className="w-full md:w-36" aria-label="Filter payment requests by type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

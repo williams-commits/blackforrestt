@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/Alert";
 import { Bell, CheckCheck, ChevronDown, MessageCircle, X } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ResponsiveFilters } from "@/components/ui/ResponsiveFilters";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";
@@ -147,20 +148,22 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
           Notifications
         </CardTitle>
         <CardDescription>Your full notification history — available whenever you sign in.</CardDescription>
-        <Select value={group} onValueChange={(value) => { setGroup(value); setPage(1); setAccumulated([]); }}>
-          <SelectTrigger size="sm" className="w-48" aria-label="Filter notifications by category">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {Object.entries(GROUP_LABELS).map(([key, label]) => (
-                <SelectItem key={key} value={key}>
-                  {`${label}${groupCounts[key] > 0 ? ` · ${groupCounts[key] > 99 ? "99+" : groupCounts[key]}` : ""}`}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+        <ResponsiveFilters className="col-span-full flex min-w-0 flex-col gap-2 md:block">
+          <Select value={group} onValueChange={(value) => { setGroup(value); setPage(1); setAccumulated([]); }}>
+            <SelectTrigger size="sm" className="w-full md:w-48" aria-label="Filter notifications by category">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {Object.entries(GROUP_LABELS).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {`${label}${groupCounts[key] > 0 ? ` · ${groupCounts[key] > 99 ? "99+" : groupCounts[key]}` : ""}`}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </ResponsiveFilters>
         {unreadCount > 0 && (
           <CardAction className="flex items-center gap-2">
             <Badge className="bg-primary text-primary-foreground">{unreadCount} unread</Badge>

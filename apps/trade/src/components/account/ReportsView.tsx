@@ -139,17 +139,22 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
           <>
             {/* Server mode: dates are submitted with the filter form and applied
                 to the list, pagination, and summary alike. Local mode: live filtering. */}
-            <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 sm:w-auto">
-              <DateInput value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="Closed after" className="h-8 w-full min-w-0 sm:w-35" />
-              <span className="text-xs text-muted-foreground">→</span>
-              <DateInput value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="Closed before" className="h-8 w-full min-w-0 sm:w-35" />
+            <div className="grid w-full min-w-0 grid-cols-1 gap-2 md:w-auto md:grid-cols-2 md:items-center">
+              <label className="min-w-0 space-y-1 md:min-w-35">
+                <span className="text-xs text-muted-foreground md:sr-only">Closed after</span>
+                <DateInput value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="Closed after" className="h-8 w-full min-w-0" />
+              </label>
+              <label className="min-w-0 space-y-1 md:min-w-35">
+                <span className="text-xs text-muted-foreground md:sr-only">Closed before</span>
+                <DateInput value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="Closed before" className="h-8 w-full min-w-0" />
+              </label>
             </div>
             {server ? (
-              <form action="/reports" method="get" className="flex flex-wrap items-center gap-2">
+              <form action="/reports" method="get" className="flex w-full min-w-0 flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
                 {fromDate && <input type="hidden" name="from" value={fromDate} />}
                 {toDate && <input type="hidden" name="to" value={toDate} />}
                 <Select name="symbol" defaultValue={symbol}>
-                  <SelectTrigger size="sm" className="w-32" aria-label="Filter by symbol">
+                  <SelectTrigger size="sm" className="w-full md:w-32" aria-label="Filter by symbol">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -158,7 +163,7 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
                   </SelectContent>
                 </Select>
                 <Select name="side" defaultValue={side}>
-                  <SelectTrigger size="sm" className="w-28" aria-label="Filter by side">
+                  <SelectTrigger size="sm" className="w-full md:w-28" aria-label="Filter by side">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -169,12 +174,12 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <Button type="submit" size="sm" variant="outline">Apply filters</Button>
+                <Button type="submit" size="sm" variant="outline" className="w-full md:w-auto">Apply filters</Button>
               </form>
             ) : (
               <>
                 <Select value={symbol} onValueChange={setLocalSymbol}>
-                  <SelectTrigger size="sm" className="w-32" aria-label="Filter by symbol">
+                  <SelectTrigger size="sm" className="w-full md:w-32" aria-label="Filter by symbol">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -185,7 +190,7 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
                   </SelectContent>
                 </Select>
                 <Select value={side} onValueChange={setLocalSide}>
-                  <SelectTrigger size="sm" className="w-28" aria-label="Filter by side">
+                  <SelectTrigger size="sm" className="w-full md:w-28" aria-label="Filter by side">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

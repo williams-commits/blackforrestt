@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { IdentityTile } from "@/components/ui/Initial";
+import { ResponsiveFilters } from "@/components/ui/ResponsiveFilters";
 
 const RECORD_TITLE_ICONS: Record<string, LucideIcon> = {
   "Closed Trades": CandlestickChart,
@@ -228,14 +229,14 @@ export function RecordList<T>({
               <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                 {search && (
                   <div className="relative w-full min-w-0 sm:max-w-sm sm:flex-1">
-                    <Search size={14} strokeWidth={2} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Search size={14} strokeWidth={2} aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       type="search"
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
                       placeholder={search.placeholder}
                       aria-label={search.placeholder}
-                      className="h-9 pl-8"
+                      className="h-9 pl-3 pr-9"
                     />
                   </div>
                 )}
@@ -247,14 +248,15 @@ export function RecordList<T>({
               </div>
             )}
             {filters && (
-              <div className="flex min-w-0 flex-col gap-2 rounded-xl bg-muted/30 p-2 sm:flex-row sm:items-center sm:gap-3">
-                <div className="flex shrink-0 items-center text-xs font-medium text-muted-foreground">
+              <ResponsiveFilters className="flex min-w-0 flex-col gap-2 rounded-xl bg-muted/30 p-2 md:flex-row md:items-center md:gap-3">
+                <div className="hidden shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground md:flex">
                   <SlidersHorizontal size={13} strokeWidth={2} aria-hidden />
+                  Filters
                 </div>
-                <div className="flex min-w-0 flex-wrap items-center gap-1.5 *:min-w-0 **:data-[slot=input]:h-8 **:data-[slot=input]:rounded-lg **:data-[slot=input]:bg-background/70 **:data-[slot=input]:text-xs **:data-[slot=select-trigger]:h-8 **:data-[slot=select-trigger]:rounded-lg **:data-[slot=select-trigger]:bg-background/70 **:data-[slot=select-trigger]:px-2.5 **:data-[slot=select-trigger]:text-xs [&_button:not([aria-pressed])]:h-8 [&_button:not([aria-pressed])]:rounded-lg [&_button:not([aria-pressed])]:px-2.5 [&_button:not([aria-pressed])]:text-xs">
+                <div className="flex min-w-0 flex-col items-stretch gap-2 *:min-w-0 *:w-full **:data-[slot=input]:h-8 **:data-[slot=input]:rounded-lg **:data-[slot=input]:bg-background/70 **:data-[slot=input]:text-xs **:data-[slot=select-trigger]:h-8 **:data-[slot=select-trigger]:rounded-lg **:data-[slot=select-trigger]:bg-background/70 **:data-[slot=select-trigger]:px-2.5 **:data-[slot=select-trigger]:text-xs [&_button:not([aria-pressed])]:h-8 [&_button:not([aria-pressed])]:rounded-lg [&_button:not([aria-pressed])]:px-2.5 [&_button:not([aria-pressed])]:text-xs md:flex-row md:flex-wrap md:items-center md:gap-1.5 md:*:w-auto">
                   {filters}
                 </div>
-              </div>
+              </ResponsiveFilters>
             )}
           </div>
         )}

@@ -172,7 +172,7 @@ fi
 "${COMPOSE[@]}" run --rm -e DATABASE_URL="$CRM_DB_URL" crm npx prisma migrate deploy
 "$ROOT/deploy/crm-grant-permissions.sh"
 "${COMPOSE[@]}" run --rm app npm run production:check
-"${COMPOSE[@]}" up -d malware-scanner crm app caddy
+"${COMPOSE[@]}" up -d malware-scanner crm app trade caddy
 if [[ "$CADDY_CHANGED" == true ]]; then
   echo "Recreating Caddy to load the new configuration…"
   "${COMPOSE[@]}" up -d --no-deps --force-recreate caddy
@@ -207,5 +207,4 @@ for attempt in {1..30}; do
 done
 echo "Deployment route health check failed (web: ${DOMAIN}, trade: ${TRADE_HOST}, CRM: ${CRM_DOMAIN_CFG:-not routed})." >&2
 "${COMPOSE[@]}" logs --tail=200 app trade crm caddy clamav malware-scanner
-exit 1
 exit 1

@@ -125,8 +125,8 @@ services, `internal: true`), `egress` (app → external APIs).
   never scale `app` beyond 1 (see the warning in `src/server/engine/hub.ts`).
 - Data services are never exposed publicly; reach them through `make psql`,
   `make studio`, or SSH tunnels.
-- Caddy depends on `app: service_healthy` — if the app never reports healthy,
-  Caddy never starts and ports 80/443 stay closed. This cascade is the most
+- Caddy depends on both `app` and `trade` being healthy — it cannot accept
+  traffic while either configured upstream is unavailable. This cascade is a
   common outage cause: run `make diagnose` first.
 
 ---

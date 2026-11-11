@@ -308,7 +308,7 @@ export function AttachmentsPanel({
                   </a>
                 )}
                 {/* Name + meta overlay for every tile */}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-xl bg-gradient-to-t from-black/70 via-black/30 to-transparent px-2.5 pb-2 pt-6 opacity-0 transition-opacity group-hover/file:opacity-100">
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-xl bg-linear-to-t from-black/70 via-black/30 to-transparent px-2.5 pb-2 pt-6 opacity-0 transition-opacity group-hover/file:opacity-100">
                   <p className="truncate text-[11px] font-medium text-white">{row.filename}</p>
                   <p className="truncate text-[10px] text-white/70">
                     {formatSizeShort(row.size)} · {relativeTime(row.createdAt)}

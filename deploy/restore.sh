@@ -17,7 +17,7 @@ MINIO_ID="$("${COMPOSE[@]}" ps -q minio)"
 CRM_ID="$("${COMPOSE[@]}" ps -q crm)"
 [[ -n "$REDIS_ID" && -n "$MINIO_ID" && -n "$CRM_ID" ]] || { echo "Redis, MinIO, and CRM containers must exist before restore." >&2; exit 1; }
 
-"${COMPOSE[@]}" stop caddy app crm
+"${COMPOSE[@]}" stop caddy app trade crm
 POSTGRES_USER="$(${COMPOSE[@]} exec -T postgres printenv POSTGRES_USER)"
 POSTGRES_DB="$(${COMPOSE[@]} exec -T postgres printenv POSTGRES_DB)"
 "${COMPOSE[@]}" exec -T postgres pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner < "$BACKUP_DIR/postgres.dump"
@@ -39,6 +39,6 @@ rm -rf "$BACKUP_DIR/crm-attachments"
 "${COMPOSE[@]}" up -d postgres redis minio minio-init
 "${COMPOSE[@]}" run --rm app npx prisma migrate deploy
 "${COMPOSE[@]}" run --rm crm npx prisma migrate deploy
-"${COMPOSE[@]}" up -d app crm caddy
+"${COMPOSE[@]}" up -d app trade crm caddy
 "${COMPOSE[@]}" ps
 echo "Restore complete. Run the health and reconciliation checks before reopening traffic."

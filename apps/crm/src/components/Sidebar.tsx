@@ -67,7 +67,7 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
 function NavList({ onNavigate, collapsed }: { onNavigate?: () => void; collapsed?: boolean }) {
   const pathname = usePathname();
   return (
-    <nav className="flex-1 overflow-y-auto px-2 py-2" aria-label="Primary">
+    <nav className="flex-1 overflow-y-auto px-2 py-2 bg-(--bg-surface)" aria-label="Primary">
       {NAV_SECTIONS.map((section, sectionIndex) => (
         <div key={sectionIndex} className={sectionIndex > 0 ? "mt-3" : ""}>
           {!collapsed && section.label ? (
@@ -151,7 +151,7 @@ function SidebarShell({ onNavigate, collapsed }: { onNavigate?: () => void; coll
 
       {/* Footer */}
       {collapsed ? null : (
-        <div className="border-t border-border px-4 py-3">
+        <div className="px-4 py-3 bg-border">
           <p className="text-[10px] text-muted-foreground">
             {branding.name} v0.1
           </p>

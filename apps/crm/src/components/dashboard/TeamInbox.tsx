@@ -134,7 +134,7 @@ export function TeamInbox({ className }: { className?: string }) {
             description="Assignments and shared tasks land here the moment they happen."
           />
         ) : (
-          <ul className="max-h-80 divide-y divide-border/60 overflow-y-auto">
+          <ul className="max-h-120 divide-y divide-border/60 overflow-y-auto">
             {notifications.map((notification) => (
               <li key={notification.id}>
                 <Link

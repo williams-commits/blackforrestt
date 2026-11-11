@@ -7,6 +7,8 @@ services:
     depends_on:
       app:
         condition: service_healthy
+      trade:
+        condition: service_healthy
     environment:
       # Optional: authenticated application subdomain (e.g. trade.blackforrestt.com).
       # When empty, Caddy runs in single-domain mode (backward compatible).

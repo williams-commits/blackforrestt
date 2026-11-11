@@ -145,6 +145,17 @@ test("per-domain site files are the ONLY deployment state (no other domain conte
   }
 });
 
+test("production deploy and restore start trade before Caddy serves its host", () => {
+  const compose = readFileSync(join(REPO, "deploy/docker-compose.prod.yml"), "utf8");
+  const deploy = readFileSync(join(REPO, "deploy/deploy.sh"), "utf8");
+  const restore = readFileSync(join(REPO, "deploy/restore.sh"), "utf8");
+
+  assert.match(compose, /caddy:[\s\S]*?depends_on:[\s\S]*?trade:\s*\n\s*condition:\s*service_healthy/);
+  assert.match(deploy, /up -d malware-scanner crm app trade caddy/);
+  assert.match(restore, /stop caddy app trade crm/);
+  assert.match(restore, /up -d app trade crm caddy/);
+});
+
 test("no numbered domain slots anywhere in source or CI", () => {
   let result = "";
   try {

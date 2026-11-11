@@ -12,7 +12,6 @@
  */
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -69,7 +68,13 @@ async function main() {
   if (group === "caddy") {
     if (command === "render") {
       const { flags } = parseFlags(rest);
-      const { renderCaddyfile } = await import("./platform/lib/deploy-config.mjs");
+      const {
+        deploymentDomains,
+        loadDomains,
+        renderCaddyfile,
+        resolveDomainSelectors,
+        syncDomainSiteFiles,
+      } = await import("./platform/lib/deploy-config.mjs");
       // resolve (not join): an absolute --env-file (e.g. a container mount
       // path) must not be concatenated under ROOT.
       const envFile = resolve(ROOT, flags["env-file"] ?? ".env.production");
@@ -78,7 +83,6 @@ async function main() {
       // DEPLOY_DOMAINS scoping: read from the env file (or --domains flag).
       let domainsScope = null;
       const domainsFlag = flags.domains;
-      const { deploymentDomains, resolveDomainSelectors, loadDomains } = await import("./platform/lib/deploy-config.mjs");
       if (domainsFlag && domainsFlag !== true) {
         // Explicit comma list (one-shot deploy scope from `make deploy <key>`):
         // selectors may be registry KEYS or served HOSTS; unknown names fail
@@ -91,19 +95,12 @@ async function main() {
         // back to "all" when an explicit scope exists.
         domainsScope = await deploymentDomains(envFile);
       }
-      // FIRST-DEPLOY SEED: every in-scope registry domain gets its site file
-      // if missing — existing files are never overwritten (per-domain edits
-      // are deployment state). Also guarantees the sites dir exists, so a
-      // fresh checkout (old render layout, no sites/ yet) cannot ENOENT.
-      mkdirSync(sitesDir, { recursive: true });
+      // Reconcile in-scope site files on every render. The app split changed
+      // trade-host routing; preserving pre-split files would keep proxying
+      // trade.<domain> to the web service after an otherwise successful deploy.
       if (Array.isArray(domainsScope) && domainsScope.length > 0) {
-        const { renderDomainSite } = await import("./platform/lib/deploy-config.mjs");
-        for (const domain of domainsScope) {
-          const siteFile = join(sitesDir, `${domain.key}.caddy`);
-          if (!existsSync(siteFile)) {
-            writeFileSync(siteFile, renderDomainSite(domain, envFile));
-            console.log(`Seeded site file for "${domain.key}" → ${siteFile}`);
-          }
+        for (const key of syncDomainSiteFiles(domainsScope, envFile, sitesDir)) {
+          console.log(`Reconciled Caddy site file for "${key}" from its domain manifest.`);
         }
       }
       const output = renderCaddyfile({

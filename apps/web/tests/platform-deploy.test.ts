@@ -50,6 +50,29 @@ function siteHosts(caddyfile: string) {
   return hosts;
 }
 
+test("Caddy render reconciles stale in-scope trade routing and preserves other domains", async () => {
+  const { renderDomainSite, syncDomainSiteFiles } = await lib();
+  const domains = await loadDomains();
+  const gbfxs = domains.find((domain) => domain.key === "gbfxs");
+  assert.ok(gbfxs);
+  const dir = join(ROOT, ".tmp-deploy-test-sites");
+  try {
+    mkdirSync(dir, { recursive: true });
+    const staleGbfxs = "# old routing\ntrade.gbfxs.com {\n  import app-site\n}\n";
+    const otherDomain = "# operator state\ntrade.blackforrestt.com {\n  import custom-site\n}\n";
+    writeFileSync(join(dir, "gbfxs.caddy"), staleGbfxs);
+    writeFileSync(join(dir, "blackforrest.caddy"), otherDomain);
+
+    assert.deepEqual(syncDomainSiteFiles([gbfxs], join(ROOT, ".env"), dir), ["gbfxs"]);
+    const updatedGbfxs = readFileSync(join(dir, "gbfxs.caddy"), "utf8");
+    assert.equal(updatedGbfxs, renderDomainSite(gbfxs, join(ROOT, ".env")));
+    assert.match(updatedGbfxs, /trade\.gbfxs\.com \{\n  import trade-site/);
+    assert.equal(readFileSync(join(dir, "blackforrest.caddy"), "utf8"), otherDomain);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("deploy gbfxs → blackforrest unchanged, present, and the merged config stays valid", async () => {
   const { renderDomainSite, renderCaddyfile } = await lib();
   const domains = await loadDomains();

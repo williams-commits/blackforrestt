@@ -243,8 +243,9 @@ Domains are data-driven (`apps/web/src/domains/<key>/domain.config.ts`).
 Create a new family with the platform CLI, set `BRAND_DOMAINS` in canonical-
 first order, and include all apex and trade origins in `APP_ORIGIN`. Use
 `DEPLOY_DOMAINS` to scope a deployment and the platform CLI to render/deploy
-that domain's Caddy site; no numbered host slots or manual Caddy edits are
-used.
+that domain's Caddy site. Every deploy reconciles the in-scope Caddy site files
+from their manifests, so old web/trade routing cannot persist after an app
+topology change. No numbered host slots or manual Caddy edits are used.
 
 **CRM module (both shapes):**
 

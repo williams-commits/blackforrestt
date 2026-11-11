@@ -193,12 +193,19 @@ if [[ -z "$DOMAIN" ]]; then
   exit 0
 fi
 echo "Waiting for https://${DOMAIN}/api/health"
+TRADE_SUBDOMAIN_CFG="$(grep -E '^TRADE_SUBDOMAIN=' .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' || :)"
+TRADE_HOST="${TRADE_SUBDOMAIN_CFG:-trade}.${DOMAIN}"
+CRM_DOMAIN_CFG="$(grep -E '^CRM_DOMAIN=' .env.production | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' | tr -d '[:space:]' || :)"
 for attempt in {1..30}; do
-  if curl --fail --silent --show-error "https://${DOMAIN}/api/health" >/dev/null; then
-    echo "Deployment healthy."
+  if curl --fail --silent "https://${DOMAIN}/api/health" >/dev/null \
+    && curl --fail --silent "https://${TRADE_HOST}/login" >/dev/null \
+    && { [[ -z "$CRM_DOMAIN_CFG" ]] || curl --fail --silent "https://${CRM_DOMAIN_CFG}/api/health" >/dev/null; }; then
+    echo "Web, trade, and configured CRM routes are healthy."
     exit 0
   fi
   sleep 5
 done
-"${COMPOSE[@]}" logs --tail=200 app caddy clamav malware-scanner
+echo "Deployment route health check failed (web: ${DOMAIN}, trade: ${TRADE_HOST}, CRM: ${CRM_DOMAIN_CFG:-not routed})." >&2
+"${COMPOSE[@]}" logs --tail=200 app trade crm caddy clamav malware-scanner
+exit 1
 exit 1

@@ -3,7 +3,7 @@
  * manifests (via a TSX import of the generated registry). ONE source of
  * truth for hosts, trade hosts, and site routing. No numbered domain slots.
  */
-import { readFileSync, existsSync, writeFileSync, readdirSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync, readdirSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -96,9 +96,24 @@ export function renderDomainSite(domain, envFile) {
   return lines.join("\n") + "\n";
 }
 
+/** Reconcile only the selected deployment scope with the current manifests. */
+export function syncDomainSiteFiles(domains, envFile, sitesDir) {
+  mkdirSync(sitesDir, { recursive: true });
+  const updated = [];
+  for (const domain of domains) {
+    const siteFile = join(sitesDir, `${domain.key}.caddy`);
+    const desired = renderDomainSite(domain, envFile);
+    if (!existsSync(siteFile) || readFileSync(siteFile, "utf8") !== desired) {
+      writeFileSync(siteFile, desired);
+      updated.push(domain.key);
+    }
+  }
+  return updated;
+}
+
 /** Assemble the complete Caddyfile: header + snippets + every deployed site
- *  file + CRM. Per-domain site files are the deployment state — writing one
- *  never touches the others (deploy-preservation guarantee). */
+ *  file + CRM. Per-domain site files are reconciled from manifests within the
+ *  selected scope; files for other domains remain untouched. */
 /** @param {{ envFile?: string, sitesDir?: string, snippetsPath?: string, outPath?: string, email?: string, domains?: Array<{key:string}> }} args */
 export function renderCaddyfile({ envFile, sitesDir, snippetsPath, outPath, email: emailOverride, domains: domainsOverride } = {}) {
   const email = emailOverride ?? envValue(envFile, "CADDY_EMAIL");

@@ -743,7 +743,7 @@ export function RecordActivities({
         </>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border border-border">
+      <div className="overflow-hidden">
         <Tabs
           value={activeTab}
           onValueChange={(key) => {
@@ -751,7 +751,7 @@ export function RecordActivities({
           }}
           className="min-w-0"
         >
-          <div className="border-b border-border bg-muted">
+          <div className="rounded-lg bg-muted">
             <TabsList
               variant="line"
               aria-label="Related activity"
@@ -773,7 +773,7 @@ export function RecordActivities({
             </TabsList>
           </div>
         </Tabs>
-        <div className="p-3 bg-accent/30">
+        <div className="pt-3">
           {activeTab === "notes" ? visibleNotes.length === 0 ? <EmptyHint icon="note" text="No notes yet — add context for everyone working this record." /> : (<>
           <ul className="m-0! p-0! [&>li]:list-none! divide-y divide-border/70 overflow-hidden rounded-lg border border-border bg-card">{visibleNotes.map((note, index) => {
           const noteCount = commentCounts[note.id] ?? 0;

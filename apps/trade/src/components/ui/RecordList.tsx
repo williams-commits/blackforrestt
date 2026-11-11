@@ -250,7 +250,6 @@ export function RecordList<T>({
               <div className="flex min-w-0 flex-col gap-2 rounded-xl bg-muted/30 p-2 sm:flex-row sm:items-center sm:gap-3">
                 <div className="flex shrink-0 items-center gap-1.5 px-1 text-xs font-medium text-muted-foreground">
                   <SlidersHorizontal size={13} strokeWidth={2} aria-hidden />
-                  <span>Filters</span>
                 </div>
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5 *:min-w-0 **:data-[slot=input]:h-8 **:data-[slot=input]:rounded-lg **:data-[slot=input]:bg-background/70 **:data-[slot=input]:text-xs **:data-[slot=select-trigger]:h-8 **:data-[slot=select-trigger]:rounded-lg **:data-[slot=select-trigger]:bg-background/70 **:data-[slot=select-trigger]:px-2.5 **:data-[slot=select-trigger]:text-xs [&_button:not([aria-pressed])]:h-8 [&_button:not([aria-pressed])]:rounded-lg [&_button:not([aria-pressed])]:px-2.5 [&_button:not([aria-pressed])]:text-xs">
                   {filters}

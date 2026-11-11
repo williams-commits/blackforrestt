@@ -1,10 +1,14 @@
 import createNextIntlPlugin from "next-intl/plugin";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+const appDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  outputFileTracingRoot: path.resolve(appDirectory, "../.."),
   // Lint runs as its own gate (`npm run lint` via turbo), same as web + crm.
   eslint: { ignoreDuringBuilds: true },
   webpack(config) {

@@ -47,14 +47,14 @@ fi
 # the host only needs Docker (no host Node), same pattern as crm-seed below.
 # Repo pieces the render reads/writes are bind-mounted over the image's /app
 # copy so the output always matches the checked-out manifests + env file.
-docker build --target builder -t blckforest-render:tmp "$ROOT/apps/web" >/dev/null
+docker build --target builder -f "$ROOT/apps/web/Dockerfile" -t blckforest-render:tmp "$ROOT" >/dev/null
 docker run --rm \
-  -v "$ROOT/apps/web/scripts:/app/scripts:ro" \
-  -v "$ROOT/apps/web/src/domains/.generated:/app/src/domains/.generated:ro" \
-  -v "$ROOT/.env.production:/app/.env.production:ro" \
-  -v "$ROOT/deploy/caddy:/app/deploy/caddy" \
+  -v "$ROOT/apps/web/scripts:/workspace/apps/web/scripts:ro" \
+  -v "$ROOT/apps/web/src/domains/.generated:/workspace/apps/web/src/domains/.generated:ro" \
+  -v "$ROOT/.env.production:/workspace/.env.production:ro" \
+  -v "$ROOT/deploy/caddy:/workspace/deploy/caddy" \
   blckforest-render:tmp \
-  node scripts/platform.mjs caddy render --env-file /app/.env.production --out /app/deploy/caddy/render/Caddyfile ${DEPLOY_SCOPE_ARGS[@]+"${DEPLOY_SCOPE_ARGS[@]}"}
+  node scripts/platform.mjs caddy render --env-file /workspace/.env.production --out /workspace/deploy/caddy/render/Caddyfile ${DEPLOY_SCOPE_ARGS[@]+"${DEPLOY_SCOPE_ARGS[@]}"}
 CADDY_HASH_AFTER="$(sha256sum "$CADDYFILE" | cut -d' ' -f1)"
 CADDY_CHANGED=false
 if [[ "$CADDY_HASH_BEFORE" != "$CADDY_HASH_AFTER" ]]; then

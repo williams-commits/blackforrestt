@@ -17,13 +17,13 @@ if [[ -d "$out" ]]; then rm -rf "$out"; fi
 
 # Render inside the repo's builder-stage container — the host needs only
 # Docker (no host Node), matching deploy.sh's render step.
-docker build --target builder -t blckforest-render:tmp "$ROOT/apps/web" >/dev/null
+docker build --target builder -f "$ROOT/apps/web/Dockerfile" -t blckforest-render:tmp "$ROOT" >/dev/null
 docker run --rm \
-  -v "$ROOT/apps/web/scripts:/app/scripts:ro" \
-  -v "$ROOT/apps/web/src/domains/.generated:/app/src/domains/.generated:ro" \
-  -v "$ENV_FILE:/app/.env.production:ro" \
-  -v "$ROOT/deploy/caddy:/app/deploy/caddy" \
+  -v "$ROOT/apps/web/scripts:/workspace/apps/web/scripts:ro" \
+  -v "$ROOT/apps/web/src/domains/.generated:/workspace/apps/web/src/domains/.generated:ro" \
+  -v "$ENV_FILE:/workspace/.env.production:ro" \
+  -v "$ROOT/deploy/caddy:/workspace/deploy/caddy" \
   blckforest-render:tmp \
-  node scripts/platform.mjs caddy render --env-file /app/.env.production --out /app/deploy/caddy/render/Caddyfile
+  node scripts/platform.mjs caddy render --env-file /workspace/.env.production --out /workspace/deploy/caddy/render/Caddyfile
 sites="$(grep -c 'import app-site' "$out" || true)"
 echo "Rendered $out — $sites active site block(s)."

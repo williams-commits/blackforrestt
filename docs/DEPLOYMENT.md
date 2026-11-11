@@ -30,12 +30,16 @@ directory (the Makefile resolves its own root).
 | Command | What it does |
 |---|---|
 | `make deploy` | **Full deploy**: build all images, start dependencies, migrate + seed the platform DB, bootstrap/migrate the CRM DB, grant CRM permissions, run the fail-closed preflight, start the app + Caddy, wait for public health. This is the only command a first deploy and a code deploy both need. |
-| `make update` | Routine code update: `git pull`, rebuild `app` + `crm` images, restart both + Caddy. |
-| `make build` | Build production images (`app`, `malware-scanner`, `crm`). |
+| `make update` | Routine code update: `git pull`, rebuild `app` + `trade` + `crm` images, restart them + Caddy. |
+| `make build` | Build production images (`app`, `trade`, `malware-scanner`, `crm`). |
 | `make build-no-cache` | Same, without the Docker layer cache (after big changes). |
 | `make only-env` | Apply `.env.production` changes **without** a rebuild — force-recreates the app container. |
 | `make restart-app` | Restart the app container only (no rebuild, no seed) — clean restart after a crash. |
 | `make down` | Stop the entire production stack. |
+
+Web and Trade are npm workspaces and use the repository-root `package-lock.json`.
+Their production images must therefore be built with the repository root as the
+Docker build context; the CRM image remains app-local with its own lockfile.
 
 ### Status, logs & diagnostics
 

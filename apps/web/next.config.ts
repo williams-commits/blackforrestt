@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 // Zero-dependency domain registry — safe to load at build/boot time. This is
@@ -85,6 +86,7 @@ const widgetHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: path.resolve(process.cwd(), "../.."),
   reactStrictMode: true,
   poweredByHeader: false,
   // ESLint is enforced as a dedicated gate (`npm run lint`) in the Phase 8

@@ -4,18 +4,33 @@
 # the platform's Caddy edge. Pattern: apps/crm/Dockerfile.
 
 FROM node:22-alpine AS deps
-WORKDIR /app
+WORKDIR /workspace
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
-COPY prisma ./prisma
+COPY apps/web/package.json ./apps/web/package.json
+COPY apps/trade/package.json ./apps/trade/package.json
+COPY apps/crm/package.json ./apps/crm/package.json
 RUN npm ci --no-audit --no-fund
+# The checked-in lockfile can omit platform-specific native add-ons when made
+# on another OS. Reinstall their locked versions for the target Alpine image.
+RUN npm install --no-save --ignore-scripts --include=optional --no-audit --no-fund \
+    "@parcel/watcher@$(node -p 'require("./package-lock.json").packages["node_modules/@parcel/watcher"].version')" \
+    "@tailwindcss/oxide@$(node -p 'require("./package-lock.json").packages["node_modules/@tailwindcss/oxide"].version')" \
+    "unrs-resolver@$(node -p 'require("./package-lock.json").packages["node_modules/unrs-resolver"].version')" \
+    "@swc/core@$(node -p 'require("./package-lock.json").packages["node_modules/next-intl/node_modules/@swc/core"].version')" \
+    "lightningcss@$(node -p 'require("./package-lock.json").packages["node_modules/lightningcss"].version')"
 
 FROM node:22-alpine AS builder
-WORKDIR /app
+WORKDIR /workspace
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /workspace/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate && npm run build
+WORKDIR /workspace/apps/trade
+# Next's SWC fallback detects the package manager from a lockfile in the
+# app directory; without one, Node's bundled Yarn shim is selected.
+RUN cp ../../package-lock.json ./package-lock.json \
+    && npx prisma generate \
+    && npm run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -27,14 +42,15 @@ ENV NODE_ENV=production \
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001 -G nodejs
 
 # Standalone output carries its minimal node_modules inside .next/standalone.
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/.next/static ./apps/trade/.next/static
+COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/public ./apps/trade/public
 # Schema + migrations for `prisma migrate deploy` inside the container.
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/prisma ./apps/trade/prisma
 # Prisma CLI vendored at build time — the trade app runs on the internal-only
 # backend network, so npx can never download it at runtime.
-RUN cd /app && npm install --no-save --omit=dev --loglevel=error prisma
+WORKDIR /app/apps/trade
+RUN npm install --no-save --omit=dev --loglevel=error prisma
 
 USER nextjs
 EXPOSE 3000

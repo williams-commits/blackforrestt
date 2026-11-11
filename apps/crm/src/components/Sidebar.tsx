@@ -126,7 +126,7 @@ function SidebarShell({ onNavigate, collapsed }: { onNavigate?: () => void; coll
       {/* Brand header */}
       <div
         className={cn(
-          "flex h-13 shrink-0 items-center",
+          "flex h-13 shrink-0 items-center bg-border",
           collapsed ? "justify-center px-0" : "justify-between px-4"
         )}
       >

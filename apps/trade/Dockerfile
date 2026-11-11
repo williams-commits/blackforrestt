@@ -41,17 +41,17 @@ ENV NODE_ENV=production \
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001 -G nodejs
 
-# Standalone output carries its minimal node_modules inside .next/standalone.
-COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/.next/static ./apps/trade/.next/static
-COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/public ./apps/trade/public
-# Schema + migrations for `prisma migrate deploy` inside the container.
-COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/prisma ./apps/trade/prisma
-# Prisma CLI vendored at build time — the trade app runs on the internal-only
-# backend network, so npx can never download it at runtime.
-WORKDIR /app/apps/trade
-RUN npm install --no-save --omit=dev --loglevel=error prisma
+# Trade's custom server initializes the market engine and WebSocket endpoint;
+# Next's generated standalone server would serve pages without either service.
+COPY --from=builder --chown=nextjs:nodejs /workspace/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/.next ./.next
+COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/public ./public
+COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/src ./src
+COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/server.ts ./server.ts
+COPY --from=builder --chown=nextjs:nodejs /workspace/apps/trade/tsconfig.json ./tsconfig.json
 
 USER nextjs
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["npm", "run", "start"]

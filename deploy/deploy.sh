@@ -45,7 +45,7 @@ fi
 # Seed per-domain site files for every registry domain on FIRST deploy.
 # The render runs INSIDE a container built from this repo's builder stage —
 # the host only needs Docker (no host Node), same pattern as crm-seed below.
-# Repo pieces the render reads/writes are bind-mounted over the image's /app
+# Repo pieces the render reads/writes are bind-mounted over the image's /workspace
 # copy so the output always matches the checked-out manifests + env file.
 docker build --target builder -f "$ROOT/apps/web/Dockerfile" -t blckforest-render:tmp "$ROOT" >/dev/null
 docker run --rm \

@@ -16,7 +16,7 @@ COMPOSE=(docker compose --env-file "$ROOT/.env.production" -f "$ROOT/deploy/dock
 
 # Same pattern as `make crm-seed`: run the seed's TS inside a throwaway
 # builder container attached to the postgres network (no host Node needed).
-docker build --target builder -t blckforest-crm-seed:tmp "$ROOT/crm"
+docker build --target builder -t blckforest-crm-seed:tmp "$ROOT/apps/crm"
 
 PG_CID="$("${COMPOSE[@]}" ps -q postgres)"
 NET="$(docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}' "$PG_CID")"

@@ -32,8 +32,12 @@ interface Props {
 const WATCHLIST_STORAGE_KEY = "blckforest:watchlist";
 const DOCK_STORAGE_KEY = "blckforest:dock";
 const DOCK_HEIGHT_STORAGE_KEY = "blckforest:dock-height";
+const MOBILE_DOCK_STORAGE_KEY = "blckforest:mobile-dock";
+const MOBILE_DOCK_HEIGHT_STORAGE_KEY = "blckforest:mobile-dock-height";
 const MIN_DOCK_HEIGHT = 144;
 const DEFAULT_DOCK_HEIGHT = 280;
+const MIN_MOBILE_DOCK_HEIGHT = 144;
+const DEFAULT_MOBILE_DOCK_HEIGHT = 260;
 
 /** Responsive trading workspace with a persistent desktop order ticket and a
  *  right-side mobile ticket, sharing one submission controller. */
@@ -77,10 +81,17 @@ export function Dashboard({
   const [tradeSide, setTradeSide] = useState<PositionSide | null>(null);
   const [watchlistOpen, setWatchlistOpen] = useState(true);
   const [dockOpen, setDockOpen] = useState(true);
+  const [mobileDockOpen, setMobileDockOpen] = useState(false);
   const [dockHeight, setDockHeight] = useState(DEFAULT_DOCK_HEIGHT);
+  const [mobileDockHeight, setMobileDockHeight] = useState(DEFAULT_MOBILE_DOCK_HEIGHT);
   const [viewportHeight, setViewportHeight] = useState(900);
+  const [isPhone, setIsPhone] = useState(false);
   const dockHeightRef = useRef(DEFAULT_DOCK_HEIGHT);
-  const dockResizeRef = useRef<{ startY: number; startHeight: number } | null>(null);
+  const mobileDockHeightRef = useRef(DEFAULT_MOBILE_DOCK_HEIGHT);
+  const dockResizeRef = useRef<{ startY: number; startHeight: number; isPhone: boolean } | null>(null);
+  const dockExpanded = isPhone ? mobileDockOpen : dockOpen;
+  const mobileDockMaxHeight = Math.max(MIN_MOBILE_DOCK_HEIGHT, Math.floor(viewportHeight * 0.52));
+  const displayedMobileDockHeight = Math.min(mobileDockHeight, mobileDockMaxHeight);
 
   const openTrade = useCallback((side: PositionSide | null = null) => {
     setTradeSide(side);
@@ -89,10 +100,18 @@ export function Dashboard({
   }, []);
 
   useEffect(() => {
-    const updateViewportHeight = () => setViewportHeight(window.innerHeight);
-    updateViewportHeight();
-    window.addEventListener("resize", updateViewportHeight);
-    return () => window.removeEventListener("resize", updateViewportHeight);
+    const phoneMedia = window.matchMedia("(max-width: 767px)");
+    const updateViewport = () => {
+      setIsPhone(phoneMedia.matches);
+      setViewportHeight(window.innerHeight);
+    };
+    updateViewport();
+    phoneMedia.addEventListener("change", updateViewport);
+    window.addEventListener("resize", updateViewport);
+    return () => {
+      phoneMedia.removeEventListener("change", updateViewport);
+      window.removeEventListener("resize", updateViewport);
+    };
   }, []);
 
   // Hydrate the watchlist from the server-resolved list so the rail renders
@@ -117,7 +136,8 @@ export function Dashboard({
     return () => window.removeEventListener(OPEN_ORDER_EVENT, onOpenOrder);
   }, [openTrade]);
 
-  // Rail/dock collapse choices persist per workstation (defaults: open).
+  // Keep the mobile dock independent: it defaults to a compact chart-first
+  // peek without changing the saved desktop workspace preference.
   useEffect(() => {
     const storedWatchlist = window.localStorage.getItem(WATCHLIST_STORAGE_KEY);
     if (storedWatchlist != null) setWatchlistOpen(storedWatchlist !== "collapsed");
@@ -127,6 +147,13 @@ export function Dashboard({
     if (Number.isFinite(storedHeight) && storedHeight >= MIN_DOCK_HEIGHT) {
       dockHeightRef.current = storedHeight;
       setDockHeight(storedHeight);
+    }
+    const storedMobileDock = window.localStorage.getItem(MOBILE_DOCK_STORAGE_KEY);
+    if (storedMobileDock != null) setMobileDockOpen(storedMobileDock === "open");
+    const storedMobileHeight = Number(window.localStorage.getItem(MOBILE_DOCK_HEIGHT_STORAGE_KEY));
+    if (Number.isFinite(storedMobileHeight) && storedMobileHeight >= MIN_MOBILE_DOCK_HEIGHT) {
+      mobileDockHeightRef.current = storedMobileHeight;
+      setMobileDockHeight(storedMobileHeight);
     }
   }, []);
 
@@ -138,6 +165,13 @@ export function Dashboard({
   const resizeDock = (clientY: number) => {
     const drag = dockResizeRef.current;
     if (!drag) return;
+    if (drag.isPhone) {
+      const maxHeight = Math.max(MIN_MOBILE_DOCK_HEIGHT, Math.floor(window.innerHeight * 0.52));
+      const nextHeight = Math.min(maxHeight, Math.max(56, drag.startHeight + drag.startY - clientY));
+      mobileDockHeightRef.current = nextHeight;
+      setMobileDockHeight(nextHeight);
+      return;
+    }
     const maxHeight = Math.max(MIN_DOCK_HEIGHT, Math.floor(window.innerHeight * 0.55));
     const nextHeight = Math.min(maxHeight, Math.max(MIN_DOCK_HEIGHT, drag.startHeight + drag.startY - clientY));
     dockHeightRef.current = nextHeight;
@@ -145,8 +179,21 @@ export function Dashboard({
   };
 
   const finishDockResize = () => {
-    if (!dockResizeRef.current) return;
+    const drag = dockResizeRef.current;
+    if (!drag) return;
     dockResizeRef.current = null;
+    if (drag.isPhone) {
+      const expanded = mobileDockHeightRef.current >= MIN_MOBILE_DOCK_HEIGHT;
+      setMobileDockOpen(expanded);
+      window.localStorage.setItem(MOBILE_DOCK_STORAGE_KEY, expanded ? "open" : "collapsed");
+      if (expanded) {
+        window.localStorage.setItem(MOBILE_DOCK_HEIGHT_STORAGE_KEY, String(mobileDockHeightRef.current));
+      } else {
+        mobileDockHeightRef.current = drag.startHeight;
+        setMobileDockHeight(drag.startHeight);
+      }
+      return;
+    }
     window.localStorage.setItem(DOCK_HEIGHT_STORAGE_KEY, String(dockHeightRef.current));
   };
 
@@ -158,6 +205,13 @@ export function Dashboard({
   };
 
   const toggleDock = () => {
+    if (isPhone) {
+      setMobileDockOpen((open) => {
+        window.localStorage.setItem(MOBILE_DOCK_STORAGE_KEY, open ? "collapsed" : "open");
+        return !open;
+      });
+      return;
+    }
     setDockOpen((open) => {
       window.localStorage.setItem(DOCK_STORAGE_KEY, open ? "collapsed" : "open");
       return !open;
@@ -165,7 +219,7 @@ export function Dashboard({
   };
 
   return (
-    <div className="trade-workspace terminal-ui flex min-h-dvh w-full flex-col overflow-x-hidden bg-canvas md:h-dvh md:overflow-hidden lg:h-screen">
+    <div className="trade-workspace terminal-ui flex h-dvh min-h-0 w-full flex-col overflow-hidden bg-canvas pb-[calc(env(safe-area-inset-bottom)+4.75rem)] md:pb-0 lg:h-screen">
       <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} walletAddresses={walletAddresses} marginWarningPercent={marginWarningPercent} />
       <MarketStatusBanner marketDataMode={marketDataMode} wsStatus={status} />
 
@@ -173,7 +227,7 @@ export function Dashboard({
           desktop; smaller screens open the same ticket in a right-side sheet. */}
       <div
         className={cn(
-          "grid grid-cols-1 gap-0 bg-panel md:min-h-0 md:flex-1",
+          "grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-0 bg-panel",
           watchlistOpen
             ? "lg:grid-cols-[240px_minmax(0,1fr)_340px]"
             : "lg:grid-cols-[2.5rem_minmax(0,1fr)_340px]",
@@ -217,7 +271,7 @@ export function Dashboard({
         <main
           id="main-content"
           tabIndex={-1}
-          className="relative min-h-75 min-w-0 p-1 sm:min-h-100 md:min-h-0"
+          className="relative min-h-0 min-w-0 p-1"
         >
           <ChartPanel
             instrument={activeInstrument}
@@ -238,29 +292,38 @@ export function Dashboard({
         </aside>
       </div>
 
-      {/* Desktop dock resizing is persisted; the mobile dock scales to the
-          viewport and keeps its rows internally scrollable. */}
+      {/* Desktop dock sizing and mobile peek sizing are persisted separately. */}
       <div
         data-activity-dock
         className={cn(
-          "min-w-0 shrink-0 bg-panel pb-[calc(env(safe-area-inset-bottom)+3.5rem)] md:pb-0",
-          dockOpen
-            ? "min-h-50 h-[min(50dvh,30rem)] sm:h-[min(50dvh,34rem)] md:h-(--dock-height)"
-            : "h-9",
+          "min-w-0 shrink-0 bg-panel transition-[height] duration-200",
+          dockExpanded
+            ? "h-[min(var(--mobile-dock-height),52dvh)] md:min-h-50 md:h-(--dock-height)"
+            : "h-14 md:h-9",
         )}
-        style={{ "--dock-height": `${dockHeight}px` } as React.CSSProperties}
+        style={{
+          "--dock-height": `${dockHeight}px`,
+          "--mobile-dock-height": `${mobileDockHeight}px`,
+        } as React.CSSProperties}
       >
-        {dockOpen && (
+        {dockExpanded && (
           <div
             role="separator"
             aria-orientation="horizontal"
             aria-label="Resize activity dock"
-            aria-valuemin={MIN_DOCK_HEIGHT}
-            aria-valuemax={Math.max(MIN_DOCK_HEIGHT, Math.floor(viewportHeight * 0.55))}
-            aria-valuenow={dockHeight}
+            aria-valuemin={isPhone ? 56 : MIN_DOCK_HEIGHT}
+            aria-valuemax={Math.max(
+              isPhone ? MIN_MOBILE_DOCK_HEIGHT : MIN_DOCK_HEIGHT,
+              Math.floor(viewportHeight * (isPhone ? 0.52 : 0.55)),
+            )}
+            aria-valuenow={isPhone ? displayedMobileDockHeight : dockHeight}
             tabIndex={0}
             onPointerDown={(event) => {
-              dockResizeRef.current = { startY: event.clientY, startHeight: dockHeight };
+              dockResizeRef.current = {
+                startY: event.clientY,
+                startHeight: isPhone ? displayedMobileDockHeight : dockHeight,
+                isPhone,
+              };
               event.currentTarget.setPointerCapture(event.pointerId);
             }}
             onPointerMove={(event) => resizeDock(event.clientY)}
@@ -270,6 +333,16 @@ export function Dashboard({
               if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
               event.preventDefault();
               const delta = event.key === "ArrowUp" ? 24 : -24;
+              if (isPhone) {
+                setMobileDockHeight((current) => {
+                  const maxHeight = Math.max(MIN_MOBILE_DOCK_HEIGHT, Math.floor(window.innerHeight * 0.52));
+                  const next = Math.min(maxHeight, Math.max(MIN_MOBILE_DOCK_HEIGHT, current + delta));
+                  mobileDockHeightRef.current = next;
+                  window.localStorage.setItem(MOBILE_DOCK_HEIGHT_STORAGE_KEY, String(next));
+                  return next;
+                });
+                return;
+              }
               setDockHeight((current) => {
                 const maxHeight = Math.max(MIN_DOCK_HEIGHT, Math.floor(window.innerHeight * 0.55));
                 const next = Math.min(maxHeight, Math.max(MIN_DOCK_HEIGHT, current + delta));
@@ -278,13 +351,13 @@ export function Dashboard({
                 return next;
               });
             }}
-            className="hidden cursor-row-resize touch-none items-center justify-center bg-panel-2 transition-colors hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-brand md:flex"
+            className="flex h-4 cursor-row-resize touch-none items-center justify-center bg-panel-2 transition-colors hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-brand md:h-2"
           >
             <span className="h-0.5 w-10 rounded-full bg-text-faint/50" aria-hidden />
           </div>
         )}
-        <div className={dockOpen ? "h-[calc(100%-0.5rem)] md:h-[calc(100%-0.5rem)]" : "h-full"}>
-          <PositionsTable instruments={instruments} collapsed={!dockOpen} onToggleCollapsed={toggleDock} />
+        <div className={dockExpanded ? "h-[calc(100%-1rem)] md:h-[calc(100%-0.5rem)]" : "h-full"}>
+          <PositionsTable instruments={instruments} collapsed={!dockExpanded} onToggleCollapsed={toggleDock} />
         </div>
       </div>
 

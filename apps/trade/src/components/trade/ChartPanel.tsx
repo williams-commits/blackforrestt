@@ -74,7 +74,7 @@ export function ChartPanel({
     <div
       ref={panelRef}
       data-testid="professional-chart-panel"
-      className={`flex h-full min-h-[min(55dvh,28rem)] min-w-0 w-full flex-col overflow-hidden bg-canvas shadow-panel lg:min-h-0 ${
+      className={`flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden bg-canvas shadow-panel ${
         fullscreen ? "rounded-none" : "rounded-none"
       }`}
     >
@@ -146,7 +146,7 @@ export function ChartPanel({
         </Button>
       </div>
 
-      <div className="relative min-h-[min(55dvh,28rem)] min-w-0 flex-1 lg:min-h-0">
+      <div className="relative min-h-0 min-w-0 flex-1">
         {tradingViewSymbol ? (
           <TradingViewChart
             key={`${tradingViewSymbol}-${theme}`}
@@ -236,7 +236,7 @@ function TradingViewChart({
       calendar: false,
       details: false,
       hotlist: false,
-      studies: ["STD;RSI", "STD;EMA", "STD;SMA"],
+      studies: ["STD;RSI", "STD;EMA"],
       hide_side_toolbar: false,
       hide_top_toolbar: false,
       hide_legend: false,
@@ -377,7 +377,7 @@ function FloatingTradeControls({
     <div
       ref={controlsRef}
       data-testid="floating-trade-controls"
-      className={`pointer-events-auto absolute right-2 top-16 z-20 select-none overflow-hidden rounded-xl border border-border-soft bg-canvas/95 shadow-xl backdrop-blur-md sm:right-3 sm:top-3 ${
+      className={`pointer-events-auto absolute right-2 top-16 z-20 hidden select-none overflow-hidden rounded-xl border border-border-soft bg-canvas/95 shadow-xl backdrop-blur-md md:block sm:right-3 sm:top-3 ${
         collapsed ? "w-40 sm:w-44" : "w-44 sm:w-52"
       }`}
       style={position ? { left: position.left, top: position.top, right: "auto" } : undefined}

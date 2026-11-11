@@ -89,11 +89,11 @@ function MobileTabBarInner() {
       href={item.href}
       aria-current={item.active ? "page" : undefined}
       className={cn(
-        "mx-1 flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-(length:--term-text-2xs) font-medium transition-all duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-brand",
+        "mx-1 flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-3xl px-1 text-(length:--term-text-2xs) font-medium transition-all duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-brand",
         item.active ? "bg-brand-soft text-brand m-0.5" : "text-text-muted hover:text-text",
       )}
     >
-      <item.Icon size={20} strokeWidth={2} aria-hidden />
+      <item.Icon size={14} strokeWidth={2} aria-hidden />
       {item.label}
     </Link>
   );
@@ -101,7 +101,7 @@ function MobileTabBarInner() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-canvas pb-[env(safe-area-inset-bottom)] shadow-panel md:hidden"
+      className="fixed inset-x-0 bottom-0 m-2 z-40 border border-border bg-canvas rounded-3xl pb-[env(safe-area-inset-bottom)] shadow-panel md:hidden"
     >
       <ul className="grid grid-cols-4">
         {navItems.map((item) => (
@@ -122,7 +122,7 @@ function MobileTabBarInner() {
               "flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white shadow-sm transition",
               onTrade && "ring-2 ring-brand/40",
             )}>
-              <TrendingUpDown size={16} strokeWidth={2} aria-hidden />
+              <TrendingUpDown size={14} strokeWidth={2} aria-hidden />
             </span>
             <span className="text-(length:--term-text-2xs) font-semibold text-brand">Trade</span>
           </button>

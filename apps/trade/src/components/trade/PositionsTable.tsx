@@ -55,7 +55,6 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
   const [busy, setBusy] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("open");
   const [editingPosition, setEditingPosition] = useState<PositionView | null>(null);
-  const dockRef = useRef<HTMLDivElement>(null);
 
   const marketHoursFor = useCallback(
     (symbol: string) => instruments.find((instrument) => instrument.symbol === symbol)?.marketHours,
@@ -67,8 +66,38 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
   const totalFloating = positions.reduce((s, p) => s + p.profit + p.swap, 0);
 
   return (
-    <div ref={dockRef} className="flex h-full flex-col bg-panel">
-      <div className={`grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 bg-panel-2 px-2 md:flex md:gap-3 md:px-3 md:py-1 mb-0.5 ${collapsed ? "py-0" : "gap-y-1.5 py-1.5"}`}>
+    <div className="flex h-full flex-col bg-panel">
+      {collapsed && onToggleCollapsed && (
+        <Button
+          type="button"
+          variant="ghost"
+          aria-label="Expand positions and trade history"
+          aria-expanded={false}
+          onClick={onToggleCollapsed}
+          className="flex h-14 w-full shrink-0 items-center justify-between rounded-none bg-panel-2 px-3 text-left hover:bg-panel-3 md:hidden"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <PanelBottomOpen size={16} aria-hidden className="shrink-0 text-brand" />
+            <span className="text-xs font-semibold text-text">Positions</span>
+            <span className="rounded-full bg-canvas px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold tabular-nums text-text-muted">
+              {positions.length}
+            </span>
+          </span>
+          {positions.length > 0 ? (
+            <span className={`flex max-w-[60%] shrink-0 items-center gap-1 truncate text-xs font-semibold tabular-nums ${
+              totalFloating >= 0 ? "text-up" : "text-down"
+            }`}>
+              {totalFloating >= 0
+                ? <TrendingUp size={13} aria-hidden />
+                : <TrendingDown size={13} aria-hidden />}
+              {totalFloating >= 0 ? "+" : ""}{fmtNum(totalFloating, 2)} USD
+            </span>
+          ) : (
+            <span className="text-(length:--term-text-2xs) text-text-faint">Tap to view activity</span>
+          )}
+        </Button>
+      )}
+      <div className={`grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 bg-panel-2 px-2 md:flex md:gap-3 md:px-3 md:py-1 mb-0.5 ${collapsed ? "hidden py-0 md:flex" : "gap-y-1.5 py-1.5"}`}>
         <div className="col-start-1 row-start-1 min-w-0 md:flex-none">
           <Tabs
             variant="segmented"
@@ -102,15 +131,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
             ]}
             active={tab}
             onChange={(key) => {
-              const nextTab = key as Tab;
-              setTab(nextTab);
-              if (nextTab === "history" && window.matchMedia("(max-width: 767px)").matches) {
-                requestAnimationFrame(() => {
-                  dockRef.current
-                    ?.closest<HTMLElement>("[data-activity-dock]")
-                    ?.scrollIntoView({ block: "end", behavior: "smooth" });
-                });
-              }
+              setTab(key as Tab);
             }}
           />
         </div>

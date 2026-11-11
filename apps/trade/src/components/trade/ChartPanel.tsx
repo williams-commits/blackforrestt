@@ -236,7 +236,7 @@ function TradingViewChart({
       calendar: false,
       details: false,
       hotlist: false,
-      studies: ["STD;RSI", "STD;EMA", "STD;MACD"],
+      studies: ["STD;RSI", "STD;EMA", "STD;SMA"],
       hide_side_toolbar: false,
       hide_top_toolbar: false,
       hide_legend: false,

@@ -24,6 +24,6 @@ docker run --rm \
   -v "$ENV_FILE:/workspace/.env.production:ro" \
   -v "$ROOT/deploy/caddy:/workspace/deploy/caddy" \
   blckforest-render:tmp \
-  node scripts/platform.mjs caddy render --env-file /workspace/.env.production --out /workspace/deploy/caddy/render/Caddyfile
+  node --import tsx scripts/platform.mjs caddy render --env-file /workspace/.env.production --out /workspace/deploy/caddy/render/Caddyfile
 sites="$(grep -c 'import app-site' "$out" || true)"
 echo "Rendered $out — $sites active site block(s)."

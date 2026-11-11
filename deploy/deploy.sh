@@ -54,7 +54,7 @@ docker run --rm \
   -v "$ROOT/.env.production:/workspace/.env.production:ro" \
   -v "$ROOT/deploy/caddy:/workspace/deploy/caddy" \
   blckforest-render:tmp \
-  node scripts/platform.mjs caddy render --env-file /workspace/.env.production --out /workspace/deploy/caddy/render/Caddyfile ${DEPLOY_SCOPE_ARGS[@]+"${DEPLOY_SCOPE_ARGS[@]}"}
+  node --import tsx scripts/platform.mjs caddy render --env-file /workspace/.env.production --out /workspace/deploy/caddy/render/Caddyfile ${DEPLOY_SCOPE_ARGS[@]+"${DEPLOY_SCOPE_ARGS[@]}"}
 CADDY_HASH_AFTER="$(sha256sum "$CADDYFILE" | cut -d' ' -f1)"
 CADDY_CHANGED=false
 if [[ "$CADDY_HASH_BEFORE" != "$CADDY_HASH_AFTER" ]]; then

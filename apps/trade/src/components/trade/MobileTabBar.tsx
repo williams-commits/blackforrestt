@@ -87,7 +87,7 @@ function MobileTabBarInner() {
         href={item.href}
         aria-current={item.active ? "page" : undefined}
         className={cn(
-          "mx-1 flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-3xl px-1 text-(length:--term-text-2xs) font-medium transition-all duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-brand",
+          "mx-1 flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-3xl px-1 text-(length:--term-text-2xs) font-medium transition-all duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-brand",
           item.active ? "bg-brand-soft text-brand m-0.5" : "text-text-muted hover:text-text",
         )}
       >
@@ -114,7 +114,7 @@ function MobileTabBarInner() {
             aria-label={onTrade ? "Open order ticket" : `Trade ${symbol ?? "instruments"}`}
             aria-haspopup="dialog"
             className={cn(
-              "flex min-h-14 w-full flex-col items-center justify-center gap-0.5 rounded-3xl px-1 text-(length:--term-text-2xs) font-medium transition-all duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-brand",
+              "flex min-h-11 w-full flex-col items-center justify-center gap-0.5 rounded-3xl px-1 text-(length:--term-text-2xs) font-medium transition-all duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-brand",
               onTrade ? "bg-brand-soft text-brand" : "text-text-muted hover:text-text",
             )}
           >

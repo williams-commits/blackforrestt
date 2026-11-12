@@ -70,7 +70,7 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
   const initial = userName[0]?.toUpperCase() ?? "U";
 
   return (
-    <header className="relative z-40 flex min-h-11 shrink-0 flex-wrap items-center bg-canvas shadow-panel sm:flex-nowrap">
+    <header className="relative z-40 flex min-h-12 shrink-0 flex-wrap items-center bg-canvas py-2 shadow-panel sm:min-h-11 sm:flex-nowrap sm:py-0">
       {/* Logo — the TRADE badge is desktop-only; on the phone it just repeated
           where the user already is. */}
       <div className="flex items-center gap-2.5 px-3 shrink-0 h-full">
@@ -78,10 +78,9 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
         <span className="hidden sm:inline-block text-(length:--term-text-2xs) font-semibold text-brand bg-brand-soft px-1.5 py-0.5 rounded">TRADE</span>
       </div>
 
-      {/* Metrics strip — phones get one compact horizontally-scrollable row
-          (an intentional data strip: every key metric reachable, no vertical
-          bulk); sm+ keeps the single dense row. */}
-      <div className="order-3 flex w-full items-center gap-4 overflow-x-auto bg-panel px-3 py-2 scrollbar-none [&::-webkit-scrollbar]:hidden sm:order-0 sm:w-auto sm:gap-4 sm:overflow-visible sm:bg-transparent sm:py-0">
+      {/* Keep the header to one row on phones like the account shell; show the
+          full metrics strip where it can fit beside the terminal controls. */}
+      <div className="order-3 hidden w-full items-center gap-4 overflow-x-auto bg-panel px-3 py-2 scrollbar-none [&::-webkit-scrollbar]:hidden sm:order-0 sm:flex sm:w-auto sm:gap-4 sm:overflow-visible sm:bg-transparent sm:py-0">
         <Metric label="ACCOUNT" value={account?.accountNo ?? "—"} className="hidden lg:flex" />
         <Metric label="BALANCE" value={fmtUsd(account?.balance)} />
         <Metric label="EQUITY" value={fmtUsd(account?.equity)} />
@@ -129,9 +128,9 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
           <button
             type="button"
             aria-label="Open account menu"
-            className="flex h-11 items-center gap-2.5 rounded-md px-2 transition-colors duration-150 hover:bg-panel-2 sm:px-2.5 in-data-[state=open]:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand"
+            className="flex h-10 items-center gap-2.5 rounded-md px-2 transition-colors duration-150 hover:bg-panel-2 sm:h-11 sm:px-2.5 in-data-[state=open]:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand"
           >
-            <span className="flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-white shadow-sm ring-2 ring-brand/25 transition-transform duration-150 in-data-[state=open]:scale-105">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white shadow-sm ring-2 ring-brand/25 transition-transform duration-150 sm:size-8 sm:text-sm in-data-[state=open]:scale-105">
               {initial}
             </span>
             <span className="hidden min-w-0 text-left sm:block">
@@ -152,11 +151,11 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
             </svg>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-72 rounded-lg border border-border bg-canvas p-0 text-xs shadow-xl">
+        <DropdownMenuContent align="end" className="w-64 rounded-lg border border-border bg-canvas p-0 text-xs shadow-xl sm:w-72">
           {/* User header — premium avatar treatment */}
-          <div className="bg-panel-2/50 px-4 py-3.5">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-base font-bold text-white shadow-sm ring-2 ring-brand/25">
+          <div className="bg-panel-2/50 px-3 py-2.5 sm:px-4 sm:py-3.5">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand text-base font-bold text-white shadow-sm ring-2 ring-brand/25 sm:size-10">
                 {initial}
               </span>
               <div className="min-w-0 flex-1">
@@ -167,14 +166,14 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
                 <span className="shrink-0 rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold uppercase text-brand">Admin</span>
               )}
             </div>
-            <div className="mt-2.5 flex items-center gap-2 border-t border-border-soft pt-2">
+            <div className="mt-2 flex items-center gap-2 border-t border-border-soft pt-1.5 sm:mt-2.5 sm:pt-2">
               <span className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">Account</span>
               <span className="text-(length:--term-text-2xs) tnum font-medium">{account?.accountNo ?? "—"}</span>
             </div>
           </div>
 
           {/* Grouped actions */}
-          <div className="p-1.5">
+          <div className="p-1 sm:p-1.5">
             <MenuGroupLabel>Money</MenuGroupLabel>
             {depositUiEnabled && (
               <MenuAction
@@ -204,18 +203,18 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
 
           {/* Theme control — the header keeps its toggle from sm up; on phones
               this is where dim mode lives. */}
-          <div className="flex items-center gap-3 bg-panel-2/40 px-4 py-2 text-xs text-text">
+          <div className="flex items-center gap-2 bg-panel-2/40 px-3 py-1.5 text-xs text-text sm:gap-3 sm:px-4 sm:py-2">
             <span className="text-text-muted"><ThemeIcon /></span>
             <span className="flex-1 font-medium">Dim mode</span>
             <ThemeToggle />
           </div>
 
           {/* Sign out */}
-          <div className="p-1.5">
+          <div className="p-1 sm:p-1.5">
             {session?.user ? (
               <DropdownMenuItem
                 variant="destructive"
-                className="gap-3 rounded-md px-3 py-2 text-xs text-down transition-colors duration-150 hover:bg-down/10 focus:bg-down/10 focus:text-down"
+                className="gap-2.5 rounded-md px-2.5 py-1.5 text-xs text-down transition-colors duration-150 hover:bg-down/10 focus:bg-down/10 focus:text-down sm:gap-3 sm:px-3 sm:py-2"
                 onSelect={() => { void signOut({ redirect: false }).then(() => { window.location.assign("/login"); }); }}
               >
                 <SignOutIcon />
@@ -271,7 +270,7 @@ function fmtUsd(v: number | null | undefined): string {
 
 function MenuGroupLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-3 pb-1 pt-2.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wider text-text-faint first:pt-1.5">
+    <div className="px-2.5 pb-0.5 pt-1.5 text-(length:--term-text-2xs) font-semibold uppercase tracking-wider text-text-faint first:pt-1 sm:px-3 sm:pb-1 sm:pt-2.5 first:sm:pt-1.5">
       {children}
     </div>
   );
@@ -290,13 +289,13 @@ function MenuAction({
 }) {
   return (
     <DropdownMenuItem
-      className="group gap-3 rounded-md px-3 py-2 text-xs text-text transition-colors duration-150 hover:bg-panel-2 focus:bg-panel-2 focus:text-text"
+      className="group gap-2.5 rounded-md px-2.5 py-1.5 text-xs text-text transition-colors duration-150 hover:bg-panel-2 focus:bg-panel-2 focus:text-text sm:gap-3 sm:px-3 sm:py-2"
       onSelect={onSelect}
     >
       <span className="text-text-muted transition-colors duration-150 group-hover:text-text">{icon}</span>
       <span className="flex-1">
         <span className="font-medium block">{label}</span>
-        {hint && <span className="text-(length:--term-text-2xs) text-text-faint">{hint}</span>}
+        {hint && <span className="text-(length:--term-text-2xs) text-text-faint max-sm:hidden">{hint}</span>}
       </span>
     </DropdownMenuItem>
   );
@@ -304,7 +303,7 @@ function MenuAction({
 
 function MenuLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
   return (
-    <DropdownMenuItem asChild className="group gap-3 rounded-md px-3 py-2 text-xs text-text transition-colors duration-150 hover:bg-panel-2 focus:bg-panel-2 focus:text-text">
+    <DropdownMenuItem asChild className="group gap-2.5 rounded-md px-2.5 py-1.5 text-xs text-text transition-colors duration-150 hover:bg-panel-2 focus:bg-panel-2 focus:text-text sm:gap-3 sm:px-3 sm:py-2">
       <Link href={href}>
         <span className="text-text-muted transition-colors duration-150 group-hover:text-text">{icon}</span>
         <span className="font-medium">{label}</span>

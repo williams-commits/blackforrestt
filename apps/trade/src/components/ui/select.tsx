@@ -10,7 +10,48 @@ import { cn } from "@/lib/utils";
    bridge in globals.css, so no dark: variants are needed here. */
 
 function Select({ ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />;
+  const { onOpenChange, ...rootProps } = props;
+  const scrollLockCountRef = React.useRef(0);
+  const scrollLockObserverRef = React.useRef<MutationObserver | null>(null);
+
+  const handleOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (typeof document !== "undefined") {
+        const body = document.body;
+        scrollLockObserverRef.current?.disconnect();
+
+        if (open) {
+          scrollLockCountRef.current = Number(body.getAttribute("data-scroll-locked") ?? "0");
+          body.setAttribute("data-radix-select-open", "");
+        } else {
+          const clearScrollMarker = () => {
+            const lockCount = Number(body.getAttribute("data-scroll-locked") ?? "0");
+            if (lockCount <= scrollLockCountRef.current) {
+              body.removeAttribute("data-radix-select-open");
+              scrollLockObserverRef.current?.disconnect();
+              scrollLockObserverRef.current = null;
+            }
+          };
+          scrollLockObserverRef.current = new MutationObserver(clearScrollMarker);
+          scrollLockObserverRef.current.observe(body, { attributes: true, attributeFilter: ["data-scroll-locked"] });
+          window.requestAnimationFrame(clearScrollMarker);
+        }
+      }
+
+      onOpenChange?.(open);
+    },
+    [onOpenChange],
+  );
+
+  React.useEffect(
+    () => () => {
+      scrollLockObserverRef.current?.disconnect();
+      document.body.removeAttribute("data-radix-select-open");
+    },
+    [],
+  );
+
+  return <SelectPrimitive.Root data-slot="select" {...rootProps} onOpenChange={handleOpenChange} />;
 }
 
 function SelectGroup({ className, ...props }: React.ComponentProps<typeof SelectPrimitive.Group>) {

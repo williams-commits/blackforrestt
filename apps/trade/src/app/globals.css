@@ -409,6 +409,12 @@ body {
   min-width: 320px;
 }
 
+/* Preserve the document scroll position while Radix Select's modal scroll lock is active. */
+html body[data-radix-select-open][data-scroll-locked] {
+  position: static !important;
+  overflow: visible !important;
+}
+
 @media (max-width: 639px) {
   button,
   a,

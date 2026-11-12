@@ -107,15 +107,15 @@ function MobileTabBarInner() {
         {/* Center Trade action — the in-flow middle button. Same job
             and brand styling as the web FAB (brand fill + arrow glyph), sized
             and aligned with the nav items around it. */}
-        <li>
+        <li className={onTrade ? "p-0.5" : "px-1"}>
           <button
             type="button"
             onClick={openTrade}
             aria-label={onTrade ? "Open order ticket" : `Trade ${symbol ?? "instruments"}`}
             aria-haspopup="dialog"
             className={cn(
-              "mx-1 flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-3xl px-1 text-(length:--term-text-2xs) font-medium transition-all duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-brand",
-              onTrade ? "bg-brand-soft text-brand m-0.5" : "text-text-muted hover:text-text",
+              "flex min-h-14 w-full flex-col items-center justify-center gap-0.5 rounded-3xl px-1 text-(length:--term-text-2xs) font-medium transition-all duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-brand",
+              onTrade ? "bg-brand-soft text-brand" : "text-text-muted hover:text-text",
             )}
           >
             <TrendingUpDown size={13} strokeWidth={2} aria-hidden />

@@ -221,7 +221,7 @@ export function Dashboard({
   return (
     <div className="trade-workspace terminal-ui flex h-dvh min-h-0 w-full flex-col overflow-hidden bg-canvas pb-[calc(env(safe-area-inset-bottom)+4.75rem)] md:pb-0 lg:h-screen">
       <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} walletAddresses={walletAddresses} marginWarningPercent={marginWarningPercent} />
-      <MarketStatusBanner marketDataMode={marketDataMode} wsStatus={status} />
+      <MarketStatusBanner marketDataMode={marketDataMode} wsStatus={status} instrument={activeInstrument} />
 
       {/* Keep market discovery, charting, and order entry in stable columns on
           desktop; smaller screens open the same ticket in a right-side sheet. */}

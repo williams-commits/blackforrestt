@@ -1,17 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Activity, Clock3, Radio } from "lucide-react";
 import { useForexStore } from "@/lib/store";
+import type { InstrumentView } from "@/lib/types";
 import type { SocketStatus } from "@/lib/ws/client";
 import { MAX_EXECUTABLE_QUOTE_AGE_MS, quoteAgeMs } from "@/lib/marketFreshness";
-import {Radio, ClockFading} from "lucide-react";
 
 export function MarketStatusBanner({
   marketDataMode,
   wsStatus,
+  instrument,
 }: {
   marketDataMode: string;
   wsStatus: SocketStatus;
+  instrument: InstrumentView;
 }) {
   const quote = useForexStore((state) => state.quote);
   const [now, setNow] = useState(() => Date.now());
@@ -20,16 +23,32 @@ export function MarketStatusBanner({
     return () => window.clearInterval(timer);
   }, []);
 
-  const ageMs = quoteAgeMs(quote, now);
+  const selectedQuote = quote?.symbol === instrument.symbol ? quote : null;
+  const ageMs = quoteAgeMs(selectedQuote, now);
   const stale = ageMs == null || ageMs > MAX_EXECUTABLE_QUOTE_AGE_MS;
+  const connected = wsStatus === "open";
   const offline = wsStatus === "closed" || wsStatus === "unauthorized";
+  const connectionLabel = wsStatus === "open"
+    ? "Connected"
+    : wsStatus === "connecting"
+      ? "Connecting"
+      : wsStatus === "unauthorized"
+        ? "Sign-in required"
+        : "Offline";
+  const quoteLabel = offline
+    ? "Feed offline"
+    : ageMs == null
+      ? "Waiting for quote"
+      : stale
+        ? `Stale · ${(ageMs / 1_000).toFixed(1)}s`
+        : `Live · ${(ageMs / 1_000).toFixed(1)}s`;
   const sourceLabel: Record<string, string> = {
-    simulation: "internal price feed",
+    simulation: "Internal price feed",
     finnhub: "Live feed",
-    alphavantage: "Alpha Vantage market data",
-    tickerlayer: "TickerLayer market data",
-    sifting: "Sifting market data",
-    lse: "London Strategic Edge market data",
+    alphavantage: "Alpha Vantage",
+    tickerlayer: "TickerLayer",
+    sifting: "Sifting",
+    lse: "London Strategic Edge",
   };
   const source = sourceLabel[marketDataMode] ?? `${marketDataMode} market data`;
 
@@ -37,30 +56,50 @@ export function MarketStatusBanner({
     <div
       role="status"
       aria-live="polite"
-      className={`flex min-h-8 flex-wrap items-center gap-x-5 gap-y-1 px-4 py-0.5 text-(length:--term-text-2xs) border-y border-border-soft bg-canvas`}
+      className="flex min-h-8 flex-wrap items-center gap-1.5 border-y border-border-soft bg-canvas px-4 py-0.5 text-(length:--term-text-2xs) sm:gap-2 lg:px-4"
     >
-      <span className="inline-flex items-center gap-2 font-medium">
-        <Radio size={12} className="animate-pulse duration-300 transition-all" />
-        <span>{source}</span>
-      </span>
-      <span className="inline-flex items-center gap-2">
-        <ClockFading size={12} />
-        <span>
-          <span className="sr-only">Connection: </span>
-          <span className="font-medium">{offline ? "Offline" : wsStatus}</span>
-          <span className="mx-1.5 opacity-50" aria-hidden="true">·</span>
-          <span className="sr-only">Quote age: </span>
-          {ageMs == null
-            ? "Waiting for quote"
-            : `${(ageMs / 1_000).toFixed(1)}s old${stale ? " · stale" : ""}`}
-        </span>
-      </span>
+      <StatusPill
+        icon={<Radio size={12} strokeWidth={2} aria-hidden />}
+        label={source}
+        tone="text-text-muted"
+      />
+      <StatusPill
+        icon={<Activity size={12} strokeWidth={2} aria-hidden />}
+        label={connectionLabel}
+        tone={connected ? "text-up" : offline ? "text-down" : "text-brand"}
+      />
+      <StatusPill
+        icon={<Clock3 size={12} strokeWidth={2} aria-hidden />}
+        label={`${instrument.symbol} · ${instrument.marketHours.isOpen ? "Session open" : "Session closed"}`}
+        tone={instrument.marketHours.isOpen ? "text-up" : "text-text-muted"}
+      />
+      <StatusPill
+        icon={<Radio size={12} strokeWidth={2} aria-hidden />}
+        label={quoteLabel}
+        tone={connected && !stale ? "text-up" : offline || stale ? "text-down" : "text-brand"}
+      />
       {(offline || stale) && (
-        <span className="inline-flex items-center gap-2 font-medium">
-          <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
-          New orders are blocked until a fresh quote is received.
+        <span className="basis-full px-1 pt-0.5 font-medium text-text-muted sm:basis-auto sm:pt-0">
+          New orders require a fresh live quote.
         </span>
       )}
     </div>
+  );
+}
+
+function StatusPill({
+  icon,
+  label,
+  tone,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  tone: string;
+}) {
+  return (
+    <span className={`inline-flex min-h-7 min-w-0 items-center gap-1.5 rounded-md bg-panel px-2.5 py-1 font-medium ${tone}`}>
+      <span className="shrink-0">{icon}</span>
+      <span className="truncate">{label}</span>
+    </span>
   );
 }

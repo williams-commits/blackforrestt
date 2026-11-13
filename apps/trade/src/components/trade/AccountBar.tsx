@@ -78,22 +78,24 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
         <span className="hidden sm:inline-block text-(length:--term-text-2xs) font-semibold text-brand bg-brand-soft px-1.5 py-0.5 rounded">TRADE</span>
       </div>
 
-      {/* Keep the header to one row on phones like the account shell; show the
-          full metrics strip where it can fit beside the terminal controls. */}
-      <div className="order-3 hidden w-full items-center gap-4 overflow-x-auto bg-panel px-3 py-2 scrollbar-none [&::-webkit-scrollbar]:hidden sm:order-0 sm:flex sm:w-auto sm:gap-4 sm:overflow-visible sm:bg-transparent sm:py-0">
+      {/* Keep every account metric available on phones in a compact scroll row;
+          large screens place the same metrics inline with the header controls. */}
+      <div className="order-3 flex w-full min-w-0 items-center gap-2 overflow-x-auto border-t border-border-soft bg-panel px-3 py-2 scrollbar-none overscroll-x-contain [&::-webkit-scrollbar]:hidden lg:order-0 lg:w-auto lg:flex-1 lg:gap-3 lg:overflow-x-auto lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
         <Metric label="ACCOUNT" value={account?.accountNo ?? "—"} className="hidden lg:flex" />
-        <Metric label="BALANCE" value={fmtUsd(account?.balance)} />
-        <Metric label="EQUITY" value={fmtUsd(account?.equity)} />
-        <Metric label="FREE" value={fmtUsd(account?.free)} />
+        <Metric label="BALANCE" value={fmtUsd(account?.balance)} className={metricCardClass} />
+        <Metric label="EQUITY" value={fmtUsd(account?.equity)} className={metricCardClass} />
+        <Metric label="FREE" value={fmtUsd(account?.free)} className={metricCardClass} />
         <Metric
           label="P/L"
           value={`${floating >= 0 ? "+" : ""}${fmtNum(floating, 2)}`}
           valueClass={floatingUp ? "text-up" : "text-down"}
+          className={metricCardClass}
         />
         <Metric
           label="MARGIN"
           value={fmtUsd(account?.margin)}
           valueClass={marginTight ? "text-down font-semibold" : ""}
+          className={metricCardClass}
         />
         <Metric
           label="MARGIN LEVEL"
@@ -101,11 +103,13 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
           // No open position → the ratio is undefined; show a muted em dash so
           // it reads "not applicable" rather than a broken value.
           valueClass={account?.marginLevel == null ? "text-text-faint" : marginTight ? "text-down font-semibold" : ""}
+          className={metricCardClass}
         />
         <Metric
           label="CREDIT"
           value={fmtUsd(account?.credit)}
           title="Outstanding repayable advance, already included in balance."
+          className={metricCardClass}
         />
       </div>
 
@@ -265,6 +269,8 @@ function fmtUsd(v: number | null | undefined): string {
   if (v == null || !isFinite(v)) return "—";
   return v.toLocaleString(getFormatLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+
+const metricCardClass = "rounded-lg bg-canvas px-2.5 py-1.5 ring-1 ring-border-soft lg:rounded-none lg:bg-transparent lg:px-0 lg:py-0 lg:ring-0";
 
 // ── Dropdown menu helpers (Radix items with the terminal look) ───────────────
 

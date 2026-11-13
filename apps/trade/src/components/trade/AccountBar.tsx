@@ -70,7 +70,7 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
   const initial = userName[0]?.toUpperCase() ?? "U";
 
   return (
-    <header className="relative z-40 grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(3rem,auto)_auto] items-center bg-canvas shadow-panel lg:flex lg:min-h-11 lg:flex-nowrap">
+    <header className="relative z-40 grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(3rem,auto)_auto] items-center bg-canvas shadow-panel lg:flex lg:min-h-12 lg:flex-nowrap">
       {/* Logo — the TRADE badge is desktop-only; on the phone it just repeated
           where the user already is. */}
       <div className="col-start-1 row-start-1 flex shrink-0 items-center gap-2.5 px-3 lg:col-auto lg:row-auto">
@@ -81,7 +81,7 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
       {/* Keep every account metric available on phones in a compact scroll row;
           large screens place the same metrics inline with the header controls. */}
       <div className="col-span-3 row-start-2 flex w-full min-w-0 items-center gap-2 overflow-x-auto border-t border-border-soft bg-panel px-3 py-2 scrollbar-none overscroll-x-contain [&::-webkit-scrollbar]:hidden lg:col-auto lg:row-auto lg:w-auto lg:flex-1 lg:gap-3 lg:overflow-x-auto lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
-        <Metric label="ACCOUNT" value={account?.accountNo ?? "—"} className="hidden lg:flex" />
+        <Metric label="ACCOUNT" value={account?.accountNo ?? "—"} className={`hidden lg:flex ${metricCardClass}`} />
         <Metric label="BALANCE" value={fmtUsd(account?.balance)} className={metricCardClass} />
         <Metric label="EQUITY" value={fmtUsd(account?.equity)} className={metricCardClass} />
         <Metric label="FREE" value={fmtUsd(account?.free)} className={metricCardClass} />
@@ -270,7 +270,7 @@ function fmtUsd(v: number | null | undefined): string {
   return v.toLocaleString(getFormatLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const metricCardClass = "rounded-lg bg-canvas px-2.5 py-1.5 ring-1 ring-border-soft lg:rounded-none lg:bg-transparent lg:px-0 lg:py-0 lg:ring-0";
+const metricCardClass = "rounded-lg bg-canvas px-2.5 py-1 ring-1 ring-border-soft lg:bg-panel truncate";
 
 // ── Dropdown menu helpers (Radix items with the terminal look) ───────────────
 

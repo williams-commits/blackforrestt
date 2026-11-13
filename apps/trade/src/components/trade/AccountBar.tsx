@@ -70,17 +70,17 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
   const initial = userName[0]?.toUpperCase() ?? "U";
 
   return (
-    <header className="relative z-40 flex min-h-12 shrink-0 flex-wrap items-center bg-canvas py-2 shadow-panel sm:min-h-11 sm:flex-nowrap sm:py-0">
+    <header className="relative z-40 grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(3rem,auto)_auto] items-center bg-canvas shadow-panel lg:flex lg:min-h-11 lg:flex-nowrap">
       {/* Logo — the TRADE badge is desktop-only; on the phone it just repeated
           where the user already is. */}
-      <div className="flex items-center gap-2.5 px-3 shrink-0 h-full">
+      <div className="col-start-1 row-start-1 flex shrink-0 items-center gap-2.5 px-3 lg:col-auto lg:row-auto">
         <Logo inverted={theme === "dim"} />
         <span className="hidden sm:inline-block text-(length:--term-text-2xs) font-semibold text-brand bg-brand-soft px-1.5 py-0.5 rounded">TRADE</span>
       </div>
 
       {/* Keep every account metric available on phones in a compact scroll row;
           large screens place the same metrics inline with the header controls. */}
-      <div className="order-3 flex w-full min-w-0 items-center gap-2 overflow-x-auto border-t border-border-soft bg-panel px-3 py-2 scrollbar-none overscroll-x-contain [&::-webkit-scrollbar]:hidden lg:order-0 lg:w-auto lg:flex-1 lg:gap-3 lg:overflow-x-auto lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
+      <div className="col-span-3 row-start-2 flex w-full min-w-0 items-center gap-2 overflow-x-auto border-t border-border-soft bg-panel px-3 py-2 scrollbar-none overscroll-x-contain [&::-webkit-scrollbar]:hidden lg:col-auto lg:row-auto lg:w-auto lg:flex-1 lg:gap-3 lg:overflow-x-auto lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
         <Metric label="ACCOUNT" value={account?.accountNo ?? "—"} className="hidden lg:flex" />
         <Metric label="BALANCE" value={fmtUsd(account?.balance)} className={metricCardClass} />
         <Metric label="EQUITY" value={fmtUsd(account?.equity)} className={metricCardClass} />
@@ -115,7 +115,7 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
 
       {/* Connection + clock + search + theme toggle. The theme toggle lives in the user
           dropdown on phones — this row stays minimal: dot + search + avatar. */}
-      <div className="ml-auto flex shrink-0 items-center gap-2 px-2 sm:px-3">
+      <div className="col-start-2 row-start-1 ml-auto flex shrink-0 items-center gap-2 px-2 sm:px-3 lg:col-auto lg:row-auto">
         <TradeSearchButton />
         <TerminalNotifications />
         <ConnectionDot status={wsStatus} />
@@ -132,7 +132,7 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
           <button
             type="button"
             aria-label="Open account menu"
-            className="flex h-10 items-center gap-2.5 rounded-md px-2 transition-colors duration-150 hover:bg-panel-2 sm:h-11 sm:px-2.5 in-data-[state=open]:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand"
+            className="col-start-3 row-start-1 flex h-10 items-center gap-2.5 rounded-md px-2 transition-colors duration-150 hover:bg-panel-2 sm:h-11 sm:px-2.5 in-data-[state=open]:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand lg:col-auto lg:row-auto"
           >
             <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white shadow-sm ring-2 ring-brand/25 transition-transform duration-150 sm:size-8 sm:text-sm in-data-[state=open]:scale-105">
               {initial}

@@ -71,8 +71,17 @@ interface Resource<T> {
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { cache: "no-store", ...init });
-  const body = (await response.json().catch(() => ({}))) as { error?: string } & T;
-  if (!response.ok) throw new Error(body.error ?? `Request failed with status ${response.status}.`);
+  const body = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    diagnostic?: { reference: string; detail: string };
+  } & T;
+  if (!response.ok) {
+    const message = body.error ?? `Request failed with status ${response.status}.`;
+    const diagnostic = body.diagnostic
+      ? `\nDiagnostic ${body.diagnostic.reference}: ${body.diagnostic.detail}`
+      : "";
+    throw new Error(`${message}${diagnostic}`);
+  }
   return body;
 }
 
@@ -1418,7 +1427,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
   }
 
   async function submitClose() {
-    if (!closeTarget || closeReason.trim().length < 3) return;
+    if (!closeTarget || closeReason.trim().length < 5) return;
     setBusy(closeTarget.id);
     setError(null);
     try {
@@ -1485,7 +1494,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
       <AdminSummaryCard label="Market data" icon={CandlestickChart} value={marketDataLabel(resource.data.marketDataMode)} detail="Price feed source." />
       <HealthCard name="Trading engine" status={resource.data.engineReady ? "UP" : "STARTING"} detail={resource.data.engineReady ? "Ready to process positions." : "Waiting for engine startup."} />
     </div>
-    {error && <Alert tone="err">{error}</Alert>}
+    {error && <Alert tone="err" className="whitespace-pre-wrap wrap-break-words">{error}</Alert>}
     {resource.data.total > allPositions.length && (
       <Alert tone="info">Showing the {allPositions.length} most recent positions of {resource.data.total.toLocaleString("en-US")} — narrow with the status filter.</Alert>
     )}
@@ -1704,11 +1713,11 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
     >
       <form onSubmit={(e) => { e.preventDefault(); void submitClose(); }} className="space-y-4 px-5 py-4">
         <div>
-          <Label htmlFor="close-reason" className="mb-1 block text-xs font-medium text-muted-foreground">Reason (audited, min 3 chars)</Label>
+          <Label htmlFor="close-reason" className="mb-1 block text-xs font-medium text-muted-foreground">Reason (audited, min 5 chars)</Label>
           <Textarea
             id="close-reason"
             required
-            minLength={3}
+            minLength={5}
             maxLength={200}
             rows={3}
             value={closeReason}
@@ -1717,11 +1726,12 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
             startIcon={<FileText size={13} strokeWidth={2} aria-hidden />}
           />
         </div>
+        {error && <Alert tone="err" className="whitespace-pre-wrap wrap-break-words select-text">{error}</Alert>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={() => { setCloseTarget(null); setCloseReason(""); }}>
             <X size={13} strokeWidth={2} aria-hidden /> Cancel
           </Button>
-          <Button type="submit" variant="destructive" loading={busy !== null} disabled={closeReason.trim().length < 3}>
+          <Button type="submit" variant="destructive" loading={busy !== null} disabled={closeReason.trim().length < 5}>
             <X size={13} strokeWidth={2} aria-hidden /> Close position
           </Button>
         </div>

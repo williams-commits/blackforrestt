@@ -14,6 +14,7 @@ import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { SectionHeader } from "./SectionHeader";
+import { useAdminPersistentState } from "./useAdminPersistentState";
 
 interface Submission {
   id: string;
@@ -79,8 +80,16 @@ export function KycReview({
   /** Blob URL kept when the browser blocks the async window.open — the admin
    *  can still open the document with a deliberate click. */
   const [manualDocUrl, setManualDocUrl] = useState<string | null>(null);
-  const [queueSearch, setQueueSearch] = useState("");
-  const [docFilter, setDocFilter] = useState<string>("ALL");
+  const [queueSearch, setQueueSearch] = useAdminPersistentState(
+    "blckforest:admin:filter:kyc-search",
+    "",
+    (value) => typeof value === "string" ? value : undefined,
+  );
+  const [docFilter, setDocFilter] = useAdminPersistentState(
+    "blckforest:admin:filter:kyc-document-type",
+    "ALL",
+    (value) => typeof value === "string" ? value : undefined,
+  );
   const [queueVisible, setQueueVisible] = useState(10);
   const [loadingMorePending, setLoadingMorePending] = useState(false);
   const [pendingLoadError, setPendingLoadError] = useState<string | null>(null);
@@ -545,6 +554,7 @@ export function KycReview({
           <div className="mt-8">
           {decisionsLoadError && <Alert tone="err" className="mb-3">{decisionsLoadError}</Alert>}
           <RecordList<Submission>
+            storageKey="blckforest:admin:list:kyc-decisions"
             ariaLabel="Decision"
             title="Recent decisions"
             count={decisions.length < reviewedTotalResolved ? `${decisions.length} of ${reviewedTotalResolved} decisions` : `${decisions.length} decisions`}

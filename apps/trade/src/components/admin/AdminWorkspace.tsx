@@ -7,6 +7,7 @@ import { ReconciliationReview } from "./ReconciliationReview";
 import { AdminUserActions } from "./AdminUserActions";
 import { AdminMessages } from "./AdminMessages";
 import { GroupsPanel } from "./GroupsPanel";
+import { useAdminPersistentState } from "./useAdminPersistentState";
 import { SectionHeader } from "./SectionHeader";
 import { SettingsForm, type UserSettingsConfig } from "./SettingsForm";
 import { Button } from "@/components/ui/Button";
@@ -85,7 +86,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return body;
 }
 
-function useResource<T>(url: string, pollMs?: number): Resource<T> {
+function useResource<T>(url: string, pollMs = 15_000): Resource<T> {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +115,8 @@ function useResource<T>(url: string, pollMs?: number): Resource<T> {
     }
   }, [url]);
   useEffect(() => { void refresh(); }, [refresh]);
-  // Optional silent polling so the panel stays in sync with the database.
+  // Silent polling keeps the active panel in sync with changes from other
+  // operators and traders; hidden browser tabs pause their API requests.
   // Paused while the tab is hidden so background admin tabs stop loading the
   // API (the visibility listener catches up on return).
   useEffect(() => {
@@ -199,7 +201,10 @@ export function AdminWorkspace({ permissions, simpleApproval = false }: Props) {
   useEffect(() => {
     const onPopState = () => {
       const param = new URLSearchParams(window.location.search).get("tab") as TabKey | null;
-      if (param && allowedKeysRef.current.has(param)) setTabState(param);
+      if (param && allowedKeysRef.current.has(param)) {
+        setTabState(param);
+        window.localStorage.setItem(ADMIN_TAB_STORAGE_KEY, param);
+      }
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
@@ -643,7 +648,19 @@ function PaginatedUsers({
   onManageBalance?: (user: UserRow) => void;
   onEditSettings?: (user: UserRow) => void;
 }) {
-  const [sort, setSort] = useState<{ key: string; direction: "asc" | "desc" }>({ key: "createdAt", direction: "desc" });
+  const [sort, setSort] = useAdminPersistentState(
+    "blckforest:admin:filter:users-sort",
+    { key: "createdAt", direction: "desc" as const },
+    (value) => {
+      if (typeof value !== "object" || value === null) return undefined;
+      const saved = value as { key?: unknown; direction?: unknown };
+      return typeof saved.key === "string" &&
+        ["createdAt", "name", "balance", "equity", "positions"].includes(saved.key) &&
+        (saved.direction === "asc" || saved.direction === "desc")
+        ? { key: saved.key, direction: saved.direction }
+        : undefined;
+    },
+  );
   const onSort = (key: string) =>
     setSort((prev) =>
       prev.key === key
@@ -674,6 +691,7 @@ function PaginatedUsers({
 
   return (
     <RecordList<UserRow>
+      storageKey="blckforest:admin:list:users"
       ariaLabel="Account"
       title="Accounts"
       count={`${sortedUsers.length} users`}
@@ -1058,6 +1076,7 @@ function UserBalanceDialog({
             {notice ? <Alert tone="ok">{notice}</Alert> : null}
             <section aria-label="Transaction history">
               <RecordList<UserFinanceTransaction>
+                storageKey="blckforest:admin:list:user-finance"
                     ariaLabel="Transaction"
                     title="Transaction history"
                     count={`${transactions.length} records`}
@@ -1191,7 +1210,11 @@ function normalizeLedgerAmount(value: string): string {
 
 function LedgerPanel() {
   const resource = useResource<LedgerResponse>("/api/admin/ledger?limit=200", 15_000);
-  const [kindFilter, setKindFilter] = useState<string>("ALL");
+  const [kindFilter, setKindFilter] = useAdminPersistentState(
+    "blckforest:admin:filter:ledger-kind",
+    "ALL",
+    (value) => typeof value === "string" ? value : undefined,
+  );
 
   const all = useMemo(() => resource.data?.transactions ?? [], [resource.data]);
   const trialBalanceByAsset = useMemo(() => {
@@ -1248,6 +1271,7 @@ function LedgerPanel() {
       </CardContent>
     </Card>
     <RecordList<LedgerTransactionView>
+      storageKey="blckforest:admin:list:ledger"
       ariaLabel="Posting"
       title="Postings"
       count={`${filtered.length} shown`}
@@ -1399,8 +1423,18 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<ExecutionResponse>("/api/admin/executions?limit=200");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<ExecutionStatusFilter>("ALL");
-  const [positionFilter, setPositionFilter] = useState<"ALL" | "OPEN" | "CLOSED">("ALL");
+  const [statusFilter, setStatusFilter] = useAdminPersistentState(
+    "blckforest:admin:filter:executions-status",
+    "ALL" as ExecutionStatusFilter,
+    (value): ExecutionStatusFilter | undefined =>
+      value === "ALL" || value === "OPEN" || value === "CLOSED" ? value : undefined,
+  );
+  const [positionFilter, setPositionFilter] = useAdminPersistentState(
+    "blckforest:admin:filter:executions-position",
+    "ALL" as "ALL" | "OPEN" | "CLOSED",
+    (value): "ALL" | "OPEN" | "CLOSED" | undefined =>
+      value === "ALL" || value === "OPEN" || value === "CLOSED" ? value : undefined,
+  );
   const [profitTarget, setProfitTarget] = useState<ExecutionPosition | null>(null);
   const [profitValue, setProfitValue] = useState("");
   const [profitReason, setProfitReason] = useState("");
@@ -1499,6 +1533,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
       <Alert tone="info">Showing the {allPositions.length} most recent positions of {resource.data.total.toLocaleString("en-US")} — narrow with the status filter.</Alert>
     )}
     <RecordList<UserGroup>
+      storageKey="blckforest:admin:list:executions"
       ariaLabel="Account"
       title="Positions by user"
       sheetWidth="sm:max-w-2xl"
@@ -1780,6 +1815,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
     try { await requestJson(`/api/admin/support/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status, resolutionNote }) }); await resource.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update case."); } finally { setBusy(null); }
   }
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Platform" icon={<LifeBuoy size={18} strokeWidth={2} aria-hidden />} title="Support operations" description="Audited customer issue ownership and resolution lifecycle." onRefresh={() => void resource.refresh()} action={canManage ? <Button size="sm" loading={busy === "create"} onClick={() => void createCase()}><Plus size={13} strokeWidth={2} aria-hidden /> New case</Button> : undefined} />{error && <Alert tone="err">{error}</Alert>}<RecordList<SupportCase>
+      storageKey="blckforest:admin:list:support"
       ariaLabel="Case"
       title="Cases"
       count={`${resource.data.cases.length} cases`}
@@ -1843,6 +1879,7 @@ function InstrumentsPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<{ instruments: InstrumentRow[]; mutationPolicy: string }>("/api/admin/instruments");
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Platform" icon={<ListTree size={18} strokeWidth={2} aria-hidden />} title="Instrument configuration" description="Manage symbol availability, trading terms, and market-data mappings." onRefresh={() => void resource.refresh()} />{canManage && <ChangeHint title="Two-person approval" text={resource.data.mutationPolicy} />}
     <RecordList<InstrumentRow>
+      storageKey="blckforest:admin:list:instruments"
       ariaLabel="Instrument"
       title="Symbols"
       count={`${resource.data.instruments.length} configured`}
@@ -1908,6 +1945,7 @@ function RiskPanel({ canManage }: { canManage: boolean }) {
     </div>
     {canManage && <ChangeHint title="Two-person approval" text={resource.data.mutationPolicy} />}
     <RecordList<RiskRuleRow>
+      storageKey="blckforest:admin:list:risk"
       ariaLabel="Rule"
       title="Rules"
       count={`${resource.data.rules.length} rules`}
@@ -1963,6 +2001,7 @@ function AuditPanel({ canVerify, canExport }: { canVerify: boolean; canExport: b
   const resource = useResource<{ events: AuditEventRow[]; redacted: boolean }>("/api/admin/audit?limit=150");
   async function verify() { try { const result = await requestJson<{ valid: boolean; checkedEvents: number }>("/api/admin/audit/verify", { method: "POST" }); toast.success(`Chain ${result.valid ? "valid" : "invalid"}`, `Checked ${result.checkedEvents} events.`); await resource.refresh(); } catch (cause) { toast.error("Verification failed", cause instanceof Error ? cause.message : "Verification failed."); } }
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Risk & compliance" icon={<ScrollText size={18} strokeWidth={2} aria-hidden />} title="Immutable audit trail" description="Full-domain event stream with export redaction and cryptographic chain verification." onRefresh={() => void resource.refresh()} action={<>{canVerify && <Button type="button" size="sm" onClick={() => void verify()}><ShieldCheck size={13} strokeWidth={2} aria-hidden /> Verify chain</Button>}{canExport && <Button type="button" size="sm" variant="outline" asChild><a href="/api/admin/audit/export?format=csv&limit=500"><Download size={13} strokeWidth={2} aria-hidden /> Export CSV</a></Button>}</>} /><RecordList<AuditEventRow>
+      storageKey="blckforest:admin:list:audit"
       ariaLabel="Event"
       title="Events"
       count={`${resource.data.events.length} events`}
@@ -2022,7 +2061,7 @@ interface HealthResponse {
   reconciliation: { status: string; startedAt?: string; completedAt?: string | null; activeBlocks?: Array<{ reason: string }>; errorMessage?: string | null };
 }
 function HealthPanel() {
-  const resource = useResource<HealthResponse>("/api/admin/service-health");
+  const resource = useResource<HealthResponse>("/api/admin/service-health", 30_000);
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && (
     <div className="space-y-4">
       <SectionHeader
@@ -2158,6 +2197,7 @@ function ChangesPanel({
             />
           )}
           <RecordList<ChangeRow>
+            storageKey="blckforest:admin:list:changes"
             ariaLabel="Request"
             title="Change requests"
             count={`${resource.data.requests.length} requests`}

@@ -86,6 +86,17 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
 
   useEffect(() => {
     void refresh();
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void refresh();
+    }, 15_000);
+    const onVisible = () => {
+      if (!document.hidden) void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [refresh]);
 
   async function runNow() {
@@ -217,6 +228,7 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
 
       <section>
         <RecordList<BlockRow>
+          storageKey="blckforest:admin:list:reconciliation-blocks"
           ariaLabel="Block"
           title="Active blocks"
           count={`${blocks.length} active`}
@@ -258,6 +270,7 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
 
       <section>
         <RecordList<CaseRow>
+          storageKey="blckforest:admin:list:reconciliation-cases"
           ariaLabel="Case"
           title="Cases"
           count={`${cases.length} cases`}
@@ -313,6 +326,7 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
 
       <section>
         <RecordList<RunRow>
+          storageKey="blckforest:admin:list:reconciliation-runs"
           ariaLabel="Run"
           title="Recent runs"
           count={`${runs.length} runs`}

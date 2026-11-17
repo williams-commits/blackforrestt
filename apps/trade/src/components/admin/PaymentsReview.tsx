@@ -23,6 +23,7 @@ import { MethodDetailsGrid } from "@/components/payments/MethodDetailsGrid";
 import { fmtDateTime } from "@/lib/dates";
 import { createDeviceId } from "@/lib/device";
 import { SectionHeader } from "./SectionHeader";
+import { useAdminPersistentState } from "./useAdminPersistentState";
 
 export interface PaymentRequestRow {
   id: string;
@@ -68,7 +69,12 @@ export function PaymentsReview({
   }, [initialRequests]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<"ALL" | "DEPOSIT" | "WITHDRAWAL">("ALL");
+  const [typeFilter, setTypeFilter] = useAdminPersistentState(
+    "blckforest:admin:filter:payments-type",
+    "ALL" as "ALL" | "DEPOSIT" | "WITHDRAWAL",
+    (value): "ALL" | "DEPOSIT" | "WITHDRAWAL" | undefined =>
+      value === "ALL" || value === "DEPOSIT" || value === "WITHDRAWAL" ? value : undefined,
+  );
   const commandKeys = useRef(new Map<string, string>());
   // Open decision form (SimpleDialog) — one money-moving decision at a time.
   const [decision, setDecision] = useState<{ action: "PREPARE" | "APPROVE" | "REJECT"; request: PaymentRequestRow } | null>(null);
@@ -130,6 +136,7 @@ export function PaymentsReview({
       <SectionHeader eyebrow="Finance" icon={<CreditCard size={18} strokeWidth={2} aria-hidden />} title="Manual payment review" description={reviewPolicy} />
       {error && <Alert tone="err">{error}</Alert>}
       <RecordList<PaymentRequestRow>
+        storageKey="blckforest:admin:list:payments"
         ariaLabel="Request"
         title="Payment queue"
         count={`${filtered.length} of ${requests.length} requests`}

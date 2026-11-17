@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { SettingsForm, type UserSettingsConfig } from "./SettingsForm";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/Button";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
+import { useAdminPersistentState } from "./useAdminPersistentState";
 import { Check, Play, Plus, Save, Search, UserMinus, UserPlus, Users, UsersRound, X, ArrowLeft, ArrowRight, ChevronRight, Coins, DollarSign, FileText, Pencil, SlidersHorizontal } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { SimpleDialog } from "@/components/ui/Dialog";
@@ -67,11 +68,20 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useAdminPersistentState<string | null>(
+    "blckforest:admin:groups:selected",
+    null,
+    (value) => value === null || typeof value === "string" ? value : undefined,
+  );
+  const [expandedIds, setExpandedIds] = useAdminPersistentState<string[]>(
+    "blckforest:admin:groups:expanded",
+    [],
+    (value) => Array.isArray(value) && value.every((item) => typeof item === "string") ? value : undefined,
+  );
+  const expanded = useMemo(() => new Set(expandedIds), [expandedIds]);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/admin/groups", { cache: "no-store" });
@@ -85,19 +95,30 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
     }
   }, []);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    if (selected) return;
+    void refresh();
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void refresh(true);
+    }, 15_000);
+    const onVisible = () => {
+      if (!document.hidden) void refresh(true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refresh, selected]);
 
   const toggleExpand = (id: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setExpandedIds((current) =>
+      current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
+    );
   };
 
   if (selected) {
-    return <GroupDetailPanel groupId={selected} canManage={canManage} onBack={() => { setSelected(null); void refresh(); }} />;
+    return <GroupDetailPanel groupId={selected} canManage={canManage} onBack={() => { setSelected(null); void refresh(true); }} />;
   }
 
   return (
@@ -582,8 +603,9 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
   const [removing, setRemoving] = useState<{ userId: string; label: string } | null>(null);
   const [removeBusy, setRemoveBusy] = useState(false);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`/api/admin/groups/${groupId}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load group");
@@ -618,7 +640,20 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
     }
   };
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void refresh(true);
+    }, 15_000);
+    const onVisible = () => {
+      if (!document.hidden) void refresh(true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refresh]);
 
   if (loading) {
     return (
@@ -636,7 +671,16 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
       </div>
     );
   }
-  if (error || !detail) return <Alert tone="err">{error ?? "Group not found."}</Alert>;
+  if (error || !detail) {
+    return (
+      <div className="space-y-3">
+        <Alert tone="err">{error ?? "Group not found."}</Alert>
+        <Button type="button" size="sm" variant="ghost" onClick={onBack}>
+          <ArrowLeft size={13} strokeWidth={2} aria-hidden /> Back to groups
+        </Button>
+      </div>
+    );
+  }
 
   const settingsSummary = getSettingsSummary(detail.settings);
 
@@ -717,6 +761,7 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
 
         <TabsContent value="members" className="min-w-0">
       <RecordList<GroupMember>
+            storageKey="blckforest:admin:list:group-members"
             ariaLabel="Member"
             title="Members"
             count={`${detail.members.length} members`}

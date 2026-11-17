@@ -99,6 +99,7 @@ export function RecordList<T>({
   onLoadMore,
   loading = false,
   loadingMore = false,
+  storageKey,
   emptyTitle = "Nothing here yet",
   emptyHint,
   emptyIcon,
@@ -140,6 +141,8 @@ export function RecordList<T>({
   /** Initial load — skeletons instead of the empty state. */
   loading?: boolean;
   loadingMore?: boolean;
+  /** Persist list search and sorting preferences in localStorage. */
+  storageKey?: string;
   emptyTitle?: string;
   emptyHint?: string;
   emptyIcon?: React.ReactNode;
@@ -158,11 +161,53 @@ export function RecordList<T>({
   const [query, setQuery] = React.useState("");
   const [visible, setVisible] = React.useState(pageSize);
   const [detailKey, setDetailKey] = React.useState<string | null>(null);
+  const [storageReady, setStorageReady] = React.useState(!storageKey);
+  const columnsRef = React.useRef(columns);
+  columnsRef.current = columns;
   // Derive the LIVE row from the current rows — the stored key survives
   // data refreshes so the slider always shows current data.
   const detail = detailKey != null ? rows.find((r) => rowKey(r) === detailKey) ?? null : null;
 
   React.useEffect(() => setVisible(pageSize), [pageSize, query, sort]);
+
+  React.useEffect(() => {
+    if (!storageKey) {
+      setStorageReady(true);
+      return;
+    }
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw) {
+        const saved: unknown = JSON.parse(raw);
+        if (typeof saved === "object" && saved !== null) {
+          const preferences = saved as { query?: unknown; sort?: { key?: unknown; direction?: unknown } };
+          if (typeof preferences.query === "string") setQuery(preferences.query);
+          if (
+            typeof preferences.sort?.key === "string" &&
+            columnsRef.current.some((column) => column.key === preferences.sort?.key) &&
+            (preferences.sort.direction === "asc" || preferences.sort.direction === "desc")
+          ) {
+            setSort({ key: preferences.sort.key, direction: preferences.sort.direction });
+          }
+        } else {
+          console.warn(`Ignoring invalid saved record-list preferences: ${storageKey}`);
+        }
+      }
+    } catch (error) {
+      console.warn(`Unable to restore record-list preferences: ${storageKey}`, error);
+    } finally {
+      setStorageReady(true);
+    }
+  }, [storageKey]);
+
+  React.useEffect(() => {
+    if (!storageKey || !storageReady) return;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify({ query, sort }));
+    } catch (error) {
+      console.warn(`Unable to save record-list preferences: ${storageKey}`, error);
+    }
+  }, [query, sort, storageKey, storageReady]);
 
   const searched = React.useMemo(() => {
     const q = query.trim().toLowerCase();

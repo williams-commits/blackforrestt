@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { Megaphone, MessageSquare, RotateCw, Search, Send, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +17,7 @@ import { fmtDateTime } from "@/lib/dates";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { useAdminPersistentState } from "./useAdminPersistentState";
 
 interface ThreadRow {
   userId: string;
@@ -60,13 +61,29 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
   const [totalUnread, setTotalUnread] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeUser, setActiveUser] = useState<{ id: string; label: string } | null>(null);
+  const [activeUserId, setActiveUserId] = useAdminPersistentState<string | null>(
+    "blckforest:admin:messages:active-user",
+    null,
+    (value) => value === null || typeof value === "string" ? value : undefined,
+  );
   const [thread, setThread] = useState<ThreadState | null>(null);
   const [threadLoading, setThreadLoading] = useState(false);
   const [threadError, setThreadError] = useState<string | null>(null);
-  const [limit, setLimit] = useState(PAGE_SIZE);
-  const [search, setSearch] = useState("");
-  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [limit, setLimit] = useAdminPersistentState(
+    "blckforest:admin:messages:limit",
+    PAGE_SIZE,
+    (value) => value === PAGE_SIZE || value === 200 ? value : undefined,
+  );
+  const [search, setSearch] = useAdminPersistentState(
+    "blckforest:admin:messages:search",
+    "",
+    (value) => typeof value === "string" ? value : undefined,
+  );
+  const [unreadOnly, setUnreadOnly] = useAdminPersistentState(
+    "blckforest:admin:messages:unread-only",
+    false,
+    (value) => typeof value === "boolean" ? value : undefined,
+  );
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [broadcastOpen, setBroadcastOpen] = useState(false);
@@ -79,6 +96,11 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
   const [deleteBusy, setDeleteBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(true);
+  const activeUser = useMemo(() => {
+    if (!activeUserId) return null;
+    const selected = threads.find((item) => item.userId === activeUserId);
+    return { id: activeUserId, label: selected?.name ?? selected?.email ?? activeUserId };
+  }, [activeUserId, threads]);
 
   const loadThreads = useCallback(async () => {
     try {
@@ -111,33 +133,33 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
   // Deep-link from UsersPanel "Chat" button
   useEffect(() => {
     if (chatWith) {
-      setActiveUser({ id: chatWith.userId, label: chatWith.label });
+      setActiveUserId(chatWith.userId);
       onChatHandled();
     }
-  }, [chatWith, onChatHandled]);
+  }, [chatWith, onChatHandled, setActiveUserId]);
 
   useEffect(() => {
-    if (!activeUser) {
+    if (!activeUserId) {
       setThread(null);
       return;
     }
     setThreadLoading(true);
     setThreadError(null);
-    void loadThread(activeUser.id, limit)
+    void loadThread(activeUserId, limit)
       .catch((cause) => setThreadError(cause instanceof Error ? cause.message : "Unable to load the thread."))
       .finally(() => setThreadLoading(false));
     const timer = window.setInterval(() => {
-      if (!document.hidden && activeUser) void loadThread(activeUser.id, limit).catch(() => undefined);
+      if (!document.hidden) void loadThread(activeUserId, limit).catch(() => undefined);
     }, 10_000);
     // Focus refresh keeps read receipts ("✓ Read") live when the operator
     // returns to the window after the customer reads the thread.
-    const onFocus = () => { if (activeUser) void loadThread(activeUser.id, limit).catch(() => undefined); };
+    const onFocus = () => { void loadThread(activeUserId, limit).catch(() => undefined); };
     window.addEventListener("focus", onFocus);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("focus", onFocus);
     };
-  }, [activeUser, limit, loadThread]);
+  }, [activeUserId, limit, loadThread]);
 
   const messageCount = thread?.messages.length ?? 0;
   useEffect(() => {
@@ -145,7 +167,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
   }, [messageCount]);
 
   function loadEarlier() {
-    setLimit((current) => Math.min(200, current + PAGE_SIZE));
+    setLimit(200);
   }
 
   async function send(event: React.FormEvent<HTMLFormElement>) {
@@ -210,7 +232,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
       toast.success("Conversation deleted", `${data.deleted ?? 0} message(s) removed for ${activeUser.label}. The deletion is recorded in the audit trail.`);
       setDeleteOpen(false);
       setThread(null);
-      setActiveUser(null);
+      setActiveUserId(null);
       await loadThreads();
     } catch (cause) {
       toast.error("Delete failed", cause instanceof Error ? cause.message : "Unable to delete the conversation.");
@@ -281,7 +303,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
               <button
                 key={threadRow.userId}
                 type="button"
-                onClick={() => { setLimit(PAGE_SIZE); setActiveUser({ id: threadRow.userId, label: threadRow.name ?? threadRow.email ?? threadRow.userId }); }}
+                onClick={() => { setLimit(PAGE_SIZE); setActiveUserId(threadRow.userId); }}
                 aria-current={activeUser?.id === threadRow.userId ? "true" : undefined}
                 className={`block w-full border-b border-border px-3 py-3 text-left last:border-0 hover:bg-accent/60 ${activeUser?.id === threadRow.userId ? "bg-muted/60" : ""}`}
               >
@@ -334,7 +356,7 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
                   >
                     <Trash2 size={13} strokeWidth={2} aria-hidden /> Delete
                   </Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => { setActiveUser(null); setThread(null); }}>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => { setActiveUserId(null); setThread(null); }}>
                     <X size={13} strokeWidth={2} aria-hidden /> Close
                   </Button>
                 </div>

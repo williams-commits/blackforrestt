@@ -15,6 +15,7 @@ import { isUserBlocked } from "../reconciliation";
 import { loadTradingRiskPolicy } from "../riskPolicy";
 import { resolveUserSettings } from "../userSettings";
 import { marketHoursForSymbol, type MarketHoursState } from "../../lib/marketHours";
+import { staleQuoteDecision } from "../../lib/marketFreshness";
 import {
   appendAuditEvent,
   ensureSystemAccount,
@@ -123,6 +124,7 @@ export interface OpenPositionInput {
   expiryMinutes: number | null;
   stopLoss: number | null;
   takeProfit: number | null;
+  acknowledgeStalePrice?: boolean;
   idempotencyKey: string;
 }
 
@@ -159,19 +161,19 @@ interface CloseRequest {
   reason: string;
 }
 
-interface AdminCloseOptions {
-  marketOverride?: {
-    pricing: "LAST_POSITION_MARK";
-    marketStatus: MarketHoursState;
-    quoteTimestamp: number | null;
-    quoteAgeMs: number | null;
-    closeRate: string;
-  };
+interface CloseMarketOverride {
+  pricing: "LAST_POSITION_MARK";
+  marketStatus: MarketHoursState;
+  quoteTimestamp: number | null;
+  quoteAgeMs: number | null;
+  closeRate: string;
+  acknowledgedBy: "ADMIN" | "TRADER";
 }
 
 class Hub {
   private instruments = new Map<string, InstrumentState>();
   private readonly marketDataTimestamps = new Map<string, number>();
+  private readonly lastLiveQuotes = new Map<string, Omit<Quote, "marketHours">>();
   private openPositions = new Map<string, Position[]>();
   private broadcast: BroadcastFn = () => undefined;
   private tickTimer: NodeJS.Timeout | null = null;
@@ -251,10 +253,15 @@ class Hub {
 
   private quoteFor(state: InstrumentState): Quote {
     const quoteTimestamp = this.marketDataTimestamps.get(state.symbol) ?? 0;
+    const now = Date.now();
+    const marketHours = marketHoursForSymbol(state.symbol, now, quoteTimestamp);
+    const lastLiveQuote = marketHours.state === "WAITING_FOR_QUOTE"
+      ? this.lastLiveQuotes.get(state.symbol)
+      : undefined;
     return {
-      ...state.sim.getQuote(),
+      ...(lastLiveQuote ?? state.sim.getQuote()),
       time: quoteTimestamp,
-      marketHours: marketHoursForSymbol(state.symbol, Date.now(), quoteTimestamp),
+      marketHours,
     };
   }
 
@@ -408,6 +415,7 @@ class Hub {
     this.marketDataTimestamps.set(symbol, timestamp);
 
     const rebasedIntervals = state.sim.setPrice(price, volume);
+    this.lastLiveQuotes.set(symbol, { ...state.sim.getQuote(), time: timestamp });
     for (const interval of rebasedIntervals) {
       this.broadcast({
         kind: "candles",
@@ -537,8 +545,12 @@ class Hub {
 
   private tickMarket(state: InstrumentState): void {
     const now = Date.now();
-    if (!marketHoursForSymbol(state.symbol, now, 0).isOpen) {
-      this.broadcast({ kind: "quote", quote: this.quoteFor(state) });
+    const currentQuote = this.quoteFor(state);
+    if (
+      !currentQuote.marketHours.isOpen ||
+      (getMarketDataMode() !== "simulation" && !currentQuote.marketHours.canTrade)
+    ) {
+      this.broadcast({ kind: "quote", quote: currentQuote });
       return;
     }
     if (getMarketDataMode() === "simulation") {
@@ -577,8 +589,11 @@ class Hub {
         if (!state) continue;
 
         const cfg = this.cfg(state);
-        const canExecute = this.canExecuteMarket(state);
-        let markRate = state.sim.rateFor(position.side === "BUY" ? "SELL" : "BUY");
+        const quote = this.quoteFor(state);
+        const canExecute = quote.marketHours.canTrade;
+        let markRate = quote.marketHours.isOpen && !canExecute
+          ? position.currentRate
+          : state.sim.rateFor(position.side === "BUY" ? "SELL" : "BUY");
         const pnlPercent = userPnlPercent;
 
         // Apply spread markup for this user.
@@ -756,16 +771,20 @@ class Hub {
         throw new TradingError(`Order volume exceeds the ${effectiveMaxLots}-lot limit.`, "BLOCKED");
       }
       const executableQuote = this.quoteFor(state);
-      if (!executableQuote.marketHours.isOpen) {
-        throw new TradingError(
-          `The ${state.symbol} market is closed. New orders resume at the next session.`,
-          "BLOCKED",
-        );
+      const staleDecision = staleQuoteDecision(
+        executableQuote.marketHours,
+        executableQuote.time,
+        input.acknowledgeStalePrice === true,
+      );
+      if (!staleDecision.allowed) {
+        const message = staleDecision.reason === "MARKET_CLOSED"
+          ? `The ${state.symbol} market is closed. New orders resume at the next session.`
+          : staleDecision.reason === "ACK_REQUIRED"
+            ? "The quote is stale. Acknowledge the stale-price risk before placing this order."
+            : "No previous valid quote is available. Wait for market data to recover.";
+        throw new TradingError(message, "BLOCKED");
       }
-      if (
-        !executableQuote.marketHours.canTrade ||
-        Date.now() - executableQuote.time > policy.maxQuoteAgeMs
-      ) {
+      if (!staleDecision.useStalePrice && Date.now() - executableQuote.time > policy.maxQuoteAgeMs) {
         throw new TradingError("The executable quote is stale. Wait for market data to recover.", "BLOCKED");
       }
 
@@ -803,7 +822,9 @@ class Hub {
       // Immediately mark at the opposite dealing side so the UI and account
       // reflect spread cost from the moment the position opens.
       // Apply spread markup to the re-mark rate too (consistent with open).
-      const baseCloseSide = state.sim.rateFor(input.side === "BUY" ? "SELL" : "BUY");
+      const baseCloseSide = staleDecision.useStalePrice
+        ? input.side === "BUY" ? executableQuote.bid : executableQuote.ask
+        : state.sim.rateFor(input.side === "BUY" ? "SELL" : "BUY");
       const closeSideRate = spreadMarkupPips > 0
         ? (input.side === "BUY" ? baseCloseSide - Number(state.pipSize) * spreadMarkupPips : baseCloseSide + Number(state.pipSize) * spreadMarkupPips)
         : baseCloseSide;
@@ -910,6 +931,15 @@ class Hub {
               volume: input.volume.toString(),
               margin: opened.margin.toFixed(8),
               commission: opened.commissionTotal.toFixed(8),
+              stalePriceOverride: staleDecision.useStalePrice
+                ? {
+                    acknowledged: true,
+                    marketStatus: executableQuote.marketHours.state,
+                    quoteTimestamp: executableQuote.time,
+                    quoteAgeMs: Math.max(0, Date.now() - executableQuote.time),
+                    entryRate: entryRate.toFixed(8),
+                  }
+                : null,
               simulation: true,
             },
           });
@@ -918,13 +948,14 @@ class Hub {
               userId: input.userId,
               type: "TRADE_OPENED",
               title: "Trade opened",
-              body: `${input.side === "BUY" ? "Buy" : "Sell"} ${input.volume.toFixed(2)} ${symbol} at ${position.openRate.toFixed(cfg.digits)}.`,
+              body: `${input.side === "BUY" ? "Buy" : "Sell"} ${input.volume.toFixed(2)} ${symbol} at ${position.openRate.toFixed(cfg.digits)}${staleDecision.useStalePrice ? " using an acknowledged stale quote." : "."}`,
               metadata: {
                 positionId: created.id,
                 symbol,
                 side: input.side,
                 type: input.type,
                 volume: input.volume,
+                stalePriceOverride: staleDecision.useStalePrice,
               },
             },
           });
@@ -1072,13 +1103,14 @@ class Hub {
       if (!Number.isFinite(closeRate) || closeRate <= 0) {
         throw new TradingError("No valid last position price is available for this close.", "BLOCKED");
       }
-      const marketOverride: AdminCloseOptions["marketOverride"] = useLastPositionMark
+      const marketOverride: CloseMarketOverride | undefined = useLastPositionMark
         ? {
             pricing: "LAST_POSITION_MARK",
             marketStatus: quote.marketHours.state,
             quoteTimestamp: quote.time > 0 ? quote.time : null,
             quoteAgeMs: quote.time > 0 ? Math.max(0, Date.now() - quote.time) : null,
             closeRate: closeRate.toFixed(8),
+            acknowledgedBy: "ADMIN",
           }
         : undefined;
       // Same dealer P/L adjustment the tick loop applies, so the booked close
@@ -1095,14 +1127,18 @@ class Hub {
         true,
         input.actorId,
         reason,
-        { allowNonExecutableMarket: true, marketOverride },
+        { allowNonExecutableMarket: "ADMIN", marketOverride },
       );
       if (!closed) throw new TradingError("The position was already closed.", "CONFLICT");
       return closed;
     });
   }
 
-  async closePositionReq(userId: string, positionId: string): Promise<OpenPositionResult | null> {
+  async closePositionReq(
+    userId: string,
+    positionId: string,
+    acknowledgeStalePrice = false,
+  ): Promise<OpenPositionResult | null> {
     return userMutationMutex.runExclusive(userId, async () => {
       const positions = this.openPositions.get(userId);
       const index = positions?.findIndex((position) => position.id === positionId) ?? -1;
@@ -1111,18 +1147,48 @@ class Hub {
       const current = positions[index];
       const state = this.instruments.get(current.symbol);
       if (!state) return null;
-      if (!this.canExecuteMarket(state)) {
-        throw new TradingError("This position cannot be closed while its market is closed or waiting for a fresh quote.", "BLOCKED");
+      const quote = this.quoteFor(state);
+      const staleDecision = staleQuoteDecision(quote.marketHours, quote.time, acknowledgeStalePrice);
+      if (!staleDecision.allowed) {
+        const message = staleDecision.reason === "MARKET_CLOSED"
+          ? "This position cannot be closed while its market is closed."
+          : staleDecision.reason === "ACK_REQUIRED"
+            ? "The quote is stale. Acknowledge the stale-price risk before closing this position."
+            : "No previous valid quote is available. Wait for market data to recover.";
+        throw new TradingError(message, "BLOCKED");
       }
       const cfg = this.cfg(state);
-      const closeRate = state.sim.rateFor(current.side === "BUY" ? "SELL" : "BUY");
+      const closeRate = staleDecision.useStalePrice
+        ? current.currentRate
+        : state.sim.rateFor(current.side === "BUY" ? "SELL" : "BUY");
+      const marketOverride: CloseMarketOverride | undefined = staleDecision.useStalePrice
+        ? {
+            pricing: "LAST_POSITION_MARK",
+            marketStatus: quote.marketHours.state,
+            quoteTimestamp: quote.time,
+            quoteAgeMs: Math.max(0, Date.now() - quote.time),
+            closeRate: closeRate.toFixed(8),
+            acknowledgedBy: "TRADER",
+          }
+        : undefined;
       // Same dealer P/L adjustment the tick loop applies, so the booked close
       // matches the last displayed net P&L.
       positions[index] = applyPnlAdjustment(
         markPosition(accrueSwap(current, cfg), closeRate, cfg).position,
         await pnlPercentForUser(userId),
       );
-      return this.closePositionInternal(userId, positionId, cfg, "MANUAL", true, userId, null);
+      return this.closePositionInternal(
+        userId,
+        positionId,
+        cfg,
+        "MANUAL",
+        true,
+        userId,
+        null,
+        staleDecision.useStalePrice
+          ? { allowNonExecutableMarket: "ACKNOWLEDGED_STALE", marketOverride }
+          : undefined,
+      );
     });
   }
 
@@ -1208,14 +1274,21 @@ class Hub {
     recomputeAfter: boolean,
     actorId: string | null = null,
     operatorNote: string | null = null,
-    options: { allowNonExecutableMarket?: boolean; marketOverride?: AdminCloseOptions["marketOverride"] } = {},
+    options: { allowNonExecutableMarket?: "ADMIN" | "ACKNOWLEDGED_STALE"; marketOverride?: CloseMarketOverride } = {},
   ): Promise<OpenPositionResult | null> {
     const positions = this.openPositions.get(userId);
     const index = positions?.findIndex((position) => position.id === positionId) ?? -1;
     if (!positions || index < 0) return null;
     const position = positions[index];
     const state = this.instruments.get(position.symbol);
-    if (!state || (!options.allowNonExecutableMarket && !this.canExecuteMarket(state))) {
+    const quote = state ? this.quoteFor(state) : null;
+    const canOverrideMarket = options.allowNonExecutableMarket === "ADMIN" ||
+      (
+        options.allowNonExecutableMarket === "ACKNOWLEDGED_STALE" &&
+        quote?.marketHours.isOpen === true &&
+        options.marketOverride?.acknowledgedBy === "TRADER"
+      );
+    if (!state || (!quote?.marketHours.canTrade && !canOverrideMarket)) {
       throw new TradingError("This position cannot be closed while its market is closed or waiting for a fresh quote.", "BLOCKED");
     }
 
@@ -1388,7 +1461,16 @@ class Hub {
             netProfit: allInNet.toFixed(8),
             simulation: true,
             operatorNote,
-            marketOverride: options.marketOverride ?? null,
+            marketOverride: options.marketOverride
+              ? {
+                  pricing: options.marketOverride.pricing,
+                  marketStatus: options.marketOverride.marketStatus,
+                  quoteTimestamp: options.marketOverride.quoteTimestamp,
+                  quoteAgeMs: options.marketOverride.quoteAgeMs,
+                  closeRate: options.marketOverride.closeRate,
+                  acknowledgedBy: options.marketOverride.acknowledgedBy,
+                }
+              : null,
           },
         });
         await tx.notification.create({

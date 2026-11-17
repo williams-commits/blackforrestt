@@ -87,7 +87,11 @@ export function MarketStatusBanner({
       </div>
       {(offline || stale) && (
         <span className="px-1 pt-0.5 font-medium text-text-muted lg:pt-0">
-          New orders require a fresh live quote.
+          {stale && instrument.marketHours.isOpen && selectedQuote
+            ? "Stale prices can be used only after you acknowledge the risk in the trade ticket or close confirmation."
+            : offline
+              ? "Market data is offline. Wait for the feed to recover; if the quote becomes stale, you can explicitly acknowledge its risk."
+              : "Orders are unavailable until a valid market quote is received."}
         </span>
       )}
     </div>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { hub, TradingError } from "@/server/engine/hub";
+import { hub, type TradingErrorCode } from "@/server/engine/hub";
 import { prisma, resolveUserId } from "@/server/db";
 import { consumeRateLimit, RateLimitedError } from "@/server/security/rateLimit";
 import { auth } from "@/auth";
@@ -18,6 +18,7 @@ const OpenSchema = z.object({
   expiryMinutes: z.number().int().min(1).max(1_440).optional().nullable(),
   stopLoss: z.number().finite().positive().optional().nullable(),
   takeProfit: z.number().finite().positive().optional().nullable(),
+  acknowledgeStalePrice: z.boolean().default(false),
 }).superRefine((value, context) => {
   if (value.type === "STRIKE" && value.expiryMinutes == null) {
     context.addIssue({ code: "custom", path: ["expiryMinutes"], message: "Strike positions require an expiry." });
@@ -94,11 +95,13 @@ export async function POST(req: Request) {
       expiryMinutes: parsed.data.expiryMinutes ?? null,
       stopLoss: parsed.data.stopLoss ?? null,
       takeProfit: parsed.data.takeProfit ?? null,
+      acknowledgeStalePrice: parsed.data.acknowledgeStalePrice,
       idempotencyKey,
     });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    if (error instanceof TradingError) {
+    const tradingError = getTradingErrorDetails(error);
+    if (tradingError) {
       try {
         await prisma.$transaction((tx) => appendAuditEvent(tx, {
           domain: "EXECUTION",
@@ -110,8 +113,9 @@ export async function POST(req: Request) {
             symbol: parsed.data.symbol,
             side: parsed.data.side,
             volume: parsed.data.volume.toString(),
-            code: error.code,
-            reason: error.message,
+            code: tradingError.code,
+            reason: tradingError.message,
+            acknowledgeStalePrice: parsed.data.acknowledgeStalePrice,
             simulation: true,
           },
         }));
@@ -119,12 +123,12 @@ export async function POST(req: Request) {
         console.error("Position rejection audit failed:", auditError);
       }
       const status =
-        error.code === "BLOCKED"
+        tradingError.code === "BLOCKED"
           ? 403
-          : error.code === "INSUFFICIENT_FUNDS" || error.code === "CONFLICT"
+          : tradingError.code === "INSUFFICIENT_FUNDS" || tradingError.code === "CONFLICT"
             ? 409
             : 400;
-      return NextResponse.json({ error: error.message, code: error.code }, { status });
+      return NextResponse.json({ error: tradingError.message, code: tradingError.code }, { status });
     }
     console.error("Position open failed:", error);
     return NextResponse.json(
@@ -132,6 +136,19 @@ export async function POST(req: Request) {
       { status: 500 },
     );
   }
+}
+
+function getTradingErrorDetails(error: unknown): { message: string; code: TradingErrorCode } | null {
+  if (typeof error !== "object" || error === null) return null;
+  const candidate = error as { name?: unknown; message?: unknown; code?: unknown };
+  if (candidate.name !== "TradingError" || typeof candidate.message !== "string") return null;
+  if (
+    candidate.code !== "VALIDATION" &&
+    candidate.code !== "INSUFFICIENT_FUNDS" &&
+    candidate.code !== "CONFLICT" &&
+    candidate.code !== "BLOCKED"
+  ) return null;
+  return { message: candidate.message, code: candidate.code };
 }
 
 /** GET /api/positions?status=OPEN|CLOSED&limit=25&cursor=<position-id> */

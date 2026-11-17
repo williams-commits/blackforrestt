@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isExecutableQuote, MAX_EXECUTABLE_QUOTE_AGE_MS } from "../src/lib/marketFreshness.js";
+import {
+  isExecutableQuote,
+  MAX_EXECUTABLE_QUOTE_AGE_MS,
+  staleQuoteDecision,
+} from "../src/lib/marketFreshness.js";
 import type { Quote } from "../src/lib/types.js";
+import type { MarketHoursView } from "../src/lib/marketHours.js";
 
 test("execution quotes remain fresh for 60 seconds, then become stale", () => {
   const now = 1_800_000_000_000;
@@ -29,4 +34,39 @@ test("execution quotes remain fresh for 60 seconds, then become stale", () => {
   assert.equal(MAX_EXECUTABLE_QUOTE_AGE_MS, 60_000);
   assert.equal(isExecutableQuote(quote, "EURUSD", now), true);
   assert.equal(isExecutableQuote({ ...quote, time: now - 60_001 }, "EURUSD", now), false);
+});
+
+test("stale quote execution requires a valid prior quote and explicit acknowledgement", () => {
+  const now = 1_000_000;
+  const openAndStale: Pick<MarketHoursView, "isOpen" | "canTrade"> = {
+    isOpen: true,
+    canTrade: false,
+  };
+
+  assert.deepEqual(staleQuoteDecision(openAndStale, now - 61_000, false, now), {
+    allowed: false,
+    reason: "ACK_REQUIRED",
+  });
+  assert.deepEqual(staleQuoteDecision(openAndStale, 0, true, now), {
+    allowed: false,
+    reason: "NO_VALID_QUOTE",
+  });
+  assert.deepEqual(staleQuoteDecision(openAndStale, now - 61_000, true, now), {
+    allowed: true,
+    useStalePrice: true,
+  });
+});
+
+test("stale quote acknowledgement never overrides a closed market", () => {
+  assert.deepEqual(
+    staleQuoteDecision({ isOpen: false, canTrade: false }, 900_000, true, 1_000_000),
+    { allowed: false, reason: "MARKET_CLOSED" },
+  );
+});
+
+test("fresh executable quotes do not require stale-price acknowledgement", () => {
+  assert.deepEqual(
+    staleQuoteDecision({ isOpen: true, canTrade: true }, 990_000, false, 1_000_000),
+    { allowed: true, useStalePrice: false },
+  );
 });

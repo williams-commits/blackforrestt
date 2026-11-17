@@ -52,6 +52,7 @@ export function Dashboard({
 }: Props) {
   const applyInstruments = useForexStore((state) => state.applyInstruments);
   const storeInstruments = useForexStore((state) => state.instruments);
+  const liveInstruments = storeInstruments.length > 0 ? storeInstruments : instruments;
   const orderController = useOpenPosition();
 
   // In-place instrument switching: the route symbol seeds the workspace, but
@@ -357,7 +358,7 @@ export function Dashboard({
           </div>
         )}
         <div className={dockExpanded ? "h-[calc(100%-1rem)] md:h-[calc(100%-0.5rem)]" : "h-full"}>
-          <PositionsTable instruments={instruments} collapsed={!dockExpanded} onToggleCollapsed={toggleDock} />
+          <PositionsTable instruments={liveInstruments} collapsed={!dockExpanded} onToggleCollapsed={toggleDock} />
         </div>
       </div>
 

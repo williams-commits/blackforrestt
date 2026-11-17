@@ -25,6 +25,8 @@ import { SimpleTabs as Tabs } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SimpleDialog } from "@/components/ui/Dialog";
+import { Alert } from "@/components/ui/Alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import { fmtPrice, fmtNum } from "@/lib/format";
 import { rowNavigate, SymbolLink } from "@/components/trade/SymbolLink";
 import type { InstrumentView, PositionView } from "@/lib/types";
@@ -55,11 +57,41 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
   const [busy, setBusy] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("open");
   const [editingPosition, setEditingPosition] = useState<PositionView | null>(null);
+  const [staleCloseTarget, setStaleCloseTarget] = useState<PositionView | null>(null);
+  const [staleCloseAcknowledged, setStaleCloseAcknowledged] = useState(false);
 
   const marketHoursFor = useCallback(
     (symbol: string) => instruments.find((instrument) => instrument.symbol === symbol)?.marketHours,
     [instruments],
   );
+  const performClose = useCallback(async (position: PositionView, acknowledgeStalePrice = false) => {
+    if (busy) return;
+    setBusy(position.id);
+    const result = await closePosition(position.id, acknowledgeStalePrice);
+    setBusy(null);
+    if (result.ok) {
+      const profit = result.netProfit ?? 0;
+      toast.success(
+        `${result.symbol ?? position.symbol} closed`,
+        `Position closed${acknowledgeStalePrice ? " after stale-price acknowledgment" : " at market"}. Realized P/L ${profit >= 0 ? "+" : "−"}${Math.abs(profit).toFixed(2)} USD.`,
+      );
+      setStaleCloseTarget(null);
+      setStaleCloseAcknowledged(false);
+    } else {
+      toast.error(
+        result.error ? `${position.symbol}: ${result.error}` : `Failed to close ${position.symbol}. Try again or contact support.`,
+      );
+    }
+  }, [busy]);
+  const requestClose = useCallback((position: PositionView) => {
+    const marketHours = marketHoursFor(position.symbol);
+    if (marketHours?.isOpen && !marketHours.canTrade) {
+      setStaleCloseTarget(position);
+      setStaleCloseAcknowledged(false);
+      return;
+    }
+    void performClose(position);
+  }, [marketHoursFor, performClose]);
   const digitsFor = (symbol: string) => instruments.find((i) => i.symbol === symbol)?.digits ?? 5;
   // Match AccountBar's floatingPl: profit + swap (excludes commission, which is
   // already booked into balance at order-open to avoid double-counting in equity).
@@ -181,7 +213,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
                   digitsFor={digitsFor}
                   marketHoursFor={marketHoursFor}
                   busy={busy}
-                  setBusy={setBusy}
+                  onRequestClose={requestClose}
                   onEditProtection={setEditingPosition}
                 />
               </div>
@@ -191,7 +223,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
                   digitsFor={digitsFor}
                   marketHoursFor={marketHoursFor}
                   busy={busy}
-                  setBusy={setBusy}
+                  onRequestClose={requestClose}
                   onEditProtection={setEditingPosition}
                 />
               </div>
@@ -216,32 +248,63 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
           onClose={() => setEditingPosition(null)}
         />
       )}
+      <SimpleDialog
+        open={staleCloseTarget !== null}
+        onClose={() => {
+          if (busy) return;
+          setStaleCloseTarget(null);
+          setStaleCloseAcknowledged(false);
+        }}
+        title={`Close ${staleCloseTarget?.symbol ?? "position"} at stale price?`}
+        description="The market is open, but the latest quote is stale. Closing requires your explicit acknowledgment."
+        className="sm:max-w-md"
+      >
+        {staleCloseTarget && (
+          <div className="flex flex-col gap-4 p-5">
+            <Alert tone="err">
+              <p className="font-semibold">Last recorded position mark</p>
+              <p className="mt-0.5 text-(length:--term-text-2xs)">
+                The actual market price may have moved. Your close price and realized P/L may differ materially from a fresh quote.
+              </p>
+            </Alert>
+            <label className="flex cursor-pointer items-start gap-2 text-sm text-text" onClick={(event) => event.stopPropagation()}>
+              <Checkbox
+                checked={staleCloseAcknowledged}
+                onCheckedChange={(checked) => setStaleCloseAcknowledged(checked === true)}
+                className="mt-0.5"
+              />
+              <span>I understand and choose to close this position at its last recorded mark.</span>
+            </label>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={busy === staleCloseTarget.id}
+                onClick={() => {
+                  setStaleCloseTarget(null);
+                  setStaleCloseAcknowledged(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                loading={busy === staleCloseTarget.id}
+                disabled={!staleCloseAcknowledged}
+                onClick={() => void performClose(staleCloseTarget, true)}
+              >
+                <X aria-hidden />
+                Close at last mark
+              </Button>
+            </div>
+          </div>
+        )}
+      </SimpleDialog>
     </div>
   );
-}
-
-/** Shared close action for a position: instant toast with the realized result,
- *  inline failure feedback. */
-function makeCloseHandler(busy: string | null, setBusy: (v: string | null) => void) {
-  return async (position: { id: string; symbol: string }) => {
-    if (busy) return;
-    setBusy(position.id);
-    const result = await closePosition(position.id);
-    setBusy(null);
-    if (result.ok) {
-      // The DB notification for the manual close arrives separately (history +
-      // other sessions); the acting user gets this immediate confirmation.
-      const profit = result.netProfit ?? 0;
-      toast.success(
-        `${result.symbol ?? position.symbol} closed`,
-        `Position closed at market. Realized P/L ${profit >= 0 ? "+" : "−"}${Math.abs(profit).toFixed(2)} USD.`,
-      );
-    } else {
-      toast.error(
-        result.error ? `${position.symbol}: ${result.error}` : `Failed to close ${position.symbol}. Try again or contact support.`,
-      );
-    }
-  };
 }
 
 function EmptyState({ title, hint }: { title: string; hint?: string }) {
@@ -270,14 +333,14 @@ function SideBadge({ side, type }: { side: "BUY" | "SELL"; type: "CFD" | "STRIKE
 function marketExecutionStatus(marketHours: InstrumentView["marketHours"] | undefined): string | null {
   if (!marketHours) return "Market status unavailable";
   if (marketHours.canTrade) return null;
-  if (marketHours.isOpen) return "Waiting for quote";
+  if (marketHours.isOpen) return "Stale quote · acknowledgment required";
   return "Market closed";
 }
 
 function marketExecutionTitle(marketHours: InstrumentView["marketHours"] | undefined): string {
   if (!marketHours) return "Market status unavailable";
   if (marketHours.canTrade) return "Market open · executable quote available";
-  if (marketHours.isOpen) return "Market open · waiting for a fresh quote";
+  if (marketHours.isOpen) return "Market open · stale quote; acknowledgement required to close";
   const nextOpenLabel = formatNextMarketOpen(marketHours);
   return nextOpenLabel ? `Market closed · opens ${nextOpenLabel}` : "Market closed";
 }
@@ -294,18 +357,17 @@ function OpenPositionCards({
   digitsFor,
   marketHoursFor,
   busy,
-  setBusy,
+  onRequestClose,
   onEditProtection,
 }: {
   positions: PositionView[];
   digitsFor: (s: string) => number;
   marketHoursFor: (s: string) => InstrumentView["marketHours"] | undefined;
   busy: string | null;
-  setBusy: (v: string | null) => void;
+  onRequestClose: (position: PositionView) => void;
   onEditProtection: (position: PositionView) => void;
 }) {
   const router = useRouter();
-  const close = makeCloseHandler(busy, setBusy);
   if (positions.length === 0) {
     return <EmptyState title="No open positions" hint="Use the trade panel to open a position" />;
   }
@@ -317,7 +379,7 @@ function OpenPositionCards({
         const up = p.netProfit >= 0;
         const closing = busy === p.id;
         const marketHours = marketHoursFor(p.symbol);
-        const canClose = marketHours?.canTrade ?? false;
+        const canClose = marketHours?.canTrade === true || marketHours?.isOpen === true;
         const marketStatus = marketExecutionStatus(marketHours);
         return (
           <li
@@ -381,7 +443,7 @@ function OpenPositionCards({
                   disabled={closing || !canClose}
                   aria-label={`Close ${p.symbol} position`}
                   title={marketExecutionTitle(marketHours)}
-                  onClick={(event) => { event.stopPropagation(); void close(p); }}
+                  onClick={(event) => { event.stopPropagation(); onRequestClose(p); }}
                   className="h-11 px-2.5 text-xs"
                 >
                   <X aria-hidden />
@@ -404,18 +466,17 @@ function OpenPositionsTable({
   digitsFor,
   marketHoursFor,
   busy,
-  setBusy,
+  onRequestClose,
   onEditProtection,
 }: {
   positions: PositionView[];
   digitsFor: (s: string) => number;
   marketHoursFor: (s: string) => InstrumentView["marketHours"] | undefined;
   busy: string | null;
-  setBusy: (v: string | null) => void;
+  onRequestClose: (position: PositionView) => void;
   onEditProtection: (position: PositionView) => void;
 }) {
   const router = useRouter();
-  const close = makeCloseHandler(busy, setBusy);
 
   const columns = useMemo<ColumnDef<PositionView, unknown>[]>(
     () => [
@@ -462,7 +523,7 @@ function OpenPositionsTable({
       { id: "close", header: "", cell: (info) => {
         const p = info.row.original;
         const marketHours = marketHoursFor(p.symbol);
-        const canClose = marketHours?.canTrade ?? false;
+        const canClose = marketHours?.canTrade === true || marketHours?.isOpen === true;
         return (
           <Button
             variant="ghost"
@@ -470,7 +531,7 @@ function OpenPositionsTable({
             disabled={busy === p.id || !canClose}
             aria-label={`Close ${p.symbol} position`}
             title={marketExecutionTitle(marketHours)}
-            onClick={(event) => { event.stopPropagation(); void close(p); }}
+            onClick={(event) => { event.stopPropagation(); onRequestClose(p); }}
             className="h-8 w-8 p-0 text-xs text-text-muted hover:bg-down/10 hover:text-down"
           >
             {busy === p.id ? "…" : <X aria-hidden />}
@@ -480,7 +541,7 @@ function OpenPositionsTable({
     ],
     // close/busy are stable per render set; digitsFor identity is stable upstream
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [busy, digitsFor, marketHoursFor, onEditProtection],
+    [busy, digitsFor, marketHoursFor, onEditProtection, onRequestClose],
   );
 
   return (

@@ -15,6 +15,8 @@ import { isExecutableQuote, quoteAgeMs } from "@/lib/marketFreshness";
 import { formatNextMarketOpen } from "@/lib/marketHours";
 import { Input } from "@/components/ui/Input";
 import { Slider } from "@/components/ui/slider";
+import { Alert } from "@/components/ui/Alert";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Props {
   instrument: InstrumentView;
@@ -64,6 +66,7 @@ export function TradePanel({
   const [takeProfit, setTakeProfit] = useState("");
   const [showSLTP, setShowSLTP] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [stalePriceAcknowledged, setStalePriceAcknowledged] = useState(false);
   const { openPosition, loading, error, clearError, status, lastAcceptedAt } = orderController;
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -78,6 +81,7 @@ export function TradePanel({
   const stopLossId = useId();
   const takeProfitId = useId();
   const riskControlsId = useId();
+  const stalePriceAcknowledgementId = useId();
 
   function clearMessages(): void {
     setValidationError(null);
@@ -92,15 +96,27 @@ export function TradePanel({
   const currentQuoteAgeMs = quoteMatches ? quoteAgeMs(quote, now) : null;
   const hasFreshQuote = isExecutableQuote(quote, instrument.symbol, now);
   const quoteReady = marketDataConnected && hasFreshQuote && instrument.marketHours.canTrade;
+  const staleQuoteAvailable = Boolean(
+    quoteMatches &&
+    quote?.time &&
+    quote.time > 0 &&
+    quote.time <= now + 5_000 &&
+    instrument.marketHours.isOpen &&
+    !instrument.marketHours.canTrade,
+  );
+  const quotePriceAvailable = quoteReady || staleQuoteAvailable;
+  const canSubmit = quoteReady || (staleQuoteAvailable && stalePriceAcknowledged);
   const nextOpenLabel = formatNextMarketOpen(instrument.marketHours);
   const sessionLabel = instrument.marketHours.isOpen ? "Open" : "Closed";
-  const quoteStateLabel = !marketDataConnected
-    ? "Data offline"
-    : !instrument.marketHours.isOpen
-      ? "Session closed"
-      : quoteReady
-        ? "Live quote"
-        : "Waiting for quote";
+  const quoteStateLabel = !instrument.marketHours.isOpen
+    ? "Session closed"
+    : quoteReady
+      ? "Live quote"
+      : staleQuoteAvailable
+        ? "Stale quote · acknowledgment required"
+        : !marketDataConnected
+          ? "Data offline"
+          : "Waiting for quote";
   const changePct = quoteMatches && quote ? quote.changePct : instrument.changePct;
   const changeIsPositive = changePct >= 0;
   const spread = ask - bid;
@@ -118,19 +134,23 @@ export function TradePanel({
   const hasValidVolume = Number.isFinite(vol) && vol >= 0.01 && vol <= 100;
   const hasFunds = account != null && freeMargin + 1e-8 >= requiredCash;
 
+  useEffect(() => {
+    setStalePriceAcknowledged(false);
+  }, [instrument.symbol, instrument.marketHours.isOpen, instrument.marketHours.canTrade]);
+
   async function submit(side: PositionSide): Promise<void> {
     clearMessages();
     if (!instrument.marketHours.isOpen) {
       setValidationError(`The ${instrument.symbol} market is closed.${nextOpenLabel ? ` It reopens ${nextOpenLabel}.` : ""}`);
       return;
     }
-    if (!instrument.marketHours.canTrade) {
-      setValidationError("The market is open, but a fresh executable quote is required before placing an order.");
+    if (staleQuoteAvailable && !stalePriceAcknowledged) {
+      setValidationError("Review and acknowledge the stale-price warning before placing this order.");
       return;
     }
-    if (!quoteReady) {
+    if (!quoteReady && !staleQuoteAvailable) {
       setValidationError(marketDataConnected
-        ? "A fresh executable quote is required. Wait for the live connection to recover before submitting an order."
+        ? "No valid quote is available. Wait for market data to recover before submitting an order."
         : "Market data is disconnected. Reconnect before submitting an order.");
       return;
     }
@@ -198,6 +218,7 @@ export function TradePanel({
       expiryMinutes: type === "STRIKE" ? Number(expiryMinutes) : null,
       stopLoss: type === "CFD" ? parsedStopLoss : null,
       takeProfit: type === "CFD" ? parsedTakeProfit : null,
+      acknowledgeStalePrice: staleQuoteAvailable && stalePriceAcknowledged,
     });
     if (result.ok) {
       // Immediate local confirmation — the DB notification follows separately
@@ -206,10 +227,11 @@ export function TradePanel({
         result.replayed ? "Order confirmed" : "Order opened",
         result.replayed
           ? "This order was already accepted; no additional position was created."
-          : `${side === "BUY" ? "Buy" : "Sell"} ${vol.toFixed(2)} ${instrument.symbol} at ${entryRate.toFixed(instrument.digits)}.`,
+          : `${side === "BUY" ? "Buy" : "Sell"} ${vol.toFixed(2)} ${instrument.symbol} at ${entryRate.toFixed(instrument.digits)}${staleQuoteAvailable ? " after stale-price acknowledgment." : "."}`,
       );
       setStopLoss("");
       setTakeProfit("");
+      if (staleQuoteAvailable) setStalePriceAcknowledged(false);
     }
   }
 
@@ -283,6 +305,39 @@ export function TradePanel({
           </div>
         )}
 
+        {instrument.marketHours.isOpen && !instrument.marketHours.canTrade && (
+          <Alert tone="err" className="mx-1 mt-2">
+            {staleQuoteAvailable ? (
+              <div className="space-y-2">
+                <div>
+                  <p className="font-semibold">
+                    Stale quote · last update {formatQuoteAge(currentQuoteAgeMs)} ago
+                  </p>
+                  <p className="mt-0.5 text-(length:--term-text-2xs)">
+                    Entry and exit prices may differ materially from the market. This can affect your execution and P/L.
+                  </p>
+                </div>
+                <label htmlFor={stalePriceAcknowledgementId} className="flex cursor-pointer items-start gap-2 text-(length:--term-text-2xs) font-medium">
+                  <Checkbox
+                    id={stalePriceAcknowledgementId}
+                    checked={stalePriceAcknowledged}
+                    onCheckedChange={(checked) => setStalePriceAcknowledged(checked === true)}
+                    className="mt-0.5"
+                  />
+                  <span>I understand and choose to place an order using the displayed stale price.</span>
+                </label>
+              </div>
+            ) : (
+              <div>
+                <p className="font-semibold">No valid prior quote is available</p>
+                <p className="mt-0.5 text-(length:--term-text-2xs)">
+                  Wait for market data to recover. Orders cannot be placed without a recorded quote.
+                </p>
+              </div>
+            )}
+          </Alert>
+        )}
+
         {/* Trade type toggle — Radix Tabs (segmented): roving focus, arrow keys. */}
         <Tabs
           variant="segmented"
@@ -305,7 +360,7 @@ export function TradePanel({
           <button
             type="button"
             aria-pressed={armed === "SELL"}
-            disabled={!quoteReady}
+            disabled={!quotePriceAvailable}
             onClick={() => setArmed((current) => (current === "SELL" ? null : "SELL"))}
             className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg bg-down/10 px-2 py-2.5 transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
               armed === "SELL" ? "ring-2 ring-down" : "hover:bg-down/15"
@@ -313,14 +368,14 @@ export function TradePanel({
           >
             <span className="text-(length:--term-text-2xs) font-semibold uppercase text-down tracking-wide">Sell · Bid{armed === "SELL" ? " · armed" : ""}</span>
             <span className="text-lg font-bold leading-tight tabular-nums text-down">
-              {quoteReady ? fmtPrice(bid, instrument.digits) : "—"}
+              {quotePriceAvailable ? fmtPrice(bid, instrument.digits) : "—"}
             </span>
           </button>
           {/* Buy / Ask */}
           <button
             type="button"
             aria-pressed={armed === "BUY"}
-            disabled={!quoteReady}
+            disabled={!quotePriceAvailable}
             onClick={() => setArmed((current) => (current === "BUY" ? null : "BUY"))}
             className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg bg-up/10 px-2 py-2.5 transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
               armed === "BUY" ? "ring-2 ring-up" : "hover:bg-up/15"
@@ -328,12 +383,12 @@ export function TradePanel({
           >
             <span className="text-(length:--term-text-2xs) font-semibold uppercase text-up tracking-wide">Buy · Ask{armed === "BUY" ? " · armed" : ""}</span>
             <span className="text-lg font-bold leading-tight tabular-nums text-up">
-              {quoteReady ? fmtPrice(ask, instrument.digits) : "—"}
+              {quotePriceAvailable ? fmtPrice(ask, instrument.digits) : "—"}
             </span>
           </button>
         </div>
         <div className="mt-2 flex items-center justify-center gap-3 text-(length:--term-text-2xs) text-text-faint">
-          <span>Spread <span className="tnum text-text-muted font-medium">{quoteReady ? fmtPrice(spread, instrument.digits) : "—"}</span></span>
+          <span>Spread <span className="tnum text-text-muted font-medium">{quotePriceAvailable ? fmtPrice(spread, instrument.digits) : "—"}</span></span>
           <span className="w-px h-3 bg-panel-3" />
           <span>Pip <span className="tnum text-text-muted font-medium">{instrument.pipSize}</span></span>
         </div>
@@ -402,7 +457,7 @@ export function TradePanel({
               inputMode="decimal"
               value={strikeRate}
               onChange={(e) => { setStrikeRate(e.target.value); clearMessages(); }}
-              placeholder={quoteReady ? `Market: ${fmtPrice(ask, instrument.digits)}` : "Waiting for quote"}
+              placeholder={quotePriceAvailable ? `Market: ${fmtPrice(ask, instrument.digits)}` : "Waiting for quote"}
               className="mt-1.5 h-10 rounded-lg px-3 transition-colors"
             />
           </div>
@@ -497,8 +552,8 @@ export function TradePanel({
             />
             <SummaryRow
               label="Quote freshness"
-              value={!marketDataConnected ? "Offline" : currentQuoteAgeMs == null ? "Waiting" : `${(currentQuoteAgeMs / 1_000).toFixed(1)}s${hasFreshQuote ? "" : " · stale"}`}
-              valueClass={quoteReady ? "text-up font-semibold" : "text-down font-semibold"}
+              value={currentQuoteAgeMs == null ? "Waiting" : `${formatQuoteAge(currentQuoteAgeMs)}${hasFreshQuote ? "" : " · stale"}`}
+              valueClass={quoteReady ? "text-up font-semibold" : staleQuoteAvailable ? "text-down font-semibold" : "text-text-muted font-semibold"}
             />
             <SummaryRow label="Free margin" value={`${fmtNum(freeMargin, 2)} USD`} valueClass={!hasFunds ? "text-down font-semibold" : "font-semibold"} />
             <SummaryRow
@@ -517,7 +572,7 @@ export function TradePanel({
         {status === "accepted" && <span className="text-up">Accepted and open{lastAcceptedAt ? ` at ${new Date(lastAcceptedAt).toLocaleTimeString()}` : ""}</span>}
         {status === "failed" && <span className="text-down">Rejected or failed</span>}
         {status === "unknown" && <span className="text-down">Confirmation pending — retry the same order</span>}
-        {status === "idle" && <span className={quoteReady ? "text-text-muted" : "text-down"}>{quoteReady ? "Ready for submission" : quoteStateLabel}</span>}
+        {status === "idle" && <span className={quoteReady ? "text-text-muted" : stalePriceAcknowledged && staleQuoteAvailable ? "text-brand" : "text-down"}>{quoteReady ? "Ready for submission" : stalePriceAcknowledged && staleQuoteAvailable ? "Stale price acknowledged · confirm the order below" : quoteStateLabel}</span>}
       </div>
 
       {/* ── Error ──────────────────────────────────────────────────────────── */}
@@ -533,31 +588,54 @@ export function TradePanel({
           reachable without covering volume, risk, or margin controls. */}
       <div className="relative z-10 shrink-0 border-t border-border-soft bg-canvas px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-lift">
         <div className="grid grid-cols-2 gap-2.5">
-          <Button variant="sell" size="default" loading={loading} disabled={!quoteReady || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("SELL")} className={`h-14 w-full min-w-0 rounded-lg px-2 ${armed === "SELL" ? "ring-2 ring-down ring-offset-2 ring-offset-canvas" : ""}`}>
+          <Button variant="sell" size="default" loading={loading} disabled={!canSubmit || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("SELL")} className={`h-14 w-full min-w-0 rounded-lg px-2 ${armed === "SELL" ? "ring-2 ring-down ring-offset-2 ring-offset-canvas" : ""}`}>
             <span className="flex flex-col items-center gap-0.5 leading-tight">
               <span className="flex items-center gap-1 text-sm font-bold uppercase tracking-wide">
                 <ArrowDownRight size={14} strokeWidth={2.25} aria-hidden />
                 Sell · Bid
               </span>
-              <span className="text-(length:--term-text-xs) font-medium tabular-nums opacity-90">{quoteReady ? fmtPrice(bid, instrument.digits) : "—"}</span>
+              <span className="text-(length:--term-text-xs) font-medium tabular-nums opacity-90">{quotePriceAvailable ? fmtPrice(bid, instrument.digits) : "—"}</span>
             </span>
           </Button>
-          <Button variant="buy" size="default" loading={loading} disabled={!quoteReady || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("BUY")} className={`h-14 w-full min-w-0 rounded-lg px-2 ${armed === "BUY" ? "ring-2 ring-up ring-offset-2 ring-offset-canvas" : ""}`}>
+          <Button variant="buy" size="default" loading={loading} disabled={!canSubmit || !hasValidVolume || !hasFunds} loadingLabel="Submitting" onClick={() => submit("BUY")} className={`h-14 w-full min-w-0 rounded-lg px-2 ${armed === "BUY" ? "ring-2 ring-up ring-offset-2 ring-offset-canvas" : ""}`}>
             <span className="flex flex-col items-center gap-0.5 leading-tight">
               <span className="flex items-center gap-1 text-sm font-bold uppercase tracking-wide">
                 <ArrowUpRight size={14} strokeWidth={2.25} aria-hidden />
                 Buy · Ask
               </span>
-              <span className="text-(length:--term-text-xs) font-medium tabular-nums opacity-90">{quoteReady ? fmtPrice(ask, instrument.digits) : "—"}</span>
+              <span className="text-(length:--term-text-xs) font-medium tabular-nums opacity-90">{quotePriceAvailable ? fmtPrice(ask, instrument.digits) : "—"}</span>
             </span>
           </Button>
         </div>
         <p className="mt-2 wrap-break-words rounded-md bg-panel-2 px-3 py-2 text-center text-(length:--term-text-2xs) leading-relaxed text-text-faint">
-          {!marketDataConnected ? "Orders disabled · market data offline" : !instrument.marketHours.isOpen ? "Orders disabled · session closed" : !quoteReady ? "Orders disabled · waiting for quote" : armed ? `${armed === "BUY" ? "Buy" : "Sell"} armed · confirm to submit` : type === "CFD" ? "CFD market order · accepted at the displayed rate" : `Strike order · settles in ${expiryMinutes} min`}
+          {!instrument.marketHours.isOpen
+            ? "Orders disabled · session closed"
+            : staleQuoteAvailable && !stalePriceAcknowledged
+              ? "Acknowledge the stale-price risk to enable order entry"
+              : !quoteReady && !staleQuoteAvailable
+                ? !marketDataConnected
+                  ? "Orders disabled · market data offline"
+                  : "Orders disabled · waiting for quote"
+                : staleQuoteAvailable
+                  ? "Stale price acknowledged · order will use the displayed quote"
+                  : armed
+                    ? `${armed === "BUY" ? "Buy" : "Sell"} armed · confirm to submit`
+                    : type === "CFD"
+                      ? "CFD market order · accepted at the displayed rate"
+                      : `Strike order · settles in ${expiryMinutes} min`}
         </p>
       </div>
     </div>
   );
+}
+
+function formatQuoteAge(ageMs: number | null): string {
+  if (ageMs == null) return "unknown";
+  const totalSeconds = Math.floor(ageMs / 1_000);
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${seconds}s`;
 }
 
 function SummaryRow({ label, value, valueClass = "" }: { label: string; value: string; valueClass?: string }) {

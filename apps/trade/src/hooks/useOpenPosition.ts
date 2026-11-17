@@ -15,6 +15,7 @@ export interface OpenPositionArgs {
   expiryMinutes?: number | null;
   stopLoss?: number | null;
   takeProfit?: number | null;
+  acknowledgeStalePrice?: boolean;
 }
 
 async function readApiError(
@@ -170,10 +171,15 @@ export function useOpenPosition() {
 
 /** Close a position by id. Returns the closed position's symbol and net P/L
  *  so callers can give immediate, exact feedback. */
-export async function closePosition(positionId: string): Promise<{ ok: boolean; symbol?: string; netProfit?: number; error?: string }> {
+export async function closePosition(
+  positionId: string,
+  acknowledgeStalePrice = false,
+): Promise<{ ok: boolean; symbol?: string; netProfit?: number; error?: string }> {
   try {
     const response = await fetch(`/api/positions/${encodeURIComponent(positionId)}/close`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ acknowledgeStalePrice }),
     });
     if (!response.ok) {
       const { message } = await readApiError(response, "Failed to close position.");

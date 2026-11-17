@@ -78,7 +78,7 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
   const up = (r: ReportRow) => r.netProfit >= 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <SummaryCard label="Net P&L" value={fmtSigned(stats.net)} valueClass={stats.net >= 0 ? "text-up" : "text-down"} />
         <SummaryCard label="Win Rate" value={`${stats.winRate.toFixed(1)}%`} sub={`${stats.trades} trades`} />

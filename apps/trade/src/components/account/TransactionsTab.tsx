@@ -133,7 +133,7 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
   ]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Net Movement (completed)" value={`${totals.net >= 0 ? "+" : ""}${totals.net.toFixed(2)}`} tone={totals.net >= 0 ? "up" : "down"} hint="All values in USD" />
         <StatCard label="Deposits · this month" value={totals.monthDeposits.toFixed(2)} tone="up" />

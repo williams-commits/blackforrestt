@@ -308,7 +308,12 @@ export function TradePanel({
         )}
 
         {currentMarketHours.isOpen && !currentMarketHours.canTrade && (
-          <Alert tone="err" className="mx-1 mt-2" icon={<Radio aria-hidden />}>
+          <Alert
+            tone={staleQuoteAvailable ? "info" : "err"}
+            role="alert"
+            className={`mx-1 mt-2 ${staleQuoteAvailable ? "border border-(--term-warning-border) bg-(--term-warning-bg) text-(--term-warning-fg)" : ""}`}
+            icon={<Radio aria-hidden />}
+          >
             {staleQuoteAvailable ? (
               <div className="flex flex-col gap-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">

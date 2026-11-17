@@ -5,7 +5,7 @@ import { Slot } from "radix-ui";
 import { Loader2 } from "lucide-react";
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none active:scale-[0.98] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform] duration-150 outline-none active:translate-y-px focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -22,9 +22,9 @@ const buttonVariants = cva(
         /* Trading variants — the terminal's market actions on the same
            shadcn base. Fills use market/brand tokens whose foregrounds carry
            the AA ink overrides from globals.css. */
-        buy: "bg-up text-white hover:brightness-110 font-semibold",
-        sell: "bg-down text-white hover:brightness-110 font-semibold",
-        brand: "bg-brand text-white hover:brightness-110 font-semibold",
+        buy: "bg-up text-white hover:brightness-105 font-semibold",
+        sell: "bg-down text-white hover:brightness-105 font-semibold",
+        brand: "bg-brand text-white hover:brightness-105 font-semibold",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

@@ -57,9 +57,9 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
   const kycStatus = kyc?.status ?? "NOT_SUBMITTED";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Equity hero + identity */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>
           <CardHeader className="grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto]">
             <CardTitle className="flex items-center gap-2">

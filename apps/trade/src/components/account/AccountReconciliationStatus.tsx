@@ -17,7 +17,7 @@ export function AccountReconciliationStatus({ status }: { status: Reconciliation
   const stateClass = blocked ? "text-down bg-down/10 border-down/30" : underReview ? "text-primary bg-primary/10 border-primary/30" : "text-up bg-up/10 border-up/30";
 
   return (
-    <section aria-labelledby="account-reconciliation-heading" className="mb-5 rounded-xl bg-card p-5">
+    <section aria-labelledby="account-reconciliation-heading" className="bevel-surface mb-5 rounded-xl bg-card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="account-reconciliation-heading" className="text-sm font-semibold">Account integrity and reconciliation</h2>

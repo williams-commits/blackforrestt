@@ -25,6 +25,7 @@
   --color-down: #e03131;
   --color-brand: #fd7e14;
   --color-brand-soft: #ffe8cc;
+  --color-overlay-surface: #ffffff;
 
   --color-text: #17202a;
   /* muted/faint both clear WCAG AA (4.5:1) on canvas and panels — faint
@@ -148,6 +149,7 @@ html.dim {
   --color-brand-ink: #0e1116;
   --color-market-ink: #0e1116;
   --color-brand-soft: oklch(0.32 0 0);
+  --color-overlay-surface: #1e2329;
   --color-text: oklch(0.985 0 0);
   --color-text-muted: oklch(0.752 0 0);
   --color-text-faint: oklch(0.64 0 0);
@@ -528,24 +530,32 @@ html.dim .terminal-ui {
   }
 }
 
-/* ── Account portal flat-tonal surface system ──────────────────────────────
-   Owner design law (2026-10-13): no hairline borders in the account portal —
-   tonal backgrounds and spacing separate surfaces, tables use a tonal header
-   band + zebra instead of row rules. The page sits one step below the cards
-   (panel), cards are canvas and border-free — mirroring the terminal's
-   border-free tonal stage. Scoped to .account-flat so the terminal, admin
-   and portaled overlays keep their own treatment. */
+/* ── Account portal surface system ─────────────────────────────────────────
+   Cards use quiet boundaries while table rows retain tonal zebra separation.
+   The treatment is scoped to .account-flat; admin keeps its existing flat UI. */
 .account-flat,
 .flat-ui {
   background: var(--color-panel);
 }
-.account-flat [data-slot="card"],
 .flat-ui [data-slot="card"] {
   border-width: 0;
   box-shadow: none;
 }
-/* Cards sit directly on the page tone; content regions inside them get
-   their separation from spacing, not rules. */
+.account-flat [data-slot="card"],
+.bevel-surface {
+  border: 1px solid color-mix(in oklab, var(--color-border-soft) 45%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 38%),
+    0 1px 2px rgb(16 24 40 / 2.5%);
+}
+html.dim .account-flat [data-slot="card"],
+html.dim .bevel-surface {
+  border-color: color-mix(in oklab, var(--color-border-soft) 45%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 4%),
+    0 1px 2px rgb(0 0 0 / 14%);
+}
+/* Content regions inside cards get their separation from spacing, not rules. */
 .account-flat [data-slot="card"] > [data-slot="card-content"] + [data-slot="card-content"],
 .flat-ui [data-slot="card"] > [data-slot="card-content"] + [data-slot="card-content"],
 .account-flat [data-slot="table-container"] + *,

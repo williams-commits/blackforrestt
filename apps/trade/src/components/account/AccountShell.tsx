@@ -353,7 +353,7 @@ export function AccountShell(props: Props) {
                     onClick={() => onSelect(key)}
                     aria-current={active ? "true" : undefined}
                     className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
-                      active ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                      active ? "bg-brand-soft font-medium text-brand" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                     }`}
                   >
                     {icon ? <TabIcon icon={icon} size={16} /> : null}
@@ -370,10 +370,10 @@ export function AccountShell(props: Props) {
   );
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
       {/* Desktop sidebar — grouped account navigation */}
       <aside className="hidden lg:block">
-        <div className="sticky top-20 rounded-xl bg-card p-2">
+        <div className="bevel-surface sticky top-20 rounded-xl bg-card p-2">
           {navSection(selectTab)}
         </div>
       </aside>
@@ -385,7 +385,7 @@ export function AccountShell(props: Props) {
           type="button"
           onClick={() => setNavOpen(true)}
           aria-haspopup="dialog"
-          className="mb-5 flex w-full items-center justify-between gap-3 rounded-xl bg-card px-4 py-3 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:hidden"
+          className="bevel-surface mb-5 flex w-full items-center justify-between gap-3 rounded-xl bg-card px-4 py-3 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:hidden"
         >
           <span className="flex min-w-0 items-center gap-2">
             <LayoutGrid size={16} strokeWidth={2} aria-hidden className="shrink-0 text-muted-foreground" />
@@ -396,7 +396,7 @@ export function AccountShell(props: Props) {
         </button>
 
         {/* Page heading + contextual action */}
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card p-4 shadow-panel">
+        <div className="bevel-surface mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card p-4">
           <div className="flex min-w-0 items-center gap-3">
             <IdentityTile size="lg" tone="brand"><UserRound size={20} strokeWidth={2} aria-hidden /></IdentityTile>
             <div className="min-w-0">

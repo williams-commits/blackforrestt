@@ -129,7 +129,7 @@ export function MessagesTab() {
   const hasThread = inbox?.role === "customer" ? inbox.hasThread : false;
 
   return (
-    <div className="flex h-[min(70vh,32rem)] flex-col rounded-xl bg-card">
+    <div className="bevel-surface flex h-[min(70vh,32rem)] flex-col overflow-hidden rounded-xl bg-card">
       <div className="flex items-center gap-3 px-4 py-3.5">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">BF</span>
         <div className="min-w-0 flex-1">

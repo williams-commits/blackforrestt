@@ -419,7 +419,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                         onClick={() => selectWallet(index)}
                         className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition ${
                           walletIndex === index
-                            ? "border-primary/50 bg-primary/10/40"
+                            ? "border-primary/50 bg-primary/10"
                             : "border-border bg-card hover:border-primary/30"
                         }`}
                       >

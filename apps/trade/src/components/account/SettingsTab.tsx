@@ -44,7 +44,7 @@ export function SettingsTab({ user }: { user: User }) {
   const [passwordOpen, setPasswordOpen] = useState(false);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Account details */}
       <Card>
         <CardHeader className="grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto]">

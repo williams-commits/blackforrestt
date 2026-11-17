@@ -44,7 +44,7 @@ export function AccountUserMenu({
           >
             <button
               type="button"
-              className="flex max-w-[58vw] items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent sm:max-w-xs"
+              className="flex max-w-[58vw] items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:max-w-xs"
             >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand">{initial}</span>
               <span className="min-w-0 hidden sm:block">
@@ -56,7 +56,7 @@ export function AccountUserMenu({
               </span>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64 rounded-xl bg-card p-0 text-xs shadow-xl">
+          <DropdownMenuContent align="end" className="bevel-surface w-64 rounded-xl bg-card p-0 text-xs">
             <div className="border-b border-border bg-muted/60 px-4 py-3">
               <div className="truncate text-xs font-semibold">{displayName}</div>
               <div className="truncate text-xs text-muted-foreground">{email}</div>

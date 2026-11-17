@@ -77,7 +77,7 @@ export function ReferralTab() {
 
   if (loading) {
     return (
-      <div className="space-y-8" role="status" aria-label="Loading referrals">
+      <div className="space-y-6" role="status" aria-label="Loading referrals">
         <div className="space-y-3 py-5">
           <Skeleton className="h-4 w-36" />
           <Skeleton className="h-3 w-72" />
@@ -112,7 +112,7 @@ export function ReferralTab() {
     status === "COMPLETED" ? "up" : status === "PENDING" ? "warn" : "down";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Card>
         <CardHeader className="grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto]">
           <CardTitle className="flex items-center gap-2">

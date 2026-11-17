@@ -265,10 +265,10 @@ export function SecurityCenter() {
             {sessions.map((session) => (
               <div
                 key={session.id}
-                className={`flex items-center gap-3 rounded-xl bg-muted/50 p-3 transition ${
+                className={`bevel-surface flex items-center gap-3 rounded-xl p-3 transition-colors ${
                   session.current
-                    ? "border-primary/30 bg-primary/10/20"
-                    : "border-border bg-panel hover:border-primary/30"
+                    ? "bg-primary/10"
+                    : "bg-panel hover:bg-panel-2"
                 }`}
               >
                 <BrowserIcon browser={session.browser} />
@@ -303,7 +303,7 @@ export function SecurityCenter() {
                     type="button"
                     onClick={() => void revoke(session.id)}
                     disabled={revokingId === session.id}
-                    className="shrink-0 text-xs font-medium transition hover:border-down/40 hover:text-down disabled:opacity-50 flex items-center gap-2"
+                    className="flex shrink-0 items-center gap-2 rounded-md px-2 py-1 text-xs font-medium transition-colors hover:bg-down/10 hover:text-down focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50"
                   >
                     {revokingId === session.id ? "Revoking…" : <><X size={13} strokeWidth={2} aria-hidden /> Revoke</>}
                   </button>

@@ -74,8 +74,8 @@ export function ChartPanel({
     <div
       ref={panelRef}
       data-testid="professional-chart-panel"
-      className={`flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden bg-canvas shadow-panel ${
-        fullscreen ? "rounded-none" : "rounded-none"
+      className={`flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden bg-canvas ${
+        fullscreen ? "rounded-none border-0" : "bevel-surface rounded-none"
       }`}
     >
       <div className="flex min-h-11 shrink-0 items-center justify-between gap-1.5 bg-panel-2 px-2 py-1 sm:px-3">

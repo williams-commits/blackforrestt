@@ -228,7 +228,7 @@ export function Dashboard({
           desktop; smaller screens open the same ticket in a right-side sheet. */}
       <div
         className={cn(
-          "grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-0 bg-panel",
+          "grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-0 bg-panel lg:gap-1",
           watchlistOpen
             ? "lg:grid-cols-[240px_minmax(0,1fr)_340px]"
             : "lg:grid-cols-[2.5rem_minmax(0,1fr)_340px]",
@@ -272,7 +272,7 @@ export function Dashboard({
         <main
           id="main-content"
           tabIndex={-1}
-          className="relative min-h-0 min-w-0 p-1"
+          className="relative min-h-0 min-w-0 py-1"
         >
           <ChartPanel
             instrument={activeInstrument}

@@ -71,7 +71,7 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
   const initial = userName[0]?.toUpperCase() ?? "U";
 
   return (
-    <header className="relative z-40 grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(3rem,auto)_auto] items-center bg-canvas shadow-panel lg:flex lg:min-h-12 lg:flex-nowrap">
+    <header className="relative z-40 grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(3rem,auto)_auto] items-center border-b border-border-soft bg-canvas shadow-panel lg:flex lg:min-h-12 lg:flex-nowrap py-1">
       {/* Logo — the TRADE badge is desktop-only; on the phone it just repeated
           where the user already is. */}
       <div className="col-start-1 row-start-1 flex shrink-0 items-center gap-2.5 px-3 lg:col-auto lg:row-auto">

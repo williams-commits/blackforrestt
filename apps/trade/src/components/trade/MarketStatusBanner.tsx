@@ -84,7 +84,7 @@ export function MarketStatusBanner({
         <StatusPill
           icon={<Radio size={12} strokeWidth={2} aria-hidden />}
           label={quoteLabel}
-          tone={connected && !stale ? "text-up" : offline || stale ? "text-down" : "text-brand"}
+          tone={connected && !stale ? "text-up" : offline ? "text-down" : stale ? "text-(--term-warning-fg)" : "text-brand"}
         />
       </div>
       {(offline || stale) && (

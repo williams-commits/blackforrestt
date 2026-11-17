@@ -115,7 +115,7 @@ export function SupportTab() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Create new case */}
       <Card>
         <CardHeader>

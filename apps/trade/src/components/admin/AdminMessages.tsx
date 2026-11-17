@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
-import { Megaphone, MessageSquare, RotateCw, Search, Send, Trash2, X } from "lucide-react";
+import { Megaphone, MessageSquare, RotateCw, Send, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
@@ -17,6 +17,7 @@ import { fmtDateTime } from "@/lib/dates";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { RecordSearchInput } from "@/components/ui/RecordList";
 import { useAdminPersistentState } from "./useAdminPersistentState";
 
 interface ThreadRow {
@@ -246,8 +247,8 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
   }
 
   const needle = search.trim().toLowerCase();
-  const visibleThreads = threads.filter((thread) => {
-    if (unreadOnly && thread.unread === 0) return false;
+  const searchableThreads = threads.filter((thread) => !unreadOnly || thread.unread > 0);
+  const visibleThreads = searchableThreads.filter((thread) => {
     if (!needle) return true;
     return [thread.name, thread.email, thread.accountNo, thread.brandDomain ?? "", thread.lastMessage]
       .some((field) => field?.toLowerCase().includes(needle));
@@ -280,13 +281,14 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
         {/* Thread list */}
         <div className="flex max-h-144 flex-col">
           <div className="space-y-2 border-b border-border p-2">
-            <Input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
+            <RecordSearchInput
+              ariaLabel="Search conversations"
               placeholder="Search name, email, account…"
-              aria-label="Search conversations"
-              startIcon={<Search size={13} strokeWidth={2} aria-hidden />}
+              value={search}
+              onChange={setSearch}
+              rows={searchableThreads}
+              text={(thread) => [thread.name, thread.email, thread.accountNo, thread.brandDomain ?? "", thread.lastMessage].join(" ")}
+              iconPosition="start"
             />
             <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Checkbox checked={unreadOnly} onCheckedChange={(checked) => setUnreadOnly(checked === true)} aria-label="Unread only" />

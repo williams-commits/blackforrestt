@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, useEffect, useMemo, useRef } from "react";
-import { Ban, CheckCheck, CheckCircle2, ChevronDown, ExternalLink, FileSearch, FileText, IdCard, Search, ShieldCheck } from "lucide-react";
+import { Ban, CheckCheck, CheckCircle2, ChevronDown, ExternalLink, FileSearch, FileText, IdCard, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { fmtAgo } from "@/lib/dates";
@@ -11,7 +11,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
-import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
+import { RecordList, RecordSearchInput, RecordStatusChip } from "@/components/ui/RecordList";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { SectionHeader } from "./SectionHeader";
 import { useAdminPersistentState } from "./useAdminPersistentState";
@@ -56,6 +56,8 @@ interface Props {
   canAccessDocuments?: boolean;
 }
 
+const pendingSearchText = (s: Submission) =>
+  `${s.id} ${s.userId} ${s.firstName ?? ""} ${s.lastName ?? ""} ${s.user.name ?? ""} ${s.user.email ?? ""} ${s.user.accountNo ?? ""} ${s.status} ${s.country ?? ""} ${s.city ?? ""} ${s.docType ?? ""} ${s.docReference ?? ""}`;
 
 /** Admin KYC review dashboard: queue of pending submissions + recent decisions. */
 export function KycReview({
@@ -174,11 +176,14 @@ export function KycReview({
     () => Array.from(new Set(pending.map((s) => s.docType).filter((d): d is string => Boolean(d)))),
     [pending],
   );
-  const filteredPending = useMemo(() => pending.filter((s) =>
-    (docFilter === "ALL" || s.docType === docFilter) &&
-    (!needle ||
-    `${s.id} ${s.userId} ${s.firstName ?? ""} ${s.lastName ?? ""} ${s.user.name ?? ""} ${s.user.email ?? ""} ${s.user.accountNo ?? ""} ${s.status} ${s.country ?? ""} ${s.city ?? ""} ${s.docType ?? ""} ${s.docReference ?? ""}`.toLowerCase().includes(needle)
-  )), [pending, needle, docFilter]);
+  const docFilteredPending = useMemo(
+    () => pending.filter((s) => docFilter === "ALL" || s.docType === docFilter),
+    [pending, docFilter],
+  );
+  const filteredPending = useMemo(
+    () => docFilteredPending.filter((s) => !needle || pendingSearchText(s).toLowerCase().includes(needle)),
+    [docFilteredPending, needle],
+  );
   const visiblePending = filteredPending.slice(0, queueVisible);
 
 
@@ -304,13 +309,14 @@ export function KycReview({
               {(needle || docFilter !== "ALL") ? `${filteredPending.length} matches · ${pending.length}/${pendingTotalResolved} loaded` : `${pending.length}/${pendingTotalResolved}`}
             </span>
           </div>
-          <Input
-            type="search"
-            value={queueSearch}
-            onChange={(e) => { setQueueSearch(e.target.value); setQueueVisible(20); }}
+          <RecordSearchInput
+            ariaLabel="Search KYC queue"
             placeholder="Search name, email, account, ID, country, or document…"
-            aria-label="Search KYC queue"
-            startIcon={<Search size={14} strokeWidth={2} aria-hidden />}
+            value={queueSearch}
+            onChange={(value) => { setQueueSearch(value); setQueueVisible(20); }}
+            rows={docFilteredPending}
+            text={pendingSearchText}
+            iconPosition="start"
           />
           {docTypes.length > 1 && (
             <ChipGroup

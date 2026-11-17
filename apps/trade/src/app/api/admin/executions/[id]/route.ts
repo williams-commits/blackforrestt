@@ -48,7 +48,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (error instanceof AdminError) return NextResponse.json({ error: error.message }, { status: error.status });
     const tradingError = getTradingErrorDetails(error);
     if (tradingError) {
-      const status = tradingError.code === "VALIDATION" ? 400 : tradingError.code === "BLOCKED" ? 403 : 409;
+      const status = tradingError.code === "VALIDATION"
+        ? 400
+        : tradingError.code === "BLOCKED" || tradingError.code === "STALE_QUOTE_ACK_REQUIRED"
+          ? 403
+          : 409;
       return NextResponse.json({ error: tradingError.message, code: tradingError.code }, { status });
     }
     const reference = randomUUID();
@@ -71,7 +75,8 @@ function getTradingErrorDetails(error: unknown): { message: string; code: Tradin
     candidate.code !== "VALIDATION" &&
     candidate.code !== "INSUFFICIENT_FUNDS" &&
     candidate.code !== "CONFLICT" &&
-    candidate.code !== "BLOCKED"
+    candidate.code !== "BLOCKED" &&
+    candidate.code !== "STALE_QUOTE_ACK_REQUIRED"
   ) return null;
   return { message: candidate.message, code: candidate.code };
 }

@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/Button";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { SimpleTabs as Tabs } from "@/components/ui/Tabs";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
-import { isExecutableQuote, quoteAgeMs } from "@/lib/marketFreshness";
-import { formatNextMarketOpen } from "@/lib/marketHours";
+import { formatQuoteAge, isExecutableQuote, quoteAgeMs } from "@/lib/marketFreshness";
+import { formatNextMarketOpen, marketHoursForSymbol } from "@/lib/marketHours";
 import { Input } from "@/components/ui/Input";
 import { Slider } from "@/components/ui/slider";
 import { Alert } from "@/components/ui/Alert";
@@ -90,25 +90,27 @@ export function TradePanel({
 
   const quote = useForexStore((s) => s.quote);
   const account = useForexStore((s) => s.account);
-  const quoteMatches = quote?.symbol === instrument.symbol;
-  const bid = quoteMatches ? quote.bid : instrument.bid;
-  const ask = quoteMatches ? quote.ask : instrument.ask;
-  const currentQuoteAgeMs = quoteMatches ? quoteAgeMs(quote, now) : null;
-  const hasFreshQuote = isExecutableQuote(quote, instrument.symbol, now);
-  const quoteReady = marketDataConnected && hasFreshQuote && instrument.marketHours.canTrade;
+  const currentQuote = quote?.symbol === instrument.symbol ? quote : null;
+  const quoteMatches = currentQuote !== null;
+  const bid = currentQuote?.bid ?? instrument.bid;
+  const ask = currentQuote?.ask ?? instrument.ask;
+  const currentQuoteAgeMs = quoteAgeMs(currentQuote, now);
+  const currentMarketHours = marketHoursForSymbol(instrument.symbol, now, currentQuote?.time ?? 0);
+  const hasFreshQuote = isExecutableQuote(currentQuote, instrument.symbol, now);
+  const quoteReady = marketDataConnected && hasFreshQuote && currentMarketHours.canTrade;
   const staleQuoteAvailable = Boolean(
     quoteMatches &&
-    quote?.time &&
-    quote.time > 0 &&
-    quote.time <= now + 5_000 &&
-    instrument.marketHours.isOpen &&
-    !instrument.marketHours.canTrade,
+    currentQuote?.time &&
+    currentQuote.time > 0 &&
+    currentQuote.time <= now + 5_000 &&
+    currentMarketHours.isOpen &&
+    !currentMarketHours.canTrade,
   );
   const quotePriceAvailable = quoteReady || staleQuoteAvailable;
   const canSubmit = quoteReady || (staleQuoteAvailable && stalePriceAcknowledged);
-  const nextOpenLabel = formatNextMarketOpen(instrument.marketHours);
-  const sessionLabel = instrument.marketHours.isOpen ? "Open" : "Closed";
-  const quoteStateLabel = !instrument.marketHours.isOpen
+  const nextOpenLabel = formatNextMarketOpen(currentMarketHours);
+  const sessionLabel = currentMarketHours.isOpen ? "Open" : "Closed";
+  const quoteStateLabel = !currentMarketHours.isOpen
     ? "Session closed"
     : quoteReady
       ? "Live quote"
@@ -117,7 +119,7 @@ export function TradePanel({
         : !marketDataConnected
           ? "Data offline"
           : "Waiting for quote";
-  const changePct = quoteMatches && quote ? quote.changePct : instrument.changePct;
+  const changePct = currentQuote?.changePct ?? instrument.changePct;
   const changeIsPositive = changePct >= 0;
   const spread = ask - bid;
 
@@ -136,11 +138,11 @@ export function TradePanel({
 
   useEffect(() => {
     setStalePriceAcknowledged(false);
-  }, [instrument.symbol, instrument.marketHours.isOpen, instrument.marketHours.canTrade]);
+  }, [instrument.symbol, currentMarketHours.isOpen, currentMarketHours.canTrade]);
 
   async function submit(side: PositionSide): Promise<void> {
     clearMessages();
-    if (!instrument.marketHours.isOpen) {
+    if (!currentMarketHours.isOpen) {
       setValidationError(`The ${instrument.symbol} market is closed.${nextOpenLabel ? ` It reopens ${nextOpenLabel}.` : ""}`);
       return;
     }
@@ -285,7 +287,7 @@ export function TradePanel({
           </span>
         </div>
 
-        {!instrument.marketHours.isOpen && (
+        {!currentMarketHours.isOpen && (
           <div
             role="status"
             className="mx-1 mt-2 flex min-w-0 items-start gap-2 rounded-xl bg-panel/75 px-3 py-2.5 shadow-card ring-1 ring-border-soft backdrop-blur-xl"
@@ -294,9 +296,9 @@ export function TradePanel({
             <div className="min-w-0 space-y-0.5">
               <p className="text-(length:--term-text-xs) font-semibold text-text">Session closed</p>
               <p className="wrap-break-words text-(length:--term-text-2xs) leading-relaxed text-text-muted">
-                {instrument.marketHours.venue === "Schedule unavailable"
+                {currentMarketHours.venue === "Schedule unavailable"
                   ? "Trading hours are not configured for this market."
-                  : `Outside regular trading hours for ${instrument.marketHours.venue}.`}
+                  : `Outside regular trading hours for ${currentMarketHours.venue}.`}
               </p>
               <p className="wrap-break-words text-(length:--term-text-2xs) font-medium leading-relaxed text-brand">
                 {nextOpenLabel ? `Opens ${nextOpenLabel}` : "Next opening time is unavailable."}
@@ -305,26 +307,45 @@ export function TradePanel({
           </div>
         )}
 
-        {instrument.marketHours.isOpen && !instrument.marketHours.canTrade && (
-          <Alert tone="err" className="mx-1 mt-2">
+        {currentMarketHours.isOpen && !currentMarketHours.canTrade && (
+          <Alert tone="err" className="mx-1 mt-2" icon={<Radio aria-hidden />}>
             {staleQuoteAvailable ? (
-              <div className="space-y-2">
-                <div>
-                  <p className="font-semibold">
-                    Stale quote · last update {formatQuoteAge(currentQuoteAgeMs)} ago
-                  </p>
-                  <p className="mt-0.5 text-(length:--term-text-2xs)">
-                    Entry and exit prices may differ materially from the market. This can affect your execution and P/L.
-                  </p>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">Stale market data</p>
+                    <p className="text-(length:--term-text-2xs)">
+                      Last received {formatQuoteAge(currentQuoteAgeMs)} ago
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-background/60 px-2 py-1 text-[10px] font-semibold tracking-wide">
+                    ACKNOWLEDGMENT REQUIRED
+                  </span>
                 </div>
-                <label htmlFor={stalePriceAcknowledgementId} className="flex cursor-pointer items-start gap-2 text-(length:--term-text-2xs) font-medium">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-md bg-background/50 px-3 py-2">
+                    <p className="text-(length:--term-text-2xs)">Last bid</p>
+                    <p className="tabular-nums font-semibold">{fmtPrice(bid, instrument.digits)}</p>
+                  </div>
+                  <div className="rounded-md bg-background/50 px-3 py-2">
+                    <p className="text-(length:--term-text-2xs)">Last ask</p>
+                    <p className="tabular-nums font-semibold">{fmtPrice(ask, instrument.digits)}</p>
+                  </div>
+                </div>
+                <p className="text-(length:--term-text-2xs)">
+                  If the feed is still stale when submitted, this order will use the last recorded quote, subject to applicable spread and commission. A fresh quote arriving first takes precedence; actual execution and P/L may differ.
+                </p>
+                <label htmlFor={stalePriceAcknowledgementId} className="flex cursor-pointer items-start gap-2 rounded-md bg-background/50 p-3 text-(length:--term-text-2xs) font-medium">
                   <Checkbox
                     id={stalePriceAcknowledgementId}
                     checked={stalePriceAcknowledged}
                     onCheckedChange={(checked) => setStalePriceAcknowledged(checked === true)}
                     className="mt-0.5"
                   />
-                  <span>I understand and choose to place an order using the displayed stale price.</span>
+                  <span>
+                    I understand the pricing risk and choose to submit this order.
+                    <span className="mt-0.5 block font-normal opacity-80">This acknowledgment applies only to this order.</span>
+                  </span>
                 </label>
               </div>
             ) : (
@@ -548,7 +569,7 @@ export function TradePanel({
             <SummaryRow
               label="Session"
               value={sessionLabel}
-              valueClass={instrument.marketHours.isOpen ? "text-up font-semibold" : "text-down font-semibold"}
+              valueClass={currentMarketHours.isOpen ? "text-up font-semibold" : "text-down font-semibold"}
             />
             <SummaryRow
               label="Quote freshness"
@@ -608,7 +629,7 @@ export function TradePanel({
           </Button>
         </div>
         <p className="mt-2 wrap-break-words rounded-md bg-panel-2 px-3 py-2 text-center text-(length:--term-text-2xs) leading-relaxed text-text-faint">
-          {!instrument.marketHours.isOpen
+          {!currentMarketHours.isOpen
             ? "Orders disabled · session closed"
             : staleQuoteAvailable && !stalePriceAcknowledged
               ? "Acknowledge the stale-price risk to enable order entry"
@@ -627,15 +648,6 @@ export function TradePanel({
       </div>
     </div>
   );
-}
-
-function formatQuoteAge(ageMs: number | null): string {
-  if (ageMs == null) return "unknown";
-  const totalSeconds = Math.floor(ageMs / 1_000);
-  if (totalSeconds < 60) return `${totalSeconds}s`;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}m ${seconds}s`;
 }
 
 function SummaryRow({ label, value, valueClass = "" }: { label: string; value: string; valueClass?: string }) {

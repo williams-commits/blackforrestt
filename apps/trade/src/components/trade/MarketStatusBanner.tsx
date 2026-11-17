@@ -5,7 +5,8 @@ import { Activity, Clock3, Radio } from "lucide-react";
 import { useForexStore } from "@/lib/store";
 import type { InstrumentView } from "@/lib/types";
 import type { SocketStatus } from "@/lib/ws/client";
-import { MAX_EXECUTABLE_QUOTE_AGE_MS, quoteAgeMs } from "@/lib/marketFreshness";
+import { formatQuoteAge, MAX_EXECUTABLE_QUOTE_AGE_MS, quoteAgeMs } from "@/lib/marketFreshness";
+import { marketHoursForSymbol } from "@/lib/marketHours";
 
 export function MarketStatusBanner({
   marketDataMode,
@@ -25,6 +26,7 @@ export function MarketStatusBanner({
 
   const selectedQuote = quote?.symbol === instrument.symbol ? quote : null;
   const ageMs = quoteAgeMs(selectedQuote, now);
+  const marketHours = marketHoursForSymbol(instrument.symbol, now, selectedQuote?.time ?? 0);
   const stale = ageMs == null || ageMs > MAX_EXECUTABLE_QUOTE_AGE_MS;
   const connected = wsStatus === "open";
   const offline = wsStatus === "closed" || wsStatus === "unauthorized";
@@ -40,7 +42,7 @@ export function MarketStatusBanner({
     : ageMs == null
       ? "Waiting for quote"
       : stale
-        ? `Stale · ${(ageMs / 1_000).toFixed(1)}s`
+      ? `Stale · ${formatQuoteAge(ageMs)}`
         : `Live · ${(ageMs / 1_000).toFixed(1)}s`;
   const sourceLabel: Record<string, string> = {
     simulation: "Internal price feed",
@@ -76,8 +78,8 @@ export function MarketStatusBanner({
         />
         <StatusPill
           icon={<Clock3 size={12} strokeWidth={2} aria-hidden />}
-          label={`${instrument.symbol} · ${instrument.marketHours.isOpen ? "Session open" : "Session closed"}`}
-          tone={instrument.marketHours.isOpen ? "text-up" : "text-text-muted"}
+          label={`${instrument.symbol} · ${marketHours.isOpen ? "Session open" : "Session closed"}`}
+          tone={marketHours.isOpen ? "text-up" : "text-text-muted"}
         />
         <StatusPill
           icon={<Radio size={12} strokeWidth={2} aria-hidden />}
@@ -87,7 +89,7 @@ export function MarketStatusBanner({
       </div>
       {(offline || stale) && (
         <span className="px-1 pt-0.5 font-medium text-text-muted lg:pt-0">
-          {stale && instrument.marketHours.isOpen && selectedQuote
+          {stale && marketHours.isOpen && selectedQuote
             ? "Stale prices can be used only after you acknowledge the risk in the trade ticket or close confirmation."
             : offline
               ? "Market data is offline. Wait for the feed to recover; if the quote becomes stale, you can explicitly acknowledge its risk."

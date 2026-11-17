@@ -1,12 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  formatQuoteAge,
   isExecutableQuote,
   MAX_EXECUTABLE_QUOTE_AGE_MS,
   staleQuoteDecision,
 } from "../src/lib/marketFreshness.js";
 import type { Quote } from "../src/lib/types.js";
 import type { MarketHoursView } from "../src/lib/marketHours.js";
+
+test("quote age labels remain readable for long stale intervals", () => {
+  assert.equal(formatQuoteAge(42_000), "42s");
+  assert.equal(formatQuoteAge(65_000), "1m 5s");
+  assert.equal(formatQuoteAge(7_325_000), "2h 2m");
+  assert.equal(formatQuoteAge(null), "unknown");
+});
 
 test("execution quotes remain fresh for 60 seconds, then become stale", () => {
   const now = 1_800_000_000_000;

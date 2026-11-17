@@ -69,6 +69,11 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
     setBusy(position.id);
     const result = await closePosition(position.id, acknowledgeStalePrice);
     setBusy(null);
+    if (!result.ok && result.code === "STALE_QUOTE_ACK_REQUIRED") {
+      setStaleCloseTarget(position);
+      setStaleCloseAcknowledged(false);
+      return;
+    }
     if (result.ok) {
       const profit = result.netProfit ?? 0;
       toast.success(
@@ -255,19 +260,43 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
           setStaleCloseTarget(null);
           setStaleCloseAcknowledged(false);
         }}
-        title={`Close ${staleCloseTarget?.symbol ?? "position"} at stale price?`}
-        description="The market is open, but the latest quote is stale. Closing requires your explicit acknowledgment."
+        title={`Review stale-price close · ${staleCloseTarget?.symbol ?? "position"}`}
+        description="The market quote is stale. Review the last recorded position mark and acknowledge the execution risk before closing."
         className="sm:max-w-md"
       >
         {staleCloseTarget && (
           <div className="flex flex-col gap-4 p-5">
             <Alert tone="err">
-              <p className="font-semibold">Last recorded position mark</p>
-              <p className="mt-0.5 text-(length:--term-text-2xs)">
-                The actual market price may have moved. Your close price and realized P/L may differ materially from a fresh quote.
-              </p>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">Live quote unavailable</p>
+                    <p className="text-(length:--term-text-2xs)">
+                      The close will use the last recorded mark for this position.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-background/60 px-2 py-1 text-[10px] font-semibold tracking-wide">
+                    ACKNOWLEDGMENT REQUIRED
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-md bg-background/50 px-3 py-2">
+                    <p className="text-(length:--term-text-2xs)">Last recorded mark</p>
+                    <p className="tabular-nums font-semibold">
+                      {fmtPrice(staleCloseTarget.currentRate, digitsFor(staleCloseTarget.symbol))}
+                    </p>
+                  </div>
+                  <div className="rounded-md bg-background/50 px-3 py-2">
+                    <p className="text-(length:--term-text-2xs)">Current unrealized P/L</p>
+                    <p className="tabular-nums font-semibold">{fmtNum(staleCloseTarget.netProfit, 2)} USD</p>
+                  </div>
+                </div>
+                <p className="text-(length:--term-text-2xs)">
+                  The actual market may have moved. Your close price and realized P/L may differ materially from a fresh quote.
+                </p>
+              </div>
             </Alert>
-            <label className="flex cursor-pointer items-start gap-2 text-sm text-text" onClick={(event) => event.stopPropagation()}>
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg bg-panel-2 p-3 text-sm text-text" onClick={(event) => event.stopPropagation()}>
               <Checkbox
                 checked={staleCloseAcknowledged}
                 onCheckedChange={(checked) => setStaleCloseAcknowledged(checked === true)}
@@ -297,7 +326,7 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
                 onClick={() => void performClose(staleCloseTarget, true)}
               >
                 <X aria-hidden />
-                Close at last mark
+                Acknowledge & close at last mark
               </Button>
             </div>
           </div>

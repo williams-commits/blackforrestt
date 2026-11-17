@@ -22,6 +22,16 @@ test("crypto is open continuously, including weekends", () => {
   }
 });
 
+test("open markets become non-executable when their last quote ages past the freshness window", () => {
+  const now = at("2026-11-10T12:00:00Z");
+  for (const symbol of ["XRPUSD", "UNIUSD", "WTIUSD"]) {
+    const status = marketHoursForSymbol(symbol, now, now - 61_000);
+    assert.equal(status.isOpen, true, `${symbol} should be in session`);
+    assert.equal(status.canTrade, false, `${symbol} should require stale-price acknowledgment`);
+    assert.equal(status.state, "WAITING_FOR_QUOTE");
+  }
+});
+
 test("OANDA FX sessions include the daily break and Sunday open in New York time", () => {
   const schedule = marketScheduleForSymbol("EURUSD");
   assert.ok(schedule);

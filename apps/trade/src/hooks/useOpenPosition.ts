@@ -174,7 +174,7 @@ export function useOpenPosition() {
 export async function closePosition(
   positionId: string,
   acknowledgeStalePrice = false,
-): Promise<{ ok: boolean; symbol?: string; netProfit?: number; error?: string }> {
+): Promise<{ ok: boolean; symbol?: string; netProfit?: number; error?: string; code?: string }> {
   try {
     const response = await fetch(`/api/positions/${encodeURIComponent(positionId)}/close`, {
       method: "POST",
@@ -182,8 +182,8 @@ export async function closePosition(
       body: JSON.stringify({ acknowledgeStalePrice }),
     });
     if (!response.ok) {
-      const { message } = await readApiError(response, "Failed to close position.");
-      return { ok: false, error: message };
+      const { message, code } = await readApiError(response, "Failed to close position.");
+      return { ok: false, error: message, code };
     }
     const data = (await response.json().catch(() => null)) as
       | { position?: { symbol?: string; netProfit?: number } }

@@ -51,7 +51,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   } catch (error) {
     const tradingError = getTradingErrorDetails(error);
     if (tradingError) {
-      const status = tradingError.code === "VALIDATION" ? 400 : tradingError.code === "BLOCKED" ? 403 : 409;
+      const status = tradingError.code === "VALIDATION"
+        ? 400
+        : tradingError.code === "BLOCKED" || tradingError.code === "STALE_QUOTE_ACK_REQUIRED"
+          ? 403
+          : 409;
       return NextResponse.json({ error: tradingError.message, code: tradingError.code }, { status });
     }
     console.error(`Position close failed for ${id}:`, error);
@@ -67,7 +71,8 @@ function getTradingErrorDetails(error: unknown): { message: string; code: Tradin
     candidate.code !== "VALIDATION" &&
     candidate.code !== "INSUFFICIENT_FUNDS" &&
     candidate.code !== "CONFLICT" &&
-    candidate.code !== "BLOCKED"
+    candidate.code !== "BLOCKED" &&
+    candidate.code !== "STALE_QUOTE_ACK_REQUIRED"
   ) return null;
   return { message: candidate.message, code: candidate.code };
 }

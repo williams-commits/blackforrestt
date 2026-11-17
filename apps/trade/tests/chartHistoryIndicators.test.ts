@@ -77,6 +77,9 @@ test("new instruments use the intended provider tickers", () => {
     endpoint: "crypto",
   });
   assert.equal(FEED_SYMBOL_MAP.LTCUSD?.feedSymbol, "BINANCE:LTCUSDT");
+  assert.equal(FEED_SYMBOL_MAP.XRPUSD?.feedSymbol, "BINANCE:XRPUSDT");
+  assert.equal(FEED_SYMBOL_MAP.UNIUSD?.feedSymbol, "BINANCE:UNIUSDT");
+  assert.equal(FEED_SYMBOL_MAP.WTIUSD?.feedSymbol, "OANDA:WTI_USD");
   assert.equal(FEED_SYMBOL_MAP.AMZN?.feedSymbol, "AMZN");
   assert.equal(FEED_SYMBOL_MAP.CORNUSD?.feedSymbol, "CORN");
   assert.deepEqual(translateSymbol("CORNUSD", "tickerlayer"), {
@@ -103,6 +106,13 @@ test("Finnhub snapshots include listed commodity funds that are not categorized 
       "EURUSD",
     ]),
     ["CORNUSD", "WEATUSD", "SOYBUSD", "AAPL"],
+  );
+});
+
+test("Finnhub snapshots cover crypto and energy instruments with quiet WebSocket feeds", () => {
+  assert.deepEqual(
+    snapshotQuoteSymbolsFor(["XRPUSD", "WTIUSD", "UNIUSD", "EURUSD"]),
+    ["XRPUSD", "WTIUSD", "UNIUSD"],
   );
 });
 

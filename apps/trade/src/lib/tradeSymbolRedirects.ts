@@ -1,5 +1,7 @@
 export const TRADE_SYMBOL_REDIRECTS: Record<string, string> = {
   BTCUSDT: "BTCUSD",
+  XRPUSDT: "XRPUSD",
+  WTI: "WTIUSD",
   MATICUSD: "POLUSD",
   VIX: "VIXY",
 };

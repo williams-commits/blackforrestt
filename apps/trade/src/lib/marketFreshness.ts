@@ -11,6 +11,17 @@ export function quoteAgeMs(quote: Quote | null, now = Date.now()): number | null
   return quote ? Math.max(0, now - quote.time) : null;
 }
 
+export function formatQuoteAge(ageMs: number | null): string {
+  if (ageMs == null || !Number.isFinite(ageMs)) return "unknown";
+  const totalSeconds = Math.floor(Math.max(0, ageMs) / 1_000);
+  const hours = Math.floor(totalSeconds / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
 export function staleQuoteDecision(
   marketHours: Pick<MarketHoursView, "isOpen" | "canTrade">,
   quoteTimestamp: number,

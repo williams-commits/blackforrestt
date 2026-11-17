@@ -782,7 +782,10 @@ class Hub {
           : staleDecision.reason === "ACK_REQUIRED"
             ? "The quote is stale. Acknowledge the stale-price risk before placing this order."
             : "No previous valid quote is available. Wait for market data to recover.";
-        throw new TradingError(message, "BLOCKED");
+        throw new TradingError(
+          message,
+          staleDecision.reason === "ACK_REQUIRED" ? "STALE_QUOTE_ACK_REQUIRED" : "BLOCKED",
+        );
       }
       if (!staleDecision.useStalePrice && Date.now() - executableQuote.time > policy.maxQuoteAgeMs) {
         throw new TradingError("The executable quote is stale. Wait for market data to recover.", "BLOCKED");
@@ -1155,7 +1158,10 @@ class Hub {
           : staleDecision.reason === "ACK_REQUIRED"
             ? "The quote is stale. Acknowledge the stale-price risk before closing this position."
             : "No previous valid quote is available. Wait for market data to recover.";
-        throw new TradingError(message, "BLOCKED");
+        throw new TradingError(
+          message,
+          staleDecision.reason === "ACK_REQUIRED" ? "STALE_QUOTE_ACK_REQUIRED" : "BLOCKED",
+        );
       }
       const cfg = this.cfg(state);
       const closeRate = staleDecision.useStalePrice
@@ -1882,7 +1888,12 @@ class Hub {
   }
 }
 
-export type TradingErrorCode = "VALIDATION" | "INSUFFICIENT_FUNDS" | "CONFLICT" | "BLOCKED";
+export type TradingErrorCode =
+  | "VALIDATION"
+  | "INSUFFICIENT_FUNDS"
+  | "CONFLICT"
+  | "BLOCKED"
+  | "STALE_QUOTE_ACK_REQUIRED";
 
 export class TradingError extends Error {
   constructor(message: string, readonly code: TradingErrorCode) {

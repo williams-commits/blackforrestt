@@ -123,7 +123,7 @@ export async function POST(req: Request) {
         console.error("Position rejection audit failed:", auditError);
       }
       const status =
-        tradingError.code === "BLOCKED"
+        tradingError.code === "BLOCKED" || tradingError.code === "STALE_QUOTE_ACK_REQUIRED"
           ? 403
           : tradingError.code === "INSUFFICIENT_FUNDS" || tradingError.code === "CONFLICT"
             ? 409
@@ -146,7 +146,8 @@ function getTradingErrorDetails(error: unknown): { message: string; code: Tradin
     candidate.code !== "VALIDATION" &&
     candidate.code !== "INSUFFICIENT_FUNDS" &&
     candidate.code !== "CONFLICT" &&
-    candidate.code !== "BLOCKED"
+    candidate.code !== "BLOCKED" &&
+    candidate.code !== "STALE_QUOTE_ACK_REQUIRED"
   ) return null;
   return { message: candidate.message, code: candidate.code };
 }

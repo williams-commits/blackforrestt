@@ -1,7 +1,7 @@
 import type { Quote } from "./types";
 import type { MarketHoursView } from "./marketHours";
 
-export const MAX_EXECUTABLE_QUOTE_AGE_MS = 60_000;
+export const MAX_EXECUTABLE_QUOTE_AGE_MS = 5 * 60_000;
 
 export type StaleQuoteDecision =
   | { allowed: true; useStalePrice: boolean }

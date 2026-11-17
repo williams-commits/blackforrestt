@@ -25,10 +25,13 @@ test("crypto is open continuously, including weekends", () => {
 test("open markets become non-executable when their last quote ages past the freshness window", () => {
   const now = at("2026-11-10T12:00:00Z");
   for (const symbol of ["XRPUSD", "UNIUSD", "WTIUSD"]) {
-    const status = marketHoursForSymbol(symbol, now, now - 61_000);
-    assert.equal(status.isOpen, true, `${symbol} should be in session`);
-    assert.equal(status.canTrade, false, `${symbol} should require stale-price acknowledgment`);
-    assert.equal(status.state, "WAITING_FOR_QUOTE");
+    const fresh = marketHoursForSymbol(symbol, now, now - 5 * 60_000);
+    const stale = marketHoursForSymbol(symbol, now, now - (5 * 60_000 + 1));
+    assert.equal(fresh.isOpen, true, `${symbol} should be in session`);
+    assert.equal(fresh.canTrade, true, `${symbol} should remain executable through five minutes`);
+    assert.equal(stale.isOpen, true, `${symbol} should remain in session`);
+    assert.equal(stale.canTrade, false, `${symbol} should require stale-price acknowledgment after five minutes`);
+    assert.equal(stale.state, "WAITING_FOR_QUOTE");
   }
 });
 
@@ -80,8 +83,8 @@ test("Tokyo index session observes the lunch break and Japanese year-end closure
 
 test("an open session remains non-executable until a fresh quote arrives", () => {
   const now = at("2026-11-10T15:00:00Z");
-  const stale = marketHoursForSymbol("AAPL", now, now - 60_001);
-  const freshAtLimit = marketHoursForSymbol("AAPL", now, now - 60_000);
+  const stale = marketHoursForSymbol("AAPL", now, now - (5 * 60_000 + 1));
+  const freshAtLimit = marketHoursForSymbol("AAPL", now, now - 5 * 60_000);
   const fresh = marketHoursForSymbol("AAPL", now, now);
   assert.equal(stale.state, "WAITING_FOR_QUOTE");
   assert.equal(stale.canTrade, false);

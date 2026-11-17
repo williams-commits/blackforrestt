@@ -7,7 +7,7 @@ export interface TradingRiskPolicy {
 
 const SAFE_DEFAULTS: TradingRiskPolicy = {
   maxOrderLots: 100,
-  maxQuoteAgeMs: 60_000,
+  maxQuoteAgeMs: 5 * 60_000,
 };
 
 function objectValue(value: unknown, key: string): unknown {

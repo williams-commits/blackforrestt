@@ -16,14 +16,14 @@ test("quote age labels remain readable for long stale intervals", () => {
   assert.equal(formatQuoteAge(null), "unknown");
 });
 
-test("execution quotes remain fresh for 60 seconds, then become stale", () => {
+test("execution quotes remain fresh for five minutes, then become stale", () => {
   const now = 1_800_000_000_000;
   const quote: Quote = {
     symbol: "EURUSD",
     bid: 1.1,
     ask: 1.1002,
     mid: 1.1001,
-    time: now - 60_000,
+    time: now - 5 * 60_000,
     open24h: 1.09,
     high24h: 1.11,
     low24h: 1.08,
@@ -39,9 +39,9 @@ test("execution quotes remain fresh for 60 seconds, then become stale", () => {
     },
   };
 
-  assert.equal(MAX_EXECUTABLE_QUOTE_AGE_MS, 60_000);
+  assert.equal(MAX_EXECUTABLE_QUOTE_AGE_MS, 5 * 60_000);
   assert.equal(isExecutableQuote(quote, "EURUSD", now), true);
-  assert.equal(isExecutableQuote({ ...quote, time: now - 60_001 }, "EURUSD", now), false);
+  assert.equal(isExecutableQuote({ ...quote, time: now - (5 * 60_000 + 1) }, "EURUSD", now), false);
 });
 
 test("stale quote execution requires a valid prior quote and explicit acknowledgement", () => {
@@ -51,7 +51,7 @@ test("stale quote execution requires a valid prior quote and explicit acknowledg
     canTrade: false,
   };
 
-  assert.deepEqual(staleQuoteDecision(openAndStale, now - 61_000, false, now), {
+  assert.deepEqual(  staleQuoteDecision(openAndStale, now - (5 * 60_000 + 1), false, now), {
     allowed: false,
     reason: "ACK_REQUIRED",
   });
@@ -59,7 +59,7 @@ test("stale quote execution requires a valid prior quote and explicit acknowledg
     allowed: false,
     reason: "NO_VALID_QUOTE",
   });
-  assert.deepEqual(staleQuoteDecision(openAndStale, now - 61_000, true, now), {
+  assert.deepEqual(  staleQuoteDecision(openAndStale, now - (5 * 60_000 + 1), true, now), {
     allowed: true,
     useStalePrice: true,
   });

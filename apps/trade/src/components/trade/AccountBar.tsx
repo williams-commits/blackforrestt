@@ -21,6 +21,7 @@ import {
 import { useTheme } from "@/components/ThemeProvider";
 import { Logo } from "./Logo";
 import { WalletModal } from "@/components/account/WalletModal";
+import { WorkspaceNavigation } from "@/components/WorkspaceNavigation";
 import type { SocketStatus } from "@/lib/ws/client";
 import type { WalletAddressEntry } from "@/server/userSettings";
 
@@ -77,6 +78,11 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
         <Logo inverted={theme === "dim"} />
         <span className="hidden sm:inline-block text-(length:--term-text-2xs) font-semibold text-brand bg-brand-soft px-1.5 py-0.5 rounded">TRADE</span>
       </div>
+      <WorkspaceNavigation
+        current="trade"
+        showAdmin={session?.user?.role === "admin"}
+        className="hidden shrink-0 px-1 xl:flex"
+      />
 
       {/* Keep every account metric available on phones in a compact scroll row;
           large screens place the same metrics inline with the header controls. */}

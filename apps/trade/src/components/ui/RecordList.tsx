@@ -120,8 +120,13 @@ export function RecordList<T>({
   /** Comparable extractor for sorting (numbers compare numerically). */
   sortValue: (row: T, key: string) => string | number;
   initialSort?: { key: string; direction: "asc" | "desc" };
-  /** When provided, renders the search pill filtering via this text extractor. */
-  search?: { placeholder: string; text: (row: T) => string };
+  /** When provided, renders a search pill; value/onChange enable remote-controlled search. */
+  search?: {
+    placeholder: string;
+    text: (row: T) => string;
+    value?: string;
+    onChange?: (value: string) => void;
+  };
   /** Caller-composed filter controls — rendered after the search pill. */
   filters?: React.ReactNode;
   /** Trailing toolbar slot (CSV export, counters). */
@@ -164,11 +169,14 @@ export function RecordList<T>({
   const [storageReady, setStorageReady] = React.useState(!storageKey);
   const columnsRef = React.useRef(columns);
   columnsRef.current = columns;
+  const searchRef = React.useRef(search);
+  searchRef.current = search;
+  const activeQuery = search?.value ?? query;
   // Derive the LIVE row from the current rows — the stored key survives
   // data refreshes so the slider always shows current data.
   const detail = detailKey != null ? rows.find((r) => rowKey(r) === detailKey) ?? null : null;
 
-  React.useEffect(() => setVisible(pageSize), [pageSize, query, sort]);
+  React.useEffect(() => setVisible(pageSize), [pageSize, activeQuery, sort]);
 
   React.useEffect(() => {
     if (!storageKey) {
@@ -181,7 +189,9 @@ export function RecordList<T>({
         const saved: unknown = JSON.parse(raw);
         if (typeof saved === "object" && saved !== null) {
           const preferences = saved as { query?: unknown; sort?: { key?: unknown; direction?: unknown } };
-          if (typeof preferences.query === "string") setQuery(preferences.query);
+          if (typeof preferences.query === "string" && searchRef.current?.value === undefined) {
+            setQuery(preferences.query);
+          }
           if (
             typeof preferences.sort?.key === "string" &&
             columnsRef.current.some((column) => column.key === preferences.sort?.key) &&
@@ -203,17 +213,20 @@ export function RecordList<T>({
   React.useEffect(() => {
     if (!storageKey || !storageReady) return;
     try {
-      window.localStorage.setItem(storageKey, JSON.stringify({ query, sort }));
+      window.localStorage.setItem(storageKey, JSON.stringify({
+        ...(searchRef.current?.value === undefined ? { query } : {}),
+        sort,
+      }));
     } catch (error) {
       console.warn(`Unable to save record-list preferences: ${storageKey}`, error);
     }
   }, [query, sort, storageKey, storageReady]);
 
   const searched = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = activeQuery.trim().toLowerCase();
     if (!q || !search) return rows;
     return rows.filter((row) => search.text(row).toLowerCase().includes(q));
-  }, [rows, query, search]);
+  }, [rows, activeQuery, search]);
 
   const sorted = React.useMemo(() => {
     const dir = sort.direction === "asc" ? 1 : -1;
@@ -277,8 +290,11 @@ export function RecordList<T>({
                     <Search size={14} strokeWidth={2} aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       type="search"
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
+                      value={activeQuery}
+                      onChange={(event) => {
+                        if (search.value === undefined) setQuery(event.target.value);
+                        search.onChange?.(event.target.value);
+                      }}
                       placeholder={search.placeholder}
                       aria-label={search.placeholder}
                       className="h-9 pl-3 pr-9"
@@ -293,10 +309,9 @@ export function RecordList<T>({
               </div>
             )}
             {filters && (
-              <ResponsiveFilters className="flex min-w-0 flex-col gap-2 rounded-xl bg-muted/30 p-2 md:flex-row md:items-center md:gap-3">
+              <ResponsiveFilters className="flex min-w-0 flex-col gap-2 rounded-xl bg-muted/30 py-2 px-4 md:flex-row md:items-center md:gap-3">
                 <div className="hidden shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground md:flex">
-                  <SlidersHorizontal size={13} strokeWidth={2} aria-hidden />
-                  Filters
+                  <SlidersHorizontal size={16} strokeWidth={2} aria-hidden />
                 </div>
                 <div className="flex min-w-0 flex-col items-stretch gap-2 *:min-w-0 *:w-full **:data-[slot=input]:h-8 **:data-[slot=input]:rounded-lg **:data-[slot=input]:bg-background/70 **:data-[slot=input]:text-xs **:data-[slot=select-trigger]:h-8 **:data-[slot=select-trigger]:rounded-lg **:data-[slot=select-trigger]:bg-background/70 **:data-[slot=select-trigger]:px-2.5 **:data-[slot=select-trigger]:text-xs [&_button:not([aria-pressed])]:h-8 [&_button:not([aria-pressed])]:rounded-lg [&_button:not([aria-pressed])]:px-2.5 [&_button:not([aria-pressed])]:text-xs md:flex-row md:flex-wrap md:items-center md:gap-1.5 md:*:w-auto">
                   {filters}

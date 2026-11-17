@@ -768,7 +768,7 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
             toolbarEnd={canManage ? <AddMemberButton groupId={detail.id} onAdded={() => void refresh()} existingIds={detail.members.map((m) => m.user.id)} /> : undefined}
             rows={detail.members}
             rowKey={(m) => m.id}
-            search={{ placeholder: "Search name or email…", text: (m) => `${m.user.name ?? ""} ${m.user.email ?? ""} ${m.user.accountNo ?? ""}` }}
+            search={{ placeholder: "Search name, email, account, or member ID…", text: (m) => `${m.id} ${m.user.id} ${m.user.name ?? ""} ${m.user.email ?? ""} ${m.user.accountNo ?? ""} ${m.user.verified ? "verified" : "unverified"}` }}
             leading={(m) => ({
               icon: null,
               tone: m.user.verified ? "muted" : "down",

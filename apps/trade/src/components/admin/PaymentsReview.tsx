@@ -142,7 +142,10 @@ export function PaymentsReview({
         count={`${filtered.length} of ${requests.length} requests`}
         rows={filtered}
         rowKey={(r) => r.id}
-        search={{ placeholder: "Search client, reference, or method…", text: (r) => `${r.user.name ?? ""} ${r.user.email ?? ""} ${r.userReference ?? ""} ${r.methodLabel}` }}
+        search={{
+          placeholder: "Search client, account, type, status, amount, method, or reference…",
+          text: (r) => `${r.id} ${r.user.name ?? ""} ${r.user.email ?? ""} ${r.user.accountNo ?? ""} ${r.user.verified ? "verified" : "unverified"} ${r.type} ${r.status} ${r.asset} ${r.amount} ${r.userReference ?? ""} ${r.externalReference ?? ""} ${r.method} ${r.methodLabel} ${r.reviewerNote ?? ""}`,
+        }}
         filters={
           <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as "ALL" | "DEPOSIT" | "WITHDRAWAL")}>
             <SelectTrigger size="sm" className="w-36" aria-label="Filter payment requests by type">

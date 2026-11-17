@@ -419,7 +419,7 @@ function OpenPositionCards({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <SideBadge side={p.side} type={p.type} />
-                <span className="text-sm font-bold">{p.symbol}</span>
+                <span className="text-sm font-bold"><SymbolLink symbol={p.symbol} showIcon={false} /></span>
                 <span className="text-(length:--term-text-xs) text-text-faint tnum">{fmtNum(p.volume, 2)}</span>
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-(length:--term-text-2xs) tnum text-text-faint">
@@ -796,7 +796,7 @@ function HistoryCards({ digitsFor }: { digitsFor: (s: string) => number }) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <SideBadge side={p.side} type={p.type} />
-                  <span className="text-sm font-bold">{p.symbol}</span>
+                  <span className="text-sm font-bold"><SymbolLink symbol={p.symbol} showIcon={false} /></span>
                   <span className="text-(length:--term-text-xs) text-text-faint tnum">{fmtNum(p.volume, 2)}</span>
                 </div>
                 <div className="mt-0.5 flex items-center gap-1.5 text-(length:--term-text-2xs) tnum text-text-faint">

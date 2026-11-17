@@ -181,8 +181,8 @@ export function SupportTab() {
         rowKey={(c) => c.id}
         loading={loading}
         search={{
-          placeholder: "Search subject or reference…",
-          text: (c) => `${c.subject} ${c.reference} ${c.category}`,
+          placeholder: "Search subject, reference, status, or priority…",
+          text: (c) => `${c.id} ${c.subject} ${c.reference} ${c.category} ${c.priority} ${c.status} ${c.description} ${c.createdAt}`,
         }}
         leading={(c) => ({
           icon: <LifeBuoy size={15} strokeWidth={2} aria-hidden />,

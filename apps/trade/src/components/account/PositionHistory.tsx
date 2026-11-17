@@ -10,6 +10,7 @@ import { fmtDateTime } from "@/lib/dates";
 import { CandlestickChart } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { RecordList, RecordStatusChip, type RecordDetailMeta } from "@/components/ui/RecordList";
+import { SymbolLink } from "@/components/trade/SymbolLink";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type PositionRow = {
@@ -89,10 +90,14 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
       }
       rows={rows}
       rowKey={(r) => r.id}
+      search={{
+        placeholder: "Search symbol, position ID, side, status, or P/L…",
+        text: (r) => `${r.id} ${r.symbol} ${r.type} ${r.side} ${r.status} ${r.volume} ${r.openRate} ${r.currentRate} ${r.netProfit} ${r.swap} ${r.commission} ${r.tradingCommission} ${fmtDateTime(r.openedAt)} ${r.closedAt ? fmtDateTime(r.closedAt) : ""}`,
+      }}
       leading={(r) => ({
         icon: <InstrumentIcon symbol={r.symbol} size={20} />,
         tone: r.side === "BUY" ? "up" : "down",
-        title: r.symbol,
+        title: <SymbolLink symbol={r.symbol} showIcon={false} />,
         secondary: <span>{r.type} · <span className={r.side === "BUY" ? "text-up" : "text-down"}>{r.side}</span> · {r.volume.toFixed(2)} lots</span>,
       })}
       columns={[
@@ -154,7 +159,7 @@ export function PositionHistory({ open, closed, instruments, fetchCap }: Props) 
           <span className={`flex size-14 items-center justify-center rounded-full ${r.side === "BUY" ? "bg-up/10" : "bg-down/10"}`}>
             <InstrumentIcon symbol={r.symbol} size={32} />
           </span>
-          <div className="text-sm font-medium">{r.symbol} · {r.side}</div>
+          <div className="text-sm font-medium"><SymbolLink symbol={r.symbol} showIcon={false} /> · {r.side}</div>
           <div className={`text-2xl font-semibold tabular-nums ${profitable(r) ? "text-up" : "text-down"}`}>
             {profitable(r) ? "+" : ""}{r.netProfit.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">USD</span>
           </div>

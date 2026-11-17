@@ -234,6 +234,10 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
           count={`${blocks.length} active`}
           rows={blocks}
           rowKey={(b) => b.id}
+          search={{
+            placeholder: "Search client, account, block ID, scope, or reason…",
+            text: (b) => `${b.id} ${b.userId} ${b.user.name ?? ""} ${b.user.email ?? ""} ${b.user.accountNo ?? ""} ${b.scope} ${b.reason} ${b.createdAt}`,
+          }}
           leading={(b) => ({
             icon: <Lock size={15} strokeWidth={2} aria-hidden />,
             tone: "down",
@@ -276,6 +280,10 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
           count={`${cases.length} cases`}
           rows={cases}
           rowKey={(c) => c.id}
+          search={{
+            placeholder: "Search case ID, message, feed, severity, status, or owner…",
+            text: (c) => `${c.id} ${c.userId ?? ""} ${c.feedKind} ${c.severity} ${c.status} ${c.message} ${c.expectedValue ?? ""} ${c.actualValue ?? ""} ${c.ownerAssignee ?? ""} ${c.blocks.map((block) => `${block.id} ${block.scope}`).join(" ")}`,
+          }}
           leading={(c) => ({
             icon: <CircleAlert size={15} strokeWidth={2} aria-hidden />,
             tone: c.severity === "CRITICAL" ? "down" : "warn",
@@ -332,6 +340,10 @@ export function ReconciliationReview({ canManage = false }: { canManage?: boolea
           count={`${runs.length} runs`}
           rows={runs}
           rowKey={(r) => r.id}
+          search={{
+            placeholder: "Search run ID, reference, status, trigger, or error…",
+            text: (r) => `${r.id} ${r.reference} ${r.trigger} ${r.status} ${r.caseCount} ${r.blockCount} ${r.errorMessage ?? ""} ${r.startedAt} ${r.completedAt ?? ""}`,
+          }}
           leading={(r) => ({
             icon: r.status === "COMPLETED" ? <CheckCircle2 size={15} strokeWidth={2} aria-hidden /> : r.status === "FAILED" ? <CircleAlert size={15} strokeWidth={2} aria-hidden /> : <Play size={15} strokeWidth={2} aria-hidden />,
             tone: r.status === "COMPLETED" ? "up" : r.status === "FAILED" ? "down" : "warn",

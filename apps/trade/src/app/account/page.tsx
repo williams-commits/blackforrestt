@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma, resolveUserId } from "@/server/db";
 import { auth } from "@/auth";
@@ -12,7 +11,7 @@ import { marketHoursForSymbol } from "@/lib/marketHours";
 import { ADDRESS_DOCUMENT_TYPES, IDENTITY_DOCUMENT_TYPES } from "@/lib/kyc";
 import { resolveUserSettings } from "@/server/userSettings";
 import { adminMessageThreads, countUnreadDirectMessages } from "@/server/adminUserManagement";
-import { CandlestickChart, User } from "lucide-react";
+import { WorkspaceNavigation } from "@/components/WorkspaceNavigation";
 
 export const dynamic = "force-dynamic";
 
@@ -162,12 +161,11 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         {/* Inline section nav is desktop-only (lg+). Phones and tablets use
             the Stage-4 bottom navigation (Markets / Trade / Positions /
             Account); reports live in the account shell's Reports tab. */}
-        <nav className="order-3 hidden lg:flex w-full items-center gap-4 overflow-x-auto text-xs sm:order-0 sm:w-auto">
-          <Link href="/trade/AUDCAD" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground">
-            <CandlestickChart size={14} strokeWidth={2} aria-hidden /> Trade Terminal</Link>
-          <Link href="/account" aria-current="page" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 font-semibold text-foreground">
-            <User size={14} strokeWidth={2} aria-hidden /> Account</Link>
-        </nav>
+        <WorkspaceNavigation
+          current="account"
+          showAdmin={session?.user?.role === "admin"}
+          className="order-3 hidden w-full lg:flex sm:order-0 sm:w-auto"
+        />
         <TradeSearchButton className="ml-auto lg:ml-0" />
         <AccountUserMenu
           displayName={user.name ?? user.email ?? "Trader"}

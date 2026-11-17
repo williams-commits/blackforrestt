@@ -35,6 +35,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
 import { ArrowDown, ArrowDownToLine, ArrowLeftRight, ArrowUp, ArrowUpFromLine, Ban, Braces, CandlestickChart, CheckCircle2, Coins, DollarSign, Download, FileText, LifeBuoy, Percent, RefreshCw, ScrollText, Server, ShieldAlert, SlidersHorizontal, Tag, TrendingDown, TrendingUp, TriangleAlert, UserRound } from "lucide-react";
 import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
+import { SymbolLink } from "@/components/trade/SymbolLink";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/Textarea";
@@ -584,12 +585,21 @@ interface UserRow {
   _count: { positions: number; securitySessions: number; reconciliationBlocks: number };
 }
 function UsersPanel({ canAdjustBalance, canManage, onOpenChat, onProposeRole }: { canAdjustBalance: boolean; canManage: boolean; onOpenChat: (user: UserRow) => void; onProposeRole?: (user: UserRow, action: "ASSIGN_ROLE" | "REVOKE_ROLE") => void }) {
-  // Search behaves like the messages inbox: filtering is INSTANT over the
-  // loaded rows (same fields as the API matches — email, name, account), so
-  // the table responds on every keystroke. The debounced server query then
-  // refreshes the authoritative result set across the whole user base without
-  // flashing a loading state (stale-while-revalidate in useResource).
-  const url = `/api/admin/users?limit=1000`;
+  const [userSearch, setUserSearch] = useAdminPersistentState(
+    "blckforest:admin:filter:users-search",
+    "",
+    (value) => typeof value === "string" ? value : undefined,
+  );
+  const [debouncedSearch, setDebouncedSearch] = useState(userSearch.trim());
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(userSearch.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [userSearch]);
+  const url = useMemo(() => {
+    const params = new URLSearchParams({ limit: "1000" });
+    if (debouncedSearch) params.set("q", debouncedSearch);
+    return `/api/admin/users?${params.toString()}`;
+  }, [debouncedSearch]);
 
   const resource = useResource<{ users: UserRow[]; total: number }>(url, 15_000);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
@@ -604,11 +614,13 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat, onProposeRole }: 
           <SectionHeader eyebrow="Operations" icon={<Users size={18} strokeWidth={2} aria-hidden />} title="Users and access" description="Identity, verification, account exposure, active roles, sessions, reconciliation restrictions, and audited balance operations." onRefresh={() => void resource.refresh()} />
           {truncated && (
             <Alert tone="info">
-              Showing {resource.data.users.length.toLocaleString("en-US")} of {resource.data.total.toLocaleString("en-US")} accounts. Search by name, email, or account number to find a match.
+              Showing {resource.data.users.length.toLocaleString("en-US")} of {resource.data.total.toLocaleString("en-US")} accounts. Search by name, email, account number, ID, brand, role, or KYC location.
             </Alert>
           )}
           <PaginatedUsers
             users={users}
+            search={userSearch}
+            onSearchChange={setUserSearch}
             emptyLabel="No accounts match."
             canAdjustBalance={canAdjustBalance}
             canManage={canManage}
@@ -636,9 +648,11 @@ function UsersPanel({ canAdjustBalance, canManage, onOpenChat, onProposeRole }: 
 }
 
 function PaginatedUsers({
-  users, onChanged, onOpenChat, onProposeRole, canManage, canAdjustBalance, emptyLabel, onManageBalance, onEditSettings,
+  users, search, onSearchChange, onChanged, onOpenChat, onProposeRole, canManage, canAdjustBalance, emptyLabel, onManageBalance, onEditSettings,
 }: {
   users: UserRow[];
+  search: string;
+  onSearchChange: (value: string) => void;
   onChanged: () => void;
   onOpenChat: (user: UserRow) => void;
   onProposeRole?: (user: UserRow, action: "ASSIGN_ROLE" | "REVOKE_ROLE") => void;
@@ -697,7 +711,22 @@ function PaginatedUsers({
       count={`${sortedUsers.length} users`}
       rows={sortedUsers}
       rowKey={(u) => u.id}
-      search={{ placeholder: "Search name, email, or account…", text: (u) => `${u.name ?? ""} ${u.email ?? ""} ${u.accountNo ?? ""}` }}
+      search={{
+        placeholder: "Search name, email, account, ID, brand, role, or KYC location…",
+        value: search,
+        onChange: onSearchChange,
+        text: (u) => [
+          u.id,
+          u.name,
+          u.email,
+          u.accountNo,
+          u.brandDomain,
+          u.kyc?.status,
+          u.kyc?.country,
+          u.kyc?.city,
+          ...u.adminRoles.map((role) => role.role),
+        ].filter(Boolean).join(" "),
+      }}
       filters={
         <div className="flex items-center gap-1">
           <Select value={sort.key} onValueChange={onSort}>
@@ -1084,7 +1113,7 @@ function UserBalanceDialog({
                     toolbarEnd={<Button size="sm" variant="ghost" onClick={() => void load()} disabled={loading}><RefreshCw size={13} strokeWidth={2} aria-hidden /> Refresh</Button>}
                     rows={transactions}
                     rowKey={(t) => t.id}
-                    search={{ placeholder: "Search type, description, or reference…", text: (t) => `${t.type} ${t.description ?? ""} ${t.reference ?? ""}` }}
+                    search={{ placeholder: "Search type, status, asset, amount, description, or reference…", text: (t) => `${t.id} ${t.type} ${t.status} ${t.asset} ${t.amount} ${t.description ?? ""} ${t.reference ?? ""} ${t.createdAt}` }}
                     leading={(t) => ({
                       icon: null,
                       tone: Number(t.amount) >= 0 ? "up" : "down",
@@ -1280,7 +1309,7 @@ function LedgerPanel() {
       rowKey={(t) => t.id}
       search={{
         placeholder: "Search postings by reference, kind, or account…",
-        text: (t) => `${t.reference} ${t.kind} ${t.description} ${t.user?.email ?? ""} ${t.user?.accountNo ?? ""}`,
+        text: (t) => `${t.id} ${t.reference} ${t.kind} ${t.status} ${t.description} ${t.userId ?? ""} ${t.user?.email ?? ""} ${t.user?.accountNo ?? ""} ${t.sourceType ?? ""} ${t.sourceId ?? ""} ${t.entries.map((entry) => `${entry.direction} ${entry.amount} ${entry.asset} ${entry.account.code} ${entry.account.name}`).join(" ")}`,
       }}
       leading={(t) => ({
         icon: <ArrowLeftRight size={15} strokeWidth={2} aria-hidden />,
@@ -1547,7 +1576,10 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
       }
       rows={groups}
       rowKey={(g) => g.key}
-      search={{ placeholder: "Search symbol, email, or account…", text: (g) => `${g.label} ${g.accountNo ?? ""} ${g.positions.map((p) => p.symbol).join(" ")}` }}
+      search={{
+        placeholder: "Search user, account, symbol, side, status, or position details…",
+        text: (g) => `${g.key} ${g.label} ${g.accountNo ?? ""} ${g.positions.map((p) => `${p.id} ${p.symbol} ${p.instrument?.name ?? ""} ${p.type ?? ""} ${p.side} ${p.status} ${p.volume} ${p.openRate ?? ""} ${p.currentRate ?? ""} ${p.profit} ${p.adminPnlAdjustment} ${p.netProfit} ${p.closeReason ?? ""} ${p.openedAt} ${p.closedAt ?? ""}`).join(" ")}`,
+      }}
       filters={
         <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ExecutionStatusFilter)}>
           <SelectTrigger size="sm" className="w-40" aria-label="Filter positions by status">
@@ -1643,7 +1675,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
                     </IdentityTile>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-sm font-semibold">{p.symbol}</span>
+                        <span className="text-sm font-semibold"><SymbolLink symbol={p.symbol} showIcon={false} /></span>
                         <Badge variant="secondary" className={`px-1.5 py-0 text-xs ${p.side === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>{p.side}</Badge>
                         <Badge variant="secondary" className={`px-1.5 py-0 text-xs ${p.status === "OPEN" ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "px-1.5 py-0 text-xs"}`}>{p.status}</Badge>
                       </div>
@@ -1821,7 +1853,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
       count={`${resource.data.cases.length} cases`}
       rows={resource.data.cases}
       rowKey={(c) => c.id}
-      search={{ placeholder: "Search reference, subject, or category…", text: (c) => `${c.reference} ${c.subject} ${c.category} ${c.description}` }}
+      search={{ placeholder: "Search reference, subject, category, priority, status, or assignee…", text: (c) => `${c.id} ${c.reference} ${c.userId ?? ""} ${c.subject} ${c.category} ${c.priority} ${c.status} ${c.assignedToId ?? ""} ${c.brandDomain ?? ""} ${c.description}` }}
       leading={(c) => ({
         icon: <LifeBuoy size={15} strokeWidth={2} aria-hidden />,
         tone: c.status === "RESOLVED" || c.status === "CLOSED" ? "muted" : c.status === "WAITING_CUSTOMER" ? "up" : "brand",
@@ -1885,11 +1917,11 @@ function InstrumentsPanel({ canManage }: { canManage: boolean }) {
       count={`${resource.data.instruments.length} configured`}
       rows={resource.data.instruments}
       rowKey={(i) => i.symbol}
-      search={{ placeholder: "Search symbol, name, or feed…", text: (i) => `${i.symbol} ${i.name} ${i.feedSymbol} ${i.category}` }}
+      search={{ placeholder: "Search symbol, name, feed, category, or status…", text: (i) => `${i.symbol} ${i.name} ${i.feedSymbol ?? ""} ${i.category} ${i.active ? "active" : "disabled"} ${i.marginPerLot} ${i.commissionPerLot} ${i.swapLongPips} ${i.swapShortPips}` }}
       leading={(i) => ({
         icon: <InstrumentIcon symbol={i.symbol} size={18} />,
         tone: i.active ? "up" : "muted",
-        title: i.symbol,
+        title: <SymbolLink symbol={i.symbol} showIcon={false} />,
         secondary: `${i.name} · ${i.category}`,
       })}
       columns={[
@@ -1905,7 +1937,7 @@ function InstrumentsPanel({ canManage }: { canManage: boolean }) {
       renderDetailHero={(i) => (
         <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
           <IdentityTile size="lg" tone={i.active ? "up" : "muted"}><InstrumentIcon symbol={i.symbol} size={30} /></IdentityTile>
-          <div className="text-sm font-medium">{i.symbol}</div>
+          <div className="text-sm font-medium"><SymbolLink symbol={i.symbol} showIcon={false} /></div>
           <div className="text-xs text-muted-foreground">{i.name}</div>
           <RecordStatusChip tone={i.active ? "up" : "muted"}>{i.active ? "Active" : "Disabled"}</RecordStatusChip>
         </div>
@@ -1951,7 +1983,7 @@ function RiskPanel({ canManage }: { canManage: boolean }) {
       count={`${resource.data.rules.length} rules`}
       rows={resource.data.rules}
       rowKey={(r) => r.id}
-      search={{ placeholder: "Search code, name, or severity…", text: (r) => `${r.code} ${r.name} ${r.severity}` }}
+      search={{ placeholder: "Search code, name, severity, version, or configuration…", text: (r) => `${r.id} ${r.code} ${r.name} ${r.severity} ${r.enabled ? "enabled active" : "disabled inactive"} ${r.version} ${JSON.stringify(r.configuration) ?? ""}` }}
       leading={(r) => ({
         icon: <ShieldAlert size={15} strokeWidth={2} aria-hidden />,
         tone: r.severity === "CRITICAL" ? "down" : r.severity === "HIGH" ? "warn" : "muted",
@@ -2008,7 +2040,7 @@ function AuditPanel({ canVerify, canExport }: { canVerify: boolean; canExport: b
       description={resource.data.redacted ? "Export-redacted view." : undefined}
       rows={resource.data.events}
       rowKey={(e) => String(e.sequence)}
-      search={{ placeholder: "Search domain, action, entity, or actor…", text: (e) => `${e.domain} ${e.action} ${e.entityType} ${e.entityId ?? ""} ${e.actorId ?? ""}` }}
+      search={{ placeholder: "Search domain, action, entity, actor, ID, or metadata…", text: (e) => `${e.sequence} ${e.domain} ${e.action} ${e.entityType} ${e.entityId ?? ""} ${e.actorId ?? ""} ${e.createdAt} ${e.eventHash} ${JSON.stringify(e.metadata) ?? ""}` }}
       leading={(e) => ({
         icon: <ScrollText size={15} strokeWidth={2} aria-hidden />,
         tone: e.domain === "ADMIN" ? "brand" : "muted",
@@ -2203,7 +2235,7 @@ function ChangesPanel({
             count={`${resource.data.requests.length} requests`}
             rows={resource.data.requests}
             rowKey={(r) => r.id}
-            search={{ placeholder: "Search domain, action, or entity…", text: (r) => `${r.domain} ${r.action} ${r.entityType} ${r.entityId ?? ""} ${r.requestedById}` }}
+            search={{ placeholder: "Search request, domain, action, entity, status, or reviewer…", text: (r) => `${r.id} ${r.domain} ${r.action} ${r.entityType} ${r.entityId ?? ""} ${r.status} ${r.requestedById} ${r.reviewedById ?? ""} ${JSON.stringify(r.payload) ?? ""}` }}
             leading={(r) => ({
               icon: <ClipboardCheck size={15} strokeWidth={2} aria-hidden />,
               tone: r.status === "PENDING" ? "warn" : r.status === "APPROVED" ? "up" : "down",

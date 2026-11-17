@@ -208,6 +208,10 @@ export function PaymentTimeline() {
         rows={filtered}
         rowKey={(r) => r.id}
         loading={loading}
+        search={{
+          placeholder: "Search type, status, amount, method, or reference…",
+          text: (r) => `${r.id} ${r.type} ${r.status} ${r.asset} ${r.amount} ${r.method} ${r.methodLabel} ${r.userReference ?? ""} ${r.externalReference ?? ""} ${r.reviewerNote ?? ""}`,
+        }}
         leading={(r) => ({
           icon: r.type === "DEPOSIT"
             ? <ArrowDownToLine size={15} strokeWidth={2} aria-hidden />

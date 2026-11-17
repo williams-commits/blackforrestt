@@ -101,6 +101,10 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
         count={`${filtered.length} shown${server ? ` of ${server.pagination.total}` : ""}`}
         rows={filtered}
         rowKey={(r) => r.id}
+        search={{
+          placeholder: "Search symbol, position ID, side, type, or P/L…",
+          text: (r) => `${r.id} ${r.symbol} ${r.type} ${r.side} ${r.volume} ${r.netProfit} ${r.swap} ${r.commission} ${fmtDateTime(r.openedAt)} ${fmtDateTime(r.closedAt)}`,
+        }}
         leading={(r) => ({
           tone: r.side === "BUY" ? "up" : "down",
           title: (
@@ -217,7 +221,7 @@ export function ReportsView({ rows, server }: { rows: ReportRow[]; server?: Repo
         renderDetailHero={(r) => (
           <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
             <InstrumentIcon symbol={r.symbol} size={44} />
-            <div className="text-sm font-medium">{r.symbol} · {r.side}</div>
+            <div className="text-sm font-medium"><SymbolLink symbol={r.symbol} showIcon={false} /> · {r.side}</div>
             <div className={`text-2xl font-semibold tabular-nums ${up(r) ? "text-up" : "text-down"}`}>
               {fmtSigned(r.netProfit)} <span className="text-sm font-normal text-muted-foreground">USD</span>
             </div>

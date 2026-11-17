@@ -162,8 +162,8 @@ export function ReferralTab() {
         rows={data.referrals}
         rowKey={(r) => r.id}
         search={{
-          placeholder: "Search name or email…",
-          text: (r) => `${r.referred.name ?? ""} ${r.referred.email ?? ""} ${r.referred.accountNo ?? ""}`,
+          placeholder: "Search name, email, account, or status…",
+          text: (r) => `${r.referred.name ?? ""} ${r.referred.email ?? ""} ${r.referred.accountNo ?? ""} ${r.status} ${r.reward} ${r.referred.verified ? "verified" : "unverified"}`,
         }}
         leading={(r) => ({
           icon: <span className="text-xs font-bold">{initialsOf(r.referred.name ?? r.referred.email)}</span>,

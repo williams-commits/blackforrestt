@@ -107,8 +107,8 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
         rows={rows}
         rowKey={(t) => t.id}
         search={{
-          placeholder: "Search description or reference…",
-          text: (t) => `${t.description ?? ""} ${t.reference ?? ""} ${t.type} ${t.asset}`,
+          placeholder: "Search description, reference, type, asset, or status…",
+          text: (t) => `${t.id} ${t.description ?? ""} ${t.reference ?? ""} ${t.type} ${t.asset} ${t.status} ${t.amount} ${t.createdAt}`,
         }}
         leading={(t) => {
           const Icon = TYPE_ICONS[t.type];

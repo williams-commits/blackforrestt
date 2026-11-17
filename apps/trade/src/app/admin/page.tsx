@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { CandlestickChart, Shield, User } from "lucide-react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AdminError, requireAdminContext } from "@/server/admin";
@@ -8,6 +6,7 @@ import { AdminWorkspace } from "@/components/admin/AdminWorkspace";
 import { AccountUserMenu } from "@/components/account/AccountUserMenu";
 import { TradeSearchButton } from "@/components/GlobalSearchPalette";
 import { simplePaymentApproval } from "@/server/payments";
+import { WorkspaceNavigation } from "@/components/WorkspaceNavigation";
 
 export const dynamic = "force-dynamic";
 
@@ -38,35 +37,11 @@ export default async function AdminPage() {
     <div className="flat-ui terminal-ui min-h-screen">
       <header className="sticky top-0 z-30 flex min-h-12 flex-wrap items-center gap-3 bg-card px-3 py-2 sm:flex-nowrap sm:px-4">
         <Logo />
-        <nav
-          aria-label="Primary"
-          className="order-3 flex w-full items-center gap-1 overflow-x-auto text-xs sm:order-0 sm:w-auto"
-        >
-          <Link
-            href="/trade/AUDCAD"
-            className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground"
-          >
-            <CandlestickChart size={14} strokeWidth={2} aria-hidden />
-            <span className="hidden sm:inline">Trade Terminal</span>
-            <span className="sm:hidden">Trade</span>
-          </Link>
-          <Link
-            href="/account"
-            className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground"
-          >
-            <User size={14} strokeWidth={2} aria-hidden />
-            Account
-          </Link>
-          <Link
-            href="/admin"
-            aria-current="page"
-            className="flex shrink-0 items-center gap-1.5 rounded-md bg-accent px-2 py-1.5 font-semibold text-foreground"
-          >
-            <Shield size={14} strokeWidth={2} aria-hidden />
-            <span className="hidden sm:inline">Operations</span>
-            <span className="sm:hidden">Admin</span>
-          </Link>
-        </nav>
+        <WorkspaceNavigation
+          current="admin"
+          showAdmin
+          className="order-3 w-full sm:order-0 sm:w-auto"
+        />
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           <span

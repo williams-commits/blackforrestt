@@ -12,18 +12,44 @@ const Query = z.object({
   limit: z.coerce.number().int().min(1).max(1000).default(100),
 });
 
+const SEARCHABLE_KYC_STATUSES = ["NOT_SUBMITTED", "PENDING", "APPROVED", "REJECTED"] as const;
+const SEARCHABLE_ADMIN_ROLES = ["SUPER_ADMIN", "COMPLIANCE", "FINANCE", "DEALER", "RISK", "SUPPORT", "AUDITOR"] as const;
+
 export async function GET(request: Request) {
   try {
     await requireAdmin("USER_READ");
     const url = new URL(request.url);
     const parsed = Query.safeParse({ q: url.searchParams.get("q") ?? undefined, limit: url.searchParams.get("limit") ?? undefined });
     if (!parsed.success) return NextResponse.json({ error: "Invalid user query." }, { status: 400 });
-    const q = parsed.data.q;
+    const q = parsed.data.q || undefined;
+    const normalizedQuery = q?.toLowerCase();
+    const matchingKycStatuses = normalizedQuery
+      ? SEARCHABLE_KYC_STATUSES.filter((status) => status.toLowerCase().includes(normalizedQuery))
+      : [];
+    const matchingAdminRoles = normalizedQuery
+      ? SEARCHABLE_ADMIN_ROLES.filter((role) => role.toLowerCase().includes(normalizedQuery))
+      : [];
     const where = q ? {
       OR: [
+        { id: { contains: q, mode: "insensitive" as const } },
         { email: { contains: q, mode: "insensitive" as const } },
         { name: { contains: q, mode: "insensitive" as const } },
         { accountNo: { contains: q } },
+        { brandDomain: { contains: q, mode: "insensitive" as const } },
+        {
+          kyc: {
+            is: {
+              OR: [
+                { country: { contains: q, mode: "insensitive" as const } },
+                { city: { contains: q, mode: "insensitive" as const } },
+                ...(matchingKycStatuses.length ? [{ status: { in: matchingKycStatuses } }] : []),
+              ],
+            },
+          },
+        },
+        ...(matchingAdminRoles.length
+          ? [{ adminRoles: { some: { revokedAt: null, role: { in: matchingAdminRoles } } } }]
+          : []),
       ],
     } : undefined;
     const [users, total] = await Promise.all([

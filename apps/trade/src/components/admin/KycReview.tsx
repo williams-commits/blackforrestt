@@ -168,8 +168,7 @@ export function KycReview({
     }
   }
 
-  // Instant client-side narrowing of the queue — name, email, account number,
-  // and an optional document-type chip filter derived from the queue itself.
+  // Instant client-side narrowing of the queue across identity and review fields.
   const needle = queueSearch.trim().toLowerCase();
   const docTypes = useMemo(
     () => Array.from(new Set(pending.map((s) => s.docType).filter((d): d is string => Boolean(d)))),
@@ -178,10 +177,7 @@ export function KycReview({
   const filteredPending = useMemo(() => pending.filter((s) =>
     (docFilter === "ALL" || s.docType === docFilter) &&
     (!needle ||
-    `${s.firstName ?? ""} ${s.lastName ?? ""}`.toLowerCase().includes(needle) ||
-    (s.user.name ?? "").toLowerCase().includes(needle) ||
-    (s.user.email ?? "").toLowerCase().includes(needle) ||
-    (s.user.accountNo ?? "").includes(needle)
+    `${s.id} ${s.userId} ${s.firstName ?? ""} ${s.lastName ?? ""} ${s.user.name ?? ""} ${s.user.email ?? ""} ${s.user.accountNo ?? ""} ${s.status} ${s.country ?? ""} ${s.city ?? ""} ${s.docType ?? ""} ${s.docReference ?? ""}`.toLowerCase().includes(needle)
   )), [pending, needle, docFilter]);
   const visiblePending = filteredPending.slice(0, queueVisible);
 
@@ -312,7 +308,7 @@ export function KycReview({
             type="search"
             value={queueSearch}
             onChange={(e) => { setQueueSearch(e.target.value); setQueueVisible(20); }}
-            placeholder="Search name, email, account…"
+            placeholder="Search name, email, account, ID, country, or document…"
             aria-label="Search KYC queue"
             startIcon={<Search size={14} strokeWidth={2} aria-hidden />}
           />
@@ -563,7 +559,10 @@ export function KycReview({
             onLoadMore={() => void loadMoreDecisions()}
             loadingMore={loadingMore}
             rowKey={(r) => r.id}
-            search={{ placeholder: "Search name or email…", text: (r) => `${r.firstName ?? ""} ${r.lastName ?? ""} ${r.user.email ?? ""}` }}
+            search={{
+              placeholder: "Search name, email, account, status, country, or document…",
+              text: (r) => `${r.id} ${r.userId} ${r.firstName ?? ""} ${r.lastName ?? ""} ${r.user.name ?? ""} ${r.user.email ?? ""} ${r.user.accountNo ?? ""} ${r.status} ${r.country ?? ""} ${r.city ?? ""} ${r.docType ?? ""} ${r.docReference ?? ""} ${r.note ?? ""}`,
+            }}
             leading={(r) => ({
               icon: r.status === "APPROVED" ? <CheckCircle2 size={15} strokeWidth={2} aria-hidden /> : <Ban size={15} strokeWidth={2} aria-hidden />,
               tone: r.status === "APPROVED" ? "up" : "down",

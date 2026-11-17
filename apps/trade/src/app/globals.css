@@ -25,7 +25,7 @@
   --color-down: #e03131;
   --color-brand: #fd7e14;
   --color-brand-soft: #ffe8cc;
-  --color-overlay-surface: #ffffff;
+  --color-overlay-surface: var(--color-canvas);
 
   --color-text: #17202a;
   /* muted/faint both clear WCAG AA (4.5:1) on canvas and panels — faint
@@ -149,7 +149,6 @@ html.dim {
   --color-brand-ink: #0e1116;
   --color-market-ink: #0e1116;
   --color-brand-soft: oklch(0.32 0 0);
-  --color-overlay-surface: #1e2329;
   --color-text: oklch(0.985 0 0);
   --color-text-muted: oklch(0.752 0 0);
   --color-text-faint: oklch(0.64 0 0);
@@ -530,18 +529,29 @@ html.dim .terminal-ui {
   }
 }
 
-/* ── Account portal surface system ─────────────────────────────────────────
-   Cards use quiet boundaries while table rows retain tonal zebra separation.
-   The treatment is scoped to .account-flat; admin keeps its existing flat UI. */
+/* ── Account and admin surface system ──────────────────────────────────────
+   Cards use quiet boundaries while table rows retain tonal zebra separation. */
 .account-flat,
 .flat-ui {
-  background: var(--color-panel);
+  background-color: var(--color-panel);
 }
-.flat-ui [data-slot="card"] {
-  border-width: 0;
-  box-shadow: none;
+.account-flat,
+.flat-ui {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-panel-2) 10%, var(--color-panel)) 0%,
+    var(--color-panel) 28rem
+  );
+}
+.trade-workspace {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-panel) 10%, var(--color-canvas)) 0%,
+    var(--color-canvas) 28rem
+  );
 }
 .account-flat [data-slot="card"],
+.flat-ui [data-slot="card"],
 .bevel-surface {
   border: 1px solid color-mix(in oklab, var(--color-border-soft) 45%, transparent);
   box-shadow:
@@ -549,6 +559,7 @@ html.dim .terminal-ui {
     0 1px 2px rgb(16 24 40 / 2.5%);
 }
 html.dim .account-flat [data-slot="card"],
+html.dim .flat-ui [data-slot="card"],
 html.dim .bevel-surface {
   border-color: color-mix(in oklab, var(--color-border-soft) 45%, transparent);
   box-shadow:

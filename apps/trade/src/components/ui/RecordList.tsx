@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Activity, ArrowDown, ArrowLeftRight, ArrowUp, ArrowUpDown, ArrowRight, BookOpenText, CandlestickChart, ChevronDown, ChevronRight, ClipboardCheck, CreditCard, Inbox, LifeBuoy, List, LockKeyhole, Search, ScrollText, ShieldAlert, SlidersHorizontal, Sparkles, UserRound, Users, UsersRound, type LucideIcon } from "lucide-react";
+import { Activity, ArrowDown, ArrowLeftRight, ArrowUp, ArrowUpDown, ArrowRight, BookOpenText, CandlestickChart, ChevronDown, ChevronRight, ClipboardCheck, CreditCard, Inbox, LifeBuoy, List, LockKeyhole, Search, ScrollText, ShieldAlert, Sparkles, UserRound, Users, UsersRound, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,6 +61,16 @@ export interface RecordColumn<T> {
   /** Cell renderer; defaults to sortValue/stringified. */
   render?: (row: T) => React.ReactNode;
   className?: string;
+}
+
+export interface RecordSort {
+  key: string;
+  direction: "asc" | "desc";
+}
+
+export interface RecordSortControl {
+  value: RecordSort;
+  onChange: (value: RecordSort) => void;
 }
 
 export interface RecordDetailMeta {
@@ -269,6 +279,7 @@ export function RecordList<T>({
   initialSort,
   search,
   filters,
+  filtersLabel = "Filter",
   toolbarEnd,
   detailTitle,
   renderDetailHero,
@@ -280,6 +291,7 @@ export function RecordList<T>({
   loading = false,
   loadingMore = false,
   storageKey,
+  sortControl,
   emptyTitle = "Nothing here yet",
   emptyHint,
   emptyIcon,
@@ -310,6 +322,10 @@ export function RecordList<T>({
   };
   /** Caller-composed filter controls — rendered after the search pill. */
   filters?: React.ReactNode;
+  /** Accessible/visible label for the responsive filter or sort controls. */
+  filtersLabel?: string;
+  /** Controlled sort state for lists with custom sort controls. */
+  sortControl?: RecordSortControl;
   /** Trailing toolbar slot (CSV export, counters). */
   toolbarEnd?: React.ReactNode;
   /** Required for the built-in slide-over detail; omit when onRowActivate drives it. */
@@ -341,9 +357,16 @@ export function RecordList<T>({
   sheetWidth?: string;
   className?: string;
 }) {
-  const [sort, setSort] = React.useState<{ key: string; direction: "asc" | "desc" }>(
+  const [internalSort, setInternalSort] = React.useState<RecordSort>(
     initialSort ?? { key: columns[0]?.key ?? "", direction: "desc" },
   );
+  const isSortControlled = sortControl !== undefined;
+  const sort = sortControl?.value ?? internalSort;
+  const setSort = (next: React.SetStateAction<RecordSort>) => {
+    const updated = typeof next === "function" ? next(sort) : next;
+    if (sortControl) sortControl.onChange(updated);
+    else setInternalSort(updated);
+  };
   const [query, setQuery] = React.useState("");
   const [visible, setVisible] = React.useState(pageSize);
   const [detailKey, setDetailKey] = React.useState<string | null>(null);
@@ -374,11 +397,12 @@ export function RecordList<T>({
             setQuery(preferences.query);
           }
           if (
+            !isSortControlled &&
             typeof preferences.sort?.key === "string" &&
             columnsRef.current.some((column) => column.key === preferences.sort?.key) &&
             (preferences.sort.direction === "asc" || preferences.sort.direction === "desc")
           ) {
-            setSort({ key: preferences.sort.key, direction: preferences.sort.direction });
+            setInternalSort({ key: preferences.sort.key, direction: preferences.sort.direction });
           }
         } else {
           console.warn(`Ignoring invalid saved record-list preferences: ${storageKey}`);
@@ -389,7 +413,7 @@ export function RecordList<T>({
     } finally {
       setStorageReady(true);
     }
-  }, [storageKey]);
+  }, [storageKey, isSortControlled]);
 
   React.useEffect(() => {
     if (!storageKey || !storageReady) return;
@@ -468,37 +492,49 @@ export function RecordList<T>({
         </div>
         {description != null && <CardDescription>{description}</CardDescription>}
         {(search || filters || toolbarEnd) && (
-          <div className="space-y-2.5 pt-2">
-            {(search || toolbarEnd) && (
-              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-                {search && (
-                  <RecordSearchInput<T>
-                    ariaLabel={search.placeholder}
-                    placeholder={search.placeholder}
-                    value={activeQuery}
-                    onChange={updateQuery}
-                    rows={rows}
-                    text={search.text}
-                    suggestions={search.suggestions}
-                    className="sm:max-w-sm sm:flex-1"
-                  />
-                )}
-                {toolbarEnd && (
-                  <div className="flex min-w-0 items-center justify-end sm:ml-auto">
-                    {toolbarEnd}
-                  </div>
-                )}
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2.5 pt-2">
+            {search && (
+              <div className={cn(
+                "min-w-0",
+                filters || toolbarEnd
+                  ? "col-span-2 row-start-1 sm:col-span-1 sm:col-start-1"
+                  : "col-span-2",
+              )}>
+                <RecordSearchInput<T>
+                  ariaLabel={search.placeholder}
+                  placeholder={search.placeholder}
+                  value={activeQuery}
+                  onChange={updateQuery}
+                  rows={rows}
+                  text={search.text}
+                  suggestions={search.suggestions}
+                  className="w-full sm:max-w-sm"
+                />
+              </div>
+            )}
+            {toolbarEnd && (
+              <div className={cn(
+                "flex items-center justify-end",
+                search ? "col-start-2 row-start-2 sm:row-start-1" : "col-start-2 row-start-1",
+              )}>
+                {toolbarEnd}
               </div>
             )}
             {filters && (
-              <ResponsiveFilters className="flex min-w-0 flex-col gap-2 rounded-xl bg-muted/30 py-2 px-4 md:flex-row md:items-center md:gap-3">
-                <div className="hidden shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground md:flex">
-                  <SlidersHorizontal size={16} strokeWidth={2} aria-hidden />
-                </div>
-                <div className="flex min-w-0 flex-col items-stretch gap-2 *:min-w-0 *:w-full **:data-[slot=input]:h-8 **:data-[slot=input]:rounded-lg **:data-[slot=input]:bg-background/70 **:data-[slot=input]:text-xs **:data-[slot=select-trigger]:h-8 **:data-[slot=select-trigger]:rounded-lg **:data-[slot=select-trigger]:bg-background/70 **:data-[slot=select-trigger]:px-2.5 **:data-[slot=select-trigger]:text-xs [&_button:not([aria-pressed])]:h-8 [&_button:not([aria-pressed])]:rounded-lg [&_button:not([aria-pressed])]:px-2.5 [&_button:not([aria-pressed])]:text-xs md:flex-row md:flex-wrap md:items-center md:gap-1.5 md:*:w-auto">
-                  {filters}
-                </div>
-              </ResponsiveFilters>
+              <div className={cn(
+                "min-w-0",
+                search
+                  ? "col-start-1 row-start-2 sm:col-span-2"
+                  : toolbarEnd
+                    ? "col-start-1 row-start-1 sm:col-span-2 sm:row-start-2"
+                    : "col-span-2 row-start-1",
+              )}>
+                <ResponsiveFilters label={filtersLabel} className="flex w-full min-w-0 flex-col gap-2 rounded-xl bg-muted/30 py-2 px-4 md:flex-row md:items-center md:gap-3">
+                  <div className="flex min-w-0 flex-col items-stretch gap-2 *:min-w-0 *:w-full **:data-[slot=input]:h-8 **:data-[slot=input]:rounded-lg **:data-[slot=input]:bg-background/70 **:data-[slot=input]:text-xs **:data-[slot=select-trigger]:h-8 **:data-[slot=select-trigger]:rounded-lg **:data-[slot=select-trigger]:bg-background/70 **:data-[slot=select-trigger]:px-2.5 **:data-[slot=select-trigger]:text-xs [&_button:not([aria-pressed])]:h-8 [&_button:not([aria-pressed])]:rounded-lg [&_button:not([aria-pressed])]:px-2.5 [&_button:not([aria-pressed])]:text-xs md:flex-row md:flex-wrap md:items-center md:gap-1.5 md:*:w-auto">
+                    {filters}
+                  </div>
+                </ResponsiveFilters>
+              </div>
             )}
           </div>
         )}

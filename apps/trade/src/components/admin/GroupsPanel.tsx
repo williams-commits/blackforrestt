@@ -155,7 +155,7 @@ export function GroupsPanel({ canManage }: { canManage: boolean }) {
             const tags = getSettingsSummary(g.settings);
             const hasSettings = Object.keys(g.settings).length > 0;
             return (
-              <div key={g.id} className="rounded-xl bg-card shadow-sm overflow-hidden">
+              <div key={g.id} className="bevel-surface overflow-hidden rounded-xl bg-card">
                 {/* Collapsible header row */}
                 <div className="flex items-center gap-3 p-4">
                   <button

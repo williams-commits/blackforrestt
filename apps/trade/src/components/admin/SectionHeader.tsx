@@ -30,7 +30,7 @@ export function SectionHeader({
   className?: string;
 }) {
   return (
-    <header className={cn("flex flex-col gap-4 rounded-xl bg-card p-4 shadow-panel sm:flex-row sm:items-center sm:justify-between sm:p-5", className)}>
+    <header className={cn("bevel-surface flex flex-col gap-4 rounded-xl bg-card p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5", className)}>
       <div className="flex min-w-0 items-center gap-3">
         {icon != null && (
           <span

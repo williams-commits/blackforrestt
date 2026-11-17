@@ -29,7 +29,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
 
 import type { ManagedUserRow } from "@/components/admin/AdminUserActions";
-import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
+import { RecordList, RecordStatusChip, type RecordSort } from "@/components/ui/RecordList";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
@@ -332,7 +332,7 @@ export function AdminWorkspace({ permissions, simpleApproval = false }: Props) {
       <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8 xl:grid-cols-[240px_minmax(0,1fr)]">
         {/* Desktop: grouped vertical sidebar. Mobile/tablet: grouped section sheet. */}
         <div className="hidden lg:block">
-          <div className="sticky top-20 rounded-xl bg-card p-2">
+          <div className="bevel-surface sticky top-20 rounded-xl bg-card p-2">
             {groupedNav("sidebar")}
           </div>
         </div>
@@ -340,7 +340,7 @@ export function AdminWorkspace({ permissions, simpleApproval = false }: Props) {
           type="button"
           onClick={() => setNavOpen(true)}
           aria-haspopup="dialog"
-          className="mb-5 flex w-full items-center justify-between gap-3 rounded-xl bg-card px-4 py-3 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:hidden"
+          className="bevel-surface mb-5 flex w-full items-center justify-between gap-3 rounded-xl bg-card px-4 py-3 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:hidden"
         >
           <span className="flex min-w-0 items-center gap-2">
             <LayoutGrid size={16} strokeWidth={2} aria-hidden className="shrink-0 text-muted-foreground" />
@@ -662,7 +662,7 @@ function PaginatedUsers({
   onManageBalance?: (user: UserRow) => void;
   onEditSettings?: (user: UserRow) => void;
 }) {
-  const [sort, setSort] = useAdminPersistentState(
+  const [sort, setSort] = useAdminPersistentState<RecordSort>(
     "blckforest:admin:filter:users-sort",
     { key: "createdAt", direction: "desc" as const },
     (value) => {
@@ -705,11 +705,10 @@ function PaginatedUsers({
 
   return (
     <RecordList<UserRow>
-      storageKey="blckforest:admin:list:users"
       ariaLabel="Account"
       title="Accounts"
       count={`${sortedUsers.length} users`}
-      rows={sortedUsers}
+      rows={users}
       rowKey={(u) => u.id}
       search={{
         placeholder: "Search name, email, account, ID, brand, role, or KYC location…",
@@ -730,7 +729,7 @@ function PaginatedUsers({
       filters={
         <div className="flex items-center gap-1">
           <Select value={sort.key} onValueChange={onSort}>
-            <SelectTrigger size="sm" className="w-36" aria-label="Sort users">
+            <SelectTrigger size="sm" className="w-36" aria-label="Sort accounts by">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -746,15 +745,18 @@ function PaginatedUsers({
           <Button
             type="button"
             variant="outline"
-            size="icon-sm"
-            aria-label={`Sort ${sort.direction === "asc" ? "descending" : "ascending"}`}
-            title={`Sort ${sort.direction === "asc" ? "descending" : "ascending"}`}
+            size="sm"
+            aria-label={`Sort ${sort.direction === "asc" ? "descending" : "ascending"}; currently ${sort.direction}`}
+            title={`Currently ${sort.direction}. Activate to sort ${sort.direction === "asc" ? "descending" : "ascending"}.`}
             onClick={() => setSort((current) => ({ ...current, direction: current.direction === "asc" ? "desc" : "asc" }))}
           >
-            {sort.direction === "asc" ? <ArrowUp aria-hidden /> : <ArrowDown aria-hidden />}
+            {sort.direction === "asc" ? <ArrowUp data-icon="inline-start" aria-hidden /> : <ArrowDown data-icon="inline-start" aria-hidden />}
+            {sort.direction === "asc" ? "Ascending" : "Descending"}
           </Button>
         </div>
       }
+      filtersLabel="Sort accounts by"
+      sortControl={{ value: sort, onChange: setSort }}
       toolbarEnd={
         <CsvExportButton
           filename="users"
@@ -797,25 +799,26 @@ function PaginatedUsers({
             {u.kyc?.status ?? "NOT_SUBMITTED"}
           </RecordStatusChip>
         ) },
-        { key: "balance", label: "Balance", sortable: true, align: "right", render: (u) => (
+        { key: "balance", label: "Balance", align: "right", render: (u) => (
           <span className="tabular-nums">{formatUsd(u.metrics?.balance ?? "0")}</span>
         ) },
-        { key: "equity", label: "Equity", sortable: true, align: "right", render: (u) => (
+        { key: "equity", label: "Equity", align: "right", render: (u) => (
           <span className="tabular-nums">{formatUsd(u.metrics?.equity ?? "0")}</span>
         ) },
-        { key: "positions", label: "Positions", sortable: true, align: "right", render: (u) => (
+        { key: "positions", label: "Positions", align: "right", render: (u) => (
           <span className={`tabular-nums ${u._count.positions > 0 ? "text-up" : ""}`}>{u._count.positions}</span>
         ) },
       ]}
       sortValue={(u, key) => {
         switch (key) {
+          case "name": return u.name ?? "";
+          case "createdAt": return new Date(u.createdAt).getTime();
           case "balance": return Number(u.metrics?.balance ?? 0);
           case "equity": return Number(u.metrics?.equity ?? 0);
           case "positions": return u._count.positions;
           default: return String((u as unknown as Record<string, unknown>)[key] ?? "");
         }
       }}
-      initialSort={{ key: "createdAt", direction: "desc" }}
       mobilePrimary={(u) => <span className="tabular-nums">{formatUsd(u.metrics?.balance ?? "0")}</span>}
       detailTitle="Account Detail"
       renderDetailHero={(u) => (
@@ -2103,7 +2106,7 @@ function HealthPanel() {
         description={`Checked ${fmtAgo(resource.data.checkedAt)} · ${resource.data.simulationOnly ? "simulation-only trading" : `${formatAdminValue(resource.data.executionProvider)} execution`} · ${marketDataLabel(resource.data.marketDataMode)} market data.`}
         onRefresh={() => void resource.refresh()}
       />
-      <div className="flex items-center gap-2.5 rounded-xl bg-card p-4 shadow-panel">
+      <div className="bevel-surface flex items-center gap-2.5 rounded-xl bg-card p-4">
         <span className={`h-3 w-3 rounded-full ${resource.data.status === "HEALTHY" ? "bg-up" : "bg-down"}`} aria-hidden />
         <span className="text-sm font-semibold">{resource.data.status === "HEALTHY" ? "All systems operational" : "Degraded — one or more services are down"}</span>
       </div>
@@ -2346,7 +2349,7 @@ function ChangeRequestComposer({
   }
 
   return (
-    <form onSubmit={submit} className="rounded-xl bg-card p-4 shadow-sm">
+    <form onSubmit={submit} className="bevel-surface rounded-xl bg-card p-4">
       <div className="grid gap-3 md:grid-cols-2">
         <div>
           <Label htmlFor="change-action" className="text-xs font-medium text-muted-foreground">Change type</Label>

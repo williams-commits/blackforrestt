@@ -49,9 +49,9 @@ export function CsvExportButton({
       type="button"
       disabled={disabled}
       onClick={() => downloadCsv(filename, columns, rows)}
-      className="flex h-8 shrink-0 items-center gap-1.5 rounded border border-border bg-canvas px-2.5 text-[11px] font-medium text-text-muted transition hover:border-brand/40 hover:text-brand disabled:opacity-50"
+      className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-canvas px-2.5 text-[11px] font-medium text-text-muted transition hover:border-brand/40 hover:text-brand disabled:opacity-50"
     >
-      <Download size={12} strokeWidth={1.75} aria-hidden />
+      <Download size={14} strokeWidth={1.75} aria-hidden />
       {label}
     </button>
   );

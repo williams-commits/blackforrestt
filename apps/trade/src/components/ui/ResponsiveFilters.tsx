@@ -8,9 +8,11 @@ import { cn } from "@/lib/utils";
 export function ResponsiveFilters({
   children,
   className,
+  label = "Filter",
 }: {
   children: ReactNode;
   className?: string;
+  label?: string;
 }) {
   const [open, setOpen] = useState(false);
   const contentId = useId();
@@ -27,7 +29,7 @@ export function ResponsiveFilters({
         className="mb-2 h-8 gap-2 md:hidden"
       >
         <SlidersHorizontal size={13} strokeWidth={2} aria-hidden />
-        Filter
+        {label}
         <ChevronDown
           size={13}
           strokeWidth={2}
@@ -39,6 +41,10 @@ export function ResponsiveFilters({
         id={contentId}
         className={cn(className, open ? "flex" : "hidden", "md:flex")}
       >
+        <div className="hidden shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground md:flex">
+          <SlidersHorizontal size={16} strokeWidth={2} aria-hidden />
+          <span>{label}</span>
+        </div>
         {children}
       </div>
     </div>

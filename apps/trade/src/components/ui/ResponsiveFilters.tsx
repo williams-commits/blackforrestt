@@ -9,16 +9,20 @@ export function ResponsiveFilters({
   children,
   className,
   label = "Filter",
+  rootClassName,
+  triggerClassName,
 }: {
   children: ReactNode;
   className?: string;
   label?: string;
+  rootClassName?: string;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const contentId = useId();
 
   return (
-    <div className="min-w-0">
+    <div className={cn("min-w-0", rootClassName)}>
       <Button
         type="button"
         size="sm"
@@ -26,7 +30,7 @@ export function ResponsiveFilters({
         aria-expanded={open}
         aria-controls={contentId}
         onClick={() => setOpen((value) => !value)}
-        className="mb-2 h-8 gap-2 md:hidden"
+        className={cn("mb-2 h-8 gap-2 md:hidden", triggerClassName)}
       >
         <SlidersHorizontal size={13} strokeWidth={2} aria-hidden />
         {label}

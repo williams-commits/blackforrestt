@@ -523,13 +523,23 @@ export function RecordList<T>({
             {filters && (
               <div className={cn(
                 "min-w-0",
-                search
-                  ? "col-start-1 row-start-2 sm:col-span-2"
-                  : toolbarEnd
-                    ? "col-start-1 row-start-1 sm:col-span-2 sm:row-start-2"
-                    : "col-span-2 row-start-1",
+                search && toolbarEnd
+                  ? "contents"
+                  : search
+                    ? "col-start-1 row-start-2 sm:col-span-2"
+                    : toolbarEnd
+                      ? "col-start-1 row-start-1 sm:col-span-2 sm:row-start-2"
+                      : "col-span-2 row-start-1",
               )}>
-                <ResponsiveFilters label={filtersLabel} className="flex w-full min-w-0 flex-col gap-2 rounded-xl bg-muted/30 py-2 px-4 md:flex-row md:items-center md:gap-3">
+                <ResponsiveFilters
+                  label={filtersLabel}
+                  rootClassName={search && toolbarEnd ? "contents" : undefined}
+                  triggerClassName={search && toolbarEnd ? "col-start-1 row-start-2 mb-0 justify-self-start" : undefined}
+                  className={cn(
+                    "flex w-full min-w-0 flex-col gap-2 rounded-xl bg-muted/30 py-2 px-4 md:flex-row md:items-center md:gap-3",
+                    search && toolbarEnd && "col-span-2 row-start-3 sm:col-span-2 md:row-start-2",
+                  )}
+                >
                   <div className="flex min-w-0 flex-col items-stretch gap-2 *:min-w-0 *:w-full **:data-[slot=input]:h-8 **:data-[slot=input]:rounded-lg **:data-[slot=input]:bg-background/70 **:data-[slot=input]:text-xs **:data-[slot=select-trigger]:h-8 **:data-[slot=select-trigger]:rounded-lg **:data-[slot=select-trigger]:bg-background/70 **:data-[slot=select-trigger]:px-2.5 **:data-[slot=select-trigger]:text-xs [&_button:not([aria-pressed])]:h-8 [&_button:not([aria-pressed])]:rounded-lg [&_button:not([aria-pressed])]:px-2.5 [&_button:not([aria-pressed])]:text-xs md:flex-row md:flex-wrap md:items-center md:gap-1.5 md:*:w-auto">
                     {filters}
                   </div>

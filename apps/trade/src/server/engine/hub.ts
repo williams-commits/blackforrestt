@@ -14,7 +14,7 @@ import { userMutationMutex } from "../locks";
 import { isUserBlocked } from "../reconciliation";
 import { loadTradingRiskPolicy } from "../riskPolicy";
 import { resolveUserSettings } from "../userSettings";
-import { marketHoursForSymbol } from "../../lib/marketHours";
+import { marketHoursForSymbol, type MarketHoursState } from "../../lib/marketHours";
 import {
   appendAuditEvent,
   ensureSystemAccount,
@@ -157,6 +157,16 @@ interface CloseRequest {
   positionId: string;
   cfg: InstrumentCfg;
   reason: string;
+}
+
+interface AdminCloseOptions {
+  marketOverride?: {
+    pricing: "LAST_POSITION_MARK";
+    marketStatus: MarketHoursState;
+    quoteTimestamp: number | null;
+    quoteAgeMs: number | null;
+    closeRate: string;
+  };
 }
 
 class Hub {
@@ -1053,11 +1063,24 @@ class Hub {
       const current = positions[index];
       const state = this.instruments.get(current.symbol);
       if (!state) throw new TradingError("The position instrument is unavailable.", "CONFLICT");
-      if (!this.canExecuteMarket(state)) {
-        throw new TradingError("This position cannot be closed while its market is closed or waiting for a fresh quote.", "BLOCKED");
-      }
       const cfg = this.cfg(state);
-      const closeRate = state.sim.rateFor(current.side === "BUY" ? "SELL" : "BUY");
+      const quote = this.quoteFor(state);
+      const useLastPositionMark = !quote.marketHours.canTrade;
+      const closeRate = useLastPositionMark
+        ? current.currentRate
+        : state.sim.rateFor(current.side === "BUY" ? "SELL" : "BUY");
+      if (!Number.isFinite(closeRate) || closeRate <= 0) {
+        throw new TradingError("No valid last position price is available for this close.", "BLOCKED");
+      }
+      const marketOverride: AdminCloseOptions["marketOverride"] = useLastPositionMark
+        ? {
+            pricing: "LAST_POSITION_MARK",
+            marketStatus: quote.marketHours.state,
+            quoteTimestamp: quote.time > 0 ? quote.time : null,
+            quoteAgeMs: quote.time > 0 ? Math.max(0, Date.now() - quote.time) : null,
+            closeRate: closeRate.toFixed(8),
+          }
+        : undefined;
       // Same dealer P/L adjustment the tick loop applies, so the booked close
       // matches the last displayed net P&L.
       positions[index] = applyPnlAdjustment(
@@ -1072,6 +1095,7 @@ class Hub {
         true,
         input.actorId,
         reason,
+        { allowNonExecutableMarket: true, marketOverride },
       );
       if (!closed) throw new TradingError("The position was already closed.", "CONFLICT");
       return closed;
@@ -1184,13 +1208,14 @@ class Hub {
     recomputeAfter: boolean,
     actorId: string | null = null,
     operatorNote: string | null = null,
+    options: { allowNonExecutableMarket?: boolean; marketOverride?: AdminCloseOptions["marketOverride"] } = {},
   ): Promise<OpenPositionResult | null> {
     const positions = this.openPositions.get(userId);
     const index = positions?.findIndex((position) => position.id === positionId) ?? -1;
     if (!positions || index < 0) return null;
     const position = positions[index];
     const state = this.instruments.get(position.symbol);
-    if (!state || !this.canExecuteMarket(state)) {
+    if (!state || (!options.allowNonExecutableMarket && !this.canExecuteMarket(state))) {
       throw new TradingError("This position cannot be closed while its market is closed or waiting for a fresh quote.", "BLOCKED");
     }
 
@@ -1363,6 +1388,7 @@ class Hub {
             netProfit: allInNet.toFixed(8),
             simulation: true,
             operatorNote,
+            marketOverride: options.marketOverride ?? null,
           },
         });
         await tx.notification.create({
@@ -1370,7 +1396,7 @@ class Hub {
             userId,
             type: "TRADE_CLOSED",
             title: `${position.symbol} closed ${allInNet.isNegative() ? "−" : "+"}${allInNet.abs().toFixed(2)} USD`,
-            body: `${position.side === "BUY" ? "Buy" : "Sell"} ${position.volume.toFixed(2)} ${position.symbol} closed by ${closeReasonLabel(reason)} at ${position.currentRate.toFixed(cfg.digits)}.`,
+            body: `${position.side === "BUY" ? "Buy" : "Sell"} ${position.volume.toFixed(2)} ${position.symbol} closed by ${closeReasonLabel(reason)} at ${position.currentRate.toFixed(cfg.digits)}${options.marketOverride ? ` using the last recorded price (${options.marketOverride.marketStatus.toLowerCase().replaceAll("_", " ")}).` : "."}`,
             metadata: {
               positionId,
               symbol: position.symbol,

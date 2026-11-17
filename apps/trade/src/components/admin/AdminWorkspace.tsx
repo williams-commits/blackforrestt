@@ -1708,7 +1708,7 @@ function ExecutionsPanel({ canManage }: { canManage: boolean }) {
       open={closeTarget !== null}
       onClose={() => { setCloseTarget(null); setCloseReason(""); }}
       title={closeTarget ? `Close position · ${closeTarget.symbol}` : "Close position"}
-      description="Closes the open position at the current mark. The reason is audit-logged."
+      description="Closes at the current executable price, or at the last recorded position mark if the market is closed or the quote is stale. The pricing override and operator reason are audit-logged."
       className="sm:max-w-md"
     >
       <form onSubmit={(e) => { e.preventDefault(); void submitClose(); }} className="space-y-4 px-5 py-4">

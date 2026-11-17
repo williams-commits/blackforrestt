@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AdminError, requireAdmin } from "@/server/admin";
-import { hub, TradingError } from "@/server/engine/hub";
+import { hub, type TradingErrorCode } from "@/server/engine/hub";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,9 +46,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ ok: true, position: result.position, metrics: result.metrics });
   } catch (error) {
     if (error instanceof AdminError) return NextResponse.json({ error: error.message }, { status: error.status });
-    if (error instanceof TradingError) {
-      const status = error.code === "VALIDATION" ? 400 : error.code === "BLOCKED" ? 403 : 409;
-      return NextResponse.json({ error: error.message, code: error.code }, { status });
+    const tradingError = getTradingErrorDetails(error);
+    if (tradingError) {
+      const status = tradingError.code === "VALIDATION" ? 400 : tradingError.code === "BLOCKED" ? 403 : 409;
+      return NextResponse.json({ error: tradingError.message, code: tradingError.code }, { status });
     }
     const reference = randomUUID();
     console.error(`Administrative position action failed [${reference}] for ${positionId ?? "unknown position"}:`, error);
@@ -60,6 +61,19 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       ...(diagnostic ? { diagnostic } : {}),
     }, { status: 500 });
   }
+}
+
+function getTradingErrorDetails(error: unknown): { message: string; code: TradingErrorCode } | null {
+  if (typeof error !== "object" || error === null) return null;
+  const candidate = error as { name?: unknown; message?: unknown; code?: unknown };
+  if (candidate.name !== "TradingError" || typeof candidate.message !== "string") return null;
+  if (
+    candidate.code !== "VALIDATION" &&
+    candidate.code !== "INSUFFICIENT_FUNDS" &&
+    candidate.code !== "CONFLICT" &&
+    candidate.code !== "BLOCKED"
+  ) return null;
+  return { message: candidate.message, code: candidate.code };
 }
 
 function diagnosticMessage(error: unknown): string {

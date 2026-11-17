@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Activity, ArrowDown, ArrowLeftRight, ArrowUp, ArrowUpDown, BookOpenText, CandlestickChart, ChevronDown, ChevronRight, ClipboardCheck, CreditCard, Inbox, LifeBuoy, List, LockKeyhole, Search, ScrollText, ShieldAlert, SlidersHorizontal, UserRound, Users, UsersRound, type LucideIcon } from "lucide-react";
+import { Activity, ArrowDown, ArrowLeftRight, ArrowUp, ArrowUpDown, ArrowRight, BookOpenText, CandlestickChart, ChevronDown, ChevronRight, ClipboardCheck, CreditCard, Inbox, LifeBuoy, List, LockKeyhole, Search, ScrollText, ShieldAlert, SlidersHorizontal, Sparkles, UserRound, Users, UsersRound, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +68,13 @@ export interface RecordDetailMeta {
   value: React.ReactNode;
 }
 
+export interface RecordSearchSuggestion {
+  value: string;
+  label: string;
+  category: string;
+  detail?: string;
+}
+
 export interface RecordLeading {
   /** Tinted identity tile (icon, initials, instrument mark). */
   icon?: React.ReactNode;
@@ -126,6 +133,7 @@ export function RecordList<T>({
     text: (row: T) => string;
     value?: string;
     onChange?: (value: string) => void;
+    suggestions?: RecordSearchSuggestion[];
   };
   /** Caller-composed filter controls — rendered after the search pill. */
   filters?: React.ReactNode;
@@ -164,6 +172,8 @@ export function RecordList<T>({
     initialSort ?? { key: columns[0]?.key ?? "", direction: "desc" },
   );
   const [query, setQuery] = React.useState("");
+  const [suggestionsOpen, setSuggestionsOpen] = React.useState(false);
+  const [activeSuggestion, setActiveSuggestion] = React.useState(-1);
   const [visible, setVisible] = React.useState(pageSize);
   const [detailKey, setDetailKey] = React.useState<string | null>(null);
   const [storageReady, setStorageReady] = React.useState(!storageKey);
@@ -172,6 +182,10 @@ export function RecordList<T>({
   const searchRef = React.useRef(search);
   searchRef.current = search;
   const activeQuery = search?.value ?? query;
+  const searchSuggestions = search?.suggestions ?? [];
+  const supportsSuggestions = search?.suggestions !== undefined;
+  const showSuggestions = suggestionsOpen && Boolean(activeQuery.trim());
+  const suggestionsId = React.useId();
   // Derive the LIVE row from the current rows — the stored key survives
   // data refreshes so the slider always shows current data.
   const detail = detailKey != null ? rows.find((r) => rowKey(r) === detailKey) ?? null : null;
@@ -256,6 +270,17 @@ export function RecordList<T>({
       ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
       : { key, direction: "desc" }));
 
+  const updateQuery = (value: string) => {
+    if (search?.value === undefined) setQuery(value);
+    search?.onChange?.(value);
+  };
+
+  const selectSuggestion = (value: string) => {
+    updateQuery(value);
+    setSuggestionsOpen(false);
+    setActiveSuggestion(-1);
+  };
+
   const toneClass = (tone?: RecordLeading["tone"]) =>
     tone === "up" ? "bg-up/10 text-up"
       : tone === "down" ? "bg-down/10 text-down"
@@ -291,14 +316,94 @@ export function RecordList<T>({
                     <Input
                       type="search"
                       value={activeQuery}
+                      role={supportsSuggestions ? "combobox" : undefined}
+                      aria-autocomplete={supportsSuggestions ? "list" : undefined}
+                      aria-haspopup={supportsSuggestions ? "listbox" : undefined}
+                      aria-expanded={supportsSuggestions ? showSuggestions : undefined}
+                      aria-controls={showSuggestions ? suggestionsId : undefined}
+                      aria-activedescendant={
+                        showSuggestions && activeSuggestion >= 0 && activeSuggestion < searchSuggestions.length
+                          ? `${suggestionsId}-option-${activeSuggestion}`
+                          : undefined
+                      }
+                      onFocus={supportsSuggestions ? () => setSuggestionsOpen(true) : undefined}
+                      onBlur={supportsSuggestions ? () => setSuggestionsOpen(false) : undefined}
                       onChange={(event) => {
-                        if (search.value === undefined) setQuery(event.target.value);
-                        search.onChange?.(event.target.value);
+                        updateQuery(event.target.value);
+                        if (supportsSuggestions) {
+                          setSuggestionsOpen(true);
+                          setActiveSuggestion(-1);
+                        }
                       }}
+                      onKeyDown={supportsSuggestions ? (event) => {
+                        if (!searchSuggestions.length) return;
+                        if (event.key === "ArrowDown") {
+                          event.preventDefault();
+                          setSuggestionsOpen(true);
+                          setActiveSuggestion((current) => (current + 1) % searchSuggestions.length);
+                        } else if (event.key === "ArrowUp") {
+                          event.preventDefault();
+                          setSuggestionsOpen(true);
+                          setActiveSuggestion((current) => current <= 0 ? searchSuggestions.length - 1 : current - 1);
+                        } else if (event.key === "Enter" && showSuggestions && activeSuggestion >= 0) {
+                          event.preventDefault();
+                          selectSuggestion(searchSuggestions[activeSuggestion].value);
+                        } else if (event.key === "Escape" && showSuggestions) {
+                          event.preventDefault();
+                          setSuggestionsOpen(false);
+                          setActiveSuggestion(-1);
+                        }
+                      } : undefined}
                       placeholder={search.placeholder}
                       aria-label={search.placeholder}
                       className="h-9 pl-3 pr-9"
                     />
+                    {showSuggestions && (
+                      <div
+                        id={suggestionsId}
+                        role="listbox"
+                        aria-label="Search suggestions"
+                        className="absolute inset-x-0 top-full z-50 mt-2 max-h-72 overflow-y-auto rounded-xl bg-popover p-1.5 text-popover-foreground shadow-lg ring-1 ring-border/60"
+                      >
+                        <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground">
+                          <Sparkles size={13} aria-hidden />
+                          Suggested matches
+                          <span className="ml-auto tabular-nums">{searchSuggestions.length}</span>
+                        </div>
+                        {searchSuggestions.length > 0 ? (
+                          <>
+                            {searchSuggestions.map((suggestion, index) => (
+                              <button
+                                key={`${suggestion.category}:${suggestion.value}`}
+                                id={`${suggestionsId}-option-${index}`}
+                                type="button"
+                                role="option"
+                                aria-selected={activeSuggestion === index}
+                                onPointerDown={(event) => event.preventDefault()}
+                                onMouseEnter={() => setActiveSuggestion(index)}
+                                onClick={() => selectSuggestion(suggestion.value)}
+                                className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left outline-none transition-colors hover:bg-accent focus-visible:bg-accent aria-selected:bg-accent"
+                              >
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-sm font-medium">{suggestion.label}</span>
+                                  <span className="block truncate text-xs text-muted-foreground">
+                                    {suggestion.category}{suggestion.detail ? ` · ${suggestion.detail}` : ""}
+                                  </span>
+                                </span>
+                                <ArrowRight size={14} aria-hidden className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-aria-selected:opacity-100" />
+                              </button>
+                            ))}
+                            <div className="px-3 py-2 text-[11px] text-muted-foreground">
+                              Select a match to search transactions
+                            </div>
+                          </>
+                        ) : (
+                          <div className="px-3 py-3 text-sm text-muted-foreground">
+                            No matching suggestions. Your search still filters transactions.
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
                 {toolbarEnd && (

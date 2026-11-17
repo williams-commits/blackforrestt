@@ -54,6 +54,7 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
   const [typeFilter, setTypeFilter] = useState<"ALL" | Txn["type"]>("ALL");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const totals = useMemo(() => {
     let net = 0;
@@ -85,6 +86,45 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
     });
   }, [transactions, statusFilter, typeFilter, fromDate, toDate]);
 
+  const suggestions = useMemo(() => {
+    const needle = searchQuery.trim().toLowerCase();
+    if (!needle) return [];
+
+    const candidates = new Map<string, { value: string; label: string; category: string; detail: string }>();
+    for (const transaction of rows) {
+      const entries = [
+        { value: transaction.id, label: transaction.id, category: "Transaction ID", detail: TYPE_LABELS[transaction.type] },
+        { value: transaction.reference ?? "", label: transaction.reference ?? "", category: "Reference", detail: TYPE_LABELS[transaction.type] },
+        { value: transaction.description ?? "", label: transaction.description ?? "", category: "Description", detail: TYPE_LABELS[transaction.type] },
+        { value: transaction.type, label: TYPE_LABELS[transaction.type], category: "Type", detail: transaction.status },
+        { value: transaction.status, label: transaction.status, category: "Status", detail: TYPE_LABELS[transaction.type] },
+        { value: transaction.asset, label: transaction.asset, category: "Asset", detail: TYPE_LABELS[transaction.type] },
+        {
+          value: String(transaction.amount),
+          label: `${transaction.amount >= 0 ? "+" : ""}${transaction.amount.toFixed(2)} ${transaction.asset}`,
+          category: "Amount",
+          detail: TYPE_LABELS[transaction.type],
+        },
+        { value: fmtDateTime(transaction.createdAt), label: fmtDateTime(transaction.createdAt), category: "Date", detail: TYPE_LABELS[transaction.type] },
+      ];
+
+      for (const suggestion of entries) {
+        const value = suggestion.value.trim();
+        if (!value || !`${value} ${suggestion.label}`.toLowerCase().includes(needle)) continue;
+        const key = `${suggestion.category}:${value.toLowerCase()}`;
+        if (!candidates.has(key)) candidates.set(key, { ...suggestion, value });
+      }
+    }
+
+    return [...candidates.values()]
+      .sort((a, b) => {
+        const aPrefix = a.value.toLowerCase().startsWith(needle) || a.label.toLowerCase().startsWith(needle) ? 0 : 1;
+        const bPrefix = b.value.toLowerCase().startsWith(needle) || b.label.toLowerCase().startsWith(needle) ? 0 : 1;
+        return aPrefix - bPrefix || a.category.localeCompare(b.category) || a.label.localeCompare(b.label);
+      })
+      .slice(0, 8);
+  }, [rows, searchQuery]);
+
   const credit = (t: Txn) => t.amount >= 0;
 
   const csvRows = rows.map((t) => [
@@ -108,7 +148,10 @@ export function TransactionsTab({ transactions }: { transactions: Txn[] }) {
         rowKey={(t) => t.id}
         search={{
           placeholder: "Search description, reference, type, asset, or status…",
-          text: (t) => `${t.id} ${t.description ?? ""} ${t.reference ?? ""} ${t.type} ${t.asset} ${t.status} ${t.amount} ${t.createdAt}`,
+          value: searchQuery,
+          onChange: setSearchQuery,
+          suggestions,
+          text: (t) => `${t.id} ${t.description ?? ""} ${t.reference ?? ""} ${t.type} ${TYPE_LABELS[t.type]} ${t.asset} ${t.status} ${t.amount} ${t.createdAt} ${fmtDateTime(t.createdAt)}`,
         }}
         leading={(t) => {
           const Icon = TYPE_ICONS[t.type];

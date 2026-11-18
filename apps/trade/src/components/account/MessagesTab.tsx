@@ -11,6 +11,7 @@ import { Alert } from "@/components/ui/Alert";
 import { ArrowRight, Headset, MessageCircle, Send } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { fmtAgo, fmtDateTime } from "@/lib/dates";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 
 interface MessageRow {
   id: string;
@@ -156,9 +157,7 @@ export function MessagesTab() {
           return (
             <div key={message.id} className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
               {!mine && (
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
-                  {(message.senderName ?? "S")[0]?.toUpperCase()}
-                </span>
+                <UserAvatar identity={message.senderId} name={message.senderName} size="sm" />
               )}
               <div className={`max-w-[80%] ${mine ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
                 <span className={`px-1 text-xs font-semibold ${mine ? "text-muted-foreground" : "text-muted-foreground"}`}>
@@ -290,9 +289,11 @@ function OperatorInbox({ threads }: { threads: { threads: ThreadRow[]; totalUnre
                       href="/admin"
                       className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-muted/50"
                     >
-                      <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${waiting ? "bg-(--term-warning-bg) text-(--term-warning-fg)" : "bg-muted text-muted-foreground"}`}>
-                        {(thread.name ?? thread.email ?? thread.userId)[0]?.toUpperCase()}
-                      </span>
+                      <UserAvatar
+                        identity={thread.userId}
+                        name={thread.name ?? thread.email ?? thread.userId}
+                        size="md"
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="truncate text-sm font-medium">{thread.name ?? thread.email ?? thread.userId}</span>

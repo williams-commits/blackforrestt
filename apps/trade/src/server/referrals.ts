@@ -240,7 +240,7 @@ export async function getReferralStats(userId: string, fallbackDomain?: string |
         referrerReward: true,
         createdAt: true,
         completedAt: true,
-        referred: { select: { name: true, email: true, accountNo: true, verified: true } },
+        referred: { select: { id: true, name: true, email: true, accountNo: true, verified: true } },
       },
       orderBy: { createdAt: "desc" },
       // The rendered list is bounded; aggregate totals below stay exact.
@@ -275,6 +275,7 @@ export async function getReferralStats(userId: string, fallbackDomain?: string |
       createdAt: r.createdAt.toISOString(),
       completedAt: r.completedAt?.toISOString() ?? null,
       referred: {
+        id: r.referred.id,
         name: r.referred.name,
         email: r.referred.email?.replace(/(.{2}).*(@.*)/, "$1***$2") ?? null,
         accountNo: r.referred.accountNo,

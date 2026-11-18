@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { Check, KeyRound, Lock, Pencil, ShieldCheck, User, X, Mail, StarCheck } from "lucide-react";
-import { IdentityTile, initialsOf } from "@/components/ui/Initial";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { Label } from "@/components/ui/label";
 
 interface User {
@@ -64,9 +64,7 @@ export function SettingsTab({ user }: { user: User }) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-4 pb-5">
-            <IdentityTile size="lg" tone="brand" className="size-14 text-lg font-semibold">
-              {initialsOf(user.name || user.email)}
-            </IdentityTile>
+            <UserAvatar identity={user.id} name={user.name || user.email} size="lg" />
             <div className="min-w-0">
               <div className="text-base font-semibold">{user.name}</div>
               <div className="text-sm text-muted-foreground">{user.email}</div>

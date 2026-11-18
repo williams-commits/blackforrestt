@@ -113,7 +113,7 @@ export function TerminalNotifications() {
         <button
           type="button"
           aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ""}`}
-          className="relative flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
+          className="relative flex h-8 w-8 items-center justify-center rounded-md bg-panel text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
         >
           <Bell size={15} strokeWidth={2} aria-hidden />
           {unread > 0 && (

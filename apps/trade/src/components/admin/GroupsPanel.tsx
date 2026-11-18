@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/Button";
-import { IdentityTile, initialsOf } from "@/components/ui/Initial";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { RecordList, RecordStatusChip } from "@/components/ui/RecordList";
 import { useAdminPersistentState } from "./useAdminPersistentState";
 import { Check, Play, Plus, Save, Search, UserMinus, UserPlus, Users, UsersRound, X, ArrowLeft, ArrowRight, ChevronRight, Coins, DollarSign, FileText, Pencil, SlidersHorizontal } from "lucide-react";
@@ -774,7 +774,7 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
               tone: m.user.verified ? "muted" : "down",
               title: (
                 <span className="flex items-center gap-2">
-                  <IdentityTile tone={m.user.verified ? "muted" : "down"}>{initialsOf(m.user.name ?? m.user.email)}</IdentityTile>
+                  <UserAvatar identity={m.user.id} name={m.user.name ?? m.user.email} size="md" />
                   {m.user.name ?? "—"}
                 </span>
               ),
@@ -801,7 +801,7 @@ function GroupDetailPanel({ groupId, canManage, onBack }: { groupId: string; can
             detailTitle="Member Detail"
             renderDetailHero={(m) => (
               <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
-                <IdentityTile size="lg" tone={m.user.verified ? "muted" : "down"}>{initialsOf(m.user.name ?? m.user.email)}</IdentityTile>
+                <UserAvatar identity={m.user.id} name={m.user.name ?? m.user.email} size="lg" />
                 <div className="text-sm font-medium">{m.user.name ?? "—"}</div>
                 <div className="text-xs text-muted-foreground">{m.user.email ?? "—"}</div>
                 {!m.user.verified && <RecordStatusChip tone="down">Unverified</RecordStatusChip>}

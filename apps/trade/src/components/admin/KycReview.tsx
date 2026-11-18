@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { IdentityTile, initialsOf } from "@/components/ui/Initial";
+import { IdentityTile } from "@/components/ui/Initial";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { RecordList, RecordSearchInput, RecordStatusChip } from "@/components/ui/RecordList";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { SectionHeader } from "./SectionHeader";
@@ -343,9 +344,11 @@ export function KycReview({
                     selected?.id === s.id ? "bg-primary/10 ring-1 ring-primary/40" : "bg-card hover:bg-accent/60"
                   }`}
                 >
-                  <IdentityTile tone={selected?.id === s.id ? "brand" : "muted"}>
-                    {initialsOf(`${s.firstName ?? ""} ${s.lastName ?? ""}`)}
-                  </IdentityTile>
+                  <UserAvatar
+                    identity={s.userId}
+                    name={`${s.firstName ?? ""} ${s.lastName ?? ""}`.trim() || s.user.name || s.user.email}
+                    size="md"
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate text-sm font-medium">

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { IdentityTile, initialsOf } from "@/components/ui/Initial";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { StatCard } from "@/components/ui/StatCard";
 import { RecordList, RecordStatusChip, type RecordDetailMeta } from "@/components/ui/RecordList";
 
@@ -25,7 +25,7 @@ interface ReferralData {
     reward: number;
     createdAt: string;
     completedAt: string | null;
-    referred: { name: string | null; email: string | null; accountNo: string | null; verified: boolean };
+    referred: { id: string; name: string | null; email: string | null; accountNo: string | null; verified: boolean };
   }>;
 }
 
@@ -165,12 +165,20 @@ export function ReferralTab() {
           placeholder: "Search name, email, account, or status…",
           text: (r) => `${r.referred.name ?? ""} ${r.referred.email ?? ""} ${r.referred.accountNo ?? ""} ${r.status} ${r.reward} ${r.referred.verified ? "verified" : "unverified"}`,
         }}
-        leading={(r) => ({
-          icon: <span className="text-xs font-bold">{initialsOf(r.referred.name ?? r.referred.email)}</span>,
-          tone: done(r) ? "up" : "muted",
-          title: r.referred.name ?? "Unknown",
-          secondary: r.referred.email ?? "—",
-        })}
+        leading={(r) => {
+          const name = r.referred.name ?? "Unknown";
+          return {
+            icon: null,
+            tone: done(r) ? "up" : "muted",
+            title: (
+              <span className="flex items-center gap-2">
+                <UserAvatar identity={r.referred.id} name={name} size="md" />
+                <span>{name}</span>
+              </span>
+            ),
+            secondary: r.referred.email ?? "—",
+          };
+        }}
         columns={[
           { key: "createdAt", label: "Joined", sortable: true, align: "right", render: (r) => (
             <span className="text-xs text-muted-foreground tabular-nums">{fmtDate(r.createdAt)}</span>
@@ -195,7 +203,7 @@ export function ReferralTab() {
         detailTitle="Referral Detail"
         renderDetailHero={(r) => (
           <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
-            <IdentityTile size="lg">{initialsOf(r.referred.name ?? r.referred.email)}</IdentityTile>
+            <UserAvatar identity={r.referred.id} name={r.referred.name ?? r.referred.email} size="lg" />
             <div className="text-sm font-medium">{r.referred.name ?? "Unknown"}</div>
             <div className={`text-2xl font-semibold tabular-nums ${done(r) ? "text-up" : "text-muted-foreground"}`}>
               {done(r) ? `+$${r.reward.toFixed(2)}` : "—"}

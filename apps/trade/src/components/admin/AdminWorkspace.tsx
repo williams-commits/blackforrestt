@@ -27,6 +27,7 @@ import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { IdentityTile, initialsOf } from "@/components/ui/Initial";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 
 import type { ManagedUserRow } from "@/components/admin/AdminUserActions";
 import { RecordList, RecordStatusChip, type RecordSort } from "@/components/ui/RecordList";
@@ -770,9 +771,12 @@ function PaginatedUsers({
         tone: u.online ? "up" : "muted",
         title: (
           <span className="flex min-w-0 items-center gap-3 whitespace-normal">
-            <IdentityTile tone={u.online ? "up" : "muted"} className={cn("shrink-0", u.online ? "ring-2 ring-up/30 ring-offset-2 ring-offset-card" : undefined)}>
-              {initialsOf(u.name ?? u.email)}
-            </IdentityTile>
+            <UserAvatar
+              identity={u.id}
+              name={u.name ?? u.email}
+              size="md"
+              className={cn("shrink-0", u.online ? "ring-2 ring-up/30 ring-offset-2 ring-offset-card" : undefined)}
+            />
             <span className="flex min-w-0 flex-col">
               <span className="flex min-w-0 items-center gap-2">
                 <span className="truncate">{u.name ?? "Unnamed"}</span>
@@ -824,9 +828,12 @@ function PaginatedUsers({
       renderDetailHero={(u) => (
         <div className="rounded-xl bg-muted/50 px-4 py-5">
           <div className="flex items-center gap-4">
-            <IdentityTile size="lg" tone={u.online ? "up" : "muted"} className={u.online ? "ring-2 ring-up/30" : undefined}>
-              {initialsOf(u.name ?? u.email)}
-            </IdentityTile>
+            <UserAvatar
+              identity={u.id}
+              name={u.name ?? u.email}
+              size="lg"
+              className={u.online ? "ring-2 ring-up/30" : undefined}
+            />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="truncate text-base font-semibold">{u.name ?? "Unnamed"}</span>

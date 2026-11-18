@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownToLine, ArrowUpFromLine, LogOut, Settings, Shield, Sun, User } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, CandlestickChart, ChartNoAxesCombined, ChevronDown, Ellipsis, LogOut, Menu, Settings, Shield, Sun, User } from "lucide-react";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useForexStore } from "@/lib/store";
 import { fmtNum, getFormatLocale } from "@/lib/format";
-import { ConnectionDot } from "./ConnectionDot";
 import { TradeSearchButton } from "@/components/GlobalSearchPalette";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { TerminalNotifications } from "./TerminalNotifications";
@@ -16,6 +15,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/components/ThemeProvider";
@@ -24,9 +24,15 @@ import { WalletModal } from "@/components/account/WalletModal";
 import { WorkspaceNavigation } from "@/components/WorkspaceNavigation";
 import type { SocketStatus } from "@/lib/ws/client";
 import type { WalletAddressEntry } from "@/server/userSettings";
+import type { InstrumentView } from "@/lib/types";
+import { InstrumentMarketStatus } from "./InstrumentMarketStatus";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 
 interface Props {
+  instrument: InstrumentView;
+  marketDataMode: string;
   wsStatus: SocketStatus;
+  onOpenInstrumentSwitcher: () => void;
   depositUiEnabled?: boolean;
   disabledPaymentMethods?: string[];
   walletAddresses?: WalletAddressEntry[];
@@ -34,15 +40,18 @@ interface Props {
   marginWarningPercent?: number;
 }
 
-/**
- * AccountBar — the top metrics strip: account number, then Balance / Credit /
- * Margin / Equity / Margin Level / Free / P/L across the bar.
- *
- * The right side is a single user avatar/name trigger that opens a dropdown
- * panel containing quick actions (Deposit, Account, Reports, Admin) and sign
- * out — instead of cluttering the header with inline links.
- */
-export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentMethods = [], walletAddresses = [], marginWarningPercent = 125 }: Props) {
+/** Responsive trading menubar with instrument status, key account metrics,
+ *  and account actions; secondary metrics stay available in the overflow menu. */
+export function AccountBar({
+  instrument,
+  marketDataMode,
+  wsStatus,
+  onOpenInstrumentSwitcher,
+  depositUiEnabled = true,
+  disabledPaymentMethods = [],
+  walletAddresses = [],
+  marginWarningPercent = 125,
+}: Props) {
   const account = useForexStore((s) => s.account);
   const { data: session } = useSession();
   const { theme } = useTheme();
@@ -53,8 +62,12 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
 
   useEffect(() => {
     const tick = () => {
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop()?.replace(/_/g, " ") ?? "";
-      setClock(`${new Date().toLocaleTimeString(getFormatLocale(), { hour12: false })} ${tz}`);
+      setClock(new Date().toLocaleTimeString(getFormatLocale(), {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }));
     };
     tick();
     const t = setInterval(tick, 1000);
@@ -67,175 +80,189 @@ export function AccountBar({ wsStatus, depositUiEnabled = true, disabledPaymentM
   // the warning band comes from resolved user settings (default 125%); below
   // 100% risks a margin call.
   const marginTight = account?.marginLevel != null && account.marginLevel > 0 && account.marginLevel < marginWarningPercent;
-  const userName = session?.user?.name ?? session?.user?.email ?? "dev trader";
-  const initial = userName[0]?.toUpperCase() ?? "U";
+  const userName = session?.user?.name ?? session?.user?.email ?? "Trader";
+  const userIdentity = session?.user?.id ?? session?.user?.email ?? userName;
+  const showAdmin = session?.user?.role === "admin";
 
   return (
-    <header className="relative z-40 grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(3rem,auto)_auto] items-center border-b border-border-soft bg-canvas shadow-panel lg:flex lg:min-h-12 lg:flex-nowrap py-1">
-      {/* Logo — the TRADE badge is desktop-only; on the phone it just repeated
-          where the user already is. */}
-      <div className="col-start-1 row-start-1 flex shrink-0 items-center gap-2.5 px-3 lg:col-auto lg:row-auto">
-        <Logo inverted={theme === "dim"} />
-        <span className="hidden sm:inline-block text-(length:--term-text-2xs) font-semibold text-brand bg-brand-soft px-1.5 py-0.5 rounded">TRADE</span>
+    <header className="relative z-40 grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(3rem,auto)_auto] items-center gap-x-1 border-b border-border-soft bg-canvas px-2 py-1 shadow-panel lg:flex lg:min-h-12 lg:flex-nowrap lg:gap-2 lg:px-3">
+      <div className="col-start-1 row-start-1 flex shrink-0 items-center gap-1">
+        <WorkspaceMenu symbol={instrument.symbol} showAdmin={showAdmin} />
+        <div className="hidden items-center gap-2 sm:flex">
+          <Logo inverted={theme === "dim"} />
+          <WorkspaceNavigation
+            current="trade"
+            showAdmin={showAdmin}
+            className="hidden shrink-0 xl:flex"
+          />
+        </div>
       </div>
-      <WorkspaceNavigation
-        current="trade"
-        showAdmin={session?.user?.role === "admin"}
-        className="hidden shrink-0 px-1 xl:flex"
-      />
 
-      {/* Keep every account metric available on phones in a compact scroll row;
-          large screens place the same metrics inline with the header controls. */}
-      <div className="col-span-3 row-start-2 flex w-full min-w-0 items-center gap-2 overflow-x-auto border-t border-border-soft bg-panel px-3 py-2 scrollbar-none overscroll-x-contain [&::-webkit-scrollbar]:hidden lg:col-auto lg:row-auto lg:w-auto lg:flex-1 lg:gap-3 lg:overflow-x-auto lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
-        <Metric label="ACCOUNT" value={account?.accountNo ?? "—"} className={`hidden lg:flex ${metricCardClass}`} />
+      <div className="col-start-2 row-start-1 min-w-0">
+        <InstrumentMarketStatus
+          instrument={instrument}
+          marketDataMode={marketDataMode}
+          wsStatus={wsStatus}
+          clock={clock || "--:--:--"}
+          onOpenInstrumentSwitcher={onOpenInstrumentSwitcher}
+        />
+      </div>
+
+      <div className="col-span-3 row-start-2 grid w-full min-w-0 grid-cols-[repeat(3,minmax(0,1fr))_auto] items-center gap-1.5 border-t border-border-soft bg-panel px-2 py-1.5 lg:col-auto lg:row-auto lg:w-auto lg:flex-none lg:gap-1.5 lg:border-0 lg:bg-transparent lg:p-0">
         <Metric label="BALANCE" value={fmtUsd(account?.balance)} className={metricCardClass} />
         <Metric label="EQUITY" value={fmtUsd(account?.equity)} className={metricCardClass} />
-        <Metric label="FREE" value={fmtUsd(account?.free)} className={metricCardClass} />
         <Metric
           label="P/L"
           value={`${floating >= 0 ? "+" : ""}${fmtNum(floating, 2)}`}
           valueClass={floatingUp ? "text-up" : "text-down"}
           className={metricCardClass}
         />
-        <Metric
-          label="MARGIN"
-          value={fmtUsd(account?.margin)}
-          valueClass={marginTight ? "text-down font-semibold" : ""}
-          className={metricCardClass}
-        />
-        <Metric
-          label="MARGIN LEVEL"
-          value={account?.marginLevel != null ? `${fmtNum(account.marginLevel, 2)}%` : "—"}
-          // No open position → the ratio is undefined; show a muted em dash so
-          // it reads "not applicable" rather than a broken value.
-          valueClass={account?.marginLevel == null ? "text-text-faint" : marginTight ? "text-down font-semibold" : ""}
-          className={metricCardClass}
-        />
-        <Metric
-          label="CREDIT"
-          value={fmtUsd(account?.credit)}
-          title="Outstanding repayable advance, already included in balance."
-          className={metricCardClass}
-        />
-      </div>
-
-      {/* Connection + clock + search + theme toggle. The theme toggle lives in the user
-          dropdown on phones — this row stays minimal: dot + search + avatar. */}
-      <div className="col-start-2 row-start-1 ml-auto flex shrink-0 items-center gap-2 px-2 sm:px-3 lg:col-auto lg:row-auto">
-        <TradeSearchButton />
-        <TerminalNotifications />
-        <ConnectionDot status={wsStatus} />
-        <span className="text-(length:--term-text-xs) text-text-muted tnum hidden lg:inline">{clock}</span>
-        <span className="hidden sm:block">
-          <ThemeToggle />
-        </span>
-      </div>
-
-      {/* User dropdown — Radix primitive (same as the account portal menu):
-          keyboard nav, typeahead, collision-aware placement, focus restore. */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            aria-label="Open account menu"
-            className="col-start-3 row-start-1 flex h-10 items-center gap-2.5 rounded-md px-2 transition-colors duration-150 hover:bg-panel-2 sm:h-11 sm:px-2.5 in-data-[state=open]:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand lg:col-auto lg:row-auto"
-          >
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white shadow-sm ring-2 ring-brand/25 transition-transform duration-150 sm:size-8 sm:text-sm in-data-[state=open]:scale-105">
-              {initial}
-            </span>
-            <span className="hidden min-w-0 text-left sm:block">
-              <span className="block truncate text-xs font-semibold leading-tight">{userName}</span>
-              <span className="block text-(length:--term-text-2xs) tnum leading-tight text-text-faint">{account?.accountNo ?? "—"}</span>
-            </span>
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              aria-hidden="true"
-              className="text-text-muted transition-transform duration-200 in-data-[state=open]:rotate-180"
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Show more account metrics"
+              title="More account metrics"
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-canvas text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand lg:bg-panel"
             >
-              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64 rounded-lg border border-border bg-canvas p-0 text-xs shadow-xl sm:w-72">
-          {/* User header — premium avatar treatment */}
-          <div className="bg-panel-2/50 px-3 py-2.5 sm:px-4 sm:py-3.5">
-            <div className="flex items-center gap-2.5 sm:gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand text-base font-bold text-white shadow-sm ring-2 ring-brand/25 sm:size-10">
-                {initial}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold">{userName}</div>
-                <div className="truncate text-(length:--term-text-2xs) text-text-faint">{session?.user?.email}</div>
+              <Ellipsis size={18} strokeWidth={2} aria-hidden />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-72 p-3 text-xs">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <DropdownMenuLabel className="px-0 py-0 text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">
+                  Account details
+                </DropdownMenuLabel>
+                <p className="mt-1 text-sm font-semibold text-text">Additional metrics</p>
               </div>
-              {session?.user?.role === "admin" && (
-                <span className="shrink-0 rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold uppercase text-brand">Admin</span>
+              <span className="rounded-md bg-panel px-2 py-1 text-(length:--term-text-2xs) font-semibold tabular-nums text-text-muted">
+                #{account?.accountNo ?? "—"}
+              </span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Metric label="FREE" value={fmtUsd(account?.free)} className="rounded-lg bg-panel px-2.5 py-2" />
+              <Metric
+                label="MARGIN"
+                value={fmtUsd(account?.margin)}
+                valueClass={marginTight ? "text-down" : ""}
+                className="rounded-lg bg-panel px-2.5 py-2"
+              />
+              <Metric
+                label="MARGIN LEVEL"
+                value={account?.marginLevel != null ? `${fmtNum(account.marginLevel, 2)}%` : "—"}
+                valueClass={account?.marginLevel == null ? "text-text-faint" : marginTight ? "text-down" : ""}
+                className="rounded-lg bg-panel px-2.5 py-2"
+              />
+              <Metric
+                label="CREDIT"
+                value={fmtUsd(account?.credit)}
+                title="Outstanding repayable advance, already included in balance."
+                className="rounded-lg bg-panel px-2.5 py-2"
+              />
+            </div>
+            <p className="mt-3 text-(length:--term-text-2xs) leading-relaxed text-text-muted">
+              Balance, equity and P/L remain visible for quick decisions.
+            </p>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <div className="col-start-3 row-start-1 ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5 lg:col-auto lg:row-auto lg:ml-auto">
+        <TradeSearchButton className="bg-panel" />
+        <TerminalNotifications />
+        <span className="hidden sm:block">
+          <ThemeToggle className="bg-panel" />
+        </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Open account menu"
+              className="flex h-9 items-center gap-2 rounded-lg bg-panel px-1.5 transition-colors duration-150 hover:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand sm:h-10 sm:px-2"
+            >
+              <UserAvatar
+                identity={userIdentity}
+                name={userName}
+                size="md"
+                className="transition-transform duration-150 in-data-[state=open]:scale-105"
+              />
+              <span className="hidden min-w-0 text-left xl:block">
+                <span className="block max-w-28 truncate text-xs font-semibold leading-tight">{userName}</span>
+                <span className="block text-(length:--term-text-2xs) tnum leading-tight text-text-faint">{account?.accountNo ?? "—"}</span>
+              </span>
+              <span className="hidden sm:block"><ChevronMenuIcon /></span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64 rounded-xl p-0 text-xs shadow-xl sm:w-72">
+            <div className="bg-panel-2/50 px-3 py-2.5 sm:px-4 sm:py-3.5">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <UserAvatar identity={userIdentity} name={userName} size="lg" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold">{userName}</div>
+                  <div className="truncate text-(length:--term-text-2xs) text-text-faint">{session?.user?.email}</div>
+                </div>
+                {showAdmin && (
+                  <span className="shrink-0 rounded bg-brand-soft px-1.5 py-0.5 text-(length:--term-text-2xs) font-semibold uppercase text-brand">Admin</span>
+                )}
+              </div>
+              <div className="mt-2 flex items-center gap-2 border-t border-border-soft pt-1.5 sm:mt-2.5 sm:pt-2">
+                <span className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">Account</span>
+                <span className="text-(length:--term-text-2xs) tnum font-medium">{account?.accountNo ?? "—"}</span>
+              </div>
+            </div>
+
+            <div className="p-1 sm:p-1.5">
+              <MenuGroupLabel>Money</MenuGroupLabel>
+              {depositUiEnabled && (
+                <MenuAction
+                  icon={<DepositIcon />}
+                  label="Deposit"
+                  hint="Fund your account"
+                  onSelect={() => { setWalletMode("deposit"); setWalletOpen(true); }}
+                />
+              )}
+              <MenuAction
+                icon={<WithdrawIcon />}
+                label="Withdraw"
+                hint="Request a payout"
+                onSelect={() => { setWalletMode("withdraw"); setWalletOpen(true); }}
+              />
+
+              <MenuGroupLabel>Account</MenuGroupLabel>
+              <MenuLink href="/account" icon={<AccountIcon />} label="My Account" />
+              <MenuLink href="/account?tab=settings" icon={<SettingsIcon />} label="Settings" />
+              {showAdmin && (
+                <>
+                  <MenuGroupLabel>Operations</MenuGroupLabel>
+                  <MenuLink href="/admin" icon={<AdminIcon />} label="Admin Console" />
+                </>
               )}
             </div>
-            <div className="mt-2 flex items-center gap-2 border-t border-border-soft pt-1.5 sm:mt-2.5 sm:pt-2">
-              <span className="text-(length:--term-text-2xs) uppercase tracking-wide text-text-faint">Account</span>
-              <span className="text-(length:--term-text-2xs) tnum font-medium">{account?.accountNo ?? "—"}</span>
+
+            <div className="flex items-center gap-2 bg-panel-2/40 px-3 py-1.5 text-xs text-text sm:hidden sm:gap-3 sm:px-4 sm:py-2">
+              <span className="text-text-muted"><ThemeIcon /></span>
+              <span className="flex-1 font-medium">Dim mode</span>
+              <ThemeToggle className="bg-canvas" />
             </div>
-          </div>
 
-          {/* Grouped actions */}
-          <div className="p-1 sm:p-1.5">
-            <MenuGroupLabel>Money</MenuGroupLabel>
-            {depositUiEnabled && (
-              <MenuAction
-                icon={<DepositIcon />}
-                label="Deposit"
-                hint="Fund your account"
-                onSelect={() => { setWalletMode("deposit"); setWalletOpen(true); }}
-              />
-            )}
-            <MenuAction
-              icon={<WithdrawIcon />}
-              label="Withdraw"
-              hint="Request a payout"
-              onSelect={() => { setWalletMode("withdraw"); setWalletOpen(true); }}
-            />
-
-            <MenuGroupLabel>Account</MenuGroupLabel>
-            <MenuLink href="/account" icon={<AccountIcon />} label="My Account" />
-            <MenuLink href="/account?tab=settings" icon={<SettingsIcon />} label="Settings" />
-            {session?.user?.role === "admin" && (
-              <>
-                <MenuGroupLabel>Operations</MenuGroupLabel>
-                <MenuLink href="/admin" icon={<AdminIcon />} label="Admin Console" />
-              </>
-            )}
-          </div>
-
-          {/* Theme control — the header keeps its toggle from sm up; on phones
-              this is where dim mode lives. */}
-          <div className="flex items-center gap-2 bg-panel-2/40 px-3 py-1.5 text-xs text-text sm:gap-3 sm:px-4 sm:py-2">
-            <span className="text-text-muted"><ThemeIcon /></span>
-            <span className="flex-1 font-medium">Dim mode</span>
-            <ThemeToggle />
-          </div>
-
-          {/* Sign out */}
-          <div className="p-1 sm:p-1.5">
-            {session?.user ? (
-              <DropdownMenuItem
-                variant="destructive"
-                className="gap-2.5 rounded-md px-2.5 py-1.5 text-xs text-down transition-colors duration-150 hover:bg-down/10 focus:bg-down/10 focus:text-down sm:gap-3 sm:px-3 sm:py-2"
-                onSelect={() => { void signOut({ redirect: false }).then(() => { window.location.assign("/login"); }); }}
-              >
-                <SignOutIcon />
-                <span className="font-medium">Sign out</span>
-              </DropdownMenuItem>
-            ) : (
-              <MenuLink href="/login" icon={<SignOutIcon />} label="Sign in" />
-            )}
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <div className="p-1 sm:p-1.5">
+              {session?.user ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  className="gap-2.5 rounded-md px-2.5 py-1.5 text-xs text-down transition-colors duration-150 hover:bg-down/10 focus:bg-down/10 focus:text-down sm:gap-3 sm:px-3 sm:py-2"
+                  onSelect={() => { void signOut({ redirect: false }).then(() => { window.location.assign("/login"); }); }}
+                >
+                  <SignOutIcon />
+                  <span className="font-medium">Sign out</span>
+                </DropdownMenuItem>
+              ) : (
+                <MenuLink href="/login" icon={<SignOutIcon />} label="Sign in" />
+              )}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <WalletModal
         open={walletOpen}
@@ -265,8 +292,33 @@ function Metric({
 }) {
   return (
     <div title={title} className={`flex flex-col gap-0 shrink-0 leading-tight ${className}`}>
-      <span className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-faint leading-none mb-0.5">{label}</span>
-      <span className={`text-(length:--term-text-md) tnum leading-none font-semibold ${valueClass}`}>{value}</span>
+      <span className="mb-0.5 text-[9px] font-medium uppercase leading-none tracking-wide text-text-faint">{label}</span>
+      <span className={`truncate text-[11px] font-semibold leading-none tnum sm:text-xs ${valueClass}`}>{value}</span>
+    </div>
+  );
+}
+
+function WorkspaceMenu({ symbol, showAdmin }: { symbol: string; showAdmin: boolean }) {
+  return (
+    <div className="xl:hidden">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label="Open workspace navigation"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-panel text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
+          >
+            <Menu size={16} strokeWidth={2} aria-hidden />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuLabel>Workspace</DropdownMenuLabel>
+          <MenuLink href="/markets" icon={<ChartNoAxesCombined size={14} strokeWidth={2} aria-hidden />} label="Markets" />
+          <MenuLink href={`/trade/${encodeURIComponent(symbol)}`} icon={<CandlestickChart size={14} strokeWidth={2} aria-hidden />} label="Trade terminal" />
+          <MenuLink href="/account" icon={<AccountIcon />} label="Account" />
+          {showAdmin && <MenuLink href="/admin" icon={<AdminIcon />} label="Admin console" />}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -276,7 +328,7 @@ function fmtUsd(v: number | null | undefined): string {
   return v.toLocaleString(getFormatLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const metricCardClass = "rounded-lg bg-canvas px-2.5 py-1 ring-1 ring-border-soft lg:bg-panel truncate";
+const metricCardClass = "min-w-0 shrink-0 rounded-lg bg-canvas px-2 py-0.5 lg:bg-panel-2";
 
 // ── Dropdown menu helpers (Radix items with the terminal look) ───────────────
 
@@ -345,6 +397,9 @@ function AdminIcon() {
 }
 function ThemeIcon() {
   return <Sun size={14} strokeWidth={2} aria-hidden className={ic} />;
+}
+function ChevronMenuIcon() {
+  return <ChevronDown size={12} strokeWidth={2.5} aria-hidden className="shrink-0 text-text-muted" />;
 }
 function SignOutIcon() {
   return <LogOut size={14} strokeWidth={2} aria-hidden className={ic} />;

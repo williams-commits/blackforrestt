@@ -56,6 +56,7 @@ export default async function AdminPage() {
           </span>
           <TradeSearchButton className="hidden sm:flex" />
           <AccountUserMenu
+            userId={session?.user?.id ?? context.actorId}
             displayName={userName}
             email={session?.user?.email ?? ""}
             accountNo={null}

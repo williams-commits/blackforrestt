@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { IdentityTile, initialsOf } from "@/components/ui/Initial";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { SectionHeader } from "./SectionHeader";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -339,7 +339,11 @@ export function AdminMessages({ chatWith, onChatHandled }: { chatWith: { userId:
             <>
               <div className="flex items-start justify-between gap-2 border-b bg-muted/40 px-4 py-3">
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <IdentityTile tone="brand">{initialsOf(thread?.user ? (thread.user.name ?? thread.user.email) : activeUser.label)}</IdentityTile>
+                  <UserAvatar
+                    identity={thread?.user.id ?? activeUser.id}
+                    name={thread?.user ? thread.user.name ?? thread.user.email : activeUser.label}
+                    size="md"
+                  />
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold">{thread?.user ? (thread.user.name ?? thread.user.email ?? activeUser.label) : activeUser.label}</div>
                     {thread?.user && (

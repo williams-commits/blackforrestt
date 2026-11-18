@@ -3,6 +3,7 @@
 import { CandlestickChart, ChevronDown, LogOut, Settings, User } from "lucide-react";
 
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,19 +20,21 @@ import { signOut } from "next-auth/react";
  * destructive sign-out).
  */
 export function AccountUserMenu({
+  userId,
   displayName,
   email,
   accountNo,
   secondaryLabel,
   isAdmin,
 }: {
+  userId?: string | null;
   displayName: string;
   email: string;
   accountNo: string | null;
   secondaryLabel?: string;
   isAdmin: boolean;
 }) {
-  const initial = (displayName || email || "U").charAt(0).toUpperCase();
+  const identity = userId || email || displayName;
   const accountLabel = secondaryLabel ?? `#${accountNo ?? "—"}`;
 
   return (
@@ -44,9 +47,10 @@ export function AccountUserMenu({
           >
             <button
               type="button"
+              aria-label={`Open account menu for ${displayName}`}
               className="flex max-w-[58vw] items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:max-w-xs"
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand">{initial}</span>
+              <UserAvatar identity={identity} name={displayName} size="md" />
               <span className="min-w-0 hidden sm:block">
                 <span className="block truncate text-xs font-medium text-foreground">{displayName}</span>
                 <span className="block truncate text-xs text-muted-foreground">{accountLabel}</span>
@@ -58,8 +62,13 @@ export function AccountUserMenu({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bevel-surface w-64 rounded-xl bg-card p-0 text-xs">
             <div className="border-b border-border bg-muted/60 px-4 py-3">
-              <div className="truncate text-xs font-semibold">{displayName}</div>
-              <div className="truncate text-xs text-muted-foreground">{email}</div>
+              <div className="flex min-w-0 items-center gap-3">
+                <UserAvatar identity={identity} name={displayName} size="lg" />
+                <div className="min-w-0">
+                  <div className="truncate text-xs font-semibold">{displayName}</div>
+                  <div className="truncate text-xs text-muted-foreground">{email}</div>
+                </div>
+              </div>
             </div>
             <div className="p-1">
               <AccountMenuLink href="/account" label="My account" icon={<User size={14} strokeWidth={1.75} aria-hidden />} />

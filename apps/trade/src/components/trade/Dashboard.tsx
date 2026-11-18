@@ -13,7 +13,6 @@ import { TradingSideWorkspace } from "./TradingSideWorkspace";
 import { PositionsTable } from "./PositionsTable";
 import { InstrumentSelector } from "./InstrumentSelector";
 import { InstrumentSwitcherSheet } from "./InstrumentSwitcherSheet";
-import { MarketStatusBanner } from "./MarketStatusBanner";
 import { MobileTabBar, OPEN_ORDER_EVENT, consumeOpenOrderFlag, rememberMobileSymbol } from "./MobileTabBar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { WalletAddressEntry } from "@/server/userSettings";
@@ -221,8 +220,16 @@ export function Dashboard({
 
   return (
     <div className="trade-workspace terminal-ui flex h-dvh min-h-0 w-full flex-col overflow-hidden bg-canvas pb-[calc(env(safe-area-inset-bottom)+4.75rem)] md:pb-0 lg:h-screen">
-      <AccountBar wsStatus={status} depositUiEnabled={depositUiEnabled} disabledPaymentMethods={disabledPaymentMethods} walletAddresses={walletAddresses} marginWarningPercent={marginWarningPercent} />
-      <MarketStatusBanner marketDataMode={marketDataMode} wsStatus={status} instrument={activeInstrument} />
+      <AccountBar
+        instrument={activeInstrument}
+        marketDataMode={marketDataMode}
+        wsStatus={status}
+        onOpenInstrumentSwitcher={() => setSwitcherOpen(true)}
+        depositUiEnabled={depositUiEnabled}
+        disabledPaymentMethods={disabledPaymentMethods}
+        walletAddresses={walletAddresses}
+        marginWarningPercent={marginWarningPercent}
+      />
 
       {/* Keep market discovery, charting, and order entry in stable columns on
           desktop; smaller screens open the same ticket in a right-side sheet. */}

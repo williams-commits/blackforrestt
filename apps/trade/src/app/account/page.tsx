@@ -168,6 +168,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         />
         <TradeSearchButton className="ml-auto lg:ml-0" />
         <AccountUserMenu
+          userId={user.id}
           displayName={user.name ?? user.email ?? "Trader"}
           email={user.email ?? ""}
           accountNo={user.accountNo}

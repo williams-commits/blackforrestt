@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowDownToLine, ArrowRight, ArrowUpFromLine, ChartNoAxesCombined, Info, Lock, UserRound, Wallet } from "lucide-react";
-import { IdentityTile, initialsOf } from "@/components/ui/Initial";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { InfoHint } from "@/components/ui/InfoHint";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { fmtDate } from "@/lib/dates";
@@ -17,7 +17,7 @@ import type { WalletAddressEntry } from "@/server/userSettings";
 interface Props {
   /** Equity/margin ratio that marks the margin warning (user settings → env default 125). */
   marginWarningPercent?: number;
-  user: { name: string; email: string; accountNo: string; createdAt: Date | string; verified: boolean };
+  user: { id: string; name: string; email: string; accountNo: string; createdAt: Date | string; verified: boolean };
   /** Live KYC review state — drives the Verification row. null = never submitted. */
   kyc?: { status: "NOT_SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED"; note: string | null } | null;
   metrics: {
@@ -123,9 +123,7 @@ export function AccountOverview({ user, metrics, wallets, openCount, depositUiEn
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
-              <IdentityTile size="lg" tone="brand" className="text-base font-semibold">
-                {initialsOf(user.name || user.email)}
-              </IdentityTile>
+              <UserAvatar identity={user.id} name={user.name || user.email} size="lg" />
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">{user.name}</div>
                 <div className="truncate text-xs text-muted-foreground">{user.email}</div>

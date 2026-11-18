@@ -29,6 +29,12 @@ const TRAFFIC_TEXT_COLORS: Record<TrafficState, string> = {
   offline: "text-down",
 };
 
+const TRAFFIC_SURFACE_COLORS: Record<TrafficState, string> = {
+  live: "bg-(--term-success-bg) text-(--term-success-fg)",
+  stale: "bg-(--term-warning-bg) text-(--term-warning-fg)",
+  offline: "bg-(--term-danger-bg) text-(--term-danger-fg)",
+};
+
 const SOURCE_LABELS: Record<string, string> = {
   simulation: "Internal price feed",
   finnhub: "Live feed",
@@ -110,9 +116,9 @@ export function InstrumentMarketStatus({
         onClick={onOpenInstrumentSwitcher}
         aria-label={`Switch instrument. ${instrument.symbol}, ${marketHours.isOpen ? "session open" : "session closed"}, ${clock} local time`}
         aria-haspopup="dialog"
-        className="group flex min-h-10 min-w-0 shrink items-center rounded-lg p-1 text-left focus-visible:outline-2 focus-visible:outline-brand"
+        className="group flex h-10 min-w-0 shrink items-center rounded-lg text-left focus-visible:outline-2 focus-visible:outline-brand"
       >
-        <span className="flex min-h-8 min-w-0 items-center gap-1 sm:gap-1.5 rounded-md bg-panel-2 px-1.5 transition-colors group-hover:bg-panel group-focus-visible:bg-panel sm:px-2">
+        <span className="flex h-10 min-w-0 items-center gap-1.5 rounded-lg bg-panel-2 px-2 transition-colors group-hover:bg-panel group-focus-visible:bg-panel">
           <InstrumentIcon symbol={instrument.symbol} size={16} className="shrink-0" />
           <span className="flex min-w-0 flex-col leading-tight">
             <span className="truncate text-xs font-semibold tracking-wide">{instrument.symbol}</span>
@@ -132,13 +138,13 @@ export function InstrumentMarketStatus({
             type="button"
             aria-label={`Market status: ${statusLabel}`}
             title={`Market status: ${statusLabel}`}
-            className="group flex min-h-10 shrink-0 items-center rounded-lg p-0 focus-visible:outline-2 focus-visible:outline-brand sm:p-1"
+            className="group flex h-10 shrink-0 items-center rounded-lg focus-visible:outline-2 focus-visible:outline-brand"
           >
-            <span className="flex min-h-7 items-center gap-1.5 rounded-md bg-panel-2 px-1 transition-colors group-hover:bg-panel group-focus-visible:bg-panel sm:px-2">
+            <span className="flex h-10 items-center gap-1.5 rounded-lg bg-panel-2 px-2 transition-colors group-hover:bg-panel group-focus-visible:bg-panel">
               <TrafficLights state={state} />
               <span className="hidden min-w-0 flex-col text-left leading-tight sm:flex">
-                <span className="text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">Market</span>
-                <span className={cn("truncate text-(length:--term-text-xs) font-medium", TRAFFIC_TEXT_COLORS[state])}>
+                <span className="text-[9px] font-semibold uppercase tracking-wide text-text-faint">Market</span>
+                <span className={cn("truncate text-[10px] font-medium", TRAFFIC_TEXT_COLORS[state])}>
                   {statusLabel}
                 </span>
               </span>
@@ -146,7 +152,7 @@ export function InstrumentMarketStatus({
             </span>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-[min(22rem,calc(100vw-1rem))] p-0 text-xs">
+        <DropdownMenuContent align="start" className="terminal-ui w-[min(22rem,calc(100vw-1rem))] p-0 text-xs">
           <div className="p-3">
             <div className="flex items-start justify-between gap-3 rounded-lg bg-panel p-3">
               <div className="flex min-w-0 items-start gap-2.5">
@@ -156,7 +162,7 @@ export function InstrumentMarketStatus({
                   <p className="mt-0.5 text-text-muted">{instrument.symbol} · {marketHours.venue}</p>
                 </div>
               </div>
-              <span className={cn("shrink-0 rounded-md bg-canvas px-2 py-1 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide", TRAFFIC_TEXT_COLORS[state])}>
+              <span className={cn("shrink-0 rounded-md px-2 py-1 text-(length:--term-text-2xs) font-semibold uppercase tracking-wide", TRAFFIC_SURFACE_COLORS[state])}>
                 {state}
               </span>
             </div>
@@ -218,8 +224,8 @@ function TrafficLights({ state, className }: { state: TrafficState; className?: 
 function StateChip({ label, state, current }: { label: string; state: TrafficState; current: boolean }) {
   return (
     <span className={cn(
-      "flex min-w-0 items-center justify-center gap-1.5 rounded-md bg-panel px-1.5 py-1.5 text-(length:--term-text-2xs)",
-      current ? "font-semibold text-text" : "text-text-muted",
+      "flex min-w-0 items-center justify-center gap-1.5 rounded-md px-1.5 py-1.5 text-(length:--term-text-2xs)",
+      current ? cn("font-semibold", TRAFFIC_SURFACE_COLORS[state]) : "bg-panel text-text-muted",
     )}>
       <span className={cn("size-1.5 shrink-0 rounded-full", TRAFFIC_COLORS[state])} aria-hidden />
       <span className="truncate">{label}</span>

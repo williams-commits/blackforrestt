@@ -123,7 +123,7 @@ export function AccountBar({
               type="button"
               aria-label="Show more account metrics"
               title="More account metrics"
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-canvas text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand lg:bg-panel"
+              className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-canvas text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand lg:bg-panel"
             >
               <Ellipsis size={18} strokeWidth={2} aria-hidden />
             </button>
@@ -291,7 +291,7 @@ function Metric({
   className?: string;
 }) {
   return (
-    <div title={title} className={`flex flex-col gap-0 shrink-0 leading-tight ${className}`}>
+    <div title={title} className={`flex flex-col justify-center gap-0 shrink-0 leading-tight ${className}`}>
       <span className="mb-0.5 text-[9px] font-medium uppercase leading-none tracking-wide text-text-faint">{label}</span>
       <span className={`truncate text-[11px] font-semibold leading-none tnum sm:text-xs ${valueClass}`}>{value}</span>
     </div>
@@ -328,7 +328,7 @@ function fmtUsd(v: number | null | undefined): string {
   return v.toLocaleString(getFormatLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const metricCardClass = "min-w-0 shrink-0 rounded-lg bg-canvas px-2 py-0.5 lg:bg-panel-2";
+const metricCardClass = "h-10 min-w-0 shrink-0 rounded-lg bg-canvas px-2 py-1 lg:bg-panel-2";
 
 // ── Dropdown menu helpers (Radix items with the terminal look) ───────────────
 

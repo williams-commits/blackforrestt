@@ -179,7 +179,7 @@ export function AccountBar({
             <button
               type="button"
               aria-label="Open account menu"
-              className="flex h-9 items-center gap-2 rounded-lg bg-panel px-1.5 transition-colors duration-150 hover:bg-panel-2 focus-visible:outline-2 focus-visible:outline-brand sm:h-10 sm:px-2"
+              className="flex h-9 items-center gap-2 rounded-lg bg-panel-2 px-1.5 transition-colors duration-150 hover:bg-panel focus-visible:outline-2 focus-visible:outline-brand sm:h-10 sm:px-2"
             >
               <UserAvatar
                 identity={userIdentity}

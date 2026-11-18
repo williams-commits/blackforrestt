@@ -10,6 +10,7 @@ import {
   PanelBottomOpen,
   Pencil,
   Save,
+  TriangleAlert,
   TrendingDown,
   TrendingUp,
   X,
@@ -260,55 +261,55 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
           setStaleCloseTarget(null);
           setStaleCloseAcknowledged(false);
         }}
-        title={`Review stale-price close · ${staleCloseTarget?.symbol ?? "position"}`}
-        description="The market quote is stale. Review the last recorded position mark and acknowledge the execution risk before closing."
-        className="sm:max-w-md"
+        title={`Confirm close · ${staleCloseTarget?.symbol ?? "position"}`}
+        description="Live pricing is unavailable. Review the last mark and execution risk before confirming."
+        className="gap-0 sm:max-w-md"
       >
         {staleCloseTarget && (
-          <div className="flex flex-col gap-4 p-5">
-            <Alert tone="err">
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold">Live quote unavailable</p>
-                    <p className="text-(length:--term-text-2xs)">
-                      The close will use the last recorded mark for this position.
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-background/60 px-2 py-1 text-[10px] font-semibold tracking-wide">
-                    ACKNOWLEDGMENT REQUIRED
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-md bg-background/50 px-3 py-2">
-                    <p className="text-(length:--term-text-2xs)">Last recorded mark</p>
-                    <p className="tabular-nums font-semibold">
-                      {fmtPrice(staleCloseTarget.currentRate, digitsFor(staleCloseTarget.symbol))}
-                    </p>
-                  </div>
-                  <div className="rounded-md bg-background/50 px-3 py-2">
-                    <p className="text-(length:--term-text-2xs)">Current unrealized P/L</p>
-                    <p className="tabular-nums font-semibold">{fmtNum(staleCloseTarget.netProfit, 2)} USD</p>
-                  </div>
-                </div>
-                <p className="text-(length:--term-text-2xs)">
-                  The actual market may have moved. Your close price and realized P/L may differ materially from a fresh quote.
-                </p>
-              </div>
+          <div className="flex flex-col gap-3 px-4 py-4 sm:px-5">
+            <Alert
+              tone="info"
+              role="alert"
+              icon={<TriangleAlert aria-hidden />}
+              className="gap-x-2.5 rounded-lg bg-(--term-warning-bg) px-3 py-2.5 text-(--term-warning-fg)"
+            >
+              <p className="font-semibold">Live quote unavailable</p>
+              <p className="text-xs">This position will close at its last recorded mark.</p>
             </Alert>
-            <label className="flex cursor-pointer items-start gap-2 rounded-lg bg-panel-2 p-3 text-sm text-text" onClick={(event) => event.stopPropagation()}>
+
+            <dl className="grid grid-cols-2 gap-2">
+              <div className="min-w-0 rounded-md bg-panel-2/60 px-3 py-2.5">
+                <dt className="text-[10px] font-medium uppercase tracking-wide text-text-faint">Last recorded mark</dt>
+                <dd className="mt-1 truncate font-mono text-sm font-semibold tabular-nums text-text">
+                  {fmtPrice(staleCloseTarget.currentRate, digitsFor(staleCloseTarget.symbol))}
+                </dd>
+              </div>
+              <div className="min-w-0 rounded-md bg-panel-2/60 px-3 py-2.5">
+                <dt className="text-[10px] font-medium uppercase tracking-wide text-text-faint">Unrealized P/L</dt>
+                <dd className={`mt-1 truncate font-mono text-sm font-semibold tabular-nums ${staleCloseTarget.netProfit >= 0 ? "text-up" : "text-down"}`}>
+                  {staleCloseTarget.netProfit >= 0 ? "+" : ""}{fmtNum(staleCloseTarget.netProfit, 2)} USD
+                </dd>
+              </div>
+            </dl>
+
+            <p className="text-xs leading-relaxed text-text-muted">
+              The market may have moved. Your final close price and realized P/L can differ from these values.
+            </p>
+
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border-soft bg-panel-2/50 p-3 text-sm text-text" onClick={(event) => event.stopPropagation()}>
               <Checkbox
                 checked={staleCloseAcknowledged}
                 onCheckedChange={(checked) => setStaleCloseAcknowledged(checked === true)}
-                className="mt-0.5"
+                className="mt-0.5 border border-border bg-canvas"
               />
-              <span>I understand and choose to close this position at its last recorded mark.</span>
+              <span className="leading-snug">I understand this position will close at its last recorded mark.</span>
             </label>
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
+                className="w-full sm:w-auto"
                 disabled={busy === staleCloseTarget.id}
                 onClick={() => {
                   setStaleCloseTarget(null);
@@ -321,12 +322,13 @@ export function PositionsTable({ instruments, collapsed = false, onToggleCollaps
                 type="button"
                 variant="destructive"
                 size="sm"
+                className="w-full sm:w-auto"
                 loading={busy === staleCloseTarget.id}
                 disabled={!staleCloseAcknowledged}
                 onClick={() => void performClose(staleCloseTarget, true)}
               >
                 <X aria-hidden />
-                Acknowledge & close at last mark
+                Close at last mark
               </Button>
             </div>
           </div>

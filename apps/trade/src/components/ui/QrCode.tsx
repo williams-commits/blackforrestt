@@ -1,16 +1,13 @@
 "use client";
 
-import { useBrand } from "@/components/providers";
-
 import { useEffect, useRef } from "react";
 import QRCodeStyling from "qr-code-styling";
+import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 
 /**
  * Modern styled deposit QR — rounded dots and brand-orange corner eyes drawn
- * by qr-code-styling. The center tree mark is overlaid as an inline React SVG,
- * NOT via the library's `image` option (whose async image-loading path stalls
- * and leaves the QR blank in this environment). An inline DOM overlay involves
- * zero image loading, so the code always renders.
+ * by qr-code-styling. The selected asset mark is overlaid as a React component,
+ * not embedded in the encoded QR payload.
  *
  * Renders as inline SVG — CSP-safe, no external requests. Colours are fixed
  * (dark dots / brand eyes on white) rather than theme-aware: QR contrast must
@@ -22,18 +19,15 @@ const INK = "#17202a";
 
 export function QrCode({
   value,
+  asset,
   size = 132,
   label,
-  withLogo = true,
 }: {
   value: string;
+  asset: string;
   size?: number;
   label?: string;
-  /** Overlay the BlackForest tree mark in the center. */
-  withLogo?: boolean;
 }) {
-  const brand = useBrand();
-  const accent = brand.accentColor || BRAND_ORANGE;
   const containerRef = useRef<HTMLDivElement>(null);
   const disc = Math.round(size * 0.3);
 
@@ -69,31 +63,13 @@ export function QrCode({
       >
         <div className="relative" style={{ width: size, height: size }}>
           <div ref={containerRef} role="img" aria-label={label ? `QR code: ${label}` : "QR code"} style={{ width: size, height: size }} />
-          {withLogo && (
-            <span
-              aria-hidden
-              className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl bg-white"
-              style={{ width: disc, height: disc }}
-            >
-              <svg
-                width={Math.round(disc * 0.62)}
-                height={Math.round(disc * 0.62)}
-                viewBox={brand.glyph?.viewBox ?? "0 0 24 24"}
-                fill="none"
-              >
-                {brand.glyph
-                  ? brand.glyph.paths.map((path, index) => (
-                      <path key={index} d={path.d} fill={path.fill === "ink" ? "#111827" : accent} />
-                    ))
-                  : (
-                    <>
-                      <path d="M12 1.5 7.5 9H10l-3 5.5H9.5L7 19h10l-2.5-4.5H17l-3-5.5h2.5L12 1.5Z" fill={accent} />
-                      <rect x="11" y="19" width="2" height="3.5" fill={accent} />
-                    </>
-                  )}
-              </svg>
-            </span>
-          )}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl bg-white"
+            style={{ width: disc, height: disc }}
+          >
+            <InstrumentIcon symbol={asset} size={Math.round(disc * 0.68)} />
+          </span>
         </div>
       </div>
       <span className="text-[10px] text-text-faint">Scan to pay</span>

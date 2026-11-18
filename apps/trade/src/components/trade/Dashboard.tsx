@@ -65,6 +65,10 @@ export function Dashboard({
     instrument;
   const { status } = useForexSocket(activeInstrument.symbol, DEFAULT_MARKET_DATA_INTERVAL);
 
+  useEffect(() => {
+    document.title = `${activeInstrument.symbol.toUpperCase()} Chart`;
+  }, [activeInstrument.symbol]);
+
   const switchInstrument = (symbol: string) => {
     if (symbol === activeInstrument.symbol) return;
     setActiveSymbol(symbol);

@@ -27,7 +27,9 @@ export const CURRENCY_FLAGS: Record<string, string> = {
 export const INSTRUMENT_IMAGES: Record<string, string> = {
   // Crypto
   BTCUSD: "btc.svg",
+  BTC: "btc.svg",
   ETHUSD: "eth.svg",
+  ETH: "eth.svg",
   SOLUSD: "solana.svg",
   XRPUSD: "xrp.png",
   ADAUSD: "ada.png",

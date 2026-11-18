@@ -148,21 +148,23 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
           Notifications
         </CardTitle>
         <CardDescription>Your full notification history — available whenever you sign in.</CardDescription>
-        <ResponsiveFilters className="col-span-full flex min-w-0 flex-col gap-2 md:block">
-          <Select value={group} onValueChange={(value) => { setGroup(value); setPage(1); setAccumulated([]); }}>
-            <SelectTrigger size="sm" className="w-full md:w-48" aria-label="Filter notifications by category">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {Object.entries(GROUP_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {`${label}${groupCounts[key] > 0 ? ` · ${groupCounts[key] > 99 ? "99+" : groupCounts[key]}` : ""}`}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+        <ResponsiveFilters className="col-span-full flex w-full min-w-0 flex-col gap-2 rounded-xl bg-muted/30 px-3 py-2 md:flex-row md:items-center md:gap-3 md:px-4">
+          <div className="flex w-full min-w-0 flex-col items-stretch gap-2 *:min-w-0 *:w-full **:data-[slot=select-trigger]:h-8 **:data-[slot=select-trigger]:rounded-lg **:data-[slot=select-trigger]:bg-background/70 **:data-[slot=select-trigger]:px-2.5 **:data-[slot=select-trigger]:text-xs md:flex-row md:items-center md:gap-1.5 md:*:w-auto">
+            <Select value={group} onValueChange={(value) => { setGroup(value); setPage(1); setAccumulated([]); }}>
+              <SelectTrigger size="sm" className="w-full md:w-48" aria-label="Filter notifications by category">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {Object.entries(GROUP_LABELS).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {`${label}${groupCounts[key] > 0 ? ` · ${groupCounts[key] > 99 ? "99+" : groupCounts[key]}` : ""}`}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
         </ResponsiveFilters>
         {unreadCount > 0 && (
           <CardAction className="flex items-center gap-2">

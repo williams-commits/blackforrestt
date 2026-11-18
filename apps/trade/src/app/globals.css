@@ -51,6 +51,40 @@
      themes — this stays dark in both light and dim so the footer reads as a
      stable dark band with white text in either mode. */
   --color-surface-dark: #17202a;
+
+  --term-glass-surface: linear-gradient(
+    135deg,
+    rgb(255 255 255 / 94%) 0%,
+    color-mix(in srgb, var(--color-panel-2) 86%, transparent) 54%,
+    rgb(255 255 255 / 98%) 100%
+  );
+  --term-glass-stat: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-brand) 7%, transparent),
+    rgb(255 255 255 / 82%) 54%,
+    color-mix(in srgb, var(--color-brand) 3%, transparent)
+  );
+  --term-glass-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E");
+  --term-action-brand-gradient: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--color-brand) 94%, black),
+    var(--color-brand)
+  );
+  --term-action-up-gradient: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--color-up) 94%, black),
+    var(--color-up)
+  );
+  --term-action-down-gradient: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--color-down) 94%, black),
+    var(--color-down)
+  );
+  --term-action-neutral-gradient: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--secondary) 92%, black),
+    var(--secondary)
+  );
 }
 
 :root {
@@ -158,6 +192,18 @@ html.dim {
   /* In dim mode the footer darkens further so it still reads as a distinct
      band against the (already dark) canvas. */
   --color-surface-dark: #06090d;
+  --term-glass-surface: linear-gradient(
+    135deg,
+    rgb(0 0 0 / 4%) 0%,
+    color-mix(in srgb, var(--color-panel-2) 12%, transparent) 54%,
+    rgb(0 0 0 / 2.5%) 100%
+  );
+  --term-glass-stat: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-brand) 9%, transparent),
+    rgb(255 255 255 / 1.6%) 54%,
+    color-mix(in srgb, var(--color-brand) 3%, transparent)
+  );
 }
 
 /* Serif prose for long-form / editorial copy. Pairs with mono labels & data. */
@@ -566,6 +612,51 @@ html.dim .bevel-surface {
     inset 0 1px 0 rgb(255 255 255 / 4%),
     0 1px 2px rgb(0 0 0 / 14%);
 }
+
+/* Glass is background-only; opt into noise on stats and major panels. */
+.bevel-surface:is(.bg-card, .bg-canvas, .bg-panel, .bg-panel-2),
+.terminal-ui [data-slot="card"],
+[data-slot="dialog-content"],
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-sub-content"],
+[data-slot="sheet-content"] {
+  background-image: var(--term-glass-surface);
+background-clip: padding-box;
+}
+
+.glass-noise,
+.glass-stat-surface {
+  background-repeat: repeat, no-repeat;
+  background-size: 160px 160px, 100% 100%;
+  background-clip: padding-box;
+}
+.glass-noise {
+  background-image: var(--term-glass-noise), var(--term-glass-surface);
+}
+.glass-stat-surface {
+  background-image: var(--term-glass-noise), var(--term-glass-stat);
+}
+.bevel-surface.glass-noise,
+.terminal-ui [data-slot="card"].glass-noise {
+  background-image: var(--term-glass-noise), var(--term-glass-surface);
+}
+.bevel-surface.glass-stat-surface,
+.terminal-ui [data-slot="card"].glass-stat-surface {
+  background-image: var(--term-glass-noise), var(--term-glass-stat);
+}
+
+.action-gradient-brand { background-image: var(--term-action-brand-gradient); }
+.action-gradient-up { background-image: var(--term-action-up-gradient); }
+.action-gradient-down { background-image: var(--term-action-down-gradient); }
+.action-gradient-neutral { background-image: var(--term-action-neutral-gradient); }
+
+[data-slot="badge"]:not([data-variant="outline"]):not([data-variant="ghost"]):not([data-variant="link"]) {
+  background-image: linear-gradient(135deg, rgb(255 255 255 / 8%), transparent 62%);
+}
+.terminal-ui [data-slot="chip"][aria-pressed="true"] {
+  background-image: var(--term-action-brand-gradient);
+}
+
 /* Content regions inside cards get their separation from spacing, not rules. */
 .account-flat [data-slot="card"] > [data-slot="card-content"] + [data-slot="card-content"],
 .flat-ui [data-slot="card"] > [data-slot="card-content"] + [data-slot="card-content"],

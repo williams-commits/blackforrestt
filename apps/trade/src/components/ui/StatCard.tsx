@@ -33,7 +33,7 @@ export function StatCard({
       <button
         type="button"
         onClick={onClick}
-        className="bevel-surface flex w-full items-start gap-2.5 rounded-xl bg-card p-4 text-left transition-colors hover:bg-accent/50"
+        className="bevel-surface glass-stat-surface flex w-full items-start gap-2.5 rounded-xl bg-card p-4 text-left transition-colors hover:bg-accent/50"
       >
         {icon && <span className="mt-0.5 shrink-0">{icon}</span>}
         <span className="min-w-0 flex-1">{body}</span>
@@ -41,7 +41,7 @@ export function StatCard({
     );
   }
   return (
-    <div className="bevel-surface flex items-start gap-2.5 rounded-xl bg-card p-5">
+    <div className="bevel-surface glass-stat-surface flex items-start gap-2.5 rounded-xl bg-card p-5">
       {icon && <span className="mt-0.5 shrink-0">{icon}</span>}
       <div className="min-w-0 flex-1">{body}</div>
     </div>

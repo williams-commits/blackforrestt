@@ -328,7 +328,7 @@ function fmtUsd(v: number | null | undefined): string {
   return v.toLocaleString(getFormatLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const metricCardClass = "h-10 min-w-0 shrink-0 rounded-lg bg-canvas px-2 py-1 lg:bg-panel-2";
+const metricCardClass = "glass-stat-surface h-10 min-w-0 shrink-0 rounded-lg bg-canvas px-2 py-1 lg:bg-panel-2";
 
 // ── Dropdown menu helpers (Radix items with the terminal look) ───────────────
 

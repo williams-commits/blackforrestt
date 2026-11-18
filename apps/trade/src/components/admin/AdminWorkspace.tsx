@@ -519,7 +519,7 @@ function OverviewPanel() {
 
 function OverviewStatCard({ label, value, icon }: { label: string; value: number; icon?: React.ReactNode }) {
   return (
-    <Card className="shadow-panel">
+    <Card className="glass-stat-surface shadow-panel">
       <CardContent className="flex items-start gap-3 p-4">
         {icon && <IdentityTile tone="brand">{icon}</IdentityTile>}
         <div className="min-w-0">
@@ -533,7 +533,7 @@ function OverviewStatCard({ label, value, icon }: { label: string; value: number
 
 function AdminSummaryCard({ label, value, detail, valueClassName, icon: Icon }: { label: string; value: string; detail?: string; valueClassName?: string; icon: LucideIcon }) {
   return (
-    <Card className="gap-2 py-4 shadow-panel">
+    <Card className="glass-stat-surface gap-2 py-4 shadow-panel">
       <CardHeader className="px-4 py-0">
         <CardTitle className="flex items-center gap-2 text-sm">
           <Icon size={15} strokeWidth={1.8} aria-hidden className="text-muted-foreground" />

@@ -46,6 +46,7 @@ export function ChipGroup<T extends string | number>({
         return (
           <button
             key={String(option.value)}
+            data-slot="chip"
             type="button"
             aria-pressed={selected}
             title={option.title}

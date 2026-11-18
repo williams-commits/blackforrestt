@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, LayoutGrid, UserRound } from "lucide-react";
+import { BadgeCheck, LayoutGrid } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { AccountOverview } from "./AccountOverview";
@@ -102,18 +102,18 @@ interface Props {
   };
 }
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: "overview", label: "Overview" },
-  { key: "positions", label: "Positions" },
-  { key: "transactions", label: "Transactions" },
-  { key: "payments", label: "Payments" },
-  { key: "reports", label: "Reports" },
-  { key: "verification", label: "Verification" },
-  { key: "notifications", label: "Notifications" },
-  { key: "messages", label: "Messages" },
-  { key: "support", label: "Support" },
-  { key: "referrals", label: "Referrals" },
-  { key: "settings", label: "Settings" },
+const TABS: { key: Tab; label: string; description: string }[] = [
+  { key: "overview", label: "Overview", description: "Account balance, equity and trading activity at a glance." },
+  { key: "positions", label: "Positions", description: "Review your open and closed trades." },
+  { key: "transactions", label: "Transactions", description: "Review deposits, withdrawals and account adjustments." },
+  { key: "payments", label: "Payments", description: "Track your deposit and withdrawal requests." },
+  { key: "reports", label: "Reports", description: "Review your trading performance and closed-trade history." },
+  { key: "verification", label: "Verification", description: "Manage identity verification and required documents." },
+  { key: "notifications", label: "Notifications", description: "Stay up to date on activity across your account." },
+  { key: "messages", label: "Messages", description: "View and reply to your account messages." },
+  { key: "support", label: "Support", description: "Get help and manage your support requests." },
+  { key: "referrals", label: "Referrals", description: "Track your referral activity and rewards." },
+  { key: "settings", label: "Settings", description: "Manage your profile and account preferences." },
 ];
 
 /** Grouped account navigation — the information architecture of the portal.
@@ -321,7 +321,8 @@ export function AccountShell(props: Props) {
     return null;
   };
 
-  const activeTabLabel = TABS.find((item) => item.key === tab)?.label ?? "Account";
+  const activeTab = TABS.find((item) => item.key === tab) ?? TABS[0];
+  const activeTabLabel = activeTab.label;
 
   // Keep the browser title in sync with the active tab (clicks, Back/Forward,
   // localStorage restore). Mirrors the server's generateMetadata format:
@@ -398,10 +399,12 @@ export function AccountShell(props: Props) {
         {/* Page heading + contextual action */}
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <IdentityTile size="lg" tone="brand"><UserRound size={20} strokeWidth={2} aria-hidden /></IdentityTile>
+            <IdentityTile size="lg" tone="brand">
+              <TabIcon icon={ACCOUNT_TAB_ICONS[tab] ?? ACCOUNT_TAB_ICONS.overview} size={20} />
+            </IdentityTile>
             <div className="min-w-0">
-              <h1 className="text-2xl font-semibold tracking-tight">My Account</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Manage your trading account, funds and profile.</p>
+              <h1 className="text-2xl font-semibold tracking-tight">{activeTabLabel}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">{activeTab.description}</p>
             </div>
           </div>
           {verificationNeeded && (

@@ -85,10 +85,10 @@ export function AccountBar({
   const showAdmin = session?.user?.role === "admin";
 
   return (
-    <header className="relative z-40 grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(3rem,auto)_auto] items-center gap-x-1 border-b border-border-soft bg-canvas px-2 py-1 shadow-panel lg:flex lg:min-h-12 lg:flex-nowrap lg:gap-2 lg:px-3">
+    <header className="relative z-40 grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(2.5rem,auto)_auto_auto] items-center gap-x-1 border-b border-border-soft bg-canvas px-2 py-1 shadow-panel md:grid-rows-[minmax(3rem,auto)_auto] lg:flex lg:min-h-12 lg:flex-nowrap lg:gap-2 lg:px-3">
       <div className="col-start-1 row-start-1 flex shrink-0 items-center gap-1">
         <WorkspaceMenu symbol={instrument.symbol} showAdmin={showAdmin} />
-        <div className="hidden items-center gap-2 sm:flex">
+        <div className="flex items-center gap-2">
           <Logo inverted={theme === "dim"} />
           <WorkspaceNavigation
             current="trade"
@@ -98,7 +98,7 @@ export function AccountBar({
         </div>
       </div>
 
-      <div className="col-start-2 row-start-1 min-w-0">
+      <div className="col-span-3 row-start-2 min-w-0 md:col-start-2 md:col-span-1 md:row-start-1 lg:col-auto lg:row-auto">
         <InstrumentMarketStatus
           instrument={instrument}
           marketDataMode={marketDataMode}
@@ -108,7 +108,7 @@ export function AccountBar({
         />
       </div>
 
-      <div className="col-span-3 row-start-2 grid w-full min-w-0 grid-cols-[repeat(3,minmax(0,1fr))_auto] items-center gap-1.5 border-t border-border-soft bg-panel px-2 py-1.5 lg:col-auto lg:row-auto lg:w-auto lg:flex-none lg:gap-1.5 lg:border-0 lg:bg-transparent lg:p-0">
+      <div className="col-span-3 row-start-3 grid w-full min-w-0 grid-cols-[repeat(3,minmax(0,1fr))_auto] items-center gap-1.5 border-t border-border-soft bg-panel px-2 py-1.5 md:row-start-2 lg:col-auto lg:row-auto lg:w-auto lg:flex-none lg:gap-1.5 lg:border-0 lg:bg-transparent lg:p-0">
         <Metric label="BALANCE" value={fmtUsd(account?.balance)} className={metricCardClass} />
         <Metric label="EQUITY" value={fmtUsd(account?.equity)} className={metricCardClass} />
         <Metric
@@ -123,7 +123,7 @@ export function AccountBar({
               type="button"
               aria-label="Show more account metrics"
               title="More account metrics"
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-canvas text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand lg:bg-panel"
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-canvas text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand lg:bg-panel"
             >
               <Ellipsis size={18} strokeWidth={2} aria-hidden />
             </button>
@@ -300,7 +300,7 @@ function Metric({
 
 function WorkspaceMenu({ symbol, showAdmin }: { symbol: string; showAdmin: boolean }) {
   return (
-    <div className="xl:hidden">
+    <div className="hidden md:block xl:hidden">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button

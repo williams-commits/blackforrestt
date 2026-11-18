@@ -9,6 +9,7 @@ import { InstrumentIcon } from "@/components/icons/InstrumentIcon";
 import { useForexStore } from "@/lib/store";
 import type { InstrumentCategory } from "@/lib/types";
 import { Input } from "@/components/ui/Input";
+import { cn } from "@/lib/utils";
 
 interface PaletteInstrument {
   symbol: string;
@@ -225,13 +226,23 @@ export function GlobalSearchPalette() {
 }
 
 /** Icon trigger for headers (account portal banner, terminal account bar). */
-export function TradeSearchButton({ className = "" }: { className?: string }) {
+export function TradeSearchButton({
+  className = "",
+  size = "sm",
+}: {
+  className?: string;
+  size?: "sm" | "md";
+}) {
   return (
     <button
       type="button"
       onClick={openTradeSearch}
       aria-label="Search instruments"
-      className={`flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${className}`}
+      className={cn(
+        "flex shrink-0 items-center justify-center text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
+        size === "md" ? "size-10 rounded-lg" : "size-8 rounded-md",
+        className,
+      )}
     >
       <Search size={15} />
     </button>

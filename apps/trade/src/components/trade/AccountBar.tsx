@@ -98,7 +98,7 @@ export function AccountBar({
         </div>
       </div>
 
-      <div className="col-span-3 row-start-2 min-w-0 md:col-start-2 md:col-span-1 md:row-start-1 lg:col-auto lg:row-auto">
+      <div className="col-span-3 row-start-2 min-w-0 min-[480px]:col-start-2 min-[480px]:col-span-1 min-[480px]:row-start-1 lg:col-auto lg:row-auto">
         <InstrumentMarketStatus
           instrument={instrument}
           marketDataMode={marketDataMode}
@@ -108,7 +108,7 @@ export function AccountBar({
         />
       </div>
 
-      <div className="col-span-3 row-start-3 grid w-full min-w-0 grid-cols-[repeat(3,minmax(0,1fr))_auto] items-center gap-1.5 border-t border-border-soft bg-panel px-2 py-1.5 md:row-start-2 lg:col-auto lg:row-auto lg:w-auto lg:flex-none lg:gap-1.5 lg:border-0 lg:bg-transparent lg:p-0">
+      <div className="col-span-3 row-start-3 grid w-full min-w-0 grid-cols-[repeat(3,minmax(0,1fr))_auto] items-center gap-1.5 border-t border-border-soft bg-panel px-2 py-1.5 md:row-start-2 lg:col-auto lg:row-auto lg:w-auto lg:flex-none lg:gap-1.5 lg:border-0 lg:bg-transparent lg:p-0 mt-1 lg:m-0 rounded-lg">
         <Metric label="BALANCE" value={fmtUsd(account?.balance)} className={metricCardClass} />
         <Metric label="EQUITY" value={fmtUsd(account?.equity)} className={metricCardClass} />
         <Metric
@@ -169,17 +169,17 @@ export function AccountBar({
       </div>
 
       <div className="col-start-3 row-start-1 ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5 lg:col-auto lg:row-auto lg:ml-auto">
-        <TradeSearchButton className="bg-panel" />
+        <TradeSearchButton className="bg-panel" size="md" />
         <TerminalNotifications />
         <span className="hidden sm:block">
-          <ThemeToggle className="bg-panel" />
+          <ThemeToggle className="size-10 rounded-lg bg-panel" />
         </span>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
               aria-label="Open account menu"
-              className="flex h-9 items-center gap-2 rounded-lg bg-panel-2 px-1.5 transition-colors duration-150 hover:bg-panel focus-visible:outline-2 focus-visible:outline-brand sm:h-10 sm:px-2"
+              className="flex h-10 items-center gap-2 rounded-lg bg-panel-2 px-1.5 transition-colors duration-150 hover:bg-panel focus-visible:outline-2 focus-visible:outline-brand sm:px-2"
             >
               <UserAvatar
                 identity={userIdentity}
@@ -306,7 +306,7 @@ function WorkspaceMenu({ symbol, showAdmin }: { symbol: string; showAdmin: boole
           <button
             type="button"
             aria-label="Open workspace navigation"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-panel text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
+            className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-panel text-text-muted transition-colors hover:bg-panel-2 hover:text-text focus-visible:outline-2 focus-visible:outline-brand"
           >
             <Menu size={16} strokeWidth={2} aria-hidden />
           </button>

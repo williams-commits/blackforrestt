@@ -148,7 +148,10 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
           Notifications
         </CardTitle>
         <CardDescription>Your full notification history — available whenever you sign in.</CardDescription>
-        <ResponsiveFilters className="col-span-full flex w-full min-w-0 flex-col gap-2 rounded-xl bg-muted/30 px-3 py-2 md:flex-row md:items-center md:gap-3 md:px-4">
+        <ResponsiveFilters
+          rootClassName="col-span-full w-full min-w-0"
+          className="flex w-full min-w-0 flex-col gap-2 rounded-xl bg-muted/30 px-3 py-2 md:flex-row md:items-center md:gap-3 md:px-4"
+        >
           <div className="flex w-full min-w-0 flex-col items-stretch gap-2 *:min-w-0 **:data-[slot=select-trigger]:h-8 **:data-[slot=select-trigger]:rounded-lg **:data-[slot=select-trigger]:bg-background/70 **:data-[slot=select-trigger]:px-2.5 **:data-[slot=select-trigger]:text-xs md:flex-row md:items-center md:gap-1.5">
             <Select value={group} onValueChange={(value) => { setGroup(value); setPage(1); setAccumulated([]); }}>
               <SelectTrigger size="sm" className="w-full md:w-48" aria-label="Filter notifications by category">

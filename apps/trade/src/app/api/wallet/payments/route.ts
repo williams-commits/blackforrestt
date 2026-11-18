@@ -3,6 +3,11 @@ import { auth } from "@/auth";
 import { resolveUserId } from "@/server/db";
 import { listCustomerPayments } from "@/server/payments";
 import { paymentMethodLabel, revealMethodDetails, type PaymentMethod } from "@/server/paymentMethodDetails";
+import {
+  customerFinanceDescription,
+  customerFinanceReference,
+  customerPaymentType,
+} from "@/lib/customerFinancePresentation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,21 +22,32 @@ export async function GET() {
   return NextResponse.json({
     requests: requests.map((request) => ({
       id: request.id,
-      type: request.type,
+      type: customerPaymentType(request.type, Number(request.transaction.amount)),
       status: request.status,
-      amount: request.amount.toFixed(8),
+      amount: request.type === "ADMIN_ADJUSTMENT"
+        ? request.transaction.amount.abs().toFixed(8)
+        : request.amount.toFixed(8),
+      reason: request.type === "ADMIN_ADJUSTMENT"
+        ? customerFinanceDescription(request.type, request.transaction.description)
+        : null,
       asset: request.asset,
-      method: request.method,
-      methodLabel: paymentMethodLabel(request.method as PaymentMethod),
+      method: request.type === "ADMIN_ADJUSTMENT" ? "MANUAL" : request.method,
+      methodLabel: request.type === "ADMIN_ADJUSTMENT"
+        ? "Manual"
+        : paymentMethodLabel(request.method as PaymentMethod),
       methodDetailsSummary: request.methodDetailsSummary ?? request.beneficiarySummary,
       methodDetails: revealMethodDetails(request.methodDetailsEncrypted ?? request.beneficiaryEncrypted),
-      userReference: request.userReference,
+      reference: customerFinanceReference(
+        request.type,
+        request.userReference ?? request.externalReference,
+        request.transaction.id,
+      ),
       beneficiarySummary: request.beneficiarySummary,
       riskHoldUntil: request.riskHoldUntil?.toISOString() ?? null,
       reconciliationStatus: request.reconciliationStatus,
       reviewerNote: request.reviewerNote,
       createdAt: request.createdAt.toISOString(),
-      reviewedAt: request.reviewedAt?.toISOString() ?? null,
+      reviewedAt: request.type === "ADMIN_ADJUSTMENT" ? null : request.reviewedAt?.toISOString() ?? null,
       proofs: request.proofs.map((proof) => ({
         id: proof.id,
         status: proof.status,
@@ -41,10 +57,14 @@ export async function GET() {
         uploadedAt: proof.uploadedAt.toISOString(),
         finalizedAt: proof.finalizedAt?.toISOString() ?? null,
       })),
-      events: request.events.map((event) => ({
-        type: event.type,
-        createdAt: event.createdAt.toISOString(),
-      })),
+      events: request.type === "ADMIN_ADJUSTMENT"
+        ? request.events
+          .filter((event) => event.type === "APPROVED")
+          .map((event) => ({ type: "CONFIRMED", createdAt: event.createdAt.toISOString() }))
+        : request.events.map((event) => ({
+          type: event.type,
+          createdAt: event.createdAt.toISOString(),
+        })),
     })),
   });
 }

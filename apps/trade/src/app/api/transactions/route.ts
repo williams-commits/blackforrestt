@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma, resolveUserId } from "@/server/db";
 import { auth } from "@/auth";
+import {
+  customerFinanceDescription,
+  customerFinanceReference,
+  customerTransactionType,
+} from "@/lib/customerFinancePresentation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,16 +46,19 @@ export async function GET(req: Request) {
   const page = hasMore ? txns.slice(0, limit) : txns;
 
   return NextResponse.json({
-    transactions: page.map((transaction) => ({
-      id: transaction.id,
-      type: transaction.type,
-      status: transaction.status,
-      amount: Number(transaction.amount),
-      asset: transaction.asset,
-      description: transaction.description,
-      reference: transaction.reference,
-      createdAt: transaction.createdAt.toISOString(),
-    })),
+    transactions: page.map((transaction) => {
+      const amount = Number(transaction.amount);
+      return {
+        id: transaction.id,
+        type: customerTransactionType(transaction.type, amount),
+        status: transaction.status,
+        amount,
+        asset: transaction.asset,
+        description: customerFinanceDescription(transaction.type, transaction.description),
+        reference: customerFinanceReference(transaction.type, transaction.reference, transaction.id),
+        createdAt: transaction.createdAt.toISOString(),
+      };
+    }),
     nextCursor: hasMore ? page.at(-1)?.id ?? null : null,
   });
 }

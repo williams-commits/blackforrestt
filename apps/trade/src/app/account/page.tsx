@@ -13,6 +13,11 @@ import { currentBrandProfile } from "@/lib/branding";
 import { resolveUserSettings } from "@/server/userSettings";
 import { adminMessageThreads, countUnreadDirectMessages } from "@/server/adminUserManagement";
 import { WorkspaceNavigation } from "@/components/WorkspaceNavigation";
+import {
+  customerFinanceDescription,
+  customerFinanceReference,
+  customerTransactionType,
+} from "@/lib/customerFinancePresentation";
 
 export const dynamic = "force-dynamic";
 
@@ -226,12 +231,12 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           }))}
           transactions={transactions.map((t) => ({
             id: t.id,
-            type: t.type,
+            type: customerTransactionType(t.type, Number(t.amount)),
             status: t.status,
             amount: Number(t.amount),
             asset: t.asset,
-            description: t.description,
-            reference: t.reference,
+            description: customerFinanceDescription(t.type, t.description),
+            reference: customerFinanceReference(t.type, t.reference, t.id),
             createdAt: t.createdAt.toISOString(),
           }))}
           kyc={kyc ? {

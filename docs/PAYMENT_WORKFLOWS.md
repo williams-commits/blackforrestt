@@ -80,6 +80,22 @@ Maximum upload size is controlled by `PAYMENT_PROOF_MAX_BYTES`.
 5. Reversal posts compensating entries; original financial records remain immutable.
 6. Reconciliation compares the internal request with the independent provider statement.
 
+## Administrative balance adjustments
+
+Admin credit, debit, advance, and advance repayment commands are internal ledger
+operations, not external deposits or withdrawals. Each new command creates an
+approved `ADMIN_ADJUSTMENT` payment-history record linked to its existing
+`ADJUSTMENT` transaction in the same database transaction. The signed linked
+transaction determines whether the customer sees a deposit or withdrawal. The
+customer sees the audited reason without the internal action prefix; internal
+references remain available for idempotency and audit. Customer history shows
+a stable `TXN-` reference derived from the linked transaction instead.
+
+These records do not post to cash clearing and are not eligible for external
+payment preparation, settlement, reversal, or reconciliation. Their
+reconciliation state is `NOT_REQUIRED`. Existing adjustment history is not
+backfilled.
+
 ## Local verification
 
 ```bash

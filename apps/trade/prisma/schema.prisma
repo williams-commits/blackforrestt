@@ -472,6 +472,7 @@ model KycDocumentAccess {
 enum PaymentRequestType {
   DEPOSIT
   WITHDRAWAL
+  ADMIN_ADJUSTMENT
 }
 
 enum PaymentRequestStatus {
@@ -487,6 +488,7 @@ enum PaymentReconciliationStatus {
   PENDING
   MATCHED
   MISMATCHED
+  NOT_REQUIRED
 }
 
 enum PaymentProofStatus {

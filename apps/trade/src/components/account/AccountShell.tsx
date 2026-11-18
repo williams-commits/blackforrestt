@@ -69,7 +69,7 @@ interface Props {
   }[];
   transactions: {
     id: string;
-    type: "DEPOSIT" | "WITHDRAW" | "BONUS" | "ADJUSTMENT" | "COMMISSION" | "SWAP" | "TRADE_PNL" | "FEE" | "REVERSAL" | "NEGATIVE_BALANCE_PROTECTION";
+    type: "DEPOSIT" | "WITHDRAW" | "BONUS" | "COMMISSION" | "SWAP" | "TRADE_PNL" | "FEE" | "REVERSAL" | "NEGATIVE_BALANCE_PROTECTION";
     status: "PENDING" | "COMPLETED" | "REJECTED" | "CANCELLED" | "REVERSED";
     amount: number;
     asset: string;

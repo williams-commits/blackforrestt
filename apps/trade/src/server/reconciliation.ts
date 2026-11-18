@@ -508,7 +508,11 @@ async function checkPayments(): Promise<PendingCase[]> {
   let mismatchCursor: string | undefined;
   for (;;) {
     const mismatched = await prisma.paymentRequest.findMany({
-      where: { status: { in: ["APPROVED", "REVERSED"] }, reconciliationStatus: "MISMATCHED" },
+      where: {
+        type: { in: ["DEPOSIT", "WITHDRAWAL"] },
+        status: { in: ["APPROVED", "REVERSED"] },
+        reconciliationStatus: "MISMATCHED",
+      },
       orderBy: { id: "asc" },
       take: 250,
       ...(mismatchCursor ? { cursor: { id: mismatchCursor }, skip: 1 } : {}),
@@ -529,6 +533,7 @@ async function checkPayments(): Promise<PendingCase[]> {
   for (;;) {
     const stale = await prisma.paymentRequest.findMany({
       where: {
+        type: { in: ["DEPOSIT", "WITHDRAWAL"] },
         status: "APPROVED",
         reconciliationStatus: "PENDING",
         reviewedAt: { lt: staleThreshold },

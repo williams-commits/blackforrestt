@@ -210,8 +210,56 @@ export async function adjustUserBalance(input: {
         reference: transactionReference,
       },
     });
-    const projection = await refreshLedgerProjections(tx, input.userId);
+    let paymentRequestId: string | null = null;
     if (!posted.replayed) {
+      const createdAt = new Date();
+      const approvedAt = new Date(createdAt.getTime() + 1);
+      const paymentRequest = await tx.paymentRequest.create({
+        data: {
+          userId: input.userId,
+          transactionId: transaction.id,
+          type: "ADMIN_ADJUSTMENT",
+          status: "APPROVED",
+          amount,
+          asset: "USD",
+          method: "ADMIN_ADJUSTMENT",
+          reviewedBy: input.actorId,
+          reviewedAt: approvedAt,
+          reconciliationStatus: "NOT_REQUIRED",
+          createdAt,
+        },
+      });
+      paymentRequestId = paymentRequest.id;
+      const eventMetadata = {
+        type: "ADMIN_ADJUSTMENT",
+        action: input.action,
+        amount: amount.toFixed(8),
+        asset: "USD",
+        reason: input.reason.trim(),
+        transactionId: transaction.id,
+        ledgerTransactionId: posted.transaction.id,
+      };
+      await tx.paymentEvent.createMany({
+        data: [
+          {
+            paymentRequestId: paymentRequest.id,
+            type: "CREATED",
+            actorId: input.actorId,
+            metadata: eventMetadata,
+            createdAt,
+          },
+          {
+            paymentRequestId: paymentRequest.id,
+            type: "APPROVED",
+            actorId: input.actorId,
+            metadata: eventMetadata,
+            createdAt: approvedAt,
+          },
+        ],
+      });
+    }
+    const projection = await refreshLedgerProjections(tx, input.userId);
+    if (paymentRequestId) {
       await appendAuditEvent(tx, {
         actorId: input.actorId,
         action: {
@@ -229,6 +277,7 @@ export async function adjustUserBalance(input: {
           reason: input.reason.trim(),
           ledgerTransactionId: posted.transaction.id,
           customerTransactionId: transaction.id,
+          paymentRequestId,
         },
       });
     }

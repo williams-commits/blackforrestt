@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     if (!parsed.success) return NextResponse.json({ error: "Invalid query." }, { status: 400 });
 
     const requests = await prisma.paymentRequest.findMany({
-      where: { status: parsed.data.status },
+      where: { status: parsed.data.status, type: { in: ["DEPOSIT", "WITHDRAWAL"] } },
       take: parsed.data.limit,
       orderBy: { createdAt: "desc" },
       include: {

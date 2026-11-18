@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import {
   type PaymentEventType,
   type PaymentProofStatus,
+  type PaymentRequestType,
   type Prisma,
 } from "@prisma/client";
 import { prisma, withSerializableRetry } from "./db";
@@ -48,6 +49,16 @@ export interface BeneficiaryDetails {
 export class PaymentError extends Error {
   constructor(message: string, readonly status = 400, readonly code?: string) {
     super(message);
+  }
+}
+
+function assertExternalPaymentRequest(request: { type: PaymentRequestType }): void {
+  if (request.type === "ADMIN_ADJUSTMENT") {
+    throw new PaymentError(
+      "Administrative balance adjustments are already confirmed internally and cannot use external payment actions.",
+      409,
+      "INTERNAL_ADJUSTMENT",
+    );
   }
 }
 
@@ -492,6 +503,7 @@ export async function preparePayment(input: {
       include: { proofs: { where: { deletedAt: null }, select: { status: true } } },
     });
     if (!request) throw new PaymentError("Payment request not found.", 404);
+    assertExternalPaymentRequest(request);
     const payload = { note: input.note?.trim() || null };
     if (await replayedCommand(tx, { paymentRequestId: request.id, type: "PREPARED", commandKey: input.commandKey, payload })) {
       return { status: request.status, replayed: true };
@@ -573,6 +585,7 @@ export async function approvePayment(input: {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`payment:${input.paymentRequestId}`}))`;
     const request = await tx.paymentRequest.findUnique({ where: { id: input.paymentRequestId }, include: { transaction: true } });
     if (!request) throw new PaymentError("Payment request not found.", 404);
+    assertExternalPaymentRequest(request);
     // In simple mode, auto-generate a unique settlement reference so the admin
     // doesn't have to invent one. This avoids the (asset, externalReference)
     // unique-constraint collision when approving many payments quickly.
@@ -694,6 +707,7 @@ export async function rejectPayment(input: {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`payment:${input.paymentRequestId}`}))`;
     const request = await tx.paymentRequest.findUnique({ where: { id: input.paymentRequestId }, include: { transaction: true } });
     if (!request) throw new PaymentError("Payment request not found.", 404);
+    assertExternalPaymentRequest(request);
     const payload = { note };
     if (await replayedCommand(tx, { paymentRequestId: request.id, type: "REJECTED", commandKey: input.commandKey, payload })) {
       return { status: request.status, replayed: true };
@@ -762,6 +776,7 @@ export async function cancelPayment(input: {
       include: { transaction: true, proofs: { where: { deletedAt: null }, select: { storageKey: true, bucket: true } } },
     });
     if (!request || request.userId !== input.userId) throw new PaymentError("Payment request not found.", 404);
+    assertExternalPaymentRequest(request);
     const payload: Record<string, string | null> = {};
     if (await replayedCommand(tx, { paymentRequestId: request.id, type: "CANCELLED", commandKey: input.commandKey, payload })) {
       return { status: request.status, replayed: true, proofs: [] as Array<{ storageKey: string; bucket: string }> };
@@ -820,6 +835,7 @@ export async function reversePayment(input: {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`payment:${input.paymentRequestId}`}))`;
     const request = await tx.paymentRequest.findUnique({ where: { id: input.paymentRequestId }, include: { transaction: true } });
     if (!request) throw new PaymentError("Payment request not found.", 404);
+    assertExternalPaymentRequest(request);
     const payload = { note };
     if (await replayedCommand(tx, { paymentRequestId: request.id, type: "REVERSED", commandKey: input.commandKey, payload })) {
       return { status: request.status, replayed: true };
@@ -883,6 +899,7 @@ export async function reconcilePayment(input: {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`payment:${input.paymentRequestId}`}))`;
     const request = await tx.paymentRequest.findUnique({ where: { id: input.paymentRequestId } });
     if (!request) throw new PaymentError("Payment request not found.", 404);
+    assertExternalPaymentRequest(request);
     const payload = {
       reconciliationReference: input.reconciliationReference,
       settledAmount: input.settledAmount.toFixed(8),
@@ -930,6 +947,7 @@ export async function listCustomerPayments(userId: string) {
     orderBy: { createdAt: "desc" },
     take: 100,
     include: {
+      transaction: { select: { id: true, amount: true, description: true, reference: true } },
       proofs: { where: { deletedAt: null }, orderBy: { createdAt: "desc" } },
       events: { orderBy: { createdAt: "desc" }, take: 50 },
     },

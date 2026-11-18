@@ -5,14 +5,14 @@ import { CsvExportButton } from "@/components/ui/CsvExport";
 import { DateInput } from "@/components/ui/Input";
 import { StatCard } from "@/components/ui/StatCard";
 import { fmtDateTime } from "@/lib/dates";
-import { ArrowDownToLine, ArrowUpFromLine, CandlestickChart, Gift, Percent, Receipt, Repeat, ShieldCheck, SlidersHorizontal, Undo2, type LucideIcon } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, CandlestickChart, Gift, Percent, Receipt, Repeat, ShieldCheck, Undo2, type LucideIcon } from "lucide-react";
 import { IdentityTile } from "@/components/ui/Initial";
 import { RecordList, RecordStatusChip, type RecordDetailMeta } from "@/components/ui/RecordList";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Txn {
   id: string;
-  type: "DEPOSIT" | "WITHDRAW" | "BONUS" | "ADJUSTMENT" | "COMMISSION" | "SWAP" | "TRADE_PNL" | "FEE" | "REVERSAL" | "NEGATIVE_BALANCE_PROTECTION";
+  type: "DEPOSIT" | "WITHDRAW" | "BONUS" | "COMMISSION" | "SWAP" | "TRADE_PNL" | "FEE" | "REVERSAL" | "NEGATIVE_BALANCE_PROTECTION";
   status: "PENDING" | "COMPLETED" | "REJECTED" | "CANCELLED" | "REVERSED";
   amount: number;
   asset: string;
@@ -22,7 +22,7 @@ interface Txn {
 }
 
 const TYPE_LABELS: Record<Txn["type"], string> = {
-  DEPOSIT: "Deposit", WITHDRAW: "Withdrawal", BONUS: "Bonus", ADJUSTMENT: "Adjustment",
+  DEPOSIT: "Deposit", WITHDRAW: "Withdrawal", BONUS: "Bonus",
   COMMISSION: "Commission", SWAP: "Swap", TRADE_PNL: "Trade P/L", FEE: "Fee",
   REVERSAL: "Reversal", NEGATIVE_BALANCE_PROTECTION: "Balance protection",
 };
@@ -30,7 +30,7 @@ const TYPE_LABELS: Record<Txn["type"], string> = {
 const TYPE_TONES: Record<Txn["type"], "up" | "down" | "warn" | "muted"> = {
   DEPOSIT: "up", BONUS: "warn", NEGATIVE_BALANCE_PROTECTION: "up",
   WITHDRAW: "down", FEE: "down", TRADE_PNL: "warn", COMMISSION: "muted",
-  SWAP: "muted", ADJUSTMENT: "muted", REVERSAL: "muted",
+  SWAP: "muted", REVERSAL: "muted",
 };
 
 /** Per-type Lucide identity — one icon language for rows and the hero. */
@@ -43,7 +43,6 @@ const TYPE_ICONS: Record<Txn["type"], LucideIcon> = {
   SWAP: Repeat,
   FEE: Receipt,
   REVERSAL: Undo2,
-  ADJUSTMENT: SlidersHorizontal,
   NEGATIVE_BALANCE_PROTECTION: ShieldCheck,
 };
 

@@ -32,16 +32,16 @@ interface PaymentView {
   type: "DEPOSIT" | "WITHDRAWAL";
   status: "PENDING" | "AWAITING_APPROVAL" | "APPROVED" | "REJECTED" | "CANCELLED" | "REVERSED";
   amount: string;
+  reason: string | null;
+  reference: string | null;
   asset: string;
   method: string;
   methodLabel: string;
-  userReference: string | null;
-  externalReference: string | null;
   methodDetailsSummary: string | null;
   methodDetails: Record<string, string> | null;
   beneficiarySummary: string | null;
   riskHoldUntil: string | null;
-  reconciliationStatus: "PENDING" | "MATCHED" | "MISMATCHED";
+  reconciliationStatus: "PENDING" | "MATCHED" | "MISMATCHED" | "NOT_REQUIRED";
   reviewerNote: string | null;
   createdAt: string;
   reviewedAt: string | null;
@@ -72,6 +72,7 @@ const EVENT_LABELS: Record<string, string> = {
   PROOF_BLOCKED: "Document blocked",
   PREPARED: "Prepared for review",
   APPROVED: "Approved by finance",
+  CONFIRMED: "Confirmed",
   REJECTED: "Rejected",
   CANCELLED: "Cancelled",
   REVERSED: "Reversed",
@@ -85,8 +86,19 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1_048_576).toFixed(1)} MB`;
 }
 
-/** Payment requests on the enterprise RecordList — proof upload, cancel and
- *  full settlement details live in the side-slide detail panel. */
+function isCredit(request: PaymentView): boolean {
+  return request.type === "DEPOSIT";
+}
+
+function paymentAmount(request: PaymentView): number {
+  return Number(request.amount);
+}
+
+function paymentTypeLabel(request: PaymentView): string {
+  return request.type === "DEPOSIT" ? "Deposit" : "Withdrawal";
+}
+
+/** Payment history on the enterprise RecordList, with details in the side panel. */
 export function PaymentTimeline() {
   const [busy, setBusy] = useState<string | null>(null);
   // Action failures (cancel/upload) are distinct from query failures.
@@ -202,33 +214,35 @@ export function PaymentTimeline() {
 
       <RecordList<PaymentView>
         ariaLabel="Payment"
-        title="Payment requests"
-        count={`${filtered.length} requests`}
-        description="Deposit proofs are required and verified before finance review."
+        title="Payment history"
+        count={`${filtered.length} entries`}
+        description="Deposits and withdrawals, with status and settlement details."
         rows={filtered}
         rowKey={(r) => r.id}
         loading={loading}
         search={{
-          placeholder: "Search type, status, amount, method, or reference…",
-          text: (r) => `${r.id} ${r.type} ${r.status} ${r.asset} ${r.amount} ${r.method} ${r.methodLabel} ${r.userReference ?? ""} ${r.externalReference ?? ""} ${r.reviewerNote ?? ""}`,
+          placeholder: "Search type, status, amount, method, reason, or reference…",
+          text: (r) => `${r.id} ${r.type} ${r.status} ${r.asset} ${r.amount} ${r.method} ${r.methodLabel} ${r.reason ?? ""} ${r.reference ?? ""} ${r.reviewerNote ?? ""}`,
         }}
         leading={(r) => ({
-          icon: r.type === "DEPOSIT"
+          icon: isCredit(r)
             ? <ArrowDownToLine size={15} strokeWidth={2} aria-hidden />
             : <ArrowUpFromLine size={15} strokeWidth={2} aria-hidden />,
-          tone: r.type === "DEPOSIT" ? "up" : "down",
-          title: `${r.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} · ${r.asset} ${r.amount}`,
-          secondary: `${r.methodLabel} · ${fmtDateTime(r.createdAt)}`,
+          tone: isCredit(r) ? "up" : "down",
+          title: `${paymentTypeLabel(r)} · ${r.asset} ${paymentAmount(r).toFixed(2)}`,
+          secondary: `${r.reason ?? r.methodLabel} · ${fmtDateTime(r.createdAt)}`,
         })}
         columns={[
           { key: "reference", label: "Reference", render: (r) => (
-            <span className="font-mono text-xs text-muted-foreground">{r.userReference ?? r.externalReference ?? "—"}</span>
+            <span className="font-mono text-xs text-muted-foreground">{r.reference ?? "—"}</span>
           ) },
           { key: "status", label: "Status", render: (r) => (
             <RecordStatusChip tone={STATUS_TONES[r.status]}>{r.status.replaceAll("_", " ")}</RecordStatusChip>
           ) },
           { key: "amount", label: "Amount", sortable: true, align: "right", render: (r) => (
-            <span className="font-semibold tabular-nums">{Number(r.amount).toFixed(2)}</span>
+            <span className={`font-semibold tabular-nums ${isCredit(r) ? "text-up" : "text-down"}`}>
+              {paymentAmount(r).toFixed(2)}
+            </span>
           ) },
           { key: "createdAt", label: "Created", sortable: true, align: "right", render: (r) => (
             <span className="text-xs text-muted-foreground tabular-nums">{fmtDateTime(r.createdAt)}</span>
@@ -236,7 +250,7 @@ export function PaymentTimeline() {
         ]}
         sortValue={(r, key) => {
           switch (key) {
-            case "amount": return Number(r.amount);
+            case "amount": return paymentAmount(r);
             case "createdAt": return new Date(r.createdAt).getTime();
             default: return String((r as unknown as Record<string, unknown>)[key] ?? "");
           }
@@ -310,36 +324,38 @@ function PaymentDetailSheet({
   // Bank and crypto deposits settle against free-form transfer references,
   // so a scanned receipt is mandatory. Card deposits are verified via the
   // processor reference — a receipt is optional.
-  const proofRequired = request.type === "DEPOSIT" && request.method !== "CARD" && !hasCleanProof;
+  const proofRequired = request.type === "DEPOSIT" && request.method !== "CARD" && request.method !== "MANUAL" && !hasCleanProof;
   const canUploadSupport = request.status === "PENDING"
+    && request.method !== "MANUAL"
     && (proofRequired || request.type === "WITHDRAWAL" || (request.type === "DEPOSIT" && request.method === "CARD"));
 
   return (
     <Sheet open onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-md">
         <SheetHeader className="space-y-1 pb-2">
-          <SheetTitle>{request.type === "DEPOSIT" ? "Deposit Detail" : "Withdrawal Detail"}</SheetTitle>
+          <SheetTitle>{`${paymentTypeLabel(request)} Detail`}</SheetTitle>
           <SheetDescription>{request.methodLabel}</SheetDescription>
         </SheetHeader>
         <div className="space-y-5 px-4 pb-6">
           <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 px-4 py-6 text-center">
-            <IdentityTile size="lg" tone={request.type === "DEPOSIT" ? "up" : "down"}>
-              {request.type === "DEPOSIT"
+            <IdentityTile size="lg" tone={isCredit(request) ? "up" : "down"}>
+              {isCredit(request)
                 ? <ArrowDownToLine size={20} strokeWidth={2} aria-hidden />
                 : <ArrowUpFromLine size={20} strokeWidth={2} aria-hidden />}
             </IdentityTile>
-            <div className="text-sm font-medium">{request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"}</div>
+            <div className="text-sm font-medium">{paymentTypeLabel(request)}</div>
             <div className="text-2xl font-semibold tabular-nums">
-              {Number(request.amount).toFixed(2)} <span className="text-sm font-normal text-muted-foreground">{request.asset}</span>
+              {paymentAmount(request).toFixed(2)} <span className="text-sm font-normal text-muted-foreground">{request.asset}</span>
             </div>
             <RecordStatusChip tone={STATUS_TONES[request.status]}>{request.status.replaceAll("_", " ")}</RecordStatusChip>
           </div>
 
           <dl className="space-y-3">
-            <DetailRow label="Type" value={request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} />
+            <DetailRow label="Type" value={paymentTypeLabel(request)} />
             <DetailRow label="Asset" value={request.asset} />
             <DetailRow label="Method" value={request.methodLabel} />
-            {request.userReference && <DetailRow label="Your reference" value={<span className="break-all font-mono text-xs">{request.userReference}</span>} />}
+            {request.reason && <DetailRow label="Reason" value={request.reason} />}
+            {request.reference && <DetailRow label="Reference" value={<span className="break-all font-mono text-xs">{request.reference}</span>} />}
             <DetailRow label="Created" value={fmtDateTime(request.createdAt)} />
             {request.reviewedAt && <DetailRow label="Reviewed" value={fmtDateTime(request.reviewedAt)} />}
             {request.methodDetailsSummary && <DetailRow label="Method details" value={request.methodDetailsSummary} />}
@@ -347,12 +363,12 @@ function PaymentDetailSheet({
             {request.riskHoldUntil && new Date(request.riskHoldUntil) > new Date() && (
               <DetailRow label="Cooling-off until" value={<span className="text-primary">{fmtDateTime(request.riskHoldUntil)}</span>} />
             )}
-            <DetailRow label="Reconciliation" value={
+            {request.reconciliationStatus !== "NOT_REQUIRED" && <DetailRow label="External reconciliation" value={
               <RecordStatusChip tone={request.reconciliationStatus === "MATCHED" ? "up" : request.reconciliationStatus === "MISMATCHED" ? "down" : "muted"}>
                 {request.reconciliationStatus}
               </RecordStatusChip>
-            } />
-            <DetailRow label="Documents" value={`${request.proofs.length} uploaded`} />
+            } />}
+            {request.method !== "MANUAL" && <DetailRow label="Documents" value={`${request.proofs.length} uploaded`} />}
             {request.reviewerNote && <DetailRow label="Finance note" value={request.reviewerNote} />}
           </dl>
 
@@ -363,7 +379,9 @@ function PaymentDetailSheet({
                 {[...request.events].reverse().map((event, index) => (
                   <li key={`${event.type}-${index}`} className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2.5 gap-y-1 text-xs sm:flex sm:items-center">
                     <span className={`row-span-2 mt-1 size-1.5 shrink-0 rounded-full sm:mt-0 ${index === request.events.length - 1 ? "bg-primary" : "bg-muted-foreground/50"}`} aria-hidden />
-                    <span className="min-w-0 font-medium text-foreground">{EVENT_LABELS[event.type] ?? event.type.replaceAll("_", " ").toLowerCase()}</span>
+                    <span className="min-w-0 font-medium text-foreground">
+                      {EVENT_LABELS[event.type] ?? event.type.replaceAll("_", " ").toLowerCase()}
+                    </span>
                     <span className="col-start-2 min-w-0 text-muted-foreground tabular-nums sm:ml-auto sm:text-right">{fmtDateTime(event.createdAt)}</span>
                   </li>
                 ))}

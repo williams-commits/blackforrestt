@@ -396,7 +396,7 @@ export function AccountShell(props: Props) {
         </button>
 
         {/* Page heading + contextual action */}
-        <div className="bevel-surface mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card p-4">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <IdentityTile size="lg" tone="brand"><UserRound size={20} strokeWidth={2} aria-hidden /></IdentityTile>
             <div className="min-w-0">

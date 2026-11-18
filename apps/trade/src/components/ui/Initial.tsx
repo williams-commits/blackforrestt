@@ -36,7 +36,7 @@ export function IdentityTile({
     <span
       aria-hidden
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-full",
+        "flex shrink-0 items-center justify-center rounded-2xl",
         tones[tone],
         sizes[size],
         className,

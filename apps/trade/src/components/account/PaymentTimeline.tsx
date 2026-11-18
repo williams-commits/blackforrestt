@@ -339,7 +339,7 @@ function PaymentDetailSheet({
             <DetailRow label="Type" value={request.type === "DEPOSIT" ? "Deposit" : "Withdrawal"} />
             <DetailRow label="Asset" value={request.asset} />
             <DetailRow label="Method" value={request.methodLabel} />
-            {request.userReference && <DetailRow label="Your reference" value={<span className="font-mono text-xs">{request.userReference}</span>} />}
+            {request.userReference && <DetailRow label="Your reference" value={<span className="break-all font-mono text-xs">{request.userReference}</span>} />}
             <DetailRow label="Created" value={fmtDateTime(request.createdAt)} />
             {request.reviewedAt && <DetailRow label="Reviewed" value={fmtDateTime(request.reviewedAt)} />}
             {request.methodDetailsSummary && <DetailRow label="Method details" value={request.methodDetailsSummary} />}
@@ -361,10 +361,10 @@ function PaymentDetailSheet({
               <div className="text-xs font-medium text-muted-foreground">Timeline</div>
               <ol className="mt-3 space-y-2.5">
                 {[...request.events].reverse().map((event, index) => (
-                  <li key={`${event.type}-${index}`} className="flex items-center gap-2.5 text-xs">
-                    <span className={`size-1.5 shrink-0 rounded-full ${index === request.events.length - 1 ? "bg-primary" : "bg-muted-foreground/50"}`} aria-hidden />
-                    <span className="font-medium text-foreground">{EVENT_LABELS[event.type] ?? event.type.replaceAll("_", " ").toLowerCase()}</span>
-                    <span className="ml-auto text-muted-foreground tabular-nums">{fmtDateTime(event.createdAt)}</span>
+                  <li key={`${event.type}-${index}`} className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2.5 gap-y-1 text-xs sm:flex sm:items-center">
+                    <span className={`row-span-2 mt-1 size-1.5 shrink-0 rounded-full sm:mt-0 ${index === request.events.length - 1 ? "bg-primary" : "bg-muted-foreground/50"}`} aria-hidden />
+                    <span className="min-w-0 font-medium text-foreground">{EVENT_LABELS[event.type] ?? event.type.replaceAll("_", " ").toLowerCase()}</span>
+                    <span className="col-start-2 min-w-0 text-muted-foreground tabular-nums sm:ml-auto sm:text-right">{fmtDateTime(event.createdAt)}</span>
                   </li>
                 ))}
               </ol>
@@ -417,9 +417,9 @@ function PaymentDetailSheet({
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 text-sm">
-      <dt className="shrink-0 text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 text-right font-medium text-foreground">{value}</dd>
+    <div className="flex min-w-0 flex-col gap-1 text-sm sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <dt className="text-xs text-muted-foreground sm:shrink-0 sm:pt-0.5">{label}</dt>
+      <dd className="min-w-0 wrap-break-words font-medium text-foreground sm:max-w-[65%] sm:text-right">{value}</dd>
     </div>
   );
 }

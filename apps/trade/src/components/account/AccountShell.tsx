@@ -14,7 +14,6 @@ import { MessagesTab } from "./MessagesTab";
 import { SettingsTab } from "./SettingsTab";
 import { ReportsView } from "./ReportsView";
 import { PaymentTimeline } from "./PaymentTimeline";
-import { SupportTab } from "./SupportTab";
 import { ReferralTab } from "./ReferralTab";
 import type { InstrumentView, PositionView } from "@/lib/types";
 import { useForexStore } from "@/lib/store";
@@ -27,7 +26,7 @@ import { AccountReconciliationStatus, type ReconciliationStatus } from "./Accoun
 import type { WalletAddressEntry } from "@/server/userSettings";
 import { IdentityTile } from "@/components/ui/Initial";
 
-type Tab = "overview" | "positions" | "transactions" | "payments" | "reports" | "verification" | "notifications" | "messages" | "support" | "settings" | "referrals";
+type Tab = "overview" | "positions" | "transactions" | "payments" | "reports" | "verification" | "notifications" | "messages" | "settings" | "referrals";
 const ACCOUNT_TAB_STORAGE_KEY = "blckforest:account-tab";
 
 interface Props {
@@ -37,7 +36,6 @@ interface Props {
   /** Unread badge counts (server-computed; refreshed with the 30s fallback poll). */
   unreadNotifications?: number;
   unreadMessages?: number;
-  openSupportCases?: number;
   /** True for operator viewers — the Messages badge shows the team inbox. */
   operator?: boolean;
   user: { id: string; name: string; email: string; accountNo: string; createdAt: string; verified: boolean };
@@ -111,7 +109,6 @@ const TABS: { key: Tab; label: string; description: string }[] = [
   { key: "verification", label: "Verification", description: "Manage identity verification and required documents." },
   { key: "notifications", label: "Notifications", description: "Stay up to date on activity across your account." },
   { key: "messages", label: "Messages", description: "View and reply to your account messages." },
-  { key: "support", label: "Support", description: "Get help and manage your support requests." },
   { key: "referrals", label: "Referrals", description: "Track your referral activity and rewards." },
   { key: "settings", label: "Settings", description: "Manage your profile and account preferences." },
 ];
@@ -124,7 +121,7 @@ const NAV_GROUPS: { label: string | null; items: Tab[] }[] = [
   { label: "Trading", items: ["positions", "reports"] },
   { label: "Money", items: ["transactions", "payments"] },
   { label: "Profile & Security", items: ["verification", "settings"] },
-  { label: "Activity & Help", items: ["notifications", "messages", "support"] },
+  { label: "Activity & Messages", items: ["notifications", "messages"] },
   { label: "Rewards", items: ["referrals"] },
 ];
 
@@ -140,28 +137,24 @@ export function AccountShell(props: Props) {
   const operator = props.operator ?? false;
   const [unreadNotifications, setUnreadNotifications] = useState(props.unreadNotifications ?? 0);
   const [unreadMessages, setUnreadMessages] = useState(props.unreadMessages ?? 0);
-  const [openSupportCases, setOpenSupportCases] = useState(props.openSupportCases ?? 0);
-  const prevCounts = useRef({ unreadNotifications: props.unreadNotifications ?? 0, unreadMessages: props.unreadMessages ?? 0, openSupportCases: props.openSupportCases ?? 0 });
+  const prevCounts = useRef({ unreadNotifications: props.unreadNotifications ?? 0, unreadMessages: props.unreadMessages ?? 0 });
   const refreshCounts = useCallback(async () => {
     try {
       const response = await fetch("/api/notifications?scope=counts", { cache: "no-store" });
       if (!response.ok) return;
-      const data = await response.json() as { unreadCount?: number; unreadMessages?: number; operatorMessages?: number; openSupportCases?: number };
+      const data = await response.json() as { unreadCount?: number; unreadMessages?: number; operatorMessages?: number };
       // One consistent meaning for the message badge per viewer type — the
       // operator inbox for staff, the customer thread otherwise. Mixing the
       // two made the change-detection below fire on phantom deltas.
       const next = {
         unreadNotifications: data.unreadCount ?? 0,
         unreadMessages: operator ? data.operatorMessages ?? data.unreadMessages ?? 0 : data.unreadMessages ?? 0,
-        openSupportCases: data.openSupportCases ?? 0,
       };
       setUnreadNotifications(next.unreadNotifications);
       setUnreadMessages(next.unreadMessages);
-      setOpenSupportCases(next.openSupportCases);
       const changed =
         next.unreadNotifications !== prevCounts.current.unreadNotifications ||
-        next.unreadMessages !== prevCounts.current.unreadMessages ||
-        next.openSupportCases !== prevCounts.current.openSupportCases;
+        next.unreadMessages !== prevCounts.current.unreadMessages;
       if (changed) {
         prevCounts.current = next;
         window.dispatchEvent(new CustomEvent("blckforest:counts-changed"));
@@ -181,11 +174,9 @@ export function AccountShell(props: Props) {
         const displayedMessages = operator ? message.counts.operatorMessages : message.counts.messages;
         setUnreadNotifications(message.counts.notifications);
         setUnreadMessages(displayedMessages);
-        setOpenSupportCases(message.counts.supportCases);
         prevCounts.current = {
           unreadNotifications: message.counts.notifications,
           unreadMessages: displayedMessages,
-          openSupportCases: message.counts.supportCases,
         };
         window.dispatchEvent(new CustomEvent("blckforest:counts-changed"));
       } else {
@@ -314,9 +305,6 @@ export function AccountShell(props: Props) {
     }
     if (key === "messages" && unreadMessages > 0) {
       return <Badge className="ml-auto px-1.5 font-bold">{unreadMessages > 99 ? "99+" : unreadMessages}</Badge>;
-    }
-    if (key === "support" && openSupportCases > 0) {
-      return <Badge variant="secondary" className="ml-auto px-1.5 font-semibold tabular-nums">{openSupportCases}</Badge>;
     }
     return null;
   };
@@ -469,7 +457,6 @@ export function AccountShell(props: Props) {
         {tab === "verification" && <VerificationTab kyc={props.kyc} checklist={props.kycChecklist} onSubmitted={() => selectTab("overview")} />}
         {tab === "notifications" && <NotificationsTab onActivity={refreshCounts} onOpenMessages={() => selectTab("messages")} />}
         {tab === "messages" && <MessagesTab />}
-        {tab === "support" && <SupportTab />}
         {tab === "referrals" && <ReferralTab />}
         {tab === "settings" && <SettingsTab user={props.user} />}
         </div>

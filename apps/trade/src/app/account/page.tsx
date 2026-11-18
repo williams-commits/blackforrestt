@@ -9,6 +9,7 @@ import { MobileTabBar } from "@/components/trade/MobileTabBar";
 import type { InstrumentView } from "@/lib/types";
 import { marketHoursForSymbol } from "@/lib/marketHours";
 import { ADDRESS_DOCUMENT_TYPES, IDENTITY_DOCUMENT_TYPES } from "@/lib/kyc";
+import { currentBrandProfile } from "@/lib/branding";
 import { resolveUserSettings } from "@/server/userSettings";
 import { adminMessageThreads, countUnreadDirectMessages } from "@/server/adminUserManagement";
 import { WorkspaceNavigation } from "@/components/WorkspaceNavigation";
@@ -17,7 +18,13 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 
-const VALID_TABS = ["overview", "positions", "transactions", "payments", "reports", "verification", "notifications", "messages", "support", "referrals", "settings"] as const;
+const VALID_TABS = ["overview", "positions", "transactions", "payments", "reports", "verification", "notifications", "messages", "referrals", "settings"] as const;
+type AccountTab = (typeof VALID_TABS)[number];
+
+function isAccountTab(tab: string | undefined): tab is AccountTab {
+  return tab !== undefined && (VALID_TABS as readonly string[]).includes(tab);
+}
+
 const TAB_LABELS: Record<(typeof VALID_TABS)[number], string> = {
   overview: "Overview",
   positions: "Positions",
@@ -27,7 +34,6 @@ const TAB_LABELS: Record<(typeof VALID_TABS)[number], string> = {
   verification: "Verification",
   notifications: "Notifications",
   messages: "Messages",
-  support: "Support",
   referrals: "Referrals",
   settings: "Settings",
 };
@@ -35,12 +41,12 @@ const TAB_LABELS: Record<(typeof VALID_TABS)[number], string> = {
 /** Browser title tracks the tab, so deep links (?tab=), refresh and shares
  *  land on the right title — client-side switches sync it in AccountShell. */
 export async function generateMetadata({ searchParams }: { searchParams: Promise<{ tab?: string }> }): Promise<Metadata> {
-  const { tab } = await searchParams;
-  const label = tab && (VALID_TABS as readonly string[]).includes(tab) && tab !== "overview"
-    ? TAB_LABELS[tab as (typeof VALID_TABS)[number]]
+  const [{ tab }, brand] = await Promise.all([searchParams, currentBrandProfile()]);
+  const label = isAccountTab(tab) && tab !== "overview"
+    ? TAB_LABELS[tab]
     : null;
   return {
-    title: label ? `${label} — Account` : "Account",
+    title: label ? `${label} — Account — ${brand.name}` : `Account — ${brand.name}`,
     description: "Manage your account, positions, transactions, payments and verification.",
     robots: { index: false, follow: false },
   };
@@ -48,7 +54,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;
-  const initialTab = tab && (VALID_TABS as readonly string[]).includes(tab) ? tab : undefined;
+  const initialTab = isAccountTab(tab) ? tab : undefined;
 
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
@@ -146,11 +152,10 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   // Operators see the SUPPORT INBOX unread count (customer→team) on their
   // Messages tab; customers see their own operator→me unread count.
   const isOperator = session?.user?.role === "admin";
-  const [unreadNotifications, customerUnread, teamUnread, openSupportCases] = await Promise.all([
+  const [unreadNotifications, customerUnread, teamUnread] = await Promise.all([
     prisma.notification.count({ where: { userId, readAt: null } }),
     countUnreadDirectMessages(userId),
     adminMessageThreads(),
-    prisma.supportCase.count({ where: { userId, status: { in: ["OPEN", "IN_PROGRESS", "WAITING_CUSTOMER"] } } }),
   ]);
   const unreadMessages = isOperator ? teamUnread.totalUnread : customerUnread;
 
@@ -181,9 +186,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           unreadNotifications={unreadNotifications}
           operator={isOperator}
           unreadMessages={unreadMessages}
-          openSupportCases={openSupportCases}
           marginWarningPercent={settings.trading.marginWarningPercent}
-          initialTab={initialTab as "overview" | "positions" | "transactions" | "payments" | "reports" | "verification" | "support" | "settings" | undefined}
+          initialTab={initialTab}
           user={{
             id: user.id,
             name: user.name ?? user.email ?? "Trader",

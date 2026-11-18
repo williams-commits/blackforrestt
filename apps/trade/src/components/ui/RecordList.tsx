@@ -730,9 +730,9 @@ export function RecordList<T>({
               {renderDetailHero?.(detail)}
               <dl className="space-y-3">
                 {(renderDetailMeta?.(detail) ?? []).map((meta) => (
-                  <div key={meta.label} className="flex items-center justify-between gap-4 text-sm">
-                    <dt className="shrink-0 text-muted-foreground">{meta.label}</dt>
-                    <dd className="min-w-0 text-right font-medium tabular-nums text-foreground">{meta.value}</dd>
+                  <div key={meta.label} className="flex min-w-0 flex-col gap-1 text-sm sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                    <dt className="text-xs text-muted-foreground sm:shrink-0 sm:pt-0.5">{meta.label}</dt>
+                    <dd className="min-w-0 wrap-break-words font-medium tabular-nums text-foreground sm:max-w-[65%] sm:text-right">{meta.value}</dd>
                   </div>
                 ))}
               </dl>

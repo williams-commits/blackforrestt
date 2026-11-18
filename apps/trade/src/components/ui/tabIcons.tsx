@@ -137,7 +137,6 @@ export const ACCOUNT_TAB_ICONS: Record<string, LucideIcon> = {
   verification: BadgeCheck,
   notifications: Bell,
   messages: MessageSquare,
-  support: LifeBuoy,
   referrals: UserPlus,
   settings: Settings,
 };

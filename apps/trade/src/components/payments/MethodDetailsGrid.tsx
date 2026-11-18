@@ -26,9 +26,9 @@ export function MethodDetailsGrid({ details }: { details: Record<string, string>
       {Object.entries(details).map(([label, value]) => {
         const long = value.length > 20;
         return (
-          <div key={label} className="flex items-start justify-between gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/40">
-            <dt className="shrink-0 pt-0.5 text-xs text-muted-foreground">{label}</dt>
-            <dd className="flex min-w-0 items-start justify-end gap-1.5 text-right">
+          <div key={label} className="flex min-w-0 flex-col gap-1 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/40 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+            <dt className="pt-0.5 text-xs text-muted-foreground sm:shrink-0">{label}</dt>
+            <dd className="flex min-w-0 max-w-full items-start gap-1.5 text-left sm:justify-end sm:text-right">
               <span className={`min-w-0 break-all text-sm ${long ? "font-mono text-xs leading-relaxed" : "font-medium"}`}>{value}</span>
               {long && (
                 <button

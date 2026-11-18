@@ -42,7 +42,7 @@ export async function GET(req: Request) {
       select: { isAdmin: true, adminRoles: { where: { revokedAt: null }, select: { role: true } } },
     });
     const isOperator = Boolean(user && (user.isAdmin || user.adminRoles.length > 0));
-    const [unreadCount, unreadMessages, operatorMessages, openSupportCases] = await Promise.all([
+    const [unreadCount, unreadMessages, operatorMessages] = await Promise.all([
       prisma.notification.count({ where: { userId, readAt: null } }),
       countUnreadDirectMessages(userId),
       isOperator
@@ -53,10 +53,9 @@ export async function GET(req: Request) {
               recipient: { OR: [{ isAdmin: true }, { adminRoles: { some: { revokedAt: null } } }] },
             },
           })
-        : Promise.resolve(0),
-      prisma.supportCase.count({ where: { userId, status: { in: ["OPEN", "IN_PROGRESS", "WAITING_CUSTOMER"] } } }),
+          : Promise.resolve(0),
     ]);
-    return NextResponse.json({ unreadCount, unreadMessages, operatorMessages, openSupportCases });
+    return NextResponse.json({ unreadCount, unreadMessages, operatorMessages });
   }
 
   const baseWhere = { userId, ...(groupTypes ? { type: { in: groupTypes } } : {}) };

@@ -13,7 +13,7 @@ import { WALLET_ICONS, TabIcon } from "@/components/ui/tabIcons";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/label";
-import { ArrowDownToLine, ArrowUpFromLine, Bitcoin, CreditCard, DollarSign, Globe, Hash, Landmark, Link2, Lock, QrCode as QrCodeIcon, Receipt, ShieldCheck, Tag, UserRound, Wallet } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Bitcoin, Check, Copy, CreditCard, DollarSign, Globe, Hash, Landmark, Link2, Lock, QrCode as QrCodeIcon, Receipt, ShieldCheck, Tag, UserRound, Wallet, X } from "lucide-react";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Alert } from "@/components/ui/Alert";
 
@@ -327,8 +327,8 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
         : <ArrowUpFromLine size={15} strokeWidth={2} aria-hidden />}
       className="max-w-xl"
     >
-      <div className="max-h-[min(82dvh,760px)] overflow-y-auto overscroll-contain p-4 sm:p-5">
-        <form onSubmit={submit} className="flex flex-col gap-4">
+      <div className="max-h-[min(72dvh,calc(100dvh-14rem),900px)] overflow-y-auto overscroll-contain">
+        <form onSubmit={submit} className="flex flex-col gap-4 p-4 sm:p-5">
           {depositEnabled && (
             <ChipGroup
               ariaLabel="Wallet operation"
@@ -337,8 +337,8 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
               className="w-full rounded-xl bg-muted p-1"
               chipClassName="h-10 min-w-0 flex-1 gap-2 rounded-lg"
               options={[
-                { value: "deposit", label: <><TabIcon icon={WALLET_ICONS.deposit} size={16} /> Deposit</> },
-                { value: "withdraw", label: <><TabIcon icon={WALLET_ICONS.withdraw} size={16} /> Withdraw</> },
+                { value: "deposit", label: <span className="flex items-center justify-center gap-2"><TabIcon icon={WALLET_ICONS.deposit} size={16} /> Deposit</span> },
+                { value: "withdraw", label: <span className="flex items-center justify-center gap-2"><TabIcon icon={WALLET_ICONS.withdraw} size={16} /> Withdraw</span> },
               ]}
             />
           )}
@@ -349,7 +349,6 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
             <div className="flex items-center justify-between gap-3">
               <div>
                 <label htmlFor={amountId} className="text-sm font-semibold text-foreground">{isDeposit ? "Deposit amount" : "Withdrawal amount"}</label>
-                <p className="mt-0.5 text-xs text-muted-foreground">Choose a preset or enter an amount.</p>
               </div>
               <span className="rounded-md bg-background px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">USD</span>
             </div>
@@ -469,13 +468,17 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
                           className="min-w-0 font-mono"
                           startIcon={<QrCodeIcon size={13} strokeWidth={2} aria-hidden />}
                         />
-                        <button
+                        <Button
                           type="button"
+                          variant="brand"
+                          size="sm"
                           onClick={() => void copyDepositAddress()}
-                          className="h-9 shrink-0 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90"
+                          className="h-9 w-full shrink-0"
                         >
-                          {copied ? "✓ Copied" : "Copy address"}
-                        </button>
+                          {copied
+                            ? <><Check size={13} strokeWidth={2} aria-hidden /> Copied</>
+                            : <><Copy size={13} strokeWidth={2} aria-hidden /> Copy address</>}
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -528,7 +531,7 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
           {!isDeposit && needsStepUp && <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/10 p-3"><p className="text-xs text-muted-foreground">Confirm this withdrawal with your password and authenticator or recovery code.</p><Input type="password" required maxLength={128} value={currentPassword} onChange={(e)=>setCurrentPassword(e.target.value)} autoComplete="current-password" placeholder="Current password" aria-label="Current password" className="h-10" startIcon={<Lock size={13} strokeWidth={2} aria-hidden />} /><Input type="text" required maxLength={64} value={mfaCode} onChange={(e)=>setMfaCode(e.target.value)} autoComplete="one-time-code" placeholder="Authenticator or recovery code" aria-label="Authenticator or recovery code" className="h-10" startIcon={<ShieldCheck size={13} strokeWidth={2} aria-hidden />} /></div>}
 
           <div>
-            <Label htmlFor={proofId} className="text-xs font-medium text-muted-foreground">
+            <Label htmlFor={proofId} className="mb-1.5 block text-xs font-semibold text-foreground">
               {isDeposit ? (method === "CARD" ? "Payment receipt (optional)" : "Payment proof (required)") : "Supporting document (optional)"}
             </Label>
             <input
@@ -537,26 +540,33 @@ export function WalletModal({ open, onClose, onDone, mode: initialMode = "deposi
               accept="image/jpeg,image/png,application/pdf"
               required={isDeposit && method !== "CARD"}
               onChange={(event)=>{const input = event.currentTarget; void prepareProofFile(input.files?.[0] ?? null, input); invalidateRequestKey();}}
-              className="block p-2 file:mr-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-2 file:text-xs border border-border rounded-xl mt-1 mb-2"
+              className="block w-full cursor-pointer rounded-lg border border-border/70 bg-muted/20 p-2 text-xs text-muted-foreground transition-colors file:mr-3 file:h-8 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:font-medium file:text-primary hover:file:bg-primary/15"
             />
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
               {isDeposit && method === "CARD"
                 ? "A receipt is optional for card deposits — finance verifies the card processor reference. JPEG, PNG, or PDF, maximum 1 MB."
                 : "JPEG, PNG, or PDF, maximum 1 MB. Images over the limit are resized automatically; PDFs must already be under 1 MB. Files are quarantined, scanned, and stored privately."}
             </p>
           </div>
 
-          {progress && <Alert tone="info" className="px-3 py-2 text-xs">{progress}</Alert>}
-          {error && <Alert tone="err" className="px-3 py-2 text-xs">{error}</Alert>}
-          <Button type="submit" variant={isDeposit ? "buy" : "sell"} loading={loading} loadingLabel={progress ?? (isDeposit ? "Submitting deposit" : "Submitting withdrawal")} className="h-10 w-full">
-            {isDeposit
-              ? <><ArrowDownToLine size={14} strokeWidth={2} aria-hidden /> Submit deposit request</>
-              : <><ArrowUpFromLine size={14} strokeWidth={2} aria-hidden /> Submit withdrawal request</>}
-          </Button>
-          <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
-            <ShieldCheck size={12} className="mr-1 inline-block align-[-2px]" aria-hidden />
-            Requests require finance review and are not settled automatically.
-          </p>
+          <div className="sticky bottom-0 z-10 -mx-4 -mb-4 mt-1 flex flex-col gap-3 border-t border-border/70 bg-overlay-surface/95 px-4 py-3 backdrop-blur-sm sm:-mx-5 sm:-mb-5 sm:px-5 sm:py-4">
+            {progress && <Alert tone="info" className="px-3 py-2 text-xs">{progress}</Alert>}
+            {error && <Alert tone="err" className="px-3 py-2 text-xs">{error}</Alert>}
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" disabled={loading} onClick={onClose} className="h-10 flex-1">
+                <X size={14} strokeWidth={2} aria-hidden /> Cancel
+              </Button>
+              <Button type="submit" variant="brand" loading={loading} loadingLabel={progress ?? (isDeposit ? "Submitting deposit" : "Submitting withdrawal")} className="h-10 flex-2">
+                {isDeposit
+                  ? <><ArrowDownToLine size={14} strokeWidth={2} aria-hidden /> Submit deposit</>
+                  : <><ArrowUpFromLine size={14} strokeWidth={2} aria-hidden /> Submit withdrawal</>}
+              </Button>
+            </div>
+            <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+              <ShieldCheck size={12} className="mr-1 inline-block align-[-2px]" aria-hidden />
+              Requests require finance review and are not settled automatically.
+            </p>
+          </div>
         </form>
       </div>
     </Dialog>

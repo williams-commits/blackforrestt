@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Ellipsis } from "lucide-react";
 import { useForexSocket } from "@/hooks/useForexSocket";
 import { useForexStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -363,9 +363,9 @@ export function Dashboard({
                 return next;
               });
             }}
-            className="flex h-4 cursor-row-resize touch-none items-center justify-center bg-panel-2 transition-colors hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-brand md:h-2"
+            className="flex cursor-row-resize touch-none items-center justify-center bg-panel-2 transition-colors hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-brand md:h-1"
           >
-            <span className="h-0.5 w-10 rounded-full bg-text-faint/50" aria-hidden />
+            <Ellipsis size={20} className="text-text-faint/50" aria-hidden />
           </div>
         )}
         <div className={dockExpanded ? "h-[calc(100%-1rem)] md:h-[calc(100%-0.5rem)]" : "h-full"}>

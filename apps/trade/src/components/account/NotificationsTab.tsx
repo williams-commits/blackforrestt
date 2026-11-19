@@ -210,7 +210,7 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
                       if (!item.readAt) void markRead(item.id);
                       setSelected(item);
                     }}
-                    className={`w-full rounded-xl p-3.5 text-left transition-colors bg-muted/30 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+                    className={`w-full rounded-2xl p-4 text-left transition-colors bg-muted/30 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
                       item.readAt ? "bg-card" : "bg-panel-2/70"
                     }`}
                   >

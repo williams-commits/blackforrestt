@@ -154,7 +154,7 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
         >
           <div className="flex w-full min-w-0 flex-col items-stretch gap-2 *:min-w-0 **:data-[slot=select-trigger]:h-8 **:data-[slot=select-trigger]:rounded-lg **:data-[slot=select-trigger]:bg-background/70 **:data-[slot=select-trigger]:px-2.5 **:data-[slot=select-trigger]:text-xs md:flex-row md:items-center md:gap-1.5">
             <Select value={group} onValueChange={(value) => { setGroup(value); setPage(1); setAccumulated([]); }}>
-              <SelectTrigger size="sm" className="w-full md:w-48" aria-label="Filter notifications by category">
+              <SelectTrigger size="sm" aria-label="Filter notifications by category">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -211,7 +211,7 @@ export function NotificationsTab({ onActivity, onOpenMessages }: { onActivity?: 
                       setSelected(item);
                     }}
                     className={`w-full rounded-xl p-3.5 text-left transition-colors bg-muted/30 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
-                      item.readAt ? "bg-card" : "bg-primary/10"
+                      item.readAt ? "bg-card" : "bg-panel-2/70"
                     }`}
                   >
                     <div className="flex items-start gap-3">

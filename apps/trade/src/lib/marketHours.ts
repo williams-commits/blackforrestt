@@ -160,8 +160,11 @@ const CRYPTO_SYMBOLS = new Set([
   "ETHUSD", "LINKUSD", "LTCUSD", "POLUSD", "SOLUSD", "UNIUSD", "XRPUSD",
 ]);
 const US_EQUITY_SYMBOLS = new Set([
-  "AAPL", "AMD", "AMZN", "CORNUSD", "GOOGL", "JPM", "META", "MSFT", "NVDA",
-  "SOYBUSD", "TSLA", "VIXY", "WEATUSD",
+  "AAPL", "ADBE", "AI", "AMAT", "AMD", "AMZN", "ANET", "ANT", "ARM", "ASML",
+  "AVGO", "BBAI", "CDNS", "CRM", "CRWV", "CORNUSD", "DELL", "GOOGL", "HPE",
+  "IBM", "INTC", "JPM", "LRCX", "META", "MRVL", "MSFT", "MU", "NBIS", "NOW",
+  "NVDA", "ORCL", "PATH", "PLTR", "QCOM", "SMCI", "SNOW", "SNPS", "SOYBUSD",
+  "SOUN", "TEM", "TSLA", "TSM", "VRT", "VIXY", "WEATUSD",
 ]);
 const US_INDEX_SYMBOLS = new Set(["NAS100", "SPX500", "US30"]);
 const FX_SYMBOLS = new Set([

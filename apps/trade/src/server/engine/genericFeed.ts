@@ -9,6 +9,7 @@
  * simulator fills gaps for instruments that haven't been polled recently.
  */
 import { getMarketDataMode, requireFeedKey, type MarketDataMode } from "./marketDataMode";
+import { FEED_SYMBOL_MAP } from "./symbolMap";
 import type { InstrumentCategory } from "./types";
 
 export type PriceCallback = (symbol: string, price: number) => void;
@@ -118,11 +119,7 @@ const PROVIDERS: Record<string, ProviderConfig> = {
 // ── Symbol helpers ─────────────────────────────────────────────────────────
 
 function inferCategory(symbol: string): InstrumentCategory {
-  if (/^(BTC|ETH|SOL|XRP|ADA|DOGE|LINK|AVAX|POL|LTC|BCH|DOT|UNI|ATOM)USD$/.test(symbol)) return "CRYPTO";
-  if (/^(AAPL|MSFT|NVDA|TSLA|AMZN|GOOGL|META|AMD|JPM|VIXY)$/.test(symbol)) return "STOCK";
-  if (/^(US30|NAS100|SPX500|GER40|UK100|FRA40|JPN225)$/.test(symbol)) return "INDEX";
-  if (/^(XAU|XAG|WTI|XBR|XPT|XPD|NG|HG|CORN|WEAT|SOYB)USD$/.test(symbol)) return "COMMODITY";
-  return "FOREX";
+  return FEED_SYMBOL_MAP[symbol]?.category ?? "FOREX";
 }
 
 /** Map our forex/commodity symbol to a slash pair (e.g. EURUSD → EUR/USD). */

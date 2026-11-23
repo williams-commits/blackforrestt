@@ -25,6 +25,61 @@ interface SeedInstrument {
   feedSymbol: string;
 }
 
+function aiStock(symbol: string, name: string, basePrice: string): SeedInstrument {
+  return {
+    symbol,
+    name,
+    category: "STOCK",
+    base: symbol,
+    quote: "USD",
+    digits: 2,
+    pipSize: "0.01",
+    pipValue: "1",
+    contractSize: "1",
+    marginPerLot: "25",
+    commissionPerLot: "1",
+    swapLongPips: "0",
+    swapShortPips: "0",
+    basePrice,
+    feedSymbol: symbol,
+  };
+}
+
+const AI_STOCKS: SeedInstrument[] = [
+  aiStock("ANT", "Anthropic, PBC", "111.50"),
+  aiStock("AI", "C3.ai, Inc.", "20.00"),
+  aiStock("PLTR", "Palantir Technologies Inc.", "151.00"),
+  aiStock("SOUN", "SoundHound AI, Inc.", "12.00"),
+  aiStock("BBAI", "BigBear.ai Holdings, Inc.", "8.00"),
+  aiStock("PATH", "UiPath, Inc.", "20.00"),
+  aiStock("NBIS", "Nebius Group N.V.", "120.00"),
+  aiStock("CRWV", "CoreWeave, Inc.", "100.00"),
+  aiStock("TEM", "Tempus AI, Inc.", "60.00"),
+  aiStock("AVGO", "Broadcom Inc.", "350.00"),
+  aiStock("ARM", "Arm Holdings plc", "140.00"),
+  aiStock("TSM", "Taiwan Semiconductor Manufacturing Company Limited", "320.00"),
+  aiStock("MU", "Micron Technology, Inc.", "220.00"),
+  aiStock("MRVL", "Marvell Technology, Inc.", "90.00"),
+  aiStock("QCOM", "QUALCOMM Incorporated", "170.00"),
+  aiStock("ASML", "ASML Holding N.V.", "1000.00"),
+  aiStock("AMAT", "Applied Materials, Inc.", "260.00"),
+  aiStock("LRCX", "Lam Research Corporation", "200.00"),
+  aiStock("SMCI", "Super Micro Computer, Inc.", "45.00"),
+  aiStock("DELL", "Dell Technologies Inc.", "120.00"),
+  aiStock("HPE", "Hewlett Packard Enterprise Company", "25.00"),
+  aiStock("VRT", "Vertiv Holdings Co", "180.00"),
+  aiStock("ANET", "Arista Networks, Inc.", "120.00"),
+  aiStock("SNPS", "Synopsys, Inc.", "500.00"),
+  aiStock("CDNS", "Cadence Design Systems, Inc.", "350.00"),
+  aiStock("IBM", "International Business Machines Corporation", "300.00"),
+  aiStock("INTC", "Intel Corporation", "40.00"),
+  aiStock("ORCL", "Oracle Corporation", "250.00"),
+  aiStock("CRM", "Salesforce, Inc.", "250.00"),
+  aiStock("NOW", "ServiceNow, Inc.", "1000.00"),
+  aiStock("SNOW", "Snowflake Inc.", "250.00"),
+  aiStock("ADBE", "Adobe Inc.", "350.00"),
+];
+
 const INSTRUMENTS: SeedInstrument[] = [
   // ── Forex ──────────────────────────────────────────────────────────────────
   {
@@ -970,6 +1025,7 @@ const INSTRUMENTS: SeedInstrument[] = [
     basePrice: "300.00",
     feedSymbol: "JPM",
   },
+  ...AI_STOCKS,
   {
     symbol: "CORNUSD",
     name: "Teucrium Corn Fund vs US Dollar",

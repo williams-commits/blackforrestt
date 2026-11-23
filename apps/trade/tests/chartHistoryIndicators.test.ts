@@ -67,6 +67,34 @@ test("every configured instrument has mappings for each app feed adapter", () =>
   }
 });
 
+test("public AI equities are wired through every market-data adapter", () => {
+  const symbols = [
+    "ANT", "AI", "PLTR", "SOUN", "BBAI", "PATH", "NBIS", "CRWV", "TEM",
+    "AVGO", "ARM", "TSM", "MU", "MRVL", "QCOM", "ASML", "AMAT", "LRCX",
+    "SMCI", "DELL", "HPE", "VRT", "ANET", "SNPS", "CDNS", "IBM", "INTC",
+    "ORCL", "CRM", "NOW", "SNOW", "ADBE",
+  ];
+
+  for (const symbol of symbols) {
+    assert.equal(FEED_SYMBOL_MAP[symbol]?.category, "STOCK", `${symbol} should be a stock`);
+    assert.equal(AV_SYMBOL_MAP[symbol]?.feedSymbol, symbol, `${symbol} should map for Alpha Vantage`);
+    assert.ok(tradingViewSymbolFor(symbol, "STOCK"), `${symbol} should have a TradingView market`);
+    for (const mode of ["tickerlayer", "sifting", "lse"] as const) {
+      assert.deepEqual(translateSymbol(symbol, mode), {
+        ticker: symbol,
+        endpoint: mode === "lse" ? "equity" : "stock",
+      });
+    }
+  }
+
+  assert.equal(tradingViewSymbolFor("ANT", "STOCK"), "NASDAQ:ANT");
+  assert.deepEqual(
+    snapshotQuoteSymbolsFor(symbols),
+    symbols,
+    "all AI equities should be included in stock quote snapshots",
+  );
+});
+
 test("new instruments use the intended provider tickers", () => {
   assert.equal(FEED_SYMBOL_MAP.POLUSD?.feedSymbol, "BINANCE:POLUSDT");
   assert.equal(AV_SYMBOL_MAP.POLUSD?.feedSymbol, "POL");

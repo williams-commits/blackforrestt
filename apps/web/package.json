@@ -24,7 +24,7 @@
     "domain:test": "npm run platform -- domain test",
     "domain:deploy": "npm run platform -- domain deploy",
     "domain:remove": "npm run platform -- domain remove",
-    "test:engine": "node --env-file-if-exists=.env --import tsx --test tests/positionEngine.test.ts tests/aiStockInstruments.test.ts",
+    "test:engine": "node --env-file-if-exists=.env --import tsx --test tests/positionEngine.test.ts tests/aiStockInstruments.test.ts tests/marketInstruments.test.ts",
     "test:instrument-assets": "node --env-file-if-exists=.env --import tsx --test tests/instrumentAssets.test.ts",
     "test:ws-protocol": "node --env-file-if-exists=.env --import tsx --test tests/wsProtocol.test.ts",
     "test:auth-client": "node --env-file-if-exists=.env --import tsx --test tests/authClient.test.ts",

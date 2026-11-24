@@ -5,22 +5,55 @@
  * premium endpoints. To stay within limits, this client polls a small batch of
  * instruments on each cycle (12s interval, 1 request per instrument). Over a
  * full minute ~5 instruments get fresh real prices; the simulator's random
- * walk fills the gaps for the rest.
+ * walk fills the gaps for the rest. Daily index/commodity quotes retain their
+ * source date and are polled less frequently.
  *
  * Same PriceCallback contract as the Finnhub FeedClient so the hub is agnostic.
  */
-import { avEntryFor } from "./alphavantageMap";
+import { avEntryFor, type AvEndpoint } from "./alphavantageMap";
 import { getMarketDataMode, requireAlphavantageKey } from "./marketDataMode";
 
 const AV_BASE = "https://www.alphavantage.co/query";
 const POLL_INTERVAL_MS = 12_000; // every 12s, poll one symbol
 const RATE_LIMIT_BACKOFF_MS = 60_000; // if rate-limited, wait a minute
+const DAILY_DATA_MIN_POLL_INTERVAL_MS = 6 * 60 * 60 * 1_000;
 
-export type AvPriceCallback = (symbol: string, price: number) => void;
+export type AvPriceCallback = (symbol: string, price: number, timestamp?: number) => void;
+
+interface AvPrice {
+  price: number;
+  timestamp?: number;
+}
+
+/** Daily provider prices retain their source date instead of appearing fresh. */
+export function latestDailyPrice(data: unknown, endpoint: "index" | "commodity"): AvPrice | null {
+  if (!Array.isArray(data)) return null;
+
+  let latest: { date: string; price: number; timestamp: number } | null = null;
+  for (const item of data) {
+    if (!item || typeof item !== "object") continue;
+    const point = item as Record<string, unknown>;
+    const date = point["date"];
+    const rawPrice = endpoint === "index" ? point["4. close"] : point["value"];
+    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const price = typeof rawPrice === "number" || typeof rawPrice === "string" ? Number(rawPrice) : Number.NaN;
+    const timestamp = Date.parse(`${date}T00:00:00Z`);
+    if (
+      !Number.isFinite(price) ||
+      price <= 0 ||
+      !Number.isFinite(timestamp) ||
+      new Date(timestamp).toISOString().slice(0, 10) !== date
+    ) continue;
+    if (!latest || date > latest.date) latest = { date, price, timestamp };
+  }
+
+  if (!latest) return null;
+  return { price: latest.price, timestamp: latest.timestamp };
+}
 
 interface AvEntry {
   symbol: string;
-  endpoint: "forex" | "crypto" | "stock";
+  endpoint: AvEndpoint;
   feedSymbol: string;
   feedQuote?: string;
 }
@@ -30,6 +63,7 @@ export class AlphaVantageFeed {
   private onPrice: AvPriceCallback;
   private pollTimer: NodeJS.Timeout | null = null;
   private currentIndex = 0;
+  private dailyPollAt = new Map<string, number>();
   private rateLimited = false;
   private rateLimitTimer: NodeJS.Timeout | null = null;
   private intentionallyStopped = false;
@@ -76,10 +110,15 @@ export class AlphaVantageFeed {
     const apiKey = requireAlphavantageKey();
     const entry = this.symbols[this.currentIndex % this.symbols.length];
     this.currentIndex++;
+    const isDailyData = entry.endpoint === "index" || entry.endpoint === "commodity";
+    const now = Date.now();
+    const previousDailyPoll = this.dailyPollAt.get(entry.symbol) ?? 0;
+    if (isDailyData && now - previousDailyPoll < DAILY_DATA_MIN_POLL_INTERVAL_MS) return;
+    if (isDailyData) this.dailyPollAt.set(entry.symbol, now);
     try {
-      const price = await this.fetchPrice(entry, apiKey);
-      if (price != null && Number.isFinite(price) && price > 0) {
-        this.onPrice(entry.symbol, price);
+      const quote = await this.fetchPrice(entry, apiKey);
+      if (quote != null && Number.isFinite(quote.price) && quote.price > 0) {
+        this.onPrice(entry.symbol, quote.price, quote.timestamp);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -97,7 +136,7 @@ export class AlphaVantageFeed {
     }
   }
 
-  private async fetchPrice(entry: AvEntry, apiKey: string): Promise<number | null> {
+  private async fetchPrice(entry: AvEntry, apiKey: string): Promise<AvPrice | null> {
     const params = new URLSearchParams({ apikey: apiKey });
     if (entry.endpoint === "forex") {
       const [from, to] = entry.feedSymbol.split("/");
@@ -108,6 +147,13 @@ export class AlphaVantageFeed {
       params.set("function", "CURRENCY_EXCHANGE_RATE");
       params.set("from_currency", entry.feedSymbol);
       params.set("to_currency", entry.feedQuote ?? "USD");
+    } else if (entry.endpoint === "index") {
+      params.set("function", "INDEX_DATA");
+      params.set("symbol", entry.feedSymbol);
+      params.set("interval", "daily");
+    } else if (entry.endpoint === "commodity") {
+      params.set("function", entry.feedSymbol);
+      params.set("interval", "daily");
     } else {
       params.set("function", "GLOBAL_QUOTE");
       params.set("symbol", entry.feedSymbol);
@@ -120,12 +166,16 @@ export class AlphaVantageFeed {
     // CURRENCY_EXCHANGE_RATE response
     const cer = body["Realtime Currency Exchange Rate"] as Record<string, string> | undefined;
     if (cer && cer["5. Exchange Rate"]) {
-      return Number(cer["5. Exchange Rate"]);
+      return { price: Number(cer["5. Exchange Rate"]) };
     }
     // GLOBAL_QUOTE response
     const gq = body["Global Quote"] as Record<string, string> | undefined;
     if (gq && gq["05. price"]) {
-      return Number(gq["05. price"]);
+      return { price: Number(gq["05. price"]) };
+    }
+    if (entry.endpoint === "index" || entry.endpoint === "commodity") {
+      const quote = latestDailyPrice(body["data"], entry.endpoint);
+      if (quote) return quote;
     }
     // Note or Information messages (rate limit, demo key)
     if (body["Note"]) throw new Error(String(body["Note"]));

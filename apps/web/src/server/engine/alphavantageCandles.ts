@@ -100,7 +100,9 @@ export async function seedAlphavantageCandles(
 
   for (const symbol of symbols) {
     const entry = avEntryFor(symbol);
-    if (!entry || entry.endpoint === "crypto") continue; // AV free tier has no crypto intraday
+    if (!entry || entry.endpoint === "crypto" || entry.endpoint === "index" || entry.endpoint === "commodity") {
+      continue;
+    }
     try {
       const candles = await fetchIntradayCandles(entry, "1m", apiKey);
       if (candles && candles.length > 0) {

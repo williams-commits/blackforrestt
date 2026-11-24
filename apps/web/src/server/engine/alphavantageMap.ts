@@ -3,15 +3,17 @@
  * into Alpha Vantage's conventions for its REST API endpoints.
  *
  * Alpha Vantage conventions:
- *   Forex / Commodities → "EUR/USD" slash pair (CURRENCY_EXCHANGE_RATE / FX_INTRADAY)
- *   Crypto              → { "BTC", "USD" } from/to pair (CURRENCY_EXCHANGE_RATE)
- *   Stocks / Indices    → plain ticker "AAPL", "DIA" (GLOBAL_QUOTE / TIME_SERIES_INTRADAY)
+ *   Forex / precious metals → "EUR/USD" slash pair (CURRENCY_EXCHANGE_RATE / FX_INTRADAY)
+ *   Crypto                  → { "BTC", "USD" } from/to pair (CURRENCY_EXCHANGE_RATE)
+ *   Stocks                  → plain ticker (GLOBAL_QUOTE / TIME_SERIES_INTRADAY)
+ *   Indices                 → index ticker (INDEX_DATA, daily OHLC)
+ *   Other commodities       → named daily series (for example WHEAT, SUGAR)
  *
  * There is no WebSocket — the feed client polls these REST endpoints.
  */
 import type { InstrumentCategory } from "./types";
 
-export type AvEndpoint = "forex" | "crypto" | "stock";
+export type AvEndpoint = "forex" | "crypto" | "stock" | "index" | "commodity";
 
 export interface AvSymbolEntry {
   symbol: string;
@@ -57,6 +59,8 @@ export const AV_SYMBOL_MAP: Record<string, AvSymbolEntry> = {
   US30:   { symbol: "US30",   feedSymbol: "DIA",   endpoint: "stock", category: "INDEX" },
   NAS100: { symbol: "NAS100", feedSymbol: "QQQ",   endpoint: "stock", category: "INDEX" },
   SPX500: { symbol: "SPX500", feedSymbol: "SPY",   endpoint: "stock", category: "INDEX" },
+  US2000: { symbol: "US2000", feedSymbol: "RUT",   endpoint: "index", category: "INDEX" },
+  VIX:    { symbol: "VIX",    feedSymbol: "VIX",   endpoint: "index", category: "INDEX" },
   GER40:  { symbol: "GER40",  feedSymbol: "EWG",   endpoint: "stock", category: "INDEX" },
   UK100:  { symbol: "UK100",  feedSymbol: "EWU",   endpoint: "stock", category: "INDEX" },
   FRA40:  { symbol: "FRA40",  feedSymbol: "EWQ",   endpoint: "stock", category: "INDEX" },
@@ -78,6 +82,18 @@ export const AV_SYMBOL_MAP: Record<string, AvSymbolEntry> = {
   DOTUSD:   { symbol: "DOTUSD",   feedSymbol: "DOT",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
   UNIUSD:   { symbol: "UNIUSD",   feedSymbol: "UNI",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
   ATOMUSD:  { symbol: "ATOMUSD",  feedSymbol: "ATOM",  feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  BNBUSD:   { symbol: "BNBUSD",   feedSymbol: "BNB",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  TRXUSD:   { symbol: "TRXUSD",   feedSymbol: "TRX",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  TONUSD:   { symbol: "TONUSD",   feedSymbol: "TON",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  SHIBUSD:  { symbol: "SHIBUSD",  feedSymbol: "SHIB",  feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  XLMUSD:   { symbol: "XLMUSD",   feedSymbol: "XLM",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  ETCUSD:   { symbol: "ETCUSD",   feedSymbol: "ETC",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  FILUSD:   { symbol: "FILUSD",   feedSymbol: "FIL",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  ICPUSD:   { symbol: "ICPUSD",   feedSymbol: "ICP",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  NEARUSD:  { symbol: "NEARUSD",  feedSymbol: "NEAR",  feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  APTUSD:   { symbol: "APTUSD",   feedSymbol: "APT",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  SUIUSD:   { symbol: "SUIUSD",   feedSymbol: "SUI",   feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
+  AAVEUSD:  { symbol: "AAVEUSD",  feedSymbol: "AAVE",  feedQuote: "USD", endpoint: "crypto", category: "CRYPTO" },
 
   // ── Stocks ──────────────────────────────────────────────────────────────
   AAPL: { symbol: "AAPL", feedSymbol: "AAPL", endpoint: "stock", category: "STOCK" },
@@ -125,6 +141,8 @@ export const AV_SYMBOL_MAP: Record<string, AvSymbolEntry> = {
   CORNUSD: { symbol: "CORNUSD", feedSymbol: "CORN", endpoint: "stock", category: "COMMODITY" },
   WEATUSD: { symbol: "WEATUSD", feedSymbol: "WEAT", endpoint: "stock", category: "COMMODITY" },
   SOYBUSD: { symbol: "SOYBUSD", feedSymbol: "SOYB", endpoint: "stock", category: "COMMODITY" },
+  WHEATUSD: { symbol: "WHEATUSD", feedSymbol: "WHEAT", endpoint: "commodity", category: "COMMODITY" },
+  SUGARUSD: { symbol: "SUGARUSD", feedSymbol: "SUGAR", endpoint: "commodity", category: "COMMODITY" },
 };
 
 /** Reverse lookup for correlating AV responses back to our symbols. */

@@ -45,6 +45,32 @@ function aiStock(symbol: string, name: string, basePrice: string): SeedInstrumen
   };
 }
 
+function cryptoInstrument(
+  symbol: string,
+  name: string,
+  basePrice: string,
+  digits: number,
+): SeedInstrument {
+  const base = symbol.slice(0, -3);
+  return {
+    symbol,
+    name,
+    category: "CRYPTO",
+    base,
+    quote: "USD",
+    digits,
+    pipSize: (10 ** -digits).toFixed(digits),
+    pipValue: "1",
+    contractSize: "1",
+    marginPerLot: "1000",
+    commissionPerLot: "7",
+    swapLongPips: "5",
+    swapShortPips: "2.5",
+    basePrice,
+    feedSymbol: `BINANCE:${base}USDT`,
+  };
+}
+
 const AI_STOCKS: SeedInstrument[] = [
   aiStock("ANT", "Anthropic, PBC", "111.50"),
   aiStock("AI", "C3.ai, Inc.", "20.00"),
@@ -78,6 +104,89 @@ const AI_STOCKS: SeedInstrument[] = [
   aiStock("NOW", "ServiceNow, Inc.", "1000.00"),
   aiStock("SNOW", "Snowflake Inc.", "250.00"),
   aiStock("ADBE", "Adobe Inc.", "350.00"),
+];
+
+const ADDITIONAL_MARKET_INSTRUMENTS: SeedInstrument[] = [
+  cryptoInstrument("BNBUSD", "BNB vs US Dollar", "549.50", 2),
+  cryptoInstrument("TRXUSD", "TRON vs US Dollar", "0.307608", 6),
+  cryptoInstrument("TONUSD", "Toncoin vs US Dollar", "1.6000", 4),
+  cryptoInstrument("SHIBUSD", "Shiba Inu vs US Dollar", "0.00000356", 8),
+  cryptoInstrument("XLMUSD", "Stellar Lumens vs US Dollar", "0.124838", 6),
+  cryptoInstrument("ETCUSD", "Ethereum Classic vs US Dollar", "5.790", 3),
+  cryptoInstrument("FILUSD", "Filecoin vs US Dollar", "0.543001", 6),
+  cryptoInstrument("ICPUSD", "Internet Computer vs US Dollar", "2.0300", 4),
+  cryptoInstrument("NEARUSD", "NEAR Protocol vs US Dollar", "2.8800", 4),
+  cryptoInstrument("APTUSD", "Aptos vs US Dollar", "0.373017", 6),
+  cryptoInstrument("SUIUSD", "Sui vs US Dollar", "0.650045", 6),
+  cryptoInstrument("AAVEUSD", "Aave vs US Dollar", "94.42", 2),
+  {
+    symbol: "US2000",
+    name: "US Russell 2000 Index",
+    category: "INDEX",
+    base: "US2000",
+    quote: "USD",
+    digits: 1,
+    pipSize: "0.1",
+    pipValue: "25",
+    contractSize: "1",
+    marginPerLot: "1000",
+    commissionPerLot: "7",
+    swapLongPips: "1.5",
+    swapShortPips: "0.5",
+    basePrice: "2500.0",
+    feedSymbol: "OANDA:US2000_USD",
+  },
+  {
+    symbol: "VIX",
+    name: "CBOE Volatility Index",
+    category: "INDEX",
+    base: "VIX",
+    quote: "USD",
+    digits: 2,
+    pipSize: "0.01",
+    pipValue: "25",
+    contractSize: "1",
+    marginPerLot: "1000",
+    commissionPerLot: "7",
+    swapLongPips: "1.5",
+    swapShortPips: "0.5",
+    basePrice: "20.00",
+    feedSymbol: "CBOE:VIX",
+  },
+  {
+    symbol: "WHEATUSD",
+    name: "Wheat vs US Dollar",
+    category: "COMMODITY",
+    base: "WHEAT",
+    quote: "USD",
+    digits: 3,
+    pipSize: "0.001",
+    pipValue: "1",
+    contractSize: "1",
+    marginPerLot: "1000",
+    commissionPerLot: "7",
+    swapLongPips: "1.5",
+    swapShortPips: "0.8",
+    basePrice: "5.500",
+    feedSymbol: "OANDA:WHEAT_USD",
+  },
+  {
+    symbol: "SUGARUSD",
+    name: "Sugar No. 11 vs US Dollar",
+    category: "COMMODITY",
+    base: "SUGAR",
+    quote: "USD",
+    digits: 2,
+    pipSize: "0.01",
+    pipValue: "1",
+    contractSize: "1",
+    marginPerLot: "1000",
+    commissionPerLot: "7",
+    swapLongPips: "1.5",
+    swapShortPips: "0.8",
+    basePrice: "17.00",
+    feedSymbol: "OANDA:SUGAR_USD",
+  },
 ];
 
 const INSTRUMENTS: SeedInstrument[] = [
@@ -1077,6 +1186,7 @@ const INSTRUMENTS: SeedInstrument[] = [
     basePrice: "20.00",
     feedSymbol: "SOYB",
   },
+  ...ADDITIONAL_MARKET_INSTRUMENTS,
 ];
 
 async function main() {
@@ -1106,7 +1216,12 @@ async function main() {
   }
 
   await prisma.instrument.updateMany({
-    where: { symbol: { in: ["MATICUSD", "VIX"] } },
+    where: { symbol: "VIX" },
+    data: { active: true },
+  });
+
+  await prisma.instrument.updateMany({
+    where: { symbol: "MATICUSD" },
     data: { active: false },
   });
 

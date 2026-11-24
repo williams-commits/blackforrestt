@@ -153,11 +153,20 @@ const SCHEDULES: Record<string, MarketSchedule> = {
     calendar: "UK",
     sessions: { 1: [[60, 1380]], 2: [[60, 1380]], 3: [[60, 1380]], 4: [[60, 1380]], 5: [[60, 1380]] },
   },
+  iceUsSugar: {
+    id: "ice-us-sugar",
+    venue: "ICE Futures U.S. Sugar No. 11",
+    timezone: "America/New_York",
+    calendar: "US_FUTURES",
+    sessions: { 1: [[210, 780]], 2: [[210, 780]], 3: [[210, 780]], 4: [[210, 780]], 5: [[210, 780]] },
+  },
 };
 
 const CRYPTO_SYMBOLS = new Set([
   "ADAUSD", "ATOMUSD", "AVAXUSD", "BCHUSD", "BTCUSD", "DOGEUSD", "DOTUSD",
   "ETHUSD", "LINKUSD", "LTCUSD", "POLUSD", "SOLUSD", "UNIUSD", "XRPUSD",
+  "BNBUSD", "TRXUSD", "TONUSD", "SHIBUSD", "XLMUSD", "ETCUSD", "FILUSD",
+  "ICPUSD", "NEARUSD", "APTUSD", "SUIUSD", "AAVEUSD",
 ]);
 const US_EQUITY_SYMBOLS = new Set([
   "AAPL", "ADBE", "AI", "AMAT", "AMD", "AMZN", "ANET", "ANT", "ARM", "ASML",
@@ -166,7 +175,7 @@ const US_EQUITY_SYMBOLS = new Set([
   "NVDA", "ORCL", "PATH", "PLTR", "QCOM", "SMCI", "SNOW", "SNPS", "SOYBUSD",
   "SOUN", "TEM", "TSLA", "TSM", "VRT", "VIXY", "WEATUSD",
 ]);
-const US_INDEX_SYMBOLS = new Set(["NAS100", "SPX500", "US30"]);
+const US_INDEX_SYMBOLS = new Set(["NAS100", "SPX500", "US2000", "US30", "VIX"]);
 const FX_SYMBOLS = new Set([
   "AUDCAD", "AUDJPY", "AUDUSD", "CHFJPY", "EURAUD", "EURCHF", "EURGBP",
   "EURJPY", "EURUSD", "GBPCAD", "GBPJPY", "GBPUSD", "NZDUSD", "USDCAD",
@@ -183,7 +192,8 @@ export function marketScheduleForSymbol(symbol: string): MarketSchedule | null {
   if (normalized === "FRA40") return SCHEDULES.euronextParis;
   if (normalized === "UK100") return SCHEDULES.london;
   if (normalized === "JPN225") return SCHEDULES.jpx;
-  if (["XAUUSD", "XAGUSD", "XPTUSD", "XPDUSD", "HGUSD", "NGUSD", "WTIUSD"].includes(normalized)) {
+  if (normalized === "SUGARUSD") return SCHEDULES.iceUsSugar;
+  if (["XAUUSD", "XAGUSD", "XPTUSD", "XPDUSD", "HGUSD", "NGUSD", "WTIUSD", "WHEATUSD"].includes(normalized)) {
     return SCHEDULES.cme;
   }
   if (normalized === "XBRUSD") return SCHEDULES.ice;

@@ -300,7 +300,9 @@ class Hub {
     const mode = getMarketDataMode();
     const onPrice = (symbol: string, price: number, timestamp?: number) => this.setLivePrice(symbol, price, timestamp);
     if (mode === "alphavantage") {
-      this.avFeed = getAlphavantageFeed(onPrice);
+      this.avFeed = getAlphavantageFeed((symbol, price, timestamp) =>
+        this.setLivePrice(symbol, price, timestamp),
+      );
       this.avFeed.start(symbols);
     } else if (mode === "tickerlayer" || mode === "sifting" || mode === "lse") {
       this.genericFeed = getGenericFeed(onPrice);

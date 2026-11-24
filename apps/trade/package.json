@@ -14,6 +14,7 @@
     "test:admin-balance-payments": "node --env-file-if-exists=.env --import tsx --test tests/adminBalancePayments.integration.test.ts",
     "test:customer-finance-presentation": "node --import tsx --test tests/customerFinancePresentation.test.ts",
     "test:instrument-assets": "node --import tsx --test tests/instrumentAssets.test.ts",
+    "test:market-instruments": "node --import tsx --test tests/marketInstruments.test.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy"

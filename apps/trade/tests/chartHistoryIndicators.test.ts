@@ -28,8 +28,11 @@ test("TradingView symbols map known terminal instruments to chartable markets", 
   assert.equal(tradingViewSymbolFor("AUDCAD", "FOREX"), "OANDA:AUDCAD");
   assert.equal(tradingViewSymbolFor("BTCUSD", "CRYPTO"), "BINANCE:BTCUSDT");
   assert.equal(tradingViewSymbolFor("US30", "INDEX"), "OANDA:US30USD");
+  assert.equal(tradingViewSymbolFor("US2000", "INDEX"), "OANDA:US2000USD");
+  assert.equal(tradingViewSymbolFor("VIX", "INDEX"), "CBOE:VIX");
+  assert.equal(tradingViewSymbolFor("WHEATUSD", "COMMODITY"), "OANDA:WHEATUSD");
+  assert.equal(tradingViewSymbolFor("SUGARUSD", "COMMODITY"), "OANDA:SUGARUSD");
   assert.equal(tradingViewSymbolFor("AAPL", "STOCK"), "NASDAQ:AAPL");
-  assert.equal(tradingViewSymbolFor("VIX", "INDEX"), null);
   assert.equal(tradingViewSymbolFor("VIXY", "STOCK"), "CBOE:VIXY");
   assert.equal(tradingViewSymbolFor("CORNUSD", "COMMODITY"), "AMEX:CORN");
   assert.equal(tradingViewSymbolFor("WEATUSD", "COMMODITY"), "AMEX:WEAT");

@@ -7,7 +7,7 @@
  *   Forex / Commodities → OANDA: prefix, underscore pair separator.
  *   Crypto              → BINANCE: prefix, no separator, USDT quote.
  * Indices             → Finnhub OANDA CFDs where available, with ETF proxies
- *                          for the US indices.
+ *                          for the existing US benchmarks.
  *
  * Reverse map (Finnhub symbol → ours) is also built for fast lookup in the
  * WebSocket message handler, where we receive { s: "OANDA:EUR_USD", p, t }.
@@ -56,11 +56,13 @@ export const FEED_SYMBOL_MAP: Record<string, FeedSymbolEntry> = {
   US30:   { symbol: "US30",   feedSymbol: "DIA",            candleEndpoint: "stock", category: "INDEX" },
   NAS100: { symbol: "NAS100", feedSymbol: "QQQ",            candleEndpoint: "stock", category: "INDEX" },
   SPX500: { symbol: "SPX500", feedSymbol: "SPY",            candleEndpoint: "stock", category: "INDEX" },
+  US2000: { symbol: "US2000", feedSymbol: "OANDA:US2000_USD", candleEndpoint: "forex", category: "INDEX" },
   GER40:  { symbol: "GER40",  feedSymbol: "OANDA:DE40_EUR", candleEndpoint: "forex", category: "INDEX" },
   UK100:  { symbol: "UK100",  feedSymbol: "OANDA:UK100_GBP",candleEndpoint: "forex", category: "INDEX" },
   FRA40:  { symbol: "FRA40",  feedSymbol: "OANDA:FR40_EUR", candleEndpoint: "forex", category: "INDEX" },
   JPN225: { symbol: "JPN225", feedSymbol: "OANDA:JP225_USD",candleEndpoint: "forex", category: "INDEX" },
   VIXY:   { symbol: "VIXY",   feedSymbol: "VIXY",           candleEndpoint: "stock", category: "STOCK" },
+  VIX:    { symbol: "VIX",    feedSymbol: "CBOE:VIX",       candleEndpoint: "stock", category: "INDEX" },
   // ── Crypto ───────────────────────────────────────────────────────────────
   BTCUSD:   { symbol: "BTCUSD",   feedSymbol: "BINANCE:BTCUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
   ETHUSD:   { symbol: "ETHUSD",   feedSymbol: "BINANCE:ETHUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
@@ -76,6 +78,18 @@ export const FEED_SYMBOL_MAP: Record<string, FeedSymbolEntry> = {
   DOTUSD:   { symbol: "DOTUSD",   feedSymbol: "BINANCE:DOTUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
   UNIUSD:   { symbol: "UNIUSD",   feedSymbol: "BINANCE:UNIUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
   ATOMUSD:  { symbol: "ATOMUSD",  feedSymbol: "BINANCE:ATOMUSDT",  candleEndpoint: "crypto", category: "CRYPTO" },
+  BNBUSD:   { symbol: "BNBUSD",   feedSymbol: "BINANCE:BNBUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  TRXUSD:   { symbol: "TRXUSD",   feedSymbol: "BINANCE:TRXUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  TONUSD:   { symbol: "TONUSD",   feedSymbol: "BINANCE:TONUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  SHIBUSD:  { symbol: "SHIBUSD",  feedSymbol: "BINANCE:SHIBUSDT",  candleEndpoint: "crypto", category: "CRYPTO" },
+  XLMUSD:   { symbol: "XLMUSD",   feedSymbol: "BINANCE:XLMUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  ETCUSD:   { symbol: "ETCUSD",   feedSymbol: "BINANCE:ETCUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  FILUSD:   { symbol: "FILUSD",   feedSymbol: "BINANCE:FILUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  ICPUSD:   { symbol: "ICPUSD",   feedSymbol: "BINANCE:ICPUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  NEARUSD:  { symbol: "NEARUSD",  feedSymbol: "BINANCE:NEARUSDT",  candleEndpoint: "crypto", category: "CRYPTO" },
+  APTUSD:   { symbol: "APTUSD",   feedSymbol: "BINANCE:APTUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  SUIUSD:   { symbol: "SUIUSD",   feedSymbol: "BINANCE:SUIUSDT",   candleEndpoint: "crypto", category: "CRYPTO" },
+  AAVEUSD:  { symbol: "AAVEUSD",  feedSymbol: "BINANCE:AAVEUSDT",  candleEndpoint: "crypto", category: "CRYPTO" },
 
   // ── Stocks ───────────────────────────────────────────────────────────────
   AAPL: { symbol: "AAPL", feedSymbol: "AAPL", candleEndpoint: "stock", category: "STOCK" },
@@ -124,6 +138,8 @@ export const FEED_SYMBOL_MAP: Record<string, FeedSymbolEntry> = {
   CORNUSD: { symbol: "CORNUSD", feedSymbol: "CORN", candleEndpoint: "stock", category: "COMMODITY" },
   WEATUSD: { symbol: "WEATUSD", feedSymbol: "WEAT", candleEndpoint: "stock", category: "COMMODITY" },
   SOYBUSD: { symbol: "SOYBUSD", feedSymbol: "SOYB", candleEndpoint: "stock", category: "COMMODITY" },
+  WHEATUSD: { symbol: "WHEATUSD", feedSymbol: "OANDA:WHEAT_USD", candleEndpoint: "forex", category: "COMMODITY" },
+  SUGARUSD: { symbol: "SUGARUSD", feedSymbol: "OANDA:SUGAR_USD", candleEndpoint: "forex", category: "COMMODITY" },
 };
 
 /** Reverse lookup: Finnhub symbol → our symbol. */

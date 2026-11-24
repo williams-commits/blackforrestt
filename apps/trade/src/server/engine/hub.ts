@@ -365,7 +365,9 @@ class Hub {
     }
 
     if (mode === "alphavantage" && symbols.length > 0) {
-      this.avFeed = getAlphavantageFeed(onPrice);
+      this.avFeed = getAlphavantageFeed((symbol, price, timestamp) =>
+        this.setLivePrice(symbol, price, undefined, timestamp),
+      );
       this.avFeed.start(symbols);
     } else if (
       symbols.length > 0 &&

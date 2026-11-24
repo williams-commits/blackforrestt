@@ -49,7 +49,7 @@ export function translateSymbol(symbol: string, mode: MarketDataMode): { ticker:
       return pair ? { ticker: pair, endpoint: "forex" } : null;
     }
     if (cat === "CRYPTO") return { ticker: symbol, endpoint: "crypto" };
-    return { ticker: etfProxy(symbol), endpoint: "stock" };
+    return { ticker: providerTickerForEquityQuote(symbol), endpoint: "stock" };
   }
   if (mode === "sifting") {
     if (cat === "FOREX" || cat === "COMMODITY") {
@@ -57,7 +57,7 @@ export function translateSymbol(symbol: string, mode: MarketDataMode): { ticker:
       return pair ? { ticker: pair, endpoint: "forex" } : null;
     }
     if (cat === "CRYPTO") return { ticker: symbol, endpoint: "crypto" };
-    return { ticker: etfProxy(symbol), endpoint: "stock" };
+    return { ticker: providerTickerForEquityQuote(symbol), endpoint: "stock" };
   }
   if (mode === "lse") {
     if (cat === "FOREX" || cat === "COMMODITY") {
@@ -65,7 +65,7 @@ export function translateSymbol(symbol: string, mode: MarketDataMode): { ticker:
       return pair ? { ticker: pair, endpoint: "fx" } : null;
     }
     if (cat === "CRYPTO") return { ticker: symbol, endpoint: "crypto" };
-    return { ticker: etfProxy(symbol), endpoint: "equity" };
+    return { ticker: providerTickerForEquityQuote(symbol), endpoint: "equity" };
   }
   return null;
 }
@@ -127,16 +127,19 @@ function forexToPair(symbol: string): string | null {
   const commodityPairs: Record<string, string> = {
     NGUSD: "NATGAS/USD",
     HGUSD: "XCU/USD",
+    WHEATUSD: "WHEAT/USD",
+    SUGARUSD: "SUGAR/USD",
   };
   if (commodityPairs[symbol]) return commodityPairs[symbol];
   if (symbol.length !== 6) return null;
   return `${symbol.slice(0, 3)}/${symbol.slice(3)}`;
 }
 
-/** Map our commodity/index symbol to an ETF proxy ticker for stock endpoints. */
-function etfProxy(symbol: string): string {
+/** Map a market symbol to the ticker expected by stock/equity quote endpoints. */
+function providerTickerForEquityQuote(symbol: string): string {
   const map: Record<string, string> = {
-    US30: "DIA", NAS100: "QQQ", SPX500: "SPY", GER40: "EWG", UK100: "EWU",
+    US30: "DIA", NAS100: "QQQ", SPX500: "SPY", US2000: "US2000", VIX: "VIX",
+    GER40: "EWG", UK100: "EWU",
     FRA40: "EWQ", JPN225: "EWJ", VIXY: "VIXY",
     WTIUSD: "USO", XBRUSD: "BNO", XPTUSD: "PLT", XPDUSD: "PALL",
     NGUSD: "UNG", HGUSD: "CPER",

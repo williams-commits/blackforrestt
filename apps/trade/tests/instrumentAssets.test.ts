@@ -10,10 +10,25 @@ const AI_STOCK_SYMBOLS = [
   "ORCL", "CRM", "NOW", "SNOW", "ADBE",
 ];
 
+const ADDITIONAL_MARKET_SYMBOLS = [
+  "BNBUSD", "TRXUSD", "TONUSD", "SHIBUSD", "XLMUSD", "ETCUSD",
+  "FILUSD", "ICPUSD", "NEARUSD", "APTUSD", "SUIUSD", "AAVEUSD",
+  "US2000", "VIX", "WHEATUSD", "SUGARUSD",
+];
+
 test("each added AI stock resolves to a local logo asset", async () => {
   for (const symbol of AI_STOCK_SYMBOLS) {
     const image = INSTRUMENT_IMAGES[symbol];
     assert.ok(image, `${symbol} should resolve to a logo`);
+    await access(new URL(`../public/brands/gbfxs/markets/${image}`, import.meta.url));
+  }
+});
+
+test("each added market has a local raster logo", async () => {
+  for (const symbol of ADDITIONAL_MARKET_SYMBOLS) {
+    const image = INSTRUMENT_IMAGES[symbol];
+    assert.ok(image, `${symbol} should resolve to a logo`);
+    assert.match(image, /\.(png|jpe?g|webp)$/i, `${symbol} logo must not be SVG`);
     await access(new URL(`../public/brands/gbfxs/markets/${image}`, import.meta.url));
   }
 });

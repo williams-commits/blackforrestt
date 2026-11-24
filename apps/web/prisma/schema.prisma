@@ -117,6 +117,10 @@ model Instrument {
   contractSize Decimal @default(100000) @db.Decimal(18, 4)
   // Margin required per 1.0 lot, in account currency (USD), at base price.
   marginPerLot Decimal @db.Decimal(18, 4)
+  // Verified account-currency notional per 1.0 price unit per lot. Null disables leverage for this asset.
+  leverageNotionalFactor Decimal? @db.Decimal(24, 12)
+  leverageDefault Decimal? @db.Decimal(12, 4)
+  leverageMax Decimal? @db.Decimal(12, 4)
   // Overnight swap in pips per lot (long / short). 0 in the sim.
   swapLongPips  Decimal @default(0) @db.Decimal(18, 8)
   swapShortPips Decimal @default(0) @db.Decimal(18, 8)
@@ -169,6 +173,7 @@ model User {
 
   wallets      Wallet[]
   positions    Position[]
+  leveragePreferences UserLeveragePreference[]
   metrics      AccountMetrics?
   transactions Transaction[]
   kyc          KycSubmission?
@@ -324,6 +329,9 @@ model Position {
   adminPnlAdjustment Decimal @default(0) @db.Decimal(18, 8)
   // Net = profit + swap - commission - tradingCommission.
   netProfit  Decimal        @default(0) @db.Decimal(18, 8)
+  // Locked margin and applied leverage are snapshotted at open; policy changes never reprice open positions.
+  marginUsed Decimal        @default(0) @db.Decimal(24, 8)
+  appliedLeverage Decimal?  @db.Decimal(12, 4)
   status     PositionStatus @default(OPEN)
   // CFD: openedTill is null (open-ended). STRIKE: the settlement time.
   openedAt   DateTime       @default(now())
@@ -962,6 +970,18 @@ model UserGroupMembership {
 
   @@unique([userId, groupId])
   @@index([groupId])
+}
+
+model UserLeveragePreference {
+  userId    String
+  scopeKey  String
+  leverage  Decimal  @db.Decimal(12, 4)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, scopeKey])
 }
 
 /// Per-user settings overrides (1:1 with User). Null fields fall back to group/global.

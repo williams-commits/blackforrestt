@@ -12,7 +12,7 @@ function Input({ className, type, startIcon, ...props }: React.ComponentProps<"i
         <span aria-hidden className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground">
           {startIcon}
         </span>
-        <Input className={cn("pl-9", className)} {...props} />
+        <Input type={type} className={cn("pl-9", className)} {...props} />
       </div>
     );
   }

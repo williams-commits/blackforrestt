@@ -1,7 +1,11 @@
-import type { AdminChangeDomain, AdminRole, Prisma } from "@prisma/client";
+import { Prisma, type AdminChangeDomain, type AdminRole } from "@prisma/client";
 import { z } from "zod";
 import { withSerializableRetry } from "@/server/db";
 import { appendAuditEvent, stableJson } from "@/server/ledger";
+import {
+  leverageMaximumForCategory,
+  validateLeveragePolicyConfiguration,
+} from "@/server/leverage";
 import {
   canReviewChangeDomain,
   permissionsForRoles,
@@ -29,6 +33,11 @@ const InstrumentPayload = z.object({
   commissionPerLot: z.string().regex(/^\d+(?:\.\d{1,8})?$/),
   swapLongPips: z.string().regex(/^-?\d+(?:\.\d{1,8})?$/),
   swapShortPips: z.string().regex(/^-?\d+(?:\.\d{1,8})?$/),
+  pipSize: z.string().regex(/^\d+(?:\.\d{1,8})?$/).optional(),
+  pipValue: z.string().regex(/^\d+(?:\.\d{1,8})?$/).optional(),
+  leverageNotionalFactor: z.string().regex(/^\d+(?:\.\d{1,12})?$/).nullable().optional(),
+  leverageDefault: z.string().regex(/^\d+(?:\.\d{1,4})?$/).nullable().optional(),
+  leverageMax: z.string().regex(/^\d+(?:\.\d{1,4})?$/).nullable().optional(),
 });
 
 export const ChangeRequestInput = z.discriminatedUnion("action", [
@@ -104,6 +113,10 @@ export async function createAdminChangeRequest(input: {
   }
   if (change.action === "UPDATE_RISK_RULE" && change.entityId !== change.payload.code) {
     throw new AdminChangeError("The risk-rule target does not match the payload code.", 400);
+  }
+  if (change.action === "UPDATE_RISK_RULE" && change.payload.code === "LEVERAGE_POLICY") {
+    const error = validateLeveragePolicyConfiguration(change.payload.configuration);
+    if (error) throw new AdminChangeError(error, 400);
   }
   if (change.action === "UPDATE_INSTRUMENT" && change.entityId.toUpperCase() !== change.payload.symbol) {
     throw new AdminChangeError("The instrument target does not match the payload symbol.", 400);
@@ -211,6 +224,26 @@ async function executeChange(
     }
     case "UPDATE_RISK_RULE": {
       const payload = RiskPayload.parse(request.payload);
+      if (payload.code === "LEVERAGE_POLICY") {
+        const error = validateLeveragePolicyConfiguration(payload.configuration);
+        if (error) throw new AdminChangeError(error, 400);
+        const instrumentOverrides = await tx.instrument.findMany({
+          where: { OR: [{ leverageDefault: { not: null } }, { leverageMax: { not: null } }] },
+          select: { symbol: true, category: true, leverageDefault: true, leverageMax: true },
+        });
+        for (const instrument of instrumentOverrides) {
+          const classMaximum = leverageMaximumForCategory(payload.configuration, instrument.category);
+          if (
+            classMaximum &&
+            (instrument.leverageDefault?.gt(classMaximum) || instrument.leverageMax?.gt(classMaximum))
+          ) {
+            throw new AdminChangeError(
+              `${instrument.symbol} has an asset leverage override above the proposed ${classMaximum.toString()}x class maximum.`,
+              400,
+            );
+          }
+        }
+      }
       await tx.riskRule.upsert({
         where: { code: payload.code },
         update: {
@@ -236,8 +269,83 @@ async function executeChange(
     }
     case "UPDATE_INSTRUMENT": {
       const payload = InstrumentPayload.parse(request.payload);
-      const instrument = await tx.instrument.findUnique({ where: { symbol: payload.symbol }, select: { symbol: true } });
+      const instrument = await tx.instrument.findUnique({
+        where: { symbol: payload.symbol },
+        select: {
+          symbol: true,
+          pipSize: true,
+          pipValue: true,
+          category: true,
+          leverageNotionalFactor: true,
+          leverageDefault: true,
+          leverageMax: true,
+        },
+      });
       if (!instrument) throw new AdminChangeError("Instrument not found.", 404);
+      if (
+        payload.leverageNotionalFactor !== undefined ||
+        payload.leverageDefault !== undefined ||
+        payload.leverageMax !== undefined ||
+        payload.pipSize !== undefined ||
+        payload.pipValue !== undefined
+      ) {
+        const factor = payload.leverageNotionalFactor === undefined
+          ? instrument.leverageNotionalFactor
+          : payload.leverageNotionalFactor === null
+            ? null
+            : new Prisma.Decimal(payload.leverageNotionalFactor);
+        const leverageDefault = payload.leverageDefault === undefined
+          ? instrument.leverageDefault
+          : payload.leverageDefault === null
+            ? null
+            : new Prisma.Decimal(payload.leverageDefault);
+        const leverageMax = payload.leverageMax === undefined
+          ? instrument.leverageMax
+          : payload.leverageMax === null
+            ? null
+            : new Prisma.Decimal(payload.leverageMax);
+        const pipSize = payload.pipSize === undefined
+          ? instrument.pipSize
+          : new Prisma.Decimal(payload.pipSize);
+        const pipValue = payload.pipValue === undefined
+          ? instrument.pipValue
+          : new Prisma.Decimal(payload.pipValue);
+        if (pipSize.lte(0) || pipValue.lte(0)) {
+          throw new AdminChangeError("Pip size and value must be greater than zero.", 400);
+        }
+        if (factor?.lte(0)) throw new AdminChangeError("A verified notional factor must be greater than zero.", 400);
+        if (
+          factor &&
+          !factor.eq(pipValue.div(pipSize).toDecimalPlaces(12))
+        ) {
+          throw new AdminChangeError(
+            "The verified notional factor must equal pip value divided by pip size so margin and P/L use the same exposure.",
+            400,
+          );
+        }
+        if (leverageDefault && (leverageDefault.lt(1) || leverageDefault.gt(500))) {
+          throw new AdminChangeError("Asset default leverage must be between 1x and 500x.", 400);
+        }
+        if (leverageMax && (leverageMax.lt(1) || leverageMax.gt(500))) {
+          throw new AdminChangeError("Asset maximum leverage must be between 1x and 500x.", 400);
+        }
+        if (leverageDefault && leverageMax && leverageDefault.gt(leverageMax)) {
+          throw new AdminChangeError("Asset default leverage cannot exceed its maximum.", 400);
+        }
+        if (!factor && (leverageDefault || leverageMax)) {
+          throw new AdminChangeError("Verify the asset notional factor before setting leverage overrides.", 400);
+        }
+        const classPolicy = await tx.riskRule.findUnique({
+          where: { code: "LEVERAGE_POLICY" },
+          select: { enabled: true, configuration: true },
+        });
+        const classMaximum = classPolicy?.enabled
+          ? leverageMaximumForCategory(classPolicy.configuration, instrument.category)
+          : null;
+        if (classMaximum && (leverageMax?.gt(classMaximum) || leverageDefault?.gt(classMaximum))) {
+          throw new AdminChangeError(`Asset leverage values cannot exceed the ${classMaximum.toString()}x class maximum.`, 400);
+        }
+      }
       await tx.instrument.update({
         where: { symbol: payload.symbol },
         data: {
@@ -246,6 +354,13 @@ async function executeChange(
           commissionPerLot: payload.commissionPerLot,
           swapLongPips: payload.swapLongPips,
           swapShortPips: payload.swapShortPips,
+          ...(payload.pipSize !== undefined ? { pipSize: payload.pipSize } : {}),
+          ...(payload.pipValue !== undefined ? { pipValue: payload.pipValue } : {}),
+          ...(payload.leverageNotionalFactor !== undefined
+            ? { leverageNotionalFactor: payload.leverageNotionalFactor }
+            : {}),
+          ...(payload.leverageDefault !== undefined ? { leverageDefault: payload.leverageDefault } : {}),
+          ...(payload.leverageMax !== undefined ? { leverageMax: payload.leverageMax } : {}),
         },
       });
       break;

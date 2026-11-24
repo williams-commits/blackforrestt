@@ -78,6 +78,8 @@ export interface PositionView {
   profit: number;
   adminPnlAdjustment: number;
   netProfit: number;
+  marginUsed: number;
+  appliedLeverage: number | null;
   status: PositionStatus;
   openedAt: number; // unix ms
   openedTill: number | null; // unix ms, null for CFD

@@ -18,6 +18,7 @@ const OpenSchema = z.object({
   expiryMinutes: z.number().int().min(1).max(1_440).optional().nullable(),
   stopLoss: z.number().finite().positive().optional().nullable(),
   takeProfit: z.number().finite().positive().optional().nullable(),
+  leverage: z.number().finite().min(1).max(500).optional(),
   acknowledgeStalePrice: z.boolean().default(false),
 }).superRefine((value, context) => {
   if (value.type === "STRIKE" && value.expiryMinutes == null) {
@@ -95,6 +96,7 @@ export async function POST(req: Request) {
       expiryMinutes: parsed.data.expiryMinutes ?? null,
       stopLoss: parsed.data.stopLoss ?? null,
       takeProfit: parsed.data.takeProfit ?? null,
+      leverage: parsed.data.leverage,
       acknowledgeStalePrice: parsed.data.acknowledgeStalePrice,
       idempotencyKey,
     });
@@ -113,6 +115,7 @@ export async function POST(req: Request) {
             symbol: parsed.data.symbol,
             side: parsed.data.side,
             volume: parsed.data.volume.toString(),
+            leverage: parsed.data.leverage?.toString() ?? null,
             code: tradingError.code,
             reason: tradingError.message,
             acknowledgeStalePrice: parsed.data.acknowledgeStalePrice,
@@ -199,6 +202,8 @@ export async function GET(req: Request) {
       profit: Number(position.profit),
       adminPnlAdjustment: Number(position.adminPnlAdjustment),
       netProfit: Number(position.netProfit),
+      marginUsed: Number(position.marginUsed),
+      appliedLeverage: position.appliedLeverage != null ? Number(position.appliedLeverage) : null,
       status: position.status,
       openedAt: position.openedAt.getTime(),
       openedTill: position.openedTill?.getTime() ?? null,

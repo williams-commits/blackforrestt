@@ -90,6 +90,8 @@ export interface PositionView {
   profit: number;
   adminPnlAdjustment: number;
   netProfit: number;
+  marginUsed: number;
+  appliedLeverage: number | null;
   status: PositionStatus;
   openedAt: number;
   openedTill: number | null;

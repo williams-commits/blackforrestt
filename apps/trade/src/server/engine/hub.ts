@@ -13,6 +13,7 @@ import { prisma, withSerializableRetry } from "../db";
 import { userMutationMutex } from "../locks";
 import { isUserBlocked } from "../reconciliation";
 import { loadTradingRiskPolicy } from "../riskPolicy";
+import { resolveEffectiveLeverage } from "../leverage";
 import { resolveUserSettings } from "../userSettings";
 import { marketHoursForSymbol, type MarketHoursState } from "../../lib/marketHours";
 import { staleQuoteDecision } from "../../lib/marketFreshness";
@@ -35,7 +36,7 @@ import { getMarketDataMode } from "./marketDataMode";
 import {
   applyPnlAdjustment,
   computeMetrics,
-  marginFor,
+  marginForPosition,
   markPosition,
   openPosition,
   protectionLevelError,
@@ -89,6 +90,9 @@ interface InstrumentState {
   pipValue: number;
   contractSize: number;
   marginPerLot: number;
+  leverageNotionalFactor: Prisma.Decimal | null;
+  leverageDefault: Prisma.Decimal | null;
+  leverageMax: Prisma.Decimal | null;
   commissionPerLot: number;
   swapLongPipsPerDay: number;
   swapShortPipsPerDay: number;
@@ -124,6 +128,7 @@ export interface OpenPositionInput {
   expiryMinutes: number | null;
   stopLoss: number | null;
   takeProfit: number | null;
+  leverage?: number;
   acknowledgeStalePrice?: boolean;
   idempotencyKey: string;
 }
@@ -300,6 +305,9 @@ class Hub {
         pipValue: Number(row.pipValue),
         contractSize: Number(row.contractSize),
         marginPerLot: Number(row.marginPerLot),
+        leverageNotionalFactor: row.leverageNotionalFactor,
+        leverageDefault: row.leverageDefault,
+        leverageMax: row.leverageMax,
         commissionPerLot: Number(row.commissionPerLot),
         swapLongPipsPerDay: Number(row.swapLongPips),
         swapShortPipsPerDay: Number(row.swapShortPips),
@@ -646,6 +654,8 @@ class Hub {
                   profit: decimal(position.profit),
                   adminPnlAdjustment: decimal(position.adminPnlAdjustment),
                   netProfit: decimal(position.netProfit),
+                  marginUsed: decimal(position.marginUsed),
+                  appliedLeverage: position.appliedLeverage,
                   swapAccruedAt: new Date(position.lastSwapMs ?? Date.now()),
                 },
               });
@@ -679,7 +689,9 @@ class Hub {
         for (const position of positions) {
           floating = floating.add(position.netProfit);
           const state = this.instruments.get(position.symbol);
-          if (state) marginTotal = marginTotal.add(marginFor(position.volume, this.cfg(state).marginPerLot));
+          if (state) {
+            marginTotal = marginTotal.add(marginForPosition(position, this.cfg(state).marginPerLot));
+          }
         }
         if (!marginTotal.isZero() && floating.gte(marginTotal.mul(-STOP_OUT_LEVEL / 100))) continue;
       }
@@ -810,10 +822,24 @@ class Hub {
 
       const entryRate = input.side === "BUY" ? effectiveAsk : effectiveBid;
       this.validateOpenInput(input, entryRate);
+      const leverageSettings = input.type === "CFD"
+        ? await resolveEffectiveLeverage(input.userId, symbol)
+        : null;
+      if (input.leverage != null) {
+        if (
+          !leverageSettings?.enabled ||
+          !leverageSettings.selected?.eq(input.leverage.toString())
+        ) {
+          throw new TradingError("Leverage settings changed. Review the current leverage and retry.", "CONFLICT");
+        }
+      }
+      const openInstrument = leverageSettings?.enabled
+        ? { ...cfg, leverageNotionalFactor: leverageSettings.notionalFactor }
+        : cfg;
 
       const opened = openPosition({
         userId: input.userId,
-        instrument: cfg,
+        instrument: openInstrument,
         side: input.side,
         volume: input.volume,
         type: input.type,
@@ -822,6 +848,7 @@ class Hub {
         stopLoss: input.stopLoss,
         takeProfit: input.takeProfit,
         marketRate: entryRate,
+        leverage: leverageSettings?.selected ?? null,
       });
 
       // Immediately mark at the opposite dealing side so the UI and account
@@ -854,6 +881,21 @@ class Hub {
             return { record: concurrentReplay, replayed: true };
           }
 
+          if (input.type === "CFD" && leverageSettings) {
+            const currentLeverage = await resolveEffectiveLeverage(input.userId, symbol, tx);
+            const ratioUnchanged = currentLeverage.selected?.eq(leverageSettings.selected ?? new Decimal(0))
+              ?? leverageSettings.selected === null;
+            const factorUnchanged = currentLeverage.notionalFactor?.eq(leverageSettings.notionalFactor ?? new Decimal(0))
+              ?? leverageSettings.notionalFactor === null;
+            if (
+              currentLeverage.enabled !== leverageSettings.enabled ||
+              !ratioUnchanged ||
+              !factorUnchanged
+            ) {
+              throw new TradingError("Leverage settings changed while the order was being placed. Review the ticket and retry.", "CONFLICT");
+            }
+          }
+
           const balances = await userLedgerBalances(tx, input.userId, "USD");
           if (balances.available.lessThan(requiredCash)) {
             throw new TradingError("Insufficient free margin.", "INSUFFICIENT_FUNDS");
@@ -877,6 +919,8 @@ class Hub {
               profit: decimal(position.profit),
               adminPnlAdjustment: decimal(position.adminPnlAdjustment),
               netProfit: decimal(position.netProfit),
+              marginUsed: decimal(position.marginUsed),
+              appliedLeverage: position.appliedLeverage,
               status: "OPEN",
               openedAt: new Date(position.openedAtMs),
               openedTill: position.openedTillMs != null ? new Date(position.openedTillMs) : null,
@@ -935,6 +979,7 @@ class Hub {
               type: input.type,
               volume: input.volume.toString(),
               margin: opened.margin.toFixed(8),
+              appliedLeverage: position.appliedLeverage?.toString() ?? null,
               commission: opened.commissionTotal.toFixed(8),
               stalePriceOverride: staleDecision.useStalePrice
                 ? {
@@ -1300,7 +1345,7 @@ class Hub {
       throw new TradingError("This position cannot be closed while its market is closed or waiting for a fresh quote.", "BLOCKED");
     }
 
-    const margin = marginFor(position.volume, cfg.marginPerLot);
+    const margin = marginForPosition(position, cfg.marginPerLot);
     const allInNet = position.netProfit;
     const closedAt = new Date();
 
@@ -1535,7 +1580,7 @@ class Hub {
     const margins = positions.map((position) => {
       const state = this.instruments.get(position.symbol);
       return state
-        ? marginFor(position.volume, new Decimal(state.marginPerLot.toString()))
+        ? marginForPosition(position, new Decimal(state.marginPerLot.toString()))
         : money(0);
     });
     const calculated = computeMetrics({ balance, credit, available, positions, margins });
@@ -1806,6 +1851,7 @@ class Hub {
       pipSize: new Decimal(state.pipSize.toString()),
       pipValue: new Decimal(state.pipValue.toString()),
       marginPerLot: new Decimal(state.marginPerLot.toString()),
+      leverageNotionalFactor: state.leverageNotionalFactor,
       commissionPerLot: new Decimal(state.commissionPerLot.toString()),
       swapLongPipsPerDay: new Decimal(state.swapLongPipsPerDay.toString()),
       swapShortPipsPerDay: new Decimal(state.swapShortPipsPerDay.toString()),
@@ -1829,6 +1875,8 @@ class Hub {
     profit: Prisma.Decimal;
     adminPnlAdjustment: Prisma.Decimal;
     netProfit: Prisma.Decimal;
+    marginUsed: Prisma.Decimal;
+    appliedLeverage: Prisma.Decimal | null;
     openedAt: Date;
     openedTill: Date | null;
     swapAccruedAt: Date;
@@ -1850,6 +1898,8 @@ class Hub {
       profit: money(position.profit),
       adminPnlAdjustment: money(position.adminPnlAdjustment),
       netProfit: money(position.netProfit),
+      marginUsed: money(position.marginUsed),
+      appliedLeverage: position.appliedLeverage,
       openedAtMs: position.openedAt.getTime(),
       openedTillMs: position.openedTill?.getTime() ?? null,
       lastSwapMs: position.swapAccruedAt.getTime(),
@@ -1883,6 +1933,8 @@ class Hub {
       profit: Number(position.profit),
       adminPnlAdjustment: Number(position.adminPnlAdjustment),
       netProfit: Number(position.netProfit),
+      marginUsed: Number(position.marginUsed),
+      appliedLeverage: position.appliedLeverage?.toNumber() ?? null,
       status: "OPEN",
       openedAt: position.openedAtMs,
       openedTill: position.openedTillMs,
@@ -1920,6 +1972,7 @@ function fingerprintOpenRequest(input: OpenPositionInput): string {
         expiryMinutes: input.expiryMinutes,
         stopLoss: input.stopLoss?.toString() ?? null,
         takeProfit: input.takeProfit?.toString() ?? null,
+        ...(input.leverage == null ? {} : { leverage: input.leverage.toString() }),
       }),
     )
     .digest("hex");

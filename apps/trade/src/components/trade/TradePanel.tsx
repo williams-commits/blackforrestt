@@ -27,6 +27,14 @@ interface Props {
   onSwitchInstrument?: () => void;
 }
 
+interface InstrumentLeverage {
+  enabled: boolean;
+  default: number | null;
+  maximum: number | null;
+  selected: number | null;
+  notionalFactor: number | null;
+}
+
 /**
  * Trade panel — enterprise-grade order ticket for placing forex/CFD trades.
  *
@@ -67,8 +75,34 @@ export function TradePanel({
   const [showSLTP, setShowSLTP] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [stalePriceAcknowledged, setStalePriceAcknowledged] = useState(false);
+  const [leverage, setLeverage] = useState<InstrumentLeverage | null>(null);
+  const [leverageStatus, setLeverageStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [leverageError, setLeverageError] = useState<string | null>(null);
   const { openPosition, loading, error, clearError, status, lastAcceptedAt } = orderController;
   const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    let active = true;
+    setLeverage(null);
+    setLeverageStatus("loading");
+    setLeverageError(null);
+    void fetch(`/api/leverage?symbol=${encodeURIComponent(instrument.symbol)}`, { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({})) as InstrumentLeverage & { error?: string };
+        if (!response.ok) throw new Error(data.error ?? "Unable to load leverage settings.");
+        return data;
+      })
+      .then((data) => {
+        if (!active) return;
+        setLeverage(data);
+        setLeverageStatus("ready");
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        setLeverageError(cause instanceof Error ? cause.message : "Unable to load leverage settings.");
+        setLeverageStatus("error");
+      });
+    return () => { active = false; };
+  }, [instrument.symbol]);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);
@@ -107,7 +141,7 @@ export function TradePanel({
     !currentMarketHours.canTrade,
   );
   const quotePriceAvailable = quoteReady || staleQuoteAvailable;
-  const canSubmit = quoteReady || (staleQuoteAvailable && stalePriceAcknowledged);
+  const canSubmit = (quoteReady || (staleQuoteAvailable && stalePriceAcknowledged)) && leverageStatus === "ready";
   const nextOpenLabel = formatNextMarketOpen(currentMarketHours);
   const sessionLabel = currentMarketHours.isOpen ? "Open" : "Closed";
   const quoteStateLabel = !currentMarketHours.isOpen
@@ -126,7 +160,15 @@ export function TradePanel({
   const vol = Number(volume);
   const sliderVolume = Number.isFinite(vol) ? Math.min(100, Math.max(0.01, vol)) : 0.1;
   const sliderValue = Math.round((Math.log(sliderVolume / 0.01) / Math.log(100 / 0.01)) * 1_000);
-  const margin = Number.isFinite(vol) ? vol * instrument.marginPerLot : 0;
+  const marginEntryRate = Math.max(ask, bid);
+  const leveragedMargin = leverage?.enabled && type === "CFD" && leverage.selected != null && leverage.notionalFactor != null
+    ? vol * marginEntryRate * leverage.notionalFactor / leverage.selected
+    : null;
+  const margin = Number.isFinite(vol)
+    ? leveragedMargin != null && Number.isFinite(leveragedMargin)
+      ? leveragedMargin
+      : vol * instrument.marginPerLot
+    : 0;
   const commission = Number.isFinite(vol) ? vol * instrument.commissionPerLot : 0;
   const pipValue = Number.isFinite(vol) ? vol * instrument.pipValue : 0;
   const requiredCash = margin + commission;
@@ -142,6 +184,10 @@ export function TradePanel({
 
   async function submit(side: PositionSide): Promise<void> {
     clearMessages();
+    if (leverageStatus !== "ready") {
+      setValidationError(leverageError ?? "Leverage settings are still loading. Retry when they are available.");
+      return;
+    }
     if (!currentMarketHours.isOpen) {
       setValidationError(`The ${instrument.symbol} market is closed.${nextOpenLabel ? ` It reopens ${nextOpenLabel}.` : ""}`);
       return;
@@ -221,6 +267,9 @@ export function TradePanel({
       stopLoss: type === "CFD" ? parsedStopLoss : null,
       takeProfit: type === "CFD" ? parsedTakeProfit : null,
       acknowledgeStalePrice: staleQuoteAvailable && stalePriceAcknowledged,
+      ...(type === "CFD" && leverage?.enabled && leverage.selected != null
+        ? { leverage: leverage.selected }
+        : {}),
     });
     if (result.ok) {
       // Immediate local confirmation — the DB notification follows separately
@@ -557,10 +606,16 @@ export function TradePanel({
         <section aria-label="Order estimate" className="space-y-2">
           <h3 className="text-(length:--term-text-2xs) font-semibold uppercase tracking-wide text-text-faint">Order estimate</h3>
           <div className="space-y-1.5">
+            <SummaryRow
+              label="Leverage"
+              value={type !== "CFD" ? "Not applied to Strike" : leverage?.enabled ? `${leverage.selected}x` : "Legacy margin preset"}
+            />
             <SummaryRow label="Margin required" value={`${fmtNum(margin, 2)} USD`} />
             <SummaryRow label="Commission" value={`${fmtNum(commission, 2)} USD`} />
             <SummaryRow label="Required to open" value={`${fmtNum(requiredCash, 2)} USD`} valueClass="font-semibold" />
           </div>
+          {leverageStatus === "error" && <Alert tone="err">{leverageError ?? "Unable to load leverage settings."}</Alert>}
+          {leverageStatus === "loading" && <p className="text-xs text-text-muted">Loading leverage settings…</p>}
         </section>
         <div className="h-px bg-panel-3" aria-hidden />
         <section aria-label="Account impact" className="space-y-2">

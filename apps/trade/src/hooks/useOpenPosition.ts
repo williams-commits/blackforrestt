@@ -16,6 +16,7 @@ export interface OpenPositionArgs {
   stopLoss?: number | null;
   takeProfit?: number | null;
   acknowledgeStalePrice?: boolean;
+  leverage?: number;
 }
 
 async function readApiError(

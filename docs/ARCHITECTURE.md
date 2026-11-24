@@ -104,6 +104,18 @@ Three apps under `apps/`, one deploy pipeline (`deploy/` compose + Caddy):
 - **`apps/crm/`** — CRM with its own DB (`blckforest_crm`);
   `PLATFORM_BRIDGE_URL` → `http://trade:3000`.
 
+**Trade leverage controls:** class defaults and maximums live in the approved
+`LEVERAGE_POLICY` risk rule; per-instrument notional factors and optional
+default/maximum overrides live on `Instrument` and use the maker-checker
+workflow. User preferences are stored separately in `UserLeveragePreference`
+and resolve per-instrument → per-class → admin default, capped by the
+effective maximum. Leverage is disabled for an instrument until its
+account-currency notional factor has been verified and approved; those orders
+continue using `marginPerLot`. `Position.marginUsed` and
+`Position.appliedLeverage` are opening snapshots, so policy changes affect
+new positions only. Web and trade schemas mirror these models because both
+apps share the database; the migration history is owned by `apps/web`.
+
 **CRM ↔ Trade integration layer** (explicit contracts only — never shared
 databases, never cross-app Prisma access): the link is
 `Customer.platformUserId` → trade `User.id`, operator-confirmed and

@@ -9,6 +9,7 @@ const instrument: InstrumentCfg = {
   pipSize: new Prisma.Decimal("0.0001"),
   pipValue: new Prisma.Decimal(10),
   marginPerLot: new Prisma.Decimal(1000),
+  leverageNotionalFactor: null,
   commissionPerLot: new Prisma.Decimal(0),
   swapLongPipsPerDay: new Prisma.Decimal(0),
   swapShortPipsPerDay: new Prisma.Decimal(0),

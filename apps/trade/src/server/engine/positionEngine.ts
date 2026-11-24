@@ -1,5 +1,5 @@
 /**
- * PositionEngine — forex position math: pip/PnL computation, stop-loss /
+ * PositionEngine — position math: pip/PnL computation, stop-loss /
  * take-profit triggering, STRIKE settlement at expiry, and account-metric
  * derivation.
  *
@@ -17,6 +17,7 @@ export interface InstrumentCfg {
   pipSize: Prisma.Decimal;
   pipValue: Prisma.Decimal; // value of 1 pip per 1.0 lot, in account currency
   marginPerLot: Prisma.Decimal; // margin per 1.0 lot, in account currency
+  leverageNotionalFactor: Prisma.Decimal | null;
   commissionPerLot: Prisma.Decimal; // commission per lot round-turn
   // Overnight swap (financing) rate in pips per lot per day, by side.
   swapLongPipsPerDay: Prisma.Decimal;
@@ -40,6 +41,8 @@ export interface Position {
   profit: Prisma.Decimal;
   adminPnlAdjustment: Prisma.Decimal;
   netProfit: Prisma.Decimal;
+  marginUsed: Prisma.Decimal;
+  appliedLeverage: Prisma.Decimal | null;
   openedAtMs: number;
   openedTillMs: number | null;
   // Timestamp swap was last accrued up to (ms). Used to prorate the daily swap.
@@ -59,6 +62,7 @@ export interface OpenInput {
   stopLoss: number | null;
   takeProfit: number | null;
   marketRate: number;
+  leverage?: Prisma.Decimal | null;
 }
 
 export interface OpenResult {
@@ -136,6 +140,34 @@ export function marginFor(
   return monetary(quantityDecimal(volume).mul(marginPerLot));
 }
 
+/** Use the locked opening margin; the legacy rate is only for pre-snapshot rows. */
+export function marginForPosition(
+  position: Pick<Position, "volume" | "marginUsed">,
+  legacyMarginPerLot: Prisma.Decimal,
+): Prisma.Decimal {
+  return position.marginUsed.gt(0)
+    ? monetary(position.marginUsed)
+    : marginFor(position.volume, legacyMarginPerLot);
+}
+
+/** Margin = exposure at entry × lots ÷ selected leverage. */
+export function marginForLeverage(
+  volume: number,
+  entryRate: number,
+  notionalFactor: Prisma.Decimal | null,
+  leverage: Prisma.Decimal,
+): Prisma.Decimal {
+  if (!Number.isFinite(entryRate) || entryRate <= 0 || !notionalFactor?.gt(0) || !leverage.gte(1)) {
+    throw new RangeError("A valid entry rate, verified notional factor, and leverage ratio are required.");
+  }
+  return monetary(
+    quantityDecimal(volume)
+      .mul(priceDecimal(entryRate))
+      .mul(notionalFactor)
+      .div(leverage),
+  );
+}
+
 /** Commission charged (commission per lot × volume), split into two line items. */
 export function commissionFor(
   volume: number,
@@ -154,7 +186,9 @@ export function openPosition(input: OpenInput): OpenResult {
   const now = Date.now();
   const openedTillMs = type === "STRIKE" && input.expiryMinutes != null ? now + input.expiryMinutes * 60_000 : null;
   const { commission, trading } = commissionFor(volume, instrument.commissionPerLot);
-  const margin = marginFor(volume, instrument.marginPerLot);
+  const margin = input.leverage
+    ? marginForLeverage(volume, openRate, instrument.leverageNotionalFactor, input.leverage)
+    : marginFor(volume, instrument.marginPerLot);
 
   const position: Position = {
     id: "", // assigned by caller (DB id)
@@ -174,6 +208,8 @@ export function openPosition(input: OpenInput): OpenResult {
     profit: monetary(0),
     adminPnlAdjustment: monetary(0),
     netProfit: monetary(commission.add(trading).neg()),
+    marginUsed: margin,
+    appliedLeverage: input.leverage ?? null,
     openedAtMs: now,
     openedTillMs,
     lastSwapMs: now,

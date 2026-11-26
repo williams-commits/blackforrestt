@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronDown, Clock3, Radio, RotateCcw } from "lucide-react";
+import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, ChevronDown, Clock3, Radio, RotateCcw } from "lucide-react";
 import { useForexStore } from "@/lib/store";
 import type { OpenPositionController } from "@/hooks/useOpenPosition";
 import { toast } from "@/lib/toast";
@@ -17,6 +17,15 @@ import { Input } from "@/components/ui/Input";
 import { Slider } from "@/components/ui/slider";
 import { Alert } from "@/components/ui/Alert";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  LOT_VOLUME_MAX,
+  LOT_VOLUME_MIN,
+  LOT_VOLUME_SLIDER_MARKERS,
+  LOT_VOLUME_SLIDER_MAX,
+  lotVolumeFromSliderPosition,
+  lotVolumeToSliderPosition,
+  nextLotVolume,
+} from "@/lib/lotVolumeScale";
 
 interface Props {
   instrument: InstrumentView;
@@ -64,11 +73,18 @@ export function TradePanel({
 }: Props) {
   const [type, setType] = useState<"CFD" | "STRIKE">("CFD");
   const [volume, setVolume] = useState("0.10");
+  const [volumeSliderPosition, setVolumeSliderPosition] = useState(() => lotVolumeToSliderPosition(0.1));
   // Quick order entry: remember the last-used size across visits so a
   // returning trader is one tap away from a familiar ticket.
   useEffect(() => {
     const saved = window.localStorage.getItem("blckforest:quick-volume");
-    if (saved) setVolume(saved);
+    if (saved) {
+      setVolume(saved);
+      const savedVolume = Number(saved);
+      if (Number.isFinite(savedVolume)) {
+        setVolumeSliderPosition(lotVolumeToSliderPosition(savedVolume));
+      }
+    }
   }, []);
   useEffect(() => {
     try {
@@ -125,10 +141,25 @@ export function TradePanel({
   const takeProfitId = useId();
   const riskControlsId = useId();
   const stalePriceAcknowledgementId = useId();
+  const volumeHintId = useId();
 
   function clearMessages(): void {
     setValidationError(null);
     clearError();
+  }
+
+  function updateVolumeFromInput(nextVolume: string): void {
+    setVolume(nextVolume);
+    if (nextVolume !== "" && Number.isFinite(Number(nextVolume))) {
+      setVolumeSliderPosition(lotVolumeToSliderPosition(Number(nextVolume)));
+    }
+    clearMessages();
+  }
+
+  function updateVolumeFromSlider(position: number): void {
+    setVolumeSliderPosition(position);
+    setVolume(lotVolumeFromSliderPosition(position).toFixed(2));
+    clearMessages();
   }
 
   const quote = useForexStore((s) => s.quote);
@@ -171,8 +202,13 @@ export function TradePanel({
   const spread = ask - bid;
 
   const vol = Number(volume);
-  const sliderVolume = Number.isFinite(vol) ? Math.min(100, Math.max(0.01, vol)) : 0.1;
-  const sliderValue = Math.round((Math.log(sliderVolume / 0.01) / Math.log(100 / 0.01)) * 1_000);
+  const sliderVolume = lotVolumeFromSliderPosition(volumeSliderPosition);
+  const volumeDisplay = Number.isFinite(vol) && vol >= LOT_VOLUME_MIN && vol <= LOT_VOLUME_MAX
+    ? `${vol.toFixed(2)} lots`
+    : "—";
+  const selectedVolume = Number.isFinite(vol) && vol >= LOT_VOLUME_MIN && vol <= LOT_VOLUME_MAX
+    ? vol.toFixed(2)
+    : "";
   const leverageMaximum = Math.max(1, leverage?.maximum ?? 1);
   const leverageTicks = [...new Set(
     Array.from({ length: 5 }, (_, index) => index === 0
@@ -546,63 +582,98 @@ export function TradePanel({
 
       {/* ── Volume ─────────────────────────────────────────────────────────── */}
       <div className="space-y-3 px-4 pb-4">
-        <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-3">
           <label htmlFor={volumeId} className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-muted">Volume (lots)</label>
+          <span className="rounded-md bg-brand-soft px-2.5 py-1 text-(length:--term-text-xs) font-semibold tabular-nums text-brand">
+            {volumeDisplay}
+          </span>
+        </div>
+        <div className="space-y-2">
           <Input
             id={volumeId}
             type="number"
             inputMode="decimal"
             step="0.01"
-            min="0.01"
-            max="100"
+            min={LOT_VOLUME_MIN}
+            max={LOT_VOLUME_MAX}
             value={volume}
-            onChange={(e) => { setVolume(e.target.value); clearMessages(); }}
-            className="h-10 rounded-lg px-3 font-semibold tabular-nums transition-colors"
+            onChange={(e) => updateVolumeFromInput(e.target.value)}
+            aria-describedby={volumeHintId}
+            startIcon={<Activity size={13} strokeWidth={2} />}
+            className="h-11 rounded-lg pr-3 text-right font-semibold tabular-nums transition-colors"
           />
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-(length:--term-text-2xs)">
-            <span className="text-text-muted">Order size</span>
-            <span className="font-semibold tabular-nums text-text">{sliderVolume.toFixed(2)} lots</span>
-          </div>
           <Slider
             aria-label="Order volume in lots"
             aria-valuetext={`${sliderVolume.toFixed(2)} lots`}
-            className="h-5"
-            trackClassName="h-1 bg-panel-2"
-            rangeClassName="bg-panel-2"
-            thumbClassName="size-3 border-2 border-panel-2 bg-brand shadow-none"
+            aria-describedby={volumeHintId}
+            className="h-10"
+            trackClassName="h-2 bg-panel-3"
+            rangeClassName="bg-brand"
+            thumbClassName="size-5 border-2 border-canvas bg-brand shadow-md ring-2 ring-brand/20 transition-transform duration-150 hover:scale-110 focus-visible:ring-4 focus-visible:ring-brand/35"
             markers={
-              <div aria-hidden className="pointer-events-none absolute inset-x-1 top-1/2 z-10 flex -translate-y-1/2 justify-between">
-                {Array.from({ length: 5 }, (_, index) => (
-                  <span key={index} className="size-1.5 rounded-full bg-panel-3" />
+              <div aria-hidden className="pointer-events-none absolute inset-x-2 top-1/2 z-10 h-0 -translate-y-1/2">
+                {LOT_VOLUME_SLIDER_MARKERS.map(({ label, position }) => (
+                  <span
+                    key={label}
+                    className="absolute size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-canvas ring-1 ring-border"
+                    style={{ left: `${(position / LOT_VOLUME_SLIDER_MAX) * 100}%` }}
+                  />
                 ))}
               </div>
             }
             min={0}
-            max={1_000}
+            max={LOT_VOLUME_SLIDER_MAX}
             step={1}
-            value={[sliderValue]}
+            value={[volumeSliderPosition]}
             onValueChange={(value) => {
-              if (value[0] != null) {
-                const nextVolume = 0.01 * (100 / 0.01) ** (value[0] / 1_000);
-                setVolume(nextVolume.toFixed(2));
-                clearMessages();
-              }
+              if (value[0] != null) updateVolumeFromSlider(value[0]);
+            }}
+            onKeyDownCapture={(event) => {
+              const direction = event.key === "ArrowRight" || event.key === "ArrowUp"
+                ? 1
+                : event.key === "ArrowLeft" || event.key === "ArrowDown"
+                  ? -1
+                  : null;
+              if (direction === null) return;
+              event.preventDefault();
+              event.stopPropagation();
+              updateVolumeFromInput(nextLotVolume(Number.isFinite(vol) ? vol : sliderVolume, direction).toFixed(2));
             }}
           />
-          <div className="flex justify-between text-(length:--term-text-2xs) tabular-nums text-text-faint">
-            <span>0.01 min</span>
-            <span>100 max</span>
+          <div aria-hidden className="relative mx-2 h-4 text-[10px] font-medium tabular-nums text-text-faint">
+            {LOT_VOLUME_SLIDER_MARKERS.map(({ label, position }) => (
+              <span
+                key={label}
+                className={`absolute top-0 ${
+                  position === 0
+                    ? "left-0"
+                    : position === LOT_VOLUME_SLIDER_MAX
+                      ? "right-0"
+                      : position === 98
+                        ? "-translate-x-full"
+                        : position === 108
+                          ? ""
+                          : "-translate-x-1/2"
+                }`}
+                style={position > 0 && position < LOT_VOLUME_SLIDER_MAX
+                  ? { left: `${(position / LOT_VOLUME_SLIDER_MAX) * 100}%` }
+                  : undefined}
+              >
+                {label}
+              </span>
+            ))}
           </div>
+          <p id={volumeHintId} className="text-[10px] leading-relaxed text-text-faint">
+            0.01–0.1 by 0.01 · 0.1–10 by 0.1 · 10–100 by 1 lot
+          </p>
           <ChipGroup
             ariaLabel="Quick volume select"
-            className="grid grid-cols-4 gap-1.5"
-            chipClassName="w-full"
+            className="grid grid-cols-3 gap-1.5"
+            chipClassName="h-10 w-full min-w-0 px-1 text-[11px] tabular-nums"
             size="sm"
-            value={volume}
-            onChange={(v) => { setVolume(v); clearMessages(); }}
-            options={[0.01, 0.1, 0.5, 1].map((v) => ({ value: v.toFixed(2), label: v }))}
+            value={selectedVolume}
+            onChange={updateVolumeFromInput}
+            options={[0.01, 0.1, 1, 9, 10, 100].map((v) => ({ value: v.toFixed(2), label: v }))}
           />
         </div>
       </div>
@@ -610,20 +681,20 @@ export function TradePanel({
       {/* ── CFD leverage ──────────────────────────────────────────────────── */}
       {type === "CFD" && (
         <div className="space-y-2 px-4 pb-4" aria-label="Leverage">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 rounded-md bg-panel-2/60 px-3 py-2">
             <div>
               <p className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-muted">Leverage</p>
               <p className="text-(length:--term-text-2xs) text-text-faint">{instrument.symbol}</p>
             </div>
             {leverageStatus === "ready" && leverage?.enabled && (
               <div className="flex items-center gap-2">
-                <span className="font-semibold tabular-nums text-text">{Number(selectedLeverage.toFixed(2))}x</span>
+                <span className="rounded-md bg-canvas px-2.5 py-1 font-semibold tabular-nums text-text">{Number(selectedLeverage.toFixed(2))}x</span>
                 {leverage.preference != null && (
                   <Button
                     type="button"
                     size="sm"
                     variant="ghost"
-                    className="h-7 px-2 text-(length:--term-text-2xs)"
+                    className="h-10 px-2.5 text-(length:--term-text-2xs)"
                     disabled={leverageSaving}
                     onClick={() => void saveLeveragePreference(null)}
                   >
@@ -644,10 +715,10 @@ export function TradePanel({
               <Slider
                 aria-label={`${instrument.symbol} leverage`}
                 aria-valuetext={`${Number(selectedLeverage.toFixed(2))}x`}
-                className="h-5"
-                trackClassName="h-1.5 bg-panel-3"
+                className="h-10"
+                trackClassName="h-2 bg-panel-3"
                 rangeClassName="bg-gradient-to-r from-up via-brand to-down"
-                thumbClassName="size-5 border-2 border-panel-2 bg-brand shadow-none ring-1 ring-brand/70"
+                thumbClassName="size-5 border-2 border-canvas bg-brand shadow-md ring-2 ring-brand/25 transition-transform duration-150 hover:scale-110 focus-visible:ring-4 focus-visible:ring-brand/35"
                 markers={
                   <div aria-hidden className="pointer-events-none absolute inset-x-1 top-1/2 z-10 flex -translate-y-1/2 justify-between">
                     {leverageTicks.map((tick) => (

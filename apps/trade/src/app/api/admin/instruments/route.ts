@@ -22,7 +22,7 @@ export async function GET() {
         pipValue: item.pipValue.toFixed(8),
         contractSize: item.contractSize.toFixed(4),
         marginPerLot: item.marginPerLot.toFixed(8),
-        leverageNotionalFactor: item.leverageNotionalFactor?.toFixed(12) ?? null,
+        leverageEnabled: item.leverageEnabled,
         leverageDefault: item.leverageDefault?.toFixed(4) ?? null,
         leverageMax: item.leverageMax?.toFixed(4) ?? null,
         commissionPerLot: item.commissionPerLot.toFixed(8),

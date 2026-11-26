@@ -193,7 +193,7 @@ export function LeveragePreferences() {
             <section className="flex flex-col gap-3" aria-label="Per-instrument leverage preference">
               <div>
                 <h3 className="text-sm font-semibold">Per-instrument override</h3>
-                <p className="text-xs text-muted-foreground">Overrides the class preference for one verified instrument.</p>
+                <p className="text-xs text-muted-foreground">Overrides the class preference for one leverage-enabled instrument.</p>
               </div>
               {selectedAsset ? (
                 <div className="grid gap-3 rounded-xl bg-muted/30 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
@@ -256,7 +256,7 @@ export function LeveragePreferences() {
                 </div>
               ) : (
                 <Alert tone="info">
-                  Per-instrument leverage becomes available after an administrator verifies and approves that instrument&apos;s notional factor.
+                  No active instruments currently have leverage enabled. Contact an administrator for access.
                 </Alert>
               )}
             </section>

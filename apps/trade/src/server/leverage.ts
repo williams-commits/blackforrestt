@@ -22,9 +22,8 @@ export interface LeverageClassLimits {
 export interface LeverageInstrumentInput {
   symbol: string;
   category: InstrumentCategory;
-  pipSize: Prisma.Decimal;
-  pipValue: Prisma.Decimal;
-  leverageNotionalFactor: Prisma.Decimal | null;
+  contractSize: Prisma.Decimal;
+  leverageEnabled: boolean;
   leverageDefault: Prisma.Decimal | null;
   leverageMax: Prisma.Decimal | null;
 }
@@ -34,7 +33,8 @@ export interface EffectiveLeverage {
   default: Prisma.Decimal | null;
   maximum: Prisma.Decimal | null;
   selected: Prisma.Decimal | null;
-  notionalFactor: Prisma.Decimal | null;
+  preference: Prisma.Decimal | null;
+  contractSize: Prisma.Decimal | null;
 }
 
 export class LeverageSettingsError extends Error {
@@ -87,15 +87,8 @@ export function validateLeveragePolicyConfiguration(value: unknown): string | nu
   return null;
 }
 
-export function hasConsistentNotionalFactor(
-  pipSize: Prisma.Decimal,
-  pipValue: Prisma.Decimal,
-  factor: Prisma.Decimal | null,
-): boolean {
-  return pipSize.gt(0) &&
-    pipValue.gt(0) &&
-    factor?.gt(0) === true &&
-    factor.eq(pipValue.div(pipSize).toDecimalPlaces(12));
+export function hasValidContractSize(contractSize: Prisma.Decimal): boolean {
+  return contractSize.isFinite() && contractSize.gt(0);
 }
 
 export function leverageMaximumForCategory(
@@ -121,7 +114,8 @@ function assetLimits(
 ): LeverageClassLimits | null {
   if (
     !classLimits ||
-    !hasConsistentNotionalFactor(instrument.pipSize, instrument.pipValue, instrument.leverageNotionalFactor)
+    !instrument.leverageEnabled ||
+    !hasValidContractSize(instrument.contractSize)
   ) return null;
   const maximum = instrument.leverageMax
     ? Prisma.Decimal.min(instrument.leverageMax, classLimits.maximum)
@@ -160,9 +154,8 @@ export async function resolveEffectiveLeverage(
       select: {
         symbol: true,
         category: true,
-        pipSize: true,
-        pipValue: true,
-        leverageNotionalFactor: true,
+        contractSize: true,
+        leverageEnabled: true,
         leverageDefault: true,
         leverageMax: true,
       },
@@ -184,16 +177,18 @@ export async function resolveEffectiveLeverage(
       default: null,
       maximum: null,
       selected: null,
-      notionalFactor: null,
+      preference: null,
+      contractSize: instrument.contractSize,
     };
   }
 
   const preferenceByScope = new Map(preferences.map((preference) => [preference.scopeKey, preference.leverage]));
+  const assetPreference = preferenceByScope.get(`asset:${instrument.symbol}`) ?? null;
   const selected = resolvePreferredLeverage(
     limits.default,
     limits.maximum,
     preferenceByScope.get(`class:${instrument.category}`),
-    preferenceByScope.get(`asset:${instrument.symbol}`),
+    assetPreference ?? undefined,
   );
 
   return {
@@ -201,7 +196,8 @@ export async function resolveEffectiveLeverage(
     default: limits.default,
     maximum: limits.maximum,
     selected,
-    notionalFactor: instrument.leverageNotionalFactor,
+    preference: assetPreference,
+    contractSize: instrument.contractSize,
   };
 }
 
@@ -215,9 +211,8 @@ export async function getUserLeverageSettings(userId: string) {
         symbol: true,
         name: true,
         category: true,
-        pipSize: true,
-        pipValue: true,
-        leverageNotionalFactor: true,
+        contractSize: true,
+        leverageEnabled: true,
         leverageDefault: true,
         leverageMax: true,
       },
@@ -294,9 +289,8 @@ export async function saveUserLeveragePreference(
       select: {
         symbol: true,
         category: true,
-        pipSize: true,
-        pipValue: true,
-        leverageNotionalFactor: true,
+        contractSize: true,
+        leverageEnabled: true,
         leverageDefault: true,
         leverageMax: true,
       },

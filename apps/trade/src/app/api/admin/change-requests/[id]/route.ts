@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AdminError, canReviewChangeDomain, requireAdminContext } from "@/server/admin";
 import { AdminChangeError, reviewAdminChangeRequest } from "@/server/adminChanges";
 import { prisma } from "@/server/db";
+import { hub } from "@/server/engine/hub";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +24,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const parsed = Review.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return NextResponse.json({ error: "Invalid review decision.", details: parsed.error.flatten() }, { status: 400 });
     const { id } = await context.params;
-    const pending = await prisma.adminChangeRequest.findUnique({ where: { id }, select: { domain: true } });
+    const pending = await prisma.adminChangeRequest.findUnique({
+      where: { id },
+      select: { domain: true, entityType: true, entityId: true },
+    });
     if (!pending) return NextResponse.json({ error: "Change request not found." }, { status: 404 });
     if (!canReviewChangeDomain(reviewer, pending.domain)) {
       return NextResponse.json({ error: `Forbidden — your roles cannot approve ${pending.domain} changes.` }, { status: 403 });
@@ -34,6 +38,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       decision: parsed.data.decision,
       note: parsed.data.note,
     });
+    if (parsed.data.decision === "APPROVE" && pending.entityType === "Instrument" && pending.entityId) {
+      await hub.refreshInstrumentLeverageTerms(pending.entityId);
+    }
     return NextResponse.json({ request: result });
   } catch (error) {
     const status = errorStatus(error);

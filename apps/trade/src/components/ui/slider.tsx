@@ -6,6 +6,10 @@ import { cn } from "@/lib/utils";
 
 function Slider({
   className,
+  trackClassName,
+  rangeClassName,
+  thumbClassName,
+  markers,
   defaultValue,
   value,
   min = 0,
@@ -13,7 +17,12 @@ function Slider({
   "aria-label": ariaLabel,
   "aria-valuetext": ariaValueText,
   ...props
-}: React.ComponentProps<typeof SliderPrimitive.Root>) {
+}: React.ComponentProps<typeof SliderPrimitive.Root> & {
+  trackClassName?: string;
+  rangeClassName?: string;
+  thumbClassName?: string;
+  markers?: React.ReactNode;
+}) {
   const _values = React.useMemo(
     () =>
       Array.isArray(value)
@@ -41,22 +50,28 @@ function Slider({
         data-slot="slider-track"
         className={cn(
           "relative grow overflow-hidden rounded-full bg-muted data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5",
+          trackClassName,
         )}
       >
         <SliderPrimitive.Range
           data-slot="slider-range"
           className={cn(
             "absolute bg-primary data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full",
+            rangeClassName,
           )}
         />
       </SliderPrimitive.Track>
+      {markers}
       {Array.from({ length: _values.length }, (_, index) => (
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
           key={index}
           aria-label={ariaLabel}
           aria-valuetext={ariaValueText}
-          className="block size-4 shrink-0 rounded-full border border-primary bg-background shadow-sm ring-ring/50 transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
+          className={cn(
+            "block size-4 shrink-0 rounded-full border border-primary bg-background shadow-sm ring-ring/50 transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50",
+            thumbClassName,
+          )}
         />
       ))}
     </SliderPrimitive.Root>

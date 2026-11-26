@@ -28,6 +28,7 @@ export async function listInstrumentViews(): Promise<InstrumentView[]> {
     pipSize: Number(r.pipSize),
     pipValue: Number(r.pipValue),
     contractSize: Number(r.contractSize),
+    quoteToAccountRate: r.quote === "USD" ? 1 : null,
     marginPerLot: Number(r.marginPerLot),
     commissionPerLot: Number(r.commissionPerLot),
     bid: Number(r.basePrice),

@@ -46,6 +46,7 @@ import {
   type InstrumentCfg,
   type Position,
 } from "./positionEngine";
+import { currencyConversionRate } from "./currencyConversion";
 import type {
   AccountMetricsView,
   ActivityBadgeCounts,
@@ -90,9 +91,6 @@ interface InstrumentState {
   pipValue: number;
   contractSize: number;
   marginPerLot: number;
-  leverageNotionalFactor: Prisma.Decimal | null;
-  leverageDefault: Prisma.Decimal | null;
-  leverageMax: Prisma.Decimal | null;
   commissionPerLot: number;
   swapLongPipsPerDay: number;
   swapShortPipsPerDay: number;
@@ -229,6 +227,26 @@ class Hub {
     return this.instruments.get(symbol.toUpperCase());
   }
 
+  quoteToAccountRate(symbol: string): number | null {
+    const state = this.instruments.get(symbol.toUpperCase());
+    return state ? this.currencyRate(state.quote, "USD") : null;
+  }
+
+  async refreshInstrumentLeverageTerms(symbol: string): Promise<void> {
+    const state = this.instruments.get(symbol.toUpperCase());
+    if (!state) return;
+    const row = await prisma.instrument.findUnique({
+      where: { symbol: state.symbol },
+      select: { contractSize: true },
+    });
+    if (!row) throw new Error(`Instrument ${state.symbol} no longer exists.`);
+    state.contractSize = Number(row.contractSize);
+    this.broadcast({
+      kind: "instruments",
+      instruments: this.listInstruments().map((instrument) => this.instrumentView(instrument)),
+    });
+  }
+
   /** List all open positions for a user (from the in-memory engine state). */
   listOpenPositions(userId: string): Position[] {
     return this.openPositions.get(userId) ?? [];
@@ -246,6 +264,7 @@ class Hub {
       pipSize: state.pipSize,
       pipValue: state.pipValue,
       contractSize: state.contractSize,
+      quoteToAccountRate: quote.quoteToAccountRate ?? null,
       marginPerLot: state.marginPerLot,
       commissionPerLot: state.commissionPerLot,
       bid: quote.bid,
@@ -257,6 +276,14 @@ class Hub {
   }
 
   private quoteFor(state: InstrumentState): Quote {
+    const quote = this.rawQuoteFor(state);
+    return {
+      ...quote,
+      quoteToAccountRate: this.currencyRate(state.quote, "USD"),
+    };
+  }
+
+  private rawQuoteFor(state: InstrumentState): Quote {
     const quoteTimestamp = this.marketDataTimestamps.get(state.symbol) ?? 0;
     const now = Date.now();
     const marketHours = marketHoursForSymbol(state.symbol, now, quoteTimestamp);
@@ -268,6 +295,19 @@ class Hub {
       time: quoteTimestamp,
       marketHours,
     };
+  }
+
+  private currencyRate(fromCurrency: string, toCurrency: string): number | null {
+    if (fromCurrency.trim().toUpperCase() === toCurrency.trim().toUpperCase()) return 1;
+    const simulation = getMarketDataMode() === "simulation";
+    const pairs = Array.from(this.instruments.values())
+      .filter((instrument) => instrument.category === "FOREX")
+      .flatMap((instrument) => {
+        const quote = this.rawQuoteFor(instrument);
+        if (!simulation && !quote.marketHours.canTrade) return [];
+        return [{ base: instrument.base, quote: instrument.quote, mid: quote.mid }];
+      });
+    return currencyConversionRate(fromCurrency, toCurrency, pairs);
   }
 
   private canExecuteMarket(state: InstrumentState): boolean {
@@ -305,9 +345,6 @@ class Hub {
         pipValue: Number(row.pipValue),
         contractSize: Number(row.contractSize),
         marginPerLot: Number(row.marginPerLot),
-        leverageNotionalFactor: row.leverageNotionalFactor,
-        leverageDefault: row.leverageDefault,
-        leverageMax: row.leverageMax,
         commissionPerLot: Number(row.commissionPerLot),
         swapLongPipsPerDay: Number(row.swapLongPips),
         swapShortPipsPerDay: Number(row.swapShortPips),
@@ -656,6 +693,7 @@ class Hub {
                   netProfit: decimal(position.netProfit),
                   marginUsed: decimal(position.marginUsed),
                   appliedLeverage: position.appliedLeverage,
+                  lastQuoteToAccountRate: position.lastQuoteToAccountRate,
                   swapAccruedAt: new Date(position.lastSwapMs ?? Date.now()),
                 },
               });
@@ -822,9 +860,18 @@ class Hub {
 
       const entryRate = input.side === "BUY" ? effectiveAsk : effectiveBid;
       this.validateOpenInput(input, entryRate);
+      if (input.type === "CFD" && !cfg.quoteToAccountRate?.gt(0)) {
+        throw new TradingError(
+          "Quote-currency conversion to USD is unavailable. Wait for fresh conversion-market data.",
+          "BLOCKED",
+        );
+      }
       const leverageSettings = input.type === "CFD"
         ? await resolveEffectiveLeverage(input.userId, symbol)
         : null;
+      if (leverageSettings?.contractSize && !leverageSettings.contractSize.eq(cfg.contractSize)) {
+        throw new TradingError("Instrument contract terms changed. Refresh the terminal and retry.", "CONFLICT");
+      }
       if (input.leverage != null) {
         if (
           !leverageSettings?.enabled ||
@@ -833,13 +880,9 @@ class Hub {
           throw new TradingError("Leverage settings changed. Review the current leverage and retry.", "CONFLICT");
         }
       }
-      const openInstrument = leverageSettings?.enabled
-        ? { ...cfg, leverageNotionalFactor: leverageSettings.notionalFactor }
-        : cfg;
-
       const opened = openPosition({
         userId: input.userId,
-        instrument: openInstrument,
+        instrument: cfg,
         side: input.side,
         volume: input.volume,
         type: input.type,
@@ -885,12 +928,12 @@ class Hub {
             const currentLeverage = await resolveEffectiveLeverage(input.userId, symbol, tx);
             const ratioUnchanged = currentLeverage.selected?.eq(leverageSettings.selected ?? new Decimal(0))
               ?? leverageSettings.selected === null;
-            const factorUnchanged = currentLeverage.notionalFactor?.eq(leverageSettings.notionalFactor ?? new Decimal(0))
-              ?? leverageSettings.notionalFactor === null;
+            const contractSizeUnchanged = currentLeverage.contractSize?.eq(leverageSettings.contractSize ?? new Decimal(0))
+              ?? leverageSettings.contractSize === null;
             if (
               currentLeverage.enabled !== leverageSettings.enabled ||
               !ratioUnchanged ||
-              !factorUnchanged
+              !contractSizeUnchanged
             ) {
               throw new TradingError("Leverage settings changed while the order was being placed. Review the ticket and retry.", "CONFLICT");
             }
@@ -921,6 +964,10 @@ class Hub {
               netProfit: decimal(position.netProfit),
               marginUsed: decimal(position.marginUsed),
               appliedLeverage: position.appliedLeverage,
+              appliedContractSize: position.appliedContractSize,
+              lastQuoteToAccountRate: position.lastQuoteToAccountRate,
+              appliedPipSize: position.appliedPipSize,
+              appliedPipValue: position.appliedPipValue,
               status: "OPEN",
               openedAt: new Date(position.openedAtMs),
               openedTill: position.openedTillMs != null ? new Date(position.openedTillMs) : null,
@@ -1359,6 +1406,7 @@ class Hub {
             swap: decimal(position.swap),
             profit: decimal(position.profit),
             netProfit: decimal(allInNet),
+            lastQuoteToAccountRate: position.lastQuoteToAccountRate,
             swapAccruedAt: new Date(position.lastSwapMs ?? closedAt.getTime()),
             closeReason: reason,
             closedAt,
@@ -1845,13 +1893,17 @@ class Hub {
   }
 
   private cfg(state: InstrumentState): InstrumentCfg {
+    const quoteToAccountRate = this.currencyRate(state.quote, "USD");
     return {
       symbol: state.symbol,
       digits: state.digits,
       pipSize: new Decimal(state.pipSize.toString()),
       pipValue: new Decimal(state.pipValue.toString()),
+      contractSize: new Decimal(state.contractSize.toString()),
+      quoteToAccountRate: quoteToAccountRate == null
+        ? null
+        : new Decimal(quoteToAccountRate.toString()),
       marginPerLot: new Decimal(state.marginPerLot.toString()),
-      leverageNotionalFactor: state.leverageNotionalFactor,
       commissionPerLot: new Decimal(state.commissionPerLot.toString()),
       swapLongPipsPerDay: new Decimal(state.swapLongPipsPerDay.toString()),
       swapShortPipsPerDay: new Decimal(state.swapShortPipsPerDay.toString()),
@@ -1877,6 +1929,10 @@ class Hub {
     netProfit: Prisma.Decimal;
     marginUsed: Prisma.Decimal;
     appliedLeverage: Prisma.Decimal | null;
+    appliedContractSize: Prisma.Decimal | null;
+    lastQuoteToAccountRate: Prisma.Decimal | null;
+    appliedPipSize: Prisma.Decimal | null;
+    appliedPipValue: Prisma.Decimal | null;
     openedAt: Date;
     openedTill: Date | null;
     swapAccruedAt: Date;
@@ -1900,6 +1956,10 @@ class Hub {
       netProfit: money(position.netProfit),
       marginUsed: money(position.marginUsed),
       appliedLeverage: position.appliedLeverage,
+      appliedContractSize: position.appliedContractSize,
+      lastQuoteToAccountRate: position.lastQuoteToAccountRate,
+      appliedPipSize: position.appliedPipSize,
+      appliedPipValue: position.appliedPipValue,
       openedAtMs: position.openedAt.getTime(),
       openedTillMs: position.openedTill?.getTime() ?? null,
       lastSwapMs: position.swapAccruedAt.getTime(),
@@ -1914,7 +1974,7 @@ class Hub {
       position.side === "BUY"
         ? new Decimal(position.currentRate.toString()).sub(entry.toString())
         : new Decimal(entry.toString()).sub(position.currentRate.toString());
-    const pips = Number(priceMove.div(cfg.pipSize));
+    const pips = Number(priceMove.div(position.appliedPipSize ?? cfg.pipSize));
     return {
       id: position.id,
       symbol: position.symbol,

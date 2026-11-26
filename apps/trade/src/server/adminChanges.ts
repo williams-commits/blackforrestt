@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withSerializableRetry } from "@/server/db";
 import { appendAuditEvent, stableJson } from "@/server/ledger";
 import {
+  hasValidContractSize,
   leverageMaximumForCategory,
   validateLeveragePolicyConfiguration,
 } from "@/server/leverage";
@@ -33,9 +34,10 @@ const InstrumentPayload = z.object({
   commissionPerLot: z.string().regex(/^\d+(?:\.\d{1,8})?$/),
   swapLongPips: z.string().regex(/^-?\d+(?:\.\d{1,8})?$/),
   swapShortPips: z.string().regex(/^-?\d+(?:\.\d{1,8})?$/),
+  contractSize: z.string().regex(/^\d+(?:\.\d{1,4})?$/).optional(),
   pipSize: z.string().regex(/^\d+(?:\.\d{1,8})?$/).optional(),
   pipValue: z.string().regex(/^\d+(?:\.\d{1,8})?$/).optional(),
-  leverageNotionalFactor: z.string().regex(/^\d+(?:\.\d{1,12})?$/).nullable().optional(),
+  leverageEnabled: z.boolean().optional(),
   leverageDefault: z.string().regex(/^\d+(?:\.\d{1,4})?$/).nullable().optional(),
   leverageMax: z.string().regex(/^\d+(?:\.\d{1,4})?$/).nullable().optional(),
 });
@@ -273,27 +275,28 @@ async function executeChange(
         where: { symbol: payload.symbol },
         select: {
           symbol: true,
+          contractSize: true,
           pipSize: true,
           pipValue: true,
           category: true,
-          leverageNotionalFactor: true,
+          leverageEnabled: true,
           leverageDefault: true,
           leverageMax: true,
         },
       });
       if (!instrument) throw new AdminChangeError("Instrument not found.", 404);
       if (
-        payload.leverageNotionalFactor !== undefined ||
+        payload.contractSize !== undefined ||
+        payload.leverageEnabled !== undefined ||
         payload.leverageDefault !== undefined ||
         payload.leverageMax !== undefined ||
         payload.pipSize !== undefined ||
         payload.pipValue !== undefined
       ) {
-        const factor = payload.leverageNotionalFactor === undefined
-          ? instrument.leverageNotionalFactor
-          : payload.leverageNotionalFactor === null
-            ? null
-            : new Prisma.Decimal(payload.leverageNotionalFactor);
+        const contractSize = payload.contractSize === undefined
+          ? instrument.contractSize
+          : new Prisma.Decimal(payload.contractSize);
+        const leverageEnabled = payload.leverageEnabled ?? instrument.leverageEnabled;
         const leverageDefault = payload.leverageDefault === undefined
           ? instrument.leverageDefault
           : payload.leverageDefault === null
@@ -313,15 +316,8 @@ async function executeChange(
         if (pipSize.lte(0) || pipValue.lte(0)) {
           throw new AdminChangeError("Pip size and value must be greater than zero.", 400);
         }
-        if (factor?.lte(0)) throw new AdminChangeError("A verified notional factor must be greater than zero.", 400);
-        if (
-          factor &&
-          !factor.eq(pipValue.div(pipSize).toDecimalPlaces(12))
-        ) {
-          throw new AdminChangeError(
-            "The verified notional factor must equal pip value divided by pip size so margin and P/L use the same exposure.",
-            400,
-          );
+        if (!hasValidContractSize(contractSize)) {
+          throw new AdminChangeError("Contract size must be greater than zero.", 400);
         }
         if (leverageDefault && (leverageDefault.lt(1) || leverageDefault.gt(500))) {
           throw new AdminChangeError("Asset default leverage must be between 1x and 500x.", 400);
@@ -332,8 +328,8 @@ async function executeChange(
         if (leverageDefault && leverageMax && leverageDefault.gt(leverageMax)) {
           throw new AdminChangeError("Asset default leverage cannot exceed its maximum.", 400);
         }
-        if (!factor && (leverageDefault || leverageMax)) {
-          throw new AdminChangeError("Verify the asset notional factor before setting leverage overrides.", 400);
+        if (!leverageEnabled && (leverageDefault || leverageMax)) {
+          throw new AdminChangeError("Clear the asset leverage overrides before disabling leverage.", 400);
         }
         const classPolicy = await tx.riskRule.findUnique({
           where: { code: "LEVERAGE_POLICY" },
@@ -356,9 +352,8 @@ async function executeChange(
           swapShortPips: payload.swapShortPips,
           ...(payload.pipSize !== undefined ? { pipSize: payload.pipSize } : {}),
           ...(payload.pipValue !== undefined ? { pipValue: payload.pipValue } : {}),
-          ...(payload.leverageNotionalFactor !== undefined
-            ? { leverageNotionalFactor: payload.leverageNotionalFactor }
-            : {}),
+          ...(payload.contractSize !== undefined ? { contractSize: payload.contractSize } : {}),
+          ...(payload.leverageEnabled !== undefined ? { leverageEnabled: payload.leverageEnabled } : {}),
           ...(payload.leverageDefault !== undefined ? { leverageDefault: payload.leverageDefault } : {}),
           ...(payload.leverageMax !== undefined ? { leverageMax: payload.leverageMax } : {}),
         },

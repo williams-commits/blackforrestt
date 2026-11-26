@@ -35,6 +35,7 @@ export interface Quote {
   low24h: number;
   changePct: number;
   marketHours: MarketHoursView;
+  quoteToAccountRate?: number | null;
 }
 
 /** Instrument metadata + live quote, as seen by the client. */
@@ -50,6 +51,7 @@ export interface InstrumentView {
   pipSize: number;
   pipValue: number;
   contractSize: number;
+  quoteToAccountRate?: number | null;
   marginPerLot: number;
   commissionPerLot: number;
   bid: number;

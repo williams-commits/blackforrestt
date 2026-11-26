@@ -105,16 +105,23 @@ Three apps under `apps/`, one deploy pipeline (`deploy/` compose + Caddy):
   `PLATFORM_BRIDGE_URL` → `http://trade:3000`.
 
 **Trade leverage controls:** class defaults and maximums live in the approved
-`LEVERAGE_POLICY` risk rule; per-instrument notional factors and optional
-default/maximum overrides live on `Instrument` and use the maker-checker
-workflow. User preferences are stored separately in `UserLeveragePreference`
-and resolve per-instrument → per-class → admin default, capped by the
-effective maximum. Leverage is disabled for an instrument until its
-account-currency notional factor has been verified and approved; those orders
-continue using `marginPerLot`. `Position.marginUsed` and
-`Position.appliedLeverage` are opening snapshots, so policy changes affect
-new positions only. Web and trade schemas mirror these models because both
-apps share the database; the migration history is owned by `apps/web`.
+`LEVERAGE_POLICY` risk rule; per-instrument `contractSize` (underlying units
+per lot), leverage enablement, and optional default/maximum overrides live on
+`Instrument` and use the maker-checker workflow. User preferences are stored
+separately in `UserLeveragePreference` and resolve per-instrument → per-class
+→ admin default, capped by the effective maximum. Traders can set or reset an
+instrument preference from its CFD order ticket; it is persisted and applies
+to new positions only. CFD exposure and P/L use contract units: signed price
+movement × lots × contract size × quote-currency-to-USD conversion. Margin
+uses the corresponding entry notional divided by selected leverage; disabling
+leverage retains the instrument's fixed `marginPerLot` preset. Non-USD quote
+currencies convert through fresh active FX quotes, including inverse and
+multi-pair paths. `Position.marginUsed`, `Position.appliedLeverage`, and
+`Position.appliedContractSize` are opening snapshots; the last conversion rate
+is updated as the position is marked. Legacy positions remain on their
+snapshotted pip-based model, and STRIKE positions continue using pip terms.
+Web and trade schemas mirror these models because both apps share the
+database; the migration history is owned by `apps/web`.
 
 **CRM ↔ Trade integration layer** (explicit contracts only — never shared
 databases, never cross-app Prisma access): the link is

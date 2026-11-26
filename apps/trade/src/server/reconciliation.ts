@@ -13,6 +13,7 @@ import {
   userAdvanceBalance,
   userLedgerBalances,
 } from "./ledger";
+import { contractGrossProfit, grossProfit } from "./engine/positionEngine";
 
 type Tx = Prisma.TransactionClient;
 
@@ -26,7 +27,7 @@ type Tx = Prisma.TransactionClient;
  *     fields equal their ledger-derived expected values (mirrors
  *     verifyUserAccountingProjection, generalized to all users)
  *   - POSITION_PNL: a closed position's stored realized P&L equals the value
- *     recomputed from open/close rate, volume, and instrument pip value
+ *     recomputed from its snapshotted contract or legacy pip terms
  *   - PAYMENT_SETTLEMENT: APPROVED payments with a settlement mismatch surface
  *
  * Critical divergences open a ReconciliationBlock (TRADE or WITHDRAW) that the
@@ -446,17 +447,36 @@ async function checkClosedPositions(userId: string): Promise<PendingCase[]> {
     const postedReferences = new Set(postings.map((posting) => posting.reference));
 
     for (const position of positions) {
-      const pipSize = position.instrument.pipSize;
-      if (pipSize.isZero()) {
-        cases.push(critical(userId, "POSITION_PNL", `Position ${position.id} has an invalid zero pip size.`));
-        continue;
-      }
       const entry = position.strikeRate ?? position.openRate;
       const diff = position.side === "BUY"
         ? position.currentRate.sub(entry)
         : entry.sub(position.currentRate);
-      const pips = diff.div(pipSize);
-      const expectedProfit = money(pips.mul(position.instrument.pipValue).mul(position.volume));
+      let gross: Prisma.Decimal;
+      if (position.appliedContractSize) {
+        if (!position.lastQuoteToAccountRate?.gt(0)) {
+          cases.push(critical(
+            userId,
+            "POSITION_PNL",
+            `Position ${position.id} has contract terms but no quote-currency conversion snapshot.`,
+          ));
+          continue;
+        }
+        gross = contractGrossProfit(
+          diff,
+          position.appliedContractSize,
+          position.lastQuoteToAccountRate,
+          Number(position.volume),
+        );
+      } else {
+        const pipSize = position.appliedPipSize ?? position.instrument.pipSize;
+        const pipValue = position.appliedPipValue ?? position.instrument.pipValue;
+        if (!pipSize.gt(0) || !pipValue.gt(0)) {
+          cases.push(critical(userId, "POSITION_PNL", `Position ${position.id} has invalid legacy pip terms.`));
+          continue;
+        }
+        gross = grossProfit(diff.div(pipSize), pipValue, Number(position.volume));
+      }
+      const expectedProfit = money(gross.add(position.adminPnlAdjustment));
       const expectedNet = money(
         expectedProfit
           .add(position.swap)

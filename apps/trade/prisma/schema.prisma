@@ -16,7 +16,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 enum AdminRole {
   SUPER_ADMIN
   COMPLIANCE
@@ -101,90 +100,91 @@ enum PositionStatus {
 
 model Instrument {
   // Stable symbol, e.g. "AUDCAD", "EURUSD", "XAUUSD", "BTCUSD".
-  symbol      String  @id
-  name        String
+  symbol                       String             @id
+  name                         String
   // Asset class, used to group instruments in the sidebar + filter in queries.
-  category    InstrumentCategory @default(FOREX)
-  base        String // e.g. "AUD"
-  quote       String // e.g. "CAD"
+  category                     InstrumentCategory @default(FOREX)
+  base                         String // e.g. "AUD"
+  quote                        String // e.g. "CAD"
   // Price decimal places (5 for most pairs, 3 for JPY pairs).
-  digits      Int     @default(5)
+  digits                       Int                @default(5)
   // Size of one pip in price terms (0.0001 for 5-digit, 0.01 for JPY).
-  pipSize     Decimal @db.Decimal(18, 8)
-  // Money value of one pip per 1.0 lot, in quote currency.
-  pipValue    Decimal @db.Decimal(18, 8)
+  pipSize                      Decimal            @db.Decimal(18, 8)
+  // Legacy money value of one pip per 1.0 lot, retained for pre-contract positions.
+  pipValue                     Decimal            @db.Decimal(18, 8)
   // Contract size: 1 lot = this many units of base currency.
-  contractSize Decimal @default(100000) @db.Decimal(18, 4)
+  contractSize                 Decimal            @default(100000) @db.Decimal(18, 4)
   // Margin required per 1.0 lot, in account currency (USD), at base price.
-  marginPerLot Decimal @db.Decimal(18, 4)
-  // Verified account-currency notional per 1.0 price unit per lot. Null disables leverage for this asset.
-  leverageNotionalFactor Decimal? @db.Decimal(24, 12)
-  leverageDefault Decimal? @db.Decimal(12, 4)
-  leverageMax Decimal? @db.Decimal(12, 4)
+  marginPerLot                 Decimal            @db.Decimal(18, 4)
+  // Retained for historical config compatibility; new exposure math uses contractSize and live conversion.
+  legacyLeverageNotionalFactor Decimal?           @map("leverageNotionalFactor") @db.Decimal(24, 12)
+  leverageEnabled              Boolean            @default(true)
+  leverageDefault              Decimal?           @db.Decimal(12, 4)
+  leverageMax                  Decimal?           @db.Decimal(12, 4)
   // Overnight swap in pips per lot (long / short). 0 in the sim.
-  swapLongPips  Decimal @default(0) @db.Decimal(18, 8)
-  swapShortPips Decimal @default(0) @db.Decimal(18, 8)
+  swapLongPips                 Decimal            @default(0) @db.Decimal(18, 8)
+  swapShortPips                Decimal            @default(0) @db.Decimal(18, 8)
   // Commission per lot round-turn, in account currency.
-  commissionPerLot Decimal @default(7) @db.Decimal(18, 4)
+  commissionPerLot             Decimal            @default(7) @db.Decimal(18, 4)
   // Seed/anchor price for the simulator (also the initial price if no live feed).
-  basePrice   Decimal @db.Decimal(24, 8)
+  basePrice                    Decimal            @db.Decimal(24, 8)
   // External feed symbol (e.g. "OANDA:EUR_USD", "BINANCE:BTCUSDT") for live data.
-  feedSymbol  String?
-  active      Boolean @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  feedSymbol                   String?
+  active                       Boolean            @default(true)
+  createdAt                    DateTime           @default(now())
+  updatedAt                    DateTime           @updatedAt
 
-  positions   Position[]
+  positions Position[]
 
   @@index([active])
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String?  @unique
-  name         String?
+  id                 String    @id @default(cuid())
+  email              String?   @unique
+  name               String?
   // bcrypt password hash. Null for the legacy dev user / OAuth-only accounts.
-  passwordHash String?
+  passwordHash       String?
   // Trading account number shown in the UI (e.g. 6583478).
-  accountNo    String?  @unique
-  isDev        Boolean  @default(false)
+  accountNo          String?   @unique
+  isDev              Boolean   @default(false)
   // Admin flag gates access to /admin (KYC review tooling).
-  isAdmin      Boolean  @default(false)
-  verified     Boolean  @default(false)
-  emailVerifiedAt DateTime?
-  failedLoginCount Int @default(0)
-  lockedUntil DateTime?
+  isAdmin            Boolean   @default(false)
+  verified           Boolean   @default(false)
+  emailVerifiedAt    DateTime?
+  failedLoginCount   Int       @default(0)
+  lockedUntil        DateTime?
   // Account management (admin actions). Soft-delete keeps ledger history;
   // all three states block login in auth.ts.
-  suspendedAt DateTime?
-  blockedAt   DateTime?
-  deletedAt   DateTime?
-  passwordChangedAt DateTime?
+  suspendedAt        DateTime?
+  blockedAt          DateTime?
+  deletedAt          DateTime?
+  passwordChangedAt  DateTime?
   // Apex domain of the brand family this account signed up under
   // (multi-brand — BRAND_OVERRIDES). Null = primary brand; users created
   // before per-domain branding. Drives transactional email rendering and
   // brand-correct action links.
-  brandDomain String?
+  brandDomain        String?
   mfaSecretEncrypted String?
-  mfaEnabledAt DateTime?
-  mfaLastUsedStep BigInt?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  mfaEnabledAt       DateTime?
+  mfaLastUsedStep    BigInt?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  wallets      Wallet[]
-  positions    Position[]
-  leveragePreferences UserLeveragePreference[]
-  metrics      AccountMetrics?
-  transactions Transaction[]
-  kyc          KycSubmission?
-  paymentRequests PaymentRequest[]
-  ledgerAccounts  LedgerAccount[]
-  ledgerTransactions LedgerTransaction[]
-  securityTokens SecurityToken[]
-  recoveryCodes MfaRecoveryCode[]
-  securitySessions SecuritySession[]
-  kycDocuments   KycDocument[]
-  notifications  Notification[]
+  wallets              Wallet[]
+  positions            Position[]
+  leveragePreferences  UserLeveragePreference[]
+  metrics              AccountMetrics?
+  transactions         Transaction[]
+  kyc                  KycSubmission?
+  paymentRequests      PaymentRequest[]
+  ledgerAccounts       LedgerAccount[]
+  ledgerTransactions   LedgerTransaction[]
+  securityTokens       SecurityToken[]
+  recoveryCodes        MfaRecoveryCode[]
+  securitySessions     SecuritySession[]
+  kycDocuments         KycDocument[]
+  notifications        Notification[]
   reconciliationCases  ReconciliationCase[]
   reconciliationBlocks ReconciliationBlock[]
   adminRoles           AdminRoleAssignment[]
@@ -192,10 +192,10 @@ model User {
   groupMemberships     UserGroupMembership[]
   profile              UserProfile?
   referralCode         ReferralCode?
-  referralsMade        Referral[]     @relation("ReferrerReferrals")
-  referralReceived     Referral?      @relation("ReferredReferral")
-  sentMessages         DirectMessage[] @relation("SentDirectMessages")
-  receivedMessages     DirectMessage[] @relation("ReceivedDirectMessages")
+  referralsMade        Referral[]               @relation("ReferrerReferrals")
+  referralReceived     Referral?                @relation("ReferredReferral")
+  sentMessages         DirectMessage[]          @relation("SentDirectMessages")
+  receivedMessages     DirectMessage[]          @relation("ReceivedDirectMessages")
 }
 
 // Admin ↔ customer direct chat. One thread per user↔admin pair is implied by
@@ -234,27 +234,27 @@ model SecurityToken {
 }
 
 model MfaRecoveryCode {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  codeHash  String   @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String    @unique
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([userId, usedAt])
 }
 
 model SecuritySession {
-  id            String   @id
+  id            String    @id
   userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   deviceId      String
   deviceName    String
   userAgent     String?
   ipHash        String?
   mfaVerifiedAt DateTime?
-  createdAt     DateTime @default(now())
-  lastSeenAt    DateTime @default(now())
+  createdAt     DateTime  @default(now())
+  lastSeenAt    DateTime  @default(now())
   expiresAt     DateTime
   revokedAt     DateTime?
 
@@ -264,12 +264,12 @@ model SecuritySession {
 }
 
 model Wallet {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  asset     String // e.g. "USD"
-  free      Decimal  @default(0) @db.Decimal(36, 8)
-  locked    Decimal  @default(0) @db.Decimal(36, 8)
+  id     String  @id @default(cuid())
+  userId String
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset  String // e.g. "USD"
+  free   Decimal @default(0) @db.Decimal(36, 8)
+  locked Decimal @default(0) @db.Decimal(36, 8)
 
   @@unique([userId, asset])
   @@index([userId])
@@ -298,56 +298,63 @@ model AccountMetrics {
 }
 
 model Position {
-  id         String         @id @default(cuid())
-  userId     String
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  symbol     String
-  instrument Instrument     @relation(fields: [symbol], references: [symbol])
-  type       PositionType
-  side       PositionSide
+  id                     String         @id @default(cuid())
+  userId                 String
+  user                   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  symbol                 String
+  instrument             Instrument     @relation(fields: [symbol], references: [symbol])
+  type                   PositionType
+  side                   PositionSide
   // Volume in lots.
-  volume     Decimal        @db.Decimal(18, 4)
+  volume                 Decimal        @db.Decimal(18, 4)
   // Rate at which the position was opened (market rate for CFD).
-  openRate   Decimal        @db.Decimal(24, 8)
+  openRate               Decimal        @db.Decimal(24, 8)
   // For STRIKE trades: the strike rate the trade was placed at. Null for CFD.
-  strikeRate Decimal?       @db.Decimal(24, 8)
+  strikeRate             Decimal?       @db.Decimal(24, 8)
   // Current mark rate (live-updated while open).
-  currentRate Decimal       @default(0) @db.Decimal(24, 8)
+  currentRate            Decimal        @default(0) @db.Decimal(24, 8)
   // Optional risk management levels.
-  stopLoss   Decimal?       @db.Decimal(24, 8)
-  takeProfit Decimal?       @db.Decimal(24, 8)
+  stopLoss               Decimal?       @db.Decimal(24, 8)
+  takeProfit             Decimal?       @db.Decimal(24, 8)
   // Overnight financing in account currency.
-  swap       Decimal        @default(0) @db.Decimal(18, 8)
+  swap                   Decimal        @default(0) @db.Decimal(18, 8)
   // Durable swap cursor prevents double charging or skipping elapsed time after restart.
-  swapAccruedAt DateTime    @default(now())
+  swapAccruedAt          DateTime       @default(now())
   // Per-lot commission charged at open.
-  commission Decimal        @default(0) @db.Decimal(18, 8)
+  commission             Decimal        @default(0) @db.Decimal(18, 8)
   // Broker "trading commission" (separate line item shown in the table).
-  tradingCommission Decimal @default(0) @db.Decimal(18, 8)
+  tradingCommission      Decimal        @default(0) @db.Decimal(18, 8)
   // Realized profit (account currency). Updated live for open, final on close.
-  profit     Decimal        @default(0) @db.Decimal(18, 8)
+  profit                 Decimal        @default(0) @db.Decimal(18, 8)
   // Audited simulation-only adjustment applied by an authorized dealer.
-  adminPnlAdjustment Decimal @default(0) @db.Decimal(18, 8)
+  adminPnlAdjustment     Decimal        @default(0) @db.Decimal(18, 8)
   // Net = profit + swap - commission - tradingCommission.
-  netProfit  Decimal        @default(0) @db.Decimal(18, 8)
+  netProfit              Decimal        @default(0) @db.Decimal(18, 8)
   // Locked margin and applied leverage are snapshotted at open; policy changes never reprice open positions.
-  marginUsed Decimal        @default(0) @db.Decimal(24, 8)
-  appliedLeverage Decimal?  @db.Decimal(12, 4)
-  status     PositionStatus @default(OPEN)
+  marginUsed             Decimal        @default(0) @db.Decimal(24, 8)
+  appliedLeverage        Decimal?       @db.Decimal(12, 4)
+  // CFD positions snapshot contract units; null means the legacy pip-based P/L model.
+  appliedContractSize    Decimal?       @db.Decimal(18, 4)
+  // Last quote-currency-to-account-currency rate used for contract P/L and swap.
+  lastQuoteToAccountRate Decimal?       @db.Decimal(24, 12)
+  // Snapshot of legacy P/L terms so existing and STRIKE positions are not repriced by later edits.
+  appliedPipSize         Decimal?       @db.Decimal(18, 8)
+  appliedPipValue        Decimal?       @db.Decimal(18, 8)
+  status                 PositionStatus @default(OPEN)
   // CFD: openedTill is null (open-ended). STRIKE: the settlement time.
-  openedAt   DateTime       @default(now())
-  openedTill DateTime?
-  closedAt   DateTime?
+  openedAt               DateTime       @default(now())
+  openedTill             DateTime?
+  closedAt               DateTime?
   // MANUAL | STOP_LOSS | TAKE_PROFIT | EXPIRY | STOP_OUT.
-  closeReason String?
-  idempotencyKey String?
-  requestFingerprint String?
+  closeReason            String?
+  idempotencyKey         String?
+  requestFingerprint     String?
 
+  @@unique([userId, idempotencyKey])
   @@index([userId, status])
   @@index([userId, status, closedAt])
   @@index([status, closedAt])
   @@index([symbol, status])
-  @@unique([userId, idempotencyKey])
 }
 
 enum TxnType {
@@ -372,23 +379,23 @@ enum TxnStatus {
 }
 
 model Transaction {
-  id        String     @id @default(cuid())
-  userId    String
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      TxnType
-  status    TxnStatus @default(COMPLETED)
-  amount    Decimal    @db.Decimal(36, 8) // signed: + for credit, - for debit
-  asset     String     @default("USD")
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        TxnType
+  status      TxnStatus @default(COMPLETED)
+  amount      Decimal   @db.Decimal(36, 8) // signed: + for credit, - for debit
+  asset       String    @default("USD")
   // Optional description / method (e.g. "Bank transfer", "Visa ****1234").
   description String?
-  reference String?
-  createdAt DateTime   @default(now())
+  reference   String?
+  createdAt   DateTime  @default(now())
 
   paymentRequest PaymentRequest?
 
+  @@unique([userId, reference])
   @@index([userId, createdAt])
   @@index([userId, type, createdAt])
-  @@unique([userId, reference])
 }
 
 enum KycStatus {
@@ -399,27 +406,27 @@ enum KycStatus {
 }
 
 model KycSubmission {
-  id          String     @id @default(cuid())
-  userId      String     @unique
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status      KycStatus  @default(NOT_SUBMITTED)
-  firstName   String?
-  lastName    String?
-  dob         DateTime?
-  country     String?
-  address     String?
-  city        String?
-  postalCode  String?
-  docType     String? // PASSPORT | ID_CARD | DRIVING_LICENSE
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       KycStatus @default(NOT_SUBMITTED)
+  firstName    String?
+  lastName     String?
+  dob          DateTime?
+  country      String?
+  address      String?
+  city         String?
+  postalCode   String?
+  docType      String? // PASSPORT | ID_CARD | DRIVING_LICENSE
   // In a real system this would be a file upload URL. Here we store a label.
   docReference String?
-  note        String? // reviewer note on rejection
-  submittedAt DateTime?
-  reviewedAt  DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  note         String? // reviewer note on rejection
+  submittedAt  DateTime?
+  reviewedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  documents   KycDocument[]
+  documents KycDocument[]
 }
 
 enum KycDocumentStatus {
@@ -453,9 +460,9 @@ model KycDocument {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kycSubmission   KycSubmission     @relation(fields: [kycSubmissionId], references: [id], onDelete: Cascade)
-  accesses        KycDocumentAccess[]
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kycSubmission KycSubmission       @relation(fields: [kycSubmissionId], references: [id], onDelete: Cascade)
+  accesses      KycDocumentAccess[]
 
   @@index([userId])
   @@index([kycSubmissionId])
@@ -475,7 +482,6 @@ model KycDocumentAccess {
   @@index([documentId, createdAt])
   @@index([actorId, createdAt])
 }
-
 
 enum PaymentRequestType {
   DEPOSIT
@@ -521,50 +527,50 @@ enum PaymentEventType {
 }
 
 model PaymentRequest {
-  id                String               @id @default(cuid())
-  userId            String
-  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactionId     String               @unique
-  transaction       Transaction          @relation(fields: [transactionId], references: [id], onDelete: Restrict)
-  type              PaymentRequestType
-  status            PaymentRequestStatus @default(PENDING)
-  amount            Decimal              @db.Decimal(36, 8)
-  asset             String               @default("USD")
-  method            String
-  userReference     String?
-  externalReference String?
-  reviewerNote      String?
-  beneficiaryEncrypted   String?
-  beneficiaryFingerprint String?
-  beneficiarySummary     String?
-  methodDetailsEncrypted String?
+  id                       String                      @id @default(cuid())
+  userId                   String
+  user                     User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionId            String                      @unique
+  transaction              Transaction                 @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  type                     PaymentRequestType
+  status                   PaymentRequestStatus        @default(PENDING)
+  amount                   Decimal                     @db.Decimal(36, 8)
+  asset                    String                      @default("USD")
+  method                   String
+  userReference            String?
+  externalReference        String?
+  reviewerNote             String?
+  beneficiaryEncrypted     String?
+  beneficiaryFingerprint   String?
+  beneficiarySummary       String?
+  methodDetailsEncrypted   String?
   methodDetailsFingerprint String?
-  methodDetailsSummary   String?
-  beneficiaryAvailableAt DateTime?
-  riskHoldUntil          DateTime?
-  preparedBy        String?
-  preparedAt        DateTime?
-  reviewedBy        String?
-  reviewedAt        DateTime?
-  reconciliationStatus    PaymentReconciliationStatus @default(PENDING)
-  reconciliationReference String?
-  reconciledAmount        Decimal?                    @db.Decimal(36, 8)
-  reconciledBy            String?
-  reconciledAt            DateTime?
-  reconciliationNote      String?
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  methodDetailsSummary     String?
+  beneficiaryAvailableAt   DateTime?
+  riskHoldUntil            DateTime?
+  preparedBy               String?
+  preparedAt               DateTime?
+  reviewedBy               String?
+  reviewedAt               DateTime?
+  reconciliationStatus     PaymentReconciliationStatus @default(PENDING)
+  reconciliationReference  String?
+  reconciledAmount         Decimal?                    @db.Decimal(36, 8)
+  reconciledBy             String?
+  reconciledAt             DateTime?
+  reconciliationNote       String?
+  createdAt                DateTime                    @default(now())
+  updatedAt                DateTime                    @updatedAt
 
-  proofs            PaymentProof[]
-  events            PaymentEvent[]
+  proofs PaymentProof[]
+  events PaymentEvent[]
 
+  @@unique([asset, externalReference])
+  @@unique([asset, reconciliationReference])
   @@index([status, createdAt])
   @@index([userId, createdAt])
   @@index([reconciliationStatus, createdAt])
   // Beneficiary cooling-off check scans by fingerprint on every withdrawal.
   @@index([beneficiaryFingerprint])
-  @@unique([asset, externalReference])
-  @@unique([asset, reconciliationReference])
 }
 
 model PaymentProof {
@@ -600,36 +606,35 @@ model PaymentEvent {
   metadata           Json?
   createdAt          DateTime         @default(now())
 
-  @@index([paymentRequestId, createdAt])
   @@unique([paymentRequestId, commandKey])
+  @@index([paymentRequestId, createdAt])
 }
 
-
 model EmailDelivery {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   userId            String?
-  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user              User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   recipient         String
   template          String
   subject           String
   variables         Json
-  status            String   @default("PENDING")
-  attempts          Int      @default(0)
-  nextAttemptAt     DateTime @default(now())
+  status            String    @default("PENDING")
+  attempts          Int       @default(0)
+  nextAttemptAt     DateTime  @default(now())
   providerMessageId String?
   lastError         String?
   sentAt            DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([status, nextAttemptAt])
   @@index([userId, createdAt])
 }
 
 model Notification {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      String
   title     String
   body      String
@@ -639,7 +644,7 @@ model Notification {
   // notification. Keeps unread (readAt=null) for the tab badge until the user
   // actually opens Notifications, instead of the toast silently consuming it.
   toastedAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([userId, readAt, createdAt])
 }
@@ -689,9 +694,9 @@ enum ReconciliationFeedKind {
 }
 
 model ReconciliationRun {
-  id           String                 @id @default(cuid())
+  id           String                   @id @default(cuid())
   // Deterministic, caller-supplied or generated; replays return the stored run.
-  reference    String                 @unique
+  reference    String                   @unique
   status       ReconciliationRunStatus  @default(RUNNING)
   trigger      ReconciliationRunTrigger @default(MANUAL)
   windowStart  DateTime?
@@ -700,9 +705,9 @@ model ReconciliationRun {
   startedAt    DateTime                 @default(now())
   heartbeatAt  DateTime                 @default(now())
   completedAt  DateTime?
-  usersChecked Int                    @default(0)
-  caseCount    Int                    @default(0)
-  blockCount   Int                    @default(0)
+  usersChecked Int                      @default(0)
+  caseCount    Int                      @default(0)
+  blockCount   Int                      @default(0)
   summary      Json?
   errorMessage String?
   cases        ReconciliationCase[]
@@ -712,23 +717,23 @@ model ReconciliationRun {
 }
 
 model ReconciliationCase {
-  id              String                   @id @default(cuid())
-  runId           String
-  run             ReconciliationRun        @relation(fields: [runId], references: [id], onDelete: Cascade)
-  userId          String?
-  user            User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  feedKind        ReconciliationFeedKind
-  severity        ReconciliationSeverity
-  status          ReconciliationCaseStatus @default(OPEN)
-  message         String
-  expectedValue   String?
-  actualValue     String?
-  ownerAssignee   String?
-  resolutionNote  String?
-  detectedAt      DateTime                 @default(now())
-  acknowledgedAt  DateTime?
-  resolvedAt      DateTime?
-  blocks          ReconciliationBlock[]
+  id             String                   @id @default(cuid())
+  runId          String
+  run            ReconciliationRun        @relation(fields: [runId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  feedKind       ReconciliationFeedKind
+  severity       ReconciliationSeverity
+  status         ReconciliationCaseStatus @default(OPEN)
+  message        String
+  expectedValue  String?
+  actualValue    String?
+  ownerAssignee  String?
+  resolutionNote String?
+  detectedAt     DateTime                 @default(now())
+  acknowledgedAt DateTime?
+  resolvedAt     DateTime?
+  blocks         ReconciliationBlock[]
 
   @@index([runId])
   @@index([userId, status])
@@ -804,24 +809,24 @@ model LedgerAccount {
 }
 
 model LedgerTransaction {
-  id          String                  @id @default(cuid())
-  reference   String                  @unique
-  fingerprint String                  @unique
-  kind        LedgerTransactionKind
-  description String
-  status      LedgerTransactionStatus @default(DRAFT)
-  createdBy   String?
-  userId      String?
-  user        User?                   @relation(fields: [userId], references: [id], onDelete: Restrict)
-  sourceType  String?
-  sourceId    String?
-  metadata    Json?
-  reversalOfId String?                @unique
-  reversalOf   LedgerTransaction?     @relation("LedgerReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
-  reversedBy   LedgerTransaction?     @relation("LedgerReversal")
+  id           String                  @id @default(cuid())
+  reference    String                  @unique
+  fingerprint  String                  @unique
+  kind         LedgerTransactionKind
+  description  String
+  status       LedgerTransactionStatus @default(DRAFT)
+  createdBy    String?
+  userId       String?
+  user         User?                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  sourceType   String?
+  sourceId     String?
+  metadata     Json?
+  reversalOfId String?                 @unique
+  reversalOf   LedgerTransaction?      @relation("LedgerReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy   LedgerTransaction?      @relation("LedgerReversal")
   entries      LedgerEntry[]
-  effectiveAt DateTime                @default(now())
-  createdAt    DateTime               @default(now())
+  effectiveAt  DateTime                @default(now())
+  createdAt    DateTime                @default(now())
 
   @@index([createdAt])
   @@index([userId, effectiveAt])
@@ -839,9 +844,9 @@ model LedgerEntry {
   asset         String            @default("USD")
   createdAt     DateTime          @default(now())
 
+  @@unique([transactionId, accountId])
   @@index([transactionId])
   @@index([accountId, createdAt])
-  @@unique([transactionId, accountId])
 }
 
 model AuditEvent {
@@ -903,17 +908,17 @@ model SupportCase {
 }
 
 model RiskRule {
-  id          String           @id @default(cuid())
-  code        String           @unique
-  name        String
-  description String
-  severity    RiskRuleSeverity @default(WARNING)
-  enabled     Boolean          @default(true)
+  id            String           @id @default(cuid())
+  code          String           @unique
+  name          String
+  description   String
+  severity      RiskRuleSeverity @default(WARNING)
+  enabled       Boolean          @default(true)
   configuration Json
-  version     Int              @default(1)
-  updatedById String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  version       Int              @default(1)
+  updatedById   String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@index([enabled, severity])
 }
@@ -952,8 +957,8 @@ model UserGroup {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  members   UserGroupMembership[]
-  profiles  UserProfile[]
+  members  UserGroupMembership[]
+  profiles UserProfile[]
 
   @@index([name])
 }
@@ -1016,15 +1021,15 @@ enum ReferralStatus {
 
 /// Tracks a referral relationship between a referrer and a referred user.
 model Referral {
-  id            String          @id @default(cuid())
-  referrerId    String
-  referredId    String          @unique
-  code          String
-  status        ReferralStatus  @default(PENDING)
+  id             String         @id @default(cuid())
+  referrerId     String
+  referredId     String         @unique
+  code           String
+  status         ReferralStatus @default(PENDING)
   referrerReward Decimal        @default(25)
   referredReward Decimal        @default(10)
-  createdAt     DateTime        @default(now())
-  completedAt   DateTime?
+  createdAt      DateTime       @default(now())
+  completedAt    DateTime?
 
   referrer User @relation("ReferrerReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
   referred User @relation("ReferredReferral", fields: [referredId], references: [id], onDelete: Cascade)

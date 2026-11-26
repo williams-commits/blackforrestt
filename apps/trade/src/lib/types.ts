@@ -35,6 +35,7 @@ export interface Quote {
   low24h: number;
   changePct: number;
   marketHours: MarketHoursView;
+  quoteToAccountRate?: number | null;
 }
 
 export type InstrumentCategory = "FOREX" | "COMMODITY" | "INDEX" | "CRYPTO" | "STOCK";
@@ -49,6 +50,7 @@ export interface InstrumentView {
   pipSize: number;
   pipValue: number;
   contractSize: number;
+  quoteToAccountRate?: number | null;
   marginPerLot: number;
   commissionPerLot: number;
   bid: number;

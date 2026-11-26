@@ -1916,7 +1916,7 @@ function SupportPanel({ canManage }: { canManage: boolean }) {
     {commandDialog}</div>}</ModuleState>;
 }
 
-interface InstrumentRow extends Record<string, unknown> { symbol: string; name: string; category: string; active: boolean; pipSize: string; pipValue: string; marginPerLot: string; leverageNotionalFactor: string | null; leverageDefault: string | null; leverageMax: string | null; commissionPerLot: string; swapLongPips: string; swapShortPips: string; feedSymbol: string | null }
+interface InstrumentRow extends Record<string, unknown> { symbol: string; name: string; category: string; active: boolean; contractSize: string; leverageEnabled: boolean; pipSize: string; pipValue: string; marginPerLot: string; leverageDefault: string | null; leverageMax: string | null; commissionPerLot: string; swapLongPips: string; swapShortPips: string; feedSymbol: string | null }
 function InstrumentsPanel({ canManage }: { canManage: boolean }) {
   const resource = useResource<{ instruments: InstrumentRow[]; mutationPolicy: string }>("/api/admin/instruments");
   return <ModuleState loading={resource.loading} error={resource.error} onRetry={() => void resource.refresh()}>{resource.data && <div className="space-y-4"><SectionHeader eyebrow="Platform" icon={<ListTree size={18} strokeWidth={2} aria-hidden />} title="Instrument configuration" description="Manage symbol availability, trading terms, and market-data mappings." onRefresh={() => void resource.refresh()} />{canManage && <ChangeHint title="Two-person approval" text={resource.data.mutationPolicy} />}
@@ -1927,7 +1927,7 @@ function InstrumentsPanel({ canManage }: { canManage: boolean }) {
       count={`${resource.data.instruments.length} configured`}
       rows={resource.data.instruments}
       rowKey={(i) => i.symbol}
-      search={{ placeholder: "Search symbol, name, feed, category, or status…", text: (i) => `${i.symbol} ${i.name} ${i.feedSymbol ?? ""} ${i.category} ${i.active ? "active" : "disabled"} ${i.marginPerLot} ${i.leverageNotionalFactor ?? ""} ${i.leverageDefault ?? ""} ${i.leverageMax ?? ""} ${i.commissionPerLot} ${i.swapLongPips} ${i.swapShortPips}` }}
+      search={{ placeholder: "Search symbol, name, feed, category, or status…", text: (i) => `${i.symbol} ${i.name} ${i.feedSymbol ?? ""} ${i.category} ${i.active ? "active" : "disabled"} ${i.contractSize} ${i.marginPerLot} ${i.leverageEnabled ? "leverage enabled" : "leverage disabled"} ${i.leverageDefault ?? ""} ${i.leverageMax ?? ""} ${i.commissionPerLot} ${i.swapLongPips} ${i.swapShortPips}` }}
       leading={(i) => ({
         icon: <InstrumentIcon symbol={i.symbol} size={18} />,
         tone: i.active ? "up" : "muted",
@@ -1938,6 +1938,7 @@ function InstrumentsPanel({ canManage }: { canManage: boolean }) {
         { key: "active", label: "Active", render: (i) => (
           <RecordStatusChip tone={i.active ? "up" : "muted"}>{i.active ? "Active" : "Disabled"}</RecordStatusChip>
         ) },
+        { key: "contractSize", label: "Units/lot", align: "right", render: (i) => <span className="tabular-nums">{i.contractSize}</span> },
         { key: "marginPerLot", label: "Margin/lot", sortable: true, align: "right", render: (i) => <span className="tabular-nums">{i.marginPerLot}</span> },
         { key: "leverageMax", label: "Lev. max", align: "right", render: (i) => <span className="tabular-nums">{i.leverageMax ? `${i.leverageMax}x` : "—"}</span> },
         { key: "commissionPerLot", label: "Comm/lot", align: "right", render: (i) => <span className="tabular-nums">{i.commissionPerLot}</span> },
@@ -1955,10 +1956,11 @@ function InstrumentsPanel({ canManage }: { canManage: boolean }) {
       )}
       renderDetailMeta={(i) => [
         { label: "Category", value: i.category },
-        { label: "Pip size", value: i.pipSize },
-        { label: "Pip value", value: i.pipValue },
+        { label: "Contract size (units/lot)", value: String(i.contractSize) },
+        { label: "Legacy pip size", value: i.pipSize },
+        { label: "Legacy pip value", value: i.pipValue },
         { label: "Margin per lot", value: String(i.marginPerLot) },
-        { label: "Verified notional factor", value: i.leverageNotionalFactor ?? "Not verified — legacy margin applies" },
+        { label: "Asset leverage", value: i.leverageEnabled ? "Enabled" : "Disabled by administrator" },
         { label: "Asset leverage default", value: i.leverageDefault ? `${i.leverageDefault}x` : "Class default" },
         { label: "Asset leverage maximum", value: i.leverageMax ? `${i.leverageMax}x` : "Class maximum" },
         { label: "Commission per lot", value: String(i.commissionPerLot) },
@@ -2437,9 +2439,9 @@ function InstrumentChangeFields() {
     <div className="mt-3 grid gap-3 md:grid-cols-3">
       <FieldInput name="symbol" label="Symbol" placeholder="EURUSD" required startIcon={<CandlestickChart size={13} strokeWidth={2} aria-hidden />} />
       <FieldInput name="marginPerLot" label="Margin per lot" type="number" step="0.00000001" required startIcon={<Coins size={13} strokeWidth={2} aria-hidden />} />
-      <FieldInput name="pipSize" label="Pip size (optional)" type="number" step="0.00000001" min="0" placeholder="Keep current value" startIcon={<Percent size={13} strokeWidth={2} aria-hidden />} />
-      <FieldInput name="pipValue" label="Pip value (optional)" type="number" step="0.00000001" min="0" placeholder="Keep current value" startIcon={<Coins size={13} strokeWidth={2} aria-hidden />} />
-      <FieldInput name="leverageNotionalFactor" label="Verified USD factor" type="number" step="0.000000000001" min="0" placeholder="Leave blank until verified" startIcon={<Coins size={13} strokeWidth={2} aria-hidden />} />
+      <FieldInput name="contractSize" label="Contract size (units per lot)" type="number" step="0.0001" min="0" placeholder="Keep current value" startIcon={<Coins size={13} strokeWidth={2} aria-hidden />} />
+      <FieldInput name="pipSize" label="Legacy pip size (optional)" type="number" step="0.00000001" min="0" placeholder="Keep current value" startIcon={<Percent size={13} strokeWidth={2} aria-hidden />} />
+      <FieldInput name="pipValue" label="Legacy pip value (optional)" type="number" step="0.00000001" min="0" placeholder="Keep current value" startIcon={<Coins size={13} strokeWidth={2} aria-hidden />} />
       <FieldInput name="leverageDefault" label="Asset default leverage (x)" type="number" step="0.0001" min="1" placeholder="Inherit class default" startIcon={<Percent size={13} strokeWidth={2} aria-hidden />} />
       <FieldInput name="leverageMax" label="Asset maximum leverage (x)" type="number" step="0.0001" min="1" placeholder="Inherit class maximum" startIcon={<Percent size={13} strokeWidth={2} aria-hidden />} />
       <FieldInput name="commissionPerLot" label="Commission per lot" type="number" step="0.00000001" required startIcon={<Percent size={13} strokeWidth={2} aria-hidden />} />
@@ -2448,8 +2450,14 @@ function InstrumentChangeFields() {
       <Label className="flex items-center gap-2 self-end pb-2 text-xs"><Checkbox name="active" defaultChecked /> Active</Label>
       <Label className="flex items-center gap-2 self-end pb-2 text-xs"><Checkbox name="inheritLeverageDefault" /> Inherit class default</Label>
       <Label className="flex items-center gap-2 self-end pb-2 text-xs"><Checkbox name="inheritLeverageMax" /> Inherit class maximum</Label>
-      <Label className="flex items-center gap-2 self-end pb-2 text-xs"><Checkbox name="clearLeverage" /> Disable asset leverage</Label>
-      <p className="text-xs text-muted-foreground md:col-span-3">The USD factor is notional per 1.0 price unit per lot and must equal pip value ÷ pip size so margin matches the engine&apos;s P/L exposure. Leave it blank until verified; approval is required before leverage is enabled.</p>
+      <Label className="text-xs">Asset leverage status
+        <NativeSelect name="leverageStatus" className="mt-1" defaultValue="keep">
+          <option value="keep">Keep current status</option>
+          <option value="enable">Enable leverage</option>
+          <option value="disable">Disable leverage</option>
+        </NativeSelect>
+      </Label>
+      <p className="text-xs text-muted-foreground md:col-span-3">Contract size is the number of underlying units per 1.0 lot. New CFD P/L and margin use that exposure and live quote-currency-to-USD conversion; approved changes affect new positions only. Legacy pip terms remain for existing positions and STRIKE trades.</p>
     </div>
   );
 }
@@ -2483,7 +2491,8 @@ function buildChangeRequest(action: ChangeAction, form: FormData): Record<string
     };
   }
   const symbol = text("symbol").toUpperCase();
-  const clearLeverage = form.get("clearLeverage") === "on";
+  const leverageStatus = text("leverageStatus");
+  const disableLeverage = leverageStatus === "disable";
   return {
     action,
     domain: "INSTRUMENT",
@@ -2493,15 +2502,14 @@ function buildChangeRequest(action: ChangeAction, form: FormData): Record<string
       symbol,
       active: form.get("active") === "on",
       marginPerLot: text("marginPerLot"),
-      ...(clearLeverage || text("leverageNotionalFactor")
-        ? { leverageNotionalFactor: clearLeverage ? null : text("leverageNotionalFactor") }
-        : {}),
-      ...(clearLeverage || form.get("inheritLeverageDefault") === "on"
+      ...(leverageStatus === "enable" ? { leverageEnabled: true } : {}),
+      ...(disableLeverage ? { leverageEnabled: false } : {}),
+      ...(disableLeverage || form.get("inheritLeverageDefault") === "on"
         ? { leverageDefault: null }
         : text("leverageDefault")
           ? { leverageDefault: text("leverageDefault") }
           : {}),
-      ...(clearLeverage || form.get("inheritLeverageMax") === "on"
+      ...(disableLeverage || form.get("inheritLeverageMax") === "on"
         ? { leverageMax: null }
         : text("leverageMax")
           ? { leverageMax: text("leverageMax") }
@@ -2509,6 +2517,7 @@ function buildChangeRequest(action: ChangeAction, form: FormData): Record<string
       commissionPerLot: text("commissionPerLot"),
       swapLongPips: text("swapLongPips"),
       swapShortPips: text("swapShortPips"),
+      ...(text("contractSize") ? { contractSize: text("contractSize") } : {}),
       ...(text("pipSize") ? { pipSize: text("pipSize") } : {}),
       ...(text("pipValue") ? { pipValue: text("pipValue") } : {}),
     },

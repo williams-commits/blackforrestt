@@ -8,7 +8,7 @@ import {
   resolveEffectiveLeverage,
   saveUserLeveragePreference,
 } from "@/server/leverage";
-import { prisma } from "@/server/db";
+import { hub } from "@/server/engine/hub";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,30 +34,28 @@ export async function GET(request: Request) {
   try {
     const symbol = new URL(request.url).searchParams.get("symbol")?.trim().toUpperCase();
     if (symbol) {
-      const instrument = await prisma.instrument.findUnique({
-        where: { symbol },
-        select: {
-          symbol: true,
-          category: true,
-          leverageNotionalFactor: true,
-          leverageDefault: true,
-          leverageMax: true,
-        },
-      });
-      if (!instrument) return NextResponse.json({ error: "Instrument not found." }, { status: 404 });
       const effective = await resolveEffectiveLeverage(userId, symbol);
+      const quoteToAccountRate = hub.quoteToAccountRate(symbol);
+      const conversionAvailable = quoteToAccountRate != null && Number.isFinite(quoteToAccountRate) && quoteToAccountRate > 0;
+      const enabled = effective.enabled && conversionAvailable;
       return NextResponse.json({
         symbol,
-        enabled: effective.enabled,
+        enabled,
         default: effective.default?.toNumber() ?? null,
         maximum: effective.maximum?.toNumber() ?? null,
-        selected: effective.selected?.toNumber() ?? null,
-        notionalFactor: effective.notionalFactor?.toNumber() ?? null,
+        selected: enabled ? effective.selected?.toNumber() ?? null : null,
+        preference: effective.preference?.toNumber() ?? null,
+        contractSize: effective.contractSize?.toNumber() ?? null,
+        quoteToAccountRate,
+        conversionAvailable,
       });
     }
 
     return NextResponse.json(await getUserLeverageSettings(userId));
   } catch (error) {
+    if (error instanceof LeverageSettingsError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("Leverage settings load failed:", error);
     return NextResponse.json({ error: "Unable to load leverage settings." }, { status: 500 });
   }

@@ -1,5 +1,5 @@
 /**
- * PositionEngine — position math: pip/PnL computation, stop-loss /
+ * PositionEngine — position math: contract/PnL computation, stop-loss /
  * take-profit triggering, STRIKE settlement at expiry, and account-metric
  * derivation.
  *
@@ -15,9 +15,10 @@ export interface InstrumentCfg {
   symbol: string;
   digits: number;
   pipSize: Prisma.Decimal;
-  pipValue: Prisma.Decimal; // value of 1 pip per 1.0 lot, in account currency
+  pipValue: Prisma.Decimal; // legacy value of 1 pip per 1.0 lot, in account currency
+  contractSize: Prisma.Decimal; // underlying units per 1.0 lot
+  quoteToAccountRate: Prisma.Decimal | null;
   marginPerLot: Prisma.Decimal; // margin per 1.0 lot, in account currency
-  leverageNotionalFactor: Prisma.Decimal | null;
   commissionPerLot: Prisma.Decimal; // commission per lot round-turn
   // Overnight swap (financing) rate in pips per lot per day, by side.
   swapLongPipsPerDay: Prisma.Decimal;
@@ -43,6 +44,10 @@ export interface Position {
   netProfit: Prisma.Decimal;
   marginUsed: Prisma.Decimal;
   appliedLeverage: Prisma.Decimal | null;
+  appliedContractSize: Prisma.Decimal | null;
+  lastQuoteToAccountRate: Prisma.Decimal | null;
+  appliedPipSize: Prisma.Decimal | null;
+  appliedPipValue: Prisma.Decimal | null;
   openedAtMs: number;
   openedTillMs: number | null;
   // Timestamp swap was last accrued up to (ms). Used to prorate the daily swap.
@@ -132,6 +137,21 @@ export function grossProfit(
   return monetary(pips.mul(pipValue).mul(quantityDecimal(volume)));
 }
 
+/** CFD P/L = signed price movement × units per lot × lots × quote conversion. */
+export function contractGrossProfit(
+  priceMovement: Prisma.Decimal,
+  contractSize: Prisma.Decimal,
+  quoteToAccountRate: Prisma.Decimal,
+  volume: number,
+): Prisma.Decimal {
+  return monetary(
+    priceMovement
+      .mul(contractSize)
+      .mul(quantityDecimal(volume))
+      .mul(quoteToAccountRate),
+  );
+}
+
 /** Margin required for a position. */
 export function marginFor(
   volume: number,
@@ -154,16 +174,24 @@ export function marginForPosition(
 export function marginForLeverage(
   volume: number,
   entryRate: number,
-  notionalFactor: Prisma.Decimal | null,
+  contractSize: Prisma.Decimal,
+  quoteToAccountRate: Prisma.Decimal | null,
   leverage: Prisma.Decimal,
 ): Prisma.Decimal {
-  if (!Number.isFinite(entryRate) || entryRate <= 0 || !notionalFactor?.gt(0) || !leverage.gte(1)) {
-    throw new RangeError("A valid entry rate, verified notional factor, and leverage ratio are required.");
+  if (
+    !Number.isFinite(entryRate) ||
+    entryRate <= 0 ||
+    !contractSize.gt(0) ||
+    !quoteToAccountRate?.gt(0) ||
+    !leverage.gte(1)
+  ) {
+    throw new RangeError("A valid entry rate, contract size, quote conversion, and leverage ratio are required.");
   }
   return monetary(
     quantityDecimal(volume)
       .mul(priceDecimal(entryRate))
-      .mul(notionalFactor)
+      .mul(contractSize)
+      .mul(quoteToAccountRate)
       .div(leverage),
   );
 }
@@ -183,11 +211,28 @@ export function commissionFor(
 export function openPosition(input: OpenInput): OpenResult {
   const { instrument, side, volume, type, marketRate } = input;
   const openRate = type === "STRIKE" && input.strikeRate != null ? input.strikeRate : marketRate;
+  const normalizedOpenRate = round(openRate, instrument);
   const now = Date.now();
   const openedTillMs = type === "STRIKE" && input.expiryMinutes != null ? now + input.expiryMinutes * 60_000 : null;
   const { commission, trading } = commissionFor(volume, instrument.commissionPerLot);
+  const usesContractModel = type === "CFD";
+  if (!usesContractModel && input.leverage) {
+    throw new RangeError("Leverage can only be applied to CFD positions.");
+  }
+  if (usesContractModel && !instrument.contractSize.gt(0)) {
+    throw new RangeError("A positive contract size is required for CFD positions.");
+  }
+  if (usesContractModel && !instrument.quoteToAccountRate?.gt(0)) {
+    throw new RangeError("A live quote-currency conversion to the account currency is required.");
+  }
   const margin = input.leverage
-    ? marginForLeverage(volume, openRate, instrument.leverageNotionalFactor, input.leverage)
+    ? marginForLeverage(
+        volume,
+        normalizedOpenRate,
+        instrument.contractSize,
+        instrument.quoteToAccountRate,
+        input.leverage,
+      )
     : marginFor(volume, instrument.marginPerLot);
 
   const position: Position = {
@@ -196,7 +241,7 @@ export function openPosition(input: OpenInput): OpenResult {
     type,
     side,
     volume,
-    openRate: round(openRate, instrument),
+    openRate: normalizedOpenRate,
     strikeRate: input.strikeRate != null ? round(input.strikeRate, instrument) : null,
     currentRate: round(openRate, instrument),
     stopLoss: input.stopLoss,
@@ -210,6 +255,10 @@ export function openPosition(input: OpenInput): OpenResult {
     netProfit: monetary(commission.add(trading).neg()),
     marginUsed: margin,
     appliedLeverage: input.leverage ?? null,
+    appliedContractSize: usesContractModel ? instrument.contractSize : null,
+    lastQuoteToAccountRate: usesContractModel ? instrument.quoteToAccountRate : null,
+    appliedPipSize: instrument.pipSize,
+    appliedPipValue: instrument.pipValue,
     openedAtMs: now,
     openedTillMs,
     lastSwapMs: now,
@@ -275,10 +324,32 @@ export function markPosition(
   now = Date.now(),
   evaluateExits = true,
 ): MarkResult {
-  const updated: Position = { ...pos, currentRate: round(markRate, instrument) };
+  const normalizedMarkRate = round(markRate, instrument);
+  const updated: Position = { ...pos, currentRate: normalizedMarkRate };
   const entry = pos.type === "STRIKE" && pos.strikeRate != null ? pos.strikeRate : pos.openRate;
-  const pips = pipsBetween(pos.side, entry, markRate, instrument.pipSize);
-  const profit = monetary(grossProfit(pips, instrument.pipValue, pos.volume).add(pos.adminPnlAdjustment));
+  const pipSize = pos.appliedPipSize ?? instrument.pipSize;
+  const pipValue = pos.appliedPipValue ?? instrument.pipValue;
+  const pips = pipsBetween(pos.side, entry, normalizedMarkRate, pipSize);
+  let baseProfit: Prisma.Decimal;
+  if (pos.appliedContractSize) {
+    const conversionRate = instrument.quoteToAccountRate ?? pos.lastQuoteToAccountRate;
+    if (!conversionRate?.gt(0)) {
+      throw new RangeError(`Position ${pos.id} has no valid quote-currency conversion snapshot.`);
+    }
+    const signedPriceMovement = pos.side === "BUY"
+      ? priceDecimal(normalizedMarkRate).sub(priceDecimal(entry))
+      : priceDecimal(entry).sub(priceDecimal(normalizedMarkRate));
+    baseProfit = contractGrossProfit(
+      signedPriceMovement,
+      pos.appliedContractSize,
+      conversionRate,
+      pos.volume,
+    );
+    updated.lastQuoteToAccountRate = conversionRate;
+  } else {
+    baseProfit = grossProfit(pips, pipValue, pos.volume);
+  }
+  const profit = monetary(baseProfit.add(pos.adminPnlAdjustment));
   updated.profit = profit;
   updated.netProfit = monetary(
     profit.add(pos.swap).sub(pos.commission).sub(pos.tradingCommission),
@@ -290,14 +361,14 @@ export function markPosition(
   // Stop loss / take profit (only for CFD; STRIKE settles at expiry).
   if (evaluateExits && pos.type === "CFD") {
     if (pos.stopLoss != null) {
-      const hit = pos.side === "BUY" ? markRate <= pos.stopLoss : markRate >= pos.stopLoss;
+      const hit = pos.side === "BUY" ? normalizedMarkRate <= pos.stopLoss : normalizedMarkRate >= pos.stopLoss;
       if (hit) {
         shouldClose = true;
         closeReason = "STOP_LOSS";
       }
     }
     if (!shouldClose && pos.takeProfit != null) {
-      const hit = pos.side === "BUY" ? markRate >= pos.takeProfit : markRate <= pos.takeProfit;
+      const hit = pos.side === "BUY" ? normalizedMarkRate >= pos.takeProfit : normalizedMarkRate <= pos.takeProfit;
       if (hit) {
         shouldClose = true;
         closeReason = "TAKE_PROFIT";
@@ -386,9 +457,21 @@ export function accrueSwap(
   const ratePips = pos.side === "BUY" ? instrument.swapLongPipsPerDay : instrument.swapShortPipsPerDay;
   // Swap is a cost (negative rate convention): charged to the holder. Keep
   // higher precision (4 dp) so sub-second accrual isn't rounded to zero.
+  const conversionRate = instrument.quoteToAccountRate ?? pos.lastQuoteToAccountRate;
+  let swapValuePerPip: Prisma.Decimal;
+  if (pos.appliedContractSize) {
+    if (!conversionRate?.gt(0)) {
+      throw new RangeError(`Position ${pos.id} has no valid quote-currency conversion snapshot.`);
+    }
+    swapValuePerPip = (pos.appliedPipSize ?? instrument.pipSize)
+      .mul(pos.appliedContractSize)
+      .mul(conversionRate);
+  } else {
+    swapValuePerPip = pos.appliedPipValue ?? instrument.pipValue;
+  }
   const swapDelta = monetary(
     ratePips
-      .mul(instrument.pipValue)
+      .mul(swapValuePerPip)
       .mul(quantityDecimal(pos.volume))
       .mul(elapsedDays)
       .neg(),
@@ -400,13 +483,16 @@ export function accrueSwap(
     netProfit: monetary(
       pos.profit.add(swap).sub(pos.commission).sub(pos.tradingCommission),
     ),
+    ...(pos.appliedContractSize && conversionRate?.gt(0)
+      ? { lastQuoteToAccountRate: conversionRate }
+      : {}),
     lastSwapMs: now,
   };
 }
 
 function round(value: number, instrument: { digits: number }): number {
   const step = Math.pow(10, -instrument.digits);
-  return Math.round(value / step) * step;
+  return Number((Math.round(value / step) * step).toFixed(instrument.digits));
 }
 function priceDecimal(value: number): Prisma.Decimal {
   if (!Number.isFinite(value)) throw new Error("Price must be finite.");

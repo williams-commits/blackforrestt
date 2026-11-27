@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  LOT_VOLUME_MIN,
   LOT_VOLUME_SLIDER_MARKERS,
   LOT_VOLUME_SLIDER_MAX,
   lotVolumeFromSliderPosition,
@@ -15,21 +16,39 @@ test("lot slider has exact stops for its tier boundaries", () => {
   }
 });
 
-test("every slider step advances exactly one lot increment for its tier", () => {
+test("lot slider divides all four ranges into equal sections", () => {
+  assert.deepEqual(
+    LOT_VOLUME_SLIDER_MARKERS.map(({ position }) => position),
+    [0, 250, 500, 750, 1_000],
+  );
+  assert.equal(lotVolumeFromSliderPosition(125), 0.06);
+  assert.equal(lotVolumeFromSliderPosition(375), 4.6);
+  assert.equal(lotVolumeFromSliderPosition(625), 9.5);
+  assert.equal(lotVolumeFromSliderPosition(875), 55);
+});
+
+test("slider drag positions resolve only to valid increments within each range", () => {
+  let previous = LOT_VOLUME_MIN;
   for (let position = 1; position <= LOT_VOLUME_SLIDER_MAX; position += 1) {
-    const previous = lotVolumeFromSliderPosition(position - 1);
     const current = lotVolumeFromSliderPosition(position);
-    const expectedStep = position <= 9 ? 0.01 : position <= 108 ? 0.1 : 1;
-    assert.ok(Math.abs(current - previous - expectedStep) < 1e-9, `step ${position}`);
+    assert.ok(current >= previous, `slider position ${position} must not move backwards`);
+    if (position <= 250) {
+      assert.ok(Math.abs(current * 100 - Math.round(current * 100)) < 1e-8, `step ${position}`);
+    } else if (position <= 750) {
+      assert.ok(Math.abs(current * 10 - Math.round(current * 10)) < 1e-8, `step ${position}`);
+    } else {
+      assert.equal(Number.isInteger(current), true, `step ${position}`);
+    }
+    previous = current;
   }
 });
 
 test("lot slider progresses by fine, fractional, and whole-lot ranges", () => {
-  assert.equal(lotVolumeFromSliderPosition(1), 0.02);
-  assert.equal(lotVolumeFromSliderPosition(10), 0.2);
-  assert.equal(lotVolumeFromSliderPosition(103), 9.5);
-  assert.equal(lotVolumeFromSliderPosition(153), 55);
-  assert.equal(LOT_VOLUME_SLIDER_MAX, 198);
+  assert.equal(lotVolumeFromSliderPosition(28), 0.02);
+  assert.equal(lotVolumeFromSliderPosition(253), 0.2);
+  assert.equal(lotVolumeFromSliderPosition(625), 9.5);
+  assert.equal(lotVolumeFromSliderPosition(875), 55);
+  assert.equal(LOT_VOLUME_SLIDER_MAX, 1_000);
 });
 
 test("lot input values map back to their slider position across every tier", () => {

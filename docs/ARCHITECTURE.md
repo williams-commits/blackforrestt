@@ -107,13 +107,13 @@ Three apps under `apps/`, one deploy pipeline (`deploy/` compose + Caddy):
 **Trade leverage controls:** class defaults and maximums live in the approved
 `LEVERAGE_POLICY` risk rule; per-instrument `contractSize` (underlying units
 per lot), leverage enablement, and optional default/maximum overrides live on
-`Instrument` and use the maker-checker workflow. User preferences are stored
-separately in `UserLeveragePreference` and resolve per-instrument → per-class
-→ admin default, capped by the effective maximum. Traders can set or reset an
-instrument preference from its CFD order ticket; it is persisted and applies
-to new positions only. CFD exposure and P/L use contract units: signed price
+`Instrument` and use the maker-checker workflow. Every active asset inherits
+its class default unless an instrument default overrides it. Traders may adjust
+leverage on the CFD order ticket for that order only; the slider value is
+bounded by the effective maximum and is never persisted as a user preference.
+CFD exposure and P/L use contract units: signed price
 movement × lots × contract size × quote-currency-to-USD conversion. Margin
-uses the corresponding entry notional divided by selected leverage; disabling
+uses the corresponding entry notional divided by the order's leverage; disabling
 leverage retains the instrument's fixed `marginPerLot` preset. Non-USD quote
 currencies convert through fresh active FX quotes, including inverse and
 multi-pair paths. `Position.marginUsed`, `Position.appliedLeverage`, and

@@ -10,8 +10,10 @@ import {
 } from "../src/server/engine/positionEngine.js";
 import {
   hasValidContractSize,
-  resolvePreferredLeverage,
+  leverageForOrder,
+  LeverageSettingsError,
   validateLeveragePolicyConfiguration,
+  type EffectiveLeverage,
 } from "../src/server/leverage.js";
 
 const instrument: InstrumentCfg = {
@@ -66,22 +68,49 @@ test("open-position margin remains locked when the instrument margin changes", (
   assert.equal(marginForPosition(opened.position, new Prisma.Decimal(25000)).toNumber(), 5500);
 });
 
-test("asset preference overrides class preference, which overrides the class default", () => {
-  const defaultRatio = new Prisma.Decimal(1);
-  const maximum = new Prisma.Decimal(100);
+test("order leverage defaults to the instrument's effective configured default", () => {
+  const settings: EffectiveLeverage = {
+    enabled: true,
+    default: new Prisma.Decimal(5),
+    maximum: new Prisma.Decimal(100),
+    contractSize: new Prisma.Decimal(100000),
+  };
 
-  assert.equal(
-    resolvePreferredLeverage(defaultRatio, maximum, new Prisma.Decimal(20), new Prisma.Decimal(50)).toNumber(),
-    50,
-  );
-  assert.equal(
-    resolvePreferredLeverage(defaultRatio, maximum, new Prisma.Decimal(20), new Prisma.Decimal(101)).toNumber(),
-    100,
-  );
-  assert.equal(
-    resolvePreferredLeverage(defaultRatio, maximum, new Prisma.Decimal(101)).toNumber(),
-    100,
-  );
+  assert.equal(leverageForOrder(settings)?.toNumber(), 5);
+});
+
+test("an order may use a slider leverage up to the configured maximum", () => {
+  const settings: EffectiveLeverage = {
+    enabled: true,
+    default: new Prisma.Decimal(5),
+    maximum: new Prisma.Decimal(100),
+    contractSize: new Prisma.Decimal(100000),
+  };
+
+  assert.equal(leverageForOrder(settings, 25)?.toNumber(), 25);
+});
+
+test("order leverage rejects values above the configured maximum", () => {
+  const settings: EffectiveLeverage = {
+    enabled: true,
+    default: new Prisma.Decimal(5),
+    maximum: new Prisma.Decimal(100),
+    contractSize: new Prisma.Decimal(100000),
+  };
+
+  assert.throws(() => leverageForOrder(settings, 100.01), LeverageSettingsError);
+});
+
+test("disabled leverage cannot be selected by an order", () => {
+  const settings: EffectiveLeverage = {
+    enabled: false,
+    default: null,
+    maximum: null,
+    contractSize: new Prisma.Decimal(100000),
+  };
+
+  assert.equal(leverageForOrder(settings), null);
+  assert.throws(() => leverageForOrder(settings, 2), LeverageSettingsError);
 });
 
 test("class leverage policy requires valid defaults and maxima for every class", () => {

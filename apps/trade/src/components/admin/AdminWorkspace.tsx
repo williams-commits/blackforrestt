@@ -2415,13 +2415,13 @@ function RiskChangeFields() {
   return (
     <div className="mt-3 grid gap-3 md:grid-cols-3">
       <FieldInput name="code" label="Rule code" defaultValue="LEVERAGE_POLICY" placeholder="MAX_ORDER_VOLUME" required startIcon={<ShieldAlert size={13} strokeWidth={2} aria-hidden />} />
-      <FieldInput name="name" label="Rule name" defaultValue="User-selectable leverage" required startIcon={<Tag size={13} strokeWidth={2} aria-hidden />} />
+      <FieldInput name="name" label="Rule name" defaultValue="Leverage default policy" required startIcon={<Tag size={13} strokeWidth={2} aria-hidden />} />
       <Label className="text-xs">Severity
         <NativeSelect name="severity" className="mt-1" defaultValue="WARNING">
           <option>INFO</option><option>WARNING</option><option>BLOCKING</option>
         </NativeSelect>
       </Label>
-      <FieldInput name="description" label="Description" defaultValue="Class defaults and maximum leverage ratios" required startIcon={<FileText size={13} strokeWidth={2} aria-hidden />} />
+      <FieldInput name="description" label="Description" defaultValue="Class and instrument defaults and maximum leverage ratios" required startIcon={<FileText size={13} strokeWidth={2} aria-hidden />} />
       <FieldInput
         name="configuration"
         label="Configuration JSON"

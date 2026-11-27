@@ -16,7 +16,6 @@ import { SimpleDialog as Dialog } from "@/components/ui/Dialog";
 import { Check, KeyRound, Lock, Pencil, ShieldCheck, User, X, Mail, StarCheck } from "lucide-react";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { Label } from "@/components/ui/label";
-import { LeveragePreferences } from "./LeveragePreferences";
 
 interface User {
   id: string;
@@ -87,7 +86,6 @@ export function SettingsTab({ user }: { user: User }) {
         </CardContent>
       </Card>
 
-      <LeveragePreferences />
       <SecurityCenter />
 
       <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} user={user} onSaved={() => router.refresh()} />

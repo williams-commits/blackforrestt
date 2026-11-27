@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
-import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, ChevronDown, Clock3, Radio, RotateCcw } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, ChevronDown, Clock3, Radio } from "lucide-react";
 import { useForexStore } from "@/lib/store";
 import type { OpenPositionController } from "@/hooks/useOpenPosition";
 import { toast } from "@/lib/toast";
@@ -26,6 +26,7 @@ import {
   lotVolumeToSliderPosition,
   nextLotVolume,
 } from "@/lib/lotVolumeScale";
+import { snapSliderValueToAnchors } from "@/lib/leverageSliderScale";
 
 interface Props {
   instrument: InstrumentView;
@@ -40,8 +41,6 @@ interface InstrumentLeverage {
   enabled: boolean;
   default: number | null;
   maximum: number | null;
-  selected: number | null;
-  preference: number | null;
   contractSize: number | null;
   quoteToAccountRate: number | null;
   conversionAvailable: boolean;
@@ -103,7 +102,7 @@ export function TradePanel({
   const [stalePriceAcknowledged, setStalePriceAcknowledged] = useState(false);
   const [leverage, setLeverage] = useState<InstrumentLeverage | null>(null);
   const [leverageDraft, setLeverageDraft] = useState<number | null>(null);
-  const [leverageSaving, setLeverageSaving] = useState(false);
+  const leveragePointerInteraction = useRef(false);
   const [leverageStatus, setLeverageStatus] = useState<"loading" | "ready" | "error">("loading");
   const [leverageError, setLeverageError] = useState<string | null>(null);
   const { openPosition, loading, error, clearError, status, lastAcceptedAt } = orderController;
@@ -118,7 +117,7 @@ export function TradePanel({
       .then((data) => {
         if (!active) return;
         setLeverage(data);
-        setLeverageDraft(data.selected);
+        setLeverageDraft(data.default);
         setLeverageStatus("ready");
       })
       .catch((cause: unknown) => {
@@ -183,9 +182,7 @@ export function TradePanel({
   const quotePriceAvailable = quoteReady || staleQuoteAvailable;
   const canSubmit = (quoteReady || (staleQuoteAvailable && stalePriceAcknowledged)) &&
     leverageStatus === "ready" &&
-    !leverageSaving &&
-    (type !== "CFD" || leverage?.conversionAvailable !== false) &&
-    (type !== "CFD" || !leverage?.enabled || leverageDraft === leverage.selected);
+    (type !== "CFD" || leverage?.conversionAvailable !== false);
   const nextOpenLabel = formatNextMarketOpen(currentMarketHours);
   const sessionLabel = currentMarketHours.isOpen ? "Open" : "Closed";
   const quoteStateLabel = !currentMarketHours.isOpen
@@ -215,9 +212,10 @@ export function TradePanel({
       ? 1
       : Math.round((leverageMaximum * index) / 4 * 100) / 100),
   )];
+  const leverageMagnetThreshold = Math.max(0.01, (leverageMaximum - 1) * 0.025);
   const selectedLeverage = Math.min(
     leverageMaximum,
-    Math.max(1, leverageDraft ?? leverage?.selected ?? 1),
+    Math.max(1, leverageDraft ?? leverage?.default ?? 1),
   );
   const marginEntryRate = Math.max(ask, bid);
   const quoteToAccountRate = currentQuote?.quoteToAccountRate
@@ -227,11 +225,10 @@ export function TradePanel({
   const contractSize = leverage?.contractSize ?? instrument.contractSize;
   const leveragedMargin = leverage?.enabled &&
     type === "CFD" &&
-    leverageDraft != null &&
     contractSize > 0 &&
     quoteToAccountRate != null &&
     quoteToAccountRate > 0
-    ? vol * marginEntryRate * contractSize * quoteToAccountRate / leverageDraft
+    ? vol * marginEntryRate * contractSize * quoteToAccountRate / selectedLeverage
     : null;
   const margin = Number.isFinite(vol)
     ? leveragedMargin != null && Number.isFinite(leveragedMargin)
@@ -251,40 +248,6 @@ export function TradePanel({
   const hasValidVolume = Number.isFinite(vol) && vol >= 0.01 && vol <= 100;
   const hasFunds = account != null && freeMargin + 1e-8 >= requiredCash;
 
-  async function saveLeveragePreference(nextValue: number | null): Promise<void> {
-    if (!leverage?.enabled || leverageSaving) return;
-    if (nextValue === null && leverage.preference === null) return;
-    if (nextValue !== null && nextValue === leverage.selected && nextValue === leverage.preference) return;
-
-    setLeverageSaving(true);
-    setLeverageError(null);
-    let preferenceSaved = false;
-    try {
-      const response = await fetch("/api/leverage", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scopeKey: `asset:${instrument.symbol}`, leverage: nextValue }),
-      });
-      const data = await response.json().catch(() => ({})) as { error?: string };
-      if (!response.ok) throw new Error(data.error ?? "Unable to save leverage preference.");
-      preferenceSaved = true;
-
-      const updated = await loadInstrumentLeverage(instrument.symbol);
-      setLeverage(updated);
-      setLeverageDraft(updated.selected);
-      toast.success(
-        nextValue === null ? "Leverage preference reset" : "Leverage preference saved",
-        `${instrument.symbol} leverage applies to new positions only.`,
-      );
-    } catch (cause) {
-      setLeverageDraft(leverage.selected);
-      setLeverageError(cause instanceof Error ? cause.message : "Unable to save leverage preference.");
-      if (preferenceSaved) setLeverageStatus("error");
-    } finally {
-      setLeverageSaving(false);
-    }
-  }
-
   useEffect(() => {
     setStalePriceAcknowledged(false);
   }, [instrument.symbol, currentMarketHours.isOpen, currentMarketHours.canTrade]);
@@ -293,10 +256,6 @@ export function TradePanel({
     clearMessages();
     if (leverageStatus !== "ready") {
       setValidationError(leverageError ?? "Leverage settings are still loading. Retry when they are available.");
-      return;
-    }
-    if (leverageSaving || (type === "CFD" && leverage?.enabled && leverageDraft !== leverage.selected)) {
-      setValidationError("Wait for the leverage preference to finish saving before placing this order.");
       return;
     }
     if (!currentMarketHours.isOpen) {
@@ -609,7 +568,7 @@ export function TradePanel({
             className="h-10"
             trackClassName="h-2 bg-panel-3"
             rangeClassName="bg-brand"
-            thumbClassName="size-5 border-2 border-canvas bg-brand shadow-md ring-2 ring-brand/20 transition-transform duration-150 hover:scale-110 focus-visible:ring-4 focus-visible:ring-brand/35"
+            thumbClassName="size-4 border-2 border-canvas bg-brand shadow-md ring-2 ring-brand/25 transition-transform duration-150 hover:scale-110 focus-visible:ring-4 focus-visible:ring-brand/35"
             markers={
               <div aria-hidden className="pointer-events-none absolute inset-x-2 top-1/2 z-10 h-0 -translate-y-1/2">
                 {LOT_VOLUME_SLIDER_MARKERS.map(({ label, position }) => (
@@ -649,9 +608,9 @@ export function TradePanel({
                     ? "left-0"
                     : position === LOT_VOLUME_SLIDER_MAX
                       ? "right-0"
-                      : position === 98
+                      : position === 500
                         ? "-translate-x-full"
-                        : position === 108
+                        : position === 750
                           ? ""
                           : "-translate-x-1/2"
                 }`}
@@ -686,21 +645,9 @@ export function TradePanel({
               <p className="text-(length:--term-text-2xs) font-medium uppercase tracking-wide text-text-muted">Leverage</p>
               <p className="text-(length:--term-text-2xs) text-text-faint">{instrument.symbol}</p>
             </div>
-            {leverageStatus === "ready" && leverage?.enabled && (
+            {leverageStatus === "ready" && leverage?.enabled && leverage.conversionAvailable && (
               <div className="flex items-center gap-2">
                 <span className="rounded-md bg-canvas px-2.5 py-1 font-semibold tabular-nums text-text">{Number(selectedLeverage.toFixed(2))}x</span>
-                {leverage.preference != null && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-10 px-2.5 text-(length:--term-text-2xs)"
-                    disabled={leverageSaving}
-                    onClick={() => void saveLeveragePreference(null)}
-                  >
-                    <RotateCcw data-icon="inline-start" aria-hidden /> Reset
-                  </Button>
-                )}
               </div>
             )}
           </div>
@@ -710,7 +657,7 @@ export function TradePanel({
           {leverageStatus === "error" && (
             <Alert tone="err">{leverageError ?? "Unable to load leverage settings."}</Alert>
           )}
-          {leverageStatus === "ready" && leverage?.enabled && (
+          {leverageStatus === "ready" && leverage?.enabled && leverage.conversionAvailable && (
             <>
               <Slider
                 aria-label={`${instrument.symbol} leverage`}
@@ -718,14 +665,14 @@ export function TradePanel({
                 className="h-10"
                 trackClassName="h-2 bg-panel-3"
                 rangeClassName="bg-gradient-to-r from-up via-brand to-down"
-                thumbClassName="size-5 border-2 border-canvas bg-brand shadow-md ring-2 ring-brand/25 transition-transform duration-150 hover:scale-110 focus-visible:ring-4 focus-visible:ring-brand/35"
+                thumbClassName="size-4 border-2 border-canvas bg-brand shadow-md ring-2 ring-brand/25 transition-transform duration-150 hover:scale-110 focus-visible:ring-4 focus-visible:ring-brand/35"
                 markers={
                   <div aria-hidden className="pointer-events-none absolute inset-x-1 top-1/2 z-10 flex -translate-y-1/2 justify-between">
                     {leverageTicks.map((tick) => (
                       <span
                         key={tick}
                         className={`size-2 rounded-full ring-1 ring-panel-2 ${
-                          tick < selectedLeverage ? "bg-brand" : "bg-panel-2"
+                          tick <= selectedLeverage ? "bg-brand" : "bg-panel-2"
                         }`}
                       />
                     ))}
@@ -735,27 +682,35 @@ export function TradePanel({
                 max={leverageMaximum}
                 step={0.01}
                 value={[selectedLeverage]}
-                disabled={leverageSaving || leverageMaximum === 1}
+                disabled={leverageMaximum === 1}
+                onPointerDownCapture={() => { leveragePointerInteraction.current = true; }}
+                onPointerUpCapture={() => { leveragePointerInteraction.current = false; }}
+                onPointerCancelCapture={() => { leveragePointerInteraction.current = false; }}
+                onBlurCapture={() => { leveragePointerInteraction.current = false; }}
                 onValueChange={(value) => {
                   if (value[0] != null) {
-                    setLeverageDraft(value[0]);
+                    setLeverageDraft(leveragePointerInteraction.current
+                      ? snapSliderValueToAnchors(value[0], leverageTicks, leverageMagnetThreshold)
+                      : value[0]);
                     setLeverageError(null);
                     clearMessages();
                   }
-                }}
-                onValueCommit={(value) => {
-                  if (value[0] != null) void saveLeveragePreference(value[0]);
                 }}
               />
               <div className="flex justify-between text-(length:--term-text-2xs) tabular-nums text-text-faint">
                 {leverageTicks.map((tick) => <span key={tick}>{Number(tick.toFixed(2))}x</span>)}
               </div>
               <div className="flex items-center justify-between gap-2 text-(length:--term-text-2xs) text-text-faint">
-                <span>Max {leverageMaximum}x · saved per instrument</span>
-                <span>{leverageSaving ? "Saving…" : "New positions only"}</span>
+                <span>Default {leverage.default ?? 1}x · max {leverageMaximum}x</span>
+                <span>This order only</span>
               </div>
               {leverageError && <Alert tone="err">{leverageError}</Alert>}
             </>
+          )}
+          {leverageStatus === "ready" && leverage?.enabled && !leverage.conversionAvailable && (
+            <Alert tone="info">
+              Default {leverage.default ?? "—"}x (maximum {leverage.maximum ?? "—"}x) is configured, but leverage is unavailable until fresh quote-currency conversion is available. The fixed margin preset applies for now.
+            </Alert>
           )}
           {leverageStatus === "ready" && !leverage?.enabled && leverage?.conversionAvailable !== false && (
             <Alert tone="info">
@@ -852,7 +807,11 @@ export function TradePanel({
           <div className="space-y-1.5">
             <SummaryRow
               label="Leverage"
-              value={type !== "CFD" ? "Not applied to Strike" : leverage?.enabled ? `${Number(selectedLeverage.toFixed(2))}x` : "Legacy margin preset"}
+              value={type !== "CFD"
+                ? "Not applied to Strike"
+                : leverage?.enabled && leverage.conversionAvailable
+                  ? `${Number(selectedLeverage.toFixed(2))}x`
+                  : "Fixed margin preset"}
             />
             <SummaryRow label="Margin required" value={`${fmtNum(margin, 2)} USD`} />
             <SummaryRow label="Commission" value={`${fmtNum(commission, 2)} USD`} />

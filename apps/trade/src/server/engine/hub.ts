@@ -13,7 +13,7 @@ import { prisma, withSerializableRetry } from "../db";
 import { userMutationMutex } from "../locks";
 import { isUserBlocked } from "../reconciliation";
 import { loadTradingRiskPolicy } from "../riskPolicy";
-import { resolveEffectiveLeverage } from "../leverage";
+import { leverageForOrder, LeverageSettingsError, resolveEffectiveLeverage } from "../leverage";
 import { resolveUserSettings } from "../userSettings";
 import { marketHoursForSymbol, type MarketHoursState } from "../../lib/marketHours";
 import { staleQuoteDecision } from "../../lib/marketFreshness";
@@ -860,6 +860,9 @@ class Hub {
 
       const entryRate = input.side === "BUY" ? effectiveAsk : effectiveBid;
       this.validateOpenInput(input, entryRate);
+      if (input.type === "STRIKE" && input.leverage != null) {
+        throw new TradingError("Leverage can only be set on CFD orders.", "VALIDATION");
+      }
       if (input.type === "CFD" && !cfg.quoteToAccountRate?.gt(0)) {
         throw new TradingError(
           "Quote-currency conversion to USD is unavailable. Wait for fresh conversion-market data.",
@@ -867,17 +870,21 @@ class Hub {
         );
       }
       const leverageSettings = input.type === "CFD"
-        ? await resolveEffectiveLeverage(input.userId, symbol)
+        ? await resolveEffectiveLeverage(symbol)
         : null;
       if (leverageSettings?.contractSize && !leverageSettings.contractSize.eq(cfg.contractSize)) {
         throw new TradingError("Instrument contract terms changed. Refresh the terminal and retry.", "CONFLICT");
       }
-      if (input.leverage != null) {
-        if (
-          !leverageSettings?.enabled ||
-          !leverageSettings.selected?.eq(input.leverage.toString())
-        ) {
-          throw new TradingError("Leverage settings changed. Review the current leverage and retry.", "CONFLICT");
+      let appliedLeverage: Prisma.Decimal | null = null;
+      if (leverageSettings) {
+        try {
+          appliedLeverage = leverageForOrder(leverageSettings, input.leverage);
+        } catch (error) {
+          if (error instanceof LeverageSettingsError) {
+            const code = error.status === 409 ? "CONFLICT" : error.status === 400 ? "VALIDATION" : "BLOCKED";
+            throw new TradingError(error.message, code);
+          }
+          throw error;
         }
       }
       const opened = openPosition({
@@ -891,7 +898,7 @@ class Hub {
         stopLoss: input.stopLoss,
         takeProfit: input.takeProfit,
         marketRate: entryRate,
-        leverage: leverageSettings?.selected ?? null,
+        leverage: appliedLeverage,
       });
 
       // Immediately mark at the opposite dealing side so the UI and account
@@ -925,9 +932,18 @@ class Hub {
           }
 
           if (input.type === "CFD" && leverageSettings) {
-            const currentLeverage = await resolveEffectiveLeverage(input.userId, symbol, tx);
-            const ratioUnchanged = currentLeverage.selected?.eq(leverageSettings.selected ?? new Decimal(0))
-              ?? leverageSettings.selected === null;
+            const currentLeverage = await resolveEffectiveLeverage(symbol, tx);
+            let currentOrderLeverage: Prisma.Decimal | null;
+            try {
+              currentOrderLeverage = leverageForOrder(currentLeverage, input.leverage);
+            } catch (error) {
+              if (error instanceof LeverageSettingsError) {
+                throw new TradingError("Leverage settings changed while the order was being placed. Review the ticket and retry.", "CONFLICT");
+              }
+              throw error;
+            }
+            const ratioUnchanged = currentOrderLeverage?.eq(appliedLeverage ?? new Decimal(0))
+              ?? appliedLeverage === null;
             const contractSizeUnchanged = currentLeverage.contractSize?.eq(leverageSettings.contractSize ?? new Decimal(0))
               ?? leverageSettings.contractSize === null;
             if (
